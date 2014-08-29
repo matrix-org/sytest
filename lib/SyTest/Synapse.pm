@@ -11,6 +11,7 @@ sub _init
    my ( $args ) = @_;
 
    my $port = $self->{port} = delete $args->{port};
+   $self->{print_output} = delete $args->{print_output};
 
    my $db = "homeserver-localhost-$port.db";
    my $db_rel = "../synapse/$db";

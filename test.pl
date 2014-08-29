@@ -73,8 +73,9 @@ my @PORTS = 8001 .. 8000+$NUMBER;
 my @f;
 foreach my $port ( @PORTS ) {
    my $synapse = $synapses_by_port{$port} = SyTest::Synapse->new(
-      synapse_dir => "../synapse",
-      port        => $port,
+      synapse_dir  => "../synapse",
+      port         => $port,
+      print_output => $SERVER_LOG,
    );
    $loop->add( $synapse );
 
