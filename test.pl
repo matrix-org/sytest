@@ -62,46 +62,24 @@ sub Future::on_done_diag {
 
 # Start up 3 homeservers
 
-sub start_hs
-{
-   my ( $port ) = @_;
-
-   my $process = SyTest::Synapse->new(
-      synapse_dir => "../synapse",
-      port        => $port,
-   );
-
-   $loop->add( $process );
-   return $process;
-}
-
-my %hs_procs_by_port;
+my %synapses_by_port;
 END {
-   print STDERR "Killing synapse servers...\n" if %hs_procs_by_port;
-   kill INT => $_->pid for values %hs_procs_by_port;
+   print STDERR "Killing synapse servers...\n" if %synapses_by_port;
+   kill INT => $_->pid for values %synapses_by_port;
 }
 $SIG{INT} = sub { exit 1 };
 
 my @PORTS = 8001 .. 8000+$NUMBER;
 my @f;
 foreach my $port ( @PORTS ) {
-   my $proc = $hs_procs_by_port{$port} = start_hs( $port );
-   my $stderr = $proc->stderr;
+   my $synapse = $synapses_by_port{$port} = SyTest::Synapse->new(
+      synapse_dir => "../synapse",
+      port        => $port,
+   );
+   $loop->add( $synapse );
 
    push @f, Future->wait_any(
-      $stderr
-         ->read_until( qr/INFO - Synapse now listening on port $port\s*$/ )
-         ->on_done( sub {
-            $stderr->configure(
-               on_read => sub {
-                  my ( $stream, $bufref, $eof ) = @_;
-                  while( $$bufref =~ s/^(.*)\n// ) {
-                     print STDERR "\e[1;35m[server $port]\e[m: $1\n" if $SERVER_LOG;
-                  }
-                  return 0;
-               }
-            );
-         })
+      $synapse->started_future
          ->on_done_diag( "Synapse on port $port now listening" ),
 
       $loop->delay_future( after => 10 )
@@ -158,7 +136,7 @@ Future->needs_all(
          ->on_done_diag( "Registered user u-$port" )
          ->then( sub { $matrix->start } )
          ->on_done_diag( "Started event stream for u-$port" )
-   } keys %hs_procs_by_port
+   } @PORTS
 )->get;
 
 # Each user could do with a displayname
