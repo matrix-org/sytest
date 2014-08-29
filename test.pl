@@ -190,6 +190,18 @@ is_deeply( \%members_by_port,
      } @PORTS },
    '%members_by_port after all other clients ->join_room' );
 
+wait_for {
+   $NUMBER == keys %presence_by_port and
+      all { $NUMBER == keys %$_ } values %presence_by_port;
+};
+is_deeply( \%presence_by_port,
+   # Each user should now see everyone's presence as online
+   { map {
+      my $port = $_;
+      $port => { map {; "\@u-$_:localhost:$_" => "online" } @PORTS }
+     } @PORTS },
+   '%presence_by_port after ->join_room' );
+
 sub flush
 {
    diag( "Waiting 3 seconds for messages to flush" );
@@ -202,5 +214,15 @@ diag( "Setting ${\$first_client->myself->displayname} away" );
 
 $first_client->set_presence( unavailable => "Gone testin'" )->get;
 flush();
+
+is_deeply( \%presence_by_port,
+   # Each user should now see first port's presence as unavailable
+   { map {
+      my $port = $_;
+      $port => { map {;
+         "\@u-$_:localhost:$_" => ( $_ == $FIRST_PORT ) ? "unavailable" : "online"
+      } @PORTS }
+     } @PORTS },
+   '%presence_by_port after ->join_room' );
 
 done_testing;
