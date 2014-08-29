@@ -4,9 +4,10 @@ use strict;
 use warnings;
 use 5.010;
 
+use lib 'lib';
+
 use Future;
 use IO::Async::Loop;
-use IO::Async::Process;
 use Net::Async::Matrix;
 
 use Test::More;
@@ -15,6 +16,8 @@ use IO::Async::Test;
 use Data::Dump qw( pp );
 use Getopt::Long;
 use List::Util qw( all );
+
+use SyTest::Synapse;
 
 GetOptions(
    'N|number=i'    => \(my $NUMBER = 2),
@@ -63,26 +66,9 @@ sub start_hs
 {
    my ( $port ) = @_;
 
-   my $db = "homeserver-localhost-$port.db";
-   my $db_rel = "../synapse/$db";
-   unlink $db_rel if -f $db_rel;
-
-   my $process = IO::Async::Process->new(
-      setup => [
-         chdir => "../synapse",
-      ],
-      stderr => {
-         via => "pipe_read",
-         on_read => sub { 0 }, # we'll read with Futures initially
-      },
-      command => [ "python", "synapse/app/homeserver.py",
-         "--host" => "localhost:$port",
-         "--port" => $port,
-         "--database" => $db,
-      ],
-      on_finish => sub {
-         say $_[0]->pid . " stopped";
-      },
+   my $process = SyTest::Synapse->new(
+      synapse_dir => "../synapse",
+      port        => $port,
    );
 
    $loop->add( $process );
