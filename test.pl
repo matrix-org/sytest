@@ -166,6 +166,7 @@ diag( "Created $room_alias" );
 diag( "Now all users should be in the room" );
 
 my %roommembers_by_port;  # {$port}{$user_id} = $membership
+my %roommessages_by_port; # {$port} = \@messages
 
 sub on_room_member
 {
@@ -181,8 +182,20 @@ sub on_room_member
 foreach my $port ( keys %rooms_by_port ) {
    my $room = $rooms_by_port{$port};
 
+   $roommessages_by_port{$port} = [];
+
    $room->configure(
       on_member => sub { on_room_member( $port, @_ ) },
+      on_message => sub {
+         my ( $room, $member, $content ) = @_;
+         print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" sends message $content->{msgtype}\n);
+
+         # Timestamps are icky to test. Delete them
+         delete $content->{hsob_ts};
+         delete $content->{hsib_ts};
+
+         push @{ $roommessages_by_port{$port} }, $content;
+      },
    );
 
    # Fetch initial members
@@ -237,5 +250,21 @@ is_deeply( \%presence_by_port,
       } @PORTS }
      } @PORTS },
    '%presence_by_port after ->join_room' );
+
+$rooms_by_port{$FIRST_PORT}->send_message( "Here is a message" )->get;
+
+wait_for {
+   all { scalar @{ $roommessages_by_port{$_} } } @PORTS
+};
+is_deeply(
+   # Each user should now see the message
+   { map {
+      my $port = $_;
+      $port => [
+         { msgtype => "m.text", body => "Here is a message" }
+      ]
+   } @PORTS },
+   \%roommessages_by_port,
+   '%roommessages_by_port' );
 
 done_testing;
