@@ -94,7 +94,6 @@ Future->needs_all( @f )->get;
 
 my %clients_by_port;  # {$port} = $matrix
 my %presence_by_port; # {$port}{$user_id} = $presence
-my %members_by_port;  # {$port}{$user_id} = $membership
 
 Future->needs_all(
    map {
@@ -120,16 +119,6 @@ Future->needs_all(
             my ( $matrix, $user, %changes ) = @_;
             $presence_by_port{$port}{$user->user_id} = $user->presence;
             print qq(\e[1;36m[$port]\e[m >> "${\$user->displayname}" presence state ${\$user->presence}\n);
-         },
-
-         on_room_member => sub {
-            my ( $room, $member, %changes ) = @_;
-            $members_by_port{$port}{$member->user_id} = $member->membership;
-
-            $changes{membership} and
-               print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" membership state ${\$member->membership}\n);
-            $changes{presence} and
-               print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" presence state ${\$member->presence}\n);
          },
       );
 
@@ -158,33 +147,56 @@ is_deeply( \%presence_by_port,
 
 # Now use one of the clients to create a room and the rest to join it
 my ( $first_client, @remaining_clients ) = @clients_by_port{@PORTS};
-my ( $FIRST_PORT ) = @PORTS;
+my ( $FIRST_PORT, @REMAINING_PORTS ) = @PORTS;
 
 my $ROOM = "test-room";
 
-my ( undef, $room_alias ) = $first_client->create_room( $ROOM )
+my %rooms_by_port;        # {$port} = $room
+( $rooms_by_port{$FIRST_PORT}, my $room_alias ) = $first_client->create_room( $ROOM )
    ->get;
 diag( "Created $room_alias" );
 
-wait_for { keys %members_by_port };
-is_deeply( \%members_by_port,
-   { $FIRST_PORT => { "\@u-$FIRST_PORT:localhost:$FIRST_PORT" => "join" } },
-   '%members_by_port after first client ->create_room' );
-
-Future->needs_all(
+@rooms_by_port{@REMAINING_PORTS} = Future->needs_all(
    map {
-      $_->join_room( $room_alias )
+      $clients_by_port{$_}->join_room( $room_alias )
          ->on_done_diag( "Joined $room_alias" )
-   } @remaining_clients
+   } @REMAINING_PORTS
 )->get;
 
 diag( "Now all users should be in the room" );
 
+my %roommembers_by_port;  # {$port}{$user_id} = $membership
+
+sub on_room_member
+{
+   my ( $port, $room, $member, %changes ) = @_;
+   $roommembers_by_port{$port}{$member->user_id} = $member->membership;
+
+   $changes{membership} and
+      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" membership state ${\$member->membership}\n);
+   $changes{presence} and
+      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" presence state ${\$member->presence}\n);
+}
+
+foreach my $port ( keys %rooms_by_port ) {
+   my $room = $rooms_by_port{$port};
+
+   $room->configure(
+      on_member => sub { on_room_member( $port, @_ ) },
+   );
+
+   # Fetch initial members
+   foreach my $member ( $room->members ) {
+      my %changes = map { $_ => [ undef, $member->$_ ] } qw( membership presence );
+      on_room_member( $port, $room, $member, %changes );
+   }
+}
+
 wait_for {
-   $NUMBER == keys %members_by_port and
-      all { $NUMBER == keys %$_ } values %members_by_port;
+   $NUMBER == keys %roommembers_by_port and
+      all { $NUMBER == keys %$_ } values %roommembers_by_port;
 };
-is_deeply( \%members_by_port,
+is_deeply( \%roommembers_by_port,
    { map {
       my $port = $_;
       $port => { map {; "\@u-$_:localhost:$_" => "join" } @PORTS }
