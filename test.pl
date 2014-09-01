@@ -15,6 +15,7 @@ use IO::Async::Test;
 
 use Data::Dump qw( pp );
 use Getopt::Long;
+use IO::Socket::SSL;
 use List::Util qw( all );
 use POSIX qw( strftime );
 
@@ -66,7 +67,8 @@ sub Future::on_done_diag {
 my %synapses_by_port;
 END {
    print STDERR "Killing synapse servers...\n" if %synapses_by_port;
-   kill INT => $_->pid for values %synapses_by_port;
+   print STDERR "[${\$_->pid}] " and kill INT => $_->pid for values %synapses_by_port;
+   print STDERR "\n";
 }
 $SIG{INT} = sub { exit 1 };
 
@@ -102,16 +104,25 @@ Future->needs_all(
 
       my $matrix = $clients_by_port{$port} = Net::Async::Matrix->new(
          server => "localhost:$port",
+         SSL    => 1,
+         SSL_verify_mode => SSL_VERIFY_NONE,
+         SSL_cipher_list => "", # IO::Socket::SSL's default list is too strict
+
          path_prefix => "_matrix/client/api/v1",
 
          on_error => sub {
             my ( $self, $failure, $name, @args ) = @_;
 
-            die $failure unless $name eq "http";
+            die $failure unless $name and $name eq "http";
             my ( $response, $request ) = @args;
 
             print STDERR "Received from " . $request->uri . "\n";
-            print STDERR "  $_\n" for split m/\n/, $response->as_string;
+            if( defined $response ) {
+               print STDERR "  $_\n" for split m/\n/, $response->as_string;
+            }
+            else {
+               print STDERR "No response\n";
+            }
 
             die $failure;
          },
