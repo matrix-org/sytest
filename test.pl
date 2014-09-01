@@ -16,6 +16,7 @@ use IO::Async::Test;
 use Data::Dump qw( pp );
 use Getopt::Long;
 use List::Util qw( all );
+use POSIX qw( strftime );
 
 use SyTest::Synapse;
 
@@ -173,10 +174,14 @@ sub on_room_member
    my ( $port, $room, $member, %changes ) = @_;
    $roommembers_by_port{$port}{$member->user_id} = $member->membership;
 
+   no warnings 'uninitialized';
+
    $changes{membership} and
-      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" membership state ${\$member->membership}\n);
+      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" membership state ${\$member->membership} (was $changes{membership}[0])\n);
    $changes{presence} and
-      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" presence state ${\$member->presence}\n);
+      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" presence state ${\$member->presence} (was $changes{presence}[0])\n);
+   $changes{last_active} and
+      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" was last active at ${\strftime "%Y/%m/%d %H:%M:%S", localtime $member->last_active}\n);
 }
 
 foreach my $port ( keys %rooms_by_port ) {
@@ -266,5 +271,7 @@ is_deeply(
    } @PORTS },
    \%roommessages_by_port,
    '%roommessages_by_port' );
+
+flush();
 
 done_testing;
