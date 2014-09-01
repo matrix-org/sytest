@@ -93,7 +93,7 @@ Future->needs_all( @f )->get;
 # Now lets create some users. 1 user per HS for now
 
 my %clients_by_port;  # {$port} = $matrix
-my %presence_by_port; # {$port}{$user_id} = $state
+my %presence_by_port; # {$port}{$user_id} = $presence
 my %members_by_port;  # {$port}{$user_id} = $membership
 
 Future->needs_all(
@@ -102,6 +102,7 @@ Future->needs_all(
 
       my $matrix = $clients_by_port{$port} = Net::Async::Matrix->new(
          server => "localhost:$port",
+         path_prefix => "_matrix/client/api/v1",
 
          on_error => sub {
             my ( $self, $failure, $name, @args ) = @_;
@@ -117,8 +118,8 @@ Future->needs_all(
 
          on_presence => sub {
             my ( $matrix, $user, %changes ) = @_;
-            $presence_by_port{$port}{$user->user_id} = $user->state;
-            print qq(\e[1;36m[$port]\e[m >> "${\$user->displayname}" presence state ${\$user->state}\n);
+            $presence_by_port{$port}{$user->user_id} = $user->presence;
+            print qq(\e[1;36m[$port]\e[m >> "${\$user->displayname}" presence state ${\$user->presence}\n);
          },
 
          on_room_member => sub {
@@ -127,8 +128,8 @@ Future->needs_all(
 
             $changes{membership} and
                print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" membership state ${\$member->membership}\n);
-            $changes{state} and
-               print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" presence state ${\$member->state}\n);
+            $changes{presence} and
+               print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" presence state ${\$member->presence}\n);
          },
       );
 
