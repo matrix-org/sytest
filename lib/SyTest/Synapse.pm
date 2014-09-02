@@ -45,6 +45,8 @@ sub _add_to_loop
          "--bind-port"   => $port,
          "--database"    => $db,
 
+         "--unsecure-port" => 0,
+
          # TLS parameters
          "--tls-dh-params-path" => "$CWD/keys/tls.dh",
    );
