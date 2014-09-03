@@ -143,7 +143,9 @@ Future->needs_all(
          on_presence => sub {
             my ( $matrix, $user, %changes ) = @_;
             $presence_by_port{$port}{$user->user_id} = $user->presence;
-            print qq(\e[1;36m[$port]\e[m >> "${\$user->displayname}" presence state ${\$user->presence}\n);
+
+            $changes{presence} and
+               print qq(\e[1;36m[$port]\e[m >> "${\$user->displayname}" presence state now ${\$user->presence}\n);
          },
       );
 
