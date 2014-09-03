@@ -32,26 +32,26 @@ if( $CLIENT_LOG ) {
    require Class::Method::Modifiers;
 
    Class::Method::Modifiers::install_modifier( "Net::Async::HTTP",
-      after => prepare_request => sub {
-         my ( $self, $request ) = @_;
+      around => _do_request => sub {
+         my ( $orig, $self, %args ) = @_;
+         my $request = $args{request};
+
          my $request_uri = $request->uri;
-         return if $request_uri->path =~ m{/events$};
+         return $orig->( $self, %args ) if $request_uri->path =~ m{/events$};
 
          print STDERR "\e[1;32mRequesting\e[m:\n";
          print STDERR "  $_\n" for split m/\n/, $request->as_string;
          print STDERR "-- \n";
-      }
-   );
 
-   Class::Method::Modifiers::install_modifier( "Net::Async::HTTP",
-      before => process_response => sub {
-         my ( $self, $response ) = @_;
-         my $request_uri = $response->request->uri;
-         return if $request_uri->path =~ m{/events$};
+         return $orig->( $self, %args )
+            ->on_done( sub {
+               my ( $response ) = @_;
 
-         print STDERR "\e[1;33mResponse\e[m from $request_uri:\n";
-         print STDERR "  $_\n" for split m/\n/, $response->as_string;
-         print STDERR "-- \n";
+               print STDERR "\e[1;33mResponse\e[m from $request_uri:\n";
+               print STDERR "  $_\n" for split m/\n/, $response->as_string;
+               print STDERR "-- \n";
+            }
+         );
       }
    );
 
