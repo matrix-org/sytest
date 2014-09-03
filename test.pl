@@ -198,7 +198,9 @@ my %roommessages_by_port; # {$port} = \@messages
 sub on_room_member
 {
    my ( $port, $room, $member, %changes ) = @_;
-   $roommembers_by_port{$port}{$member->user_id} = $member->membership;
+   my $user = $member->user;
+
+   $roommembers_by_port{$port}{$member->user->user_id} = $member->membership;
 
    no warnings 'uninitialized';
 
@@ -231,7 +233,7 @@ foreach my $port ( keys %rooms_by_port ) {
 
    # Fetch initial members
    foreach my $member ( $room->members ) {
-      my %changes = map { $_ => [ undef, $member->$_ ] } qw( membership presence );
+      my %changes = map { $_ => [ undef, $member->$_ ] } qw( membership );
       on_room_member( $port, $room, $member, %changes );
    }
 }
