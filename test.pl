@@ -45,9 +45,20 @@ if( $CLIENT_LOG ) {
       before => process_response => sub {
          my ( $self, $response ) = @_;
          my $request_uri = $response->request->uri;
+         return if $request_uri->path =~ m{/events$};
 
          print STDERR "\e[1;33mReceived\e[m from $request_uri:\n";
          print STDERR "  $_\n" for split m/\n/, $response->as_string;
+         print STDERR "-- \n";
+      }
+   );
+
+   Class::Method::Modifiers::install_modifier( "Net::Async::Matrix",
+      before => _incoming_event => sub {
+         my ( $self, $event ) = @_;
+
+         print STDERR "\e[1;33mReceived event\e[m:\n";
+         print STDERR "  $_\n" for split m/\n/, pp( $event );
          print STDERR "-- \n";
       }
    );
