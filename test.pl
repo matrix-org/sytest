@@ -204,9 +204,9 @@ sub on_room_member
    $changes{membership} and
       print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" membership state ${\$member->membership} (was $changes{membership}[0])\n);
    $changes{presence} and
-      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" presence state ${\$member->presence} (was $changes{presence}[0])\n);
+      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" presence state ${\$user->presence} (was $changes{presence}[0])\n);
    $changes{last_active} and
-      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" was last active at ${\strftime "%Y/%m/%d %H:%M:%S", localtime $member->last_active}\n);
+      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" was last active at ${\strftime "%Y/%m/%d %H:%M:%S", localtime $user->last_active}\n);
 }
 
 foreach my $port ( keys %rooms_by_port ) {
