@@ -119,9 +119,6 @@ Future->needs_all(
          server => "localhost:$port",
          SSL    => 1,
          SSL_verify_mode => SSL_VERIFY_NONE,
-         SSL_cipher_list => "", # IO::Socket::SSL's default list is too strict
-
-         path_prefix => "_matrix/client/api/v1",
 
          on_error => sub {
             my ( $self, $failure, $name, @args ) = @_;
