@@ -215,7 +215,8 @@ foreach my $port ( keys %rooms_by_port ) {
    $roommessages_by_port{$port} = [];
 
    $room->configure(
-      on_member => sub { on_room_member( $port, @_ ) },
+      on_membership => sub { on_room_member( $port, @_ ) },
+      on_presence   => sub { on_room_member( $port, @_ ) },
       on_message => sub {
          my ( $room, $member, $content ) = @_;
          print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" sends message $content->{msgtype}\n);
