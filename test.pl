@@ -8,7 +8,7 @@ use lib 'lib';
 
 use Future;
 use IO::Async::Loop;
-use Net::Async::Matrix;
+use Net::Async::Matrix 0.07;
 
 use Test::More;
 use IO::Async::Test;
@@ -147,7 +147,7 @@ Future->needs_all(
       );
 
       $loop->add( $matrix );
-      $matrix->register( "u-$port" )
+      $matrix->register( user_id => "u-$port", password => "f00b4r" )
          ->on_done_diag( "Registered user u-$port" )
          ->then( sub { $matrix->start } )
          ->on_done_diag( "Started event stream for u-$port" )
@@ -215,8 +215,16 @@ foreach my $port ( keys %rooms_by_port ) {
    $roommessages_by_port{$port} = [];
 
    $room->configure(
-      on_membership => sub { on_room_member( $port, @_ ) },
-      on_presence   => sub { on_room_member( $port, @_ ) },
+      on_membership => sub {
+         my $room = shift;
+         my $member = shift; shift; # event
+         on_room_member( $port, $room, $member, @_ );
+      },
+      on_presence   => sub {
+         my $room = shift;
+         my $member = shift;
+         on_room_member( $port, $room, $member, @_ );
+      },
       on_message => sub {
          my ( $room, $member, $content ) = @_;
          print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" sends message $content->{msgtype}\n);
