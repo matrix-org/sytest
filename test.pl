@@ -69,6 +69,33 @@ if( $CLIENT_LOG ) {
 my $loop = IO::Async::Loop->new;
 testing_loop( $loop );
 
+my @tests;
+
+use File::Basename qw( basename );
+use File::Find;
+find({
+   no_chdir => 1,
+   wanted => sub {
+      return unless basename( $_ ) =~ m/^\d+.*\.pl$/;
+      print "Loading $_\n";
+
+      no warnings 'once';
+      local *test = sub {
+         my ( $name, %parts ) = @_;
+         push @tests, TestCase->new(
+            name => $name,
+            file => $_,
+            %parts,
+         );
+      };
+
+      # This is hideous
+      do $File::Find::name or
+         die $@ || "Cannot 'do $_' - $!";
+   }},
+   "tests"
+);
+
 # Terribly useful
 sub Future::on_done_diag {
    my ( $self, $message ) = @_;
@@ -115,8 +142,9 @@ Future->needs_all(
    map {
       my $port = $_;
 
-      my $matrix = $clients_by_port{$port} = Net::Async::Matrix->new(
-         server => "localhost:$port",
+      my $matrix = $clients_by_port{$port} = MatrixClient->new(
+         server => "localhost",
+         port   => $port,
          SSL    => 1,
          SSL_verify_mode => SSL_VERIFY_NONE,
 
@@ -154,14 +182,20 @@ Future->needs_all(
    } @PORTS
 )->get;
 
-# Each user could do with a displayname
-Future->needs_all(
-   map {
-      my $port = $_;
-      $clients_by_port{$port}->set_displayname( "User on $port" )
-         ->on_done_diag( "Set User $port displayname" )
-   } keys %clients_by_port
-)->get;
+## NOW RUN THE TESTS
+foreach my $test ( @tests ) {
+   print "\e[36mTesting if: ${\$test->name} (${\$test->file})\e[m... ";
+   if( eval { $test->run; 1 } ) {
+      print "\e[32mPASS\e[m\n";
+   }
+   else {
+      my $e = $@; chomp $e;
+      print "\e[1;31mFAIL\e[m:\n";
+      print " | $_\n" for split m/\n/, $e;
+      print " +----------------------\n";
+      # TODO: work out what else to skip
+   }
+}
 
 wait_for { $NUMBER == keys %presence_by_port };
 is_deeply( \%presence_by_port,
@@ -311,3 +345,57 @@ is_deeply(
 flush();
 
 done_testing;
+
+package TestCase {
+   sub new { my $class = shift; bless { @_ }, $class }
+
+   sub name { shift->{name} }
+   sub file { shift->{file} }
+
+   sub run
+   {
+      my $self = shift;
+
+      my @clients = @clients_by_port{@PORTS};
+
+      my $check = $self->{check};
+
+      if( my $do = $self->{do} ) {
+         if( $check ) {
+            eval { $check->( \@clients )->get } and
+               warn "Warning: ${\$self->name} was already passing before we did anything\n";
+         }
+
+         $do->( \@clients )->get;
+      }
+
+      if( $check ) {
+         $check->( \@clients )->get or
+            die "Test check function failed to return a true value";
+      }
+
+      return 1;
+   }
+}
+
+package MatrixClient {
+   # A silly subclass that remembers what port number it lives on
+   use base qw( Net::Async::Matrix );
+
+   sub new
+   {
+      my $class = shift;
+      my %params = @_;
+
+      my $port = delete $params{port};
+      $params{server} = "$params{server}:$port";
+
+      my $self = $class->SUPER::new( %params );
+
+      $self->{port} = $port;
+
+      return $self;
+   }
+
+   sub port { shift->{port} }
+}
