@@ -8,7 +8,6 @@ use lib 'lib';
 
 use Future;
 use IO::Async::Loop;
-use Net::Async::Matrix 0.07;
 
 use Test::More;
 use IO::Async::Test;
@@ -20,6 +19,7 @@ use List::Util qw( all );
 use POSIX qw( strftime );
 
 use SyTest::Synapse;
+use SyTest::MatrixClient;
 
 GetOptions(
    'N|number=i'    => \(my $NUMBER = 2),
@@ -142,7 +142,7 @@ Future->needs_all(
    map {
       my $port = $_;
 
-      my $matrix = $clients_by_port{$port} = MatrixClient->new(
+      my $matrix = $clients_by_port{$port} = SyTest::MatrixClient->new(
          server => "localhost",
          port   => $port,
          SSL    => 1,
@@ -376,26 +376,4 @@ package TestCase {
 
       return 1;
    }
-}
-
-package MatrixClient {
-   # A silly subclass that remembers what port number it lives on
-   use base qw( Net::Async::Matrix );
-
-   sub new
-   {
-      my $class = shift;
-      my %params = @_;
-
-      my $port = delete $params{port};
-      $params{server} = "$params{server}:$port";
-
-      my $self = $class->SUPER::new( %params );
-
-      $self->{port} = $port;
-
-      return $self;
-   }
-
-   sub port { shift->{port} }
 }
