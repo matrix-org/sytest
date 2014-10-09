@@ -217,8 +217,8 @@ foreach my $port ( keys %rooms_by_port ) {
    $room->configure(
       on_membership => sub {
          my $room = shift;
-         my $member = shift; shift; # event
-         on_room_member( $port, $room, $member, @_ );
+         my ( $member, $event, $subject_member, %changes ) = @_;
+         on_room_member( $port, $room, $subject_member, %changes );
       },
       on_presence   => sub {
          my $room = shift;
@@ -237,7 +237,9 @@ foreach my $port ( keys %rooms_by_port ) {
       },
    );
 
-   # Fetch initial members
+   # Fetch initial members after sync
+   $room->initial_sync->get;
+
    foreach my $member ( $room->members ) {
       my %changes = map { $_ => [ undef, $member->$_ ] } qw( membership );
       on_room_member( $port, $room, $member, %changes );
