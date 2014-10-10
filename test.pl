@@ -219,65 +219,6 @@ TEST: foreach my $test ( @tests ) {
    }
 }
 
-# Now use one of the clients to create a room and the rest to join it
-my ( $first_client, @remaining_clients ) = @clients_by_port{@PORTS};
-my ( $FIRST_PORT, @REMAINING_PORTS ) = @PORTS;
-
-my %rooms_by_port;
-$rooms_by_port{$PORTS[$_]} = $test_environment{rooms}[$_] for 0 .. $#PORTS;
-
-my %roommembers_by_port;  # {$port}{$user_id} = $membership
-
-sub on_room_member
-{
-   my ( $port, $room, $member, %changes ) = @_;
-   my $user = $member->user;
-
-   $roommembers_by_port{$port}{$member->user->user_id} = $member->membership;
-
-   no warnings 'uninitialized';
-
-   $changes{membership} and
-      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" membership state ${\$member->membership} (was $changes{membership}[0])\n);
-   $changes{presence} and
-      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" presence state ${\$user->presence} (was $changes{presence}[0])\n);
-   $changes{last_active} and
-      print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" was last active at ${\strftime "%Y/%m/%d %H:%M:%S", localtime $user->last_active}\n);
-}
-
-foreach my $port ( keys %rooms_by_port ) {
-   my $room = $rooms_by_port{$port};
-
-   $room->configure(
-      on_membership => sub {
-         my $room = shift;
-         my ( $member, $event, $subject_member, %changes ) = @_;
-         on_room_member( $port, $room, $subject_member, %changes );
-      },
-      on_presence   => sub {
-         my $room = shift;
-         my $member = shift;
-         on_room_member( $port, $room, $member, @_ );
-      },
-   );
-
-   # Fetch initial members after sync
-   $room->initial_sync->get;
-
-   foreach my $member ( $room->members ) {
-      my %changes = map { $_ => [ undef, $member->$_ ] } qw( membership );
-      on_room_member( $port, $room, $member, %changes );
-   }
-}
-
-sub flush
-{
-   diag( "Waiting 3 seconds for messages to flush" );
-   $loop->delay_future( after => 3 )->get;
-}
-
-done_testing;
-
 package TestCase {
    sub new { my $class = shift; bless { @_ }, $class }
 
