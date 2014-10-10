@@ -15,5 +15,4 @@ test "Users see their own initial presence",
             return Future->fail( "Presence for $port can see too much" );
       }
       return Future->done(1);
-   },
-;
+   };

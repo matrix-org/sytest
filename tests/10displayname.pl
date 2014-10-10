@@ -27,5 +27,4 @@ test "Users can set their displayname",
             })
          } @$CLIENTS
       )->then_done( 1 );
-   },
-;
+   };

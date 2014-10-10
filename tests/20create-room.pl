@@ -14,8 +14,7 @@ test "A room can be created",
          });
    },
 
-   provides => [qw( first_room room_alias )],
-;
+   provides => [qw( first_room room_alias )];
 
 test "Other clients can join the room",
    requires => [qw( clients first_room room_alias )],
@@ -38,8 +37,7 @@ test "Other clients can join the room",
          });
    },
 
-   provides => [qw( rooms )],
-;
+   provides => [qw( rooms )];
 
 test "All clients see all room members initially",
    requires => [qw( clients rooms )],
@@ -63,8 +61,7 @@ test "All clients see all room members initially",
       }
 
       Future->done(1);
-   },
-;
+   };
 
 test "All clients see presence state of all room members",
    requires => [qw( clients rooms )],
@@ -83,5 +80,4 @@ test "All clients see presence state of all room members",
       }
 
       Future->done(1);
-   },
-;
+   };
