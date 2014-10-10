@@ -276,24 +276,6 @@ sub flush
    $loop->delay_future( after => 3 )->get;
 }
 
-flush();
-
-diag( "Setting ${\$first_client->myself->displayname} away" );
-
-$first_client->set_presence( unavailable => "Gone testin'" )->get;
-flush();
-
-is_deeply(
-   # Each user should now see first port's presence as unavailable
-   { map { $_ => $clients_by_port{$_}->cached_presence } @PORTS },
-   { map {
-      my $port = $_;
-      $port => { map {;
-         "\@u-$_:localhost:$_" => ( $_ == $FIRST_PORT ) ? "unavailable" : "online"
-      } @PORTS }
-     } @PORTS },
-   'cached_presence after ->join_room' );
-
 done_testing;
 
 package TestCase {
