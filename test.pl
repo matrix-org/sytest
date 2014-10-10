@@ -75,6 +75,7 @@ use File::Basename qw( basename );
 use File::Find;
 find({
    no_chdir => 1,
+   preprocess => sub { sort @_ },
    wanted => sub {
       return unless basename( $_ ) =~ m/^\d+.*\.pl$/;
       print "Loading $_\n";
