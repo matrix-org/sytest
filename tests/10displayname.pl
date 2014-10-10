@@ -1,4 +1,6 @@
 test "Users can set their displayname",
+   requires => [qw( clients )],
+
    do => sub {
       my ( $CLIENTS ) = @_;
 

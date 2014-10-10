@@ -1,5 +1,7 @@
 # Each user should initially only see their own presence state
 test "Users see their own initial presence",
+   requires => [qw( clients )],
+
    wait_time => 10,
    check => sub {
       my ( $CLIENTS ) = @_;

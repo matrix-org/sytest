@@ -174,12 +174,25 @@ Future->needs_all(
    } @PORTS
 )->get;
 
-my @clients = @clients_by_port{@PORTS};
+# Some tests create objects as a side-effect that later tests will depend on,
+# such as clients, users, rooms, etc... These are called the Environment
+my %test_environment;
+
+# For now, declare the clients as env
+$test_environment{clients} = [ @clients_by_port{@PORTS} ];
 
 ## NOW RUN THE TESTS
-foreach my $test ( @tests ) {
+TEST: foreach my $test ( @tests ) {
+   my @params;
+   foreach my $req ( $test->requires ) {
+      push @params, $test_environment{$req} and next if $test_environment{$req};
+
+      print "\e[1;33mSKIP\e[m ${\$test->name} (${\$test->file}) due to lack of $req\n";
+      next TEST;
+   }
+
    print "\e[36mTesting if: ${\$test->name} (${\$test->file})\e[m... ";
-   if( eval { $test->run( \@clients ); 1 } ) {
+   if( eval { $test->run( @params ); 1 } ) {
       print "\e[32mPASS\e[m\n";
    }
    else {
@@ -341,6 +354,8 @@ package TestCase {
 
    sub name { shift->{name} }
    sub file { shift->{file} }
+
+   sub requires { @{ shift->{requires} || [] } }
 
    sub run
    {
