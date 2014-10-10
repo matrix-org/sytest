@@ -227,7 +227,6 @@ my %rooms_by_port;
 $rooms_by_port{$PORTS[$_]} = $test_environment{rooms}[$_] for 0 .. $#PORTS;
 
 my %roommembers_by_port;  # {$port}{$user_id} = $membership
-my %roommessages_by_port; # {$port} = \@messages
 
 sub on_room_member
 {
@@ -249,8 +248,6 @@ sub on_room_member
 foreach my $port ( keys %rooms_by_port ) {
    my $room = $rooms_by_port{$port};
 
-   $roommessages_by_port{$port} = [];
-
    $room->configure(
       on_membership => sub {
          my $room = shift;
@@ -261,16 +258,6 @@ foreach my $port ( keys %rooms_by_port ) {
          my $room = shift;
          my $member = shift;
          on_room_member( $port, $room, $member, @_ );
-      },
-      on_message => sub {
-         my ( $room, $member, $content ) = @_;
-         print qq(\e[1;36m[$port]\e[m >> "${\$member->displayname}" in "${\$room->room_id}" sends message $content->{msgtype}\n);
-
-         # Timestamps are icky to test. Delete them
-         delete $content->{hsob_ts};
-         delete $content->{hsib_ts};
-
-         push @{ $roommessages_by_port{$port} }, $content;
       },
    );
 
@@ -306,24 +293,6 @@ is_deeply(
       } @PORTS }
      } @PORTS },
    'cached_presence after ->join_room' );
-
-$rooms_by_port{$FIRST_PORT}->send_message( "Here is a message" )->get;
-
-wait_for {
-   all { scalar @{ $roommessages_by_port{$_} } } @PORTS
-};
-is_deeply(
-   # Each user should now see the message
-   { map {
-      my $port = $_;
-      $port => [
-         { msgtype => "m.text", body => "Here is a message" }
-      ]
-   } @PORTS },
-   \%roommessages_by_port,
-   '%roommessages_by_port' );
-
-flush();
 
 done_testing;
 
