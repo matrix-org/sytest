@@ -283,30 +283,6 @@ foreach my $port ( keys %rooms_by_port ) {
    }
 }
 
-wait_for {
-   $NUMBER == keys %roommembers_by_port and
-      all { $NUMBER == keys %$_ } values %roommembers_by_port;
-};
-is_deeply( \%roommembers_by_port,
-   { map {
-      my $port = $_;
-      $port => { map {; "\@u-$_:localhost:$_" => "join" } @PORTS }
-     } @PORTS },
-   '%members_by_port after all other clients ->join_room' );
-
-wait_for {
-   all { $NUMBER == keys %{ $clients_by_port{$_}->cached_presence } } @PORTS;
-};
-is_deeply(
-   # Each user should now see everyone's presence as online
-   { map { $_ => $clients_by_port{$_}->cached_presence } @PORTS },
-   { map {
-      my $port = $_;
-      $port => { map {; "\@u-$_:localhost:$_" => "online" } @PORTS }
-     } @PORTS },
-   'cached_presence after ->join_room'
-);
-
 sub flush
 {
    diag( "Waiting 3 seconds for messages to flush" );
