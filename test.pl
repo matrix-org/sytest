@@ -136,7 +136,6 @@ Future->needs_all( @f )->get;
 # Now lets create some users. 1 user per HS for now
 
 my %clients_by_port;  # {$port} = $matrix
-my %presence_by_port; # {$port}{$user_id} = $presence
 
 Future->needs_all(
    map {
@@ -164,14 +163,6 @@ Future->needs_all(
 
             die $failure;
          },
-
-         on_presence => sub {
-            my ( $matrix, $user, %changes ) = @_;
-            $presence_by_port{$port}{$user->user_id} = $user->presence;
-
-            $changes{presence} and
-               print qq(\e[1;36m[$port]\e[m >> "${\$user->displayname}" presence state now ${\$user->presence}\n);
-         },
       );
 
       $loop->add( $matrix );
@@ -197,11 +188,17 @@ foreach my $test ( @tests ) {
    }
 }
 
-wait_for { $NUMBER == keys %presence_by_port };
-is_deeply( \%presence_by_port,
+wait_for {
+   $NUMBER == grep {
+      defined $clients_by_port{$_}->cached_presence( "\@u-$_:localhost:$_" )
+   } @PORTS
+};
+is_deeply(
+   { map { $_ => $clients_by_port{$_}->cached_presence } @PORTS },
    # Each user should initially only see their own presence state
    { map { $_ => { "\@u-$_:localhost:$_" => "online" } } @PORTS },
-   '%presence_by_port after *->set_displayname' );
+   'cached_presence after *->set_displayname'
+);
 
 # Now use one of the clients to create a room and the rest to join it
 my ( $first_client, @remaining_clients ) = @clients_by_port{@PORTS};
@@ -292,16 +289,17 @@ is_deeply( \%roommembers_by_port,
    '%members_by_port after all other clients ->join_room' );
 
 wait_for {
-   $NUMBER == keys %presence_by_port and
-      all { $NUMBER == keys %$_ } values %presence_by_port;
+   all { $NUMBER == keys %{ $clients_by_port{$_}->cached_presence } } @PORTS;
 };
-is_deeply( \%presence_by_port,
+is_deeply(
    # Each user should now see everyone's presence as online
+   { map { $_ => $clients_by_port{$_}->cached_presence } @PORTS },
    { map {
       my $port = $_;
       $port => { map {; "\@u-$_:localhost:$_" => "online" } @PORTS }
      } @PORTS },
-   '%presence_by_port after ->join_room' );
+   'cached_presence after ->join_room'
+);
 
 sub flush
 {
@@ -316,15 +314,16 @@ diag( "Setting ${\$first_client->myself->displayname} away" );
 $first_client->set_presence( unavailable => "Gone testin'" )->get;
 flush();
 
-is_deeply( \%presence_by_port,
+is_deeply(
    # Each user should now see first port's presence as unavailable
+   { map { $_ => $clients_by_port{$_}->cached_presence } @PORTS },
    { map {
       my $port = $_;
       $port => { map {;
          "\@u-$_:localhost:$_" => ( $_ == $FIRST_PORT ) ? "unavailable" : "online"
       } @PORTS }
      } @PORTS },
-   '%presence_by_port after ->join_room' );
+   'cached_presence after ->join_room' );
 
 $rooms_by_port{$FIRST_PORT}->send_message( "Here is a message" )->get;
 
