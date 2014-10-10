@@ -1,20 +1,20 @@
 test "Users can set their displayname",
-   requires => [qw( clients )],
+   requires => [qw( users )],
 
    do => sub {
-      my ( $CLIENTS ) = @_;
+      my ( $USERS ) = @_;
 
       Future->needs_all(
          map {
             my $port = $_->port;
 
             $_->set_displayname( "User on port $port" )
-         } @$CLIENTS
+         } @$USERS
       );
    },
 
    check => sub {
-      my ( $CLIENTS ) = @_;
+      my ( $USERS ) = @_;
 
       Future->needs_all(
          map {
@@ -25,6 +25,6 @@ test "Users can set their displayname",
                $name eq "User on port $port" ? Future->done
                   : Future->fail( "User port $port does not have expected name" );
             })
-         } @$CLIENTS
+         } @$USERS
       )->then_done( 1 );
    };

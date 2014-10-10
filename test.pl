@@ -148,15 +148,11 @@ foreach my $port ( @PORTS ) {
 
 Future->needs_all( @f )->get;
 
-# Now lets create some users. 1 user per HS for now
-
-my %clients_by_port;  # {$port} = $matrix
-
-Future->needs_all(
+my @clients = Future->needs_all(
    map {
       my $port = $_;
 
-      my $matrix = $clients_by_port{$port} = SyTest::MatrixClient->new(
+      my $matrix = SyTest::MatrixClient->new(
          server => "localhost",
          port   => $port,
          SSL    => 1,
@@ -181,15 +177,12 @@ Future->needs_all(
       );
 
       $loop->add( $matrix );
-      $matrix->register( user_id => "u-$port", password => "f00b4r" )
-         ->on_done_diag( "Registered user u-$port" )
-         ->then( sub { $matrix->start } )
-         ->on_done_diag( "Started event stream for u-$port" )
+
+      Future->done( $matrix );
    } @PORTS
 )->get;
 
-# For now, declare the clients as env
-$test_environment{clients} = [ @clients_by_port{@PORTS} ];
+$test_environment{clients} = \@clients;
 
 ## NOW RUN THE TESTS
 TEST: foreach my $test ( @tests ) {

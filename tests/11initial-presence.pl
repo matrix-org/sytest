@@ -1,11 +1,11 @@
 # Each user should initially only see their own presence state
 test "Users see their own initial presence",
-   requires => [qw( clients )],
+   requires => [qw( users )],
 
    wait_time => 10,
    check => sub {
-      my ( $CLIENTS ) = @_;
-      foreach ( @$CLIENTS ) {
+      my ( $USERS ) = @_;
+      foreach ( @$USERS ) {
          my $port = $_->port;
 
          $_->cached_presence( "\@u-$port:localhost:$port" ) eq "online" or
