@@ -174,10 +174,12 @@ Future->needs_all(
    } @PORTS
 )->get;
 
+my @clients = @clients_by_port{@PORTS};
+
 ## NOW RUN THE TESTS
 foreach my $test ( @tests ) {
    print "\e[36mTesting if: ${\$test->name} (${\$test->file})\e[m... ";
-   if( eval { $test->run; 1 } ) {
+   if( eval { $test->run( \@clients ); 1 } ) {
       print "\e[32mPASS\e[m\n";
    }
    else {
@@ -343,25 +345,24 @@ package TestCase {
    sub run
    {
       my $self = shift;
-
-      my @clients = @clients_by_port{@PORTS};
+      my ( @params ) = @_;
 
       my $check = $self->{check};
 
       if( my $do = $self->{do} ) {
          if( $check ) {
-            eval { $check->( \@clients )->get } and
+            eval { $check->( @params )->get } and
                warn "Warning: ${\$self->name} was already passing before we did anything\n";
          }
 
-         $do->( \@clients )->get;
+         $do->( @params )->get;
       }
 
       if( $check ) {
          my $attempts = $self->{wait_time} // 0;
          do {
             eval {
-               $check->( \@clients )->get or
+               $check->( @params )->get or
                   die "Test check function failed to return a true value"
             } and return 1;
             die "$@" unless $attempts;
