@@ -52,4 +52,48 @@ sub cached_presence
       : { %{ $self->{presence_cache} } };
 }
 
+# TODO: NaMatrix really ought to make a way to allow this sort of subclassing
+sub _make_room
+{
+   my $self = shift;
+
+   my $old_new = Net::Async::Matrix::Room->can( 'new' );
+   local *Net::Async::Matrix::Room::new = sub {
+      if( $_[0] eq "Net::Async::Matrix::Room" ) {
+         shift;
+         return SyTest::MatrixClient::Room->new( @_ );
+      }
+      else {
+         return $old_new->( @_ );
+      }
+   };
+
+   return $self->SUPER::_make_room( @_ );
+}
+
+package SyTest::MatrixClient::Room {
+   use base qw( Net::Async::Matrix::Room );
+
+   sub _init
+   {
+      my $self = shift;
+      my ( $params ) = @_;
+
+      $self->{messages} = \my @messages;
+
+      $params->{on_message} = sub {
+         my ( $self, $member, $content ) = @_;
+         push @messages, [ $member, $content ];
+      };
+
+      $self->SUPER::_init( $params );
+   }
+
+   sub last_message
+   {
+      my $self = shift;
+      return $self->{messages}[-1];
+   }
+}
+
 1;
