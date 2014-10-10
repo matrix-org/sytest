@@ -9,7 +9,6 @@ test "Users can set their displayname",
             my $port = $_->port;
 
             $_->set_displayname( "User on port $port" )
-               ->on_done_diag( "Set User $port displayname" )
          } @$CLIENTS
       );
    },
