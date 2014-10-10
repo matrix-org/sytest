@@ -6,6 +6,8 @@ use 5.010;
 
 use lib 'lib';
 
+use Carp;
+
 use Future;
 use IO::Async::Loop;
 
@@ -70,6 +72,18 @@ my $loop = IO::Async::Loop->new;
 testing_loop( $loop );
 
 my @tests;
+
+# Some tests create objects as a side-effect that later tests will depend on,
+# such as clients, users, rooms, etc... These are called the Environment
+my %test_environment;
+sub provide
+{
+   my ( $name, $value ) = @_;
+   exists $test_environment{$name} and
+      carp "Overwriting existing test environment key '$name'";
+
+   $test_environment{$name} = $value;
+}
 
 use File::Basename qw( basename );
 use File::Find;
@@ -174,10 +188,6 @@ Future->needs_all(
    } @PORTS
 )->get;
 
-# Some tests create objects as a side-effect that later tests will depend on,
-# such as clients, users, rooms, etc... These are called the Environment
-my %test_environment;
-
 # For now, declare the clients as env
 $test_environment{clients} = [ @clients_by_port{@PORTS} ];
 
@@ -200,7 +210,12 @@ TEST: foreach my $test ( @tests ) {
       print "\e[1;31mFAIL\e[m:\n";
       print " | $_\n" for split m/\n/, $e;
       print " +----------------------\n";
-      # TODO: work out what else to skip
+   }
+
+   foreach my $req ( $test->provides ) {
+      exists $test_environment{$req} and next;
+
+      print "\e[1;31mWARN\e[m: Test failed to provide the '$req' environment as promised\n";
    }
 }
 
@@ -208,21 +223,8 @@ TEST: foreach my $test ( @tests ) {
 my ( $first_client, @remaining_clients ) = @clients_by_port{@PORTS};
 my ( $FIRST_PORT, @REMAINING_PORTS ) = @PORTS;
 
-my $ROOM = "test-room";
-
-my %rooms_by_port;        # {$port} = $room
-( $rooms_by_port{$FIRST_PORT}, my $room_alias ) = $first_client->create_room( $ROOM )
-   ->get;
-diag( "Created $room_alias" );
-
-@rooms_by_port{@REMAINING_PORTS} = Future->needs_all(
-   map {
-      $clients_by_port{$_}->join_room( $room_alias )
-         ->on_done_diag( "Joined $room_alias" )
-   } @REMAINING_PORTS
-)->get;
-
-diag( "Now all users should be in the room" );
+my %rooms_by_port;
+$rooms_by_port{$PORTS[$_]} = $test_environment{rooms}[$_] for 0 .. $#PORTS;
 
 my %roommembers_by_port;  # {$port}{$user_id} = $membership
 my %roommessages_by_port; # {$port} = \@messages
@@ -356,6 +358,7 @@ package TestCase {
    sub file { shift->{file} }
 
    sub requires { @{ shift->{requires} || [] } }
+   sub provides { @{ shift->{provides} || [] } }
 
    sub run
    {
