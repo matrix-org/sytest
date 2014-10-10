@@ -188,18 +188,6 @@ foreach my $test ( @tests ) {
    }
 }
 
-wait_for {
-   $NUMBER == grep {
-      defined $clients_by_port{$_}->cached_presence( "\@u-$_:localhost:$_" )
-   } @PORTS
-};
-is_deeply(
-   { map { $_ => $clients_by_port{$_}->cached_presence } @PORTS },
-   # Each user should initially only see their own presence state
-   { map { $_ => { "\@u-$_:localhost:$_" => "online" } } @PORTS },
-   'cached_presence after *->set_displayname'
-);
-
 # Now use one of the clients to create a room and the rest to join it
 my ( $first_client, @remaining_clients ) = @clients_by_port{@PORTS};
 my ( $FIRST_PORT, @REMAINING_PORTS ) = @PORTS;
@@ -369,8 +357,18 @@ package TestCase {
       }
 
       if( $check ) {
-         $check->( \@clients )->get or
-            die "Test check function failed to return a true value";
+         my $attempts = $self->{wait_time} // 0;
+         do {
+            eval {
+               $check->( \@clients )->get or
+                  die "Test check function failed to return a true value"
+            } and return 1;
+            die "$@" unless $attempts;
+
+            print "wait...\n";
+            $loop->delay_future( after => 1 )->get;
+            $attempts--;
+         } while(1);
       }
 
       return 1;
