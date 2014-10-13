@@ -35,5 +35,6 @@ test "Users see their own initial presence",
          keys %{ $_->cached_presence } > 1 and
             return Future->fail( "Presence for $port can see too much" );
       }
-      return Future->done(1);
+
+      1;
    };

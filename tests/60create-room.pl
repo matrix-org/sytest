@@ -60,7 +60,7 @@ test "All clients see all room members initially",
             for @user_ids;
       }
 
-      Future->done(1);
+      1;
    };
 
 test "All clients see presence state of all room members",
@@ -79,5 +79,5 @@ test "All clients see presence state of all room members",
          }
       }
 
-      Future->done(1);
+      1;
    };

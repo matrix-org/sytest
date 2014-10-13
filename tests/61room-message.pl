@@ -20,7 +20,7 @@ test "A user can send a message to a room",
          return Future->fail( "Message content body is incorrect" );
 
       provide room_message => 1;
-      Future->done(1);
+      1;
    },
 
    provides => [qw( room_message )];
@@ -43,5 +43,5 @@ test "Other users can see messages sent to a room",
             return Future->fail( "Message content body is incorrect" );
       }
 
-      Future->done(1);
+      1;
    },

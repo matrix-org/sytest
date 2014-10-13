@@ -19,5 +19,5 @@ test "User presence changes are announced to a room",
             return Future->fail( "Incorrect presence for $user_id" );
       }
 
-      Future->done(1);
+      1;
    };

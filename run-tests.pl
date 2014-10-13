@@ -166,18 +166,18 @@ sub _test
    my $success = eval {
       if( my $do = $params{do} ) {
          if( $check ) {
-            eval { $check->( @reqs )->get } and
+            eval { Future->wrap( $check->( @reqs ) )->get } and
                warn "Warning: $name was already passing before we did anything\n";
          }
 
-         $do->( @reqs )->get;
+         Future->wrap( $do->( @reqs ) )->get;
       }
 
       if( $check ) {
          my $attempts = $params{wait_time} // 0;
          do {
             eval {
-               $check->( @reqs )->get or
+               Future->wrap( $check->( @reqs ) )->get or
                   die "Test check function failed to return a true value"
             } and return 1; # returns from the containing outer eval
 
