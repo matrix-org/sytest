@@ -48,6 +48,14 @@ sub do_request_json
    $self->do_request( %params )->then( sub {
       my ( $response ) = @_;
 
+      unless( $response->code == 200 ) {
+         my $message = $response->message;
+         $message =~ s/\r?\n?$//; # because HTTP::Response doesn't do this
+
+         return Future->fail( "HTTP Request failed (${\$response->code} $message)",
+            http => $response, $response->request );
+      }
+
       my $content = decode_json $response->content;
       Future->done( $content, $response );
    });
