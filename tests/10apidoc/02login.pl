@@ -1,18 +1,18 @@
-test "GET /register yields a set of flows",
+test "GET /login yields a set of flows",
    requires => [qw( first_http_client )],
 
    check => sub {
       my ( $http ) = @_;
 
       $http->do_request_json(
-         uri => "/register",
+         uri => "/login",
       )->then( sub {
          my ( $body ) = @_;
 
          ref $body eq "HASH" or die "Expected JSON object\n";
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list\n";
 
-         my $has_register_flow;
+         my $has_login_flow;
 
          foreach my $idx ( 0 .. $#{ $body->{flows} } ) {
             my $flow = $body->{flows}[$idx];
@@ -23,33 +23,31 @@ test "GET /register yields a set of flows",
             ref $flow->{stages} eq "ARRAY" or defined $flow->{type} or
                die "Expected flow[$idx] to have 'stages' as a list or a 'type'\n";
 
-            $has_register_flow++ if $flow->{type} eq "m.login.password" or
+            $has_login_flow++ if $flow->{type} eq "m.login.password" or
                @{ $flow->{stages} } == 1 && $flows->{stages}[0] eq "m.login.password"
          }
 
-         $has_register_flow and
-            provide can_register_password_flow => 1;
+         $has_login_flow and
+            provide can_login_password_flow => 1;
 
          Future->done(1);
       });
    };
 
-# Doesn't matter what this is, but later tests will use it.
-my $password = "s3kr1t";
-
-test "POST /register can create a user",
-   requires => [qw( first_http_client can_register_password_flow )],
+test "POST /login can log in as a user",
+   requires => [qw( first_http_client can_register can_login_password_flow )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $http, $login_details ) = @_;
+      my ( $user_id, $password ) = @$login_details;
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/register",
+         uri    => "/login",
 
          content => {
             type     => "m.login.password",
-            user     => "01register-user",
+            user     => $user_id,
             password => $password,
          },
       )->then( sub {
@@ -57,11 +55,11 @@ test "POST /register can create a user",
 
          ref $body eq "HASH" or die "Expected JSON object\n";
 
-         defined $body->{$_} or die "Expected '$_'\n"
-            for qw( user_id access_token );
+         defined $body->{access_token} or die "Expected 'access_token' in ${\pp $body}\n";
 
-         provide can_register => [ $body->{user_id}, $password ];
+         provide can_login => [ $user_id, $body->{access_token} ];
+         proivde access_token => $body->{access_token};
 
-         Future->done( 1 );
+         Future->done(1);
       });
    };
