@@ -11,9 +11,6 @@ use Carp;
 use Future;
 use IO::Async::Loop;
 
-use Test::More;
-use IO::Async::Test;
-
 use Data::Dump qw( pp );
 use Getopt::Long;
 use IO::Socket::SSL;
@@ -69,7 +66,6 @@ if( $CLIENT_LOG ) {
 }
 
 my $loop = IO::Async::Loop->new;
-testing_loop( $loop );
 
 my @tests;
 
@@ -111,12 +107,6 @@ find({
    "tests"
 );
 
-# Terribly useful
-sub Future::on_done_diag {
-   my ( $self, $message ) = @_;
-   $self->on_done( sub { diag( $message ) } );
-}
-
 # Start up 3 homeservers
 
 my %synapses_by_port;
@@ -138,8 +128,7 @@ foreach my $port ( @PORTS ) {
    $loop->add( $synapse );
 
    push @f, Future->wait_any(
-      $synapse->started_future
-         ->on_done_diag( "Synapse on port $port now listening" ),
+      $synapse->started_future,
 
       $loop->delay_future( after => 10 )
          ->then_fail( "Synapse server on port $port failed to start" ),
