@@ -158,19 +158,21 @@ sub provide
    $test_environment{$name} = $value;
 }
 
-sub _test
+my $failed;
+
+sub test
 {
-   my ( $filename, $name, %params ) = @_;
+   my ( $name, %params ) = @_;
 
    my @reqs;
    foreach my $req ( @{ $params{requires} || [] } ) {
       push @reqs, $test_environment{$req} and next if $test_environment{$req};
 
-      print "\e[1;33mSKIP\e[m $name ($filename) due to lack of $req\n";
+      print "  \e[1;33mSKIP\e[m $name due to lack of $req\n";
       return;
    }
 
-   print "\e[36mTesting if: $name ($filename)\e[m... ";
+   print "  \e[36mTesting if: $name\e[m... ";
 
    my $check = $params{check};
 
@@ -210,6 +212,7 @@ sub _test
       print "\e[1;31mFAIL\e[m:\n";
       print " | $_\n" for split m/\n/, $e;
       print " +----------------------\n";
+      $failed++;
    }
 
    foreach my $req ( @{ $params{provides} || [] } ) {
@@ -218,10 +221,8 @@ sub _test
       print "\e[1;31mWARN\e[m: Test failed to provide the '$req' environment as promised\n";
    }
 
-   return $success;
+   return 1; # ensure the 'do' sees a true value
 }
-
-my $failed;
 
 walkdir(
    sub {
@@ -229,11 +230,7 @@ walkdir(
 
       return unless basename( $filename ) =~ m/^\d+.*\.pl$/;
 
-      no warnings 'once';
-      local *test = sub {
-         _test( $filename, @_ ) or $failed++;
-         1; # return true so the final 'test' in the file makes 'do' see a true value
-      };
+      print "\e[1;36mRunning $filename...\e[m\n";
 
       # This is hideous
       do $filename or die $@ || "Cannot 'do $_' - $!";
