@@ -183,7 +183,6 @@ sub _test
 
             die "$@" unless $attempts;
 
-            print "wait...\n";
             $loop->delay_future( after => 1 )->get;
             $attempts--;
          } while(1);
