@@ -55,7 +55,7 @@ test "POST /login can log in as a user",
 
          ref $body eq "HASH" or die "Expected JSON object\n";
 
-         defined $body->{access_token} or die "Expected 'access_token' in ${\pp $body}\n";
+         defined $body->{access_token} or die "Expected 'access_token'\n";
 
          provide can_login => [ $user_id, $body->{access_token} ];
          proivde access_token => $body->{access_token};
