@@ -8,7 +8,7 @@ use warnings;
 
 use base qw( Net::Async::HTTP );
 
-use JSON qw( decode_json );
+use JSON qw( encode_json decode_json );
 
 sub configure
 {
@@ -38,7 +38,14 @@ sub do_request
 sub do_request_json
 {
    my $self = shift;
-   $self->do_request( @_ )->then( sub {
+   my %params = @_;
+
+   if( defined( my $content = $params{content} ) ) {
+      $params{content} = encode_json $content;
+      $params{content_type} //= "text/json";
+   }
+
+   $self->do_request( %params )->then( sub {
       my ( $response ) = @_;
 
       my $content = decode_json $response->content;
