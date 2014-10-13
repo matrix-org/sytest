@@ -12,6 +12,8 @@ use Future;
 use IO::Async::Loop;
 
 use Data::Dump qw( pp );
+use File::Basename qw( basename );
+use File::Find;
 use Getopt::Long;
 use IO::Socket::SSL;
 use List::Util qw( all );
@@ -66,46 +68,6 @@ if( $CLIENT_LOG ) {
 }
 
 my $loop = IO::Async::Loop->new;
-
-my @tests;
-
-# Some tests create objects as a side-effect that later tests will depend on,
-# such as clients, users, rooms, etc... These are called the Environment
-my %test_environment;
-sub provide
-{
-   my ( $name, $value ) = @_;
-   exists $test_environment{$name} and
-      carp "Overwriting existing test environment key '$name'";
-
-   $test_environment{$name} = $value;
-}
-
-use File::Basename qw( basename );
-use File::Find;
-find({
-   no_chdir => 1,
-   preprocess => sub { sort @_ },
-   wanted => sub {
-      return unless basename( $_ ) =~ m/^\d+.*\.pl$/;
-      print "Loading $_\n";
-
-      no warnings 'once';
-      local *test = sub {
-         my ( $name, %parts ) = @_;
-         push @tests, TestCase->new(
-            name => $name,
-            file => $_,
-            %parts,
-         );
-      };
-
-      # This is hideous
-      do $File::Find::name or
-         die $@ || "Cannot 'do $_' - $!";
-   }},
-   "tests"
-);
 
 # Start up 3 homeservers
 
@@ -171,20 +133,66 @@ my @clients = Future->needs_all(
    } @PORTS
 )->get;
 
+# Some tests create objects as a side-effect that later tests will depend on,
+# such as clients, users, rooms, etc... These are called the Environment
+my %test_environment;
 $test_environment{clients} = \@clients;
 
-## NOW RUN THE TESTS
-TEST: foreach my $test ( @tests ) {
-   my @params;
-   foreach my $req ( $test->requires ) {
-      push @params, $test_environment{$req} and next if $test_environment{$req};
+sub provide
+{
+   my ( $name, $value ) = @_;
+   exists $test_environment{$name} and
+      carp "Overwriting existing test environment key '$name'";
 
-      print "\e[1;33mSKIP\e[m ${\$test->name} (${\$test->file}) due to lack of $req\n";
-      next TEST;
+   $test_environment{$name} = $value;
+}
+
+sub _test
+{
+   my ( $filename, $name, %params ) = @_;
+
+   my @reqs;
+   foreach my $req ( @{ $params{requires} || [] } ) {
+      push @reqs, $test_environment{$req} and next if $test_environment{$req};
+
+      print "\e[1;33mSKIP\e[m $name ($filename) due to lack of $req\n";
+      return;
    }
 
-   print "\e[36mTesting if: ${\$test->name} (${\$test->file})\e[m... ";
-   if( eval { $test->run( @params ); 1 } ) {
+   print "\e[36mTesting if: $name ($filename)\e[m... ";
+
+   my $check = $params{check};
+
+   my $success = eval {
+      if( my $do = $params{do} ) {
+         if( $check ) {
+            eval { $check->( @reqs )->get } and
+               warn "Warning: $name was already passing before we did anything\n";
+         }
+
+         $do->( @reqs )->get;
+      }
+
+      if( $check ) {
+         my $attempts = $params{wait_time} // 0;
+         do {
+            eval {
+               $check->( @reqs )->get or
+                  die "Test check function failed to return a true value"
+            } and return 1; # returns from the containing outer eval
+
+            die "$@" unless $attempts;
+
+            print "wait...\n";
+            $loop->delay_future( after => 1 )->get;
+            $attempts--;
+         } while(1);
+      }
+
+      1;
+   };
+
+   if( $success ) {
       print "\e[32mPASS\e[m\n";
    }
    else {
@@ -194,53 +202,30 @@ TEST: foreach my $test ( @tests ) {
       print " +----------------------\n";
    }
 
-   foreach my $req ( $test->provides ) {
+   foreach my $req ( @{ $params{provides} || [] } ) {
       exists $test_environment{$req} and next;
 
       print "\e[1;31mWARN\e[m: Test failed to provide the '$req' environment as promised\n";
    }
 }
 
-package TestCase {
-   sub new { my $class = shift; bless { @_ }, $class }
+find({
+   no_chdir => 1,
+   preprocess => sub { sort @_ },
+   wanted => sub {
+      my $filename = $_;
 
-   sub name { shift->{name} }
-   sub file { shift->{file} }
+      return unless basename( $filename ) =~ m/^\d+.*\.pl$/;
 
-   sub requires { @{ shift->{requires} || [] } }
-   sub provides { @{ shift->{provides} || [] } }
+      no warnings 'once';
+      local *test = sub {
+         _test( $filename, @_ );
+         1; # return true so the final 'test' in the file makes 'do' see a true value
+      };
 
-   sub run
-   {
-      my $self = shift;
-      my ( @params ) = @_;
-
-      my $check = $self->{check};
-
-      if( my $do = $self->{do} ) {
-         if( $check ) {
-            eval { $check->( @params )->get } and
-               warn "Warning: ${\$self->name} was already passing before we did anything\n";
-         }
-
-         $do->( @params )->get;
-      }
-
-      if( $check ) {
-         my $attempts = $self->{wait_time} // 0;
-         do {
-            eval {
-               $check->( @params )->get or
-                  die "Test check function failed to return a true value"
-            } and return 1;
-            die "$@" unless $attempts;
-
-            print "wait...\n";
-            $loop->delay_future( after => 1 )->get;
-            $attempts--;
-         } while(1);
-      }
-
-      return 1;
-   }
-}
+      # This is hideous
+      do $File::Find::name or
+         die $@ || "Cannot 'do $_' - $!";
+   }},
+   "tests"
+);
