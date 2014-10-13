@@ -145,6 +145,7 @@ $test_environment{http_clients} = [ map {
    $loop->add( $client );
    $client;
 } @PORTS ];
+$test_environment{first_http_client} = $test_environment{http_clients}->[0];
 
 $test_environment{clients} = \@clients;
 

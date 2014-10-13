@@ -1,9 +1,8 @@
 test "GET /register yields a set of flows",
-   requires => [qw( http_clients )],
+   requires => [qw( first_http_client )],
 
    check => sub {
-      my ( $HTTP ) = @_;
-      my $http = $HTTP->[0];
+      my ( $http ) = @_;
 
       $http->do_request_json(
          uri => "/register",
