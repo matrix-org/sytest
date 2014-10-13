@@ -23,9 +23,6 @@ sub new
       on_presence => sub {
          my ( $self, $user, %changes ) = @_;
          $presence{$user->user_id} = $user->presence;
-
-         $changes{presence} and
-            print qq(\e[1;36m[$port]\e[m >> "${\$user->displayname}" presence state now ${\$user->presence}\n);
       },
    );
 
