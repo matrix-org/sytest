@@ -19,6 +19,7 @@ use List::Util qw( all );
 use POSIX qw( strftime );
 
 use SyTest::Synapse;
+use SyTest::HTTPClient;
 use SyTest::MatrixClient;
 
 GetOptions(
@@ -135,6 +136,16 @@ my @clients = Future->needs_all(
 # Some tests create objects as a side-effect that later tests will depend on,
 # such as clients, users, rooms, etc... These are called the Environment
 my %test_environment;
+
+$test_environment{http_clients} = [ map {
+   my $port = $_;
+   my $client = SyTest::HTTPClient->new(
+      uri_base => "https://localhost:$port/_matrix/client/api/v1",
+   );
+   $loop->add( $client );
+   $client;
+} @PORTS ];
+
 $test_environment{clients} = \@clients;
 
 sub provide
