@@ -13,7 +13,6 @@ use IO::Async::Loop;
 
 use Data::Dump qw( pp );
 use File::Basename qw( basename );
-use File::Find;
 use Getopt::Long;
 use IO::Socket::SSL;
 use List::Util qw( all );
@@ -212,11 +211,9 @@ sub _test
 
 my $failed;
 
-find({
-   no_chdir => 1,
-   preprocess => sub { sort @_ },
-   wanted => sub {
-      my $filename = $_;
+walkdir(
+   sub {
+      my ( $filename ) = @_;
 
       return unless basename( $filename ) =~ m/^\d+.*\.pl$/;
 
@@ -227,9 +224,8 @@ find({
       };
 
       # This is hideous
-      do $File::Find::name or
-         die $@ || "Cannot 'do $_' - $!";
-   }},
+      do $filename or die $@ || "Cannot 'do $_' - $!";
+   },
    "tests"
 );
 
@@ -240,4 +236,27 @@ if( $failed ) {
 else {
    print STDERR "\n\e[1;32mAll tests PASSED\e[m\n";
    exit 0;
+}
+
+# Can't use File::Find because of the fact it always sorts directories after
+# nondirectories, even if you give a sort function
+#   https://rt.perl.org/Public/Bug/Display.html?id=122968
+sub walkdir
+{
+   my ( $code, $path ) = @_;
+
+   my @ents = do {
+      opendir my $dirh, $path or die "Cannot opendir $path - $!";
+      readdir $dirh;
+   };
+
+   foreach my $ent ( sort grep { not m/^\./ } @ents ) {
+      my $subpath = "$path/$ent";
+      if ( -d $subpath ) {
+         walkdir( $code, $subpath );
+      }
+      else {
+         $code->( $subpath );
+      }
+   }
 }
