@@ -207,7 +207,11 @@ sub _test
 
       print "\e[1;31mWARN\e[m: Test failed to provide the '$req' environment as promised\n";
    }
+
+   return $success;
 }
+
+my $failed;
 
 find({
    no_chdir => 1,
@@ -219,7 +223,7 @@ find({
 
       no warnings 'once';
       local *test = sub {
-         _test( $filename, @_ );
+         _test( $filename, @_ ) or $failed++;
          1; # return true so the final 'test' in the file makes 'do' see a true value
       };
 
@@ -229,3 +233,12 @@ find({
    }},
    "tests"
 );
+
+if( $failed ) {
+   print STDERR "\n\e[1;31m$failed tests FAILED\e[m\n";
+   exit 1;
+}
+else {
+   print STDERR "\n\e[1;32mAll tests PASSED\e[m\n";
+   exit 0;
+}
