@@ -58,7 +58,7 @@ test "POST /login can log in as a user",
          defined $body->{access_token} or die "Expected 'access_token'\n";
 
          provide can_login => [ $user_id, $body->{access_token} ];
-         proivde access_token => $body->{access_token};
+         provide access_token => $body->{access_token};
 
          Future->done(1);
       });
