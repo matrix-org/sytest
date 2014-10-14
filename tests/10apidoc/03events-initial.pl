@@ -1,4 +1,4 @@
-test "GET /events initially empty",
+test "GET /events initially",
    requires => [qw( first_http_client access_token )],
 
    check => sub {
