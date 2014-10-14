@@ -7,6 +7,7 @@ use warnings;
 # encoding/decoding wrapper methods
 
 use base qw( Net::Async::HTTP );
+Net::Async::HTTP->VERSION( '0.36' ); # PUT content bugfix
 
 use JSON qw( encode_json decode_json );
 
@@ -27,12 +28,16 @@ sub do_request
    my $self = shift;
    my %params = @_;
 
-   $params{uri} = URI->new( $self->{uri_base} . $params{uri} );
+   my $uri = URI->new( $self->{uri_base} . $params{uri} );
+   $uri->query_form( %{ $params{params} } ) if $params{params};
 
    # Also set verify_mode = 0 to not complain about self-signed SSL certs
    $params{SSL_verify_mode} = 0;
 
-   $self->SUPER::do_request( %params );
+   $self->SUPER::do_request(
+      %params,
+      uri => $uri,
+   );
 }
 
 sub do_request_json
