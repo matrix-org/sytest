@@ -26,6 +26,8 @@ GetOptions(
    'N|number=i'    => \(my $NUMBER = 2),
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \my $SERVER_LOG,
+
+   's|stop-on-fail+' => \my $STOP_ON_FAIL,
 ) or exit 1;
 
 if( $CLIENT_LOG ) {
@@ -221,22 +223,27 @@ sub test
       print "\e[1;31mWARN\e[m: Test failed to provide the '$req' environment as promised\n";
    }
 
+   no warnings 'exiting';
+   last TEST if $STOP_ON_FAIL and not $success;
+
    return 1; # ensure the 'do' sees a true value
 }
 
-walkdir(
-   sub {
-      my ( $filename ) = @_;
+TEST: {
+   walkdir(
+      sub {
+         my ( $filename ) = @_;
 
-      return unless basename( $filename ) =~ m/^\d+.*\.pl$/;
+         return unless basename( $filename ) =~ m/^\d+.*\.pl$/;
 
-      print "\e[1;36mRunning $filename...\e[m\n";
+         print "\e[1;36mRunning $filename...\e[m\n";
 
-      # This is hideous
-      do $filename or die $@ || "Cannot 'do $_' - $!";
-   },
-   "tests"
-);
+         # This is hideous
+         do $filename or die $@ || "Cannot 'do $_' - $!";
+      },
+      "tests"
+   );
+}
 
 if( $failed ) {
    print STDERR "\n\e[1;31m$failed tests FAILED\e[m\n";
