@@ -1,16 +1,14 @@
 my $displayname = "Testing Displayname";
 
 test "PUT /profile/:user_id/displayname sets my name",
-   requires => [qw( first_http_client can_login )],
+   requires => [qw( do_request_json_authed )],
 
    check => sub {
-      my ( $http, $login ) = @_;
-      my ( $user_id, $access_token ) = @$login;
+      my ( $do_request_json_authed ) = @_;
 
-      $http->do_request_json(
+      $do_request_json_authed->(
          method => "GET",
-         uri    => "/profile/$user_id/displayname",
-         params => { access_token => $access_token },
+         uri    => "/profile/:user_id/displayname",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -27,13 +25,11 @@ test "PUT /profile/:user_id/displayname sets my name",
    },
 
    do => sub {
-      my ( $http, $login ) = @_;
-      my ( $user_id, $access_token ) = @$login;
+      my ( $do_request_json_authed ) = @_;
 
-      $http->do_request_json(
+      $do_request_json_authed->(
          method => "PUT",
-         uri    => "/profile/$user_id/displayname",
-         params => { access_token => $access_token },
+         uri    => "/profile/:user_id/displayname",
 
          content => {
             displayname => $displayname,

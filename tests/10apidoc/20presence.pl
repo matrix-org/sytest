@@ -1,14 +1,12 @@
 test "GET /presence/:user_id/status fetches initial status",
-   requires => [qw( first_http_client can_login )],
+   requires => [qw( do_request_json_authed )],
 
    check => sub {
-      my ( $http, $login ) = @_;
-      my ( $user_id, $access_token ) = @$login;
+      my ( $do_request_json_authed ) = @_;
 
-      $http->do_request_json(
+      $do_request_json_authed->(
          method => "GET",
-         uri    => "/presence/$user_id/status",
-         params => { access_token => $access_token },
+         uri    => "/presence/:user_id/status",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -23,16 +21,14 @@ test "GET /presence/:user_id/status fetches initial status",
 my $status_msg = "Testing something";
 
 test "PUT /presence/:user_id/status updates my presence",
-   requires => [qw( first_http_client can_login )],
+   requires => [qw( do_request_json_authed )],
 
    check => sub {
-      my ( $http, $login ) = @_;
-      my ( $user_id, $access_token ) = @$login;
+      my ( $do_request_json_authed ) = @_;
 
-      $http->do_request_json(
+      $do_request_json_authed->(
          method => "GET",
-         uri    => "/presence/$user_id/status",
-         params => { access_token => $access_token },
+         uri    => "/presence/:user_id/status",
       )->then( sub {
          my ( $body ) = @_;
          Future->done( $body->{status_msg} eq $status_msg );
@@ -40,13 +36,11 @@ test "PUT /presence/:user_id/status updates my presence",
    },
 
    do => sub {
-      my ( $http, $login ) = @_;
-      my ( $user_id, $access_token ) = @$login;
+      my ( $do_request_json_authed ) = @_;
 
-      $http->do_request_json(
+      $do_request_json_authed->(
          method => "PUT",
-         uri    => "/presence/$user_id/status",
-         params => { access_token => $access_token },
+         uri    => "/presence/:user_id/status",
 
          content => {
             presence   => "online",

@@ -57,8 +57,26 @@ test "POST /login can log in as a user",
 
          defined $body->{access_token} or die "Expected 'access_token'\n";
 
-         provide can_login => [ $user_id, $body->{access_token} ];
-         provide access_token => $body->{access_token};
+         my $access_token = $body->{access_token};
+         provide can_login => [ $user_id, $access_token ];
+         provide access_token => $access_token;
+
+         provide do_request_json_authed => sub {
+            my %args = @_;
+
+            ( my $uri = delete $args{uri} ) =~ s/:user_id/$user_id/g;
+
+            my %params = (
+               access_token => $access_token,
+               %{ delete $args{params} || {} },
+            );
+
+            $http->do_request_json(
+               uri    => $uri,
+               params => \%params,
+               %args,
+            );
+         };
 
          Future->done(1);
       });

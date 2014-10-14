@@ -1,13 +1,13 @@
 test "GET /events initially",
-   requires => [qw( first_http_client access_token )],
+   requires => [qw( do_request_json_authed )],
 
    check => sub {
-      my ( $http, $access_token ) = @_;
+      my ( $do_request_json_authed ) = @_;
 
-      $http->do_request_json(
+      $do_request_json_authed->(
          method => "GET",
          uri    => "/events",
-         params => { access_token => $access_token, timeout => 0 },
+         params => { timeout => 0 },
       )->then( sub {
          my ( $body ) = @_;
 
