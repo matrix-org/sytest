@@ -238,8 +238,16 @@ TEST: {
 
          print "\e[1;36mRunning $filename...\e[m\n";
 
-         # This is hideous
-         do $filename or die $@ || "Cannot 'do $_' - $!";
+         # Slurp and eval() the file instead of do() because then lexical
+         # environment such as strict/warnings will still apply
+         my $code = do {
+            open my $fh, "<", $filename or die "Cannot read $filename - $!\n";
+            local $/; <$fh>
+         };
+
+         # Tell eval what the filename is so we get nicer warnings/errors that
+         # give the filename instead of (eval 123)
+         eval( "#line 1 $filename\n" . $code ) or die $@;
       },
       "tests"
    );
