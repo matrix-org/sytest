@@ -16,7 +16,6 @@ use File::Basename qw( basename );
 use Getopt::Long;
 use IO::Socket::SSL;
 use List::Util qw( all );
-use POSIX qw( strftime );
 
 use SyTest::Synapse;
 use SyTest::HTTPClient;
