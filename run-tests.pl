@@ -185,9 +185,7 @@ sub test
                warn "Warning: $name was already passing before we did anything\n";
          }
 
-         my @also = $params{prepare} ? $params{prepare}->( @reqs )->get : ();
-
-         Future->wrap( $do->( @reqs, @also ) )->get;
+         Future->wrap( $do->( @reqs ) )->get;
       }
 
       if( $check ) {
