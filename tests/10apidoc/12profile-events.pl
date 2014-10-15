@@ -1,32 +1,30 @@
 my $displayname = "Another name here";
 
 test "GET /events sees profile change",
-   requires => [qw( first_http_client can_login can_set_displayname )],
-
-   prepare => sub {
-      my ( $http, $login ) = @_;
-      my ( undef, $access_token ) = @$login;
-
-      $http->GET_current_event_token( $access_token );
-   },
+   requires => [qw( do_request_json_authed GET_current_event_token can_login can_set_displayname )],
 
    do => sub {
-      my ( $http, $login, undef, $before_event_token ) = @_;
-      my ( $user_id, $access_token ) = @$login;
+      my ( $do_request_json_authed, $GET_current_event_token, $login ) = @_;
+      my ( $user_id ) = @$login;
 
-      $http->do_request_json(
-         method => "PUT",
-         uri    => "/profile/$user_id/displayname",
-         params => { access_token => $access_token },
+      my $before_event_token;
 
-         content => {
-            displayname => $displayname,
-         }
-      )->then( sub {
-         $http->do_request_json(
+      $GET_current_event_token->()->then( sub {
+         ( $before_event_token ) = @_;
+
+         $do_request_json_authed->(
+            method => "PUT",
+            uri    => "/profile/:user_id/displayname",
+
+            content => {
+               displayname => $displayname,
+            }
+         )
+      })->then( sub {
+         $do_request_json_authed->(
             method => "GET",
             uri    => "/events",
-            params => { access_token => $access_token, from => $before_event_token, timeout => 10000 },
+            params => { from => $before_event_token, timeout => 10000 },
          )
       })->then( sub {
          my ( $body ) = @_;

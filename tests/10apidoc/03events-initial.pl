@@ -20,6 +20,17 @@ test "GET /events initially",
          # We can't be absolutely sure that there won't be any events yet, so
          # don't check that.
 
+         provide GET_current_event_token => sub {
+            $do_request_json_authed->(
+               method => "GET",
+               uri    => "/events",
+               params => { from => "END", timeout => 0 },
+            )->then( sub {
+               my ( $body ) = @_;
+               Future->done( $body->{end} );
+            });
+         };
+
          Future->done(1);
       });
    };

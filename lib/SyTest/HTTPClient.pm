@@ -66,20 +66,4 @@ sub do_request_json
    });
 }
 
-# Some Matrix-specific conveniences
-sub GET_current_event_token
-{
-   my $self = shift;
-   my ( $access_token ) = @_;
-
-   $self->do_request_json(
-      method => "GET",
-      uri    => "/events",
-      params => { access_token => $access_token, from => "END", timeout => 0 },
-   )->then( sub {
-      my ( $body ) = @_;
-      Future->done( $body->{end} );
-   });
-}
-
 1;
