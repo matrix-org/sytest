@@ -225,8 +225,6 @@ sub test
 
    no warnings 'exiting';
    last TEST if $STOP_ON_FAIL and not $success;
-
-   return 1; # ensure the 'do' sees a true value
 }
 
 ## Some assertion functions useful by test scripts
@@ -269,7 +267,7 @@ TEST: {
 
          # Tell eval what the filename is so we get nicer warnings/errors that
          # give the filename instead of (eval 123)
-         eval( "#line 1 $filename\n" . $code ) or die $@;
+         eval( "#line 1 $filename\n" . $code . "; 1" ) or die $@;
       },
       "tests"
    );
