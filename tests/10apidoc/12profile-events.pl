@@ -1,11 +1,11 @@
 my $displayname = "Another name here";
 
 test "GET /events sees profile change",
-   requires => [qw( do_request_json_authed GET_current_event_token can_login can_set_displayname )],
+   requires => [qw( do_request_json_authed GET_current_event_token user_id
+                    can_set_displayname )],
 
    do => sub {
-      my ( $do_request_json_authed, $GET_current_event_token, $login ) = @_;
-      my ( $user_id ) = @$login;
+      my ( $do_request_json_authed, $GET_current_event_token, $user_id ) = @_;
 
       my $before_event_token;
 

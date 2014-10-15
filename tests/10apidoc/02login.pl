@@ -57,8 +57,10 @@ test "POST /login can log in as a user",
 
          defined $body->{access_token} or die "Expected 'access_token'\n";
 
+         provide can_login => 1;
+
          my $access_token = $body->{access_token};
-         provide can_login => [ $user_id, $access_token ];
+         provide user_id      => $user_id;
          provide access_token => $access_token;
 
          provide do_request_json_authed => sub {
