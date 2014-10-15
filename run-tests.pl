@@ -227,6 +227,41 @@ sub test
    last TEST if $STOP_ON_FAIL and not $success;
 }
 
+sub prepare
+{
+   my ( $name, %params ) = @_;
+
+   my @reqs;
+   foreach my $req ( @{ $params{requires} || [] } ) {
+      push @reqs, $test_environment{$req} and next if $test_environment{$req};
+
+      print "  \e[1;33mSKIP\e[m '$name' prepararation due to lack of $req\n";
+      return;
+   }
+
+   print "  \e[36mPreparing: $name\e[m... ";
+
+   my $do = $params{do};
+   my $success = eval {
+      $do->( @reqs )->get;
+      1;
+   };
+
+   if( $success ) {
+      print "DONE\n";
+   }
+   else {
+      my $e = $@; chomp $e;
+      print "\e[1;31mFAIL\e[m:\n";
+      print " | $_\n" for split m/\n/, $e;
+      print " +----------------------\n";
+      $failed++;
+   }
+
+    no warnings 'exiting';
+    last TEST if $STOP_ON_FAIL and not $success;
+}
+
 ## Some assertion functions useful by test scripts
 sub json_object_ok
 {
