@@ -278,6 +278,12 @@ sub json_keys_ok
    }
 }
 
+sub json_list_ok
+{
+   my ( $list ) = @_;
+   ref $list eq "ARRAY" or croak "Expected a JSON list";
+}
+
 sub json_number_ok
 {
    my ( $num ) = @_;
