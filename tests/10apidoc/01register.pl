@@ -9,7 +9,7 @@ test "GET /register yields a set of flows",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
+         json_keys_ok( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list\n";
 
          my $has_register_flow;
@@ -55,10 +55,7 @@ test "POST /register can create a user",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
-
-         defined $body->{$_} or die "Expected '$_'\n"
-            for qw( user_id access_token );
+         json_keys_ok( $body, qw( user_id access_token ));
 
          provide can_register => [ $body->{user_id}, $password ];
 

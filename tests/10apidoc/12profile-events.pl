@@ -29,23 +29,23 @@ test "GET /events sees profile change",
       })->then( sub {
          my ( $body ) = @_;
 
+         json_keys_ok( $body, qw( start end chunk ));
          $body->{start} eq $before_event_token or die "Expected 'start' to be before_event_token\n";
 
          my $found_me;
 
          foreach my $event ( @{ $body->{chunk} } ) {
-            defined $event->{type} or die "Expected event to contain 'type' key\n";
+            json_keys_ok( $event, qw( type content ));
             next unless $event->{type} eq "m.presence";
 
-            defined $event->{content} or die "Expected m.presence event to contain 'content' key\n";
             my $content = $event->{content};
+            json_keys_ok( $content, qw( user_id ));
 
-            defined $content->{user_id} or die "Expected m.presence content to contain 'user_id' key\n";
             next unless $content->{user_id} eq $user_id;
 
             $found_me = 1;
 
-            defined $content->{displayname} or die "Expected m.presence to contain 'displayname' key\n";
+            json_keys_ok( $content, qw( displayname ));
             $content->{displayname} eq $displayname or die "Expected displayname to be '$displayname'\n";
          }
 

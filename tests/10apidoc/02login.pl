@@ -9,7 +9,7 @@ test "GET /login yields a set of flows",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
+         json_keys_ok( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list\n";
 
          my $has_login_flow;
@@ -53,9 +53,7 @@ test "POST /login can log in as a user",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
-
-         defined $body->{access_token} or die "Expected 'access_token'\n";
+         json_keys_ok( $body, qw( access_token ));
 
          provide can_login => 1;
 

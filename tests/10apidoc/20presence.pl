@@ -10,9 +10,7 @@ test "GET /presence/:user_id/status fetches initial status",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
-
-         defined $body->{presence} or die "Expected 'presence' key\n";
+         json_keys_ok( $body, qw( presence ));
 
          Future->done(1);
       });

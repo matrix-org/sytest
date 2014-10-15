@@ -12,9 +12,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
-
-         defined $body->{avatar_url} or die "Expected 'avatar_url'\n";
+         json_keys_ok( $body, qw( avatar_url ));
 
          $body->{avatar_url} eq $avatar_url or die "Wrong avatar_url\n";
 
@@ -50,9 +48,7 @@ test "GET /profile/:user_id/avatar_url publicly accessible",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
-
-         defined $body->{avatar_url} or die "Expected 'avatar_url'\n";
+         json_keys_ok( $body, qw( avatar_url ));
 
          $body->{avatar_url} eq $avatar_url or die "Wrong avatar_url\n";
 

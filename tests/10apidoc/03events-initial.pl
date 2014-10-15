@@ -11,10 +11,7 @@ test "GET /events initially",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
-
-         defined $body->{$_} or die "Expected '$_'\n" for qw( start end );
-
+         json_keys_ok( $body, qw( start end chunk ));
          ref $body->{chunk} eq "ARRAY" or die "Expected 'chunk' as a JSON list\n";
 
          # We can't be absolutely sure that there won't be any events yet, so

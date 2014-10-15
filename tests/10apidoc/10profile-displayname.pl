@@ -12,9 +12,7 @@ test "PUT /profile/:user_id/displayname sets my name",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
-
-         defined $body->{displayname} or die "Expected 'displayname'\n";
+         json_keys_ok( $body, qw( displayname ));
 
          $body->{displayname} eq $displayname or die "Wrong displayname\n";
 
@@ -50,9 +48,7 @@ test "GET /profile/:user_id/displayname publicly accessible",
       )->then( sub {
          my ( $body ) = @_;
 
-         ref $body eq "HASH" or die "Expected JSON object\n";
-
-         defined $body->{displayname} or die "Expected 'displayname'\n";
+         json_keys_ok( $body, qw( displayname ));
 
          $body->{displayname} eq $displayname or die "Wrong displayname\n";
 

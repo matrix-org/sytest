@@ -228,6 +228,22 @@ sub test
    return 1; # ensure the 'do' sees a true value
 }
 
+## Some assertion functions useful by test scripts
+sub json_object_ok
+{
+   my ( $obj ) = @_;
+   ref $obj eq "HASH" or croak "Expected a JSON object";
+}
+
+sub json_keys_ok
+{
+   my ( $obj, @keys ) = @_;
+   json_object_ok( $obj );
+   foreach ( @keys ) {
+      defined $obj->{$_} or croak "Expected a '$_' key";
+   }
+}
+
 TEST: {
    walkdir(
       sub {
