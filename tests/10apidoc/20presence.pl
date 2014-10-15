@@ -10,7 +10,9 @@ test "GET /presence/:user_id/status fetches initial status",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( presence ));
+         json_keys_ok( $body, qw( presence last_active_ago ));
+         json_number_ok( $body->{last_active_ago} );
+         $body->{last_active_ago} >= 0 or die "Expected last_active_ago non-negative";
 
          Future->done(1);
       });

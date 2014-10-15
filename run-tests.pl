@@ -16,6 +16,7 @@ use File::Basename qw( basename );
 use Getopt::Long;
 use IO::Socket::SSL;
 use List::Util qw( all );
+use Scalar::Util qw( looks_like_number );
 
 use SyTest::Synapse;
 use SyTest::HTTPClient;
@@ -242,6 +243,12 @@ sub json_keys_ok
    foreach ( @keys ) {
       defined $obj->{$_} or croak "Expected a '$_' key";
    }
+}
+
+sub json_number_ok
+{
+   my ( $num ) = @_;
+   !ref $num and looks_like_number( $num ) or croak "Expected a JSON number";
 }
 
 TEST: {
