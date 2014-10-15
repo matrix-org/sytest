@@ -24,7 +24,7 @@ test "GET /login yields a set of flows",
                die "Expected flow[$idx] to have 'stages' as a list or a 'type'\n";
 
             $has_login_flow++ if $flow->{type} eq "m.login.password" or
-               @{ $flow->{stages} } == 1 && $flows->{stages}[0] eq "m.login.password"
+               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password"
          }
 
          $has_login_flow and

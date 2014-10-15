@@ -74,7 +74,7 @@ test "All clients see presence state of all room members",
 
       foreach my $client ( @$USERS ) {
          foreach my $user_id ( @user_ids ) {
-            $client->cached_presence( $user_id ) eq "online" or
+            ( $client->cached_presence( $user_id ) // "" ) eq "online" or
                return Future->fail( "Client does not have presence for $user_id" );
          }
       }

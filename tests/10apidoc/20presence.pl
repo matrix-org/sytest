@@ -31,7 +31,7 @@ test "PUT /presence/:user_id/status updates my presence",
          uri    => "/presence/:user_id/status",
       )->then( sub {
          my ( $body ) = @_;
-         Future->done( $body->{status_msg} eq $status_msg );
+         Future->done( ( $body->{status_msg} // "" ) eq $status_msg );
       });
    },
 
