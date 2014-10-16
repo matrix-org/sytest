@@ -16,7 +16,6 @@ use File::Basename qw( basename );
 use Getopt::Long;
 use IO::Socket::SSL;
 use List::Util qw( all );
-use Scalar::Util qw( looks_like_number );
 
 use SyTest::Synapse;
 use SyTest::HTTPClient;
@@ -262,32 +261,43 @@ sub prepare
     last TEST if $STOP_ON_FAIL and not $success;
 }
 
-## Some assertion functions useful by test scripts
-sub json_object_ok
-{
-   my ( $obj ) = @_;
-   ref $obj eq "HASH" or croak "Expected a JSON object";
-}
+## Some assertion functions useful by test scripts. Put them in their own
+#    package so that croak will find the correct line number
+package assertions {
+   use Carp;
+   use Scalar::Util qw( looks_like_number );
 
-sub json_keys_ok
-{
-   my ( $obj, @keys ) = @_;
-   json_object_ok( $obj );
-   foreach ( @keys ) {
-      defined $obj->{$_} or croak "Expected a '$_' key";
+   sub json_object_ok
+   {
+      my ( $obj ) = @_;
+      ref $obj eq "HASH" or croak "Expected a JSON object";
+   }
+
+   sub json_keys_ok
+   {
+      my ( $obj, @keys ) = @_;
+      json_object_ok( $obj );
+      foreach ( @keys ) {
+         defined $obj->{$_} or croak "Expected a '$_' key";
+      }
+   }
+
+   sub json_list_ok
+   {
+      my ( $list ) = @_;
+      ref $list eq "ARRAY" or croak "Expected a JSON list";
+   }
+
+   sub json_number_ok
+   {
+      my ( $num ) = @_;
+      !ref $num and looks_like_number( $num ) or croak "Expected a JSON number";
    }
 }
 
-sub json_list_ok
 {
-   my ( $list ) = @_;
-   ref $list eq "ARRAY" or croak "Expected a JSON list";
-}
-
-sub json_number_ok
-{
-   my ( $num ) = @_;
-   !ref $num and looks_like_number( $num ) or croak "Expected a JSON number";
+   no strict 'refs';
+   *$_ = \&{"assertions::$_"} for qw( json_object_ok json_keys_ok json_list_ok json_number_ok );
 }
 
 TEST: {
