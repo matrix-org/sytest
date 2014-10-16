@@ -23,18 +23,6 @@ my $status_msg = "Testing something";
 test "PUT /presence/:user_id/status updates my presence",
    requires => [qw( do_request_json_authed )],
 
-   check => sub {
-      my ( $do_request_json_authed ) = @_;
-
-      $do_request_json_authed->(
-         method => "GET",
-         uri    => "/presence/:user_id/status",
-      )->then( sub {
-         my ( $body ) = @_;
-         Future->done( ( $body->{status_msg} // "" ) eq $status_msg );
-      });
-   },
-
    do => sub {
       my ( $do_request_json_authed ) = @_;
 
@@ -47,4 +35,22 @@ test "PUT /presence/:user_id/status updates my presence",
             status_msg => $status_msg,
          },
       )
+   },
+
+   check => sub {
+      my ( $do_request_json_authed ) = @_;
+
+      $do_request_json_authed->(
+         method => "GET",
+         uri    => "/presence/:user_id/status",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         ( $body->{status_msg} // "" ) eq $status_msg or
+            die "Incorrect status_msg";
+
+         provide can_set_presence => 1;
+
+         Future->done(1);
+      });
    };
