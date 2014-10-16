@@ -59,3 +59,31 @@ test "GET /events initially",
          Future->done(1);
       });
    };
+
+test "GET /initialSync initially",
+   requires => [qw( do_request_json_authed )],
+
+   check => sub {
+      my ( $do_request_json_authed ) = @_;
+
+      $do_request_json_authed->(
+         method => "GET",
+         uri    => "/initialSync",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         json_keys_ok( $body, qw( end ));
+
+         # Spec says these are optional
+         if( exists $body->{rooms} ) {
+            json_list_ok( $body->{rooms} );
+         }
+         if( exists $body->{presence} ) {
+            json_list_ok( $body->{presence} );
+         }
+
+         provide can_initial_sync => 1;
+
+         Future->done(1);
+      });
+   };
