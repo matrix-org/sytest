@@ -53,6 +53,8 @@ test "POST /presence/:user_id/list can invite users",
          json_keys_ok( $body->[0], qw( accepted presence user_id ));
          $body->[0]->{user_id} eq $friend_uid or die "Expected friend user_id\n";
 
+         provide can_invite_presence => 1;
+
          Future->done(1);
       });
    };

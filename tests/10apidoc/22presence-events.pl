@@ -49,7 +49,7 @@ my $friend_status = "Status of a Friend";
 
 test "GET /events sees friend presence change",
    requires => [qw( first_http_client more_users GET_events_after user_id
-                    can_set_presence )],
+                    can_set_presence can_invite_presence )],
 
    do => sub {
       my ( $http, $more_users, $GET_events_after, $user_id ) = @_;
