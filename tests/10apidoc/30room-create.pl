@@ -9,7 +9,9 @@ test "POST /createRoom makes a room",
          uri    => "/createRoom",
 
          content => {
-            visibility => "public",
+            visibility      => "public",
+            # This is just the localpart
+            room_alias_name => "#testing-room",
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -39,9 +41,6 @@ test "POST /createRoom makes a room",
 
 test "GET /publicRooms lists newly-created room",
    requires => [qw( first_http_client room_id can_create_room )],
-
-   # Currently this doesn't work - see SYN-106
-   expect_fail => 1,
 
    check => sub {
       my ( $http, $room_id ) = @_;
@@ -94,6 +93,7 @@ test "GET /initialSync sees my presence in the room",
             $found++;
 
             $room->{membership} eq "join" or die "Expected room membership to be 'join'\n";
+            $room->{visibility} eq "public" or die "Expected room visibility to be 'public'\n";
          }
 
          $found or
