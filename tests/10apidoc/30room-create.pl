@@ -70,3 +70,35 @@ test "GET /publicRooms lists newly-created room",
          Future->done(1);
       })
    };
+
+test "GET /initialSync sees my presence in the room",
+   requires => [qw( do_request_json_authed room_id
+                    can_create_room can_initial_sync )],
+
+   check => sub {
+      my ( $do_request_json_authed, $room_id ) = @_;
+
+      $do_request_json_authed->(
+         method => "GET",
+         uri    => "/initialSync",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         my $found;
+
+         json_list_ok( $body->{rooms} );
+         foreach my $room ( @{ $body->{rooms} } ) {
+            json_keys_ok( $room, qw( room_id membership ));
+
+            next unless $room->{room_id} eq $room_id;
+            $found++;
+
+            $room->{membership} eq "join" or die "Expected room membership to be 'join'\n";
+         }
+
+         $found or
+            die "Failed to find our newly-joined room";
+
+         Future->done(1);
+      });
+   };
