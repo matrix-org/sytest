@@ -304,11 +304,23 @@ package assertions {
       my ( $num ) = @_;
       !ref $num and looks_like_number( $num ) or croak "Expected a JSON number";
    }
+
+   sub json_string_ok
+   {
+      my ( $str ) = @_;
+      !ref $str or croak "Expected a JSON string";
+   }
+
+   sub json_nonempty_string_ok
+   {
+      my ( $str ) = @_;
+      !ref $str and length $str or croak "Expected a non-empty JSON string";
+   }
 }
 
 {
    no strict 'refs';
-   *$_ = \&{"assertions::$_"} for qw( json_object_ok json_keys_ok json_list_ok json_number_ok );
+   *$_ = \&{"assertions::$_"} for grep m/_ok/, keys %{"assertions::"};
 }
 
 TEST: {
