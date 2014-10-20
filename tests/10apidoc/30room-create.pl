@@ -16,7 +16,9 @@ test "POST /createRoom makes a room",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( room_id ));
+         json_keys_ok( $body, qw( room_id room_alias ));
+         json_nonempty_string_ok( $body->{room_id} );
+         json_nonempty_string_ok( $body->{room_alias} );
 
          provide can_create_room => 1;
          provide room_id => $body->{room_id};
