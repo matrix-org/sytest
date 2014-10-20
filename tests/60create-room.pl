@@ -10,14 +10,14 @@ test "A room can be created",
             my ( $room, $alias ) = @_;
 
             provide first_room => $room;
-            provide room_alias => $alias;
+            provide legacy_room_alias => $alias;
          });
    },
 
-   provides => [qw( first_room room_alias )];
+   provides => [qw( first_room legacy_room_alias )];
 
 test "Other clients can join the room",
-   requires => [qw( users first_room room_alias )],
+   requires => [qw( users first_room legacy_room_alias )],
 
    do => sub {
       my ( $USERS, $FIRST_ROOM, $ROOM_ALIAS ) = @_;
