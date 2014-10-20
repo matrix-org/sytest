@@ -160,6 +160,7 @@ sub provide
 }
 
 my $failed;
+my $expected_fail;
 
 sub test
 {
@@ -207,13 +208,23 @@ sub test
 
    if( $success ) {
       print "\e[32mPASS\e[m\n";
+      if( $params{expect_fail} ) {
+         # TODO - remark that this was unexpected
+         print "\e[1;33mEXPECTED TO FAIL\e[m but passed anyway\n";
+      }
    }
    else {
       my $e = $@; chomp $e;
-      print "\e[1;31mFAIL\e[m:\n";
+      if( $params{expect_fail} ) {
+         print "\e[1;33mEXPECTED FAIL\e[m:\n";
+         $expected_fail++;
+      }
+      else {
+         print "\e[1;31mFAIL\e[m:\n";
+         $failed++;
+      }
       print " | $_\n" for split m/\n/, $e;
       print " +----------------------\n";
-      $failed++;
    }
 
    foreach my $req ( @{ $params{provides} || [] } ) {
@@ -329,7 +340,11 @@ if( $failed ) {
    exit 1;
 }
 else {
-   print STDERR "\n\e[1;32mAll tests PASSED\e[m\n";
+   print STDERR "\n\e[1;32mAll tests PASSED\e[m";
+   if( $expected_fail ) {
+      print STDERR " (with $expected_fail expected failures)";
+   }
+   print STDERR "\n";
    exit 0;
 }
 
