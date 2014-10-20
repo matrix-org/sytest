@@ -21,7 +21,8 @@ test "POST /createRoom makes a room",
          json_nonempty_string_ok( $body->{room_alias} );
 
          provide can_create_room => 1;
-         provide room_id => $body->{room_id};
+         provide room_id    => $body->{room_id};
+         provide room_alias => $body->{room_alias};
 
          Future->done(1);
       });
@@ -100,6 +101,27 @@ test "GET /initialSync sees my presence in the room",
 
          $found or
             die "Failed to find our newly-joined room";
+
+         Future->done(1);
+      });
+   };
+
+test "GET /directory/room/:room_alias yields room ID",
+   requires => [qw( do_request_json_authed room_alias room_id can_create_room )],
+
+   check => sub {
+      my ( $do_request_json_authed, $room_alias, $room_id ) = @_;
+
+      $do_request_json_authed->(
+         method => "GET",
+         uri    => "/directory/room/$room_alias",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         json_keys_ok( $body, qw( room_id servers ));
+         json_list_ok( $body->{servers} );
+
+         $body->{room_id} eq $room_id or die "Expected room_id";
 
          Future->done(1);
       });
