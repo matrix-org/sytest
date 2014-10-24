@@ -13,7 +13,7 @@ use IO::Async::Loop;
 
 use Data::Dump qw( pp );
 use File::Basename qw( basename );
-use Getopt::Long;
+use Getopt::Long qw( :config no_ignore_case );
 use IO::Socket::SSL;
 use List::Util 1.33 qw( all );
 
