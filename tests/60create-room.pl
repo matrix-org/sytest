@@ -39,30 +39,6 @@ test "Other clients can join the room",
 
    provides => [qw( rooms )];
 
-test "All clients see all room members initially",
-   requires => [qw( users rooms )],
-
-   check => sub {
-      my ( $USERS, $ROOMS ) = @_;
-
-      my @user_ids = map { $_->myself->user_id } @$USERS;
-
-      # Rooms should already be initialSync'ed by now, so ->members will be
-      # immediately correct
-      foreach my $room ( @$ROOMS ) {
-         my @members = $room->joined_members;
-
-         scalar @members == scalar @$USERS or
-            return Future->fail( "Room does not have the right number of members" );
-         my %members_by_uid = map { $_->user->user_id => $_ } @members;
-
-         exists $members_by_uid{$_} or return Future->fail( "Room does not have $_" )
-            for @user_ids;
-      }
-
-      1;
-   };
-
 test "All clients see presence state of all room members",
    requires => [qw( users rooms )],
 
