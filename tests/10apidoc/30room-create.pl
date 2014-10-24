@@ -1,5 +1,5 @@
 use feature qw( switch );
-no if $] >= 5.020, warnings => 'experimental';
+no if $] >= 5.018, warnings => 'experimental';
 
 test "POST /createRoom makes a room",
    requires => [qw( do_request_json_authed can_initial_sync )],
