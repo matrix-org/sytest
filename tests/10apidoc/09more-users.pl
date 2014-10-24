@@ -1,5 +1,5 @@
 # How many more users do we want?
-my $LOCAL_USERS = 1;
+my $LOCAL_USERS = 2;
 
 # A handy little structure for other scripts to find in 'more_users'
 use Struct::Dumb 'readonly_struct';
