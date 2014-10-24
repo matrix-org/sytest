@@ -54,3 +54,29 @@ test "PUT /presence/:user_id/status updates my presence",
          Future->done(1);
       });
    };
+
+test "GET /events sees my new presence",
+   requires => [qw( GET_new_events user_id can_set_presence )],
+
+   check => sub {
+      my ( $GET_new_events, $user_id ) = @_;
+
+      $GET_new_events->( "m.presence" )->then( sub {
+         my $found;
+
+         foreach my $event ( @_ ) {
+            my $content = $event->{content};
+            json_keys_ok( $content, qw( user_id status_msg ));
+
+            next unless $content->{user_id} eq $user_id;
+            $found++;
+
+            $content->{status_msg} eq $status_msg or die "Expected status_msg to be $status_msg";
+         }
+
+         $found or
+            die "Did not find expected presence event";
+
+         Future->done(1);
+      });
+   };
