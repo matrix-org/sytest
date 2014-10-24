@@ -2,11 +2,13 @@ Installing
 ----------
 
 If you haven't set up cpan then run::
+
     cpan -v
     perl -Mlocal::lib >> ~/.profile
     . ~/.profile
 
 Install sytest and its dependencies::
+
     git clone https://github.com/matrix-org/sytest
     cd sytest
     cpanm --installdeps .
@@ -14,6 +16,7 @@ Install sytest and its dependencies::
     cd ..
 
 Install synapse::
+
     pip install pynacl --user # Work around pynacl directory sort bug.
     git clone https://github.com/matrix-org/synapse
     cd synapse
@@ -26,6 +29,7 @@ Running
 -------
 
 Run sytest::
+
     cd sytest
     ./run-tests.pl
 
