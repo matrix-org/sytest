@@ -11,7 +11,7 @@ test "POST /createRoom makes a room",
          content => {
             visibility      => "public",
             # This is just the localpart
-            room_alias_name => "#testing-room",
+            room_alias_name => "testing-room",
          },
       )->then( sub {
          my ( $body ) = @_;
