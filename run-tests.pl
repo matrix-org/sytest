@@ -93,7 +93,7 @@ foreach my $port ( @PORTS ) {
    push @f, Future->wait_any(
       $synapse->started_future,
 
-      $loop->delay_future( after => 10 )
+      $loop->delay_future( after => 20 )
          ->then_fail( "Synapse server on port $port failed to start" ),
    );
 }
