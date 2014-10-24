@@ -1,3 +1,6 @@
+use feature qw( switch );
+no if $] >= 5.020, warnings => 'experimental';
+
 test "POST /createRoom makes a room",
    requires => [qw( do_request_json_authed can_initial_sync )],
 
@@ -39,6 +42,45 @@ test "POST /createRoom makes a room",
 
          json_list_ok( $body->{rooms} );
          Future->done( scalar @{ $body->{rooms} } > 0 );
+      });
+   };
+
+test "GET /events sees initial state of the room",
+   requires => [qw( GET_new_events room_id user_id can_create_room )],
+
+   check => sub {
+      my ( $GET_new_events, $room_id, $user_id ) = @_;
+
+      $GET_new_events->( qr/^m\.room\./ )->then( sub {
+         my %found;
+
+         foreach my $event ( @_ ) {
+            json_keys_ok( $event, qw( room_id content ));
+            next unless $event->{room_id} eq $room_id;
+
+            for( $event->{type} ) {
+               when( "m.room.create" ) {
+                  $found{create}++;
+               }
+               when( "m.room.member" ) {
+                  next unless $event->{user_id} eq $user_id;
+
+                  $found{member}++;
+
+                  $event->{content}{membership} eq "join" or
+                     die "Expected my membership as 'join'";
+               }
+               # TODO: consider some of the other events too
+               #default {
+               #   print STDERR "TODO: consider ${\pp $event}\n";
+               #}
+            }
+         }
+
+         $found{create} or die "Failed to find m.room.create event";
+         $found{member} or die "Failed to find m.room.member event";
+
+         Future->done(1);
       });
    };
 
