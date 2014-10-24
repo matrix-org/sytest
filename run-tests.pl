@@ -15,7 +15,7 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long;
 use IO::Socket::SSL;
-use List::Util qw( all );
+use List::Util 1.33 qw( all );
 
 use SyTest::Synapse;
 use SyTest::HTTPClient;
