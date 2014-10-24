@@ -63,11 +63,12 @@ test "GET /events sees initial state of the room",
                   $found{create}++;
                }
                when( "m.room.member" ) {
+                  json_keys_ok( $event, qw( membership ));
                   next unless $event->{user_id} eq $user_id;
 
                   $found{member}++;
 
-                  $event->{content}{membership} eq "join" or
+                  $event->{membership} eq "join" or
                      die "Expected my membership as 'join'";
                }
                # TODO: consider some of the other events too

@@ -47,6 +47,35 @@ test "POST /rooms/:room_id/join can join a room",
       });
    };
 
+test "GET /events sees user's join-by-ID event",
+   requires => [qw( GET_new_events more_users room_id
+                    can_join_room_by_id )],
+
+   check => sub {
+      my ( $GET_new_events, $more_users, $room_id ) = @_;
+      my $user = $more_users->[0];
+
+      $GET_new_events->( "m.room.member" )->then( sub {
+         my $found;
+
+         foreach my $event ( @_ ) {
+            json_keys_ok( $event, qw( room_id content membership ));
+            next unless $event->{room_id} eq $room_id;
+            next unless $event->{user_id} eq $user->user_id;
+
+            $found++;
+
+            $event->{membership} eq "join" or
+               die "Expected user membership as 'join'";
+         }
+
+         $found or
+            die "Failed to find an appropriate m.room.member event";
+
+         Future->done(1);
+      });
+   };
+
 test "POST /join/:room_alias can join a room",
    requires => [qw( first_http_client more_users room_id room_alias
                     can_initial_sync )],
@@ -91,6 +120,35 @@ test "POST /join/:room_alias can join a room",
             die "Failed to find expected room";
 
          provide can_join_room_by_alias => 1;
+
+         Future->done(1);
+      });
+   };
+
+test "GET /events sees user's join-by-alias event",
+   requires => [qw( GET_new_events more_users room_id
+                    can_join_room_by_id )],
+
+   check => sub {
+      my ( $GET_new_events, $more_users, $room_id ) = @_;
+      my $user = $more_users->[1];
+
+      $GET_new_events->( "m.room.member" )->then( sub {
+         my $found;
+
+         foreach my $event ( @_ ) {
+            json_keys_ok( $event, qw( room_id content membership ));
+            next unless $event->{room_id} eq $room_id;
+            next unless $event->{user_id} eq $user->user_id;
+
+            $found++;
+
+            $event->{membership} eq "join" or
+               die "Expected user membership as 'join'";
+         }
+
+         $found or
+            die "Failed to find an appropriate m.room.member event";
 
          Future->done(1);
       });
