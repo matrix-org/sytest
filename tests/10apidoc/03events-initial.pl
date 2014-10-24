@@ -28,36 +28,8 @@ test "GET /events initially",
             });
          };
 
-         # A useful closure for other tests to use, returning the next chunk
-         # of events that occur after some code is run
-         provide GET_events_after => sub {
-            my ( $code ) = @_;
-
-            my $before_event_token;
-            $get_current->()->then( sub {
-               ( $before_event_token ) = @_;
-
-               $code->()
-            })->then( sub {
-               $do_request_json_authed->(
-                  method => "GET",
-                  uri    => "/events",
-                  params => { from => $before_event_token, timeout => 10000 },
-               )
-            })->then( sub {
-               my ( $body ) = @_;
-
-               json_keys_ok( $body, qw( start end chunk ));
-               $body->{start} eq $before_event_token or die "Expected 'start' to be before_event_token\n";
-
-               json_list_ok( $body->{chunk} );
-
-               Future->done( @{ $body->{chunk} } );
-            });
-         };
-
-         # Another useful closure, which keeps track of the current eventstream
-         # token and fetches new events since it
+         # A useful closure, which keeps track of the current eventstream token
+         # and fetches new events since it
          provide GET_new_events => do {
             my $token = $body->{end};
             sub {
