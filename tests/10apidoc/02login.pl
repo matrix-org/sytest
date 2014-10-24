@@ -53,13 +53,15 @@ test "POST /login can log in as a user",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( access_token ));
+         json_keys_ok( $body, qw( access_token home_server ));
 
          provide can_login => 1;
 
          my $access_token = $body->{access_token};
          provide user_id      => $user_id;
          provide access_token => $access_token;
+
+         provide first_home_server => $body->{home_server};
 
          provide do_request_json_authed => sub {
             my %args = @_;
