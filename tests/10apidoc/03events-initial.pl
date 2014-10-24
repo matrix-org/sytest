@@ -56,6 +56,32 @@ test "GET /events initially",
             });
          };
 
+         # Another useful closure, which keeps track of the current eventstream
+         # token and fetches new events since it
+         provide GET_new_events => do {
+            my $token = $body->{end};
+            sub {
+               my ( $filter ) = @_;
+               $filter = qr/^\Q$filter\E$/ if defined $filter and not ref $filter;
+
+               $do_request_json_authed->(
+                  method => "GET",
+                  uri    => "/events",
+                  params => { from => $token, timeout => 10000 },
+               )->then( sub {
+                  my ( $body ) = @_;
+                  $token = $body->{end};
+
+                  if( defined $filter ) {
+                     Future->done( grep { $_->{type} =~ $filter } @{ $body->{chunk} } );
+                  }
+                  else {
+                     Future->done( @{ $body->{chunk} } );
+                  }
+               });
+            };
+         };
+
          Future->done(1);
       });
    };
