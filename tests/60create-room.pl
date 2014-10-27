@@ -25,10 +25,6 @@ test "Other clients can join the room",
 
       Future->needs_all( map {
          $_->join_room( $ROOM_ALIAS )
-            ->then( sub {
-               my ( $room ) = @_;
-               $room->initial_sync->then_done( $room );
-            } )
       } @other_users )
          ->on_done( sub {
             my @other_rooms = @_;
