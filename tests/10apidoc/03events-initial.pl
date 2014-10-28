@@ -56,6 +56,25 @@ test "GET /events initially",
             $GET_new_events_for_user->( $user, @_ );
          };
 
+         provide flush_events_for_user => sub {
+            my ( $user ) = @_;
+
+            $http->do_request_json(
+               method => "GET",
+               uri    => "/events",
+               params => {
+                  access_token => $user->access_token,
+                  timeout      => 0,
+               }
+            )->then( sub {
+               my ( $body ) = @_;
+               $user->eventstream_token = $body->{end};
+               @{ $user->saved_events } = ();
+
+               Future->done;
+            });
+         };
+
          # Set current event-stream end point
          $user->eventstream_token = $body->{end};
 
