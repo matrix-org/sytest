@@ -150,13 +150,13 @@ test "GET /initialSync sees my membership in the room",
    };
 
 test "GET /events (optionally) sends my own presence",
-   requires => [qw( saved_events_for_user user room_id
+   requires => [qw( saved_events_for user room_id
                     can_create_room can_set_presence )],
 
    check => sub {
-      my ( $saved_events_for_user, $user, $room_id ) = @_;
+      my ( $saved_events_for, $user, $room_id ) = @_;
 
-      $saved_events_for_user->( $user, "m.presence" )->then( sub {
+      $saved_events_for->( $user, "m.presence" )->then( sub {
          my @events = @_;
 
          # We don't really care if this happens or not, but doing it here

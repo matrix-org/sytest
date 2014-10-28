@@ -1,14 +1,14 @@
 my $status_msg = "Update for room members";
 
 test "PUT /presence/:user_id/status updates my presence while in a room",
-   requires => [qw( do_request_json_authed flush_events_for_user user more_users
+   requires => [qw( do_request_json_authed flush_events_for user more_users
                     can_set_presence )],
 
    do => sub {
-      my ( $do_request_json_authed, $flush_events_for_user, $user, $more_users ) = @_;
+      my ( $do_request_json_authed, $flush_events_for, $user, $more_users ) = @_;
 
       # Flush event streams first
-      Future->needs_all( map { $flush_events_for_user->( $_ ) } $user, @$more_users )
+      Future->needs_all( map { $flush_events_for->( $_ ) } $user, @$more_users )
 
       ->then( sub {
          $do_request_json_authed->(
@@ -24,18 +24,18 @@ test "PUT /presence/:user_id/status updates my presence while in a room",
    };
 
 test "GET /events by other room members sees presence status change",
-   requires => [qw( GET_new_events_for_user user more_users
+   requires => [qw( GET_new_events_for user more_users
                     can_set_presence can_join_room_by_id can_join_room_by_alias )],
 
    check => sub {
-      my ( $GET_new_events_for_user, $first_user, $more_users ) = @_;
+      my ( $GET_new_events_for, $first_user, $more_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
          my $found;
 
-         $GET_new_events_for_user->( $user, "m.presence" )->then( sub {
+         $GET_new_events_for->( $user, "m.presence" )->then( sub {
             foreach my $event ( @_ ) {
                json_keys_ok( $event, qw( type content ));
                json_keys_ok( $event->{content}, qw( user_id presence status_msg ));

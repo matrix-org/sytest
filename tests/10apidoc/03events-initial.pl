@@ -21,7 +21,7 @@ test "GET /events initially",
 
          # A useful closure, which keeps track of the current eventstream token
          # and fetches new events since it
-         provide saved_events_for_user => my $saved_events_for_user = sub {
+         provide saved_events_for => my $saved_events_for = sub {
             my ( $user, $filter, @more ) = @_;
             $filter = qr/^\Q$filter\E$/ if defined $filter and not ref $filter;
 
@@ -32,7 +32,7 @@ test "GET /events initially",
             Future->done( @filtered_events );
          };
 
-         provide GET_new_events_for_user => my $GET_new_events_for_user = sub {
+         provide GET_new_events_for => my $GET_new_events_for = sub {
             my ( $user, $filter ) = @_;
 
             $http->do_request_json(
@@ -47,16 +47,16 @@ test "GET /events initially",
                my ( $body ) = @_;
                $user->eventstream_token = $body->{end};
 
-               return $saved_events_for_user->( $user, $filter, @{ $body->{chunk} } );
+               return $saved_events_for->( $user, $filter, @{ $body->{chunk} } );
             });
          };
 
          # Convenient wrapper operating on the first user
          provide GET_new_events => sub {
-            $GET_new_events_for_user->( $user, @_ );
+            $GET_new_events_for->( $user, @_ );
          };
 
-         provide flush_events_for_user => sub {
+         provide flush_events_for => sub {
             my ( $user ) = @_;
 
             $http->do_request_json(

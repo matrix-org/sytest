@@ -58,14 +58,14 @@ test "GET /events sees my sent message",
    };
 
 test "GET /events as other user sees sent message",
-   requires => [qw( GET_new_events_for_user room_id user more_users
+   requires => [qw( GET_new_events_for room_id user more_users
                     can_send_message )],
 
    check => sub {
-      my ( $GET_new_events_for_user, $room_id, $first_user, $more_users ) = @_;
+      my ( $GET_new_events_for, $room_id, $first_user, $more_users ) = @_;
       my $user = $more_users->[0];
 
-      $GET_new_events_for_user->( $user, "m.message" )->then( sub {
+      $GET_new_events_for->( $user, "m.message" )->then( sub {
          my $found;
 
          foreach my $event ( @_ ) {

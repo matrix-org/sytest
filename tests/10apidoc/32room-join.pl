@@ -49,14 +49,14 @@ test "POST /rooms/:room_id/join can join a room",
    };
 
 test "GET /events sees my join-by-ID event",
-   requires => [qw( GET_new_events_for_user more_users room_id
+   requires => [qw( GET_new_events_for more_users room_id
                     can_join_room_by_id )],
 
    check => sub {
-      my ( $GET_new_events_for_user, $more_users, $room_id ) = @_;
+      my ( $GET_new_events_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[0];
 
-      $GET_new_events_for_user->( $user, "m.room.member" )->then( sub {
+      $GET_new_events_for->( $user, "m.room.member" )->then( sub {
          my $found;
 
          foreach my $event ( @_ ) {
@@ -78,14 +78,14 @@ test "GET /events sees my join-by-ID event",
    };
 
 test "Events also sees room state",
-   requires => [qw( saved_events_for_user more_users room_id
+   requires => [qw( saved_events_for more_users room_id
                     can_join_room_by_id )],
 
    check => sub {
-      my ( $saved_events_for_user, $more_users, $room_id ) = @_;
+      my ( $saved_events_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[0];
 
-      $saved_events_for_user->( $user, qr/^m\.room\./ )->then( sub {
+      $saved_events_for->( $user, qr/^m\.room\./ )->then( sub {
          my @events = @_;
 
          my %wanted = map { $_ => 0 } qw(
@@ -115,14 +115,14 @@ test "Events also sees room state",
    };
 
 test "Events also sees other users' presence",
-   requires => [qw( saved_events_for_user user more_users
+   requires => [qw( saved_events_for user more_users
                     can_join_room_by_id )],
 
    check => sub {
-      my ( $saved_events_for_user, $first_user, $more_users ) = @_;
+      my ( $saved_events_for, $first_user, $more_users ) = @_;
       my $user = $more_users->[0];
 
-      $saved_events_for_user->( $user, "m.presence" )->then( sub {
+      $saved_events_for->( $user, "m.presence" )->then( sub {
          my $found;
 
          foreach my $event ( @_ ) {
@@ -171,14 +171,14 @@ test "GET /events sees user's join-by-ID event",
    };
 
 test "Events also sees other users' presence",
-   requires => [qw( saved_events_for_user user more_users
+   requires => [qw( saved_events_for user more_users
                     can_join_room_by_id )],
 
    check => sub {
-      my ( $saved_events_for_user, $user, $more_users ) = @_;
+      my ( $saved_events_for, $user, $more_users ) = @_;
       my $joined_user = $more_users->[0];
 
-      $saved_events_for_user->( $user, "m.presence" )->then( sub {
+      $saved_events_for->( $user, "m.presence" )->then( sub {
          my $found;
 
          foreach my $event ( @_ ) {
@@ -248,14 +248,14 @@ test "POST /join/:room_alias can join a room",
    };
 
 test "GET /events sees my join-by-alias event",
-   requires => [qw( GET_new_events_for_user more_users room_id
+   requires => [qw( GET_new_events_for more_users room_id
                     can_join_room_by_id )],
 
    check => sub {
-      my ( $GET_new_events_for_user, $more_users, $room_id ) = @_;
+      my ( $GET_new_events_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[1];
 
-      $GET_new_events_for_user->( $user, "m.room.member" )->then( sub {
+      $GET_new_events_for->( $user, "m.room.member" )->then( sub {
          my $found;
 
          foreach my $event ( @_ ) {
