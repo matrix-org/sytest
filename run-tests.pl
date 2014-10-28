@@ -31,6 +31,7 @@ GetOptions(
 if( $CLIENT_LOG ) {
    require Net::Async::HTTP;
    require Class::Method::Modifiers;
+   require JSON;
 
    Class::Method::Modifiers::install_modifier( "Net::Async::HTTP",
       around => _do_request => sub {
@@ -38,31 +39,42 @@ if( $CLIENT_LOG ) {
          my $request = $args{request};
 
          my $request_uri = $request->uri;
-         return $orig->( $self, %args ) if $request_uri->path =~ m{/events$};
+         if( $request_uri->path =~ m{/events$} ) {
+            print STDERR "\e[1;32mPolling events\e[m\n";
 
-         print STDERR "\e[1;32mRequesting\e[m:\n";
-         print STDERR "  $_\n" for split m/\n/, $request->as_string;
-         print STDERR "-- \n";
+            return $orig->( $self, %args )
+               ->on_done( sub {
+                  my ( $response ) = @_;
 
-         return $orig->( $self, %args )
-            ->on_done( sub {
-               my ( $response ) = @_;
+                  eval {
+                     my $content_decoded = JSON::decode_json( $response->content );
+                     foreach my $event ( @{ $content_decoded->{chunk} } ) {
+                        print STDERR "\e[1;33mReceived event\e[m:\n";
+                        print STDERR "  $_\n" for split m/\n/, pp( $event );
+                        print STDERR "-- \n";
+                     }
+                     1;
+                  } or do {
+                     print STDERR "Could not deparse JSON event return - $@";
+                  };
+               }
+            );
+         }
+         else {
+            print STDERR "\e[1;32mRequesting\e[m:\n";
+            print STDERR "  $_\n" for split m/\n/, $request->as_string;
+            print STDERR "-- \n";
 
-               print STDERR "\e[1;33mResponse\e[m from $request_uri:\n";
-               print STDERR "  $_\n" for split m/\n/, $response->as_string;
-               print STDERR "-- \n";
-            }
-         );
-      }
-   );
+            return $orig->( $self, %args )
+               ->on_done( sub {
+                  my ( $response ) = @_;
 
-   Class::Method::Modifiers::install_modifier( "Net::Async::Matrix",
-      before => _incoming_event => sub {
-         my ( $self, $event ) = @_;
-
-         print STDERR "\e[1;33mReceived event\e[m from $self->{server}:\n";
-         print STDERR "  $_\n" for split m/\n/, pp( $event );
-         print STDERR "-- \n";
+                  print STDERR "\e[1;33mResponse\e[m from $request_uri:\n";
+                  print STDERR "  $_\n" for split m/\n/, $response->as_string;
+                  print STDERR "-- \n";
+               }
+            );
+         }
       }
    );
 }
