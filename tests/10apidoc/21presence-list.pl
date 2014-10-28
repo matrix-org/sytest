@@ -48,10 +48,10 @@ test "POST /presence/:user_id/list can invite users",
          my ( $body ) = @_;
 
          json_list_ok( $body );
-         scalar @$body > 0 or die "Expected non-empty list\n";
+         scalar @$body > 0 or die "Expected non-empty list";
 
          json_keys_ok( $body->[0], qw( accepted presence user_id ));
-         $body->[0]->{user_id} eq $friend_uid or die "Expected friend user_id\n";
+         $body->[0]->{user_id} eq $friend_uid or die "Expected friend user_id";
 
          provide can_invite_presence => 1;
 
@@ -92,13 +92,13 @@ test "GET /events sees friend presence change",
 
             json_keys_ok( $content, qw( presence status_msg ));
             $content->{presence} eq "online" or
-               die "Expected presence to be 'online'\n";
+               die "Expected presence to be 'online'";
             $content->{status_msg} eq $friend_status or
-               die "Expected status_msg to be '$friend_status'\n";
+               die "Expected status_msg to be '$friend_status'";
          }
 
          $found or
-            die "Did not find an appropriate presence event\n";
+            die "Did not find an appropriate presence event";
 
          Future->done(1);
       });

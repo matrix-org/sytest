@@ -10,7 +10,7 @@ test "GET /register yields a set of flows",
          my ( $body ) = @_;
 
          json_keys_ok( $body, qw( flows ));
-         ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list\n";
+         ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
 
          my $has_register_flow;
 
@@ -21,7 +21,7 @@ test "GET /register yields a set of flows",
             #   option needs a 'stages' key, but the implementation omits it
             #   for options that have only one stage in their flow.
             ref $flow->{stages} eq "ARRAY" or defined $flow->{type} or
-               die "Expected flow[$idx] to have 'stages' as a list or a 'type'\n";
+               die "Expected flow[$idx] to have 'stages' as a list or a 'type'";
 
             $has_register_flow++ if $flow->{type} eq "m.login.password" or
                @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password"

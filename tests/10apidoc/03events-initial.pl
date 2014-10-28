@@ -14,7 +14,7 @@ test "GET /events initially",
          my ( $body ) = @_;
 
          json_keys_ok( $body, qw( start end chunk ));
-         ref $body->{chunk} eq "ARRAY" or die "Expected 'chunk' as a JSON list\n";
+         json_list_ok( $body->{chunk} );
 
          # We can't be absolutely sure that there won't be any events yet, so
          # don't check that.

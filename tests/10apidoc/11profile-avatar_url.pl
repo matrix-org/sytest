@@ -14,7 +14,8 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
 
          json_keys_ok( $body, qw( avatar_url ));
 
-         $body->{avatar_url} eq $avatar_url or die "Wrong avatar_url\n";
+         $body->{avatar_url} eq $avatar_url or
+            die "Expected avatar_url to be '$avatar_url'";
 
          provide can_set_avatar_url => 1;
 
@@ -51,7 +52,8 @@ test "GET /events reports my avatar change",
             next unless $content->{user_id} eq $user->user_id;
             $found++;
 
-            $content->{avatar_url} eq $avatar_url or die "Expected avatar_url to be $avatar_url";
+            $content->{avatar_url} eq $avatar_url or
+               die "Expected avatar_url to be '$avatar_url'";
          }
 
          $found or
@@ -77,7 +79,8 @@ test "GET /profile/:user_id/avatar_url publicly accessible",
 
          json_keys_ok( $body, qw( avatar_url ));
 
-         $body->{avatar_url} eq $avatar_url or die "Wrong avatar_url\n";
+         $body->{avatar_url} eq $avatar_url or
+            die "Expected avatar_url to be '$avatar_url'";
 
          Future->done(1);
       });

@@ -12,7 +12,8 @@ test "GET /presence/:user_id/status fetches initial status",
 
          json_keys_ok( $body, qw( presence last_active_ago ));
          json_number_ok( $body->{last_active_ago} );
-         $body->{last_active_ago} >= 0 or die "Expected last_active_ago non-negative";
+         $body->{last_active_ago} >= 0 or
+            die "Expected last_active_ago non-negative";
 
          Future->done(1);
       });
@@ -71,7 +72,8 @@ test "GET /events sees my new presence",
             next unless $content->{user_id} eq $user->user_id;
             $found++;
 
-            $content->{status_msg} eq $status_msg or die "Expected status_msg to be $status_msg";
+            $content->{status_msg} eq $status_msg or
+               die "Expected status_msg to be $status_msg";
          }
 
          $found or

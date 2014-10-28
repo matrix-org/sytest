@@ -14,7 +14,8 @@ test "PUT /profile/:user_id/displayname sets my name",
 
          json_keys_ok( $body, qw( displayname ));
 
-         $body->{displayname} eq $displayname or die "Wrong displayname\n";
+         $body->{displayname} eq $displayname or
+            die "Expected displayname to be '$displayname'";
 
          provide can_set_displayname => 1;
 
@@ -51,7 +52,8 @@ test "GET /events reports my name change",
             next unless $content->{user_id} eq $user->user_id;
             $found++;
 
-            $content->{displayname} eq $displayname or die "Expected displayname to be $displayname";
+            $content->{displayname} eq $displayname or
+               die "Expected displayname to be '$displayname'";
          }
 
          $found or
@@ -77,7 +79,8 @@ test "GET /profile/:user_id/displayname publicly accessible",
 
          json_keys_ok( $body, qw( displayname ));
 
-         $body->{displayname} eq $displayname or die "Wrong displayname\n";
+         $body->{displayname} eq $displayname or
+            die "Expected displayname to be '$displayname'";
 
          Future->done(1);
       });

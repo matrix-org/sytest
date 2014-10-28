@@ -35,7 +35,8 @@ test "POST /rooms/:room_id/join can join a room",
             next unless $room->{room_id} eq $room_id;
             $found++;
 
-            $room->{membership} eq "join" or die "Expected room membership to be 'join'";
+            $room->{membership} eq "join" or
+               die "Expected room membership to be 'join'";
          }
 
          $found or
@@ -233,7 +234,8 @@ test "POST /join/:room_alias can join a room",
             next unless $room->{room_id} eq $room_id;
             $found++;
 
-            $room->{membership} eq "join" or die "Expected room membership to be 'join'";
+            $room->{membership} eq "join" or
+               die "Expected room membership to be 'join'";
          }
 
          $found or
