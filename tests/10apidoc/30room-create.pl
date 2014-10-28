@@ -116,7 +116,7 @@ test "GET /publicRooms lists newly-created room",
       })
    };
 
-test "GET /initialSync sees my presence in the room",
+test "GET /initialSync sees my membership in the room",
    requires => [qw( do_request_json_authed room_id
                     can_create_room can_initial_sync )],
 
@@ -145,6 +145,22 @@ test "GET /initialSync sees my presence in the room",
          $found or
             die "Failed to find our newly-joined room";
 
+         Future->done(1);
+      });
+   };
+
+test "GET /events (optionally) sends my own presence",
+   requires => [qw( saved_events_for_user user room_id
+                    can_create_room can_set_presence )],
+
+   check => sub {
+      my ( $saved_events_for_user, $user, $room_id ) = @_;
+
+      $saved_events_for_user->( $user, "m.presence" )->then( sub {
+         my @events = @_;
+
+         # We don't really care if this happens or not, but doing it here
+         # flushes the saved event queue.
          Future->done(1);
       });
    };

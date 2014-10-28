@@ -113,6 +113,33 @@ test "Events also sees room state",
       });
    };
 
+test "Events also sees other users' presence",
+   requires => [qw( saved_events_for_user user more_users
+                    can_join_room_by_id )],
+
+   check => sub {
+      my ( $saved_events_for_user, $first_user, $more_users ) = @_;
+      my $user = $more_users->[0];
+
+      $saved_events_for_user->( $user, "m.presence" )->then( sub {
+         my $found;
+
+         foreach my $event ( @_ ) {
+            json_keys_ok( $event, qw( type content ));
+            json_keys_ok( $event->{content}, qw( user_id presence ));
+
+            next if $event->{content}{user_id} ne $first_user->user_id;
+
+            $found++;
+         }
+
+         $found or
+            die "Failed to find an appropriate m.presence event";
+
+         Future->done(1);
+      });
+   };
+
 test "GET /events sees user's join-by-ID event",
    requires => [qw( GET_new_events more_users room_id
                     can_join_room_by_id )],
@@ -137,6 +164,33 @@ test "GET /events sees user's join-by-ID event",
 
          $found or
             die "Failed to find an appropriate m.room.member event";
+
+         Future->done(1);
+      });
+   };
+
+test "Events also sees other users' presence",
+   requires => [qw( saved_events_for_user user more_users
+                    can_join_room_by_id )],
+
+   check => sub {
+      my ( $saved_events_for_user, $user, $more_users ) = @_;
+      my $joined_user = $more_users->[0];
+
+      $saved_events_for_user->( $user, "m.presence" )->then( sub {
+         my $found;
+
+         foreach my $event ( @_ ) {
+            json_keys_ok( $event, qw( type content ));
+            json_keys_ok( $event->{content}, qw( user_id presence ));
+
+            next if $event->{content}{user_id} ne $joined_user->user_id;
+
+            $found++;
+         }
+
+         $found or
+            die "Failed to find an appropriate m.presence event";
 
          Future->done(1);
       });
