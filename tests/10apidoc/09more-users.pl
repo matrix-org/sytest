@@ -39,32 +39,6 @@ prepare "More local users",
 
          provide more_users => \@users;
 
-         # A variant of GET_new_events for User() structs
-         provide GET_new_events_for_user => sub {
-            my ( $user, $filter ) = @_;
-            $filter = qr/^\Q$filter\E$/ if defined $filter and not ref $filter;
-
-            $http->do_request_json(
-               method => "GET",
-               uri    => "/events",
-               params => {
-                  access_token => $user->access_token,
-                  from         => $user->eventstream_token,
-                  timeout      => 10000,
-               }
-            )->then( sub {
-               my ( $body ) = @_;
-               $user->eventstream_token = $body->{end};
-
-               if( defined $filter ) {
-                  Future->done( grep { $_->{type} =~ $filter } @{ $body->{chunk} } );
-               }
-               else {
-                  Future->done( @{ $body->{chunk} } );
-               }
-            });
-         };
-
          Future->done();
       })
    };
