@@ -2,12 +2,12 @@ use feature qw( switch );
 no if $] >= 5.018, warnings => 'experimental';
 
 test "POST /createRoom makes a room",
-   requires => [qw( do_request_json_authed can_initial_sync )],
+   requires => [qw( do_request_json can_initial_sync )],
 
    do => sub {
-      my ( $do_request_json_authed ) = @_;
+      my ( $do_request_json ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "POST",
          uri    => "/createRoom",
 
@@ -32,9 +32,9 @@ test "POST /createRoom makes a room",
    },
 
    check => sub {
-      my ( $do_request_json_authed ) = @_;
+      my ( $do_request_json ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/initialSync",
       )->then( sub {
@@ -117,13 +117,13 @@ test "GET /publicRooms lists newly-created room",
    };
 
 test "GET /initialSync sees my membership in the room",
-   requires => [qw( do_request_json_authed room_id
+   requires => [qw( do_request_json room_id
                     can_create_room can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json_authed, $room_id ) = @_;
+      my ( $do_request_json, $room_id ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/initialSync",
       )->then( sub {
@@ -166,12 +166,12 @@ test "GET /events (optionally) sends my own presence",
    };
 
 test "GET /directory/room/:room_alias yields room ID",
-   requires => [qw( do_request_json_authed room_alias room_id can_create_room )],
+   requires => [qw( do_request_json room_alias room_id can_create_room )],
 
    check => sub {
-      my ( $do_request_json_authed, $room_alias, $room_id ) = @_;
+      my ( $do_request_json, $room_alias, $room_id ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/directory/room/$room_alias",
       )->then( sub {

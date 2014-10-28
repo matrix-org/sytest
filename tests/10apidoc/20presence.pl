@@ -1,10 +1,10 @@
 test "GET /presence/:user_id/status fetches initial status",
-   requires => [qw( do_request_json_authed )],
+   requires => [qw( do_request_json )],
 
    check => sub {
-      my ( $do_request_json_authed ) = @_;
+      my ( $do_request_json ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/presence/:user_id/status",
       )->then( sub {
@@ -22,12 +22,12 @@ test "GET /presence/:user_id/status fetches initial status",
 my $status_msg = "Testing something";
 
 test "PUT /presence/:user_id/status updates my presence",
-   requires => [qw( do_request_json_authed )],
+   requires => [qw( do_request_json )],
 
    do => sub {
-      my ( $do_request_json_authed ) = @_;
+      my ( $do_request_json ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "PUT",
          uri    => "/presence/:user_id/status",
 
@@ -39,9 +39,9 @@ test "PUT /presence/:user_id/status updates my presence",
    },
 
    check => sub {
-      my ( $do_request_json_authed ) = @_;
+      my ( $do_request_json ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/presence/:user_id/status",
       )->then( sub {

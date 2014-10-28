@@ -1,28 +1,26 @@
 test "POST /rooms/:room_id/join can join a room",
-   requires => [qw( first_http_client more_users room_id
+   requires => [qw( do_request_json_for more_users room_id
                     can_initial_sync )],
 
    do => sub {
-      my ( $http, $more_users, $room_id ) = @_;
+      my ( $do_request_json_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[0];
 
-      $http->do_request_json(
+      $do_request_json_for->( $user,
          method => "POST",
          uri    => "/rooms/$room_id/join",
-         params => { access_token => $user->access_token },
 
          content => {},
       );
    },
 
    check => sub {
-      my ( $http, $more_users, $room_id ) = @_;
+      my ( $do_request_json_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[0];
 
-      $http->do_request_json(
+      $do_request_json_for->( $user,
          method => "GET",
          uri    => "/initialSync",
-         params => { access_token => $user->access_token },
       )->then( sub {
          my ( $body ) = @_;
 
@@ -198,14 +196,14 @@ test "Events also sees other users' presence",
    };
 
 test "POST /join/:room_alias can join a room",
-   requires => [qw( first_http_client more_users room_id room_alias
+   requires => [qw( do_request_json_for more_users room_id room_alias
                     can_initial_sync )],
 
    do => sub {
-      my ( $http, $more_users, undef, $room_alias ) = @_;
+      my ( $do_request_json_for, $more_users, undef, $room_alias ) = @_;
       my $user = $more_users->[1];
 
-      $http->do_request_json(
+      $do_request_json_for->( $user,
          method => "POST",
          uri    => "/join/$room_alias",
          params => { access_token => $user->access_token },
@@ -215,10 +213,10 @@ test "POST /join/:room_alias can join a room",
    },
 
    check => sub {
-      my ( $http, $more_users, $room_id ) = @_;
+      my ( $do_request_json_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[1];
 
-      $http->do_request_json(
+      $do_request_json_for->( $user,
          method => "GET",
          uri    => "/initialSync",
          params => { access_token => $user->access_token },

@@ -1,12 +1,12 @@
 use List::UtilsBy qw( extract_by );
 
 test "GET /events initially",
-   requires => [qw( do_request_json_authed user first_http_client )],
+   requires => [qw( do_request_json user first_http_client )],
 
    check => sub {
-      my ( $do_request_json_authed, $user, $http ) = @_;
+      my ( $do_request_json, $user, $http ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/events",
          params => { timeout => 0 },
@@ -83,12 +83,12 @@ test "GET /events initially",
    };
 
 test "GET /initialSync initially",
-   requires => [qw( do_request_json_authed )],
+   requires => [qw( do_request_json )],
 
    check => sub {
-      my ( $do_request_json_authed ) = @_;
+      my ( $do_request_json ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/initialSync",
       )->then( sub {

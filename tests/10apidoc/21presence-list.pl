@@ -2,12 +2,12 @@
 my $PRESENCE_LIST_URI = "/presence/list/:user_id";
 
 test "GET /presence/:user_id/list initially empty",
-   requires => [qw( do_request_json_authed )],
+   requires => [qw( do_request_json )],
 
    check => sub {
-      my ( $do_request_json_authed ) = @_;
+      my ( $do_request_json ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => $PRESENCE_LIST_URI,
       )->then( sub {
@@ -21,13 +21,13 @@ test "GET /presence/:user_id/list initially empty",
    };
 
 test "POST /presence/:user_id/list can invite users",
-   requires => [qw( do_request_json_authed more_users )],
+   requires => [qw( do_request_json more_users )],
 
    do => sub {
-      my ( $do_request_json_authed, $more_users ) = @_;
+      my ( $do_request_json, $more_users ) = @_;
       my $friend_uid = $more_users->[0]->user_id;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "POST",
          uri    => $PRESENCE_LIST_URI,
 
@@ -38,10 +38,10 @@ test "POST /presence/:user_id/list can invite users",
    },
 
    check => sub {
-      my ( $do_request_json_authed, $more_users ) = @_;
+      my ( $do_request_json, $more_users ) = @_;
       my $friend_uid = $more_users->[0]->user_id;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => $PRESENCE_LIST_URI,
       )->then( sub {
@@ -62,17 +62,16 @@ test "POST /presence/:user_id/list can invite users",
 my $friend_status = "Status of a Friend";
 
 test "GET /events sees friend presence change",
-   requires => [qw( first_http_client more_users GET_new_events
+   requires => [qw( do_request_json_for more_users GET_new_events
                     can_set_presence can_invite_presence )],
 
    do => sub {
-      my ( $http, $more_users, $GET_new_events ) = @_;
+      my ( $do_request_json_for, $more_users, $GET_new_events ) = @_;
       my $friend = $more_users->[0];
 
-      $http->do_request_json(
+      $do_request_json_for->( $friend,
          method => "PUT",
-         uri    => "/presence/${\$friend->user_id}/status",
-         params => { access_token => $friend->access_token },
+         uri    => "/presence/:user_id/status",
 
          content => {
             presence   => "online",

@@ -1,14 +1,14 @@
 my $alias_localpart = "#another-alias";
 
 test "PUT /directory/room/:room_alias creates alias",
-   requires => [qw( do_request_json_authed room_id first_home_server
+   requires => [qw( do_request_json room_id first_home_server
                     can_create_room )],
 
    do => sub {
-      my ( $do_request_json_authed, $room_id, $first_home_server ) = @_;
+      my ( $do_request_json, $room_id, $first_home_server ) = @_;
       my $room_alias = "${alias_localpart}:$first_home_server";
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "PUT",
          uri    => "/directory/room/$room_alias",
 
@@ -19,10 +19,10 @@ test "PUT /directory/room/:room_alias creates alias",
    },
 
    check => sub {
-      my ( $do_request_json_authed, $room_id, $first_home_server ) = @_;
+      my ( $do_request_json, $room_id, $first_home_server ) = @_;
       my $room_alias = "${alias_localpart}:$first_home_server";
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/directory/room/$room_alias",
       )->then( sub {

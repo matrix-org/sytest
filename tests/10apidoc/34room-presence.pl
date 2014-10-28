@@ -1,17 +1,17 @@
 my $status_msg = "Update for room members";
 
 test "PUT /presence/:user_id/status updates my presence while in a room",
-   requires => [qw( do_request_json_authed flush_events_for user more_users
+   requires => [qw( do_request_json flush_events_for user more_users
                     can_set_presence )],
 
    do => sub {
-      my ( $do_request_json_authed, $flush_events_for, $user, $more_users ) = @_;
+      my ( $do_request_json, $flush_events_for, $user, $more_users ) = @_;
 
       # Flush event streams first
       Future->needs_all( map { $flush_events_for->( $_ ) } $user, @$more_users )
 
       ->then( sub {
-         $do_request_json_authed->(
+         $do_request_json->(
             method => "PUT",
             uri    => "/presence/:user_id/status",
 

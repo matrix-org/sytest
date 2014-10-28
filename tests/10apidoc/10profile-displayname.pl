@@ -1,12 +1,12 @@
 my $displayname = "Testing Displayname";
 
 test "PUT /profile/:user_id/displayname sets my name",
-   requires => [qw( do_request_json_authed )],
+   requires => [qw( do_request_json )],
 
    check => sub {
-      my ( $do_request_json_authed ) = @_;
+      my ( $do_request_json ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/profile/:user_id/displayname",
       )->then( sub {
@@ -24,9 +24,9 @@ test "PUT /profile/:user_id/displayname sets my name",
    },
 
    do => sub {
-      my ( $do_request_json_authed ) = @_;
+      my ( $do_request_json ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "PUT",
          uri    => "/profile/:user_id/displayname",
 

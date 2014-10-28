@@ -63,17 +63,18 @@ test "POST /login can log in as a user",
 
          my $access_token = $body->{access_token};
 
-         provide user => User( $user_id, $access_token, undef, [] );
+         provide user => my $user = User( $user_id, $access_token, undef, [] );
 
          provide first_home_server => $body->{home_server};
 
-         provide do_request_json_authed => sub {
-            my %args = @_;
+         provide do_request_json_for => my $do_request_json_for = sub {
+            my ( $user, %args ) = @_;
 
+            my $user_id = $user->user_id;
             ( my $uri = delete $args{uri} ) =~ s/:user_id/$user_id/g;
 
             my %params = (
-               access_token => $access_token,
+               access_token => $user->access_token,
                %{ delete $args{params} || {} },
             );
 
@@ -82,6 +83,10 @@ test "POST /login can log in as a user",
                params => \%params,
                %args,
             );
+         };
+
+         provide do_request_json => sub {
+            $do_request_json_for->( $user, @_ );
          };
 
          Future->done(1);

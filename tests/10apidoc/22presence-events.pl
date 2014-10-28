@@ -1,11 +1,11 @@
 
 test "GET /initialSync sees status",
-   requires => [qw( do_request_json_authed user can_initial_sync )],
+   requires => [qw( do_request_json user can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json_authed, $user ) = @_;
+      my ( $do_request_json, $user ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "GET",
          uri    => "/initialSync",
       )->then( sub {

@@ -2,12 +2,12 @@ my $msgtype = "m.message";
 my $body = "Here is the message content";
 
 test "POST /rooms/:room_id/send/:event_type sends a message",
-   requires => [qw( do_request_json_authed room_id )],
+   requires => [qw( do_request_json room_id )],
 
    do => sub {
-      my ( $do_request_json_authed, $room_id ) = @_;
+      my ( $do_request_json, $room_id ) = @_;
 
-      $do_request_json_authed->(
+      $do_request_json->(
          method => "POST",
          uri    => "/rooms/$room_id/send/$msgtype",
 
