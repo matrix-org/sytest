@@ -17,17 +17,6 @@ test "GET /events initially",
          # We can't be absolutely sure that there won't be any events yet, so
          # don't check that.
 
-         provide GET_current_event_token => my $get_current = sub {
-            $do_request_json_authed->(
-               method => "GET",
-               uri    => "/events",
-               params => { from => "END", timeout => 0 },
-            )->then( sub {
-               my ( $body ) = @_;
-               Future->done( $body->{end} );
-            });
-         };
-
          # A useful closure, which keeps track of the current eventstream token
          # and fetches new events since it
          provide GET_new_events => do {
