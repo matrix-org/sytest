@@ -1,10 +1,6 @@
 # How many more users do we want?
 my $LOCAL_USERS = 2;
 
-# A handy little structure for other scripts to find in 'more_users'
-use Struct::Dumb 'struct';
-struct User => [qw( user_id access_token eventstream_token )];
-
 prepare "More local users",
    requires => [qw( first_http_client can_register )],
 
