@@ -12,7 +12,6 @@ Install sytest and its dependencies::
     git clone https://github.com/matrix-org/sytest
     cd sytest
     cpanm --installdeps .
-    cpanm Net::Async::Matrix
     cd ..
 
 Install synapse::
