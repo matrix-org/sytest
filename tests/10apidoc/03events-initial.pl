@@ -1,3 +1,5 @@
+use List::UtilsBy qw( extract_by );
+
 test "GET /events initially",
    requires => [qw( do_request_json_authed user first_http_client )],
 
@@ -19,9 +21,19 @@ test "GET /events initially",
 
          # A useful closure, which keeps track of the current eventstream token
          # and fetches new events since it
+         provide saved_events_for_user => my $saved_events_for_user = sub {
+            my ( $user, $filter, @more ) = @_;
+            $filter = qr/^\Q$filter\E$/ if defined $filter and not ref $filter;
+
+            my @events = ( @{ $user->saved_events }, @more );
+            my @filtered_events = extract_by { $_->{type} =~ $filter } @events;
+            $user->saved_events = \@events;
+
+            Future->done( @filtered_events );
+         };
+
          provide GET_new_events_for_user => my $GET_new_events_for_user = sub {
             my ( $user, $filter ) = @_;
-            $filter = qr/^\Q$filter\E$/ if defined $filter and not ref $filter;
 
             $http->do_request_json(
                method => "GET",
@@ -35,12 +47,7 @@ test "GET /events initially",
                my ( $body ) = @_;
                $user->eventstream_token = $body->{end};
 
-               if( defined $filter ) {
-                  Future->done( grep { $_->{type} =~ $filter } @{ $body->{chunk} } );
-               }
-               else {
-                  Future->done( @{ $body->{chunk} } );
-               }
+               return $saved_events_for_user->( $user, $filter, @{ $body->{chunk} } );
             });
          };
 

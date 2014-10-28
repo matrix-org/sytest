@@ -1,6 +1,6 @@
 # A handy little structure for other scripts to find in 'user' and 'more_users'
 use Struct::Dumb 'struct';
-struct User => [qw( user_id access_token eventstream_token )];
+struct User => [qw( user_id access_token eventstream_token saved_events )];
 
 test "GET /login yields a set of flows",
    requires => [qw( first_http_client )],
@@ -65,7 +65,7 @@ test "POST /login can log in as a user",
          provide user_id      => $user_id;
          provide access_token => $access_token;
 
-         provide user => User( $user_id, $access_token, undef );
+         provide user => User( $user_id, $access_token, undef, [] );
 
          provide first_home_server => $body->{home_server};
 

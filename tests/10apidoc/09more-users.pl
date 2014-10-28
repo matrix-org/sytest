@@ -30,7 +30,7 @@ prepare "More local users",
             )->then( sub {
                my ( $body ) = @_;
 
-               Future->done( User( $user_id, $access_token, $body->{end} ) );
+               Future->done( User( $user_id, $access_token, $body->{end}, [] ) );
             });
          });
       } 1 .. $LOCAL_USERS
