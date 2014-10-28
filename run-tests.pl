@@ -19,7 +19,6 @@ use List::Util 1.33 qw( all );
 
 use SyTest::Synapse;
 use SyTest::HTTPClient;
-use SyTest::MatrixClient;
 
 GetOptions(
    'N|number=i'    => \(my $NUMBER = 2),
@@ -100,40 +99,6 @@ foreach my $port ( @PORTS ) {
 
 Future->needs_all( @f )->get;
 
-my @clients = Future->needs_all(
-   map {
-      my $port = $_;
-
-      my $matrix = SyTest::MatrixClient->new(
-         server => "localhost",
-         port   => $port,
-         SSL    => 1,
-         SSL_verify_mode => SSL_VERIFY_NONE,
-
-         on_error => sub {
-            my ( $self, $failure, $name, @args ) = @_;
-
-            die $failure unless $name and $name eq "http";
-            my ( $response, $request ) = @args;
-
-            print STDERR "Received from " . $request->uri . "\n";
-            if( defined $response ) {
-               print STDERR "  $_\n" for split m/\n/, $response->as_string;
-            }
-            else {
-               print STDERR "No response\n";
-            }
-
-            die $failure;
-         },
-      );
-
-      $loop->add( $matrix );
-
-      Future->done( $matrix );
-   } @PORTS
-)->get;
-
 # Some tests create objects as a side-effect that later tests will depend on,
 # such as clients, users, rooms, etc... These are called the Environment
 my %test_environment;
@@ -147,8 +112,6 @@ $test_environment{http_clients} = [ map {
    $client;
 } @PORTS ];
 $test_environment{first_http_client} = $test_environment{http_clients}->[0];
-
-$test_environment{clients} = \@clients;
 
 sub provide
 {
