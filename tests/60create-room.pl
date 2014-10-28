@@ -34,22 +34,3 @@ test "Other clients can join the room",
    },
 
    provides => [qw( rooms )];
-
-test "All clients see presence state of all room members",
-   requires => [qw( users rooms )],
-
-   wait_time => 10,  # This might not be immediate, as it doesn't come in /state
-   check => sub {
-      my ( $USERS, $ROOMS ) = @_;
-
-      my @user_ids = map { $_->myself->user_id } @$USERS;
-
-      foreach my $client ( @$USERS ) {
-         foreach my $user_id ( @user_ids ) {
-            ( $client->cached_presence( $user_id ) // "" ) eq "online" or
-               return Future->fail( "Client does not have presence for $user_id" );
-         }
-      }
-
-      1;
-   };
