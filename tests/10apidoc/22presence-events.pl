@@ -1,9 +1,9 @@
 
 test "GET /initialSync sees status",
-   requires => [qw( do_request_json_authed user_id can_initial_sync )],
+   requires => [qw( do_request_json_authed user can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json_authed, $user_id ) = @_;
+      my ( $do_request_json_authed, $user ) = @_;
 
       $do_request_json_authed->(
          method => "GET",
@@ -23,7 +23,7 @@ test "GET /initialSync sees status",
             my $content = $event->{content};
             json_object_ok( $content, qw( user_id presence last_active_ago ));
 
-            next unless $content->{user_id} eq $user_id;
+            next unless $content->{user_id} eq $user->user_id;
 
             $found = 1;
          }

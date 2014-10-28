@@ -36,10 +36,10 @@ test "PUT /profile/:user_id/displayname sets my name",
    };
 
 test "GET /events reports my name change",
-   requires => [qw( GET_new_events user_id can_set_displayname )],
+   requires => [qw( GET_new_events user can_set_displayname )],
 
    check => sub {
-      my ( $GET_new_events, $user_id ) = @_;
+      my ( $GET_new_events, $user ) = @_;
 
       $GET_new_events->( "m.presence" )->then( sub {
          my $found;
@@ -48,7 +48,7 @@ test "GET /events reports my name change",
             my $content = $event->{content};
             json_keys_ok( $content, qw( user_id displayname ));
 
-            next unless $content->{user_id} eq $user_id;
+            next unless $content->{user_id} eq $user->user_id;
             $found++;
 
             $content->{displayname} eq $displayname or die "Expected displayname to be $displayname";
@@ -62,10 +62,11 @@ test "GET /events reports my name change",
    };
 
 test "GET /profile/:user_id/displayname publicly accessible",
-   requires => [qw( first_http_client user_id can_set_displayname )],
+   requires => [qw( first_http_client user can_set_displayname )],
 
    check => sub {
-      my ( $http, $user_id ) = @_;
+      my ( $http, $user ) = @_;
+      my $user_id = $user->user_id;
 
       $http->do_request_json(
          method => "GET",

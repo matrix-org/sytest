@@ -46,10 +46,10 @@ test "POST /createRoom makes a room",
    };
 
 test "GET /events sees initial state of the room",
-   requires => [qw( GET_new_events room_id user_id can_create_room )],
+   requires => [qw( GET_new_events room_id user can_create_room )],
 
    check => sub {
-      my ( $GET_new_events, $room_id, $user_id ) = @_;
+      my ( $GET_new_events, $room_id, $user ) = @_;
 
       $GET_new_events->( qr/^m\.room\./ )->then( sub {
          my %found;
@@ -64,7 +64,7 @@ test "GET /events sees initial state of the room",
                }
                when( "m.room.member" ) {
                   json_keys_ok( $event, qw( membership ));
-                  next unless $event->{user_id} eq $user_id;
+                  next unless $event->{user_id} eq $user->user_id;
 
                   $found{member}++;
 

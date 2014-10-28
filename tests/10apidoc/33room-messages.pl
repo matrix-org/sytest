@@ -28,10 +28,10 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
    };
 
 test "GET /events sees my sent message",
-   requires => [qw( GET_new_events room_id user_id can_send_message )],
+   requires => [qw( GET_new_events room_id user can_send_message )],
 
    check => sub {
-      my ( $GET_new_events, $room_id, $user_id ) = @_;
+      my ( $GET_new_events, $room_id, $user ) = @_;
 
       $GET_new_events->( "m.message" )->then( sub {
          my $found;
@@ -40,7 +40,7 @@ test "GET /events sees my sent message",
             json_keys_ok( $event, qw( room_id user_id type content ));
 
             next unless $event->{room_id} eq $room_id;
-            next unless $event->{user_id} eq $user_id;
+            next unless $event->{user_id} eq $user->user_id;
 
             $found++;
 
@@ -58,11 +58,11 @@ test "GET /events sees my sent message",
    };
 
 test "GET /events as other user sees sent message",
-   requires => [qw( GET_new_events_for_user room_id user_id more_users
+   requires => [qw( GET_new_events_for_user room_id user more_users
                     can_send_message )],
 
    check => sub {
-      my ( $GET_new_events_for_user, $room_id, $user_id, $more_users ) = @_;
+      my ( $GET_new_events_for_user, $room_id, $first_user, $more_users ) = @_;
       my $user = $more_users->[0];
 
       $GET_new_events_for_user->( $user, "m.message" )->then( sub {
@@ -72,7 +72,7 @@ test "GET /events as other user sees sent message",
             json_keys_ok( $event, qw( room_id user_id type content ));
 
             next unless $event->{room_id} eq $room_id;
-            next unless $event->{user_id} eq $user_id;
+            next unless $event->{user_id} eq $first_user->user_id;
 
             $found++;
 

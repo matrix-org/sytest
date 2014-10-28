@@ -62,8 +62,6 @@ test "POST /login can log in as a user",
          provide can_login => 1;
 
          my $access_token = $body->{access_token};
-         provide user_id      => $user_id;
-         provide access_token => $access_token;
 
          provide user => User( $user_id, $access_token, undef, [] );
 
