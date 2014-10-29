@@ -33,7 +33,7 @@ test "GET /events initially",
          };
 
          provide GET_new_events_for => my $GET_new_events_for = sub {
-            my ( $user, $filter ) = @_;
+            my ( $user, $filter, %opts ) = @_;
 
             $http->do_request_json(
                method => "GET",
@@ -41,7 +41,7 @@ test "GET /events initially",
                params => {
                   access_token => $user->access_token,
                   from         => $user->eventstream_token,
-                  timeout      => 10000,
+                  timeout      => $opts{timeout} // 10000,
                }
             )->then( sub {
                my ( $body ) = @_;
