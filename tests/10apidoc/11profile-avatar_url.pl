@@ -36,33 +36,6 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
       );
    };
 
-test "GET /events reports my avatar change",
-   requires => [qw( GET_new_events user can_set_avatar_url )],
-
-   check => sub {
-      my ( $GET_new_events, $user ) = @_;
-
-      $GET_new_events->( "m.presence" )->then( sub {
-         my $found;
-
-         foreach my $event ( @_ ) {
-            my $content = $event->{content};
-            json_keys_ok( $content, qw( user_id avatar_url ));
-
-            next unless $content->{user_id} eq $user->user_id;
-            $found++;
-
-            $content->{avatar_url} eq $avatar_url or
-               die "Expected avatar_url to be '$avatar_url'";
-         }
-
-         $found or
-            die "Did not find expected presence event";
-
-         Future->done(1);
-      });
-   };
-
 test "GET /profile/:user_id/avatar_url publicly accessible",
    requires => [qw( first_http_client user can_set_avatar_url )],
 
