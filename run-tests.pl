@@ -134,6 +134,13 @@ sub provide
    $test_environment{$name} = $value;
 }
 
+sub unprovide
+{
+   my @names = @_;
+
+   delete $test_environment{$_} for @names;
+}
+
 my $failed;
 my $expected_fail;
 
