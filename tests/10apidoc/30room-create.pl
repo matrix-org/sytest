@@ -1,6 +1,3 @@
-use feature qw( switch );
-no if $] >= 5.018, warnings => 'experimental';
-
 test "POST /createRoom makes a room",
    requires => [qw( do_request_json can_initial_sync )],
 
@@ -45,46 +42,6 @@ test "POST /createRoom makes a room",
       });
    };
 
-test "GET /events sees initial state of the room",
-   requires => [qw( GET_new_events room_id user can_create_room )],
-
-   check => sub {
-      my ( $GET_new_events, $room_id, $user ) = @_;
-
-      $GET_new_events->( qr/^m\.room\./ )->then( sub {
-         my %found;
-
-         foreach my $event ( @_ ) {
-            json_keys_ok( $event, qw( room_id content ));
-            next unless $event->{room_id} eq $room_id;
-
-            for( $event->{type} ) {
-               when( "m.room.create" ) {
-                  $found{create}++;
-               }
-               when( "m.room.member" ) {
-                  json_keys_ok( $event, qw( membership ));
-                  next unless $event->{user_id} eq $user->user_id;
-
-                  $found{member}++;
-
-                  $event->{membership} eq "join" or
-                     die "Expected my membership as 'join'";
-               }
-               # TODO: consider some of the other events too
-               #default {
-               #   print STDERR "TODO: consider ${\pp $event}\n";
-               #}
-            }
-         }
-
-         $found{create} or die "Failed to find m.room.create event";
-         $found{member} or die "Failed to find m.room.member event";
-
-         Future->done(1);
-      });
-   };
-
 test "GET /publicRooms lists newly-created room",
    requires => [qw( first_http_client room_id can_create_room )],
 
@@ -114,39 +71,6 @@ test "GET /publicRooms lists newly-created room",
 
          Future->done(1);
       })
-   };
-
-test "GET /initialSync sees my membership in the room",
-   requires => [qw( do_request_json room_id
-                    can_create_room can_initial_sync )],
-
-   check => sub {
-      my ( $do_request_json, $room_id ) = @_;
-
-      $do_request_json->(
-         method => "GET",
-         uri    => "/initialSync",
-      )->then( sub {
-         my ( $body ) = @_;
-
-         my $found;
-
-         json_list_ok( $body->{rooms} );
-         foreach my $room ( @{ $body->{rooms} } ) {
-            json_keys_ok( $room, qw( room_id membership ));
-
-            next unless $room->{room_id} eq $room_id;
-            $found++;
-
-            $room->{membership} eq "join" or die "Expected room membership to be 'join'\n";
-            $room->{visibility} eq "public" or die "Expected room visibility to be 'public'\n";
-         }
-
-         $found or
-            die "Failed to find our newly-joined room";
-
-         Future->done(1);
-      });
    };
 
 test "GET /directory/room/:room_alias yields room ID",
