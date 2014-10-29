@@ -26,7 +26,7 @@ test "GET /events initially",
             $filter = qr/^\Q$filter\E$/ if defined $filter and not ref $filter;
 
             my @events = ( @{ $user->saved_events }, @more );
-            my @filtered_events = extract_by { $_->{type} =~ $filter } @events;
+            my @filtered_events = extract_by { $filter ? $_->{type} =~ $filter : 1 } @events;
             $user->saved_events = \@events;
 
             Future->done( @filtered_events );
