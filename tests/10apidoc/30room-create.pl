@@ -42,6 +42,27 @@ test "POST /createRoom makes a room",
       });
    };
 
+test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
+   requires => [qw( do_request_json room_id can_create_room )],
+
+   check => sub {
+      my ( $do_request_json, $room_id ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         json_keys_ok( $body, qw( membership ));
+
+         $body->{membership} eq "join" or
+            die "Expected membership as 'join'";
+
+         Future->done(1);
+      });
+   };
+
 test "GET /publicRooms lists newly-created room",
    requires => [qw( first_http_client room_id can_create_room )],
 
