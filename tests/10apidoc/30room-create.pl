@@ -59,6 +59,8 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
          $body->{membership} eq "join" or
             die "Expected membership as 'join'";
 
+         provide can_get_room_membership => 1;
+
          Future->done(1);
       });
    };

@@ -1,6 +1,6 @@
 test "POST /rooms/:room_id/join can join a room",
    requires => [qw( do_request_json_for more_users room_id
-                    can_initial_sync )],
+                    can_get_room_membership )],
 
    do => sub {
       my ( $do_request_json_for, $more_users, $room_id ) = @_;
@@ -20,25 +20,12 @@ test "POST /rooms/:room_id/join can join a room",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/initialSync",
+         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_list_ok( $body->{rooms} );
-
-         my $found;
-         foreach my $room ( @{ $body->{rooms} } ) {
-            json_keys_ok( $room, qw( room_id membership ));
-
-            next unless $room->{room_id} eq $room_id;
-            $found++;
-
-            $room->{membership} eq "join" or
-               die "Expected room membership to be 'join'";
-         }
-
-         $found or
-            die "Failed to find expected room";
+         $body->{membership} eq "join" or
+            die "Expected membership to be 'join'";
 
          provide can_join_room_by_id => 1;
 
@@ -48,7 +35,7 @@ test "POST /rooms/:room_id/join can join a room",
 
 test "POST /join/:room_alias can join a room",
    requires => [qw( do_request_json_for more_users room_id room_alias
-                    can_initial_sync )],
+                    can_get_room_membership )],
 
    do => sub {
       my ( $do_request_json_for, $more_users, undef, $room_alias ) = @_;
@@ -69,28 +56,49 @@ test "POST /join/:room_alias can join a room",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/initialSync",
-         params => { access_token => $user->access_token },
+         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_list_ok( $body->{rooms} );
-
-         my $found;
-         foreach my $room ( @{ $body->{rooms} } ) {
-            json_keys_ok( $room, qw( room_id membership ));
-
-            next unless $room->{room_id} eq $room_id;
-            $found++;
-
-            $room->{membership} eq "join" or
-               die "Expected room membership to be 'join'";
-         }
-
-         $found or
-            die "Failed to find expected room";
+         $body->{membership} eq "join" or
+            die "Expected membership to be 'join'";
 
          provide can_join_room_by_alias => 1;
+
+         Future->done(1);
+      });
+   };
+
+test "POST /rooms/:room_id/leave can leave a room",
+   requires => [qw( do_request_json_for more_users room_id
+                    can_join_room_by_id can_get_room_membership )],
+
+   do => sub {
+      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my $user = $more_users->[0];
+
+      $do_request_json_for->( $user,
+         method => "POST",
+         uri    => "/rooms/$room_id/leave",
+
+         content => {},
+      );
+   },
+
+   check => sub {
+      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my $user = $more_users->[0];
+
+      $do_request_json_for->( $user,
+         method => "GET",
+         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         $body->{membership} eq "join" and
+            die "Expected membership not to be 'join'";
+
+         provide can_leave_room => 1;
 
          Future->done(1);
       });
