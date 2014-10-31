@@ -35,7 +35,7 @@ test "GET /events initially",
          provide GET_new_events_for => my $GET_new_events_for = sub {
             my ( $user, $filter, %opts ) = @_;
 
-            $http->do_request_json(
+            $user->http->do_request_json(
                method => "GET",
                uri    => "/events",
                params => {
@@ -59,7 +59,7 @@ test "GET /events initially",
          provide flush_events_for => sub {
             my ( $user ) = @_;
 
-            $http->do_request_json(
+            $user->http->do_request_json(
                method => "GET",
                uri    => "/events",
                params => {
