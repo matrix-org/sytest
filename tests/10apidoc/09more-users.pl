@@ -2,10 +2,10 @@
 my $LOCAL_USERS = 2;
 
 prepare "More local users",
-   requires => [qw( first_http_client can_register )],
+   requires => [qw( first_http_client user can_register )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $http, $user ) = @_;
 
       Future->needs_all( map {
          my $uid = "09more-users-$_";
@@ -38,6 +38,7 @@ prepare "More local users",
          my @users = @_;
 
          provide more_users => \@users;
+         provide local_users => [ $user, @users ];
 
          Future->done();
       })
