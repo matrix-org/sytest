@@ -1,9 +1,47 @@
-prepare "More local room members",
-   requires => [qw( do_request_json_for flush_events_for more_users room_id
-                    can_join_room_by_id )],
+test "Remote users can join room by alias",
+   requires => [qw( do_request_json_for flush_events_for remote_users room_alias room_id
+                    can_join_room_by_alias can_get_room_membership )],
 
    do => sub {
-      my ( $do_request_json_for, $flush_events_for, $more_users, $room_id ) = @_;
+      my ( $do_request_json_for, $flush_events_for, $remote_users, $room_alias ) = @_;
+      my $user = $remote_users->[0];
+
+      $flush_events_for->( $user )->then( sub {
+         $do_request_json_for->( $user,
+            method => "POST",
+            uri    => "/join/$room_alias",
+
+            content => {},
+         );
+      });
+   },
+
+   check => sub {
+      my ( $do_request_json_for, undef, $remote_users, undef, $room_id ) = @_;
+      my $user = $remote_users->[0];
+
+      $do_request_json_for->( $user,
+         method => "GET",
+         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         $body->{membership} eq "join" or
+            die "Expected membership to be 'join'";
+
+         provide can_join_remote_room_by_alias => 1;
+
+         Future->done(1);
+      });
+   };
+
+prepare "More remote room members",
+   requires => [qw( do_request_json_for flush_events_for remote_users room_alias
+                    can_join_remote_room_by_alias )],
+
+   do => sub {
+      my ( $do_request_json_for, $flush_events_for, $remote_users, $room_alias ) = @_;
+      my ( undef, @users ) = @$remote_users;
 
       Future->needs_all( map {
          my $user = $_;
@@ -11,20 +49,20 @@ prepare "More local room members",
          $flush_events_for->( $user )->then( sub {
             $do_request_json_for->( $user,
                method => "POST",
-               uri    => "/rooms/$room_id/join",
+               uri    => "/join/$room_alias",
 
                content => {},
             );
          });
-      } @$more_users );
+      } @users );
    };
 
 test "New room members see their own join event",
-   requires => [qw( GET_new_events_for more_users room_id
-                    can_join_room_by_id )],
+   requires => [qw( GET_new_events_for remote_users room_id
+                    can_join_remote_room_by_alias )],
 
    check => sub {
-      my ( $GET_new_events_for, $more_users, $room_id ) = @_;
+      my ( $GET_new_events_for, $remote_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
@@ -49,23 +87,24 @@ test "New room members see their own join event",
 
             Future->done(1);
          });
-      } @$more_users );
+      } @$remote_users );
    };
 
 test "New room members also see original members' presence",
-   requires => [qw( saved_events_for user more_users
-                    can_join_room_by_id )],
+   requires => [qw( GET_new_events_for user remote_users
+                    can_join_remote_room_by_alias )],
 
-   # Currently this test fails due to a Synapse bug. May be related to
-   #   SYN-72 or SYN-81
-   expect_fail => 1,
    check => sub {
-      my ( $saved_events_for, $first_user, $more_users ) = @_;
+      my ( $GET_new_events_for, $first_user, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $saved_events_for->( $user, "m.presence" )->then( sub {
+         # GET_new instead of saved because they probably don't come in the
+         # chunk over federation
+         $GET_new_events_for->( $user, "m.presence",
+            timeout => 50,
+         )->then( sub {
             my $found;
             foreach my $event ( @_ ) {
                json_keys_ok( $event, qw( type content ));
@@ -81,15 +120,15 @@ test "New room members also see original members' presence",
 
             Future->done(1);
          });
-      } @$more_users );
+      } @$remote_users );
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( GET_new_events_for user more_users room_id
-                    can_join_room_by_id )],
+   requires => [qw( GET_new_events_for user remote_users room_id
+                    can_join_remote_room_by_alias )],
 
    check => sub {
-      my ( $GET_new_events_for, $user, $more_users, $room_id ) = @_;
+      my ( $GET_new_events_for, $user, $remote_users, $room_id ) = @_;
 
       $GET_new_events_for->( $user, "m.room.member" )->then( sub {
          my %found_user;
@@ -104,20 +143,22 @@ test "Existing members see new members' join events",
          }
 
          $found_user{$_->user_id} or die "Failed to find membership of ${\$_->user_id}"
-            for @$more_users;
+            for @$remote_users;
 
          Future->done(1);
       });
    };
 
-test "Existing members see new members' presence",
-   requires => [qw( saved_events_for user more_users
-                    can_join_room_by_id )],
+test "Existing members see new member's presence",
+   requires => [qw( GET_new_events remote_users
+                    can_join_remote_room_by_alias )],
 
    check => sub {
-      my ( $saved_events_for, $user, $more_users ) = @_;
+      my ( $GET_new_events, $remote_users ) = @_;
 
-      $saved_events_for->( $user, "m.presence" )->then( sub {
+      $GET_new_events->( "m.presence",
+         timeout => 50,
+      )->then( sub {
          my %found_user;
          foreach my $event ( @_ ) {
             json_keys_ok( $event, qw( type content ));
@@ -127,7 +168,7 @@ test "Existing members see new members' presence",
          }
 
          $found_user{$_->user_id} or die "Failed to find presence of ${\$_->user_id}"
-            for @$more_users;
+            for @$remote_users;
 
          Future->done(1);
       });
