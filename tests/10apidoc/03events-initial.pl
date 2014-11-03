@@ -16,64 +16,10 @@ test "GET /events initially",
          json_keys_ok( $body, qw( start end chunk ));
          json_list_ok( $body->{chunk} );
 
+         provide can_get_events => 1;
+
          # We can't be absolutely sure that there won't be any events yet, so
          # don't check that.
-
-         # A useful closure, which keeps track of the current eventstream token
-         # and fetches new events since it
-         provide saved_events_for => my $saved_events_for = sub {
-            my ( $user, $filter, @more ) = @_;
-            $filter = qr/^\Q$filter\E$/ if defined $filter and not ref $filter;
-
-            my @events = ( @{ $user->saved_events }, @more );
-            my @filtered_events = extract_by { $filter ? $_->{type} =~ $filter : 1 } @events;
-            $user->saved_events = \@events;
-
-            Future->done( @filtered_events );
-         };
-
-         provide GET_new_events_for => my $GET_new_events_for = sub {
-            my ( $user, $filter, %opts ) = @_;
-
-            $user->http->do_request_json(
-               method => "GET",
-               uri    => "/events",
-               params => {
-                  access_token => $user->access_token,
-                  from         => $user->eventstream_token,
-                  timeout      => $opts{timeout} // 10000,
-               }
-            )->then( sub {
-               my ( $body ) = @_;
-               $user->eventstream_token = $body->{end};
-
-               return $saved_events_for->( $user, $filter, @{ $body->{chunk} } );
-            });
-         };
-
-         # Convenient wrapper operating on the first user
-         provide GET_new_events => sub {
-            $GET_new_events_for->( $user, @_ );
-         };
-
-         provide flush_events_for => sub {
-            my ( $user ) = @_;
-
-            $user->http->do_request_json(
-               method => "GET",
-               uri    => "/events",
-               params => {
-                  access_token => $user->access_token,
-                  timeout      => 0,
-               }
-            )->then( sub {
-               my ( $body ) = @_;
-               $user->eventstream_token = $body->{end};
-               @{ $user->saved_events } = ();
-
-               Future->done;
-            });
-         };
 
          # Set current event-stream end point
          $user->eventstream_token = $body->{end};
@@ -108,4 +54,70 @@ test "GET /initialSync initially",
 
          Future->done(1);
       });
+   };
+
+prepare "Environment closures for stateful /event access",
+   requires => [qw( user can_get_events )],
+
+   do => sub {
+      my ( $first_user ) = @_;
+
+      # A useful closure, which keeps track of the current eventstream token
+      # and fetches new events since it
+      provide saved_events_for => my $saved_events_for = sub {
+         my ( $user, $filter, @more ) = @_;
+         $filter = qr/^\Q$filter\E$/ if defined $filter and not ref $filter;
+
+         my @events = ( @{ $user->saved_events }, @more );
+         my @filtered_events = extract_by { $filter ? $_->{type} =~ $filter : 1 } @events;
+         $user->saved_events = \@events;
+
+         Future->done( @filtered_events );
+      };
+
+      provide GET_new_events_for => my $GET_new_events_for = sub {
+         my ( $user, $filter, %opts ) = @_;
+
+         $user->http->do_request_json(
+            method => "GET",
+            uri    => "/events",
+            params => {
+               access_token => $user->access_token,
+               from         => $user->eventstream_token,
+               timeout      => $opts{timeout} // 10000,
+            }
+         )->then( sub {
+            my ( $body ) = @_;
+            $user->eventstream_token = $body->{end};
+
+            return $saved_events_for->( $user, $filter, @{ $body->{chunk} } );
+         });
+      };
+
+      provide flush_events_for => sub {
+         my ( $user ) = @_;
+
+         $user->http->do_request_json(
+            method => "GET",
+            uri    => "/events",
+            params => {
+               access_token => $user->access_token,
+               timeout      => 0,
+            }
+         )->then( sub {
+            my ( $body ) = @_;
+            $user->eventstream_token = $body->{end};
+            @{ $user->saved_events } = ();
+
+            Future->done;
+         });
+      };
+
+
+      # Convenient wrapper operating on the first user
+      provide GET_new_events => sub {
+         $GET_new_events_for->( $first_user, @_ );
+      };
+
+      Future->done(1);
    };
