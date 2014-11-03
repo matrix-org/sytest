@@ -171,17 +171,17 @@ sub test
       }
 
       if( $check ) {
-         my $attempts = $params{wait_time} // 0;
+         my $attempts = $params{attempts} // 1;
          do {
             eval {
                Future->wrap( $check->( @reqs ) )->get or
                   die "Test check function failed to return a true value"
             } and return 1; # returns from the containing outer eval
 
+            $attempts--;
             die "$@" unless $attempts;
 
-            $loop->delay_future( after => 1 )->get;
-            $attempts--;
+            $loop->delay_future( after => $params{wait_time} // 1.0 )->get;
          } while(1);
       }
 
