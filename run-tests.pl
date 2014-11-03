@@ -48,11 +48,14 @@ if( $CLIENT_LOG ) {
 
                   eval {
                      my $content_decoded = JSON::decode_json( $response->content );
-                     foreach my $event ( @{ $content_decoded->{chunk} } ) {
+                     my $events = $content_decoded->{chunk};
+                     foreach my $event ( @$events ) {
                         print STDERR "\e[1;33mReceived event\e[m:\n";
                         print STDERR "  $_\n" for split m/\n/, pp( $event );
                         print STDERR "-- \n";
                      }
+                     print "\e[1;33mNo events\e[m\n" unless @$events;
+
                      1;
                   } or do {
                      print STDERR "Could not deparse JSON event return - $@";
