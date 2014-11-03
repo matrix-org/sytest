@@ -216,7 +216,7 @@ sub test
    }
 
    no warnings 'exiting';
-   last TEST if $STOP_ON_FAIL and not $success;
+   last TEST if $STOP_ON_FAIL and not $success and not $params{expect_fail};
 }
 
 sub prepare
