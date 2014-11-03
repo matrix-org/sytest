@@ -32,6 +32,7 @@ text to use as a caption, and a set of named arguments to control how the test
 runs.
 
 ::
+
     test "Here is the caption of the test",
        ...
 
