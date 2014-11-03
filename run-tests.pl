@@ -1,8 +1,8 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
-use 5.010;
+use 5.014; # package NAME { BLOCK }
 
 use lib 'lib';
 
