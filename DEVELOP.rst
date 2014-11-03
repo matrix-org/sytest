@@ -38,15 +38,15 @@ runs.
 The following named arguments apply to a test. Each of them is optional, and
 is described in more detail in the following sections.
 
-  ``do``
+``do``
     Provides a ``CODE`` reference (most likely in the form of an inline
     ``sub { ... }`` block) which contains the main activity of the test
 
-  ``check``
+``check``
     Provides a ``CODE`` reference similar to the ``do`` argument, which
     contains the checking code for the test
 
-  ``requires``
+``requires``
     Provides an ``ARRAY`` reference giving a list of named requirements.
 
 A call to ``provide`` is similar to ``test``, except that it doesn't take a
@@ -107,12 +107,12 @@ Initial Environment
 The following environment keys are provided at the beginning by the test runner
 itself:
 
-  ``http_clients``
+``http_clients``
     An ``ARRAY`` containing a HTTP client instance per ``synapse`` home server.
     Each is of a subclass of ``Net::Async::HTTP`` that stores a URL base that
     points at the IP/port the testing home servers are running on.
 
-  ``first_http_client``
+``first_http_client``
     The first value from ``http_clients``, pointing at the first home server,
     for convenience where most of the tests run there.
 
@@ -123,30 +123,30 @@ The following convenient helper functions are also available for test code.
 Each will throw an exception if it fails; the return value does not need to be
 tested.
 
-  ``json_object_ok``
+``json_object_ok``
     Asserts that it is given a representation of a JSON object (i.e. a ``HASH``
     ref).
 
-  ``json_keys_ok``
+``json_keys_ok``
     Asserts that it is given a representation of a JSON object and that
     additionally it defines values for all of the key names given.
 
-  ``json_list_ok``
+``json_list_ok``
     Asserts that it is given a representation of a JSON object (i.e. an
     ``ARRAY`` ref).
 
-  ``json_number_ok``
+``json_number_ok``
     Asserts that it is given a likely representation of a JSON number (i.e. a
     non-reference that passes the ``looks_like_number()`` test). Because of the
     limits of the JSON-to-Perl decoding process it isn't possible to definitely
     assert this originally came from a number in the JSON encoding, as compared
     to a string representation of a number.
 
-  ``json_string_ok``
+``json_string_ok``
     Asserts that it is given a likely representation of a JSON string (i.e. a
     non-reference). Note that this will also be true of values that were
     originally JSON numbers or booleans.
 
-  ``json_nonempty_string_ok``
+``json_nonempty_string_ok``
     Asserts that it is given a likely representation of a JSON string, and
     additionally that the string is not empty.
