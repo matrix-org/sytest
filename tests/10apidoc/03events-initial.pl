@@ -113,6 +113,26 @@ prepare "Environment closures for stateful /event access",
          });
       };
 
+      # New API
+      provide GET_event_for => sub {
+         my ( $user, $filter ) = @_;
+
+         # TODO: This won't yet handle:
+         #   * concurrency
+         #   * saving nonfiltered events
+
+         $GET_new_events_for->( $user, undef, timeout => 500 )->then( sub {
+            my $found;
+            foreach my $event ( @_ ) {
+               $filter->( $event ) or next;
+
+               $found = 1;
+               last;
+            }
+
+            Future->done( $found );
+         });
+      };
 
       # Convenient wrapper operating on the first user
       provide GET_new_events => sub {

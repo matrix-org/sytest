@@ -8,7 +8,7 @@ prepare "Flushing event stream",
 my $displayname = "New displayname for 20profile-events.pl";
 
 test "Displayname change reports an event to myself",
-   requires => [qw( do_request_json GET_new_events user can_set_displayname )],
+   requires => [qw( do_request_json GET_event_for user can_set_displayname )],
 
    do => sub {
       my ( $do_request_json, undef, $user ) = @_;
@@ -22,33 +22,25 @@ test "Displayname change reports an event to myself",
    },
 
    await => sub {
-      my ( undef, $GET_new_events, $user ) = @_;
+      my ( undef, $GET_event_for, $user ) = @_;
 
-      # This timeout may not be 100% reliable; if this spuriously fails try
-      # making it a little bigger
-      $GET_new_events->( undef, timeout => 50 )->then( sub {
-         my $found;
-         foreach my $event ( @_ ) {
-            next unless $event->{type} eq "m.presence";
-            my $content = $event->{content};
-            next unless $content->{user_id} eq $user->user_id;
-            $found++;
+      $GET_event_for->( $user, sub {
+         my ( $event ) = @_;
+         return unless $event->{type} eq "m.presence";
+         my $content = $event->{content};
+         return unless $content->{user_id} eq $user->user_id;
 
-            $content->{displayname} eq $displayname or
-               die "Expected displayname to be '$displayname'";
-         }
+         $content->{displayname} eq $displayname or
+            die "Expected displayname to be '$displayname'";
 
-         $found or
-            die "Failed to find my own presence event";
-
-         Future->done(1);
+         return 1;
       });
    };
 
 my $avatar_url = "http://a.new.url/for/20profile-events.pl";
 
 test "Avatar URL change reports an event to myself",
-   requires => [qw( do_request_json GET_new_events user can_set_avatar_url )],
+   requires => [qw( do_request_json GET_event_for user can_set_avatar_url )],
 
    do => sub {
       my ( $do_request_json, undef, $user ) = @_;
@@ -62,25 +54,17 @@ test "Avatar URL change reports an event to myself",
    },
 
    await => sub {
-      my ( undef, $GET_new_events, $user ) = @_;
+      my ( undef, $GET_event_for, $user ) = @_;
 
-      # This timeout may not be 100% reliable; if this spuriously fails try
-      # making it a little bigger
-      $GET_new_events->( undef, timeout => 50 )->then( sub {
-         my $found;
-         foreach my $event ( @_ ) {
-            next unless $event->{type} eq "m.presence";
-            my $content = $event->{content};
-            next unless $content->{user_id} eq $user->user_id;
-            $found++;
+      $GET_event_for->( $user, sub {
+         my ( $event ) = @_;
+         return unless $event->{type} eq "m.presence";
+         my $content = $event->{content};
+         return unless $content->{user_id} eq $user->user_id;
 
-            $content->{avatar_url} eq $avatar_url or
-               die "Expected avatar_url to be '$avatar_url'";
-         }
+         $content->{avatar_url} eq $avatar_url or
+            die "Expected avatar_url to be '$avatar_url'";
 
-         $found or
-            die "Failed to find my own presence event";
-
-         Future->done(1);
+         return 1;
       });
    };

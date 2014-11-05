@@ -44,7 +44,7 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   requires => [qw( do_request_json GET_new_events user can_set_presence )],
+   requires => [qw( do_request_json GET_event_for user can_set_presence )],
 
    do => sub {
       my ( $do_request_json ) = @_;
@@ -58,25 +58,17 @@ test "Presence change reports an event to myself",
    },
 
    await => sub {
-      my ( undef, $GET_new_events, $user ) = @_;
+      my ( undef, $GET_event_for, $user ) = @_;
 
-      # This timeout may not be 100% reliable; if this spuriously fails try
-      # making it a little bigger
-      $GET_new_events->( undef, timeout => 50 )->then( sub {
-         my $found;
-         foreach my $event ( @_ ) {
-            next unless $event->{type} eq "m.presence";
-            my $content = $event->{content};
-            next unless $content->{user_id} eq $user->user_id;
-            $found++;
+      $GET_event_for->( $user, sub {
+         my ( $event ) = @_;
+         next unless $event->{type} eq "m.presence";
+         my $content = $event->{content};
+         next unless $content->{user_id} eq $user->user_id;
 
-            $content->{status_msg} eq $status_msg or
-               die "Expected status_msg to be '$status_msg'";
-         }
+         $content->{status_msg} eq $status_msg or
+            die "Expected status_msg to be '$status_msg'";
 
-         $found or
-            die "Failed to find my own presence event";
-
-         Future->done(1);
+         return 1;
       });
    };
