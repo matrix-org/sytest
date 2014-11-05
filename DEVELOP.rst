@@ -84,7 +84,10 @@ If an ``await`` block is provided it is executed repeatedly, after any ``do``
 or ``check`` functions, until it succeeds, or until it has taken too long to
 provide a success (which will then count as a failure). This allows for tests
 that aren't guaranteed to succeed immediately, such as awaiting for some event
-to appear on the event stream.
+to appear on the event stream. If it returns false, this indicates that the
+thing it is waiting for hasn't happened yet and wishes to be called again. If
+it throws an exception entirely (or returns a failed Future) this indicates an
+actual error; it will fail immediately.
 
 Dependencies and Environment
 ----------------------------

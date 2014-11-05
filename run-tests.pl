@@ -182,12 +182,9 @@ sub test
          my $until_time = $loop->time + ( $params{timeout} // 10 );
 
          while(1) {
-            eval {
-               Future->wrap( $await->( @reqs ) )->get or
-                  die "Test await function failed to return a true value"
-            } and last;
+            Future->wrap( $await->( @reqs ) )->get and last;
 
-            die "$@" if $loop->time >= $until_time;
+            die "Await function timed out" if $loop->time >= $until_time;
 
             $loop->delay_future( after => $params{delay} // 1.0 )->get;
          };
