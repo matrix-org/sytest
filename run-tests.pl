@@ -161,9 +161,8 @@ sub test
 
    print "  \e[36mTesting if: $name\e[m... ";
 
-   my $check = $params{check};
-
    my $success = eval {
+      my $check = $params{check};
       if( my $do = $params{do} ) {
          if( $check ) {
             eval { Future->wrap( $check->( @reqs ) )->get } and
@@ -174,18 +173,24 @@ sub test
       }
 
       if( $check ) {
-         my $attempts = $params{attempts} // 1;
-         do {
+         Future->wrap( $check->( @reqs ) )->get or
+            die "Test check function failed to return a true value"
+      }
+
+      if( my $await = $params{await} ) {
+         # Default at-most 10 seconds to pass
+         my $until_time = $loop->time + ( $params{timeout} // 10 );
+
+         while(1) {
             eval {
-               Future->wrap( $check->( @reqs ) )->get or
-                  die "Test check function failed to return a true value"
-            } and return 1; # returns from the containing outer eval
+               Future->wrap( $await->( @reqs ) )->get or
+                  die "Test await function failed to return a true value"
+            } and last;
 
-            $attempts--;
-            die "$@" unless $attempts;
+            die "$@" if $loop->time >= $until_time;
 
-            $loop->delay_future( after => $params{wait_time} // 1.0 )->get;
-         } while(1);
+            $loop->delay_future( after => $params{delay} // 1.0 )->get;
+         };
       }
 
       1;

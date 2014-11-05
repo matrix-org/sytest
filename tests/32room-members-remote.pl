@@ -61,7 +61,7 @@ test "New room members see their own join event",
    requires => [qw( GET_new_events_for remote_users room_id
                     can_join_remote_room_by_alias )],
 
-   check => sub {
+   await => sub {
       my ( $GET_new_events_for, $remote_users, $room_id ) = @_;
 
       Future->needs_all( map {
@@ -94,7 +94,7 @@ test "New room members also see original members' presence",
    requires => [qw( GET_new_events_for user remote_users
                     can_join_remote_room_by_alias )],
 
-   check => sub {
+   await => sub {
       my ( $GET_new_events_for, $first_user, $remote_users ) = @_;
 
       Future->needs_all( map {
@@ -127,7 +127,7 @@ test "Existing members see new members' join events",
    requires => [qw( GET_new_events_for user remote_users room_id
                     can_join_remote_room_by_alias )],
 
-   check => sub {
+   await => sub {
       my ( $GET_new_events_for, $user, $remote_users, $room_id ) = @_;
 
       $GET_new_events_for->( $user, "m.room.member" )->then( sub {
@@ -153,7 +153,7 @@ test "Existing members see new member's presence",
    requires => [qw( GET_new_events remote_users
                     can_join_remote_room_by_alias )],
 
-   check => sub {
+   await => sub {
       my ( $GET_new_events, $remote_users ) = @_;
 
       $GET_new_events->( "m.presence",

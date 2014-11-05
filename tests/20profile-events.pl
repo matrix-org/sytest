@@ -21,7 +21,7 @@ test "Displayname change reports an event to myself",
       );
    },
 
-   check => sub {
+   await => sub {
       my ( undef, $GET_new_events, $user ) = @_;
 
       # This timeout may not be 100% reliable; if this spuriously fails try
@@ -61,7 +61,7 @@ test "Avatar URL change reports an event to myself",
       );
    },
 
-   check => sub {
+   await => sub {
       my ( undef, $GET_new_events, $user ) = @_;
 
       # This timeout may not be 100% reliable; if this spuriously fails try

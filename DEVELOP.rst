@@ -41,25 +41,30 @@ is described in more detail in the following sections.
 
 ``do``
     Provides a ``CODE`` reference (most likely in the form of an inline
-    ``sub { ... }`` block) which contains the main activity of the test
+    ``sub { ... }`` block) which contains the main activity of the test.
 
 ``check``
     Provides a ``CODE`` reference similar to the ``do`` argument, which
-    contains the checking code for the test
+    contains "immediate" checking code for the test.
+
+ ``await``
+    Provides a ``CODE`` reference similar to the ``check`` argument, which
+    contains "deferred" checking code for the test.
 
 ``requires``
     Provides an ``ARRAY`` reference giving a list of named requirements.
 
 A call to ``provide`` is similar to ``test``, except that it doesn't take a
-``check`` block, only a ``do``.
+checking blocks, only a ``do``.
 
 Code Blocks
 -----------
 
-The blocks of code given to ``do`` and ``check`` arguments follow the same
-basic pattern. Each is given a list of arguments matching the dependencies of
-the test (see below), and is expected to return a ``Future``. The
-interpretation of the return value of this future depends on the type of block.
+The blocks of code given to ``do``, ``check`` and ``await`` arguments follow
+the same basic pattern. Each is given a list of arguments matching the
+dependencies of the test (see below), and is expected to return a ``Future``.
+The interpretation of the return value of this future depends on the type of
+block.
 
 If a test provides both a ``do`` and a ``check`` block, then the checking one
 is run either side of the main step code, to test that it fails before the main
@@ -74,6 +79,12 @@ real distinction between ``do`` and ``check`` at presence, though stylistically
 ``check`` should be used for purely-passive "look-but-don't-touch" styles of
 activity, in case a distinction is introduced later (for example, allowing
 multiple blocks to execute concurrently).
+
+If an ``await`` block is provided it is executed repeatedly, after any ``do``
+or ``check`` functions, until it succeeds, or until it has taken too long to
+provide a success (which will then count as a failure). This allows for tests
+that aren't guaranteed to succeed immediately, such as awaiting for some event
+to appear on the event stream.
 
 Dependencies and Environment
 ----------------------------

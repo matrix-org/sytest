@@ -23,7 +23,7 @@ test "Presence changes are reported to all room members",
       )
    },
 
-   check => sub {
+   await => sub {
       my ( undef, $GET_new_events_for, $users ) = @_;
       my ( $senduser ) = @$users;
 

@@ -23,7 +23,7 @@ test "New room members see their own join event",
    requires => [qw( GET_new_events_for more_users room_id
                     can_join_room_by_id )],
 
-   check => sub {
+   await => sub {
       my ( $GET_new_events_for, $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
@@ -59,7 +59,8 @@ test "New room members also see original members' presence",
    # Currently this test fails due to a Synapse bug. May be related to
    #   SYN-72 or SYN-81
    expect_fail => 1,
-   check => sub {
+
+   await => sub {
       my ( $saved_events_for, $first_user, $more_users ) = @_;
 
       Future->needs_all( map {
@@ -88,7 +89,7 @@ test "Existing members see new members' join events",
    requires => [qw( GET_new_events_for user more_users room_id
                     can_join_room_by_id )],
 
-   check => sub {
+   await => sub {
       my ( $GET_new_events_for, $user, $more_users, $room_id ) = @_;
 
       $GET_new_events_for->( $user, "m.room.member" )->then( sub {
@@ -114,7 +115,7 @@ test "Existing members see new members' presence",
    requires => [qw( saved_events_for user more_users
                     can_join_room_by_id )],
 
-   check => sub {
+   await => sub {
       my ( $saved_events_for, $user, $more_users ) = @_;
 
       $saved_events_for->( $user, "m.presence" )->then( sub {

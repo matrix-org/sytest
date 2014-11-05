@@ -24,7 +24,7 @@ test "All room members see posted messages",
       );
    },
 
-   check => sub {
+   await => sub {
       my ( undef, $GET_new_events_for, $users, $room_id ) = @_;
       my ( $senduser ) = @$users;
 
