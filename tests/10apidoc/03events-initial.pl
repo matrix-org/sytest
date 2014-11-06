@@ -120,15 +120,25 @@ prepare "Environment closures for stateful /event access",
 
          # TODO: This won't yet handle:
          #   * concurrency
-         #   * saving nonfiltered events
 
          repeat {
-            $GET_new_events_for->( $user, undef, timeout => 500 )->then( sub {
+            # Just replay saved ones the first time around, if there are any
+            my $replay_saved = !shift && scalar @{ $user->saved_events };
+
+            ( $replay_saved
+               ? Future->done( @{ $user->saved_events } )
+               : $GET_new_events_for->( $user, undef, timeout => 500 )
+            )->then( sub {
+               my $found;
                foreach my $event ( @_ ) {
-                  $filter->( $event ) and return Future->done(1);
+                  not $found and $filter->( $event ) and
+                     $found = 1, next;
+
+                  # Save it for later
+                  push @{ $user->saved_events }, $event;
                }
 
-               Future->done(0);
+               Future->done( $found );
             });
          } while => sub { !$_[0]->failure and !$_[0]->get };
       };
