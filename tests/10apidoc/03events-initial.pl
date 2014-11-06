@@ -1,4 +1,5 @@
 use List::UtilsBy qw( extract_by );
+use Future::Utils qw( repeat );
 
 test "GET /events initially",
    requires => [qw( do_request_json user first_http_client )],
@@ -114,25 +115,24 @@ prepare "Environment closures for stateful /event access",
       };
 
       # New API
-      provide GET_event_for => sub {
+      provide await_event_for => sub {
          my ( $user, $filter ) = @_;
 
          # TODO: This won't yet handle:
          #   * concurrency
          #   * saving nonfiltered events
 
-         $GET_new_events_for->( $user, undef, timeout => 500 )->then( sub {
-            my $found;
-            foreach my $event ( @_ ) {
-               $filter->( $event ) or next;
+         repeat {
+            $GET_new_events_for->( $user, undef, timeout => 500 )->then( sub {
+               foreach my $event ( @_ ) {
+                  $filter->( $event ) and return Future->done(1);
+               }
 
-               $found = 1;
-               last;
-            }
-
-            Future->done( $found );
-         });
+               Future->done(0);
+            });
+         } while => sub { !$_[0]->failure and !$_[0]->get };
       };
+
 
       # Convenient wrapper operating on the first user
       provide GET_new_events => sub {

@@ -8,7 +8,7 @@ prepare "Flushing event stream",
 my $displayname = "New displayname for 20profile-events.pl";
 
 test "Displayname change reports an event to myself",
-   requires => [qw( do_request_json GET_event_for user can_set_displayname )],
+   requires => [qw( do_request_json await_event_for user can_set_displayname )],
 
    do => sub {
       my ( $do_request_json, undef, $user ) = @_;
@@ -22,9 +22,9 @@ test "Displayname change reports an event to myself",
    },
 
    await => sub {
-      my ( undef, $GET_event_for, $user ) = @_;
+      my ( undef, $await_event_for, $user ) = @_;
 
-      $GET_event_for->( $user, sub {
+      $await_event_for->( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
          my $content = $event->{content};
@@ -40,7 +40,7 @@ test "Displayname change reports an event to myself",
 my $avatar_url = "http://a.new.url/for/20profile-events.pl";
 
 test "Avatar URL change reports an event to myself",
-   requires => [qw( do_request_json GET_event_for user can_set_avatar_url )],
+   requires => [qw( do_request_json await_event_for user can_set_avatar_url )],
 
    do => sub {
       my ( $do_request_json, undef, $user ) = @_;
@@ -54,9 +54,9 @@ test "Avatar URL change reports an event to myself",
    },
 
    await => sub {
-      my ( undef, $GET_event_for, $user ) = @_;
+      my ( undef, $await_event_for, $user ) = @_;
 
-      $GET_event_for->( $user, sub {
+      $await_event_for->( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
          my $content = $event->{content};

@@ -44,7 +44,7 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   requires => [qw( do_request_json GET_event_for user can_set_presence )],
+   requires => [qw( do_request_json await_event_for user can_set_presence )],
 
    do => sub {
       my ( $do_request_json ) = @_;
@@ -58,9 +58,9 @@ test "Presence change reports an event to myself",
    },
 
    await => sub {
-      my ( undef, $GET_event_for, $user ) = @_;
+      my ( undef, $await_event_for, $user ) = @_;
 
-      $GET_event_for->( $user, sub {
+      $await_event_for->( $user, sub {
          my ( $event ) = @_;
          next unless $event->{type} eq "m.presence";
          my $content = $event->{content};
