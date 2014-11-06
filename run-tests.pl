@@ -178,16 +178,16 @@ sub test
       }
 
       if( my $await = $params{await} ) {
-         # Default at-most 10 seconds to pass
-         my $until_time = $loop->time + ( $params{timeout} // 10 );
+         Future->wait_any(
+            Future->wrap( $await->( @reqs ) )->then( sub {
+               my ( $success ) = @_;
+               $success or die "'await' check did not return a true value";
+               Future->done
+            }),
 
-         while(1) {
-            Future->wrap( $await->( @reqs ) )->get and last;
-
-            die "Await function timed out" if $loop->time >= $until_time;
-
-            $loop->delay_future( after => $params{delay} // 1.0 )->get;
-         };
+            $loop->delay_future( after => $params{timeout} // 10 )
+               ->then_fail( "Timed out waiting for 'await'" )
+         )->get;
       }
 
       1;
