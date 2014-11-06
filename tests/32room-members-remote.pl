@@ -132,26 +132,23 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new member's presence",
-   requires => [qw( GET_new_events remote_users
+   requires => [qw( await_event_for user remote_users
                     can_join_remote_room_by_alias )],
 
    await => sub {
-      my ( $GET_new_events, $remote_users ) = @_;
+      my ( $await_event_for, $user, $remote_users ) = @_;
 
-      $GET_new_events->( "m.presence",
-         timeout => 50,
-      )->then( sub {
-         my %found_user;
-         foreach my $event ( @_ ) {
+      Future->needs_all( map {
+         my $other_user = $_;
+
+         $await_event_for->( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
             json_keys_ok( $event, qw( type content ));
             json_keys_ok( my $content = $event->{content}, qw( user_id presence ));
+            return unless $content->{user_id} eq $other_user->user_id;
 
-            $found_user{$content->{user_id}}++;
-         }
-
-         $found_user{$_->user_id} or die "Failed to find presence of ${\$_->user_id}"
-            for @$remote_users;
-
-         Future->done(1);
-      });
+            return 1;
+         });
+      } @$remote_users );
    };
