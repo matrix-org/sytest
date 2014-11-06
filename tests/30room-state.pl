@@ -23,56 +23,43 @@ prepare "Creating a room",
    };
 
 test "Room creation reports m.room.create to myself",
-   requires => [qw( GET_new_events room_id user )],
+   requires => [qw( await_event_for room_id user )],
 
-   check => sub {
-      my ( $GET_new_events, $room_id, $user ) = @_;
+   await => sub {
+      my ( $await_event_for, $room_id, $user ) = @_;
 
-      $GET_new_events->( "m.room.create" )->then( sub {
-         my $found;
-         foreach my $event ( @_ ) {
-            json_keys_ok( $event, qw( room_id user_id content ));
-            next unless $event->{room_id} eq $room_id;
+      $await_event_for->( $user, sub {
+         my ( $event ) = @_;
+         return unless $event->{type} eq "m.room.create";
+         json_keys_ok( $event, qw( room_id user_id content ));
+         return unless $event->{room_id} eq $room_id;
 
-            $found++;
+         $event->{user_id} eq $user->user_id or die "Expected user_id to be ${\$user->user_id}";
 
-            $event->{user_id} eq $user->user_id or die "Expected user_id to be ${\$user->user_id}";
+         json_keys_ok( my $content = $event->{content}, qw( creator ));
+         $content->{creator} eq $user->user_id or die "Expected creator to be ${\$user->user_id}";
 
-            json_keys_ok( my $content = $event->{content}, qw( creator ));
-
-            $content->{creator} eq $user->user_id or die "Expected creator to be ${\$user->user_id}";
-         }
-
-         $found or
-            die "Failed to find expected m.room.create event";
-
-         Future->done(1);
+         return 1;
       });
    };
 
 test "Room creation reports m.room.member to myself",
-   requires => [qw( saved_events_for room_id user )],
+   requires => [qw( await_event_for room_id user )],
 
-   check => sub {
-      my ( $saved_events_for, $room_id, $user ) = @_;
+   await => sub {
+      my ( $await_event_for, $room_id, $user ) = @_;
 
-      $saved_events_for->( $user, "m.room.member" )->then( sub {
-         my $found;
-         foreach my $event ( @_ ) {
-            json_keys_ok( $event, qw( room_id user_id state_key content ));
-            next unless $event->{room_id} eq $room_id;
-            next unless $event->{state_key} eq $user->user_id;
+      $await_event_for->( $user, sub {
+         my ( $event ) = @_;
+         return unless $event->{type} eq "m.room.member";
+         json_keys_ok( $event, qw( room_id user_id state_key content ));
+         return unless $event->{room_id} eq $room_id;
+         return unless $event->{state_key} eq $user->user_id;
 
-            $found++;
+         $event->{membership} eq "join" or
+            die "Expected my membership as 'join'";
 
-            $event->{membership} eq "join" or
-               die "Expected my membership as 'join'";
-         }
-
-         $found or
-            die "Failed to find expected m.room.member event";
-
-         Future->done(1);
+         return 1;
       });
    };
 
