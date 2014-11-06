@@ -185,6 +185,10 @@ sub test
                Future->done
             }),
 
+            $loop->delay_future( after => 2 )
+               ->then( sub { print STDERR "  Waiting..."; $loop->new_future })
+               ->on_cancel( sub { print STDERR "\r\e[2K" }),
+
             $loop->delay_future( after => $params{timeout} // 10 )
                ->then_fail( "Timed out waiting for 'await'" )
          )->get;
