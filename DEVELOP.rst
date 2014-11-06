@@ -47,7 +47,7 @@ is described in more detail in the following sections.
     Provides a ``CODE`` reference similar to the ``do`` argument, which
     contains "immediate" checking code for the test.
 
- ``await``
+``await``
     Provides a ``CODE`` reference similar to the ``check`` argument, which
     contains "deferred" checking code for the test.
 
