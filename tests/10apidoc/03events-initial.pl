@@ -79,19 +79,22 @@ prepare "Environment closures for stateful /event access",
       provide GET_new_events_for => my $GET_new_events_for = sub {
          my ( $user, $filter, %opts ) = @_;
 
-         $user->http->do_request_json(
-            method => "GET",
-            uri    => "/events",
-            params => {
-               access_token => $user->access_token,
-               from         => $user->eventstream_token,
-               timeout      => $opts{timeout} // 10000,
-            }
-         )->then( sub {
-            my ( $body ) = @_;
-            $user->eventstream_token = $body->{end};
+         return $user->pending_get_events //=
+            $user->http->do_request_json(
+               method => "GET",
+               uri    => "/events",
+               params => {
+                  access_token => $user->access_token,
+                  from         => $user->eventstream_token,
+                  timeout      => $opts{timeout} // 10000,
+               }
+            )->on_ready( sub {
+               undef $user->pending_get_events;
+            })->then( sub {
+               my ( $body ) = @_;
+               $user->eventstream_token = $body->{end};
 
-            return $saved_events_for->( $user, $filter, @{ $body->{chunk} } );
+               return $saved_events_for->( $user, $filter, @{ $body->{chunk} } );
          });
       };
 
@@ -117,9 +120,6 @@ prepare "Environment closures for stateful /event access",
       # New API
       provide await_event_for => sub {
          my ( $user, $filter ) = @_;
-
-         # TODO: This won't yet handle:
-         #   * concurrency
 
          repeat {
             # Just replay saved ones the first time around, if there are any
