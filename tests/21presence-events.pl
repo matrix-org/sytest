@@ -1,3 +1,6 @@
+# Eventually this will be changed; see SPEC-53
+my $PRESENCE_LIST_URI = "/presence/list/:user_id";
+
 prepare "Flushing event stream",
    requires => [qw( flush_events_for user )],
    do => sub {
@@ -70,5 +73,78 @@ test "Presence change reports an event to myself",
             die "Expected status_msg to be '$status_msg'";
 
          return 1;
+      });
+   };
+
+my $friend_status = "Status of a Friend";
+
+test "Friends presence changes reports events",
+   requires => [qw( do_request_json_for await_event_for user more_users
+                    can_set_presence can_invite_presence )],
+
+   do => sub {
+      my ( $do_request_json_for, undef, $user, $more_users ) = @_;
+      my $friend = $more_users->[0];
+
+      $do_request_json_for->( $user,
+         method => "POST",
+         uri    => $PRESENCE_LIST_URI,
+
+         content => {
+            invite => [ $friend->user_id ],
+         }
+      )->then( sub {
+         $do_request_json_for->( $friend,
+            method => "PUT",
+            uri    => "/presence/:user_id/status",
+
+            content => { presence => "online", status_msg => $friend_status },
+         );
+      });
+   },
+
+   await => sub {
+      my ( undef, $await_event_for, $user, $more_users ) = @_;
+      my $friend = $more_users->[0];
+
+      $await_event_for->( $user, sub {
+         my ( $event ) = @_;
+         return unless $event->{type} eq "m.presence";
+
+         my $content = $event->{content};
+         json_keys_ok( $content, qw( user_id ));
+
+         return unless $content->{user_id} eq $friend->user_id;
+
+         json_keys_ok( $content, qw( presence status_msg ));
+         $content->{presence} eq "online" or
+            die "Expected presence to be 'online'";
+         $content->{status_msg} eq $friend_status or
+            die "Expected status_msg to be '$friend_status'";
+
+         return 1;
+      });
+   };
+
+prepare "Clearing presence list",
+   requires => [qw( do_request_json can_invite_presence can_drop_presence )],
+
+   do => sub {
+      my ( $do_request_json ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => $PRESENCE_LIST_URI,
+      )->then( sub {
+         my ( $body ) = @_;
+
+         my @ids = map { $_->{user_id} } @$body;
+
+         $do_request_json->(
+            method => "POST",
+            uri    => $PRESENCE_LIST_URI,
+
+            content => { drop => \@ids },
+         );
       });
    };
