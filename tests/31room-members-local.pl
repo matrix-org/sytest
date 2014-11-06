@@ -20,40 +20,33 @@ prepare "More local room members",
    };
 
 test "New room members see their own join event",
-   requires => [qw( GET_new_events_for more_users room_id
+   requires => [qw( await_event_for more_users room_id
                     can_join_room_by_id )],
 
    await => sub {
-      my ( $GET_new_events_for, $more_users, $room_id ) = @_;
+      my ( $await_event_for, $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $GET_new_events_for->( $user, "m.room.member",
-            timeout => 50,
-         )->then( sub {
-            my $found;
-            foreach my $event ( @_ ) {
-               json_keys_ok( $event, qw( type room_id user_id membership ));
-               next unless $event->{room_id} eq $room_id;
-               next unless $event->{user_id} eq $user->user_id;
+         $await_event_for->( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.member";
 
-               $found++;
+            json_keys_ok( $event, qw( type room_id user_id membership ));
+            return unless $event->{room_id} eq $room_id;
+            return unless $event->{user_id} eq $user->user_id;
 
-               $event->{membership} eq "join" or
-                  die "Expected user membership as 'join'";
-            }
+            $event->{membership} eq "join" or
+               die "Expected user membership as 'join'";
 
-            $found or
-               die "Failed to find an appropriate m.room.member event";
-
-            Future->done(1);
+            return 1;
          });
       } @$more_users );
    };
 
 test "New room members also see original members' presence",
-   requires => [qw( saved_events_for user more_users
+   requires => [qw( await_event_for user more_users
                     can_join_room_by_id )],
 
    # Currently this test fails due to a Synapse bug. May be related to
@@ -61,26 +54,19 @@ test "New room members also see original members' presence",
    expect_fail => 1,
 
    await => sub {
-      my ( $saved_events_for, $first_user, $more_users ) = @_;
+      my ( $await_event_for, $first_user, $more_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $saved_events_for->( $user, "m.presence" )->then( sub {
-            my $found;
-            foreach my $event ( @_ ) {
-               json_keys_ok( $event, qw( type content ));
-               json_keys_ok( my $content = $event->{content}, qw( user_id presence ));
+         $await_event_for->( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
+            json_keys_ok( $event, qw( type content ));
+            json_keys_ok( my $content = $event->{content}, qw( user_id presence ));
+            return unless $content->{user_id} eq $first_user->user_id;
 
-               next unless $content->{user_id} eq $first_user->user_id;
-
-               $found++;
-            }
-
-            $found or
-               die "Failed to find presence of existing room member";
-
-            Future->done(1);
+            return 1;
          });
       } @$more_users );
    };

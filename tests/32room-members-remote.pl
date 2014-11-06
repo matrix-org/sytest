@@ -58,67 +58,50 @@ prepare "More remote room members",
    };
 
 test "New room members see their own join event",
-   requires => [qw( GET_new_events_for remote_users room_id
+   requires => [qw( await_event_for remote_users room_id
                     can_join_remote_room_by_alias )],
 
    await => sub {
-      my ( $GET_new_events_for, $remote_users, $room_id ) = @_;
+      my ( $await_event_for, $remote_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $GET_new_events_for->( $user, "m.room.member",
-            timeout => 50,
-         )->then( sub {
-            my $found;
-            foreach my $event ( @_ ) {
-               json_keys_ok( $event, qw( type room_id user_id membership ));
-               next unless $event->{room_id} eq $room_id;
-               next unless $event->{user_id} eq $user->user_id;
+         $await_event_for->( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.member";
 
-               $found++;
+            json_keys_ok( $event, qw( type room_id user_id membership ));
+            return unless $event->{room_id} eq $room_id;
+            return unless $event->{user_id} eq $user->user_id;
 
-               $event->{membership} eq "join" or
-                  die "Expected user membership as 'join'";
-            }
+            $event->{membership} eq "join" or
+               die "Expected user membership as 'join'";
 
-            $found or
-               die "Failed to find an appropriate m.room.member event";
-
-            Future->done(1);
+            return 1;
          });
       } @$remote_users );
    };
 
 test "New room members also see original members' presence",
-   requires => [qw( GET_new_events_for user remote_users
+   requires => [qw( await_event_for user remote_users
                     can_join_remote_room_by_alias )],
 
    await => sub {
-      my ( $GET_new_events_for, $first_user, $remote_users ) = @_;
+      my ( $await_event_for, $first_user, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         # GET_new instead of saved because they probably don't come in the
-         # chunk over federation
-         $GET_new_events_for->( $user, "m.presence",
-            timeout => 50,
-         )->then( sub {
-            my $found;
-            foreach my $event ( @_ ) {
-               json_keys_ok( $event, qw( type content ));
-               json_keys_ok( my $content = $event->{content}, qw( user_id presence ));
+         $await_event_for->( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
+            json_keys_ok( $event, qw( type content ));
+            json_keys_ok( my $content = $event->{content}, qw( user_id presence ));
 
-               next unless $content->{user_id} eq $first_user->user_id;
+            return unless $content->{user_id} eq $first_user->user_id;
 
-               $found++;
-            }
-
-            $found or
-               die "Failed to find presence of existing room member";
-
-            Future->done(1);
+            return 1;
          });
       } @$remote_users );
    };

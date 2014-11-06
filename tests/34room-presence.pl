@@ -9,7 +9,7 @@ prepare "Flushing event streams",
 my $status_msg = "Update for room members";
 
 test "Presence changes are reported to all room members",
-   requires => [qw( do_request_json GET_new_events_for local_users
+   requires => [qw( do_request_json await_event_for local_users
                     can_set_presence )],
 
    do => sub {
@@ -24,32 +24,25 @@ test "Presence changes are reported to all room members",
    },
 
    await => sub {
-      my ( undef, $GET_new_events_for, $users ) = @_;
+      my ( undef, $await_event_for, $users ) = @_;
       my ( $senduser ) = @$users;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $GET_new_events_for->( $recvuser, "m.presence",
-            timeout => 50,
-         )->then( sub {
-            my $found;
-            foreach my $event ( @_ ) {
-               json_keys_ok( $event, qw( type content ));
-               json_keys_ok( my $content = $event->{content}, qw( user_id presence status_msg ));
+         $await_event_for->( $recvuser, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
 
-               $content->{user_id} eq $senduser->user_id or next;
+            json_keys_ok( $event, qw( type content ));
+            json_keys_ok( my $content = $event->{content}, qw( user_id presence status_msg ));
 
-               $found++;
+            $content->{user_id} eq $senduser->user_id or next;
 
-               $content->{status_msg} eq $status_msg or
-                  die "Expected content status_msg to '$status_msg'";
-            }
+            $content->{status_msg} eq $status_msg or
+               die "Expected content status_msg to '$status_msg'";
 
-            $found or
-               die "Failed to find expected m.presence event for ${\$senduser->user_id}";
-
-            Future->done(1);
+            return 1;
          });
       } @$users );
    };

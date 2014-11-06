@@ -10,7 +10,7 @@ my $msgtype = "m.message";
 my $body = "Room message for 33room-messages";
 
 test "All room members see posted messages",
-   requires => [qw( do_request_json GET_new_events_for local_users room_id
+   requires => [qw( do_request_json await_event_for local_users room_id
                     can_send_message )],
 
    do => sub {
@@ -25,36 +25,29 @@ test "All room members see posted messages",
    },
 
    await => sub {
-      my ( undef, $GET_new_events_for, $users, $room_id ) = @_;
+      my ( undef, $await_event_for, $users, $room_id ) = @_;
       my ( $senduser ) = @$users;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $GET_new_events_for->( $recvuser, "m.room.message",
-            timeout => 50,
-         )->then( sub {
-            my $found;
-            foreach my $event ( @_ ) {
-               json_keys_ok( $event, qw( type content room_id user_id ));
-               json_keys_ok( my $content = $event->{content}, qw( msgtype body ));
+         $await_event_for->( $recvuser, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.message";
 
-               next unless $event->{room_id} eq $room_id;
+            json_keys_ok( $event, qw( type content room_id user_id ));
+            json_keys_ok( my $content = $event->{content}, qw( msgtype body ));
 
-               $found++;
+            return unless $event->{room_id} eq $room_id;
 
-               $content->{msgtype} eq $msgtype or
-                  die "Expected msgtype as $msgtype";
-               $content->{body} eq $body or
-                  die "Expected body as '$body'";
-               $event->{user_id} eq $senduser->user_id or
-                  die "Expected sender user_id as ${\$senduser->user_id}\n";
-            }
+            $content->{msgtype} eq $msgtype or
+               die "Expected msgtype as $msgtype";
+            $content->{body} eq $body or
+               die "Expected body as '$body'";
+            $event->{user_id} eq $senduser->user_id or
+               die "Expected sender user_id as ${\$senduser->user_id}\n";
 
-            $found or
-               die "Failed to find expected m.room.message event";
-
-            Future->done(1);
+            return 1;
          });
       } @$users );
    };
