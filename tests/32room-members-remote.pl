@@ -107,29 +107,28 @@ test "New room members also see original members' presence",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( GET_new_events_for user remote_users room_id
+   requires => [qw( await_event_for user remote_users room_id
                     can_join_remote_room_by_alias )],
 
    await => sub {
-      my ( $GET_new_events_for, $user, $remote_users, $room_id ) = @_;
+      my ( $await_event_for, $user, $remote_users, $room_id ) = @_;
 
-      $GET_new_events_for->( $user, "m.room.member" )->then( sub {
-         my %found_user;
-         foreach my $event ( @_ ) {
+      Future->needs_all( map {
+         my $other_user = $_;
+
+         $await_event_for->( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.member";
             json_keys_ok( $event, qw( type room_id user_id membership ));
-            next unless $event->{room_id} eq $room_id;
-
-            $found_user{$event->{user_id}}++;
+            return unless $event->{room_id} eq $room_id;
+            return unless $event->{user_id} eq $other_user->user_id;
 
             $event->{membership} eq "join" or
                die "Expected user membership as 'join'";
-         }
 
-         $found_user{$_->user_id} or die "Failed to find membership of ${\$_->user_id}"
-            for @$remote_users;
-
-         Future->done(1);
-      });
+            return 1;
+         });
+      } @$remote_users );
    };
 
 test "Existing members see new member's presence",
