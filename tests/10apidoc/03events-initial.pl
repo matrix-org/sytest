@@ -65,19 +65,9 @@ prepare "Environment closures for stateful /event access",
 
       # A useful closure, which keeps track of the current eventstream token
       # and fetches new events since it
-      provide saved_events_for => my $saved_events_for = sub {
-         my ( $user, $filter, @more ) = @_;
-         $filter = qr/^\Q$filter\E$/ if defined $filter and not ref $filter;
 
-         my @events = ( @{ $user->saved_events }, @more );
-         my @filtered_events = extract_by { $filter ? $_->{type} =~ $filter : 1 } @events;
-         $user->saved_events = \@events;
-
-         Future->done( @filtered_events );
-      };
-
-      provide GET_new_events_for => my $GET_new_events_for = sub {
-         my ( $user, $filter, %opts ) = @_;
+      my $GET_new_events_for = sub {
+         my ( $user ) = @_;
 
          return $user->pending_get_events //=
             $user->http->do_request_json(
@@ -86,7 +76,7 @@ prepare "Environment closures for stateful /event access",
                params => {
                   access_token => $user->access_token,
                   from         => $user->eventstream_token,
-                  timeout      => $opts{timeout} // 10000,
+                  timeout      => 500,
                }
             )->on_ready( sub {
                undef $user->pending_get_events;
@@ -94,8 +84,11 @@ prepare "Environment closures for stateful /event access",
                my ( $body ) = @_;
                $user->eventstream_token = $body->{end};
 
-               return $saved_events_for->( $user, $filter, @{ $body->{chunk} } );
-         });
+               my @events = ( @{ $user->saved_events }, @{ $body->{chunk} } );
+               @{ $user->saved_events } = ();
+
+               Future->done( @events );
+            });
       };
 
       provide flush_events_for => sub {
@@ -117,7 +110,6 @@ prepare "Environment closures for stateful /event access",
          });
       };
 
-      # New API
       provide await_event_for => sub {
          my ( $user, $filter ) = @_;
 
@@ -127,7 +119,7 @@ prepare "Environment closures for stateful /event access",
 
             ( $replay_saved
                ? Future->done( @{ $user->saved_events } )
-               : $GET_new_events_for->( $user, undef, timeout => 500 )
+               : $GET_new_events_for->( $user )
             )->then( sub {
                my $found;
                foreach my $event ( @_ ) {
@@ -141,12 +133,6 @@ prepare "Environment closures for stateful /event access",
                Future->done( $found );
             });
          } while => sub { !$_[0]->failure and !$_[0]->get };
-      };
-
-
-      # Convenient wrapper operating on the first user
-      provide GET_new_events => sub {
-         $GET_new_events_for->( $first_user, @_ );
       };
 
       Future->done(1);
