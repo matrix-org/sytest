@@ -1,5 +1,5 @@
 # How many more users do we want?
-my $LOCAL_USERS = 2;
+my $LOCAL_USERS = 3;
 
 prepare "More local users",
    requires => [qw( first_http_client user can_register )],

@@ -69,6 +69,41 @@ test "POST /join/:room_alias can join a room",
       });
    };
 
+test "POST /rooms/:room_id/invite can send an invite",
+   requires => [qw( do_request_json_for user more_users room_id
+                    can_get_room_membership )],
+
+   do => sub {
+      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my $invitee = $more_users->[2];
+
+      $do_request_json_for->( $user,
+         method => "POST",
+         uri    => "/rooms/$room_id/invite",
+
+         content => { user_id => $invitee->user_id },
+      );
+   },
+
+   check => sub {
+      my ( $do_request_json_for, undef, $more_users, $room_id ) = @_;
+      my $invitee = $more_users->[2];
+
+      $do_request_json_for->( $invitee,
+         method => "GET",
+         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         $body->{membership} eq "invite" or
+            die "Expected membership to be 'invite'";
+
+         provide can_invite_room => 1;
+
+         Future->done(1);
+      });
+   };
+
 test "POST /rooms/:room_id/leave can leave a room",
    requires => [qw( do_request_json_for more_users room_id
                     can_join_room_by_id can_get_room_membership )],
