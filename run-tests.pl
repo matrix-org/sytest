@@ -29,6 +29,7 @@ GetOptions(
    'N|number=i'    => \(my $NUMBER = 2),
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \my $SERVER_LOG,
+   'd|synapse-directory=s' => \(my $SYNAPSE_DIR = "../synapse"),
 
    's|stop-on-fail+' => \my $STOP_ON_FAIL,
 
@@ -109,7 +110,7 @@ my @PORTS = 8001 .. 8000+$NUMBER;
 my @f;
 foreach my $port ( @PORTS ) {
    my $synapse = $synapses_by_port{$port} = SyTest::Synapse->new(
-      synapse_dir  => "../synapse",
+      synapse_dir  => $SYNAPSE_DIR,
       port         => $port,
       output       => $output,
       print_output => $SERVER_LOG,
