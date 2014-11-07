@@ -5,6 +5,8 @@ use warnings;
 
 use constant FORMAT => "tap";
 
+STDOUT->autoflush(1);
+
 # File status
 sub run_file {}
 
