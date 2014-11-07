@@ -15,12 +15,15 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case );
 use IO::Socket::SSL;
-use List::Util 1.33 qw( all );
+use List::Util 1.33 qw( first all );
 
 use SyTest::Synapse;
 use SyTest::HTTPClient;
 
-use SyTest::Output::Term;
+use Module::Pluggable
+   sub_name    => "output_formats",
+   search_path => [ "SyTest::Output" ],
+   require     => 1;
 
 GetOptions(
    'N|number=i'    => \(my $NUMBER = 2),
@@ -28,9 +31,12 @@ GetOptions(
    'S|server-log+' => \my $SERVER_LOG,
 
    's|stop-on-fail+' => \my $STOP_ON_FAIL,
+
+   'O|output-format=s' => \(my $OUTPUT_FORMAT = "term"),
 ) or exit 1;
 
-my $output = "SyTest::Output::Term";
+my $output = first { $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
+   or die "Unrecognised output format $OUTPUT_FORMAT\n";
 
 if( $CLIENT_LOG ) {
    require Net::Async::HTTP;

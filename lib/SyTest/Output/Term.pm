@@ -3,6 +3,8 @@ package SyTest::Output::Term;
 use strict;
 use warnings;
 
+use constant FORMAT => "term";
+
 # File status
 sub run_file
 {
