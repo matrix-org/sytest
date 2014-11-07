@@ -20,6 +20,8 @@ use List::Util 1.33 qw( all );
 use SyTest::Synapse;
 use SyTest::HTTPClient;
 
+use SyTest::Output::Term;
+
 GetOptions(
    'N|number=i'    => \(my $NUMBER = 2),
    'C|client-log+' => \my $CLIENT_LOG,
@@ -27,6 +29,8 @@ GetOptions(
 
    's|stop-on-fail+' => \my $STOP_ON_FAIL,
 ) or exit 1;
+
+my $output = "SyTest::Output::Term";
 
 if( $CLIENT_LOG ) {
    require Net::Async::HTTP;
@@ -88,9 +92,10 @@ my $loop = IO::Async::Loop->new;
 
 my %synapses_by_port;
 END {
-   print STDERR "Killing synapse servers...\n" if %synapses_by_port;
-   print STDERR "[${\$_->pid}] " and kill INT => $_->pid for values %synapses_by_port;
-   print STDERR "\n";
+   $output->diag( "Killing synapse servers " . join " ", map { "[${\$_->pid}]" } values %synapses_by_port )
+      if %synapses_by_port;
+
+   kill INT => $_->pid for values %synapses_by_port;
 }
 $SIG{INT} = sub { exit 1 };
 
@@ -155,11 +160,11 @@ sub test
    foreach my $req ( @{ $params{requires} || [] } ) {
       push @reqs, $test_environment{$req} and next if $test_environment{$req};
 
-      print "  \e[1;33mSKIP\e[m $name due to lack of $req\n";
+      $output->skip_test( $name, $req );
       return;
    }
 
-   print "  \e[36mTesting if: $name\e[m... ";
+   $output->start_test( $name );
 
    my $success = eval {
       my $check = $params{check};
@@ -186,8 +191,10 @@ sub test
             }),
 
             $loop->delay_future( after => 2 )
-               ->then( sub { print STDERR "  Waiting..."; $loop->new_future })
-               ->on_cancel( sub { print STDERR "\r\e[2K" }),
+               ->then( sub {
+                  $output->start_waiting;
+                  $loop->new_future->on_cancel( sub { $output->stop_waiting });
+               }),
 
             $loop->delay_future( after => $params{timeout} // 10 )
                ->then_fail( "Timed out waiting for 'await'" )
@@ -198,30 +205,12 @@ sub test
    };
 
    if( $success ) {
-      print "\e[32mPASS\e[m\n";
-      if( $params{expect_fail} ) {
-         # TODO - remark that this was unexpected
-         print "\e[1;33mEXPECTED TO FAIL\e[m but passed anyway\n";
-      }
+      $output->pass_test( $params{expect_fail} );
    }
    else {
       my $e = $@; chomp $e;
-      if( $params{expect_fail} ) {
-         print "\e[1;33mEXPECTED FAIL\e[m:\n";
-         $expected_fail++;
-      }
-      else {
-         print "\e[1;31mFAIL\e[m:\n";
-         $failed++;
-      }
-      print " | $_\n" for split m/\n/, $e;
-      print " +----------------------\n";
-   }
-
-   foreach my $req ( @{ $params{provides} || [] } ) {
-      exists $test_environment{$req} and next;
-
-      print "\e[1;31mWARN\e[m: Test failed to provide the '$req' environment as promised\n";
+      $output->fail_test( $e, $params{expect_fail} );
+      $params{expect_fail} ? $expected_fail++ : $failed++;
    }
 
    no warnings 'exiting';
@@ -236,11 +225,11 @@ sub prepare
    foreach my $req ( @{ $params{requires} || [] } ) {
       push @reqs, $test_environment{$req} and next if $test_environment{$req};
 
-      print "  \e[1;33mSKIP\e[m '$name' prepararation due to lack of $req\n";
+      $output->skip_prepare( $name, $req );
       return;
    }
 
-   print "  \e[36mPreparing: $name\e[m... ";
+   $output->start_prepare( $name );
 
    my $do = $params{do};
    my $success = eval {
@@ -249,13 +238,11 @@ sub prepare
    };
 
    if( $success ) {
-      print "DONE\n";
+      $output->pass_prepare;
    }
    else {
       my $e = $@; chomp $e;
-      print "\e[1;31mFAIL\e[m:\n";
-      print " | $_\n" for split m/\n/, $e;
-      print " +----------------------\n";
+      $output->fail_prepare( $e );
       $failed++;
    }
 
@@ -321,7 +308,7 @@ TEST: {
 
          return unless basename( $filename ) =~ m/^\d+.*\.pl$/;
 
-         print "\e[1;36mRunning $filename...\e[m\n";
+         $output->run_file( $filename );
 
          # Slurp and eval() the file instead of do() because then lexical
          # environment such as strict/warnings will still apply
@@ -339,15 +326,11 @@ TEST: {
 }
 
 if( $failed ) {
-   print STDERR "\n\e[1;31m$failed tests FAILED\e[m\n";
+   $output->final_fail( $failed );
    exit 1;
 }
 else {
-   print STDERR "\n\e[1;32mAll tests PASSED\e[m";
-   if( $expected_fail ) {
-      print STDERR " (with $expected_fail expected failures)";
-   }
-   print STDERR "\n";
+   $output->final_pass( $expected_fail );
    exit 0;
 }
 
