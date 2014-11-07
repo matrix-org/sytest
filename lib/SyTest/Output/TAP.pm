@@ -32,7 +32,7 @@ sub fail_test
 {
    shift;
    my ( $failure, $expect_fail ) = @_;
-   print "not ok $next_test_num $running" . ( $expect_fail ? " # TODO" : "" ) . "\n";
+   print "not ok $next_test_num $running" . ( $expect_fail ? " # TODO expected fail" : "" ) . "\n";
    $next_test_num++;
 
    print "# $_\n" for split m/\n/, $failure;
