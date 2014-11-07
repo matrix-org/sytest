@@ -105,6 +105,7 @@ foreach my $port ( @PORTS ) {
    my $synapse = $synapses_by_port{$port} = SyTest::Synapse->new(
       synapse_dir  => "../synapse",
       port         => $port,
+      output       => $output,
       print_output => $SERVER_LOG,
    );
    $loop->add( $synapse );

@@ -15,7 +15,7 @@ sub _init
    my $self = shift;
    my ( $args ) = @_;
 
-   $self->{$_} = delete $args->{$_} for qw( port print_output synapse_dir );
+   $self->{$_} = delete $args->{$_} for qw( port output print_output synapse_dir );
 
    $self->SUPER::_init( $args );
 }
@@ -26,6 +26,7 @@ sub _add_to_loop
    my ( $loop ) = @_;
 
    my $port = $self->{port};
+   my $output = $self->{output};
 
    my $hs_dir = "localhost-$port";
    my $db = "$hs_dir/homeserver.db";
@@ -51,7 +52,7 @@ sub _add_to_loop
          "--tls-dh-params-path" => "$CWD/keys/tls.dh",
    );
 
-   print STDERR "Generating config for port $port\n";
+   $output->diag( "Generating config for port $port" );
 
    $loop->run_child(
       setup => [
@@ -68,7 +69,7 @@ sub _add_to_loop
             exit $exitcode;
          }
 
-         print STDERR "Starting server for port $port\n";
+         $output->diag( "Starting server for port $port" );
          $self->add_child(
             $self->{proc} = IO::Async::Process->new(
                setup => [
