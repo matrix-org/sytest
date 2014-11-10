@@ -88,16 +88,18 @@ sub fail_prepare
 
 # Wait status on longrunning tests
 
+my $waiting = "Waiting...";
+
 sub start_waiting
 {
    shift;
-   print STDERR "  Waiting...";
+   print STDERR $waiting;
 }
 
 sub stop_waiting
 {
    shift;
-   print STDERR "\r\e[2K";
+   print STDERR "\x08" x length($waiting), "\e[K";
 }
 
 # Overall summary
