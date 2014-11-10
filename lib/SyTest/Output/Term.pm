@@ -5,12 +5,28 @@ use warnings;
 
 use constant FORMAT => "term";
 
+# Some terminal control strings
+
+my $RED_B = "\e[1;31m";
+my $GREEN = "\e[32m";
+my $GREEN_B = "\e[1;32m";
+my $YELLOW_B = "\e[1;33m";
+my $CYAN = "\e[36m";
+my $CYAN_B = "\e[1;36m";
+
+my $RESET = "\e[m";
+
+# Backspace
+my $BS = "\x08";
+# Erase to end of line
+my $EL_TO_EOL = "\e[K";
+
 # File status
 sub run_file
 {
    shift;
    my ( $filename ) = @_;
-   print "\e[1;36mRunning $filename...\e[m\n";
+   print "${CYAN_B}Running $filename...${RESET}\n";
 }
 
 # General test status
@@ -18,17 +34,17 @@ sub start_test
 {
    shift;
    my ( $name ) = @_;
-   print "  \e[36mTesting if: $name\e[m... ";
+   print "  ${CYAN}Testing if: $name${RESET}... ";
 }
 
 sub pass_test
 {
    shift;
    my ( $expect_fail ) = @_;
-   print "\e[32mPASS\e[m\n";
+   print "${GREEN}PASS${RESET}\n";
 
    if( $expect_fail ) {
-      print "\e[1;33mEXPECTED TO FAIL\e[m but passed anyway\n";
+      print "${YELLOW_B}EXPECTED TO FAIL${RESET} but passed anyway\n";
    }
 }
 
@@ -38,10 +54,10 @@ sub fail_test
    my ( $failure, $expect_fail ) = @_;
 
    if( $expect_fail ) {
-      print "\e[1;33mEXPECTED FAIL\e[m:\n";
+      print "${YELLOW_B}EXPECTED FAIL${RESET}:\n";
    }
    else {
-      print "\e[1;31mFAIL\e[m:\n";
+      print "${RED_B}FAIL${RESET}:\n";
    }
 
    print " | $_\n" for split m/\n/, $failure;
@@ -52,7 +68,7 @@ sub skip_test
 {
    shift;
    my ( $name, $req ) = @_;
-   print "  \e[1;33mSKIP\e[m $name due to lack of $req\n";
+   print "  ${YELLOW_B}SKIP${RESET} $name due to lack of $req\n";
 }
 
 # General preparation status
@@ -60,14 +76,14 @@ sub start_prepare
 {
    shift;
    my ( $name ) = @_;
-   print "  \e[36mPreparing: $name\e[m... ";
+   print "  ${CYAN}Preparing: $name${RESET}... ";
 }
 
 sub skip_prepare
 {
    shift;
    my ( $name, $req ) = @_;
-   print "  \e[1;33mSKIP\e[m '$name' prepararation due to lack of $req\n";
+   print "  ${YELLOW_B}SKIP${RESET} '$name' prepararation due to lack of $req\n";
 }
 
 sub pass_prepare
@@ -81,7 +97,7 @@ sub fail_prepare
    shift;
    my ( $failure ) = @_;
 
-   print "\e[1;31mFAIL\e[m:\n";
+   print "${RED_B}FAIL${RESET}:\n";
    print " | $_\n" for split m/\n/, $failure;
    print " +----------------------\n";
 }
@@ -99,7 +115,7 @@ sub start_waiting
 sub stop_waiting
 {
    shift;
-   print STDERR "\x08" x length($waiting), "\e[K";
+   print STDERR $BS x length($waiting), $EL_TO_EOL;
 }
 
 # Overall summary
@@ -107,7 +123,7 @@ sub final_pass
 {
    shift;
    my ( $expected_fail ) = @_;
-   print STDERR "\n\e[1;32mAll tests PASSED\e[m";
+   print STDERR "\n${GREEN_B}All tests PASSED${RESET}";
    if( $expected_fail ) {
       print STDERR " (with $expected_fail expected failures)";
    }
@@ -118,7 +134,7 @@ sub final_fail
 {
    shift;
    my ( $failed ) = @_;
-   print STDERR "\n\e[1;31m$failed tests FAILED\e[m\n";
+   print STDERR "\n${RED_B}$failed tests FAILED${RESET}\n";
 }
 
 # General diagnostic status
