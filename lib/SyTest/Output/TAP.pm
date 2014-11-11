@@ -53,6 +53,14 @@ sub start_prepare
    ( $running ) = @_;
 }
 
+sub skip_prepare
+{
+   shift;
+   my ( $name, $req ) = @_;
+   print "ok $next_test_num $name # skip Missing requirement $req\n";
+   $next_test_num++;
+}
+
 sub pass_prepare
 {
    print "ok $next_test_num prepared $running\n";
@@ -70,8 +78,13 @@ sub fail_prepare
 }
 
 # Wait status on longrunning tests
-sub start_waiting {}
-sub stop_waiting  {}
+sub start_waiting
+{
+}
+
+sub stop_waiting
+{
+}
 
 # Overall summary
 sub final_pass
@@ -86,6 +99,7 @@ sub final_fail
    print "1..$next_test_num\n";
 }
 
+# General diagnostic status
 sub diag
 {
    shift;
