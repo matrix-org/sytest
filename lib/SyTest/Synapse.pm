@@ -111,7 +111,7 @@ sub on_synapse_read
       my $line = $1;
       print STDERR "\e[1;35m[server $self->{port}]\e[m: $line\n" if $self->{print_output};
 
-      $self->started_future->done if $line =~ m/INFO - Synapse now listening on port $self->{port}\s*$/;
+      $self->started_future->done if $line =~ m/INFO .* Synapse now listening on port $self->{port}\s*$/;
    }
 
    return 0;
