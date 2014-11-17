@@ -127,14 +127,24 @@ test "POST /rooms/:room_id/leave can leave a room",
       $do_request_json_for->( $user,
          method => "GET",
          uri    => "/rooms/$room_id/state/m.room.member/:user_id",
-      )->then( sub {
-         my ( $body ) = @_;
+      )->then(
+         sub { # then
+            my ( $body ) = @_;
 
-         $body->{membership} eq "join" and
-            die "Expected membership not to be 'join'";
+            $body->{membership} eq "join" and
+               die "Expected membership not to be 'join'";
 
-         provide can_leave_room => 1;
+            provide can_leave_room => 1;
 
-         Future->done(1);
-      });
+            Future->done(1);
+         },
+         sub { # else
+            my ( $failure, $name, $response ) = @_;
+            Future->fail( @_ ) unless defined $name and $name eq "http";
+            Future->fail( @_ ) unless $response->code == 403;
+
+            # We're expecting a 403 so that's fine
+            Future->done(1);
+         },
+      );
    };
