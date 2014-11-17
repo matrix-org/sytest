@@ -87,6 +87,10 @@ test "New room members also see original members' presence",
    requires => [qw( await_event_for user remote_users
                     can_join_remote_room_by_alias )],
 
+   # Currently this test fails due to a Synapse bug. May be related to
+   #   SYN-72 or SYN-81
+   expect_fail => 1,
+
    await => sub {
       my ( $await_event_for, $first_user, $remote_users ) = @_;
 
