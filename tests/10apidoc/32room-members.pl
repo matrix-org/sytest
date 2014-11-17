@@ -86,12 +86,12 @@ test "POST /rooms/:room_id/invite can send an invite",
    },
 
    check => sub {
-      my ( $do_request_json_for, undef, $more_users, $room_id ) = @_;
+      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
       my $invitee = $more_users->[2];
 
-      $do_request_json_for->( $invitee,
+      $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+         uri    => "/rooms/$room_id/state/m.room.member/" . $invitee->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
