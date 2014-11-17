@@ -144,6 +144,8 @@ test "POST /rooms/:room_id/leave can leave a room",
             Future->fail( @_ ) unless $response->code == 403;
 
             # We're expecting a 403 so that's fine
+            provide can_leave_room => 1;
+
             Future->done(1);
          },
       );
