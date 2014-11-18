@@ -33,6 +33,8 @@ test "PUT /directory/room/:room_alias creates alias",
 
          $body->{room_id} eq $room_id or die "Expected room_id";
 
+         provide can_create_room_alias => 1;
+
          Future->done(1);
       });
    };
