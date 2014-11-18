@@ -94,3 +94,60 @@ test "initialSync sees my membership in the room",
          Future->done(1);
       });
    };
+
+test "Room initialSync sees room state",
+   requires => [qw( do_request_json room_id user can_room_initial_sync )],
+
+   check => sub {
+      my ( $do_request_json, $room_id, $user ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/rooms/$room_id/initialSync",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         my %state_by_type;
+         push @{ $state_by_type{$_->{type}} }, $_ for @{ $body->{state} };
+
+         $state_by_type{$_} or die "Expected $_ events" for
+            qw( m.room.create m.room.member );
+
+         my %members;
+         $members{$_->{user_id}} = $_ for @{ $state_by_type{"m.room.member"} };
+
+         $members{$user->user_id} or die "Expected to find my own membership";
+         $members{$user->user_id}->{membership} eq "join" or
+            die "Expected my own membership to be 'join'\n";
+
+         Future->done(1);
+      });
+   };
+
+test "Room initialSync sees room member presence",
+   requires => [qw( do_request_json room_id user can_room_initial_sync )],
+
+   check => sub {
+      my ( $do_request_json, $room_id, $user ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/rooms/$room_id/initialSync",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         my %presence;
+         $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+
+         $presence{$user->user_id} or die "Expected to find my own presence";
+
+         json_keys_ok( $presence{$user->user_id}, qw( type content ));
+         json_keys_ok( my $content = $presence{$user->user_id}{content},
+            qw( presence status_msg last_active_ago ));
+
+         $content->{presence} eq "online" or
+            die "Expected my own presence to be 'online'\n";
+
+         Future->done(1);
+      });
+   };

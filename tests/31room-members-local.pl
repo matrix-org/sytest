@@ -45,28 +45,33 @@ test "New room members see their own join event",
       } @$more_users );
    };
 
-test "New room members also see original members' presence",
-   requires => [qw( await_event_for user more_users
-                    can_join_room_by_id )],
+test "New room members see room state in room initialSync",
+   requires => [qw( do_request_json_for user more_users room_id
+                    can_join_room_by_id can_room_initial_sync )],
 
-   # Currently this test fails due to a Synapse bug. May be related to
-   #   SYN-72 or SYN-81
-   expect_fail => 1,
-
-   await => sub {
-      my ( $await_event_for, $first_user, $more_users ) = @_;
+   check => sub {
+      my ( $do_request_json_for, $first_user, $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $await_event_for->( $user, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.presence";
-            json_keys_ok( $event, qw( type content ));
-            json_keys_ok( my $content = $event->{content}, qw( user_id presence ));
-            return unless $content->{user_id} eq $first_user->user_id;
+         $do_request_json_for->( $user,
+            method => "GET",
+            uri    => "/rooms/$room_id/initialSync",
+         )->then( sub {
+            my ( $body ) = @_;
 
-            return 1;
+            my %presence;
+            $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+
+            $presence{$first_user->user_id} or
+               die "Expected to find initial user's presence";
+
+            json_keys_ok( $presence{$first_user->user_id}, qw( type content ));
+            json_keys_ok( $presence{$first_user->user_id}{content},
+               qw( presence status_msg last_active_ago ));
+
+            Future->done(1);
          });
       } @$more_users );
    };
