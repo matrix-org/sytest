@@ -65,6 +65,35 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
       });
    };
 
+test "GET /rooms/:room_id/initialSync fetches initial sync state",
+   requires => [qw( do_request_json room_id can_create_room )],
+
+   check => sub {
+      my ( $do_request_json, $room_id ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/rooms/$room_id/initialSync",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         json_keys_ok( $body, qw( room_id membership state messages presence ));
+         json_keys_ok( $body->{messages}, qw( chunk start end ));
+         json_list_ok( $body->{messages}{chunk} );
+         json_list_ok( $body->{state} );
+         json_list_ok( $body->{presence} );
+
+         $body->{room_id} eq $room_id or
+            die "Expected 'room_id' as $room_id";
+         $body->{membership} eq "join" or
+            die "Expected 'membership' as 'join'";
+
+         provide can_room_initial_sync => 1;
+
+         Future->done(1);
+      });
+   };
+
 test "GET /publicRooms lists newly-created room",
    requires => [qw( first_http_client room_id can_create_room )],
 
