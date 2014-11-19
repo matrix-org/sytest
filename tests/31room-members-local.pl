@@ -150,7 +150,9 @@ test "All room members see all room members' presence in global initialSync",
                $presence_by_userid{$user_id} or die "Expected to see presence of $user_id";
 
                json_keys_ok( my $event = $presence_by_userid{$user_id}, qw( type content ) );
-               json_keys_ok( $event->{content}, qw( user_id presence last_active_ago ));
+               json_keys_ok( my $content = $event->{content}, qw( user_id presence last_active_ago ));
+
+               $content->{presence} eq "online" or die "Expected presence of $user_id to be online";
             }
 
             Future->done(1);
