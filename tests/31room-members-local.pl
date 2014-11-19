@@ -45,7 +45,7 @@ test "New room members see their own join event",
       } @$more_users );
    };
 
-test "New room members see room state in room initialSync",
+test "New room members see existing users' presence in room initialSync",
    requires => [qw( do_request_json_for user more_users room_id
                     can_join_room_by_id can_room_initial_sync )],
 
@@ -121,4 +121,39 @@ test "Existing members see new members' presence",
             return 1;
          });
       } @$more_users );
+   };
+
+test "All room members see all room members' presence in global initialSync",
+   requires => [qw( do_request_json_for user more_users
+                    can_create_room can_join_room_by_id can_initial_sync )],
+
+   check => sub {
+      my ( $do_request_json_for, $user, $more_users ) = @_;
+      my @all_users = ( $user, @$more_users );
+
+      Future->needs_all( map {
+         my $user = $_;
+
+         $do_request_json_for->( $user,
+            method => "GET",
+            uri    => "/initialSync",
+         )->then( sub {
+            my ( $body ) = @_;
+
+            json_keys_ok( $body, qw( presence ));
+            json_list_ok( my $presence = $body->{presence} );
+
+            my %presence_by_userid = map { $_->{content}{user_id} => $_ } @$presence;
+
+            foreach my $user ( @all_users ) {
+               my $user_id = $user->user_id;
+               $presence_by_userid{$user_id} or die "Expected to see presence of $user_id";
+
+               json_keys_ok( my $event = $presence_by_userid{$user_id}, qw( type content ) );
+               json_keys_ok( $event->{content}, qw( user_id presence last_active_ago ));
+            }
+
+            Future->done(1);
+         });
+      } @all_users );
    };
