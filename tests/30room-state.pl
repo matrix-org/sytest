@@ -63,7 +63,7 @@ test "Room creation reports m.room.member to myself",
       });
    };
 
-test "initialSync sees my membership in the room",
+multi_test "Global initialSync",
    requires => [qw( do_request_json room_id can_initial_sync )],
 
    check => sub {
@@ -82,14 +82,14 @@ test "initialSync sees my membership in the room",
             require_json_keys( $room, qw( room_id membership ));
 
             next unless $room->{room_id} eq $room_id;
-            $found++;
-
-            $room->{membership} eq "join" or die "Expected room membership to be 'join'\n";
-            $room->{visibility} eq "public" or die "Expected room visibility to be 'public'\n";
+            $found = $room;
+            last;
          }
 
-         $found or
-            die "Filed to find our newly-created room";
+         ok( $found, "my membership in the room is reported" );
+
+         ok( $found->{membership} eq "join", "room membership is 'join'" );
+         ok( $found->{visibility} eq "public", "room visibility is 'public'" );
 
          Future->done(1);
       });
