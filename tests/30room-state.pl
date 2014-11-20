@@ -101,7 +101,7 @@ multi_test "Global initialSync",
       });
    };
 
-test "Room initialSync sees room state",
+multi_test "Room initialSync",
    requires => [qw( do_request_json room_id user can_room_initial_sync )],
 
    check => sub {
@@ -116,43 +116,25 @@ test "Room initialSync sees room state",
          my %state_by_type;
          push @{ $state_by_type{$_->{type}} }, $_ for @{ $body->{state} };
 
-         $state_by_type{$_} or die "Expected $_ events" for
+         ok( $state_by_type{$_}, "room has state $_" ) for
             qw( m.room.create m.room.member );
 
          my %members;
          $members{$_->{user_id}} = $_ for @{ $state_by_type{"m.room.member"} };
 
-         $members{$user->user_id} or die "Expected to find my own membership";
-         $members{$user->user_id}->{membership} eq "join" or
-            die "Expected my own membership to be 'join'\n";
-
-         Future->done(1);
-      });
-   };
-
-test "Room initialSync sees room member presence",
-   requires => [qw( do_request_json room_id user can_room_initial_sync )],
-
-   check => sub {
-      my ( $do_request_json, $room_id, $user ) = @_;
-
-      $do_request_json->(
-         method => "GET",
-         uri    => "/rooms/$room_id/initialSync",
-      )->then( sub {
-         my ( $body ) = @_;
+         ok( $members{$user->user_id}, "room members has my own membership" );
+         ok( $members{$user->user_id}->{membership} eq "join", "my own room membership is 'join'" );
 
          my %presence;
          $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
 
-         $presence{$user->user_id} or die "Expected to find my own presence";
+         ok( $presence{$user->user_id}, "found my own presence" );
 
          require_json_keys( $presence{$user->user_id}, qw( type content ));
          require_json_keys( my $content = $presence{$user->user_id}{content},
             qw( presence status_msg last_active_ago ));
 
-         $content->{presence} eq "online" or
-            die "Expected my own presence to be 'online'\n";
+         ok( $content->{presence} eq "online", "my presence is 'online'" );
 
          Future->done(1);
       });
