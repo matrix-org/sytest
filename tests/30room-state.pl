@@ -79,7 +79,7 @@ multi_test "Global initialSync",
 
          require_json_list( $body->{rooms} );
          foreach my $room ( @{ $body->{rooms} } ) {
-            require_json_keys( $room, qw( room_id membership ));
+            require_json_keys( $room, qw( room_id membership messages ));
 
             next unless $room->{room_id} eq $room_id;
             $found = $room;
@@ -90,6 +90,12 @@ multi_test "Global initialSync",
 
          ok( $found->{membership} eq "join", "room membership is 'join'" );
          ok( $found->{visibility} eq "public", "room visibility is 'public'" );
+
+         my $messages = $found->{messages};
+         require_json_keys( $messages, qw( start end chunk ));
+         require_json_list( my $chunk = $messages->{chunk} );
+
+         ok( scalar @$chunk, "room messages chunk reports some messages" );
 
          Future->done(1);
       });
