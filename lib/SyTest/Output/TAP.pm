@@ -30,6 +30,7 @@ sub enter_multi_test
    my ( $name, $expect_fail ) = @_;
    return SyTest::Output::TAP::Test->new(
       name => $name,
+      num  => ++$test_num,
       expect_fail => $expect_fail,
       multi => 1,
    );
@@ -148,11 +149,14 @@ package SyTest::Output::TAP::Test {
 
       if( $self->multi ) {
          print "  1..${\$self->subnum}\n";
-         return;
+         $self->failure = "${\$self->failed} subtests failed" if $self->failed and not length $self->failure;
       }
 
       if( !$self->failed ) {
-         print "ok ${\$self->num} ${\$self->name}\n";
+         my $name = $self->name;
+         $name .= " (${\$self->subnum} subtests)" if $self->multi;
+
+         print "ok ${\$self->num} $name\n";
       }
       else {
          print "not ok ${\$self->num} ${\$self->name}" . ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
