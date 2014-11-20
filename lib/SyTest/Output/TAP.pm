@@ -10,7 +10,7 @@ STDOUT->autoflush(1);
 # File status
 sub run_file {}
 
-my $next_test_num = 1;
+my $test_num;
 
 # General test status
 sub enter_test
@@ -19,7 +19,7 @@ sub enter_test
    my ( $name, $expect_fail ) = @_;
    return SyTest::Output::TAP::Test->new(
       name => $name,
-      num  => $next_test_num++,
+      num  => ++$test_num,
       expect_fail => $expect_fail,
    );
 }
@@ -47,22 +47,22 @@ sub skip_prepare
 {
    shift;
    my ( $name, $req ) = @_;
-   print "ok $next_test_num $name # skip Missing requirement $req\n";
-   $next_test_num++;
+   ++$test_num;
+   print "ok $test_num $name # skip Missing requirement $req\n";
 }
 
 sub pass_prepare
 {
-   print "ok $next_test_num prepared $running\n";
-   $next_test_num;
+   ++$test_num;
+   print "ok $test_num prepared $running\n";
 }
 
 sub fail_prepare
 {
    shift;
    my ( $failure ) = @_;
-   print "not ok $next_test_num prepared $running\n";
-   $next_test_num++;
+   ++$test_num;
+   print "not ok $test_num prepared $running\n";
 
    print "# $_\n" for split m/\n/, $failure;
 }
@@ -80,13 +80,13 @@ sub stop_waiting
 sub final_pass
 {
    shift;
-   print "1..$next_test_num\n";
+   print "1..$test_num\n";
 }
 
 sub final_fail
 {
    shift;
-   print "1..$next_test_num\n";
+   print "1..$test_num\n";
 }
 
 # General diagnostic status
