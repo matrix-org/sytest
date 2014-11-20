@@ -36,7 +36,7 @@ GetOptions(
    'O|output-format=s' => \(my $OUTPUT_FORMAT = "term"),
 ) or exit 1;
 
-my $output = first { $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
+my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
 
 if( $CLIENT_LOG ) {
@@ -160,26 +160,26 @@ sub unprovide
 my $failed;
 my $expected_fail;
 
-sub test
+sub _run_test
 {
-   my ( $name, %params ) = @_;
+   my ( $t, %params ) = @_;
 
    my @reqs;
    foreach my $req ( @{ $params{requires} || [] } ) {
       push @reqs, $test_environment{$req} and next if $test_environment{$req};
 
-      $output->skip_test( $name, $req );
+      $t->skip( $req );
       return;
    }
 
-   $output->start_test( $name );
+   $t->start;
 
-   my $success = eval {
+   return eval {
       my $check = $params{check};
       if( my $do = $params{do} ) {
          if( $check ) {
             eval { Future->wrap( $check->( @reqs ) )->get } and
-               warn "Warning: $name was already passing before we did anything\n";
+               warn "Warning: ${\$t->name} was already passing before we did anything\n";
          }
 
          Future->wrap( $do->( @reqs ) )->get;
@@ -211,13 +211,22 @@ sub test
 
       1;
    };
+}
+
+sub test
+{
+   my ( $name, %params ) = @_;
+
+   my $t = $output->enter_test( $name );
+
+   my $success = _run_test( $t, %params );
 
    if( $success ) {
-      $output->pass_test( $params{expect_fail} );
+      $t->pass( $params{expect_fail} );
    }
    else {
       my $e = $@; chomp $e;
-      $output->fail_test( $e, $params{expect_fail} );
+      $t->fail( $e, $params{expect_fail} );
       $params{expect_fail} ? $expected_fail++ : $failed++;
    }
 

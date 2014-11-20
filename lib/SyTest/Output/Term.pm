@@ -30,45 +30,11 @@ sub run_file
 }
 
 # General test status
-sub start_test
+sub enter_test
 {
    shift;
    my ( $name ) = @_;
-   print "  ${CYAN}Testing if: $name${RESET}... ";
-}
-
-sub pass_test
-{
-   shift;
-   my ( $expect_fail ) = @_;
-   print "${GREEN}PASS${RESET}\n";
-
-   if( $expect_fail ) {
-      print "${YELLOW_B}EXPECTED TO FAIL${RESET} but passed anyway\n";
-   }
-}
-
-sub fail_test
-{
-   shift;
-   my ( $failure, $expect_fail ) = @_;
-
-   if( $expect_fail ) {
-      print "${YELLOW_B}EXPECTED FAIL${RESET}:\n";
-   }
-   else {
-      print "${RED_B}FAIL${RESET}:\n";
-   }
-
-   print " | $_\n" for split m/\n/, $failure;
-   print " +----------------------\n";
-}
-
-sub skip_test
-{
-   shift;
-   my ( $name, $req ) = @_;
-   print "  ${YELLOW_B}SKIP${RESET} $name due to lack of $req\n";
+   return SyTest::Output::Term::Test->new( $name );
 }
 
 # General preparation status
@@ -143,6 +109,51 @@ sub diag
    shift;
    my ( $message ) = @_;
    print STDERR "$message\n";
+}
+
+package SyTest::Output::Term::Test {
+   sub new { my ( $class, $name ) = @_; bless [ $name ], $class }
+   sub name { shift->[0] }
+
+   sub start
+   {
+      my $name = shift->name;
+      print "  ${CYAN}Testing if: $name${RESET}... ";
+   }
+
+   sub pass
+   {
+      shift;
+      my ( $expect_fail ) = @_;
+      print "${GREEN}PASS${RESET}\n";
+
+      if( $expect_fail ) {
+         print "${YELLOW_B}EXPECTED TO FAIL${RESET} but passed anyway\n";
+      }
+   }
+
+   sub fail
+   {
+      shift;
+      my ( $failure, $expect_fail ) = @_;
+
+      if( $expect_fail ) {
+         print "${YELLOW_B}EXPECTED FAIL${RESET}:\n";
+      }
+      else {
+         print "${RED_B}FAIL${RESET}:\n";
+      }
+
+      print " | $_\n" for split m/\n/, $failure;
+      print " +----------------------\n";
+   }
+
+   sub skip
+   {
+      my $name = shift->name;
+      my ( $req ) = @_;
+      print "  ${YELLOW_B}SKIP${RESET} $name due to lack of $req\n";
+   }
 }
 
 1;
