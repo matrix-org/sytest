@@ -30,7 +30,7 @@ test "Room aliases can contain Unicode",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( room_id ));
+         require_json_keys( $body, qw( room_id ));
 
          $body->{room_id} eq $room_id or die "Expected room_id";
 

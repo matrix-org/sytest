@@ -12,7 +12,7 @@ test "PUT /profile/:user_id/displayname sets my name",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( displayname ));
+         require_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq $displayname or
             die "Expected displayname to be '$displayname'";
@@ -50,7 +50,7 @@ test "GET /profile/:user_id/displayname publicly accessible",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( displayname ));
+         require_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq $displayname or
             die "Expected displayname to be '$displayname'";

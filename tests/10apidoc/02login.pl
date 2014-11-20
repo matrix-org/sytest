@@ -13,7 +13,7 @@ test "GET /login yields a set of flows",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( flows ));
+         require_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
 
          my $has_login_flow;
@@ -57,7 +57,7 @@ test "POST /login can log in as a user",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( access_token home_server ));
+         require_json_keys( $body, qw( access_token home_server ));
 
          provide can_login => 1;
 

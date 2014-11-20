@@ -16,9 +16,9 @@ test "POST /createRoom makes a room",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( room_id room_alias ));
-         json_nonempty_string_ok( $body->{room_id} );
-         json_nonempty_string_ok( $body->{room_alias} );
+         require_json_keys( $body, qw( room_id room_alias ));
+         require_json_nonempty_string( $body->{room_id} );
+         require_json_nonempty_string( $body->{room_alias} );
 
          provide can_create_room => 1;
          provide room_id    => $body->{room_id};
@@ -37,7 +37,7 @@ test "POST /createRoom makes a room",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_list_ok( $body->{rooms} );
+         require_json_list( $body->{rooms} );
          Future->done( scalar @{ $body->{rooms} } > 0 );
       });
    };
@@ -54,7 +54,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( membership ));
+         require_json_keys( $body, qw( membership ));
 
          $body->{membership} eq "join" or
             die "Expected membership as 'join'";
@@ -77,11 +77,11 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( room_id membership state messages presence ));
-         json_keys_ok( $body->{messages}, qw( chunk start end ));
-         json_list_ok( $body->{messages}{chunk} );
-         json_list_ok( $body->{state} );
-         json_list_ok( $body->{presence} );
+         require_json_keys( $body, qw( room_id membership state messages presence ));
+         require_json_keys( $body->{messages}, qw( chunk start end ));
+         require_json_list( $body->{messages}{chunk} );
+         require_json_list( $body->{state} );
+         require_json_list( $body->{presence} );
 
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' as $room_id";
@@ -106,13 +106,13 @@ test "GET /publicRooms lists newly-created room",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( start end chunk ));
-         json_list_ok( $body->{chunk} );
+         require_json_keys( $body, qw( start end chunk ));
+         require_json_list( $body->{chunk} );
 
          my $found;
 
          foreach my $event ( @{ $body->{chunk} } ) {
-            json_keys_ok( $event, qw( room_id ));
+            require_json_keys( $event, qw( room_id ));
             next unless $event->{room_id} eq $room_id;
 
             $found = 1;
@@ -137,8 +137,8 @@ test "GET /directory/room/:room_alias yields room ID",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( room_id servers ));
-         json_list_ok( $body->{servers} );
+         require_json_keys( $body, qw( room_id servers ));
+         require_json_list( $body->{servers} );
 
          $body->{room_id} eq $room_id or die "Expected room_id";
 

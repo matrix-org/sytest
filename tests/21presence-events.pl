@@ -20,17 +20,17 @@ test "initialSync sees my presence status",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( presence ));
+         require_json_keys( $body, qw( presence ));
 
          my $found;
 
          foreach my $event ( @{ $body->{presence} } ) {
-            json_object_ok( $event, qw( type content ));
+            require_json_object( $event, qw( type content ));
             $event->{type} eq "m.presence" or
                die "Expected type of event to be m.presence";
 
             my $content = $event->{content};
-            json_object_ok( $content, qw( user_id presence last_active_ago ));
+            require_json_object( $content, qw( user_id presence last_active_ago ));
 
             next unless $content->{user_id} eq $user->user_id;
 
@@ -112,11 +112,11 @@ test "Friends presence changes reports events",
          return unless $event->{type} eq "m.presence";
 
          my $content = $event->{content};
-         json_keys_ok( $content, qw( user_id ));
+         require_json_keys( $content, qw( user_id ));
 
          return unless $content->{user_id} eq $friend->user_id;
 
-         json_keys_ok( $content, qw( presence status_msg ));
+         require_json_keys( $content, qw( presence status_msg ));
          $content->{presence} eq "online" or
             die "Expected presence to be 'online'";
          $content->{status_msg} eq $friend_status or

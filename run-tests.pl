@@ -297,40 +297,40 @@ package assertions {
    use Carp;
    use Scalar::Util qw( looks_like_number );
 
-   sub json_object_ok
+   sub require_json_object
    {
       my ( $obj ) = @_;
       ref $obj eq "HASH" or croak "Expected a JSON object";
    }
 
-   sub json_keys_ok
+   sub require_json_keys
    {
       my ( $obj, @keys ) = @_;
-      json_object_ok( $obj );
+      require_json_object( $obj );
       foreach ( @keys ) {
          defined $obj->{$_} or croak "Expected a '$_' key";
       }
    }
 
-   sub json_list_ok
+   sub require_json_list
    {
       my ( $list ) = @_;
       ref $list eq "ARRAY" or croak "Expected a JSON list";
    }
 
-   sub json_number_ok
+   sub require_json_number
    {
       my ( $num ) = @_;
       !ref $num and looks_like_number( $num ) or croak "Expected a JSON number";
    }
 
-   sub json_string_ok
+   sub require_json_string
    {
       my ( $str ) = @_;
       !ref $str or croak "Expected a JSON string";
    }
 
-   sub json_nonempty_string_ok
+   sub require_json_nonempty_string
    {
       my ( $str ) = @_;
       !ref $str and length $str or croak "Expected a non-empty JSON string";
@@ -339,7 +339,7 @@ package assertions {
 
 {
    no strict 'refs';
-   *$_ = \&{"assertions::$_"} for grep m/_ok/, keys %{"assertions::"};
+   *$_ = \&{"assertions::$_"} for grep m/^require_/, keys %{"assertions::"};
 }
 
 TEST: {

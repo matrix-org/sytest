@@ -35,8 +35,8 @@ test "Local room members see posted messages",
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
 
-            json_keys_ok( $event, qw( type content room_id user_id ));
-            json_keys_ok( my $content = $event->{content}, qw( msgtype body ));
+            require_json_keys( $event, qw( type content room_id user_id ));
+            require_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
             return unless $event->{room_id} eq $room_id;
 
@@ -68,8 +68,8 @@ test "Remote room members also see posted messages",
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
 
-            json_keys_ok( $event, qw( type content room_id user_id ));
-            json_keys_ok( my $content = $event->{content}, qw( msgtype body ));
+            require_json_keys( $event, qw( type content room_id user_id ));
+            require_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
             return unless $event->{room_id} eq $room_id;
 

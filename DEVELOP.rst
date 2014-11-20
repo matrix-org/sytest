@@ -141,30 +141,30 @@ The following convenient helper functions are also available for test code.
 Each will throw an exception if it fails; the return value does not need to be
 tested.
 
-``json_object_ok``
+``require_json_object``
     Asserts that it is given a representation of a JSON object (i.e. a ``HASH``
     ref).
 
-``json_keys_ok``
+``require_json_keys``
     Asserts that it is given a representation of a JSON object and that
     additionally it defines values for all of the key names given.
 
-``json_list_ok``
+``require_json_list``
     Asserts that it is given a representation of a JSON object (i.e. an
     ``ARRAY`` ref).
 
-``json_number_ok``
+``require_json_number``
     Asserts that it is given a likely representation of a JSON number (i.e. a
     non-reference that passes the ``looks_like_number()`` test). Because of the
     limits of the JSON-to-Perl decoding process it isn't possible to definitely
     assert this originally came from a number in the JSON encoding, as compared
     to a string representation of a number.
 
-``json_string_ok``
+``require_json_string``
     Asserts that it is given a likely representation of a JSON string (i.e. a
     non-reference). Note that this will also be true of values that were
     originally JSON numbers or booleans.
 
-``json_nonempty_string_ok``
+``require_json_nonempty_string``
     Asserts that it is given a likely representation of a JSON string, and
     additionally that the string is not empty.

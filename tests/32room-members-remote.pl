@@ -71,7 +71,7 @@ test "New room members see their own join event",
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
 
-            json_keys_ok( $event, qw( type room_id user_id membership ));
+            require_json_keys( $event, qw( type room_id user_id membership ));
             return unless $event->{room_id} eq $room_id;
             return unless $event->{user_id} eq $user->user_id;
 
@@ -105,8 +105,8 @@ test "New room members see room state in room initialSync",
             $presence{$first_user->user_id} or
                die "Expected to find initial user's presence";
 
-            json_keys_ok( $presence{$first_user->user_id}, qw( type content ));
-            json_keys_ok( $presence{$first_user->user_id}{content},
+            require_json_keys( $presence{$first_user->user_id}, qw( type content ));
+            require_json_keys( $presence{$first_user->user_id}{content},
                qw( presence status_msg last_active_ago ));
 
             Future->done(1);
@@ -127,7 +127,7 @@ test "Existing members see new members' join events",
          $await_event_for->( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
-            json_keys_ok( $event, qw( type room_id user_id membership ));
+            require_json_keys( $event, qw( type room_id user_id membership ));
             return unless $event->{room_id} eq $room_id;
             return unless $event->{user_id} eq $other_user->user_id;
 
@@ -152,8 +152,8 @@ test "Existing members see new member's presence",
          $await_event_for->( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
-            json_keys_ok( $event, qw( type content ));
-            json_keys_ok( my $content = $event->{content}, qw( user_id presence ));
+            require_json_keys( $event, qw( type content ));
+            require_json_keys( my $content = $event->{content}, qw( user_id presence ));
             return unless $content->{user_id} eq $other_user->user_id;
 
             return 1;

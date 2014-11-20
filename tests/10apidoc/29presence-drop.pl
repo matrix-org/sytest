@@ -41,7 +41,7 @@ test "POST /presence/:user_id/list can drop users",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_list_ok( $body );
+         require_json_list( $body );
          @$body == 0 or die "Expected an empty list";
 
          provide can_drop_presence => 1;

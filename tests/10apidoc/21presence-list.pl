@@ -13,7 +13,7 @@ test "GET /presence/:user_id/list initially empty",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_list_ok( $body );
+         require_json_list( $body );
          @$body == 0 or die "Expected an empty list";
 
          Future->done(1);
@@ -47,10 +47,10 @@ test "POST /presence/:user_id/list can invite users",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_list_ok( $body );
+         require_json_list( $body );
          scalar @$body > 0 or die "Expected non-empty list";
 
-         json_keys_ok( $body->[0], qw( accepted presence user_id ));
+         require_json_keys( $body->[0], qw( accepted presence user_id ));
          $body->[0]->{user_id} eq $friend_uid or die "Expected friend user_id";
 
          provide can_invite_presence => 1;

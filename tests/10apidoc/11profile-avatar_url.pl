@@ -12,7 +12,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( avatar_url ));
+         require_json_keys( $body, qw( avatar_url ));
 
          $body->{avatar_url} eq $avatar_url or
             die "Expected avatar_url to be '$avatar_url'";
@@ -50,7 +50,7 @@ test "GET /profile/:user_id/avatar_url publicly accessible",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( avatar_url ));
+         require_json_keys( $body, qw( avatar_url ));
 
          $body->{avatar_url} eq $avatar_url or
             die "Expected avatar_url to be '$avatar_url'";

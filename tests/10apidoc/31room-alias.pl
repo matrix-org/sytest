@@ -28,8 +28,8 @@ test "PUT /directory/room/:room_alias creates alias",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( room_id servers ));
-         json_list_ok( $body->{servers} );
+         require_json_keys( $body, qw( room_id servers ));
+         require_json_list( $body->{servers} );
 
          $body->{room_id} eq $room_id or die "Expected room_id";
 

@@ -9,7 +9,7 @@ test "GET /register yields a set of flows",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( flows ));
+         require_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
 
          my $has_register_flow;
@@ -55,7 +55,7 @@ test "POST /register can create a user",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( user_id access_token ));
+         require_json_keys( $body, qw( user_id access_token ));
 
          provide can_register => [ $body->{user_id}, $password ];
 

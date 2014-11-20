@@ -14,8 +14,8 @@ test "GET /events initially",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( start end chunk ));
-         json_list_ok( $body->{chunk} );
+         require_json_keys( $body, qw( start end chunk ));
+         require_json_list( $body->{chunk} );
 
          provide can_get_events => 1;
 
@@ -41,14 +41,14 @@ test "GET /initialSync initially",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( end ));
+         require_json_keys( $body, qw( end ));
 
          # Spec says these are optional
          if( exists $body->{rooms} ) {
-            json_list_ok( $body->{rooms} );
+            require_json_list( $body->{rooms} );
          }
          if( exists $body->{presence} ) {
-            json_list_ok( $body->{presence} );
+            require_json_list( $body->{presence} );
          }
 
          provide can_initial_sync => 1;

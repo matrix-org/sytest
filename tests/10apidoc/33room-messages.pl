@@ -15,8 +15,8 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
       )->then( sub {
          my ( $body ) = @_;
 
-         json_keys_ok( $body, qw( event_id ));
-         json_nonempty_string_ok( $body->{event_id} );
+         require_json_keys( $body, qw( event_id ));
+         require_json_nonempty_string( $body->{event_id} );
 
          provide can_send_message => 1;
 

@@ -34,8 +34,8 @@ test "Presence changes are reported to all room members",
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
 
-            json_keys_ok( $event, qw( type content ));
-            json_keys_ok( my $content = $event->{content}, qw( user_id presence status_msg ));
+            require_json_keys( $event, qw( type content ));
+            require_json_keys( my $content = $event->{content}, qw( user_id presence status_msg ));
 
             $content->{user_id} eq $senduser->user_id or next;
 

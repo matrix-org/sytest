@@ -31,12 +31,12 @@ test "Room creation reports m.room.create to myself",
       $await_event_for->( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.create";
-         json_keys_ok( $event, qw( room_id user_id content ));
+         require_json_keys( $event, qw( room_id user_id content ));
          return unless $event->{room_id} eq $room_id;
 
          $event->{user_id} eq $user->user_id or die "Expected user_id to be ${\$user->user_id}";
 
-         json_keys_ok( my $content = $event->{content}, qw( creator ));
+         require_json_keys( my $content = $event->{content}, qw( creator ));
          $content->{creator} eq $user->user_id or die "Expected creator to be ${\$user->user_id}";
 
          return 1;
@@ -52,7 +52,7 @@ test "Room creation reports m.room.member to myself",
       $await_event_for->( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
-         json_keys_ok( $event, qw( room_id user_id state_key content ));
+         require_json_keys( $event, qw( room_id user_id state_key content ));
          return unless $event->{room_id} eq $room_id;
          return unless $event->{state_key} eq $user->user_id;
 
@@ -77,9 +77,9 @@ test "initialSync sees my membership in the room",
 
          my $found;
 
-         json_list_ok( $body->{rooms} );
+         require_json_list( $body->{rooms} );
          foreach my $room ( @{ $body->{rooms} } ) {
-            json_keys_ok( $room, qw( room_id membership ));
+            require_json_keys( $room, qw( room_id membership ));
 
             next unless $room->{room_id} eq $room_id;
             $found++;
@@ -89,7 +89,7 @@ test "initialSync sees my membership in the room",
          }
 
          $found or
-            die "Failed to find our newly-created room";
+            die "Filed to find our newly-created room";
 
          Future->done(1);
       });
@@ -141,8 +141,8 @@ test "Room initialSync sees room member presence",
 
          $presence{$user->user_id} or die "Expected to find my own presence";
 
-         json_keys_ok( $presence{$user->user_id}, qw( type content ));
-         json_keys_ok( my $content = $presence{$user->user_id}{content},
+         require_json_keys( $presence{$user->user_id}, qw( type content ));
+         require_json_keys( my $content = $presence{$user->user_id}{content},
             qw( presence status_msg last_active_ago ));
 
          $content->{presence} eq "online" or
