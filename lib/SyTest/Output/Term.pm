@@ -33,8 +33,8 @@ sub run_file
 sub enter_test
 {
    shift;
-   my ( $name ) = @_;
-   return SyTest::Output::Term::Test->new( $name );
+   my ( $name, $expect_fail ) = @_;
+   return SyTest::Output::Term::Test->new( name => $name, expect_fail => $expect_fail );
 }
 
 # General preparation status
@@ -112,8 +112,10 @@ sub diag
 }
 
 package SyTest::Output::Term::Test {
-   sub new { my ( $class, $name ) = @_; bless [ $name ], $class }
-   sub name { shift->[0] }
+   sub new { my $class = shift; bless { @_ }, $class }
+
+   sub name        { shift->{name}        }
+   sub expect_fail { shift->{expect_fail} }
 
    sub start
    {
@@ -123,21 +125,20 @@ package SyTest::Output::Term::Test {
 
    sub pass
    {
-      shift;
-      my ( $expect_fail ) = @_;
+      my $self = shift;
       print "${GREEN}PASS${RESET}\n";
 
-      if( $expect_fail ) {
+      if( $self->expect_fail ) {
          print "${YELLOW_B}EXPECTED TO FAIL${RESET} but passed anyway\n";
       }
    }
 
    sub fail
    {
-      shift;
-      my ( $failure, $expect_fail ) = @_;
+      my $self = shift;
+      my ( $failure ) = @_;
 
-      if( $expect_fail ) {
+      if( $self->expect_fail ) {
          print "${YELLOW_B}EXPECTED FAIL${RESET}:\n";
       }
       else {

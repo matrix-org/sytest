@@ -217,16 +217,16 @@ sub test
 {
    my ( $name, %params ) = @_;
 
-   my $t = $output->enter_test( $name );
+   my $t = $output->enter_test( $name, $params{expect_fail} );
 
    my $success = _run_test( $t, %params );
 
    if( $success ) {
-      $t->pass( $params{expect_fail} );
+      $t->pass;
    }
    else {
       my $e = $@; chomp $e;
-      $t->fail( $e, $params{expect_fail} );
+      $t->fail( $e );
       $params{expect_fail} ? $expected_fail++ : $failed++;
    }
 

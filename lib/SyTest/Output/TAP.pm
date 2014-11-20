@@ -16,8 +16,12 @@ my $next_test_num = 1;
 sub enter_test
 {
    shift;
-   my ( $name ) = @_;
-   return SyTest::Output::TAP::Test->new( $name, $next_test_num++ );
+   my ( $name, $expect_fail ) = @_;
+   return SyTest::Output::TAP::Test->new(
+      name => $name,
+      num  => $next_test_num++,
+      expect_fail => $expect_fail,
+   );
 }
 
 # General preparation status
@@ -83,24 +87,25 @@ sub diag
 }
 
 package SyTest::Output::TAP::Test {
-   sub new { my ( $class, $name, $num ) = @_; bless [ $name, $num ], $class }
-   sub name { shift->[0] }
-   sub num  { shift->[1] }
+   sub new { my $class = shift; bless { @_ }, $class }
+
+   sub name        { shift->{name}        }
+   sub num         { shift->{num}         }
+   sub expect_fail { shift->{expect_fail} }
 
    sub start {}
 
    sub pass
    {
       my $self = shift;
-      my ( $expect_fail ) = @_;
       print "ok ${\$self->num} ${\$self->name}\n";
    }
 
    sub fail
    {
       my $self = shift;
-      my ( $failure, $expect_fail ) = @_;
-      print "not ok ${\$self->num} ${\$self->name}" . ( $expect_fail ? " # TODO expected fail" : "" ) . "\n";
+      my ( $failure ) = @_;
+      print "not ok ${\$self->num} ${\$self->name}" . ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
 
       print "# $_\n" for split m/\n/, $failure;
    }
