@@ -218,6 +218,9 @@ sub _run_test
    else {
       my $e = $@; chomp $e;
       $t->fail( $e );
+   }
+
+   if( $t->failed ) {
       $params{expect_fail} ? $expected_fail++ : $failed++;
    }
 }
