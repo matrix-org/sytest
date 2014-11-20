@@ -24,6 +24,17 @@ sub enter_test
    );
 }
 
+sub enter_multi_test
+{
+   shift;
+   my ( $name, $expect_fail ) = @_;
+   return SyTest::Output::TAP::Test->new(
+      name => $name,
+      expect_fail => $expect_fail,
+      multi => 1,
+   );
+}
+
 # General preparation status
 my $running;
 sub start_prepare
@@ -92,9 +103,11 @@ package SyTest::Output::TAP::Test {
    sub name            { shift->{name}        }
    sub num             { shift->{num}         }
    sub expect_fail     { shift->{expect_fail} }
+   sub multi           { shift->{multi}       }
    sub skipped :lvalue { shift->{skipped}     }
    sub failed :lvalue  { shift->{failed}      }
    sub failure :lvalue { shift->{failure}     }
+   sub subnum :lvalue  { shift->{subnum}      }
 
    sub start {}
 
@@ -107,6 +120,16 @@ package SyTest::Output::TAP::Test {
 
       $self->failed++;
       $self->failure .= $failure;
+   }
+
+   sub ok
+   {
+      my $self = shift;
+      my ( $ok, $stepname ) = @_;
+
+      my $subnum = ++$self->subnum;
+
+      print "  ", ( $ok ? "ok" : "not ok" ), " $subnum $stepname (${\$self->name})\n";
    }
 
    sub skip
@@ -122,6 +145,11 @@ package SyTest::Output::TAP::Test {
       my $self = shift;
 
       return if $self->skipped;
+
+      if( $self->multi ) {
+         print "  1..${\$self->subnum}\n";
+         return;
+      }
 
       if( !$self->failed ) {
          print "ok ${\$self->num} ${\$self->name}\n";

@@ -7,6 +7,7 @@ use constant FORMAT => "term";
 
 # Some terminal control strings
 
+my $RED = "\e[31m";
 my $RED_B = "\e[1;31m";
 my $GREEN = "\e[32m";
 my $GREEN_B = "\e[1;32m";
@@ -35,6 +36,13 @@ sub enter_test
    shift;
    my ( $name, $expect_fail ) = @_;
    return SyTest::Output::Term::Test->new( name => $name, expect_fail => $expect_fail );
+}
+
+sub enter_multi_test
+{
+   shift;
+   my ( $name, $expect_fail ) = @_;
+   return SyTest::Output::Term::Test->new( name => $name, expect_fail => $expect_fail, multi => 1 );
 }
 
 # General preparation status
@@ -116,14 +124,16 @@ package SyTest::Output::Term::Test {
 
    sub name            { shift->{name}        }
    sub expect_fail     { shift->{expect_fail} }
+   sub multi           { shift->{multi}       }
    sub skipped :lvalue { shift->{skipped}     }
    sub failed :lvalue  { shift->{failed}      }
    sub failure :lvalue { shift->{failure}     }
 
    sub start
    {
-      my $name = shift->name;
-      print "  ${CYAN}Testing if: $name${RESET}... ";
+      my $self = shift;
+      print "  ${CYAN}Testing if: ${\$self->name}${RESET}... ";
+      print "\n" if $self->multi;
    }
 
    sub pass { }
@@ -135,6 +145,18 @@ package SyTest::Output::Term::Test {
 
       $self->failed++;
       $self->failure .= $failure;
+   }
+
+   sub ok
+   {
+      my $self = shift;
+      my ( $ok, $stepname ) = @_;
+
+      $ok ?
+         print "  ${CYAN}| $stepname... ${GREEN}OK${RESET}\n" :
+         print "  ${CYAN}| $stepname... ${RED}NOT OK${RESET}\n";
+
+      $self->failed++ if not $ok;
    }
 
    sub skip
@@ -150,6 +172,8 @@ package SyTest::Output::Term::Test {
       my $self = shift;
 
       return if $self->skipped;
+
+      print "  ${CYAN}+--- " if $self->multi;
 
       if( !$self->failed ) {
          print "${GREEN}PASS${RESET}\n";

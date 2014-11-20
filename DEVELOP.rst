@@ -23,13 +23,13 @@ Tests
 -----
 
 Each file under the ``tests`` directory is run as a normal perl file, within
-the context of the main program. It should contain calls to ``test`` and
-``prepare``, which sequentially control the execution of all the tests and
-other preparation steps that happen between them.
+the context of the main program. It should contain calls to ``test``,
+``multi_test`` and ``prepare``, which sequentially control the execution of all
+the tests and other preparation steps that happen between them.
 
-Each call to ``test`` takes a single positional argument giving descriptive
-text to use as a caption, and a set of named arguments to control how the test
-runs.
+Each call to ``test`` or ``multi_test`` takes a single positional argument
+giving descriptive text to use as a caption, and a set of named arguments to
+control how the test runs.
 
 ::
 
@@ -53,6 +53,12 @@ is described in more detail in the following sections.
 
 ``requires``
     Provides an ``ARRAY`` reference giving a list of named requirements.
+
+A call to ``test`` is a simplified version of ``multi_test`` which produces
+only a single line of test output indicating success or failure automatically.
+A call to ``multi_test`` can make use of additional functions within the body
+in order to report success or failure of multiple steps within it. Aside from
+this difference, the two behave identically.
 
 A call to ``provide`` is similar to ``test``, except that it doesn't take a
 checking blocks, only a ``do``.

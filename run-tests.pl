@@ -174,7 +174,7 @@ sub _run_test
 
    $t->start;
 
-   return eval {
+   my $success = eval {
       my $check = $params{check};
       if( my $do = $params{do} ) {
          if( $check ) {
@@ -211,15 +211,6 @@ sub _run_test
 
       1;
    };
-}
-
-sub test
-{
-   my ( $name, %params ) = @_;
-
-   my $t = $output->enter_test( $name, $params{expect_fail} );
-
-   my $success = _run_test( $t, %params );
 
    if( $success ) {
       $t->pass;
@@ -229,11 +220,42 @@ sub test
       $t->fail( $e );
       $params{expect_fail} ? $expected_fail++ : $failed++;
    }
+}
 
+sub test
+{
+   my ( $name, %params ) = @_;
+
+   my $t = $output->enter_test( $name, $params{expect_fail} );
+   _run_test( $t, %params );
    $t->leave;
 
    no warnings 'exiting';
-   last TEST if $STOP_ON_FAIL and not $success and not $params{expect_fail};
+   last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
+}
+
+{
+   our $RUNNING_TEST;
+
+   sub ok
+   {
+      die "Cannot call ok() outside of a multi_test\n" unless $RUNNING_TEST;
+
+      my ( $ok, $stepname ) = @_;
+      $RUNNING_TEST->ok( $ok, $stepname );
+   }
+
+   sub multi_test
+   {
+      my ( $name, %params ) = @_;
+
+      local $RUNNING_TEST = my $t = $output->enter_multi_test( $name );
+      _run_test( $t, %params );
+      $t->leave;
+
+      no warnings 'exiting';
+      last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
+   }
 }
 
 sub prepare
