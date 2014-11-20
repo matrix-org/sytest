@@ -153,8 +153,8 @@ package SyTest::Output::Term::Test {
       my ( $ok, $stepname ) = @_;
 
       $ok ?
-         print "  ${CYAN}| $stepname... ${GREEN}OK${RESET}\n" :
-         print "  ${CYAN}| $stepname... ${RED}NOT OK${RESET}\n";
+         print "   ${CYAN}| $stepname... ${GREEN}OK${RESET}\n" :
+         print "   ${CYAN}| $stepname... ${RED}NOT OK${RESET}\n";
 
       $self->failed++ if not $ok;
    }
@@ -173,7 +173,7 @@ package SyTest::Output::Term::Test {
 
       return if $self->skipped;
 
-      print "  ${CYAN}+--- " if $self->multi;
+      print "   ${CYAN}+--- " if $self->multi;
 
       if( !$self->failed ) {
          print "${GREEN}PASS${RESET}\n";
@@ -189,6 +189,9 @@ package SyTest::Output::Term::Test {
          else {
             print "${RED_B}FAIL${RESET}:\n";
          }
+
+         $self->failure = "${\$self->failed} subtests failed" if
+            $self->multi and not length $self->failure;
 
          print " | $_\n" for split m/\n/, $self->failure;
          print " +----------------------\n";
