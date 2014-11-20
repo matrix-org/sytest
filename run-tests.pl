@@ -230,6 +230,8 @@ sub test
       $params{expect_fail} ? $expected_fail++ : $failed++;
    }
 
+   $t->leave;
+
    no warnings 'exiting';
    last TEST if $STOP_ON_FAIL and not $success and not $params{expect_fail};
 }

@@ -89,25 +89,24 @@ sub diag
 package SyTest::Output::TAP::Test {
    sub new { my $class = shift; bless { @_ }, $class }
 
-   sub name        { shift->{name}        }
-   sub num         { shift->{num}         }
-   sub expect_fail { shift->{expect_fail} }
+   sub name            { shift->{name}        }
+   sub num             { shift->{num}         }
+   sub expect_fail     { shift->{expect_fail} }
+   sub skipped :lvalue { shift->{skipped}     }
+   sub failed :lvalue  { shift->{failed}      }
+   sub failure :lvalue { shift->{failure}     }
 
    sub start {}
 
-   sub pass
-   {
-      my $self = shift;
-      print "ok ${\$self->num} ${\$self->name}\n";
-   }
+   sub pass { }
 
    sub fail
    {
       my $self = shift;
       my ( $failure ) = @_;
-      print "not ok ${\$self->num} ${\$self->name}" . ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
 
-      print "# $_\n" for split m/\n/, $failure;
+      $self->failed++;
+      $self->failure .= $failure;
    }
 
    sub skip
@@ -115,6 +114,23 @@ package SyTest::Output::TAP::Test {
       my $self = shift;
       my ( $req ) = @_;
       print "ok ${\$self->num} ${\$self->name} # skip Missing requirement $req\n";
+      $self->skipped++;
+   }
+
+   sub leave
+   {
+      my $self = shift;
+
+      return if $self->skipped;
+
+      if( !$self->failed ) {
+         print "ok ${\$self->num} ${\$self->name}\n";
+      }
+      else {
+         print "not ok ${\$self->num} ${\$self->name}" . ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
+
+         print "# $_\n" for split m/\n/, $self->failure;
+      }
    }
 }
 

@@ -114,8 +114,11 @@ sub diag
 package SyTest::Output::Term::Test {
    sub new { my $class = shift; bless { @_ }, $class }
 
-   sub name        { shift->{name}        }
-   sub expect_fail { shift->{expect_fail} }
+   sub name            { shift->{name}        }
+   sub expect_fail     { shift->{expect_fail} }
+   sub skipped :lvalue { shift->{skipped}     }
+   sub failed :lvalue  { shift->{failed}      }
+   sub failure :lvalue { shift->{failure}     }
 
    sub start
    {
@@ -123,37 +126,49 @@ package SyTest::Output::Term::Test {
       print "  ${CYAN}Testing if: $name${RESET}... ";
    }
 
-   sub pass
-   {
-      my $self = shift;
-      print "${GREEN}PASS${RESET}\n";
-
-      if( $self->expect_fail ) {
-         print "${YELLOW_B}EXPECTED TO FAIL${RESET} but passed anyway\n";
-      }
-   }
+   sub pass { }
 
    sub fail
    {
       my $self = shift;
       my ( $failure ) = @_;
 
-      if( $self->expect_fail ) {
-         print "${YELLOW_B}EXPECTED FAIL${RESET}:\n";
-      }
-      else {
-         print "${RED_B}FAIL${RESET}:\n";
-      }
-
-      print " | $_\n" for split m/\n/, $failure;
-      print " +----------------------\n";
+      $self->failed++;
+      $self->failure .= $failure;
    }
 
    sub skip
    {
-      my $name = shift->name;
+      my $self = shift;
       my ( $req ) = @_;
-      print "  ${YELLOW_B}SKIP${RESET} $name due to lack of $req\n";
+      print "  ${YELLOW_B}SKIP${RESET} ${\$self->name} due to lack of $req\n";
+      $self->skipped++;
+   }
+
+   sub leave
+   {
+      my $self = shift;
+
+      return if $self->skipped;
+
+      if( !$self->failed ) {
+         print "${GREEN}PASS${RESET}\n";
+
+         if( $self->expect_fail ) {
+            print "${YELLOW_B}EXPECTED TO FAIL${RESET} but passed anyway\n";
+         }
+      }
+      else {
+         if( $self->expect_fail ) {
+            print "${YELLOW_B}EXPECTED FAIL${RESET}:\n";
+         }
+         else {
+            print "${RED_B}FAIL${RESET}:\n";
+         }
+
+         print " | $_\n" for split m/\n/, $self->failure;
+         print " +----------------------\n";
+      }
    }
 }
 
