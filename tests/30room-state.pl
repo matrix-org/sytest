@@ -101,6 +101,34 @@ multi_test "Global initialSync",
       });
    };
 
+test "Global initialSync with limit=0 gives no messages",
+   requires => [qw( do_request_json room_id can_initial_sync )],
+
+   check => sub {
+      my ( $do_request_json, $room_id ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/initialSync",
+         params => { limit => 0 },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         my $found;
+         foreach my $room ( @{ $body->{rooms} } ) {
+            $found = $room, last if $room->{room_id} eq $room_id;
+         }
+
+         $found or die "Failed to find room";
+
+         my $chunk = $found->{messages}{chunk};
+         scalar @$chunk == 0 or
+            die "Expected not to find any messages";
+
+         Future->done(1);
+      });
+   };
+
 multi_test "Room initialSync",
    requires => [qw( do_request_json room_id user can_room_initial_sync )],
 
@@ -139,6 +167,27 @@ multi_test "Room initialSync",
          my $chunk = $body->{messages}{chunk};
 
          ok( scalar @$chunk, "room messages chunk reports some messages" );
+
+         Future->done(1);
+      });
+   };
+
+test "Room initialSync with limit=0 gives no messages",
+   requires => [qw( do_request_json room_id can_initial_sync )],
+
+   check => sub {
+      my ( $do_request_json, $room_id ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/rooms/$room_id/initialSync",
+         params => { limit => 0 },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         my $chunk = $body->{messages}{chunk};
+         scalar @$chunk == 0 or
+            die "Expected not to find any messages";
 
          Future->done(1);
       });
