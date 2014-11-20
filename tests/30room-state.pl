@@ -136,6 +136,10 @@ multi_test "Room initialSync",
 
          ok( $content->{presence} eq "online", "my presence is 'online'" );
 
+         my $chunk = $body->{messages}{chunk};
+
+         ok( scalar @$chunk, "room messages chunk reports some messages" );
+
          Future->done(1);
       });
    };
