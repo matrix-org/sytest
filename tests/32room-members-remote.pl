@@ -1,3 +1,5 @@
+use Future::Utils qw( try_repeat );
+
 test "Remote users can join room by alias",
    requires => [qw( do_request_json_for flush_events_for remote_users room_alias room_id
                     can_join_room_by_alias can_get_room_membership )],
@@ -87,31 +89,36 @@ test "New room members see room state in room initialSync",
    requires => [qw( do_request_json_for user remote_users room_id
                     can_join_remote_room_by_alias can_room_initial_sync )],
 
-   check => sub {
+   await => sub {
       my ( $do_request_json_for, $first_user, $remote_users, $room_id ) = @_;
 
-      Future->needs_all( map {
-         my $user = $_;
+      try_repeat {
+         Future->needs_all( map {
+            my $user = $_;
 
-         $do_request_json_for->( $user,
-            method => "GET",
-            uri    => "/rooms/$room_id/initialSync",
-         )->then( sub {
-            my ( $body ) = @_;
+            $do_request_json_for->( $user,
+               method => "GET",
+               uri    => "/rooms/$room_id/initialSync",
+            )->then( sub {
+               my ( $body ) = @_;
 
-            my %presence;
-            $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+               my %presence;
+               $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
 
-            $presence{$first_user->user_id} or
-               die "Expected to find initial user's presence";
+               $presence{$first_user->user_id} or
+                  die "Expected to find initial user's presence";
 
-            require_json_keys( $presence{$first_user->user_id}, qw( type content ));
-            require_json_keys( $presence{$first_user->user_id}{content},
-               qw( presence status_msg last_active_ago ));
+               require_json_keys( $presence{$first_user->user_id}, qw( type content ));
+               require_json_keys( $presence{$first_user->user_id}{content},
+                  qw( presence status_msg last_active_ago ));
 
-            Future->done(1);
-         });
-      } @$remote_users );
+               Future->done(1);
+            });
+         } @$remote_users )
+            ->else_with_f( sub {
+               my ( $f ) = @_; delay( 0.2 )->then( sub { $f } );
+            });
+      } until => sub { !$_[0]->failure };
    };
 
 test "Existing members see new members' join events",
