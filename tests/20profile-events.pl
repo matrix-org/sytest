@@ -68,3 +68,36 @@ test "Avatar URL change reports an event to myself",
          return 1;
       });
    };
+
+multi_test "Global /initialSync reports my own profile",
+   requires => [qw( do_request_json user
+                    can_set_displayname can_set_avatar_url can_initial_sync )],
+
+   check => sub {
+      my ( $do_request_json, $user ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/initialSync",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( presence ));
+         require_json_list( $body->{presence} );
+
+         my %presence_by_userid;
+         $presence_by_userid{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+
+         my $presence = $presence_by_userid{$user->user_id} or
+            die "Failed to find my own presence information";
+
+         require_json_keys( $presence, qw( content ) );
+         require_json_keys( my $content = $presence->{content},
+            qw( user_id displayname avatar_url ));
+
+         is_eq( $content->{displayname}, $displayname, 'displayname in presence event is correct' );
+         is_eq( $content->{avatar_url}, $avatar_url, 'avatar_url in presence event is correct' );
+
+         Future->done(1);
+      });
+   };
