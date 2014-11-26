@@ -255,6 +255,17 @@ sub test
       $RUNNING_TEST->ok( $ok, $stepname );
    }
 
+   sub is_eq
+   {
+      die "Cannot call is_eq() outside of a multi_test\n" unless $RUNNING_TEST;
+
+      my ( $got, $want, $stepname ) = @_;
+      $RUNNING_TEST->ok( my $ok = $got eq $want, $stepname );
+      if( !$ok ) {
+         $output->diag( "Got $got, expected $want" );
+      }
+   }
+
    sub multi_test
    {
       my ( $name, %params ) = @_;
