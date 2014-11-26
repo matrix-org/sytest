@@ -157,6 +157,13 @@ sub unprovide
    delete $test_environment{$_} for @names;
 }
 
+# Util. function for tests
+sub delay
+{
+   my ( $secs ) = @_;
+   $loop->delay_future( after => $secs );
+}
+
 my $failed;
 my $expected_fail;
 
