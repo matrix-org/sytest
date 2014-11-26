@@ -85,7 +85,7 @@ test "New room members see their own join event",
       } @$remote_users );
    };
 
-test "New room members see room state in room initialSync",
+test "New room members see existing members' presence in room initialSync",
    requires => [qw( do_request_json_for user remote_users room_id
                     can_join_remote_room_by_alias can_room_initial_sync )],
 
