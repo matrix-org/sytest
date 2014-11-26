@@ -167,3 +167,38 @@ test "Existing members see new member's presence",
          });
       } @$remote_users );
    };
+
+test "New room members see first user's profile information in global initialSync",
+   requires => [qw( do_request_json_for user remote_users
+                    can_create_room can_join_remote_room_by_alias can_initial_sync can_set_displayname can_set_avatar_url )],
+
+   expect_fail => 1, # SYN-143
+   check => sub {
+      my ( $do_request_json_for, $first_user, $remote_users ) = @_;
+
+      Future->needs_all( map {
+         my $user = $_;
+
+         $do_request_json_for->( $user,
+            method => "GET",
+            uri    => "/initialSync",
+         )->then( sub {
+            my ( $body ) = @_;
+
+            require_json_keys( $body, qw( presence ));
+            require_json_list( $body->{presence} );
+
+            my %presence_by_userid;
+            $presence_by_userid{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+
+            my $presence = $presence_by_userid{$first_user->user_id} or
+               die "Failed to find presence of first user";
+
+            require_json_keys( $presence, qw( content ));
+            require_json_keys( my $content = $presence->{content},
+               qw( user_id displayname avatar_url ));
+
+            Future->done(1);
+         });
+      } @$remote_users );
+   };
