@@ -88,8 +88,8 @@ multi_test "Global initialSync",
 
          ok( $found, "my membership in the room is reported" );
 
-         ok( $found->{membership} eq "join", "room membership is 'join'" );
-         ok( $found->{visibility} eq "public", "room visibility is 'public'" );
+         is_eq( $found->{membership}, "join", "room membership is 'join'" );
+         is_eq( $found->{visibility}, "public", "room visibility is 'public'" );
 
          my $messages = $found->{messages};
          require_json_keys( $messages, qw( start end chunk ));
@@ -151,7 +151,7 @@ multi_test "Room initialSync",
          $members{$_->{user_id}} = $_ for @{ $state_by_type{"m.room.member"} };
 
          ok( $members{$user->user_id}, "room members has my own membership" );
-         ok( $members{$user->user_id}->{membership} eq "join", "my own room membership is 'join'" );
+         is_eq( $members{$user->user_id}->{membership}, "join", "my own room membership is 'join'" );
 
          my %presence;
          $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
@@ -162,7 +162,7 @@ multi_test "Room initialSync",
          require_json_keys( my $content = $presence{$user->user_id}{content},
             qw( presence status_msg last_active_ago ));
 
-         ok( $content->{presence} eq "online", "my presence is 'online'" );
+         is_eq( $content->{presence}, "online", "my presence is 'online'" );
 
          my $chunk = $body->{messages}{chunk};
 
