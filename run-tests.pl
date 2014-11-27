@@ -26,7 +26,6 @@ use Module::Pluggable
    require     => 1;
 
 GetOptions(
-   'N|number=i'    => \(my $NUMBER = 2),
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \my $SERVER_LOG,
    'd|synapse-directory=s' => \(my $SYNAPSE_DIR = "../synapse"),
@@ -95,8 +94,6 @@ if( $CLIENT_LOG ) {
 
 my $loop = IO::Async::Loop->new;
 
-# Start up 3 homeservers
-
 my %synapses_by_port;
 END {
    $output->diag( "Killing synapse servers " . join " ", map { "[${\$_->pid}]" } values %synapses_by_port )
@@ -106,7 +103,8 @@ END {
 }
 $SIG{INT} = sub { exit 1 };
 
-my @PORTS = 8001 .. 8000+$NUMBER;
+# We need two servers; a "local" and a "remote" one for federation-based tests
+my @PORTS = ( 8001, 8002 );
 my @f;
 foreach my $port ( @PORTS ) {
    my $synapse = $synapses_by_port{$port} = SyTest::Synapse->new(
