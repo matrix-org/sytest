@@ -1,11 +1,11 @@
 Developing
-----------
+==========
 
-``sytest`` consists of two basic parts; the core test runner program and its
+SyTest consists of two basic parts; the core test runner program and its
 associated helper modules, and a set of test scripts themselves. The overall
-runner program controls startup and shutdown of a number of ``synapse``
-processes by means of a helper module, and reads and executes tests specified
-in each of the actual test scripts.
+runner program controls startup and shutdown of a number of Synapse processes
+by means of a helper module, and reads and executes tests specified in each of
+the actual test scripts.
 
 The test scripts are read and executed in file name order, thus giving a
 reliable order to them. Individual tests within these files can declare
