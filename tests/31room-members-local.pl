@@ -193,3 +193,42 @@ test "New room members see first user's profile information in global initialSyn
          });
       } @$more_users );
    };
+
+test "New room members see first user's profile information in per-room initialSync",
+   requires => [qw( do_request_json_for user more_users room_id
+                    can_create_room can_join_room_by_id can_room_initial_sync can_set_displayname can_set_avatar_url )],
+
+   check => sub {
+      my ( $do_request_json_for, $first_user, $more_users, $room_id ) = @_;
+
+      Future->needs_all( map {
+         my $user = $_;
+
+         $do_request_json_for->( $user,
+            method => "GET",
+            uri    => "/rooms/$room_id/initialSync",
+         )->then( sub {
+            my ( $body ) = @_;
+
+            require_json_keys( $body, qw( state ));
+            require_json_list( $body->{state} );
+
+            my %state_by_type_key;
+            $state_by_type_key{$_->{type}}{$_->{state_key}} = $_ for @{ $body->{state} };
+
+            my $first_member = $state_by_type_key{"m.room.member"}{$first_user->user_id}
+               or die "Failed to find first user in m.room.member state";
+
+            require_json_keys( $first_member, qw( user_id content ));
+            require_json_keys( my $content = $first_member->{content},
+               qw( displayname avatar_url ));
+
+            length $content->{displayname} or
+               die "First user does not have profile displayname\n";
+            length $content->{avatar_url} or
+               die "First user does not have profile avatar_url\n";
+
+            Future->done(1);
+         });
+      } @$more_users );
+   };
