@@ -141,11 +141,16 @@ multi_test "Room initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
+         require_json_keys( $body, qw( state messages presence ));
+
          my %state_by_type;
          push @{ $state_by_type{$_->{type}} }, $_ for @{ $body->{state} };
 
          ok( $state_by_type{$_}, "room has state $_" ) for
-            qw( m.room.create m.room.member );
+            qw( m.room.create m.room.join_rules m.room.member );
+
+         is_eq( $state_by_type{"m.room.join_rules"}[0]{content}{join_rule}, "public",
+            "join rule is public" );
 
          my %members;
          $members{$_->{user_id}} = $_ for @{ $state_by_type{"m.room.member"} };
