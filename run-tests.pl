@@ -33,6 +33,8 @@ GetOptions(
    's|stop-on-fail+' => \my $STOP_ON_FAIL,
 
    'O|output-format=s' => \(my $OUTPUT_FORMAT = "term"),
+
+   'p|persist-servers' => \my $PERSIST_SERVERS,
 ) or exit 1;
 
 my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
@@ -96,6 +98,8 @@ my $loop = IO::Async::Loop->new;
 
 my %synapses_by_port;
 END {
+   return if $PERSIST_SERVERS;
+
    $output->diag( "Killing synapse servers " . join " ", map { "[${\$_->pid}]" } values %synapses_by_port )
       if %synapses_by_port;
 
