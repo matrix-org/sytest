@@ -35,6 +35,8 @@ GetOptions(
    'O|output-format=s' => \(my $OUTPUT_FORMAT = "term"),
 
    'p|persist-servers' => \my $PERSIST_SERVERS,
+
+   'v|verbose+' => \(my $VERBOSE = 0),
 ) or exit 1;
 
 my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
@@ -116,6 +118,7 @@ foreach my $port ( @PORTS ) {
       port         => $port,
       output       => $output,
       print_output => $SERVER_LOG,
+      verbose      => $VERBOSE,
    );
    $loop->add( $synapse );
 

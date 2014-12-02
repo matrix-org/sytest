@@ -15,7 +15,7 @@ sub _init
    my $self = shift;
    my ( $args ) = @_;
 
-   $self->{$_} = delete $args->{$_} for qw( port output print_output synapse_dir );
+   $self->{$_} = delete $args->{$_} for qw( port output print_output synapse_dir verbose );
 
    $self->SUPER::_init( $args );
 }
@@ -76,7 +76,7 @@ sub _add_to_loop
                   chdir => $self->{synapse_dir},
                ],
 
-               command => \@command,
+               command => [ @command, ( "-v" ) x $self->{verbose} ],
 
                stderr => {
                   via => "pipe_read",
