@@ -92,6 +92,31 @@ test "Can invite users to invite-only rooms",
       );
    };
 
+test "Invited user receives invite",
+   requires => [qw( await_event_for more_users inviteonly_room_id
+                    can_invite_room )],
+
+   await => sub {
+      my ( $await_event_for, $more_users, $room_id ) = @_;
+      my $invitee = $more_users->[1];
+
+      $await_event_for->( $invitee, sub {
+         my ( $event ) = @_;
+
+         require_json_keys( $event, qw( type ));
+         return 0 unless $event->{type} eq "m.room.member";
+
+         require_json_keys( $event, qw( room_id state_key membership ));
+         return 0 unless $event->{room_id} eq $room_id;
+         return 0 unless $event->{state_key} eq $invitee->user_id;
+
+         $event->{membership} eq "invite" or
+            die "Expected membership to be 'invite'";
+
+         return 1;
+      });
+   };
+
 test "Invited user can join the room",
    requires => [qw( do_request_json_for more_users inviteonly_room_id
                     can_invite_room can_join_room_by_id )],
