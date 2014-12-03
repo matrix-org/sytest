@@ -250,6 +250,12 @@ sub test
 {
    our $RUNNING_TEST;
 
+   sub pass
+   {
+      my ( $testname ) = @_;
+      ok( 1, $testname );
+   }
+
    sub ok
    {
       die "Cannot call ok() outside of a multi_test\n" unless $RUNNING_TEST;
