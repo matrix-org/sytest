@@ -34,7 +34,7 @@ GetOptions(
 
    'O|output-format=s' => \(my $OUTPUT_FORMAT = "term"),
 
-   'p|persist-servers' => \my $PERSIST_SERVERS,
+   'w|wait-at-end' => \my $WAIT_AT_END,
 
    'v|verbose+' => \(my $VERBOSE = 0),
 ) or exit 1;
@@ -100,8 +100,6 @@ my $loop = IO::Async::Loop->new;
 
 my %synapses_by_port;
 END {
-   return if $PERSIST_SERVERS;
-
    $output->diag( "Killing synapse servers " . join " ", map { "[${\$_->pid}]" } values %synapses_by_port )
       if %synapses_by_port;
 
@@ -390,6 +388,12 @@ TEST: {
       },
       "tests"
    );
+}
+
+if( $WAIT_AT_END ) {
+   print STDERR "Waiting... (hit ENTER to end)\n";
+   $loop->add( my $stdin = IO::Async::Stream->new_for_stdin( on_read => sub {} ) );
+   $stdin->read_until( "\n" )->get;
 }
 
 if( $failed ) {
