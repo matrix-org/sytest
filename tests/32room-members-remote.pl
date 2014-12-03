@@ -172,7 +172,6 @@ test "New room members see first user's profile information in global initialSyn
    requires => [qw( do_request_json_for user remote_users
                     can_create_room can_join_remote_room_by_alias can_initial_sync can_set_displayname can_set_avatar_url )],
 
-   expect_fail => 1, # SYN-143
    check => sub {
       my ( $do_request_json_for, $first_user, $remote_users ) = @_;
 
