@@ -56,7 +56,9 @@ test "Room creation reports m.room.member to myself",
          return unless $event->{room_id} eq $room_id;
          return unless $event->{state_key} eq $user->user_id;
 
-         $event->{membership} eq "join" or
+         require_json_keys( my $content = $event->{content}, qw( membership ));
+
+         $content->{membership} eq "join" or
             die "Expected my membership as 'join'";
 
          return 1;

@@ -33,11 +33,13 @@ test "New room members see their own join event",
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
 
-            require_json_keys( $event, qw( type room_id user_id membership ));
+            require_json_keys( $event, qw( type room_id user_id ));
             return unless $event->{room_id} eq $room_id;
             return unless $event->{user_id} eq $user->user_id;
 
-            $event->{membership} eq "join" or
+            require_json_keys( my $content = $event->{content}, qw( membership ));
+
+            $content->{membership} eq "join" or
                die "Expected user membership as 'join'";
 
             return 1;
@@ -89,11 +91,13 @@ test "Existing members see new members' join events",
          $await_event_for->( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
-            require_json_keys( $event, qw( type room_id user_id membership ));
+            require_json_keys( $event, qw( type room_id user_id ));
             return unless $event->{room_id} eq $room_id;
             return unless $event->{user_id} eq $other_user->user_id;
 
-            $event->{membership} eq "join" or
+            require_json_keys( my $content = $event->{content}, qw( membership ));
+
+            $content->{membership} eq "join" or
                die "Expected user membership as 'join'";
 
             return 1;
