@@ -70,7 +70,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
                return unless $event->{type} eq "m.room.member" and
                              $event->{room_id} eq $room->{room_id} and
                              $event->{state_key} eq $bob->user_id and
-                             $event->{membership} eq "invite";
+                             $event->{content}{membership} eq "invite";
 
                return 1;
             }),

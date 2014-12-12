@@ -158,7 +158,8 @@ multi_test "Room initialSync",
          $members{$_->{user_id}} = $_ for @{ $state_by_type{"m.room.member"} };
 
          ok( $members{$user->user_id}, "room members has my own membership" );
-         is_eq( $members{$user->user_id}->{membership}, "join", "my own room membership is 'join'" );
+         is_eq( $members{$user->user_id}->{content}{membership}, "join",
+            "my own room membership is 'join'" );
 
          my %presence;
          $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
