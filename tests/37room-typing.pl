@@ -32,14 +32,16 @@ test "Typing notification sent to local room members",
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
 
-            require_json_keys( $event, qw( type room_id typing ));
-            require_json_list( my $typing = $event->{typing} );
+            require_json_keys( $event, qw( type room_id content ));
+            require_json_keys( my $content = $event->{content}, qw( user_ids ));
 
             return unless $event->{room_id} eq $room_id;
 
-            scalar @$typing == 1 or
+            require_json_list( my $users = $content->{user_ids} );
+
+            scalar @$users == 1 or
                die "Expected 1 member to be typing";
-            $typing->[0] eq $typinguser->user_id or
+            $users->[0] eq $typinguser->user_id or
                die "Expected ${\$typinguser->user_id} to be typing";
 
             return 1;
@@ -61,14 +63,16 @@ test "Typing notifications also sent to remove room members",
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
 
-            require_json_keys( $event, qw( type room_id typing ));
-            require_json_list( my $typing = $event->{typing} );
+            require_json_keys( $event, qw( type room_id content ));
+            require_json_keys( my $content = $event->{content}, qw( user_ids ));
 
             return unless $event->{room_id} eq $room_id;
 
-            scalar @$typing == 1 or
+            require_json_list( my $users = $content->{user_ids} );
+
+            scalar @$users == 1 or
                die "Expected 1 member to be typing";
-            $typing->[0] eq $typinguser->user_id or
+            $users->[0] eq $typinguser->user_id or
                die "Expected ${\$typinguser->user_id} to be typing";
 
             return 1;
