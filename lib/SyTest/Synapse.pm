@@ -41,6 +41,7 @@ sub _add_to_loop
    my @command = (
       "python", "-m", "synapse.app.homeserver",
          "--config-path" => "$hs_dir/config",
+         "--log-file"    => "",
 
          "--server-name" => "localhost:$port",
          "--bind-port"   => $port,
