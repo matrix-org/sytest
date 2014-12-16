@@ -51,6 +51,10 @@ sub _add_to_loop
 
          # TLS parameters
          "--tls-dh-params-path" => "$CWD/keys/tls.dh",
+
+         # Allow huge amounts of messages before burst rate kicks in
+         "--rc-messages-per-second" => 1000,
+         "--rc-message-burst-count" => 1000,
    );
 
    $output->diag( "Generating config for port $port" );
