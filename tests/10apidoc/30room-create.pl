@@ -171,3 +171,34 @@ test "POST /createRoom makes a private room",
          Future->done(1);
       });
    };
+
+test "POST /createRoom makes a private room with invites",
+   requires => [qw( do_request_json more_users
+                    can_create_private_room )],
+
+   # Currently fails - see SYN-205
+   expect_fail => 1,
+   do => sub {
+      my ( $do_request_json, $more_users ) = @_;
+      my $invitee = $more_users->[0];
+
+      $do_request_json->(
+         method => "POST",
+         uri    => "/createRoom",
+
+         content => {
+            visibility => "private",
+            # TODO: This doesn't actually appear in the API docs yet
+            invite     => [ $invitee->user_id ],
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( room_id ));
+         require_json_nonempty_string( $body->{room_id} );
+
+         provide can_create_private_room_with_invite => 1;
+
+         Future->done(1);
+      });
+   };
