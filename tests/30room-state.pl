@@ -65,6 +65,41 @@ test "Room creation reports m.room.member to myself",
       });
    };
 
+my $topic = "Testing topic for the new room";
+
+test "Setting room topic reports m.room.topic to myself",
+   requires => [qw( do_request_json await_event_for room_id user
+                    can_set_room_topic )],
+
+   do => sub {
+      my ( $do_request_json, undef, $room_id, undef ) = @_;
+
+      $do_request_json->(
+         method => "PUT",
+         uri    => "/rooms/$room_id/state/m.room.topic",
+
+         content => { topic => $topic },
+      );
+   },
+
+   await => sub {
+      my ( undef, $await_event_for, $room_id, $user ) = @_;
+
+      $await_event_for->( $user, sub {
+         my ( $event ) = @_;
+         return unless $event->{type} eq "m.room.topic";
+         require_json_keys( $event, qw( room_id user_id content ));
+         return unless $event->{room_id} eq $room_id;
+
+         $event->{user_id} eq $user->user_id or die "Expected user_id to be ${\$user->user_id}";
+
+         require_json_keys( my $content = $event->{content}, qw( topic ));
+         $content->{topic} eq $topic or die "Expected topic to be '$topic'";
+
+         return 1;
+      });
+   };
+
 multi_test "Global initialSync",
    requires => [qw( do_request_json room_id can_initial_sync )],
 

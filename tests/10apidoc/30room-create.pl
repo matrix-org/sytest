@@ -148,7 +148,7 @@ test "GET /directory/room/:room_alias yields room ID",
 
 # Other forms of /createRoom
 test "POST /createRoom makes a private room",
-   requires => [qw( do_request_json can_initial_sync )],
+   requires => [qw( do_request_json )],
 
    do => sub {
       my ( $do_request_json ) = @_;
