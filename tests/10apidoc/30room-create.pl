@@ -176,8 +176,6 @@ test "POST /createRoom makes a private room with invites",
    requires => [qw( do_request_json more_users
                     can_create_private_room )],
 
-   # Currently fails - see SYN-205
-   expect_fail => 1,
    do => sub {
       my ( $do_request_json, $more_users ) = @_;
       my $invitee = $more_users->[0];
