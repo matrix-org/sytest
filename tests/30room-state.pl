@@ -101,7 +101,8 @@ test "Setting room topic reports m.room.topic to myself",
    };
 
 multi_test "Global initialSync",
-   requires => [qw( do_request_json room_id can_initial_sync )],
+   requires => [qw( do_request_json room_id
+                    can_initial_sync can_set_room_topic )],
 
    check => sub {
       my ( $do_request_json, $room_id ) = @_;
@@ -112,23 +113,32 @@ multi_test "Global initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
-         my $found;
+         my $room;
 
          require_json_list( $body->{rooms} );
-         foreach my $room ( @{ $body->{rooms} } ) {
-            require_json_keys( $room, qw( room_id membership messages ));
+         foreach ( @{ $body->{rooms} } ) {
+            require_json_keys( $_, qw( room_id membership state messages ));
 
-            next unless $room->{room_id} eq $room_id;
-            $found = $room;
+            next unless $_->{room_id} eq $room_id;
+            $room = $_;
             last;
          }
 
-         ok( $found, "my membership in the room is reported" );
+         ok( $room, "my membership in the room is reported" );
 
-         is_eq( $found->{membership}, "join", "room membership is 'join'" );
-         is_eq( $found->{visibility}, "public", "room visibility is 'public'" );
+         is_eq( $room->{membership}, "join", "room membership is 'join'" );
+         is_eq( $room->{visibility}, "public", "room visibility is 'public'" );
 
-         my $messages = $found->{messages};
+         my %state_by_type;
+         push @{ $state_by_type{$_->{type}} }, $_ for @{ $room->{state} };
+
+         $state_by_type{"m.room.topic"} or
+            die "Expected m.room.topic state";
+         require_json_keys( my $topic_state = $state_by_type{"m.room.topic"}[0], qw( content ));
+         require_json_keys( $topic_state->{content}, qw( topic ));
+         is_eq( $topic_state->{content}{topic}, $topic, "m.room.topic content topic" );
+
+         my $messages = $room->{messages};
          require_json_keys( $messages, qw( start end chunk ));
          require_json_list( my $chunk = $messages->{chunk} );
 
@@ -188,6 +198,9 @@ multi_test "Room initialSync",
 
          is_eq( $state_by_type{"m.room.join_rules"}[0]{content}{join_rule}, "public",
             "join rule is public" );
+
+         is_eq( $state_by_type{"m.room.topic"}[0]{content}{topic}, $topic,
+            "m.room.topic content topic" );
 
          my %members;
          $members{$_->{user_id}} = $_ for @{ $state_by_type{"m.room.member"} };
