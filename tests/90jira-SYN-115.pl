@@ -76,7 +76,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             }),
 
             delay( 10 )
-               ->then_fail( "Timed out waitinf for m.room.member invite" ),
+               ->then_fail( "Timed out waiting for m.room.member invite" ),
          );
       })->then( sub {
          pass "Received invite";
