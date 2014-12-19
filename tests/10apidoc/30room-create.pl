@@ -65,6 +65,30 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
       });
    };
 
+test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
+   requires => [qw( do_request_json room_id can_create_room )],
+
+   check => sub {
+      my ( $do_request_json, $room_id ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/rooms/$room_id/state/m.room.power_levels",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( ban kick redact users_default
+            state_default events_default users events ));
+
+         require_json_object( $body->{users} );
+         require_json_object( $body->{events} );
+
+         provide can_get_room_powerlevels => 1;
+
+         Future->done(1);
+      });
+   };
+
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
    requires => [qw( do_request_json room_id can_create_room )],
 
