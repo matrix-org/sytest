@@ -1,6 +1,6 @@
 multi_test "New federated private chats get full presence information (SYN-115)",
    requires => [qw( http_clients do_request_json_for flush_events_for await_event_for
-                    can_register can_create_room )],
+                    can_register can_create_private_room )],
 
    do => sub {
       my ( $clients, $do_request_json_for, $flush_events_for, $await_event_for ) = @_;

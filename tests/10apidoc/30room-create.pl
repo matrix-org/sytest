@@ -1,4 +1,4 @@
-test "POST /createRoom makes a room",
+test "POST /createRoom makes a public room",
    requires => [qw( do_request_json can_initial_sync )],
 
    do => sub {
@@ -141,6 +141,32 @@ test "GET /directory/room/:room_alias yields room ID",
          require_json_list( $body->{servers} );
 
          $body->{room_id} eq $room_id or die "Expected room_id";
+
+         Future->done(1);
+      });
+   };
+
+# Other forms of /createRoom
+test "POST /createRoom makes a private room",
+   requires => [qw( do_request_json can_initial_sync )],
+
+   do => sub {
+      my ( $do_request_json ) = @_;
+
+      $do_request_json->(
+         method => "POST",
+         uri    => "/createRoom",
+
+         content => {
+            visibility => "private",
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( room_id ));
+         require_json_nonempty_string( $body->{room_id} );
+
+         provide can_create_private_room => 1;
 
          Future->done(1);
       });
