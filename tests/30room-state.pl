@@ -101,11 +101,11 @@ test "Setting room topic reports m.room.topic to myself",
    };
 
 multi_test "Global initialSync",
-   requires => [qw( do_request_json room_id
+   requires => [qw( do_request_json user room_id
                     can_initial_sync can_set_room_topic )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $do_request_json, $user, $room_id ) = @_;
 
       $do_request_json->(
          method => "GET",
@@ -137,6 +137,14 @@ multi_test "Global initialSync",
          require_json_keys( my $topic_state = $state_by_type{"m.room.topic"}[0], qw( content ));
          require_json_keys( $topic_state->{content}, qw( topic ));
          is_eq( $topic_state->{content}{topic}, $topic, "m.room.topic content topic" );
+
+         $state_by_type{"m.room.power_levels"} or
+            die "Expected m.room.power_levels";
+         require_json_keys( my $power_level_state = $state_by_type{"m.room.power_levels"}[0], qw( content ));
+         require_json_keys( my $levels = $power_level_state->{content}, qw( users ));
+         my $user_levels = $levels->{users};
+         ok( exists $user_levels->{$user->user_id}, "user level exists for room creator" );
+         ok( $user_levels->{$user->user_id} > 0, "room creator has nonzero power level" );
 
          my $messages = $room->{messages};
          require_json_keys( $messages, qw( start end chunk ));
