@@ -127,3 +127,29 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
          Future->done(1);
       });
    };
+
+test "GET /rooms/:room_id/state fetches entire room state",
+   requires => [qw( do_request_json room_id )],
+
+   check => sub {
+      my ( $do_request_json, $room_id ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/rooms/$room_id/state",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_list( $body );
+
+         my %state_by_type;
+         push @{ $state_by_type{$_->{type}} }, $_ for @$body;
+
+         defined $state_by_type{$_} or die "Missing $_ state" for
+            qw( m.room.create m.room.join_rules m.room.name m.room.power_levels );
+
+         provide can_get_room_all_state => 1;
+
+         Future->done(1);
+      });
+   };
