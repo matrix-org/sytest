@@ -38,7 +38,7 @@ test "POST /join/:room_alias can join a room",
                     can_get_room_membership )],
 
    do => sub {
-      my ( $do_request_json_for, $more_users, undef, $room_alias ) = @_;
+      my ( $do_request_json_for, $more_users, $room_id, $room_alias ) = @_;
       my $user = $more_users->[1];
 
       $do_request_json_for->( $user,
@@ -47,7 +47,14 @@ test "POST /join/:room_alias can join a room",
          params => { access_token => $user->access_token },
 
          content => {},
-      );
+      )->then( sub {
+         my ( $body ) = @_;
+
+         $body->{room_id} eq $room_id or
+            die "Expected 'room_id' to be $room_id";
+
+         Future->done(1);
+      });
    },
 
    check => sub {
