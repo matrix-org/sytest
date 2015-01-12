@@ -79,6 +79,9 @@ test "POST /join/:room_id can join a room",
    requires => [qw( do_request_json_for more_users room_id
                     can_get_room_membership )],
 
+   # See SYN-234
+   expect_fail => 1,
+
    do => sub {
       my ( $do_request_json_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[2];
@@ -91,7 +94,9 @@ test "POST /join/:room_id can join a room",
       )->then( sub {
          my ( $body ) = @_;
 
-         # TODO
+         require_json_keys( $body, qw( room_id ));
+         $body->{room_id} eq $room_id or
+            die "Expected 'room_id' to be $room_id";
 
          Future->done(1);
       });
