@@ -79,3 +79,44 @@ test "Typing notifications also sent to remove room members",
          })
       } @$remote_users );
    };
+
+test "Typing can be explicitly stopped",
+   requires => [qw( do_request_json await_event_for local_users room_id
+                    can_set_room_typing can_create_room can_join_room_by_id )],
+
+   do => sub {
+      my ( $do_request_json, undef, undef, $room_id ) = @_;
+
+      $do_request_json->(
+         method => "PUT",
+         uri    => "/rooms/$room_id/typing/:user_id",
+
+         content => { typing => 0 },
+      );
+   },
+
+   await => sub {
+      my ( undef, $await_event_for, $users, $room_id ) = @_;
+      my ( $typinguser ) = @$users;
+
+      Future->needs_all( map {
+         my $recvuser = $_;
+
+         $await_event_for->( $recvuser, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.typing";
+
+            require_json_keys( $event, qw( type room_id content ));
+            require_json_keys( my $content = $event->{content}, qw( user_ids ));
+
+            return unless $event->{room_id} eq $room_id;
+
+            require_json_list( my $users = $content->{user_ids} );
+
+            scalar @$users and
+               die "Expected 0 members to be typing";
+
+            return 1;
+         })
+      } @$users );
+   };
