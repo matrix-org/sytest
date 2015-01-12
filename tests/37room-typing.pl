@@ -1,3 +1,5 @@
+use Time::HiRes qw( time );
+
 prepare "Flushing event streams",
    requires => [qw( flush_events_for local_users remote_users )],
    do => sub {
@@ -119,4 +121,58 @@ test "Typing can be explicitly stopped",
             return 1;
          })
       } @$users );
+   };
+
+prepare "Flushing event streams",
+   requires => [qw( flush_events_for local_users remote_users )],
+   do => sub {
+      my ( $flush_events_for, $local_users, $remote_users ) = @_;
+
+      Future->needs_all( map { $flush_events_for->( $_ ) } @$local_users, @$remote_users );
+   };
+
+multi_test "Typing notifications timeout and can be resent",
+   requires => [qw( do_request_json await_event_for user room_id
+                    can_set_room_typing can_create_room )],
+
+   await => sub {
+      my ( $do_request_json, $await_event_for, $user, $room_id ) = @_;
+
+      my $start_time = time();
+
+      $do_request_json->(
+         method => "PUT",
+         uri    => "/rooms/$room_id/typing/:user_id",
+
+         content => { typing => 1, timeout => 100 }, # msec; i.e. very short
+      )->then( sub {
+         pass( "Sent typing notification" );
+
+         # start typing
+         $await_event_for->( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.typing";
+            return unless $event->{room_id} eq $room_id;
+
+            return unless scalar @{ $event->{content}{user_ids} };
+
+            pass( "Received start notification" );
+            return 1;
+         })
+      })->then( sub {
+         # stop typing
+         $await_event_for->( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.typing";
+            return unless $event->{room_id} eq $room_id;
+
+            return if scalar @{ $event->{content}{user_ids} };
+
+            ( time() - $start_time ) < 0.5 or
+               die "Took too long to time out";
+
+            pass( "Received stop notification" );
+            return 1;
+         })
+      });
    };
