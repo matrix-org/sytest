@@ -79,9 +79,6 @@ test "POST /join/:room_id can join a room",
    requires => [qw( do_request_json_for more_users room_id
                     can_get_room_membership )],
 
-   # See SYN-234
-   expect_fail => 1,
-
    do => sub {
       my ( $do_request_json_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[2];
