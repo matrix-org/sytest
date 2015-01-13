@@ -174,5 +174,16 @@ multi_test "Typing notifications timeout and can be resent",
             pass( "Received stop notification" );
             return 1;
          })
+      })->then( sub {
+         $do_request_json->(
+            method => "PUT",
+            uri    => "/rooms/$room_id/typing/:user_id",
+
+            content => { typing => 1, timeout => 10000 },
+         )
+      })->then( sub {
+         pass( "Sent second notification" );
+
+         Future->done(1);
       });
    };
