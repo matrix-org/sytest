@@ -36,6 +36,12 @@ sub _add_to_loop
       unlink $db if -f $db;
    }
 
+   my $pythonpath = (
+      exists $ENV{PYTHONPATH}
+      ? "$self->{synapse_dir}:$ENV{PYTHONPATH}"
+      : "$self->{synapse_dir}"
+   );
+
    my @command = (
       $self->{python}, "-m", "synapse.app.homeserver",
          "--config-path" => "$hs_dir/config",
@@ -60,7 +66,7 @@ sub _add_to_loop
    $loop->run_child(
       setup => [
          env => {
-            "PYTHONPATH" => "$self->{synapse_dir}:$ENV{PYTHONPATH}",
+            "PYTHONPATH" => $pythonpath,
             "PATH" => $ENV{PATH},
             "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
          },
@@ -81,7 +87,7 @@ sub _add_to_loop
             $self->{proc} = IO::Async::Process->new(
                setup => [
                   env => {
-                     "PYTHONPATH" => "$self->{synapse_dir}:$ENV{PYTHONPATH}",
+                     "PYTHONPATH" => $pythonpath,
                      "PATH" => $ENV{PATH},
                      "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
                   },
