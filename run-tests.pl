@@ -37,6 +37,8 @@ GetOptions(
    'w|wait-at-end' => \my $WAIT_AT_END,
 
    'v|verbose+' => \(my $VERBOSE = 0),
+
+   'python=s' => \(my $PYTHON = "python"),
 ) or exit 1;
 
 my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
@@ -117,6 +119,7 @@ foreach my $port ( @PORTS ) {
       output       => $output,
       print_output => $SERVER_LOG,
       verbose      => $VERBOSE,
+      python       => $PYTHON,
    );
    $loop->add( $synapse );
 

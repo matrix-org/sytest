@@ -15,7 +15,7 @@ sub _init
    my $self = shift;
    my ( $args ) = @_;
 
-   $self->{$_} = delete $args->{$_} for qw( port output print_output synapse_dir verbose );
+   $self->{$_} = delete $args->{$_} for qw( port output print_output synapse_dir verbose python );
 
    $self->SUPER::_init( $args );
 }
@@ -39,7 +39,7 @@ sub _add_to_loop
    }
 
    my @command = (
-      "python", "-m", "synapse.app.homeserver",
+      $self->{python}, "-m", "synapse.app.homeserver",
          "--config-path" => "$hs_dir/config",
          "--log-file"    => "",
 
