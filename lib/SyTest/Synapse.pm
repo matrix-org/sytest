@@ -32,8 +32,6 @@ sub _add_to_loop
    my $db = "$hs_dir/homeserver.db";
 
    {
-      local $CWD = $self->{synapse_dir};
-
       -d $hs_dir or make_path $hs_dir;
       unlink $db if -f $db;
    }
@@ -61,7 +59,10 @@ sub _add_to_loop
 
    $loop->run_child(
       setup => [
-         chdir => $self->{synapse_dir},
+         env => {
+            "PYTHONPATH" => "$self->{synapse_dir}:$ENV{PYTHONPATH}",
+            "PATH" => $ENV{PATH},
+         },
       ],
 
       command => [ @command, "--generate-config" ],
@@ -78,7 +79,10 @@ sub _add_to_loop
          $self->add_child(
             $self->{proc} = IO::Async::Process->new(
                setup => [
-                  chdir => $self->{synapse_dir},
+                  env => {
+                     "PYTHONPATH" => "$self->{synapse_dir}:$ENV{PYTHONPATH}",
+                     "PATH" => $ENV{PATH},
+                  },
                ],
 
                command => [ @command, ( "-v" ) x $self->{verbose} ],
