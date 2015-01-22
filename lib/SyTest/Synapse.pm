@@ -62,6 +62,7 @@ sub _add_to_loop
          env => {
             "PYTHONPATH" => "$self->{synapse_dir}:$ENV{PYTHONPATH}",
             "PATH" => $ENV{PATH},
+            "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
          },
       ],
 
@@ -82,6 +83,7 @@ sub _add_to_loop
                   env => {
                      "PYTHONPATH" => "$self->{synapse_dir}:$ENV{PYTHONPATH}",
                      "PATH" => $ENV{PATH},
+                     "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
                   },
                ],
 
