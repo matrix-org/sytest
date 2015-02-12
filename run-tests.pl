@@ -382,7 +382,7 @@ TEST: {
       sub {
          my ( $filename ) = @_;
 
-         return unless basename( $filename ) =~ m/^\d+.*\.pl$/;
+         return unless basename( $filename ) =~ m/\.pl$/;
 
          $output->run_file( $filename );
 
