@@ -28,7 +28,7 @@ use Module::Pluggable
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \my $SERVER_LOG,
-   'server-filter=s' => \my @SERVER_FILTER,
+   'server-grep=s' => \my @SERVER_FILTER,
    'd|synapse-directory=s' => \(my $SYNAPSE_DIR = "../synapse"),
 
    's|stop-on-fail+' => \my $STOP_ON_FAIL,
