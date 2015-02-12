@@ -9,13 +9,16 @@ use IO::Async::Process;
 
 use File::chdir;
 use File::Path qw( make_path );
+use List::Util qw( any );
 
 sub _init
 {
    my $self = shift;
    my ( $args ) = @_;
 
-   $self->{$_} = delete $args->{$_} for qw( port output print_output synapse_dir verbose python );
+   $self->{$_} = delete $args->{$_} for qw(
+      port output print_output filter_output synapse_dir verbose python
+   );
 
    $self->SUPER::_init( $args );
 }
@@ -126,7 +129,13 @@ sub on_synapse_read
 
    while( $$bufref =~ s/^(.*)\n// ) {
       my $line = $1;
-      print STDERR "\e[1;35m[server $self->{port}]\e[m: $line\n" if $self->{print_output};
+
+      if( $self->{print_output} ) {
+         my $filter = $self->{filter_output};
+         if( !$filter or any { $line =~ m/$_/ } @$filter ) {
+            print STDERR "\e[1;35m[server $self->{port}]\e[m: $line\n";
+         }
+      }
 
       $self->started_future->done if $line =~ m/INFO .* Synapse now listening on port $self->{port}\s*$/;
    }

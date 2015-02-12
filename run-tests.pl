@@ -28,6 +28,7 @@ use Module::Pluggable
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \my $SERVER_LOG,
+   'server-filter=s' => \my @SERVER_FILTER,
    'd|synapse-directory=s' => \(my $SYNAPSE_DIR = "../synapse"),
 
    's|stop-on-fail+' => \my $STOP_ON_FAIL,
@@ -120,6 +121,7 @@ foreach my $port ( @PORTS ) {
       print_output => $SERVER_LOG,
       verbose      => $VERBOSE,
       python       => $PYTHON,
+      ( @SERVER_FILTER ? ( filter_output => \@SERVER_FILTER ) : () ),
    );
    $loop->add( $synapse );
 
