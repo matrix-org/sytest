@@ -3,6 +3,8 @@ use List::Util qw( first );
 test "A room can be created set to invite-only",
    requires => [qw( do_request_json can_create_room )],
 
+   provides => [qw( inviteonly_room_id )],
+
    do => sub {
       my ( $do_request_json ) = @_;
 

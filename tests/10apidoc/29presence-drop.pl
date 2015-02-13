@@ -8,6 +8,8 @@ my $PRESENCE_LIST_URI = "/presence/list/:user_id";
 test "POST /presence/:user_id/list can drop users",
    requires => [qw( do_request_json can_invite_presence )],
 
+   provides => [qw( can_drop_presence )],
+
    do => sub {
       my ( $do_request_json ) = @_;
 

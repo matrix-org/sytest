@@ -23,6 +23,8 @@ test "GET /presence/:user_id/list initially empty",
 test "POST /presence/:user_id/list can invite users",
    requires => [qw( do_request_json more_users )],
 
+   provides => [qw( can_invite_presence )],
+
    do => sub {
       my ( $do_request_json, $more_users ) = @_;
       my $friend_uid = $more_users->[0]->user_id;

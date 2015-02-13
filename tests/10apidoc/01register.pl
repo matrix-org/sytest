@@ -1,6 +1,8 @@
 test "GET /register yields a set of flows",
    requires => [qw( first_http_client )],
 
+   provides => [qw( can_register_password_flow )],
+
    check => sub {
       my ( $http ) = @_;
 
@@ -39,6 +41,8 @@ my $password = "s3kr1t";
 
 test "POST /register can create a user",
    requires => [qw( first_http_client can_register_password_flow )],
+
+   provides => [qw( can_register )],
 
    do => sub {
       my ( $http ) = @_;

@@ -5,6 +5,8 @@ struct User => [qw( http user_id access_token eventstream_token saved_events pen
 test "GET /login yields a set of flows",
    requires => [qw( first_http_client )],
 
+   provides => [qw( can_login_password_flow )],
+
    check => sub {
       my ( $http ) = @_;
 
@@ -40,6 +42,8 @@ test "GET /login yields a set of flows",
 
 test "POST /login can log in as a user",
    requires => [qw( first_http_client can_register can_login_password_flow )],
+
+   provides => [qw( can_login user first_home_server do_request_json_for do_request_json )],
 
    do => sub {
       my ( $http, $login_details ) = @_;

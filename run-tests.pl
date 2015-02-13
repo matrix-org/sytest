@@ -15,7 +15,7 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case );
 use IO::Socket::SSL;
-use List::Util 1.33 qw( first all );
+use List::Util 1.33 qw( first all any );
 
 use SyTest::Synapse;
 use SyTest::HTTPClient;
@@ -149,11 +149,15 @@ $test_environment{http_clients} = [ map {
 } @PORTS ];
 $test_environment{first_http_client} = $test_environment{http_clients}->[0];
 
+our @PROVIDES;
+
 sub provide
 {
    my ( $name, $value ) = @_;
    exists $test_environment{$name} and
       carp "Overwriting existing test environment key '$name'";
+   any { $name eq $_ } @PROVIDES or
+      carp "Was not expecting to provide '$name'";
 
    $test_environment{$name} = $value;
 }
@@ -178,6 +182,8 @@ my $expected_fail;
 sub _run_test
 {
    my ( $t, %params ) = @_;
+
+   local @PROVIDES = @{ $params{provides} || [] };
 
    my @reqs;
    foreach my $req ( @{ $params{requires} || [] } ) {
@@ -228,6 +234,9 @@ sub _run_test
    };
 
    if( $success ) {
+      exists $test_environment{$_} or warn "Test step ${\$t->name} did not provide a value for $_\n"
+         for @PROVIDES;
+
       $t->pass;
    }
    else {
@@ -297,6 +306,8 @@ sub prepare
 {
    my ( $name, %params ) = @_;
 
+   local @PROVIDES = @{ $params{provides} || [] };
+
    my @reqs;
    foreach my $req ( @{ $params{requires} || [] } ) {
       push @reqs, $test_environment{$req} and next if $test_environment{$req};
@@ -324,6 +335,9 @@ sub prepare
 
     no warnings 'exiting';
     last TEST if $STOP_ON_FAIL and not $success;
+
+   exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
+      for @PROVIDES;
 }
 
 ## Some assertion functions useful by test scripts. Put them in their own

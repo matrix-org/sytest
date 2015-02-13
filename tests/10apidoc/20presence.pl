@@ -24,6 +24,8 @@ my $status_msg = "Testing something";
 test "PUT /presence/:user_id/status updates my presence",
    requires => [qw( do_request_json )],
 
+   provides => [qw( can_set_presence )],
+
    do => sub {
       my ( $do_request_json ) = @_;
 

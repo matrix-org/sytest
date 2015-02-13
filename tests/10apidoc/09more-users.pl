@@ -4,6 +4,8 @@ my $LOCAL_USERS = 3;
 prepare "More local users",
    requires => [qw( first_http_client user can_register )],
 
+   provides => [qw( more_users local_users )],
+
    do => sub {
       my ( $http, $user ) = @_;
 

@@ -2,6 +2,9 @@ test "PUT /rooms/:room_id/typing/:user_id sets typing notification",
    requires => [qw( do_request_json room_id
                     can_create_room )],
 
+
+   provides => [qw( can_set_room_typing )],
+
    do => sub {
       my ( $do_request_json, $room_id ) = @_;
 

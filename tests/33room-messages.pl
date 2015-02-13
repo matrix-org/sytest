@@ -13,6 +13,8 @@ test "Local room members see posted message events",
    requires => [qw( do_request_json await_event_for local_users room_id
                     can_send_message )],
 
+   provides => [qw( can_receive_room_message_locally )],
+
    do => sub {
       my ( $do_request_json, undef, undef, $room_id ) = @_;
 

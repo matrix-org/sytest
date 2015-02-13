@@ -1,6 +1,8 @@
 prepare "Creating a room",
    requires => [qw( do_request_json can_create_room )],
 
+   provides => [qw( room_id room_alias )],
+
    do => sub {
       my ( $do_request_json ) = @_;
 

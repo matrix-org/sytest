@@ -4,6 +4,8 @@ test "PUT /directory/room/:room_alias creates alias",
    requires => [qw( do_request_json room_id first_home_server
                     can_create_room )],
 
+   provides => [qw( can_create_room_alias )],
+
    do => sub {
       my ( $do_request_json, $room_id, $first_home_server ) = @_;
       my $room_alias = "${alias_localpart}:$first_home_server";

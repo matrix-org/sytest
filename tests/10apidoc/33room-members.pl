@@ -2,6 +2,8 @@ test "POST /rooms/:room_id/join can join a room",
    requires => [qw( do_request_json_for more_users room_id
                     can_get_room_membership )],
 
+   provides => [qw( can_join_room_by_id )],
+
    do => sub {
       my ( $do_request_json_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[0];
@@ -36,6 +38,8 @@ test "POST /rooms/:room_id/join can join a room",
 test "POST /join/:room_alias can join a room",
    requires => [qw( do_request_json_for more_users room_id room_alias
                     can_get_room_membership )],
+
+   provides => [qw( can_join_room_by_alias )],
 
    do => sub {
       my ( $do_request_json_for, $more_users, $room_id, $room_alias ) = @_;
@@ -120,6 +124,8 @@ test "POST /rooms/:room_id/leave can leave a room",
    requires => [qw( do_request_json_for more_users room_id
                     can_join_room_by_id can_get_room_membership )],
 
+   provides => [qw( can_leave_room )],
+
    do => sub {
       my ( $do_request_json_for, $more_users, $room_id ) = @_;
       my $user = $more_users->[2];
@@ -166,6 +172,8 @@ test "POST /rooms/:room_id/leave can leave a room",
 test "POST /rooms/:room_id/invite can send an invite",
    requires => [qw( do_request_json_for user more_users room_id
                     can_get_room_membership )],
+
+   provides => [qw( can_invite_room )],
 
    do => sub {
       my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;

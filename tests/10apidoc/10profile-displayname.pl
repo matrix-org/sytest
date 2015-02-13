@@ -3,6 +3,8 @@ my $displayname = "Testing Displayname";
 test "PUT /profile/:user_id/displayname sets my name",
    requires => [qw( do_request_json )],
 
+   provides => [qw( can_set_displayname )],
+
    check => sub {
       my ( $do_request_json ) = @_;
 

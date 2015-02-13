@@ -1,6 +1,8 @@
 test "POST /createRoom makes a public room",
    requires => [qw( do_request_json can_initial_sync )],
 
+   provides => [qw( can_create_room room_id room_alias )],
+
    do => sub {
       my ( $do_request_json ) = @_;
 
@@ -45,6 +47,8 @@ test "POST /createRoom makes a public room",
 test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
    requires => [qw( do_request_json room_id can_create_room )],
 
+   provides => [qw( can_get_room_membership )],
+
    check => sub {
       my ( $do_request_json, $room_id ) = @_;
 
@@ -67,6 +71,8 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
 
 test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
    requires => [qw( do_request_json room_id can_create_room )],
+
+   provides => [qw( can_get_room_powerlevels )],
 
    check => sub {
       my ( $do_request_json, $room_id ) = @_;
@@ -91,6 +97,8 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
 
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
    requires => [qw( do_request_json room_id can_create_room )],
+
+   provides => [qw( can_room_initial_sync )],
 
    check => sub {
       my ( $do_request_json, $room_id ) = @_;
@@ -174,6 +182,8 @@ test "GET /directory/room/:room_alias yields room ID",
 test "POST /createRoom makes a private room",
    requires => [qw( do_request_json )],
 
+   provides => [qw( can_create_private_room )],
+
    do => sub {
       my ( $do_request_json ) = @_;
 
@@ -199,6 +209,8 @@ test "POST /createRoom makes a private room",
 test "POST /createRoom makes a private room with invites",
    requires => [qw( do_request_json more_users
                     can_create_private_room )],
+
+   provides => [qw( can_create_private_room_with_invite )],
 
    do => sub {
       my ( $do_request_json, $more_users ) = @_;

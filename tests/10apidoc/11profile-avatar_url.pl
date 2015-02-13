@@ -3,6 +3,8 @@ my $avatar_url = "http://somewhere/my-pic.jpg";
 test "PUT /profile/:user_id/avatar_url sets my avatar",
    requires => [qw( do_request_json )],
 
+   provides => [qw( can_set_avatar_url )],
+
    check => sub {
       my ( $do_request_json ) = @_;
 

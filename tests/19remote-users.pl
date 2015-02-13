@@ -4,6 +4,8 @@ my $REMOTE_USERS = 2;
 prepare "Remote users",
    requires => [qw( http_clients can_register )],
 
+   provides => [qw( remote_users )],
+
    do => sub {
       my ( $clients ) = @_;
       my $http = $clients->[1];

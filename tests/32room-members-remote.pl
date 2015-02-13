@@ -4,6 +4,8 @@ test "Remote users can join room by alias",
    requires => [qw( do_request_json_for flush_events_for remote_users room_alias room_id
                     can_join_room_by_alias can_get_room_membership )],
 
+   provides => [qw( can_join_remote_room_by_alias )],
+
    do => sub {
       my ( $do_request_json_for, $flush_events_for, $remote_users, $room_alias ) = @_;
       my $user = $remote_users->[0];
