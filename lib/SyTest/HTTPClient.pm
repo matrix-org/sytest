@@ -29,7 +29,12 @@ sub do_request
    my %params = @_;
 
    my $uri = URI->new( $self->{uri_base} );
-   $uri->path( $uri->path . $params{uri} ); # In case of '#room' fragments
+   if( defined $params{full_uri} ) {
+      $uri->path( $params{full_uri} );
+   }
+   else {
+      $uri->path( $uri->path . $params{uri} ); # In case of '#room' fragments
+   }
    $uri->query_form( %{ $params{params} } ) if $params{params};
 
    # Also set verify_mode = 0 to not complain about self-signed SSL certs
