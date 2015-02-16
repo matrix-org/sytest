@@ -38,20 +38,7 @@ sub do_request
    $self->SUPER::do_request(
       %params,
       uri => $uri,
-   );
-}
-
-sub do_request_json
-{
-   my $self = shift;
-   my %params = @_;
-
-   if( defined( my $content = $params{content} ) ) {
-      $params{content} = encode_json $content;
-      $params{content_type} //= "text/json";
-   }
-
-   $self->do_request( %params )->then( sub {
+   )->then( sub {
       my ( $response ) = @_;
 
       unless( $response->code == 200 ) {
@@ -62,9 +49,27 @@ sub do_request_json
             http => $response, $response->request );
       }
 
-      my $content = decode_json $response->content;
+      my $content = $response->content;
+
+      if( $response->header( "Content-type" ) eq "application/json" ) {
+         $content = decode_json $content;
+      }
+
       Future->done( $content, $response );
    });
+}
+
+sub do_request_json
+{
+   my $self = shift;
+   my %params = @_;
+
+   if( defined( my $content = $params{content} ) ) {
+      $params{content} = encode_json $content;
+      $params{content_type} //= "application/json";
+   }
+
+   $self->do_request( %params );
 }
 
 1;
