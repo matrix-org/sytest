@@ -40,7 +40,43 @@ GetOptions(
    'v|verbose+' => \(my $VERBOSE = 0),
 
    'python=s' => \(my $PYTHON = "python"),
-) or exit 1;
+
+   'h|help' => sub { usage(0) },
+) or usage(1);
+
+sub usage
+{
+   my ( $exitcode ) = @_;
+
+   print STDERR <<'EOF';
+run-tests.pl: [options...]
+
+Options:
+   -C, --client-log             - enable logging of requests made by the client
+
+   -S, --server-log             - enable pass-through of server logs
+
+       --server-grep PATTERN    - additionally, filter the server passthrough
+                                  for matches of this pattern
+
+   -d, --synapse-directory DIR  - path to the checkout directory of synapse
+
+   -s, --stop-on-fail           - stop after the first failed test
+
+   -O, --output-format FORMAT   - set the style of test output report
+
+   -w, --wait-at-end            - pause for input before shutting down testing
+                                  synapse servers
+
+   -v, --verbose                - increase the verbosity of output and
+                                  synapse's logging level
+
+       --python PATH            - path to the 'python' binary
+
+EOF
+
+   exit $exitcode;
+}
 
 my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
