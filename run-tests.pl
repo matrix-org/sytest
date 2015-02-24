@@ -13,7 +13,7 @@ use IO::Async::Loop;
 
 use Data::Dump qw( pp );
 use File::Basename qw( basename );
-use Getopt::Long qw( :config no_ignore_case );
+use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any );
 
@@ -25,6 +25,7 @@ use Module::Pluggable
    search_path => [ "SyTest::Output" ],
    require     => 1;
 
+my @SYNAPSE_EXTRA_ARGS;
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \my $SERVER_LOG,
@@ -41,8 +42,19 @@ GetOptions(
 
    'python=s' => \(my $PYTHON = "python"),
 
+   'E=s' => sub { # process -Eoption=value
+      my @more = split m/=/, $_[1];
+
+      # Turn single-letter into -X but longer into --NAME
+      $_ = ( length > 1 ? "--$_" : "-$_" ) for $more[0];
+
+      push @SYNAPSE_EXTRA_ARGS, @more;
+   },
+
    'h|help' => sub { usage(0) },
 ) or usage(1);
+
+push @SYNAPSE_EXTRA_ARGS, "-v" if $VERBOSE;
 
 sub usage
 {
@@ -72,6 +84,8 @@ Options:
                                   synapse's logging level
 
        --python PATH            - path to the 'python' binary
+
+   -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
 
 EOF
 
@@ -155,7 +169,7 @@ foreach my $port ( @PORTS ) {
       port         => $port,
       output       => $output,
       print_output => $SERVER_LOG,
-      verbose      => $VERBOSE,
+      extra_args   => \@SYNAPSE_EXTRA_ARGS,
       python       => $PYTHON,
       ( @SERVER_FILTER ? ( filter_output => \@SERVER_FILTER ) : () ),
    );

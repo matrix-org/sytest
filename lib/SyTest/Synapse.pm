@@ -17,7 +17,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port output print_output filter_output synapse_dir verbose python
+      port output print_output filter_output synapse_dir extra_args python
    );
 
    $self->SUPER::_init( $args );
@@ -96,7 +96,7 @@ sub _add_to_loop
                   },
                ],
 
-               command => [ @command, ( "-v" ) x $self->{verbose} ],
+               command => [ @command, @{ $self->{extra_args} } ],
 
                stderr => {
                   via => "pipe_read",
