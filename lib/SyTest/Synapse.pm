@@ -119,7 +119,20 @@ sub pid
 sub on_finish
 {
    my $self = shift;
+   my ( $process, $exitcode ) = @_;
+
    say $self->pid . " stopped";
+
+   if( $exitcode > 0 ) {
+      print STDERR "Process failed ($exitcode)\n";
+
+      print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
+         for @{ $self->{stderr_lines} // [] };
+
+      # Now force all remaining output to be printed
+      $self->{print_output}++;
+      undef $self->{filter_output};
+   }
 }
 
 sub on_synapse_read
@@ -129,6 +142,9 @@ sub on_synapse_read
 
    while( $$bufref =~ s/^(.*)\n// ) {
       my $line = $1;
+
+      push @{ $self->{stderr_lines} }, $line;
+      shift @{ $self->{stderr_lines} } while @{ $self->{stderr_lines} } > 20;
 
       if( $self->{print_output} ) {
          my $filter = $self->{filter_output};
