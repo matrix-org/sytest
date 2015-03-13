@@ -116,6 +116,16 @@ sub pid
    return $self->{proc}->pid;
 }
 
+sub kill
+{
+   my $self = shift;
+   my ( $signal ) = @_;
+
+   if( $self->{proc} and my $pid = $self->{proc}->pid ) {
+      kill $signal => $pid;
+   }
+}
+
 sub on_finish
 {
    my $self = shift;

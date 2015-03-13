@@ -153,10 +153,9 @@ my $loop = IO::Async::Loop->new;
 
 my %synapses_by_port;
 END {
-   $output->diag( "Killing synapse servers " . join " ", map { "[${\$_->pid}]" } values %synapses_by_port )
-      if %synapses_by_port;
+   $output->diag( "Killing synapse servers " ) if %synapses_by_port;
 
-   kill INT => $_->pid for values %synapses_by_port;
+   $_->kill( 'INT' ) for values %synapses_by_port;
 }
 $SIG{INT} = sub { exit 1 };
 
