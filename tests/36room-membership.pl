@@ -148,3 +148,60 @@ test "Invited user can join the room",
          Future->done(1);
       });
    };
+
+test "Banned user is kicked and may not rejoin",
+   requires => [qw( do_request_json_for user more_users room_id
+                    can_ban_room )],
+
+   do => sub {
+      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my $banned_user = $more_users->[0];
+
+      # Pre-test assertion that the user we want to ban is present
+      $do_request_json_for->( $banned_user,
+         method => "GET",
+         uri    => "/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
+      )->then( sub {
+         my ( $body ) = @_;
+         $body->{membership} eq "join" or
+            die "Pretest assertion failed: expected user to be in 'join' state";
+
+         $do_request_json_for->( $user,
+            method => "POST",
+            uri    => "/rooms/$room_id/ban",
+
+            content => { user_id => $banned_user->user_id, reason => "testing" },
+         );
+      })->then( sub {
+         $do_request_json_for->( $user,
+            method => "GET",
+            uri    => "/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         $body->{membership} eq "ban" or
+            die "Expected banned user membership to be 'ban'";
+
+         $do_request_json_for->( $banned_user,
+            method => "POST",
+            uri    => "/rooms/$room_id/join",
+
+            content => {},
+         )->then(
+            sub { # done
+               die "Expected to receive an error joining the room when banned";
+            },
+            sub { # fail
+               my ( $failure, $name ) = @_;
+               defined $name and $name eq "http" or
+                  die "Expected an HTTP failure";
+
+               my ( undef, undef, $response, $request ) = @_;
+               $response->code == 403 or
+                  die "Expected an HTTP 403 error";
+
+               Future->done(1);
+            }
+         );
+      });
+   };
