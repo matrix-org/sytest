@@ -205,3 +205,43 @@ test "POST /rooms/:room_id/invite can send an invite",
          Future->done(1);
       });
    };
+
+test "POST /rooms/:room_id/ban can ban a user",
+   requires => [qw( do_request_json_for user more_users room_id
+                    can_get_room_membership )],
+
+   provides => [qw( can_ban_room )],
+
+   do => sub {
+      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my $banned_user = $more_users->[2];
+
+      $do_request_json_for->( $user,
+         method => "POST",
+         uri    => "/rooms/$room_id/ban",
+
+         content => {
+            user_id => $banned_user->user_id,
+            reason  => "Just testing",
+         },
+      );
+   },
+
+   check => sub {
+      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my $banned_user = $more_users->[2];
+
+      $do_request_json_for->( $user,
+         method => "GET",
+         uri    => "/rooms/$room_id/state/m.room.member/" . $banned_user->user_id,
+      )->then( sub {
+         my ( $body ) = @_;
+
+         $body->{membership} eq "ban" or
+            die "Expecting membership to be 'ban'";
+
+         provide can_ban_room => 1;
+
+         Future->done(1);
+      });
+   };
