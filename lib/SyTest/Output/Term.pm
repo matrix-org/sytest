@@ -141,6 +141,8 @@ package SyTest::Output::Term::Test {
       my $self = shift;
       my ( $message ) = @_;
 
+      $self->{progress_printed} = 1;
+
       # TODO: handle multiline messages
       print "\r\e[K$message";
    }
@@ -161,7 +163,7 @@ package SyTest::Output::Term::Test {
       my $self = shift;
       my ( $ok, $stepname ) = @_;
 
-      $self->progress( "" );
+      $self->progress( "" ) if $self->{progress_printed};
 
       $ok ?
          print "   ${CYAN}| $stepname... ${GREEN}OK${RESET}\n" :
@@ -184,7 +186,7 @@ package SyTest::Output::Term::Test {
 
       return if $self->skipped;
 
-      $self->progress( "" );
+      $self->progress( "" ) if $self->{progress_printed};
 
       print "   ${CYAN}+--- " if $self->multi;
 
