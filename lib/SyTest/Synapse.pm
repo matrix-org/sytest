@@ -17,10 +17,22 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port output print_output filter_output synapse_dir extra_args python
+      port output synapse_dir extra_args python
    );
 
    $self->SUPER::_init( $args );
+}
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
+      print_output filter_output
+   );
+
+   $self->SUPER::configure( %params );
 }
 
 sub _add_to_loop
