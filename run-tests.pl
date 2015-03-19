@@ -159,16 +159,35 @@ END {
 }
 $SIG{INT} = sub { exit 1 };
 
+sub extract_extra_args
+{
+   my ( $idx, $args ) = @_;
+
+   return map {
+      if( m/^\[(.*)\]$/ ) {
+         # Extract the $idx'th element from a comma-separated list, or use the final
+         my @choices = split m/,/, $1;
+         $idx < @choices ? $choices[$idx] : $choices[-1];
+      }
+      else {
+         $_;
+      }
+   } @$args;
+}
+
 # We need two servers; a "local" and a "remote" one for federation-based tests
 my @PORTS = ( 8001, 8002 );
 my @f;
-foreach my $port ( @PORTS ) {
+foreach my $idx ( 0 .. $#PORTS ) {
+   my $port = $PORTS[$idx];
+   my @extra_args = extract_extra_args( $idx, \@SYNAPSE_EXTRA_ARGS );
+
    my $synapse = $synapses_by_port{$port} = SyTest::Synapse->new(
       synapse_dir  => $SYNAPSE_DIR,
       port         => $port,
       output       => $output,
       print_output => $SERVER_LOG,
-      extra_args   => \@SYNAPSE_EXTRA_ARGS,
+      extra_args   => \@extra_args,
       python       => $PYTHON,
       ( @SERVER_FILTER ? ( filter_output => \@SERVER_FILTER ) : () ),
    );
