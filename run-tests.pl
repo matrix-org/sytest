@@ -40,6 +40,8 @@ GetOptions(
 
    'v|verbose+' => \(my $VERBOSE = 0),
 
+   'n|no-ssl' => \my $NO_SSL,
+
    'python=s' => \(my $PYTHON = "python"),
 
    'E=s' => sub { # process -Eoption=value
@@ -189,6 +191,7 @@ foreach my $idx ( 0 .. $#PORTS ) {
       print_output => $SERVER_LOG,
       extra_args   => \@extra_args,
       python       => $PYTHON,
+      no_ssl       => $NO_SSL,
       ( @SERVER_FILTER ? ( filter_output => \@SERVER_FILTER ) : () ),
    );
    $loop->add( $synapse );
@@ -210,7 +213,9 @@ my %test_environment;
 $test_environment{http_clients} = [ map {
    my $port = $_;
    my $client = SyTest::HTTPClient->new(
-      uri_base => "https://localhost:$port/_matrix/client/api/v1",
+      uri_base => ( $NO_SSL ?
+         "http://localhost:@{[ $port + 1000 ]}/_matrix/client/api/v1" :
+         "https://localhost:$port/_matrix/client/api/v1" ),
    );
    $loop->add( $client );
    $client;

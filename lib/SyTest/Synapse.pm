@@ -17,7 +17,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port output synapse_dir extra_args python
+      port output synapse_dir extra_args python no_ssl
    );
 
    $self->SUPER::_init( $args );
@@ -66,7 +66,10 @@ sub _add_to_loop
          "--bind-port"   => $port,
          "--database"    => $db,
 
-         "--unsecure-port" => 0,
+         ( $self->{no_ssl} ?
+            ( "--unsecure-port" => $port + 1000, ) :
+
+            ( "--unsecure-port" => 0 ) ),
 
          # TLS parameters
          "--tls-dh-params-path" => "$CWD/keys/tls.dh",
