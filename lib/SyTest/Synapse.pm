@@ -65,6 +65,7 @@ sub _add_to_loop
          "--server-name" => "localhost:$port",
          "--bind-port"   => $port,
          "--database"    => $db,
+         "--manhole" => $port - 1000,
 
          ( $self->{no_ssl} ?
             ( "--unsecure-port" => $port + 1000, ) :
