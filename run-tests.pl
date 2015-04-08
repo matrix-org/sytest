@@ -40,7 +40,7 @@ GetOptions(
 
    'v|verbose+' => \(my $VERBOSE = 0),
 
-   'n|no-ssl' => \my $NO_SSL,
+   'n|no-tls' => \my $NO_SSL,
 
    'python=s' => \(my $PYTHON = "python"),
 
