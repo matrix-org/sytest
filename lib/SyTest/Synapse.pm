@@ -161,6 +161,8 @@ sub on_finish
       $self->{print_output}++;
       undef $self->{filter_output};
    }
+
+   $self->await_finish->done( $exitcode );
 }
 
 sub on_synapse_read
@@ -191,6 +193,28 @@ sub started_future
 {
    my $self = shift;
    return $self->{started_future} ||= $self->loop->new_future;
+}
+
+sub await_finish
+{
+   my $self = shift;
+   return $self->{finished_future} //= $self->loop->new_future;
+}
+
+sub print_output
+{
+   my $self = shift;
+   my ( $on ) = @_;
+   $on = 1 unless @_;
+
+   $self->configure( print_output => $on );
+
+   if( $on ) {
+      print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
+         for @{ $self->{stderr_lines} // [] };
+   }
+
+   undef @{ $self->{stderr_lines} };
 }
 
 1;
