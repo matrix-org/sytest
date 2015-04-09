@@ -49,13 +49,15 @@ sub _add_to_loop
    my $db  = "$hs_dir/homeserver.db";
    my $log = "$hs_dir/homeserver.log";
 
+   $self->{logpath} = $log;
+
    {
       -d $hs_dir or make_path $hs_dir;
       unlink $db if -f $db;
    }
 
-   if( -f $log ) {
-      # truncate
+   {
+      # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
    }
 
@@ -128,12 +130,7 @@ sub _add_to_loop
             )
          );
 
-         $self->add_child(
-            $self->{stderr_stream} = IO::Async::FileStream->new(
-               filename => $log,
-               on_read => $self->_capture_weakself( 'on_synapse_read' ),
-            )
-         );
+         $self->open_logfile;
       }
    );
 }
@@ -173,6 +170,25 @@ sub on_finish
    }
 
    $self->await_finish->done( $exitcode );
+}
+
+sub open_logfile
+{
+   my $self = shift;
+
+   $self->add_child(
+      $self->{log_stream} = IO::Async::FileStream->new(
+         filename => $self->{logpath},
+         on_read => $self->_capture_weakself( 'on_synapse_read' ),
+      )
+   );
+}
+
+sub close_logfile
+{
+   my $self = shift;
+
+   $self->remove_child( delete $self->{log_stream} );
 }
 
 sub on_synapse_read
