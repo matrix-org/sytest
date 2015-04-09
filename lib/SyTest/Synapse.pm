@@ -6,6 +6,7 @@ use 5.010;
 use base qw( IO::Async::Notifier );
 
 use IO::Async::Process;
+use IO::Async::FileStream;
 
 use File::chdir;
 use File::Path qw( make_path );
@@ -44,11 +45,18 @@ sub _add_to_loop
    my $output = $self->{output};
 
    my $hs_dir = "localhost-$port";
-   my $db = "$hs_dir/homeserver.db";
+
+   my $db  = "$hs_dir/homeserver.db";
+   my $log = "$hs_dir/homeserver.log";
 
    {
       -d $hs_dir or make_path $hs_dir;
       unlink $db if -f $db;
+   }
+
+   if( -f $log ) {
+      # truncate
+      open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
    }
 
    my $pythonpath = (
@@ -60,7 +68,7 @@ sub _add_to_loop
    my @command = (
       $self->{python}, "-m", "synapse.app.homeserver",
          "--config-path" => "$hs_dir/config",
-         "--log-file"    => "",
+         "--log-file"    => $log,
 
          "--server-name"   => "localhost:$port",
          "--bind-port"     => $port,
@@ -116,12 +124,14 @@ sub _add_to_loop
 
                command => [ @command, @{ $self->{extra_args} } ],
 
-               stderr => {
-                  via => "pipe_read",
-                  on_read => $self->_capture_weakself( 'on_synapse_read' ),
-               },
-
                on_finish => $self->_capture_weakself( 'on_finish' ),
+            )
+         );
+
+         $self->add_child(
+            $self->{stderr_stream} = IO::Async::FileStream->new(
+               filename => $log,
+               on_read => $self->_capture_weakself( 'on_synapse_read' ),
             )
          );
       }
@@ -168,7 +178,7 @@ sub on_finish
 sub on_synapse_read
 {
    my $self = shift;
-   my ( $proc, $bufref, $eof ) = @_;
+   my ( $stream, $bufref, $eof ) = @_;
 
    while( $$bufref =~ s/^(.*)\n// ) {
       my $line = $1;
