@@ -62,10 +62,10 @@ sub _add_to_loop
          "--config-path" => "$hs_dir/config",
          "--log-file"    => "",
 
-         "--server-name" => "localhost:$port",
-         "--bind-port"   => $port,
-         "--database"    => $db,
-         "--manhole" => $port - 1000,
+         "--server-name"   => "localhost:$port",
+         "--bind-port"     => $port,
+         "--database-path" => $db,
+         "--manhole"       => $port - 1000,
 
          ( $self->{no_ssl} ?
             ( "--unsecure-port" => $port + 1000, ) :
