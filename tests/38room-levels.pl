@@ -136,3 +136,14 @@ test_powerlevel "setting 'm.room.name' respects room powerlevel",
          content => { name => "A new room name" },
       );
    };
+
+test_powerlevel "setting 'm.room.power_levels' respects room powerlevel",
+   requires => [qw( can_get_power_levels )],
+
+   do => sub {
+      my ( $do_request_json_for, $test_user ) = @_;
+
+      $set_user_powerlevel->( $do_request_json_for, $test_user,
+         '@some-random-user:here', 50,
+      );
+   };
