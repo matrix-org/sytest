@@ -148,3 +148,25 @@ test_powerlevel "setting 'm.room.power_levels' respects room powerlevel",
          $levels->{users}{'@some-random-user:here'} = 50;
       });
    };
+
+test "Unprivileged users can set m.room.topic if it only needs level 0",
+   requires => [qw( do_request_json_for change_room_powerlevels local_users )],
+
+   do => sub {
+      my ( $do_request_json_for, $change_room_powerlevels, $local_users ) = @_;
+      my $creator = $local_users->[0];
+      my $test_user = $local_users->[1];
+
+      $change_room_powerlevels->( $creator, $room_id, sub {
+         my ( $levels ) = @_;
+         delete $levels->{users}{ $test_user->user_id };
+         $levels->{events}{"m.room.topic"} = 0;
+      })->then( sub {
+         $do_request_json_for->( $test_user,
+            method => "PUT",
+            uri    => "/rooms/$room_id/state/m.room.topic",
+
+            content => { topic => "Here I can set the topic at powerlevel 0" },
+         );
+      });
+   };
