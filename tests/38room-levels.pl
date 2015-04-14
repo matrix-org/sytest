@@ -79,3 +79,17 @@ test_powerlevel "'ban' event respects room powerlevel",
          content => { user_id => '@random_dude:test', reason => "testing" },
       );
    };
+
+test_powerlevel "setting 'm.room.name' respects room powerlevel",
+   requires => [qw( can_set_room_name )],
+
+   do => sub {
+      my ( $do_request_json_for, $test_user, $room_id ) = @_;
+
+      $do_request_json_for->( $test_user,
+         method => "PUT",
+         uri    => "/rooms/$room_id/state/m.room.name",
+
+         content => { name => "A new room name" },
+      );
+   };
