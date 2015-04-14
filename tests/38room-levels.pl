@@ -1,3 +1,5 @@
+use List::Util qw( first );
+
 my $room_id;
 
 prepare "Creating a new test room",
@@ -28,44 +30,37 @@ prepare "Creating a new test room",
       });
    };
 
-my $set_user_powerlevel = sub {
-   my ( $do_request_json_for, $opuser, $user_id, $level ) = @_;
-
-   $do_request_json_for->( $opuser,
-      method => "GET",
-      uri    => "/rooms/$room_id/state/m.room.power_levels",
-   )->then( sub {
-      my ( $levels ) = @_;
-
-      $levels->{users}{ $user_id } = $level;
-
-      $do_request_json_for->( $opuser,
-         method => "PUT",
-         uri    => "/rooms/$room_id/state/m.room.power_levels",
-
-         content => $levels,
-      );
-   })
-};
-
 sub test_powerlevel
 {
    my ( $name, %args ) = @_;
 
    my $do = $args{do};
+   my @requires = @{ $args{requires} };
 
-   multi_test $name,,
-      requires => [qw( do_request_json_for user local_users ), @{ $args{requires} } ],
+   my $test_user_idx = first { $requires[$_] eq "test_user" } 0 .. $#requires;
+   if( defined $test_user_idx ) {
+      splice @requires, $test_user_idx, 1, ();
+   }
+
+   multi_test $name,
+      requires => [qw( do_request_json_for change_room_powerlevels user local_users ),
+                   @requires ],
 
       do => sub {
-         my ( $do_request_json_for, $user, $local_users ) = @_;
+         my ( $do_request_json_for, $change_room_powerlevels, $user, $local_users,
+              @dependencies ) = @_;
          my $test_user = $local_users->[1];
 
+         if( defined $test_user_idx ) {
+            splice @dependencies, $test_user_idx, 0, ( $test_user );
+         }
+
          # Fails at powerlevel 0
-         $set_user_powerlevel->( $do_request_json_for, $user,
-            $test_user->user_id, 0
-         )->then( sub {
-            $do->( $do_request_json_for, $test_user );
+         $change_room_powerlevels->( $user, $room_id, sub {
+            my ( $levels ) = @_;
+            $levels->{users}{ $test_user->user_id } = 0;
+         })->then( sub {
+            $do->( @dependencies );
          })->then(
             sub { # done
                Future->fail( "Expected to fail at powerlevel=0 but it didn't" );
@@ -83,11 +78,12 @@ sub test_powerlevel
             pass( "Fails at powerlevel 0" );
 
             # Succeeds at powerlevel 100
-            $set_user_powerlevel->( $do_request_json_for, $user,
-               $test_user->user_id, 100
-            )
+            $change_room_powerlevels->( $user, $room_id, sub {
+               my ( $levels ) = @_;
+               $levels->{users}{ $test_user->user_id } = 100;
+            })
          })->then( sub {
-            $do->( $do_request_json_for, $test_user );
+            $do->( @dependencies );
          })->on_done( sub {
             pass( "Succeeds at powerlevel 100" );
          })
@@ -95,7 +91,8 @@ sub test_powerlevel
 }
 
 test_powerlevel "'ban' event respects room powerlevel",
-   requires => [qw( can_ban_room )],
+   requires => [qw( do_request_json_for test_user
+                    can_ban_room )],
 
    do => sub {
       my ( $do_request_json_for, $test_user ) = @_;
@@ -110,7 +107,8 @@ test_powerlevel "'ban' event respects room powerlevel",
 
 # Currently there's no way to limit permission on invites
 ## test_powerlevel "'invite' event respects room powerlevel",
-##    requires => [qw( can_invite_room )],
+##    requires => [qw( do_request_json_for test_user
+##                     can_invite_room )],
 ## 
 ##    do => sub {
 ##       my ( $do_request_json_for, $test_user ) = @_;
@@ -124,7 +122,8 @@ test_powerlevel "'ban' event respects room powerlevel",
 ##    };
 
 test_powerlevel "setting 'm.room.name' respects room powerlevel",
-   requires => [qw( can_set_room_name )],
+   requires => [qw( do_request_json_for test_user
+                    can_set_room_name )],
 
    do => sub {
       my ( $do_request_json_for, $test_user ) = @_;
@@ -138,12 +137,14 @@ test_powerlevel "setting 'm.room.name' respects room powerlevel",
    };
 
 test_powerlevel "setting 'm.room.power_levels' respects room powerlevel",
-   requires => [qw( can_get_power_levels )],
+   requires => [qw( change_room_powerlevels test_user
+                    can_get_power_levels )],
 
    do => sub {
-      my ( $do_request_json_for, $test_user ) = @_;
+      my ( $change_room_powerlevels, $test_user ) = @_;
 
-      $set_user_powerlevel->( $do_request_json_for, $test_user,
-         '@some-random-user:here', 50,
-      );
+      $change_room_powerlevels->( $test_user, $room_id, sub {
+         my ( $levels ) = @_;
+         $levels->{users}{'@some-random-user:here'} = 50;
+      });
    };
