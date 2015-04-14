@@ -31,7 +31,7 @@ sub test_powerlevel
 
       do => sub {
          my ( $do_request_json_for, $user, $local_users, $room_id ) = @_;
-         my $test_user = $local_users->[1];
+         my $test_user = $local_users->[2];
 
          # Fails at powerlevel 0
          $set_user_powerlevel->( $do_request_json_for, $user, $room_id,
@@ -44,10 +44,12 @@ sub test_powerlevel
             },
             sub { # fail
                my ( $message, $name, $response, $request ) = @_;
-               $name eq "http" and $response and $response->code == 403 and
-                  return Future->done;
+               $name eq "http" or
+                  return Future->fail( @_ );
+               $response and $response->code == 403 or
+                  return Future->fail( @_ );
 
-               return Future->fail( @_ );
+               Future->done;
             },
          )->then( sub {
             pass( "Fails at powerlevel 0" );
