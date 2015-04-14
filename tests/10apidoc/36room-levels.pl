@@ -71,3 +71,34 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
          Future->done(1);
       });
    };
+
+prepare "Creating power_level change helper",
+   requires => [qw( do_request_json_for
+                    can_get_power_levels can_set_power_levels )],
+
+   provides => [qw( change_room_powerlevels )],
+
+   do => sub {
+      my ( $do_request_json_for ) = @_;
+
+      provide change_room_powerlevels => sub {
+         my ( $user, $room_id, $func ) = @_;
+
+         $do_request_json_for->( $user,
+            method => "GET",
+            uri    => "/rooms/$room_id/state/m.room.power_levels",
+         )->then( sub {
+            my ( $levels ) = @_;
+            $func->( $levels );
+
+            $do_request_json_for->( $user,
+               method => "PUT",
+               uri    => "/rooms/$room_id/state/m.room.power_levels",
+
+               content => $levels,
+            );
+         });
+      };
+
+      Future->done(1);
+   };
