@@ -108,6 +108,21 @@ test_powerlevel "'ban' event respects room powerlevel",
       );
    };
 
+# Currently there's no way to limit permission on invites
+## test_powerlevel "'invite' event respects room powerlevel",
+##    requires => [qw( can_invite_room )],
+## 
+##    do => sub {
+##       my ( $do_request_json_for, $test_user ) = @_;
+## 
+##       $do_request_json_for->( $test_user,
+##          method => "POST",
+##          uri    => "/rooms/$room_id/invite",
+## 
+##          content => { user_id => '@random-invitee:localhost:8001' },
+##       );
+##    };
+
 test_powerlevel "setting 'm.room.name' respects room powerlevel",
    requires => [qw( can_set_room_name )],
 
