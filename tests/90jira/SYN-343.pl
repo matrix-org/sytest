@@ -2,8 +2,6 @@ multi_test "Non-present room members cannot ban others",
    requires => [qw( do_request_json_for change_room_powerlevels local_users
                     can_create_room can_leave_room can_ban_room )],
 
-   expect_fail => 1,  # Unfixed bug
-
    do => sub {
       my ( $do_request_json_for, $change_room_powerlevels, $local_users ) = @_;
       my $creator = $local_users->[0];
