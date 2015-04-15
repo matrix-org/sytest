@@ -8,8 +8,35 @@ prepare "Flushing event streams",
       Future->needs_all( map { $flush_events_for->( $_ ) } @$local_users, @$remote_users );
    };
 
+# This file only operates on members of the room; so we'll just work out who of
+# the local_users is still a member, so as not to be dependent on the actions
+# of earlier tests.
+
+my @local_members;
+prepare "Fetching current room members",
+   requires => [qw( do_request_json local_users room_id )],
+
+   do => sub {
+      my ( $do_request_json, $local_users, $room_id ) = @_;
+
+      $do_request_json->(
+         method => "GET",
+         uri    => "/rooms/$room_id/state",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         my %members;
+         $_->{type} eq "m.room.member" and $_->{content}{membership} eq "join" and
+            $members{$_->{state_key}} = 1 for @$body;
+
+         @local_members = grep { $members{$_->user_id} } @$local_users;
+
+         Future->done(1);
+      });
+   };
+
 test "Typing notification sent to local room members",
-   requires => [qw( do_request_json await_event_for local_users room_id
+   requires => [qw( do_request_json await_event_for user room_id
                     can_set_room_typing can_create_room can_join_room_by_id )],
 
    do => sub {
@@ -24,8 +51,7 @@ test "Typing notification sent to local room members",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $users, $room_id ) = @_;
-      my ( $typinguser ) = @$users;
+      my ( undef, $await_event_for, $typinguser, $room_id ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
@@ -48,7 +74,7 @@ test "Typing notification sent to local room members",
 
             return 1;
          })
-      } @$users );
+      } @local_members );
    };
 
 test "Typing notifications also sent to remove room members",
@@ -83,7 +109,7 @@ test "Typing notifications also sent to remove room members",
    };
 
 test "Typing can be explicitly stopped",
-   requires => [qw( do_request_json await_event_for local_users room_id
+   requires => [qw( do_request_json await_event_for user room_id
                     can_set_room_typing can_create_room can_join_room_by_id )],
 
    do => sub {
@@ -98,8 +124,7 @@ test "Typing can be explicitly stopped",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $users, $room_id ) = @_;
-      my ( $typinguser ) = @$users;
+      my ( undef, $await_event_for, $typinguser, $room_id ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
@@ -120,15 +145,15 @@ test "Typing can be explicitly stopped",
 
             return 1;
          })
-      } @$users );
+      } @local_members );
    };
 
 prepare "Flushing event streams",
-   requires => [qw( flush_events_for local_users remote_users )],
+   requires => [qw( flush_events_for remote_users )],
    do => sub {
-      my ( $flush_events_for, $local_users, $remote_users ) = @_;
+      my ( $flush_events_for, $remote_users ) = @_;
 
-      Future->needs_all( map { $flush_events_for->( $_ ) } @$local_users, @$remote_users );
+      Future->needs_all( map { $flush_events_for->( $_ ) } @local_members, @$remote_users );
    };
 
 multi_test "Typing notifications timeout and can be resent",
