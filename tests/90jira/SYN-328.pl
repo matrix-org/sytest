@@ -2,8 +2,6 @@ multi_test "Typing notifications don't leak",
    requires => [qw( make_test_room do_request_json_for await_event_for local_users
                     can_create_room can_set_room_typing )],
 
-   expect_fail => 1,  # existing bug
-
    do => sub {
       my ( $make_test_room, $do_request_json_for, $await_event_for, $local_users ) = @_;
       my $creator = $local_users->[0];
