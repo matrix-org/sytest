@@ -3,31 +3,17 @@ use List::Util qw( first );
 my $room_id;
 
 prepare "Creating a new test room",
-   requires => [qw( do_request_json_for local_users
-                    can_create_room can_join_room_by_id )],
+   requires => [qw( make_test_room local_users )],
 
    do => sub {
-      my ( $do_request_json_for, $local_users ) = @_;
+      my ( $make_test_room, $local_users ) = @_;
       my $creator   = $local_users->[0];
       my $test_user = $local_users->[1];
 
-      $do_request_json_for->( $creator,
-         method => "POST",
-         uri    => "/createRoom",
-
-         content => { visibility => "public" },
-      )->then( sub {
-         my ( $body ) = @_;
-
-         $room_id = $body->{room_id};
-
-         $do_request_json_for->( $test_user,
-            method => "POST",
-            uri    => "/rooms/$room_id/join",
-
-            content => {},
-         );
-      });
+      $make_test_room->( $creator, $test_user )
+         ->on_done( sub {
+            ( $room_id ) = @_;
+         });
    };
 
 sub test_powerlevel

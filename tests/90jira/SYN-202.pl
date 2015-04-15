@@ -1,9 +1,9 @@
 multi_test "Left room members do not cause problems for presence",
-   requires => [qw( first_http_client do_request_json_for more_users
-                    can_create_private_room can_leave_room can_room_initial_sync )],
+   requires => [qw( first_http_client make_test_room do_request_json_for more_users
+                    can_leave_room can_room_initial_sync )],
 
    do => sub {
-      my ( $http, $do_request_json_for, $more_users ) = @_;
+      my ( $http, $make_test_room, $do_request_json_for, $more_users ) = @_;
       my ( $user1, $user2 );
       my $room_id;
 
@@ -27,27 +27,11 @@ multi_test "Left room members do not cause problems for presence",
          $user1 = User( $http, @{$user1body}{qw( user_id access_token )}, undef, [], undef );
          $user2 = User( $http, @{$user2body}{qw( user_id access_token )}, undef, [], undef );
 
-         $do_request_json_for->( $user1,
-            method => "POST",
-            uri    => "/createRoom",
-
-            content => { visibility => "public" },
-         );
+         $make_test_room->( $user1, $user2 )
       })->then( sub {
-         my ( $body ) = @_;
+         ( $room_id ) = @_;
 
          pass "Created room";
-
-         $room_id = $body->{room_id};
-
-         $do_request_json_for->( $user2,
-            method => "POST",
-            uri    => "/rooms/$room_id/join",
-
-            content => {},
-         );
-      })->then( sub {
-         pass "Joined room";
 
          $do_request_json_for->( $user2,
             method => "POST",

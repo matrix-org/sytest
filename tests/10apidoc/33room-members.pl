@@ -245,3 +245,43 @@ test "POST /rooms/:room_id/ban can ban a user",
          Future->done(1);
       });
    };
+
+prepare "Creating test-room-creation helper function",
+   requires => [qw( do_request_json_for
+                    can_create_room can_join_room_by_id )],
+
+   provides => [qw( make_test_room )],
+
+   do => sub {
+      my ( $do_request_json_for ) = @_;
+
+      provide make_test_room => sub {
+         my ( $creator, @other_members ) = @_;
+
+         my $room_id;
+
+         $do_request_json_for->( $creator,
+            method => "POST",
+            uri    => "/createRoom",
+
+            content => { visibility => "public" },
+         )->then( sub {
+            my ( $body ) = @_;
+            $room_id = $body->{room_id};
+
+            Future->needs_all( map {
+               my $user = $_;
+               $do_request_json_for->( $user,
+                  method => "POST",
+                  uri    => "/rooms/$room_id/join",
+
+                  content => {},
+               )
+            } @other_members )
+         })->then( sub {
+            Future->done( $room_id );
+         });
+      };
+
+      Future->done;
+   };
