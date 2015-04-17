@@ -109,7 +109,10 @@ if( $CLIENT_LOG ) {
 
          my $request_uri = $request->uri;
          if( $request_uri->path =~ m{/events$} ) {
-            print STDERR "\e[1;32mPolling events\e[m\n";
+            my %params = $request_uri->query_form;
+            print STDERR "\e[1;32mPolling events\e[m",
+               ( defined $params{from} ? " since $params{from}" : "" ),
+               " for token=$params{access_token}\n";
 
             return $orig->( $self, %args )
                ->on_done( sub {
@@ -119,7 +122,7 @@ if( $CLIENT_LOG ) {
                      my $content_decoded = JSON::decode_json( $response->content );
                      my $events = $content_decoded->{chunk};
                      foreach my $event ( @$events ) {
-                        print STDERR "\e[1;33mReceived event\e[m:\n";
+                        print STDERR "\e[1;33mReceived event\e[m for token=$params{access_token}:\n";
                         print STDERR "  $_\n" for split m/\n/, pp( $event );
                         print STDERR "-- \n";
                      }
