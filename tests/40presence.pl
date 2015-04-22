@@ -1,3 +1,19 @@
+my $room_id;
+
+# Ensure all the users are members of a shared room, so that we know presence
+# messages can be shared between them all
+prepare "Creating a new test room",
+   requires => [qw( make_test_room local_users remote_users )],
+
+   do => sub {
+      my ( $make_test_room, $local_users, $remote_users ) = @_;
+
+      $make_test_room->( @$local_users, @$remote_users )
+         ->on_done( sub {
+            ( $room_id ) = @_;
+         });
+   };
+
 prepare "Flushing event streams",
    requires => [qw( flush_events_for local_users remote_users )],
    do => sub {
@@ -62,14 +78,35 @@ test "Presence changes are also reported to remote room members",
             return unless $event->{type} eq "m.presence";
 
             require_json_keys( $event, qw( type content ));
-            require_json_keys( my $content = $event->{content}, qw( user_id presence status_msg ));
+            require_json_keys( my $content = $event->{content}, qw( user_id presence ));
 
-            $content->{user_id} eq $senduser->user_id or next;
+            # The next presence message we get might not necessarily be the
+            # one we were expecting, given this is remote. Wait to get the
+            # right one
+            $content->{user_id} eq $senduser->user_id or return;
 
-            $content->{status_msg} eq $status_msg or
-               die "Expected content status_msg to '$status_msg'";
+            $content->{status_msg} and $content->{status_msg} eq $status_msg
+               or return;
 
             return 1;
          });
       } @$remote_users );
+   };
+
+prepare "Leaving test room",
+   requires => [qw( do_request_json_for local_users remote_users )],
+
+   do => sub {
+      my ( $do_request_json, $local_users, $remote_users ) = @_;
+
+      Future->needs_all( map {
+         my $user = $_;
+
+         $do_request_json->( $user,
+            method => "POST",
+            uri    => "/rooms/$room_id/leave",
+
+            content => {},
+         )
+      } @$local_users, @$remote_users )
    };
