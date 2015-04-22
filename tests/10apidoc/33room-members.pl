@@ -246,9 +246,11 @@ test "POST /rooms/:room_id/ban can ban a user",
       });
    };
 
+my $next_alias = 1;
+
 prepare "Creating test-room-creation helper function",
    requires => [qw( do_request_json_for
-                    can_create_room can_join_room_by_id )],
+                    can_create_room can_join_room_by_alias )],
 
    provides => [qw( make_test_room )],
 
@@ -259,12 +261,19 @@ prepare "Creating test-room-creation helper function",
          my ( $creator, @other_members ) = @_;
 
          my $room_id;
+         my $room_alias_shortname = "test-$next_alias"; $next_alias++;
+
+         my ( $domain ) = $creator->user_id =~ m/:(.*)$/;
+         my $room_alias_fullname = "#${room_alias_shortname}:$domain";
 
          $do_request_json_for->( $creator,
             method => "POST",
             uri    => "/createRoom",
 
-            content => { visibility => "public" },
+            content => {
+               visibility      => "public",
+               room_alias_name => $room_alias_shortname,
+            },
          )->then( sub {
             my ( $body ) = @_;
             $room_id = $body->{room_id};
@@ -273,7 +282,7 @@ prepare "Creating test-room-creation helper function",
                my $user = $_;
                $do_request_json_for->( $user,
                   method => "POST",
-                  uri    => "/rooms/$room_id/join",
+                  uri    => "/join/$room_alias_fullname",
 
                   content => {},
                )
