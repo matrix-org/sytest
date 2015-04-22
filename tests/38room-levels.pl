@@ -16,6 +16,21 @@ prepare "Creating a new test room",
          });
    };
 
+my $EXPECT_HTTP_403 = sub {
+   my ( $f ) = @_;
+   $f->then(
+      sub { # done
+         Future->fail( "Expected to receive an HTTP 403 failure but it succeeded" )
+      },
+      sub { # fail
+         my ( undef, $name, $response ) = @_;
+         $name and $name eq "http" and $response and $response->code == 403 and
+            return Future->done;
+         Future->fail( @_ );
+      },
+   );
+};
+
 sub test_powerlevel
 {
    my ( $name, %args ) = @_;
@@ -46,21 +61,9 @@ sub test_powerlevel
             my ( $levels ) = @_;
             $levels->{users}{ $test_user->user_id } = 0;
          })->then( sub {
-            $do->( @dependencies );
-         })->then(
-            sub { # done
-               Future->fail( "Expected to fail at powerlevel=0 but it didn't" );
-            },
-            sub { # fail
-               my ( $message, $name, $response, $request ) = @_;
-               $name eq "http" or
-                  return Future->fail( @_ );
-               $response and $response->code == 403 or
-                  return Future->fail( @_ );
-
-               Future->done;
-            },
-         )->then( sub {
+            $do->( @dependencies )
+               ->$EXPECT_HTTP_403
+         })->then( sub {
             pass( "Fails at powerlevel 0" );
 
             # Succeeds at powerlevel 100
