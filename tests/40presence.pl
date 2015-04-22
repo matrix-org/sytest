@@ -129,6 +129,33 @@ test "Presence changes to OFFLINE are reported to local room members",
       } @$users );
    };
 
+test "Presence changes to OFFLINE are reported to remote room members",
+   requires => [qw( await_event_for user remote_users
+                    can_set_presence can_create_room can_join_remote_room_by_alias )],
+
+   expect_fail => 1,  # SYN-261
+
+   await => sub {
+      my ( $await_event_for, $senduser, $remote_users ) = @_;
+
+      Future->needs_all( map {
+         my $recvuser = $_;
+
+         $await_event_for->( $recvuser, sub {
+            my ( $event ) = @_;
+
+            return unless $event->{type} eq "m.presence";
+
+            my $content = $event->{content};
+            return unless $content->{user_id} eq $senduser->user_id;
+
+            return unless $content->{presence} eq "offline";
+
+            return 1;
+         });
+      } @$remote_users );
+   };
+
 prepare "Leaving test room",
    requires => [qw( do_request_json_for local_users remote_users )],
 
