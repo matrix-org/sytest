@@ -159,3 +159,28 @@ test "Unprivileged users can set m.room.topic if it only needs level 0",
          );
       });
    };
+
+foreach my $levelname (qw( ban kick redact )) {
+   multi_test "Users cannot set $levelname powerlevel higher than their own",
+      requires => [qw( change_room_powerlevels user )],
+
+      do => sub {
+         my ( $change_room_powerlevels, $user ) = @_;
+
+         $change_room_powerlevels->( $user, $room_id, sub {
+            my ( $levels ) = @_;
+
+            $levels->{$levelname} = 25;
+         })->then( sub {
+            pass "Succeeds at setting 25";
+
+            $change_room_powerlevels->( $user, $room_id, sub {
+               my ( $levels ) = @_;
+
+               $levels->{$levelname} = 10000000;
+            })->$EXPECT_HTTP_403
+         })->on_done( sub {
+            pass "Fails at setting 75";
+         });
+      };
+}
