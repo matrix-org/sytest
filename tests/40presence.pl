@@ -133,8 +133,6 @@ test "Presence changes to OFFLINE are reported to remote room members",
    requires => [qw( await_event_for user remote_users
                     can_set_presence can_create_room can_join_remote_room_by_alias )],
 
-   expect_fail => 1,  # SYN-261
-
    await => sub {
       my ( $await_event_for, $senduser, $remote_users ) = @_;
 
