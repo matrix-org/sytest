@@ -55,8 +55,21 @@ sub _add_to_loop
    if( -f $config_path ) {
       my $config = YAML::LoadFile( $config_path );
 
-      $db_type = "sqlite";
-      $db_args{path} = $config->{database_path};
+      if( defined( my $db_config_path = $config->{database_config} ) ) {
+         my $db_config = YAML::LoadFile( $db_config_path );
+
+         if( $db_config->{name} eq "psycopg2" ) {
+            $db_type = "pg";
+            %db_args = %{ $db_config->{args} };
+         }
+         else {
+            die "Unrecognised DB type '$db_config->{name}' in $db_config_path";
+         }
+      }
+      else {
+         $db_type = "sqlite";
+         $db_args{path} = $config->{database_path};
+      }
    }
    else {
       warn "No homeserver config file found at $config_path; so I can't clear it\n";
@@ -268,6 +281,27 @@ sub clear_db_sqlite
    $self->{output}->diag( "Clearing SQLite database at $db" );
 
    unlink $db if -f $db;
+}
+
+sub clear_db_pg
+{
+   my $self = shift;
+   my %args = @_;
+
+   $self->{output}->diag( "Clearing Pg database $args{database} on $args{host}" );
+
+   require DBI;
+   require DBD::Pg;
+
+   my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$args{host}", $args{user}, $args{password} )
+      or die DBI->errstr;
+
+   foreach my $row ( @{ $dbh->selectall_arrayref( "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" ) } ) {
+      my ( $tablename ) = @$row;
+
+      $dbh->do( "DROP TABLE $tablename CASCADE" ) or
+         die $dbh->errstr;
+   }
 }
 
 1;
