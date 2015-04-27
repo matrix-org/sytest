@@ -12,6 +12,8 @@ use File::chdir;
 use File::Path qw( make_path );
 use List::Util qw( any );
 
+use YAML ();
+
 sub _init
 {
    my $self = shift;
@@ -45,16 +47,29 @@ sub _add_to_loop
    my $output = $self->{output};
 
    my $hs_dir = "localhost-$port";
+   -d $hs_dir or make_path $hs_dir;
+
+   my $config_path = "$hs_dir/config";
+
+   my ( $db_type, %db_args );
+   if( -f $config_path ) {
+      my $config = YAML::LoadFile( $config_path );
+
+      $db_type = "sqlite";
+      $db_args{path} = $config->{database_path};
+   }
+   else {
+      warn "No homeserver config file found at $config_path; so I can't clear it\n";
+   }
+
+   if( defined $db_type ) {
+      $self->${\"clear_db_$db_type"}( %db_args );
+   }
 
    my $db  = "$hs_dir/homeserver.db";
    my $log = "$hs_dir/homeserver.log";
 
    $self->{logpath} = $log;
-
-   {
-      -d $hs_dir or make_path $hs_dir;
-      unlink $db if -f $db;
-   }
 
    {
       # create or truncate
@@ -74,7 +89,7 @@ sub _add_to_loop
 
          "--server-name"   => "localhost:$port",
          "--bind-port"     => $port,
-         "--database-path" => $db,
+         "--database-path" => "$hs_dir/homeserver.db",
          "--manhole"       => $port - 1000,
 
          ( $self->{no_ssl} ?
@@ -241,6 +256,18 @@ sub print_output
    }
 
    undef @{ $self->{stderr_lines} };
+}
+
+sub clear_db_sqlite
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $db = $args{path};
+
+   $self->{output}->diag( "Clearing SQLite database at $db" );
+
+   unlink $db if -f $db;
 }
 
 1;
