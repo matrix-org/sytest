@@ -40,5 +40,5 @@ test "GET /events with non-numeric 'timeout'",
          uri    => "/events",
 
          params => { from => $user->eventstream_token, timeout => "hello" },
-      )->$expect_http_4xx;
+      )->$expect_http_4xx->then_fail( "DEBUG" );
    };

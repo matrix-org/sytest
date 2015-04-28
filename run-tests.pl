@@ -162,17 +162,9 @@ my %synapses_by_port;
 END {
    $output->diag( "Killing synapse servers " ) if %synapses_by_port;
 
-   my @f;
    foreach my $synapse ( values %synapses_by_port ) {
-      if( $? ) {
-         $synapse->print_output;
-         push @f, $synapse->await_finish;
-      }
-
       $synapse->kill( 'INT' );
    }
-
-   Future->wait_all( @f )->get if @f;
 }
 $SIG{INT} = sub { exit 1 };
 
@@ -511,6 +503,16 @@ if( $WAIT_AT_END ) {
 
 if( $failed ) {
    $output->final_fail( $failed );
+
+   my @f;
+   foreach my $synapse ( values %synapses_by_port ) {
+      $synapse->print_output;
+      push @f, $synapse->await_finish;
+
+      $synapse->kill( 'INT' );
+   }
+
+   Future->wait_all( @f )->get if @f;
    exit 1;
 }
 else {
