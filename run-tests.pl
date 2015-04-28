@@ -44,6 +44,8 @@ GetOptions(
 
    'python=s' => \(my $PYTHON = "python"),
 
+   'p|port-base=i' => \(my $PORT_BASE = 8000),
+
    'E=s' => sub { # process -Eoption=value
       my @more = split m/=/, $_[1];
 
@@ -191,7 +193,7 @@ sub extract_extra_args
 }
 
 # We need two servers; a "local" and a "remote" one for federation-based tests
-my @PORTS = ( 8001, 8002 );
+my @PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
 my @f;
 foreach my $idx ( 0 .. $#PORTS ) {
    my $port = $PORTS[$idx];
