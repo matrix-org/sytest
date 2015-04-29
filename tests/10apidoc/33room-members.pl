@@ -128,7 +128,7 @@ test "POST /rooms/:room_id/leave can leave a room",
 
    do => sub {
       my ( $do_request_json_for, $more_users, $room_id ) = @_;
-      my $user = $more_users->[2];
+      my $user = $more_users->[1];
 
       $do_request_json_for->( $user,
          method => "POST",
@@ -140,7 +140,7 @@ test "POST /rooms/:room_id/leave can leave a room",
 
    check => sub {
       my ( $do_request_json_for, $more_users, $room_id ) = @_;
-      my $user = $more_users->[2];
+      my $user = $more_users->[1];
 
       $do_request_json_for->( $user,
          method => "GET",
@@ -177,7 +177,7 @@ test "POST /rooms/:room_id/invite can send an invite",
 
    do => sub {
       my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
-      my $invitee = $more_users->[2];
+      my $invitee = $more_users->[1];
 
       $do_request_json_for->( $user,
          method => "POST",
@@ -189,7 +189,7 @@ test "POST /rooms/:room_id/invite can send an invite",
 
    check => sub {
       my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
-      my $invitee = $more_users->[2];
+      my $invitee = $more_users->[1];
 
       $do_request_json_for->( $user,
          method => "GET",
