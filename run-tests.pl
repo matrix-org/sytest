@@ -15,7 +15,7 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
-use List::Util 1.33 qw( first all any );
+use List::Util 1.33 qw( first all any maxstr );
 
 use SyTest::Synapse;
 use SyTest::HTTPClient;
@@ -259,11 +259,19 @@ sub delay
 my $failed;
 my $expected_fail;
 
+our $SKIPPING;
+
 sub _run_test
 {
    my ( $t, %params ) = @_;
 
    local @PROVIDES = @{ $params{provides} || [] };
+
+   # If the test doesn't provide anything, and we're in skipping mode, just stop right now
+   if( $SKIPPING and !@PROVIDES ) {
+      $t->skipped++;
+      return;
+   }
 
    my @reqs;
    foreach my $req ( @{ $params{requires} || [] } ) {
@@ -471,6 +479,14 @@ package assertions {
    *$_ = \&{"assertions::$_"} for grep m/^require_/, keys %{"assertions::"};
 }
 
+my %only_files;
+my $stop_after;
+if( @ARGV ) {
+   $only_files{$_}++ for @ARGV;
+
+   $stop_after = maxstr keys %only_files;
+}
+
 TEST: {
    walkdir(
       sub {
@@ -487,9 +503,14 @@ TEST: {
             local $/; <$fh>
          };
 
+         local $SKIPPING = 1 if %only_files and not exists $only_files{$filename};
+
          # Tell eval what the filename is so we get nicer warnings/errors that
          # give the filename instead of (eval 123)
          eval( "#line 1 $filename\n" . $code . "; 1" ) or die $@;
+
+         no warnings 'exiting';
+         last TEST if $stop_after and $filename eq $stop_after;
       },
       "tests"
    );
