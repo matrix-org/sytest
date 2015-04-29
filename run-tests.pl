@@ -269,7 +269,7 @@ sub _run_test
    foreach my $req ( @{ $params{requires} || [] } ) {
       push @reqs, $test_environment{$req} and next if $test_environment{$req};
 
-      $t->skip( $req );
+      $t->skip( "lack of $req" );
       return;
    }
 

@@ -175,8 +175,8 @@ package SyTest::Output::Term::Test {
    sub skip
    {
       my $self = shift;
-      my ( $req ) = @_;
-      print "  ${YELLOW_B}SKIP${RESET} ${\$self->name} due to lack of $req\n";
+      my ( $reason ) = @_;
+      print "  ${YELLOW_B}SKIP${RESET} ${\$self->name} due to $reason\n";
       $self->skipped++;
    }
 

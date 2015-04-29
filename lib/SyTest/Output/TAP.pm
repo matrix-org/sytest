@@ -138,8 +138,8 @@ package SyTest::Output::TAP::Test {
    sub skip
    {
       my $self = shift;
-      my ( $req ) = @_;
-      print "ok ${\$self->num} ${\$self->name} # skip Missing requirement $req\n";
+      my ( $reason ) = @_;
+      print "ok ${\$self->num} ${\$self->name} # skip $reason\n";
       $self->skipped++;
    }
 
