@@ -8,7 +8,7 @@ use base qw( IO::Async::Notifier );
 use IO::Async::Process;
 use IO::Async::FileStream;
 
-use File::chdir;
+use Cwd qw( getcwd );
 use File::Path qw( make_path );
 use List::Util qw( any );
 
@@ -95,6 +95,8 @@ sub _add_to_loop
       : "$self->{synapse_dir}"
    );
 
+   my $cwd = getcwd;
+
    my @command = (
       $self->{python}, "-m", "synapse.app.homeserver",
          "--config-path" => "$hs_dir/config",
@@ -111,7 +113,7 @@ sub _add_to_loop
             ( "--unsecure-port" => 0 ) ),
 
          # TLS parameters
-         "--tls-dh-params-path" => "$CWD/keys/tls.dh",
+         "--tls-dh-params-path" => "$cwd/keys/tls.dh",
 
          # Allow huge amounts of messages before burst rate kicks in
          "--rc-messages-per-second" => 1000,
