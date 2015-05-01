@@ -59,8 +59,8 @@ sub _add_to_loop
           $db_type = "pg";
           %db_args = %{ $db_config->{args} };
       }
-      elsif ($db_config->{name} eq "sqilte3") {
-          $db_type = "sqilte";
+      elsif ($db_config->{name} eq "sqlite3") {
+          $db_type = "sqlite";
           $db_args{path} = $db_config->{args}->{database};
       }
       else {
