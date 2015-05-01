@@ -8,7 +8,7 @@ use base qw( IO::Async::Notifier );
 use IO::Async::Process;
 use IO::Async::FileStream;
 
-use Cwd qw( getcwd );
+use Cwd qw( getcwd abs_path );
 use File::Path qw( make_path );
 use List::Util qw( any );
 
@@ -46,41 +46,58 @@ sub _add_to_loop
    my $port = $self->{port};
    my $output = $self->{output};
 
-   my $hs_dir = "localhost-$port";
+   my $hs_dir = abs_path("localhost-$port");
    -d $hs_dir or make_path $hs_dir;
 
-   my $config_path = "$hs_dir/config";
+   my $db_config_path = "$hs_dir/database.yaml";
+   my $db  = ":memory:"; #"$hs_dir/homeserver.db";
 
-   my ( $db_type, %db_args );
-   if( -f $config_path ) {
-      my $config = YAML::LoadFile( $config_path );
-
-      if( defined( my $db_config_path = $config->{database_config} ) ) {
-         my $db_config = YAML::LoadFile( $db_config_path );
-
-         if( $db_config->{name} eq "psycopg2" ) {
-            $db_type = "pg";
-            %db_args = %{ $db_config->{args} };
-         }
-         else {
-            die "Unrecognised DB type '$db_config->{name}' in $db_config_path";
-         }
+   my ( $db_type, %db_args, $db_config );
+   if( -f $db_config_path ) {
+      $db_config = YAML::LoadFile( $db_config_path );
+      if( $db_config->{name} eq "psycopg2") {
+          $db_type = "pg";
+          %db_args = %{ $db_config->{args} };
+      }
+      elsif ($db_config->{name} eq "sqilte3") {
+          $db_type = "sqilte";
+          $db_args{path} = $db_config->{args}->{database};
       }
       else {
-         $db_type = "sqlite";
-         $db_args{path} = $config->{database_path};
+         die "Unrecognised DB type '$db_config->{name}' in $db_config_path";
       }
    }
    else {
-      warn "No homeserver config file found at $config_path; so I can't clear it\n";
+      $db_type = "sqlite";
+      $db_args{path} = $db;
+      $db_config = { name => "sqlite3", args => { database => $db } };
+      YAML::DumpFile( $db_config_path, $db_config );
    }
 
    if( defined $db_type ) {
       $self->${\"clear_db_$db_type"}( %db_args );
    }
 
-   my $db  = "$hs_dir/homeserver.db";
+   my $cwd = getcwd;
    my $log = "$hs_dir/homeserver.log";
+
+   my $conf = {
+        "server_name" => "localhost:$port",
+        "log_file" => "$log",
+        "bind_port" => $port,
+        ( $self->{no_ssl} ?
+            ( "unsecure_port" => $port + 1000, ) :
+            ( "unsecure_port" => 0 )),
+        "tls-dh-params-path" => "$cwd/keys/tls.dh",
+        "rc_messages_per_second" => 1000,
+        "rc_message_burst_count" => 1000,
+        "enable_registration" => "true",
+        "database" => $db_config,
+        "database_config" => $db_config_path,
+   };
+
+   YAML::DumpFile("$hs_dir/config", $conf);
+
 
    $self->{logpath} = $log;
 
@@ -95,31 +112,11 @@ sub _add_to_loop
       : "$self->{synapse_dir}"
    );
 
-   my $cwd = getcwd;
 
    my @command = (
       $self->{python}, "-m", "synapse.app.homeserver",
          "--config-path" => "$hs_dir/config",
-         "--log-file"    => $log,
-
          "--server-name"   => "localhost:$port",
-         "--bind-port"     => $port,
-         "--database-path" => "$hs_dir/homeserver.db",
-         "--manhole"       => $port - 1000,
-
-         ( $self->{no_ssl} ?
-            ( "--unsecure-port" => $port + 1000, ) :
-
-            ( "--unsecure-port" => 0 ) ),
-
-         # TLS parameters
-         "--tls-dh-params-path" => "$cwd/keys/tls.dh",
-
-         # Allow huge amounts of messages before burst rate kicks in
-         "--rc-messages-per-second" => 1000,
-         "--rc-message-burst-count" => 1000,
-
-         "--enable-registration" => 1,
    );
 
    $output->diag( "Generating config for port $port" );
