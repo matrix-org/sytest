@@ -51,9 +51,11 @@ test "Presence changes are reported to local room members",
             return unless $event->{type} eq "m.presence";
 
             require_json_keys( $event, qw( type content ));
-            require_json_keys( my $content = $event->{content}, qw( user_id presence status_msg ));
+            require_json_keys( my $content = $event->{content}, qw( user_id presence ));
 
-            $content->{user_id} eq $senduser->user_id or next;
+            $content->{user_id} eq $senduser->user_id or return;
+
+            require_json_keys( $content, qw( status_msg ));
 
             $content->{status_msg} eq $status_msg or
                die "Expected content status_msg to '$status_msg'";
