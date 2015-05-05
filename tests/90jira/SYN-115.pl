@@ -115,7 +115,9 @@ multi_test "New federated private chats get full presence information (SYN-115)"
                      : grep { $_->{type} eq "m.presence" } @{ $body->{chunk} };
 
                   foreach my $event ( @presence ) {
-                     $presence_by_userid{$event->{content}{user_id}} = $event;
+                     my $user_id = $event->{content}{user_id};
+                     pass "User ${\$user->user_id} received presence for $user_id";
+                     $presence_by_userid{$user_id} = $event;
                   }
 
                   Future->done(1);
