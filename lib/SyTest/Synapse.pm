@@ -94,6 +94,10 @@ sub _add_to_loop
         "enable_registration" => "true",
         "database" => $db_config,
         "database_config" => $db_config_path,
+
+        # Metrics are always useful
+        "enable_metrics" => 1,
+        "metrics_port" => ( $port - 8000 + 9090 ),
    };
 
    YAML::DumpFile("$hs_dir/config", $conf);
