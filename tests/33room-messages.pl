@@ -6,10 +6,10 @@ my @remote_members;
 my $local_nonmember;
 
 prepare "Creating test room",
-   requires => [qw( make_test_room local_users remote_users )],
+   requires => [qw( make_test_room await_event_for local_users remote_users )],
 
    do => sub {
-      my ( $make_test_room, $local_users, $remote_users ) = @_;
+      my ( $make_test_room, $await_event_for, $local_users, $remote_users ) = @_;
 
       @local_members = @$local_users;
       @remote_members = @$remote_users;
@@ -17,8 +17,22 @@ prepare "Creating test room",
       # Reserve a user not in the room
       $local_nonmember = pop @local_members;
 
-      $make_test_room->( @local_members, @remote_members )->on_done( sub {
+      $make_test_room->( @local_members, @remote_members )->then( sub {
          ( $room_id ) = @_;
+
+         # TODO: Move this await logic into $make_test_room itself
+         my %joined_members;
+
+         $await_event_for->( $local_members[0], sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{room_id} eq $room_id;
+
+            $joined_members{$event->{state_key}}++;
+
+            return 1 if keys( %joined_members ) == @local_members + @remote_members;
+            return 0;
+         });
       });
    };
 
