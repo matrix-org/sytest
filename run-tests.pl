@@ -256,6 +256,16 @@ sub delay
    $loop->delay_future( after => $secs );
 }
 
+my @log_if_fail_lines;
+
+sub log_if_fail
+{
+   my ( $message, $structure ) = @_;
+
+   push @log_if_fail_lines, $message;
+   push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
+}
+
 my $failed;
 my $expected_fail;
 
@@ -264,6 +274,8 @@ our $SKIPPING;
 sub _run_test
 {
    my ( $t, %params ) = @_;
+
+   undef @log_if_fail_lines;
 
    local @PROVIDES = @{ $params{provides} || [] };
 
@@ -344,6 +356,10 @@ sub test
    my $t = $output->enter_test( $name, $params{expect_fail} );
    _run_test( $t, %params );
    $t->leave;
+
+   if( $t->failed ) {
+      $output->diag( $_ ) for @log_if_fail_lines;
+   }
 
    no warnings 'exiting';
    last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
