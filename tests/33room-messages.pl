@@ -1,3 +1,15 @@
+my $room_id;
+
+prepare "Creating test room",
+   requires => [qw( make_test_room local_users remote_users )],
+
+   do => sub {
+      my ( $make_test_room, $local_users, $remote_users ) = @_;
+      $make_test_room->( @$local_users, @$remote_users )->on_done( sub {
+         ( $room_id ) = @_;
+      });
+   };
+
 prepare "Flushing event streams",
    requires => [qw( flush_events_for local_users )],
    do => sub {
@@ -10,13 +22,13 @@ my $msgtype = "m.message";
 my $msgbody = "Room message for 33room-messages";
 
 test "Local room members see posted message events",
-   requires => [qw( do_request_json await_event_for local_users room_id
+   requires => [qw( do_request_json await_event_for local_users
                     can_send_message )],
 
    provides => [qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $do_request_json, undef, undef, $room_id ) = @_;
+      my ( $do_request_json ) = @_;
 
       $do_request_json->(
          method => "POST",
@@ -27,7 +39,7 @@ test "Local room members see posted message events",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $users, $room_id ) = @_;
+      my ( undef, $await_event_for, $users ) = @_;
       my ( $senduser ) = @$users;
 
       Future->needs_all( map {
@@ -57,11 +69,11 @@ test "Local room members see posted message events",
    };
 
 test "Local room members can get room messages",
-   requires => [qw( do_request_json_for local_users room_id
+   requires => [qw( do_request_json_for local_users
                     can_send_message can_get_messages )],
 
    check => sub {
-      my ( $do_request_json_for, $local_users, $room_id ) = @_;
+      my ( $do_request_json_for, $local_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
@@ -102,11 +114,11 @@ test "Local room members can get room messages",
    };
 
 test "Remote room members also see posted message events",
-   requires => [qw( await_event_for user remote_users room_id
+   requires => [qw( await_event_for user remote_users
                     can_receive_room_message_locally )],
 
    await => sub {
-      my ( $await_event_for, $senduser, $remote_users, $room_id ) = @_;
+      my ( $await_event_for, $senduser, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
@@ -133,11 +145,11 @@ test "Remote room members also see posted message events",
    };
 
 test "Remote room members can get room messages",
-   requires => [qw( do_request_json_for remote_users room_id
+   requires => [qw( do_request_json_for remote_users
                     can_send_message can_get_messages )],
 
    check => sub {
-      my ( $do_request_json_for, $remote_users, $room_id ) = @_;
+      my ( $do_request_json_for, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
