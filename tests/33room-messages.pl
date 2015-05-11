@@ -3,6 +3,8 @@ my $room_id;
 my @local_members;
 my @remote_members;
 
+my $local_nonmember;
+
 prepare "Creating test room",
    requires => [qw( make_test_room local_users remote_users )],
 
@@ -12,7 +14,10 @@ prepare "Creating test room",
       @local_members = @$local_users;
       @remote_members = @$remote_users;
 
-      $make_test_room->( @$local_users, @$remote_users )->on_done( sub {
+      # Reserve a user not in the room
+      $local_nonmember = pop @local_members;
+
+      $make_test_room->( @local_members, @remote_members )->on_done( sub {
          ( $room_id ) = @_;
       });
    };
@@ -73,6 +78,28 @@ test "Local room members see posted message events",
       } @local_members )->on_done( sub {
          provide can_receive_room_message_locally => 1;
       });
+   };
+
+test "Local non-members don't see posted message events",
+   requires => [qw( await_event_for )],
+
+   await => sub {
+      my ( $await_event_for ) = @_;
+
+      Future->wait_any(
+         $await_event_for->( $local_nonmember, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.message";
+
+            require_json_keys( $event, qw( type content room_id user_id ));
+            return unless $event->{room_id} eq $room_id;
+
+            die "Nonmember received event ${\ pp $event }\n";
+         }),
+
+         # So as not to wait too long, give it 500msec to not arrive
+         delay( 0.5 )->then_done(1),
+      );
    };
 
 test "Local room members can get room messages",
