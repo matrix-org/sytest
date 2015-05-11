@@ -89,12 +89,14 @@ test "Local non-members don't see posted message events",
       Future->wait_any(
          $await_event_for->( $local_nonmember, sub {
             my ( $event ) = @_;
+            log_if_fail "Received event:", $event;
+
             return unless $event->{type} eq "m.room.message";
 
             require_json_keys( $event, qw( type content room_id user_id ));
             return unless $event->{room_id} eq $room_id;
 
-            die "Nonmember received event ${\ pp $event }\n";
+            die "Nonmember received event about a room they're not a member of";
          }),
 
          # So as not to wait too long, give it 500msec to not arrive
@@ -119,6 +121,7 @@ test "Local room members can get room messages",
             params => { limit => 1, dir => "b" },
          )->then( sub {
             my ( $body ) = @_;
+            log_if_fail "Body:", $body;
 
             require_json_keys( $body, qw( start end chunk ));
             require_json_list( my $chunk = $body->{chunk} );
