@@ -124,7 +124,7 @@ prepare "Environment closures for stateful /event access",
             my $replay_saved = !shift && scalar @{ $user->saved_events };
 
             ( $replay_saved
-               ? Future->done( @{ $user->saved_events } )
+               ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
                : $GET_new_events_for->( $user )
             )->then( sub {
                my $found;
