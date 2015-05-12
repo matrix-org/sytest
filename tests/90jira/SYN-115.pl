@@ -1,9 +1,9 @@
 multi_test "New federated private chats get full presence information (SYN-115)",
-   requires => [qw( http_clients do_request_json_for flush_events_for await_event_for
+   requires => [qw( register_new_user http_clients do_request_json_for flush_events_for await_event_for
                     can_register can_create_private_room )],
 
    do => sub {
-      my ( $clients, $do_request_json_for, $flush_events_for, $await_event_for ) = @_;
+      my ( $register_new_user, $clients, $do_request_json_for, $flush_events_for, $await_event_for ) = @_;
       my ( $http1, $http2 ) = @$clients;
 
       my ( $alice, $bob );
@@ -11,30 +11,12 @@ multi_test "New federated private chats get full presence information (SYN-115)"
 
       # Register two users
       Future->needs_all(
-         $http1->do_request_json(
-            method => "POST", uri => "/register",
-            content => {
-               type     => "m.login.password",
-               user     => "90jira-SYN-115_alice",
-               password => "alicepw"
-            },
-         )->then( sub { Future->done( $_[0] ) } ),
-
-         $http2->do_request_json(
-            method => "POST", uri => "/register",
-            content => {
-               type     => "m.login.password",
-               user     => "90jira-SYN-115_bob",
-               password => "bob'spw"
-            },
-         )->then( sub { Future->done( $_[0] ) } ),
+         $register_new_user->( $http1, "90jira-SYN-115_alice" ),
+         $register_new_user->( $http2, "90jira-SYN-115_bob" ),
       )->then( sub {
-         my ( $alicebody, $bobbody ) = @_;
+         ( $alice, $bob ) = @_;
 
          pass "Registered users";
-
-         $alice = User( $http1, @{$alicebody}{qw( user_id access_token )}, undef, [], undef );
-         $bob   = User( $http2, @{$bobbody  }{qw( user_id access_token )}, undef, [], undef );
 
          # Flush event streams for both; as a side-effect will mark presence 'online'
          Future->needs_all(
