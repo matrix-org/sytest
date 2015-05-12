@@ -249,13 +249,13 @@ test "POST /rooms/:room_id/ban can ban a user",
 my $next_alias = 1;
 
 prepare "Creating test-room-creation helper function",
-   requires => [qw( do_request_json_for
+   requires => [qw( do_request_json_for await_event_for
                     can_create_room can_join_room_by_alias )],
 
    provides => [qw( make_test_room )],
 
    do => sub {
-      my ( $do_request_json_for ) = @_;
+      my ( $do_request_json_for, $await_event_for ) = @_;
 
       provide make_test_room => sub {
          my ( $creator, @other_members ) = @_;
@@ -265,6 +265,8 @@ prepare "Creating test-room-creation helper function",
 
          my ( $domain ) = $creator->user_id =~ m/:(.*)$/;
          my $room_alias_fullname = "#${room_alias_shortname}:$domain";
+
+         my $n_joiners = scalar @other_members;
 
          $do_request_json_for->( $creator,
             method => "POST",
@@ -278,6 +280,8 @@ prepare "Creating test-room-creation helper function",
             my ( $body ) = @_;
             $room_id = $body->{room_id};
 
+            log_if_fail "room_id=$room_id";
+
             Future->needs_all( map {
                my $user = $_;
                $do_request_json_for->( $user,
@@ -288,8 +292,25 @@ prepare "Creating test-room-creation helper function",
                )
             } @other_members )
          })->then( sub {
-            Future->done( $room_id );
-         });
+            return Future->done( $room_id ) unless $n_joiners;
+
+            # Now wait for the creator to see every join event, so we're sure
+            # the remote joins have happened
+            my %joined_members;
+
+            $await_event_for->( $creator, sub {
+               my ( $event ) = @_;
+               log_if_fail "Creator event", $event;
+
+               return unless $event->{type} eq "m.room.member";
+               return unless $event->{room_id} eq $room_id;
+
+               $joined_members{$event->{state_key}}++;
+
+               return 1 if keys( %joined_members ) == $n_joiners;
+               return 0;
+            })->then_done( $room_id );
+         })
       };
 
       Future->done;

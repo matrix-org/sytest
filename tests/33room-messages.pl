@@ -17,22 +17,8 @@ prepare "Creating test room",
       # Reserve a user not in the room
       $local_nonmember = pop @local_members;
 
-      $make_test_room->( @local_members, @remote_members )->then( sub {
+      $make_test_room->( @local_members, @remote_members )->on_done( sub {
          ( $room_id ) = @_;
-
-         # TODO: Move this await logic into $make_test_room itself
-         my %joined_members;
-
-         $await_event_for->( $local_members[0], sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.member";
-            return unless $event->{room_id} eq $room_id;
-
-            $joined_members{$event->{state_key}}++;
-
-            return 1 if keys( %joined_members ) == @local_members + @remote_members;
-            return 0;
-         });
       });
    };
 
