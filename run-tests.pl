@@ -401,6 +401,10 @@ sub test
       _run_test( $t, %params );
       $t->leave;
 
+      if( $t->failed ) {
+         $output->diag( $_ ) for @log_if_fail_lines;
+      }
+
       no warnings 'exiting';
       last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
    }
