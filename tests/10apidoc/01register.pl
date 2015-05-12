@@ -66,3 +66,40 @@ test "POST /register can create a user",
          Future->done( 1 );
       });
    };
+
+prepare "Creating test-user-creation helper function",
+   requires => [qw( can_register )],
+
+   provides => [qw( register_new_user )],
+
+   do => sub {
+      provide register_new_user => sub {
+         my ( $http, $uid ) = @_;
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/register",
+
+            content => {
+               type     => "m.login.password",
+               user     => $uid,
+               password => "an0th3r s3kr1t",
+            },
+         )->then( sub {
+            my ( $body ) = @_;
+            my ( $user_id, $access_token ) = @{$body}{qw( user_id access_token )};
+
+            $http->do_request_json(
+               method => "GET",
+               uri    => "/events",
+               params => { access_token => $access_token, timeout => 0 },
+            )->then( sub {
+               my ( $body ) = @_;
+
+               Future->done( User( $http, $user_id, $access_token, $body->{end}, [], undef ) );
+            });
+         });
+      };
+
+      Future->done;
+   };
