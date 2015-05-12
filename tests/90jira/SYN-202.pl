@@ -2,7 +2,7 @@ multi_test "Left room members do not cause problems for presence",
    requires => [qw( first_http_client make_test_room do_request_json_for more_users
                     can_leave_room can_room_initial_sync )],
 
-   do => sub {
+   await => sub {
       my ( $http, $make_test_room, $do_request_json_for, $more_users ) = @_;
       my ( $user1, $user2 );
       my $room_id;
@@ -55,6 +55,6 @@ multi_test "Left room members do not cause problems for presence",
          #
          #      synapse.handlers.message - 395 - WARNING -  - Failed to get member presence of u'@SYN-202-user2:localhost:8001'
 
-         Future->done;
+         Future->done(1);
       });
    };
