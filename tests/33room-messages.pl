@@ -80,6 +80,39 @@ test "Local room members see posted message events",
       });
    };
 
+test "Fetching eventstream a second time doesn't yield the message again",
+   requires => [qw( do_request_json_for
+                    can_receive_room_message_locally )],
+
+   check => sub {
+      my ( $do_request_json_for ) = @_;
+
+      Future->needs_all( map {
+         my $recvuser = $_;
+
+         $do_request_json_for->( $recvuser,
+            method => "GET",
+            uri    => "/events",
+            params => {
+               from    => $recvuser->eventstream_token,
+               timeout => 0,
+            },
+         )->then( sub {
+            my ( $body ) = @_;
+
+            foreach my $event ( @{ $body->{chunk} } ) {
+               next unless $event->{type} eq "m.room.message";
+               my $content = $event->{content};
+
+               $content->{body} eq $msgbody and
+                  die "Expected not to recieve duplicate message\n";
+            }
+
+            Future->done;
+         })
+      } @local_members )->then_done(1);
+   };
+
 test "Local non-members don't see posted message events",
    requires => [qw( await_event_for )],
 
