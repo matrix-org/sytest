@@ -35,9 +35,11 @@ multi_test "Check that event streams started after a client joined a room work (
             )
         })->then( sub {
             ( $room ) = @_;
+            pass "Created a room";
+            # Now that we've joined a room, flush the event stream to get
+            # a stream token from before we send a message.
             $flush_events_for->( $alice );
         })->then( sub {
-            pass "Created a room";
             # Alice sends a message
             $do_request_json_for->( $alice,
                 method => "POST",
@@ -46,18 +48,22 @@ multi_test "Check that event streams started after a client joined a room work (
                     msgtype => "m.message",
                     body => "Room message for 90jira-SYT-1"
                 },
-             );
-         })->then( sub {
-         Future->wait_any(
-            $await_event_for->( $alice, sub {
-                my ( $event ) = @_;
-                return unless $event->{type} eq "m.room.message";
-                return 1;
-            }),
-            delay( 2 )->then_fail(
-                "Timed out waiting for message for Alice"
             )
-         )
+         })->then( sub {
+            my ( $body ) = @_;
+            my $event_id = $body->{event_id};
+            # Wait for the message we just sent.
+            Future->wait_any(
+                $await_event_for->( $alice, sub {
+                    my ( $event ) = @_;
+                    return unless $event->{type} eq "m.room.message";
+                    return unless $event->{event_id} eq $event_id;
+                    return 1;
+                }),
+                delay( 2 )->then_fail(
+                    "Timed out waiting for message for Alice"
+                )
+            );
         })->then( sub {
             pass "Alice saw her message";
             Future->done(1);
