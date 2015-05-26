@@ -31,5 +31,6 @@ multi_test "Getting push rules doesn't corrupt the cache SYN-390",
             );
         })->then( sub {
             pass "Got push rules the second time";
+            Future->done(1)
         });
     }
