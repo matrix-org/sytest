@@ -166,17 +166,8 @@ test "Local room members can get room messages",
 
             require_json_keys( $event, qw( type room_id user_id content ));
 
-            $event->{type} eq "m.room.message" or
-               die "Expected type to be m.room.message";
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
-
-            require_json_keys( my $content = $event->{content}, qw( msgtype body ));
-
-            $content->{msgtype} eq $msgtype or
-               die "Expected msgtype to be $msgtype";
-            $content->{body} eq $msgbody or
-               die "Expected body to be '$msgbody'";
 
             Future->done(1);
          });
@@ -242,17 +233,8 @@ test "Remote room members can get room messages",
 
             require_json_keys( $event, qw( type room_id user_id content ));
 
-            $event->{type} eq "m.room.message" or
-               die "Expected type to be m.room.message";
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
-
-            require_json_keys( my $content = $event->{content}, qw( msgtype body ));
-
-            $content->{msgtype} eq $msgtype or
-               die "Expected msgtype to be $msgtype";
-            $content->{body} eq $msgbody or
-               die "Expected body to be '$msgbody'";
 
             Future->done(1);
          });

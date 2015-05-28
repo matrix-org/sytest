@@ -98,6 +98,7 @@ sub _add_to_loop
         # Metrics are always useful
         "enable_metrics" => 1,
         "metrics_port" => ( $port - 8000 + 9090 ),
+        "perspectives" => {servers => {}},
    };
 
    YAML::DumpFile("$hs_dir/config", $conf);
