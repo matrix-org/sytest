@@ -1,12 +1,15 @@
 multi_test "Test that a message is pushed",
-    requires => [qw( http_clients do_request_json_for await_event_for flush_events_for
-                    test_http_server_uri_base await_http_request
-                    can_register can_create_private_room)],
+    requires => [qw(
+        http_clients do_request_json_for await_event_for flush_events_for
+        test_http_server_uri_base await_http_request register_new_user_without_events
+        can_register can_create_private_room
+    )],
     do => sub {
         my (
             $clients, $do_request_json_for, $await_event_for,
             $flush_events_for, $test_http_server_uri_base,
-            $await_http_request) = @_;
+            $await_http_request, $register_new_user
+        ) = @_;
 
         my $http = $clients->[0];
 
@@ -15,35 +18,15 @@ multi_test "Test that a message is pushed",
         my $room;
         my $event_id;
 
-        # Use our own version of register new user as we don't want to start an
-        # event stream for Alice. Starting an event stream will make presence
+        # We use the version of register new user that doesn't start the event
+        # stream for Alice. Starting an event stream will make presence
         # consider Alice to be online. If presence considers alice to be online
         # then Alice might stop receiving push messages.
-        my $register_new_user = sub {
-            my ( $user_id ) = @_;
-            $http->do_request_json(
-                method => "POST",
-                uri     => "/register",
-                content => {
-                    type     => "m.login.password",
-                    user     => $user_id,
-                    password => "an0th3r s3kr1t",
-                },
-            )->then(sub {
-                my ( $body ) = @_;
-                my $user_id = $body->{user_id};
-                my $access_token = $body->{access_token};
-                Future->done(
-                    User($http, $user_id, $access_token, undef, [], undef)
-                );
-            })
-        };
-
         # We need to register two users because you are never pushed for
         # messages that you send yourself.
         Future->needs_all(
-            $register_new_user->("50push-01-alice"),
-            $register_new_user->("50push-01-bob"),
+            $register_new_user->($http, "50push-01-alice"),
+            $register_new_user->($http, "50push-01-bob"),
         )->then( sub {
             ( $alice, $bob ) = @_;
             pass "Registered users";

@@ -70,7 +70,7 @@ test "POST /register can create a user",
 prepare "Creating test-user-creation helper function",
    requires => [qw( can_register )],
 
-   provides => [qw( register_new_user )],
+   provides => [qw( register_new_user register_new_user_without_events)],
 
    do => sub {
       provide register_new_user => sub {
@@ -100,6 +100,27 @@ prepare "Creating test-user-creation helper function",
             });
          });
       };
+
+      provide register_new_user_without_events => sub {
+          my ( $http, $user_id ) = @_;
+          $http->do_request_json(
+              method => "POST",
+              uri     => "/register",
+              content => {
+                  type     => "m.login.password",
+                  user     => $user_id,
+                  password => "an0th3r s3kr1t",
+              },
+          )->then(sub {
+              my ( $body ) = @_;
+              my $user_id = $body->{user_id};
+              my $access_token = $body->{access_token};
+              Future->done(
+                  User($http, $user_id, $access_token, undef, [], undef)
+              );
+          })
+      };
+
 
       Future->done;
    };
