@@ -1,11 +1,11 @@
 multi_test "Test that a message is pushed",
     requires => [qw( http_clients do_request_json_for await_event_for flush_events_for
-                    test_http_server_address await_http_request
+                    test_http_server_uri_base await_http_request
                     can_register can_create_private_room)],
     do => sub {
         my (
             $clients, $do_request_json_for, $await_event_for,
-            $flush_events_for, $test_http_server_address,
+            $flush_events_for, $test_http_server_uri_base,
             $await_http_request) = @_;
 
         my $http = $clients->[0];
@@ -13,7 +13,7 @@ multi_test "Test that a message is pushed",
         my $alice;
         my $bob;
         my $room;
-
+        my $event_id;
 
         # Use our own version of register new user as we don't want to start an
         # event stream for Alice. Starting an event stream will make presence
@@ -103,7 +103,7 @@ multi_test "Test that a message is pushed",
                     pushkey => "a_push_key",
                     lang => "en",
                     data => {
-                        url => "$test_http_server_address/alice_push",
+                        url => "$test_http_server_uri_base/alice_push",
                     },
                 },
             )
@@ -115,19 +115,41 @@ multi_test "Test that a message is pushed",
                 method => "POST",
                 uri     => "/rooms/$room->{room_id}/send/m.room.message",
                 content => {
-                    msgtype => "m.message",
-                    body => "Room message for 90jira-SYT-1"
+                    msgtype => "m.text",
+                    body => "Room message for 50push-01message-pushed"
                 },
             )
         })->then( sub {
+            my ( $body ) = @_;
+            $event_id = $body->{event_id};
             pass "Message sent";
             # Now we wait for an HTTP poke for the push request.
             # TODO(check that the HTTP poke is actually the poke we wanted)
             Future->wait_any(
-                $await_http_request->("/alice_push"),
+                $await_http_request->("/alice_push", sub {
+                    my ( $body ) = @_;
+                    return unless $body->{notification}{type};
+                    return unless $body->{notification}{type} eq "m.room.message";
+                    return 1;
+                }),
                 delay( 10 )->then_fail( "Timed out waiting for push" ),
             );
         })->then( sub {
+            my ( $body ) = @_;
+            require_json_keys(my $notification = $body->{notification}, qw(
+                id room_id type sender content devices counts
+            ));
+            require_json_keys(my $counts = $notification->{counts}, qw(
+                unread
+            ));
+            require_json_keys(my $device = $notification->{devices}[0], qw(
+                app_id pushkey pushkey_ts data tweaks
+            ));
+            require_json_keys(my $content = $notification->{content}, qw(
+                msgtype body
+            ));
+            die "Unexpected message body" unless $content->{body}
+                eq "Room message for 50push-01message-pushed";
             pass "Alice was pushed";
             Future->done(1);
         });

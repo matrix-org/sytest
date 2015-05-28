@@ -53,8 +53,9 @@ multi_test "Environment closures for receiving HTTP pokes",
 
         provide test_http_server_uri_base => $uri_base;
 
-        my $await_http_request = sub {
-            my ( $path ) = @_;
+        my $await_http_request;
+        $await_http_request = sub {
+            my ($path, $matches) = @_;
 
             my $future = $loop->new_future();
             my $pending_request = shift @{$pending_requests->{$path}};
@@ -63,7 +64,14 @@ multi_test "Environment closures for receiving HTTP pokes",
             } else {
                 push @{$pending_futures->{$path}}, $future;
             }
-            return $future;
+            return $future->then(sub {
+                my ($body, $request) = @_;
+                if ($matches->($body, $request)) {
+                    return Future->done($body, $request);
+                } else {
+                    return $await_http_request->($path, $matches);
+                }
+            });
         };
 
         provide await_http_request => $await_http_request;
@@ -79,7 +87,7 @@ multi_test "Environment closures for receiving HTTP pokes",
         )->then( sub {
             pass "Listening on $uri_base";
             my $http_client = SyTest::HTTPClient->new(uri_base => $uri_base);
-            $loop->add( $http_client);
+            $loop->add($http_client);
             $http_client->do_request_json(
                 method => "POST",
                 uri     => "/http_server_self_test",
@@ -89,7 +97,7 @@ multi_test "Environment closures for receiving HTTP pokes",
             );
         })->then( sub {
             Future->wait_any(
-                $await_http_request->("/http_server_self_test"),
+                $await_http_request->("/http_server_self_test", sub {1}),
                 delay( 10 )->then_fail( "Timed out waiting for request" ),
             );
         })->then( sub {
