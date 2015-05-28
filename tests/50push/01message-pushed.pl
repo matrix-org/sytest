@@ -108,7 +108,7 @@ multi_test "Test that a message is pushed",
                 },
             )
         })->then( sub {
-            pass "Alice's pusher created"
+            pass "Alice's pusher created";
             # Bob sends a message that should be pushed to Alice, since it is
             # in a "1:1" room with Alice
             $do_request_json_for->( $bob,
@@ -120,13 +120,12 @@ multi_test "Test that a message is pushed",
                 },
             )
         })->then( sub {
-            pass "Message sent"
+            pass "Message sent";
             # Now we wait for an HTTP poke for the push request.
             # TODO(check that the HTTP poke is actually the poke we wanted)
             Future->wait_any(
-                $await_http_request->(),
-                 delay( 10 )
-                    ->then_fail( "Timed out waiting for push" ),
+                $await_http_request->("/alice_push"),
+                delay( 10 )->then_fail( "Timed out waiting for push" ),
             );
         })->then( sub {
             pass "Alice was pushed";
