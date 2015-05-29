@@ -229,6 +229,18 @@ $test_environment{http_clients} = [ map {
 } @PORTS ];
 $test_environment{first_http_client} = $test_environment{http_clients}->[0];
 
+$test_environment{v2_clients} = [ map {
+   my $port = $_;
+   my $client = SyTest::HTTPClient->new(
+      uri_base => ( $NO_SSL ?
+         "http://localhost:@{[ $port + 1000 ]}/_matrix/client/v2_alpha" :
+         "https://localhost:$port/_matrix/client/v2_alpha" ),
+   );
+   $loop->add( $client );
+   $client;
+} @PORTS ];
+$test_environment{first_v2_client} = $test_environment{v2_clients}->[0];
+
 our @PROVIDES;
 
 sub provide

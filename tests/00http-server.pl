@@ -1,21 +1,27 @@
 use Net::Async::HTTP::Server;
-use JSON qw( decode_json );
+use JSON qw( decode_json encode_json );
 
 multi_test "Environment closures for receiving HTTP pokes",
-    provides => [qw( test_http_server_uri_base await_http_request )],
+    provides => [qw(
+        test_http_server_uri_base await_http_request
+        respond_with_http_to respond_with_json_to
+    )],
 
     do => sub {
-        # Hashes from paths to arrays of pending requests and futures.
-        my $pending_requests = {};
-        my $pending_futures = {};
-        my $response = HTTP::Response->new( 200 );
 
         my $listen_host = "localhost";
         my $listen_port = 8003;
 
-        $response->add_content( "{}" );
-        $response->content_type( "application/json" );
-        $response->content_length( length $response->content );
+        # Hash from path to the response to return for that path.
+        my $responses = {};
+        my $default_response = HTTP::Response->new( 200 );
+        $default_response->add_content( "{}" );
+        $default_response->content_type( "application/json" );
+        $default_response->content_length( length $default_response->content );
+
+        # Hashes from paths to arrays of pending requests and futures.
+        my $pending_requests = {};
+        my $pending_futures = {};
 
         my $handle_request = sub {
             my ( $request, $future ) = @_;
@@ -28,12 +34,32 @@ multi_test "Environment closures for receiving HTTP pokes",
             $future->done($content, $request);
         };
 
+        my $respond_with_http_to = sub {
+            my ( $path, $response ) = @_;
+            $responses->{$path} = $response;
+        };
+
+        provide respond_with_http_to => $respond_with_http_to;
+
+        my $respond_with_json_to = sub {
+            my ( $path, $response_json ) = @_;
+            my $content = encode_json $response_json;
+            my $response = HTTP::Response->new( 200 );
+            $response->add_content( $content );
+            $response->content_type( "application/json" );
+            $response->content_length( length $content );
+            $respond_with_http_to->($path, $response);
+        };
+
+        provide respond_with_json_to => $respond_with_json_to;
+
         my $http_server = Net::Async::HTTP::Server->new(
             on_request => sub {
                 my ( $self, $request ) = @_;
-                $request->respond( $response );
                 my $method = $request->method;
                 my $path = $request->path;
+
+                $request->respond( $responses->{$path} // $default_response );
                 if ( $CLIENT_LOG ) {
                     print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
                     #TODO log the HTTP Request headers
@@ -77,6 +103,8 @@ multi_test "Environment closures for receiving HTTP pokes",
         provide await_http_request => $await_http_request;
 
         $loop->add( $http_server );
+        my $http_client = SyTest::HTTPClient->new(uri_base => $uri_base);
+        $loop->add($http_client);
 
         $http_server->listen(
             addr => {
@@ -86,8 +114,6 @@ multi_test "Environment closures for receiving HTTP pokes",
             },
         )->then( sub {
             pass "Listening on $uri_base";
-            my $http_client = SyTest::HTTPClient->new(uri_base => $uri_base);
-            $loop->add($http_client);
             $http_client->do_request_json(
                 method => "POST",
                 uri     => "/http_server_self_test",
@@ -105,6 +131,20 @@ multi_test "Environment closures for receiving HTTP pokes",
             unless ($body->{some_key} eq "some_value") {
                 die "Expected JSON with {\"some_key\":\"some_value\"}";
             }
+            $respond_with_json_to->("/http_server_self_test" => {
+                "response_key" => "response_value",
+            });
+            $http_client->do_request_json(
+                method => "POST",
+                uri     => "/http_server_self_test",
+                content => {},
+            );
+        })->then( sub {
+            my ( $body ) = @_;
+            unless ($body->{response_key} eq "response_value") {
+                die "Expected JSON with {\"response_key\":\"response_value\"}";
+            }
+            pass "HTTP server self-checks pass";
             Future->done(1);
         });
     }

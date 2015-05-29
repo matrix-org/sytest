@@ -95,6 +95,11 @@ sub _add_to_loop
         "database" => $db_config,
         "database_config" => $db_config_path,
 
+        # Config for testing recaptcha. 90jira/SYT-8.pl
+        "recaptcha_siteverify_api" => "http://localhost:8003/recaptcha/api/siteverify",
+        "recaptcha_public_key" => "sytest_recaptcha_public_key",
+        "recaptcha_private_key" => "sytest_recaptcha_private_key",
+
         # Metrics are always useful
         "enable_metrics" => 1,
         "metrics_port" => ( $port - 8000 + 9090 ),
