@@ -2,10 +2,10 @@ use JSON::MaybeXS qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha (SYT-8)",
-   requires => [qw( first_v2_client respond_with_json_to await_http_request )],
+   requires => [qw( first_v2_client respond_with_json_to await_http_request expect_http_4xx )],
 
    do => sub {
-      my ( $http, $respond_with_json_to, $await_http_request ) = @_;
+      my ( $http, $respond_with_json_to, $await_http_request, $expect_http_4xx ) = @_;
 
       $respond_with_json_to->("/recaptcha/api/siteverify" => {
          success => JSON::true,
@@ -22,9 +22,9 @@ multi_test "Register with a recaptcha (SYT-8)",
                response => "sytest_captcha_response",
             },
          },
-      )->else( sub {
-         my ( $message, $type, $response ) = @_;
-         die "Expecting http error" unless $type eq "http";
+      )->$expect_http_4xx
+      ->then( sub {
+         my ( $response ) = @_;
 
          my $body = decode_json $response->content;
          require_json_keys( $body, qw(completed) );
