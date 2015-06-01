@@ -13,7 +13,7 @@ prepare "Creating test assertion helpers",
             sub {  # fail
                my ( undef, $name, $response ) = @_;
                $name and $name eq "http" and $response and $response->code =~ m/^4/ and
-                  return Future->done( 1 );
+                  return Future->done( $response );
                Future->fail( @_ );
             },
          );
