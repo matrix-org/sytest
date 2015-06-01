@@ -1,5 +1,5 @@
 use JSON;
-use URL::Encode;
+use URI;
 
 multi_test "Register with a recaptcha (SYT-8)",
     requires => [qw( first_v2_client respond_with_json_to await_http_request)],
@@ -36,7 +36,8 @@ multi_test "Register with a recaptcha (SYT-8)",
         })->then( sub {
             my ($body) = @_;
             pass "Got captcha verify request";
-            my $request_params = URL::Encode::url_params_mixed($body);
+            # $body arrives in an HTTP query-params format
+            my $request_params = { URI->new( "http://?$body" )->query_form };
             die "Bad secret" unless $request_params->{secret}
                 eq "sytest_recaptcha_private_key";
             die "Bad response" unless $request_params->{response}
