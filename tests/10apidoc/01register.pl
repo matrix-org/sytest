@@ -73,8 +73,8 @@ prepare "Creating test-user-creation helper function",
    provides => [qw( register_new_user register_new_user_without_events)],
 
    do => sub {
-      provide register_new_user => sub {
-         my ( $http, $uid ) = @_;
+      my $register_new_user = sub {
+         my ( $with_events, $http, $uid ) = @_;
 
          $http->do_request_json(
             method => "POST",
@@ -87,42 +87,33 @@ prepare "Creating test-user-creation helper function",
             },
          )->then( sub {
             my ( $body ) = @_;
-            my ( $user_id, $access_token ) = @{$body}{qw( user_id access_token )};
+            my $access_token = $body->{access_token};
 
-            $http->do_request_json(
-               method => "GET",
-               uri    => "/events",
-               params => { access_token => $access_token, timeout => 0 },
-            )->then( sub {
-               my ( $body ) = @_;
+            my $user = User( $http, $body->{user_id}, $access_token, undef, [], undef );
 
-               Future->done( User( $http, $user_id, $access_token, $body->{end}, [], undef ) );
-            });
+            if( $with_events ) {
+               $http->do_request_json(
+                  method => "GET",
+                  uri    => "/events",
+                  params => { access_token => $access_token, timeout => 0 },
+               )->then( sub {
+                  my ( $body ) = @_;
+
+                  $user->eventstream_token = $body->{end};
+                  Future->done( $user );
+               })
+            }
+            else {
+               Future->done( $user );
+            }
          });
       };
 
-      provide register_new_user_without_events => sub {
-          my ( $http, $uid ) = @_;
+      provide register_new_user =>
+         sub { $register_new_user->( 1, @_ ) };
 
-          $http->do_request_json(
-              method => "POST",
-              uri    => "/register",
-
-              content => {
-                  type     => "m.login.password",
-                  user     => $uid,
-                  password => "an0th3r s3kr1t",
-              },
-          )->then( sub {
-              my ( $body ) = @_;
-              my $user_id = $body->{user_id};
-              my $access_token = $body->{access_token};
-
-              Future->done(
-                  User( $http, $user_id, $access_token, undef, [], undef )
-              );
-          })
-      };
+      provide register_new_user_without_events =>
+         sub { $register_new_user->( 0, @_ ) };
 
       Future->done;
    };
