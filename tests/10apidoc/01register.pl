@@ -102,25 +102,27 @@ prepare "Creating test-user-creation helper function",
       };
 
       provide register_new_user_without_events => sub {
-          my ( $http, $user_id ) = @_;
+          my ( $http, $uid ) = @_;
+
           $http->do_request_json(
               method => "POST",
-              uri     => "/register",
+              uri    => "/register",
+
               content => {
                   type     => "m.login.password",
-                  user     => $user_id,
+                  user     => $uid,
                   password => "an0th3r s3kr1t",
               },
-          )->then(sub {
+          )->then( sub {
               my ( $body ) = @_;
               my $user_id = $body->{user_id};
               my $access_token = $body->{access_token};
+
               Future->done(
-                  User($http, $user_id, $access_token, undef, [], undef)
+                  User( $http, $user_id, $access_token, undef, [], undef )
               );
           })
       };
-
 
       Future->done;
    };
