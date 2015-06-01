@@ -1,4 +1,4 @@
-use JSON;
+use JSON::MaybeXS qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha (SYT-8)",
@@ -25,7 +25,7 @@ multi_test "Register with a recaptcha (SYT-8)",
         )->else( sub {
             my ($message, $type, $response) = @_;
             die "Expecting http error" unless $type eq "http";
-            my $body = JSON::decode_json $response->content;
+            my $body = decode_json $response->content;
             require_json_keys($body, qw(completed));
             require_json_list( my $completed = $body->{completed} );
             die "Expected one completed stage" unless scalar @$completed eq 1;

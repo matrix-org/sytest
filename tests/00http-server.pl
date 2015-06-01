@@ -1,5 +1,5 @@
 use Net::Async::HTTP::Server;
-use JSON qw( decode_json encode_json );
+use JSON::MaybeXS qw( decode_json encode_json );
 
 multi_test "Environment closures for receiving HTTP pokes",
     provides => [qw(
