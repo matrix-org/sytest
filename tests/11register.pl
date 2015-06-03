@@ -1,7 +1,7 @@
 use JSON qw( decode_json );
 use URI;
 
-multi_test "Register with a recaptcha (SYT-8)",
+multi_test "Register with a recaptcha",
    requires => [qw( first_v2_client await_http_request expect_http_4xx )],
 
    do => sub {
