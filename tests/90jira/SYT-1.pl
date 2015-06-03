@@ -1,32 +1,17 @@
 multi_test "Check that event streams started after a client joined a room work (SYT-1)",
-    requires => [qw( http_clients do_request_json_for await_event_for flush_events_for
-                          can_register can_create_private_room )],
+    requires => [qw( first_http_client register_new_user_without_events do_request_json_for await_event_for flush_events_for
+                     can_register can_create_private_room )],
 
     do => sub {
-        my ( $clients, $do_request_json_for, $await_event_for, $flush_events_for ) = @_;
-        my $http = $clients->[0];
+        my ( $http, $register_new_user_without_events, $do_request_json_for, $await_event_for, $flush_events_for ) = @_;
 
         my $alice;
         my $room;
 
-        # Register a user manually because register_new_user hits /events
-        # which is precisely the behaviour we want to avoid.
-        Future->needs_all(
-            $http->do_request_json(
-                method => "POST",
-                uri     => "/register",
-                content => {
-                    type     => "m.login.password",
-                    user     => "90jira-SYT-1_alice",
-                    password => "an0th3r s3kr1t",
-                },
-            )
-        )->then( sub {
-            my ( $body ) = @_;
-            my $user_id = $body->{user_id};
-            my $access_token = $body->{access_token};
-            $alice = User($http, $user_id, $access_token, undef, [], undef);
+        $register_new_user_without_events->( $http, "90jira-SYT-1_alice" )->then( sub {
+            ( $alice ) = @_;
             pass "Registered user";
+
             # Have Alice create a new private room
             $do_request_json_for->( $alice,
                 method => "POST",
