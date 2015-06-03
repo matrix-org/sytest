@@ -96,6 +96,8 @@ EOF
    exit $exitcode;
 }
 
+my $internal_server_port = $PORT_BASE + 10;
+
 my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
 
@@ -200,6 +202,8 @@ foreach my $idx ( 0 .. $#PORTS ) {
       python       => $PYTHON,
       no_ssl       => $NO_SSL,
       ( @SERVER_FILTER ? ( filter_output => \@SERVER_FILTER ) : () ),
+
+      internal_server_port => $internal_server_port,  # temporary hack
    );
    $loop->add( $synapse );
 
@@ -240,6 +244,8 @@ $test_environment{v2_clients} = [ map {
    $client;
 } @PORTS ];
 $test_environment{first_v2_client} = $test_environment{v2_clients}->[0];
+
+$test_environment{internal_server_port} = $internal_server_port;
 
 our @PROVIDES;
 

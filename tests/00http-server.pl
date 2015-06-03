@@ -2,13 +2,14 @@ use Net::Async::HTTP::Server;
 use JSON::MaybeXS qw( decode_json );
 
 multi_test "Environment closures for receiving HTTP pokes",
-   provides => [qw(
-      test_http_server_uri_base await_http_request
-   )],
+   requires => [qw( internal_server_port )],
+
+   provides => [qw( test_http_server_uri_base await_http_request )],
 
    do => sub {
+      my ( $listen_port ) = @_;
+
       my $listen_host = "localhost";
-      my $listen_port = 8003;
 
       # Hashes from paths to arrays of pending requests and futures.
       my $pending_requests = {};

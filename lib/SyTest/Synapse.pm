@@ -20,7 +20,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port output synapse_dir extra_args python no_ssl
+      port output synapse_dir extra_args python no_ssl internal_server_port
    );
 
    $self->SUPER::_init( $args );
@@ -96,7 +96,7 @@ sub _add_to_loop
         "database_config" => $db_config_path,
 
         # Config for testing recaptcha. 90jira/SYT-8.pl
-        "recaptcha_siteverify_api" => "http://localhost:8003/recaptcha/api/siteverify",
+        "recaptcha_siteverify_api" => "http://localhost:$self->{internal_server_port}/recaptcha/api/siteverify",
         "recaptcha_public_key" => "sytest_recaptcha_public_key",
         "recaptcha_private_key" => "sytest_recaptcha_private_key",
 
