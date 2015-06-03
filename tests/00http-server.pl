@@ -1,7 +1,7 @@
 use Net::Async::HTTP::Server;
 use JSON qw( decode_json );
 
-multi_test "Environment closures for receiving HTTP pokes",
+prepare "Environment closures for receiving HTTP pokes",
    requires => [qw( internal_server_port )],
 
    provides => [qw( test_http_server_uri_base await_http_request )],
@@ -93,8 +93,6 @@ multi_test "Environment closures for receiving HTTP pokes",
             port     => $listen_port
          },
       )->then( sub {
-         pass "Listening on $uri_base";
-
          Future->needs_all(
             Future->wait_any(
                $await_http_request->( "/http_server_self_test", sub {1} ),
@@ -148,8 +146,6 @@ multi_test "Environment closures for receiving HTTP pokes",
                Future->done(1);
             }),
          )
-      })->on_done( sub {
-         pass "HTTP server self-checks pass";
       })
    };
 
