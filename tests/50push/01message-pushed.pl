@@ -120,15 +120,20 @@ multi_test "Test that a message is pushed",
                return unless $body->{notification}{type};
                return unless $body->{notification}{type} eq "m.room.message";
                return 1;
+            })->then( sub {
+               my ( $body, $request ) = @_;
+
+               $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
+               Future->done( $body );
             }),
 
             delay( 10 )
                ->then_fail( "Timed out waiting for push" ),
          );
       })->then( sub {
-         my ( $body ) = @_;
+         my ( $request_body ) = @_;
 
-         require_json_keys( my $notification = $body->{notification}, qw(
+         require_json_keys( my $notification = $request_body->{notification}, qw(
             id room_id type sender content devices counts
          ));
          require_json_keys( $notification->{counts}, qw(
