@@ -17,9 +17,6 @@ use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any maxstr );
 
-use SyTest::Synapse;
-use SyTest::HTTPClient;
-
 use Module::Pluggable
    sub_name    => "output_formats",
    search_path => [ "SyTest::Output" ],
@@ -160,90 +157,14 @@ if( $CLIENT_LOG ) {
 
 my $loop = IO::Async::Loop->new;
 
-my %synapses_by_port;
-END {
-   $output->diag( "Killing synapse servers " ) if %synapses_by_port;
-
-   foreach my $synapse ( values %synapses_by_port ) {
-      $synapse->kill( 'INT' );
-   }
-}
 $SIG{INT} = sub { exit 1 };
-
-sub extract_extra_args
-{
-   my ( $idx, $args ) = @_;
-
-   return map {
-      if( m/^\[(.*)\]$/ ) {
-         # Extract the $idx'th element from a comma-separated list, or use the final
-         my @choices = split m/,/, $1;
-         $idx < @choices ? $choices[$idx] : $choices[-1];
-      }
-      else {
-         $_;
-      }
-   } @$args;
-}
 
 # We need two servers; a "local" and a "remote" one for federation-based tests
 my @PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
-my @f;
-foreach my $idx ( 0 .. $#PORTS ) {
-   my $port = $PORTS[$idx];
-   my @extra_args = extract_extra_args( $idx, \@SYNAPSE_EXTRA_ARGS );
-
-   my $synapse = $synapses_by_port{$port} = SyTest::Synapse->new(
-      synapse_dir  => $SYNAPSE_DIR,
-      port         => $port,
-      output       => $output,
-      print_output => $SERVER_LOG,
-      extra_args   => \@extra_args,
-      python       => $PYTHON,
-      no_ssl       => $NO_SSL,
-      ( @SERVER_FILTER ? ( filter_output => \@SERVER_FILTER ) : () ),
-
-      internal_server_port => $internal_server_port,  # temporary hack
-   );
-   $loop->add( $synapse );
-
-   push @f, Future->wait_any(
-      $synapse->started_future,
-
-      $loop->delay_future( after => 20 )
-         ->then_fail( "Synapse server on port $port failed to start" ),
-   );
-}
-
-Future->needs_all( @f )->get;
 
 # Some tests create objects as a side-effect that later tests will depend on,
 # such as clients, users, rooms, etc... These are called the Environment
 my %test_environment;
-
-$test_environment{http_clients} = [ map {
-   my $port = $_;
-   my $client = SyTest::HTTPClient->new(
-      uri_base => ( $NO_SSL ?
-         "http://localhost:@{[ $port + 1000 ]}/_matrix/client/api/v1" :
-         "https://localhost:$port/_matrix/client/api/v1" ),
-   );
-   $loop->add( $client );
-   $client;
-} @PORTS ];
-$test_environment{first_http_client} = $test_environment{http_clients}->[0];
-
-$test_environment{v2_clients} = [ map {
-   my $port = $_;
-   my $client = SyTest::HTTPClient->new(
-      uri_base => ( $NO_SSL ?
-         "http://localhost:@{[ $port + 1000 ]}/_matrix/client/v2_alpha" :
-         "https://localhost:$port/_matrix/client/v2_alpha" ),
-   );
-   $loop->add( $client );
-   $client;
-} @PORTS ];
-$test_environment{first_v2_client} = $test_environment{v2_clients}->[0];
 
 $test_environment{internal_server_port} = $internal_server_port;
 
@@ -564,7 +485,7 @@ if( $failed ) {
    $output->final_fail( $failed );
 
    my @f;
-   foreach my $synapse ( values %synapses_by_port ) {
+   foreach my $synapse ( @{ $test_environment{synapses} } ) {
       $synapse->print_output;
       push @f, $synapse->await_finish;
 

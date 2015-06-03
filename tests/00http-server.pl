@@ -1,6 +1,8 @@
 use Net::Async::HTTP::Server;
 use JSON qw( decode_json );
 
+use SyTest::HTTPClient;
+
 prepare "Environment closures for receiving HTTP pokes",
    requires => [qw( internal_server_port )],
 
