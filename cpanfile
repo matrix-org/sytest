@@ -13,4 +13,5 @@ requires 'List::Util', '>= 1.33';
 requires 'List::UtilsBy';
 requires 'Module::Pluggable';
 requires 'Net::Async::HTTP', '>= 0.36';
+requires 'Net::Async::HTTP::Server';
 requires 'YAML';
