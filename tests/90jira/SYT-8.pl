@@ -1,4 +1,4 @@
-use JSON::MaybeXS qw( decode_json );
+use JSON qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha (SYT-8)",

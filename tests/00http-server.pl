@@ -1,5 +1,5 @@
 use Net::Async::HTTP::Server;
-use JSON::MaybeXS qw( decode_json );
+use JSON qw( decode_json );
 
 multi_test "Environment closures for receiving HTTP pokes",
    requires => [qw( internal_server_port )],
@@ -157,7 +157,7 @@ multi_test "Environment closures for receiving HTTP pokes",
 package SyTest::HTTPServer::Request;
 use base qw( Net::Async::HTTP::Server::Request );
 
-use JSON::MaybeXS qw( encode_json );
+use JSON qw( encode_json );
 
 sub respond_json
 {
