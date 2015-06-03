@@ -1,22 +1,14 @@
 use Net::Async::HTTP::Server;
-use JSON::MaybeXS qw( decode_json encode_json );
+use JSON::MaybeXS qw( decode_json );
 
 multi_test "Environment closures for receiving HTTP pokes",
    provides => [qw(
       test_http_server_uri_base await_http_request
-      respond_with_http_to respond_with_json_to
    )],
 
    do => sub {
       my $listen_host = "localhost";
       my $listen_port = 8003;
-
-      # Hash from path to the response to return for that path.
-      my %canned_responses;
-      my $default_response = HTTP::Response->new( 200 );
-      $default_response->add_content( "{}" );
-      $default_response->content_type( "application/json" );
-      $default_response->content_length( length $default_response->content );
 
       # Hashes from paths to arrays of pending requests and futures.
       my $pending_requests = {};
@@ -31,30 +23,16 @@ multi_test "Environment closures for receiving HTTP pokes",
          $f->done( $content, $request );
       };
 
-      my $respond_with_http_to = sub {
-         my ( $path, $response ) = @_;
-         $canned_responses{$path} = $response;
-      };
-      provide respond_with_http_to => $respond_with_http_to;
-
-      my $respond_with_json_to = sub {
-         my ( $path, $response_json ) = @_;
-         my $content = encode_json $response_json;
-         my $response = HTTP::Response->new( 200 );
-         $response->add_content( $content );
-         $response->content_type( "application/json" );
-         $response->content_length( length $content );
-         $respond_with_http_to->( $path, $response );
-      };
-      provide respond_with_json_to => $respond_with_json_to;
-
       my $http_server = Net::Async::HTTP::Server->new(
          on_request => sub {
             my ( $self, $request ) = @_;
+
+            # TODO: This should be a parameter of NaH:Server
+            bless $request, "SyTest::HTTPServer::Request" if ref( $request ) eq "Net::Async::HTTP::Server::Request";
+
             my $method = $request->method;
             my $path = $request->path;
 
-            $request->respond( $canned_responses{$path} // $default_response );
             if( $CLIENT_LOG ) {
                print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
                #TODO log the HTTP Request headers
@@ -115,42 +93,80 @@ multi_test "Environment closures for receiving HTTP pokes",
          },
       )->then( sub {
          pass "Listening on $uri_base";
-         $http_client->do_request_json(
-            method  => "POST",
-            uri     => "/http_server_self_test",
-            content => {
-               "some_key" => "some_value",
-            },
-         );
+
+         Future->needs_all(
+            Future->wait_any(
+               $await_http_request->( "/http_server_self_test", sub {1} ),
+
+               delay( 10 )
+                  ->then_fail( "Timed out waiting for request" ),
+            )->then( sub {
+               my ( $request_body, $request ) = @_;
+
+               $request_body->{some_key} eq "some_value" or
+                  die "Expected JSON with {\"some_key\":\"some_value\"}";
+
+               $request->respond_json( {} );
+               Future->done();
+            }),
+
+            $http_client->do_request_json(
+               method  => "POST",
+               uri     => "/http_server_self_test",
+               content => {
+                  some_key => "some_value",
+               },
+            )->then_done(1),
+         )
       })->then( sub {
-         Future->wait_any(
-            $await_http_request->( "/http_server_self_test", sub {1} ),
+         Future->needs_all(
+            Future->wait_any(
+               $await_http_request->( "/http_server_self_test", sub {1} ),
 
-            delay( 10 )
-            ->then_fail( "Timed out waiting for request" ),
-         );
-      })->then( sub {
-         my ( $body ) = @_;
+               delay( 10 )
+                  ->then_fail( "Timed out waiting for request" ),
+            )->then( sub {
+               my ( $request_body, $request ) = @_;
 
-         $body->{some_key} eq "some_value" or
-            die "Expected JSON with {\"some_key\":\"some_value\"}";
+               $request->respond_json( {
+                  response_key => "response_value",
+               } );
+               Future->done();
+            }),
 
-         $respond_with_json_to->( "/http_server_self_test" => {
-            "response_key" => "response_value",
-         });
+            $http_client->do_request_json(
+               method => "POST",
+               uri     => "/http_server_self_test",
+               content => {},
+            )->then( sub {
+               my ( $response_body ) = @_;
 
-         $http_client->do_request_json(
-            method => "POST",
-            uri     => "/http_server_self_test",
-            content => {},
-         );
-      })->then( sub {
-         my ( $body ) = @_;
+               $response_body->{response_key} eq "response_value" or
+                  die "Expected JSON with {\"response_key\":\"response_value\"}";
 
-         $body->{response_key} eq "response_value" or
-            die "Expected JSON with {\"response_key\":\"response_value\"}";
-
+               Future->done(1);
+            }),
+         )
+      })->on_done( sub {
          pass "HTTP server self-checks pass";
-         Future->done(1);
-      });
+      })
    };
+
+# A somewhat-hackish way to give NaH:Server::Request objects a ->respond_json method
+package SyTest::HTTPServer::Request;
+use base qw( Net::Async::HTTP::Server::Request );
+
+use JSON::MaybeXS qw( encode_json );
+
+sub respond_json
+{
+   my $self = shift;
+   my ( $json ) = @_;
+
+   my $response = HTTP::Response->new( 200 );
+   $response->add_content( encode_json $json );
+   $response->content_type( "application/json" );
+   $response->content_length( length $response->content );
+
+   $self->respond( $response );
+}
