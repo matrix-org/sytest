@@ -4,13 +4,11 @@ use JSON qw( decode_json );
 use SyTest::HTTPClient;
 
 prepare "Environment closures for receiving HTTP pokes",
-   requires => [qw( internal_server_port )],
+   requires => [qw( )],
 
-   provides => [qw( test_http_server_uri_base await_http_request )],
+   provides => [qw( internal_server_port test_http_server_uri_base await_http_request )],
 
    do => sub {
-      my ( $listen_port ) = @_;
-
       my $listen_host = "localhost";
 
       # Hashes from paths to arrays of pending requests and futures.
@@ -53,10 +51,6 @@ prepare "Environment closures for receiving HTTP pokes",
       );
       $loop->add( $http_server );
 
-      my $uri_base = "http://$listen_host:$listen_port";
-
-      provide test_http_server_uri_base => $uri_base;
-
       my $await_http_request;
       $await_http_request = sub {
          my ( $path, $matches ) = @_;
@@ -83,18 +77,29 @@ prepare "Environment closures for receiving HTTP pokes",
 
       provide await_http_request => $await_http_request;
 
-      my $http_client = SyTest::HTTPClient->new(
-         uri_base => $uri_base,
-      );
-      $loop->add( $http_client );
+      my $http_client;
 
       $http_server->listen(
          addr => {
             family   => "inet",
             socktype => "stream",
-            port     => $listen_port
+            port     => 0,
          },
       )->then( sub {
+         my ( $listener ) = @_;
+         my $sockport = $listener->read_handle->sockport;
+
+         provide internal_server_port => $sockport;
+
+         my $uri_base = "http://$listen_host:$sockport";
+
+         provide test_http_server_uri_base => $uri_base;
+
+         $http_client = SyTest::HTTPClient->new(
+            uri_base => $uri_base,
+         );
+         $loop->add( $http_client );
+
          Future->needs_all(
             Future->wait_any(
                $await_http_request->( "/http_server_self_test", sub {1} ),

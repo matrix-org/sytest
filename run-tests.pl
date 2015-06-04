@@ -93,8 +93,6 @@ EOF
    exit $exitcode;
 }
 
-my $internal_server_port = $PORT_BASE + 10;
-
 my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
 
@@ -165,8 +163,6 @@ my @PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
 # Some tests create objects as a side-effect that later tests will depend on,
 # such as clients, users, rooms, etc... These are called the Environment
 my %test_environment;
-
-$test_environment{internal_server_port} = $internal_server_port;
 
 our @PROVIDES;
 
