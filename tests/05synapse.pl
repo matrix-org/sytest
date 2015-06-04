@@ -27,7 +27,7 @@ END {
 }
 
 prepare "Starting synapse",
-   requires => [qw( )],
+   requires => [qw( internal_server_port )],
 
    provides => [qw( )],
 
@@ -36,6 +36,8 @@ prepare "Starting synapse",
    #    $SERVER_FILTER and $NO_SSL variables defined at toplevel
 
    do => sub {
+      my ( $internal_server_port ) = @_;
+
       Future->needs_all( map {
          my $idx = $_;
          my $port = $PORTS[$idx];
@@ -52,7 +54,7 @@ prepare "Starting synapse",
             no_ssl       => $NO_SSL,
             ( @SERVER_FILTER ? ( filter_output => \@SERVER_FILTER ) : () ),
 
-            internal_server_port => $internal_server_port,  # temporary hack
+            internal_server_port => $internal_server_port,
          );
          $loop->add( $synapse );
 
