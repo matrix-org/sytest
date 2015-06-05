@@ -22,12 +22,23 @@ use Module::Pluggable
    search_path => [ "SyTest::Output" ],
    require     => 1;
 
-my @SYNAPSE_EXTRA_ARGS;
+# A number of commandline arguments exist simply for passing values through to
+# the way that synapse is started by tests/05synapse.pl. We'll collect them
+# all in one place for neatness
+my %SYNAPSE_ARGS = (
+   directory  => "../synapse",
+   python     => "python",
+   extra_args => [],
+
+   log        => 0,
+   log_filter => [],
+);
+
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
-   'S|server-log+' => \my $SERVER_LOG,
-   'server-grep=s' => \my @SERVER_FILTER,
-   'd|synapse-directory=s' => \(my $SYNAPSE_DIR = "../synapse"),
+   'S|server-log+' => \$SYNAPSE_ARGS{log},
+   'server-grep=s' => \$SYNAPSE_ARGS{log_filter},
+   'd|synapse-directory=s' => \$SYNAPSE_ARGS{directory},
 
    's|stop-on-fail+' => \my $STOP_ON_FAIL,
 
@@ -39,7 +50,7 @@ GetOptions(
 
    'n|no-tls' => \my $NO_SSL,
 
-   'python=s' => \(my $PYTHON = "python"),
+   'python=s' => \$SYNAPSE_ARGS{python},
 
    'p|port-base=i' => \(my $PORT_BASE = 8000),
 
@@ -49,13 +60,13 @@ GetOptions(
       # Turn single-letter into -X but longer into --NAME
       $_ = ( length > 1 ? "--$_" : "-$_" ) for $more[0];
 
-      push @SYNAPSE_EXTRA_ARGS, @more;
+      push @{ $SYNAPSE_ARGS{extra_args} }, @more;
    },
 
    'h|help' => sub { usage(0) },
 ) or usage(1);
 
-push @SYNAPSE_EXTRA_ARGS, "-v" if $VERBOSE;
+push @{ $SYNAPSE_ARGS{extra_args} }, "-v" if $VERBOSE;
 
 sub usage
 {
@@ -162,7 +173,9 @@ my @PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
 
 # Some tests create objects as a side-effect that later tests will depend on,
 # such as clients, users, rooms, etc... These are called the Environment
-my %test_environment;
+my %test_environment = (
+   synapse_args => \%SYNAPSE_ARGS,
+);
 
 our @PROVIDES;
 

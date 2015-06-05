@@ -27,32 +27,33 @@ END {
 }
 
 prepare "Starting synapse",
-   requires => [qw( internal_server_port )],
+   requires => [qw( synapse_args internal_server_port )],
 
    provides => [qw( )],
 
-   ## TODO: This preparation step relies on sneaky visibility of the @PORTS,
-   #    $SYNAPSE_EXTRA_ARGS, $SYNAPSE_DIR, $SERVER_LOG, $PYTHON,
-   #    $SERVER_FILTER and $NO_SSL variables defined at toplevel
+   ## TODO: This preparation step relies on sneaky visibility of the @PORTS
+   #    and $NO_SSL variables defined at toplevel
 
    do => sub {
-      my ( $internal_server_port ) = @_;
+      my ( $args, $internal_server_port ) = @_;
 
       Future->needs_all( map {
          my $idx = $_;
          my $port = $PORTS[$idx];
 
-         my @extra_args = extract_extra_args( $idx, \@SYNAPSE_EXTRA_ARGS );
+         my @extra_args = extract_extra_args( $idx, $args->{extra_args} );
 
          my $synapse = SyTest::Synapse->new(
-            synapse_dir  => $SYNAPSE_DIR,
+            synapse_dir  => $args->{directory},
             port         => $port,
             output       => $output,
-            print_output => $SERVER_LOG,
+            print_output => $args->{log},
             extra_args   => \@extra_args,
-            python       => $PYTHON,
+            python       => $args->{python},
             no_ssl       => $NO_SSL,
-            ( @SERVER_FILTER ? ( filter_output => \@SERVER_FILTER ) : () ),
+            ( scalar @{ $args->{log_filter} } ?
+               ( filter_output => $args->{log_filter} ) :
+               () ),
 
             internal_server_port => $internal_server_port,
          );
