@@ -29,7 +29,7 @@ END {
 prepare "Starting synapse",
    requires => [qw( synapse_ports synapse_args internal_server_port )],
 
-   provides => [qw( )],
+   provides => [qw( synapse_client_locations )],
 
    ## TODO: This preparation step relies on sneaky visibility of the $NO_SSL
    #    variable defined at toplevel
@@ -37,11 +37,17 @@ prepare "Starting synapse",
    do => sub {
       my ( $ports, $args, $internal_server_port ) = @_;
 
+      my @locations;
+
       Future->needs_all( map {
          my $idx = $_;
          my $port = $ports->[$idx];
 
          my @extra_args = extract_extra_args( $idx, $args->{extra_args} );
+
+         $locations[$idx] = $NO_SSL ?
+            "http://localhost:@{[ $port + 1000 ]}" :
+            "https://localhost:$port";
 
          my $synapse = SyTest::Synapse->new(
             synapse_dir  => $args->{directory},
@@ -69,5 +75,8 @@ prepare "Starting synapse",
             $loop->delay_future( after => 20 )
                ->then_fail( "Synapse server on port $port failed to start" ),
          );
-      } 0 .. $#$ports );
+      } 0 .. $#$ports )
+      ->on_done( sub {
+         provide synapse_client_locations => \@locations;
+      });
    };
