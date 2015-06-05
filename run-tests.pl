@@ -168,13 +168,14 @@ my $loop = IO::Async::Loop->new;
 
 $SIG{INT} = sub { exit 1 };
 
-# We need two servers; a "local" and a "remote" one for federation-based tests
-my @PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
 
 # Some tests create objects as a side-effect that later tests will depend on,
 # such as clients, users, rooms, etc... These are called the Environment
 my %test_environment = (
    synapse_args => \%SYNAPSE_ARGS,
+
+   # We need two servers; a "local" and a "remote" one for federation-based tests
+   synapse_ports => [ $PORT_BASE + 1, $PORT_BASE + 2 ],
 );
 
 our @PROVIDES;

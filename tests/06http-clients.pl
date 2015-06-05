@@ -1,14 +1,16 @@
 use SyTest::HTTPClient;
 
 prepare "Creating test HTTP clients",
-   requires => [qw( )],
+   requires => [qw( synapse_ports )],
 
    provides => [qw( http_clients first_http_client v2_clients first_v2_client )],
 
-   ## TODO: This preparation step relies on sneaky visibility of the @PORTS and
-   #    $NO_SSL variables defined at toplevel
+   ## TODO: This preparation step relies on sneaky visibility of the $NO_SSL
+   #    variable defined at toplevel
 
    do => sub {
+      my ( $ports ) = @_;
+
       my @clients = map {
          my $port = $_;
          my $client = SyTest::HTTPClient->new(
@@ -18,7 +20,7 @@ prepare "Creating test HTTP clients",
          );
          $loop->add( $client );
          $client;
-      } @PORTS;
+      } @$ports;
 
       provide http_clients => \@clients;
       provide first_http_client => $clients[0];
@@ -32,7 +34,7 @@ prepare "Creating test HTTP clients",
          );
          $loop->add( $client );
          $client;
-      } @PORTS;
+      } @$ports;
 
       provide v2_clients => \@v2_clients;
       provide first_v2_client => $v2_clients[0];

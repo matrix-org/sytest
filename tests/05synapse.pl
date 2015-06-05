@@ -27,19 +27,19 @@ END {
 }
 
 prepare "Starting synapse",
-   requires => [qw( synapse_args internal_server_port )],
+   requires => [qw( synapse_ports synapse_args internal_server_port )],
 
    provides => [qw( )],
 
-   ## TODO: This preparation step relies on sneaky visibility of the @PORTS
-   #    and $NO_SSL variables defined at toplevel
+   ## TODO: This preparation step relies on sneaky visibility of the $NO_SSL
+   #    variable defined at toplevel
 
    do => sub {
-      my ( $args, $internal_server_port ) = @_;
+      my ( $ports, $args, $internal_server_port ) = @_;
 
       Future->needs_all( map {
          my $idx = $_;
-         my $port = $PORTS[$idx];
+         my $port = $ports->[$idx];
 
          my @extra_args = extract_extra_args( $idx, $args->{extra_args} );
 
@@ -67,5 +67,5 @@ prepare "Starting synapse",
             $loop->delay_future( after => 20 )
                ->then_fail( "Synapse server on port $port failed to start" ),
          );
-      } 0 .. $#PORTS );
+      } 0 .. $#$ports );
    };
