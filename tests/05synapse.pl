@@ -46,11 +46,13 @@ prepare "Starting synapse",
          my $synapse = SyTest::Synapse->new(
             synapse_dir  => $args->{directory},
             port         => $port,
+            ( $NO_SSL ?
+               ( unsecure_port => $port + 1000 ) :
+               ( unsecure_port => 0 ) ),
             output       => $output,
             print_output => $args->{log},
             extra_args   => \@extra_args,
             python       => $args->{python},
-            no_ssl       => $NO_SSL,
             ( scalar @{ $args->{log_filter} } ?
                ( filter_output => $args->{log_filter} ) :
                () ),

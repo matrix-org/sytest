@@ -20,7 +20,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port output synapse_dir extra_args python no_ssl internal_server_port
+      port unsecure_port output synapse_dir extra_args python internal_server_port
    );
 
    $self->SUPER::_init( $args );
@@ -85,9 +85,7 @@ sub _add_to_loop
         "server_name" => "localhost:$port",
         "log_file" => "$log",
         "bind_port" => $port,
-        ( $self->{no_ssl} ?
-            ( "unsecure_port" => $port + 1000, ) :
-            ( "unsecure_port" => 0 )),
+        "unsecure_port" => $self->{unsecure_port},
         "tls-dh-params-path" => "$cwd/keys/tls.dh",
         "rc_messages_per_second" => 1000,
         "rc_message_burst_count" => 1000,
