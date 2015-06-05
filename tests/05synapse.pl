@@ -41,24 +41,24 @@ prepare "Starting synapse",
 
       Future->needs_all( map {
          my $idx = $_;
-         my $port = $ports->[$idx];
+
+         my $secure_port = $ports->[$idx];
+         my $unsecure_port = $NO_SSL ? $secure_port + 1000 : 0;
 
          my @extra_args = extract_extra_args( $idx, $args->{extra_args} );
 
          $locations[$idx] = $NO_SSL ?
-            "http://localhost:@{[ $port + 1000 ]}" :
-            "https://localhost:$port";
+            "http://localhost:$unsecure_port" :
+            "https://localhost:$secure_port";
 
          my $synapse = SyTest::Synapse->new(
-            synapse_dir  => $args->{directory},
-            port         => $port,
-            ( $NO_SSL ?
-               ( unsecure_port => $port + 1000 ) :
-               ( unsecure_port => 0 ) ),
-            output       => $output,
-            print_output => $args->{log},
-            extra_args   => \@extra_args,
-            python       => $args->{python},
+            synapse_dir   => $args->{directory},
+            port          => $secure_port,
+            unsecure_port => $unsecure_port,
+            output        => $output,
+            print_output  => $args->{log},
+            extra_args    => \@extra_args,
+            python        => $args->{python},
             ( scalar @{ $args->{log_filter} } ?
                ( filter_output => $args->{log_filter} ) :
                () ),
@@ -73,7 +73,7 @@ prepare "Starting synapse",
             $synapse->started_future,
 
             $loop->delay_future( after => 20 )
-               ->then_fail( "Synapse server on port $port failed to start" ),
+               ->then_fail( "Synapse server on port $secure_port failed to start" ),
          );
       } 0 .. $#$ports )
       ->on_done( sub {
