@@ -38,10 +38,9 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
-sub _add_to_loop
+sub start
 {
    my $self = shift;
-   my ( $loop ) = @_;
 
    my $port = $self->{port};
    my $output = $self->{output};
@@ -104,7 +103,6 @@ sub _add_to_loop
 
    YAML::DumpFile("$hs_dir/config", $conf);
 
-
    $self->{logpath} = $log;
 
    {
@@ -118,7 +116,6 @@ sub _add_to_loop
       : "$self->{synapse_dir}"
    );
 
-
    my @command = (
       $self->{python}, "-m", "synapse.app.homeserver",
          "--config-path" => "$hs_dir/config",
@@ -127,6 +124,7 @@ sub _add_to_loop
 
    $output->diag( "Generating config for port $port" );
 
+   my $loop = $self->loop;
    $loop->run_child(
       setup => [
          env => {

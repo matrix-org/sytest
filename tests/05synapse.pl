@@ -69,6 +69,8 @@ prepare "Starting synapse",
          );
          $loop->add( $synapse );
 
+         $synapse->start;
+
          push @synapses, $synapse;
 
          Future->wait_any(
