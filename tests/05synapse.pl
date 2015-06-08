@@ -60,7 +60,12 @@ prepare "Starting synapse",
                ( filter_output => $args->{log_filter} ) :
                () ),
 
-            internal_server_port => $internal_server_port,
+            config => {
+               # Config for testing recaptcha. 90jira/SYT-8.pl
+               recaptcha_siteverify_api => "http://localhost:$internal_server_port/recaptcha/api/siteverify",
+               recaptcha_public_key     => "sytest_recaptcha_public_key",
+               recaptcha_private_key    => "sytest_recaptcha_private_key",
+            },
          );
          $loop->add( $synapse );
 

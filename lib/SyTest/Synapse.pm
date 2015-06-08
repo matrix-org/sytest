@@ -20,7 +20,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port unsecure_port output synapse_dir extra_args python internal_server_port
+      port unsecure_port output synapse_dir extra_args python config
    );
 
    $self->SUPER::_init( $args );
@@ -93,15 +93,13 @@ sub _add_to_loop
         "database" => $db_config,
         "database_config" => $db_config_path,
 
-        # Config for testing recaptcha. 90jira/SYT-8.pl
-        "recaptcha_siteverify_api" => "http://localhost:$self->{internal_server_port}/recaptcha/api/siteverify",
-        "recaptcha_public_key" => "sytest_recaptcha_public_key",
-        "recaptcha_private_key" => "sytest_recaptcha_private_key",
-
         # Metrics are always useful
         "enable_metrics" => 1,
         "metrics_port" => ( $port - 8000 + 9090 ),
+
         "perspectives" => {servers => {}},
+
+        %{ $self->{config} },
    };
 
    YAML::DumpFile("$hs_dir/config", $conf);
