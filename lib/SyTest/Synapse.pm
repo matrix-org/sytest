@@ -40,6 +40,29 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
+sub _append
+{
+   my ( $config, $more ) = @_;
+   if( ref $more eq "HASH" ) {
+      ref $config eq "HASH" or die "Cannot append HASH to non-HASH";
+      _append( $_[0]->{$_}, $more->{$_} ) for keys %$more;
+   }
+   elsif( ref $more eq "ARRAY" ) {
+      push @{ $_[0] }, @$more;
+   }
+   else {
+      die "Not sure how to append ${\ref $more} to config\n";
+   }
+}
+
+sub append_config
+{
+   my $self = shift;
+   my %more = @_;
+
+   _append( $self->{config}, \%more );
+}
+
 sub write_yaml_file
 {
    my $self = shift;
