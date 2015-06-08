@@ -45,6 +45,9 @@ multi_test "Register with a recaptcha",
             my ( $response ) = @_;
 
             my $body = decode_json $response->content;
+
+            log_if_fail "Body:", $body;
+
             require_json_keys( $body, qw(completed) );
             require_json_list( my $completed = $body->{completed} );
 
