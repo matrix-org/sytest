@@ -236,7 +236,7 @@ sub _run_test
 
    my @reqs;
    foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if $test_environment{$req};
+      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
 
       $t->skip( "lack of $req" );
       return;
@@ -367,7 +367,7 @@ sub prepare
 
    my @reqs;
    foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if $test_environment{$req};
+      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
 
       $output->skip_prepare( $name, $req );
       return;
