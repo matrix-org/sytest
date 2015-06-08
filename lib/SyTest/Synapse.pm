@@ -23,6 +23,8 @@ sub _init
       port unsecure_port output synapse_dir extra_args python config
    );
 
+   $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
+
    $self->SUPER::_init( $args );
 }
 
@@ -38,6 +40,19 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
+sub write_yaml_file
+{
+   my $self = shift;
+   my ( $relpath, $content ) = @_;
+
+   my $hs_dir = $self->{hs_dir};
+   -d $hs_dir or make_path $hs_dir;
+
+   YAML::DumpFile( my $abspath = "$hs_dir/$relpath", $content );
+
+   return $abspath;
+}
+
 sub start
 {
    my $self = shift;
@@ -45,10 +60,7 @@ sub start
    my $port = $self->{port};
    my $output = $self->{output};
 
-   my $hs_dir = abs_path("localhost-$port");
-   -d $hs_dir or make_path $hs_dir;
-
-   my $db_config_path = "$hs_dir/database.yaml";
+   my $db_config_path = "$self->{hs_dir}/database.yaml";
    my $db  = ":memory:"; #"$hs_dir/homeserver.db";
 
    my ( $db_type, %db_args, $db_config );
@@ -78,9 +90,9 @@ sub start
    }
 
    my $cwd = getcwd;
-   my $log = "$hs_dir/homeserver.log";
+   my $log = "$self->{hs_dir}/homeserver.log";
 
-   my $conf = {
+   my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
         "bind_port" => $port,
@@ -99,9 +111,7 @@ sub start
         "perspectives" => {servers => {}},
 
         %{ $self->{config} },
-   };
-
-   YAML::DumpFile("$hs_dir/config", $conf);
+   } );
 
    $self->{logpath} = $log;
 
@@ -118,8 +128,8 @@ sub start
 
    my @command = (
       $self->{python}, "-m", "synapse.app.homeserver",
-         "--config-path" => "$hs_dir/config",
-         "--server-name"   => "localhost:$port",
+         "--config-path" => $config_path,
+         "--server-name" => "localhost:$port",
    );
 
    $output->diag( "Generating config for port $port" );
