@@ -27,15 +27,12 @@ END {
 }
 
 prepare "Starting synapse",
-   requires => [qw( synapse_ports synapse_args internal_server_port )],
+   requires => [qw( synapse_ports synapse_args internal_server_port want_tls )],
 
    provides => [qw( synapse_client_locations )],
 
-   ## TODO: This preparation step relies on sneaky visibility of the $NO_SSL
-   #    variable defined at toplevel
-
    do => sub {
-      my ( $ports, $args, $internal_server_port ) = @_;
+      my ( $ports, $args, $internal_server_port, $want_tls ) = @_;
 
       my @locations;
 
@@ -43,13 +40,13 @@ prepare "Starting synapse",
          my $idx = $_;
 
          my $secure_port = $ports->[$idx];
-         my $unsecure_port = $NO_SSL ? $secure_port + 1000 : 0;
+         my $unsecure_port = $want_tls ? 0 : $secure_port + 1000;
 
          my @extra_args = extract_extra_args( $idx, $args->{extra_args} );
 
-         $locations[$idx] = $NO_SSL ?
-            "http://localhost:$unsecure_port" :
-            "https://localhost:$secure_port";
+         $locations[$idx] = $want_tls ?
+            "https://localhost:$secure_port" :
+            "http://localhost:$unsecure_port";
 
          my $synapse = SyTest::Synapse->new(
             synapse_dir   => $args->{directory},

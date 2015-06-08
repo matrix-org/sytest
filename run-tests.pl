@@ -34,6 +34,8 @@ my %SYNAPSE_ARGS = (
    log_filter => [],
 );
 
+my $WANT_TLS = 1;
+
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \$SYNAPSE_ARGS{log},
@@ -48,7 +50,7 @@ GetOptions(
 
    'v|verbose+' => \(my $VERBOSE = 0),
 
-   'n|no-tls' => \my $NO_SSL,
+   'n|no-tls' => sub { $WANT_TLS = 0 },
 
    'python=s' => \$SYNAPSE_ARGS{python},
 
@@ -176,6 +178,8 @@ my %test_environment = (
 
    # We need two servers; a "local" and a "remote" one for federation-based tests
    synapse_ports => [ $PORT_BASE + 1, $PORT_BASE + 2 ],
+
+   want_tls => $WANT_TLS,
 );
 
 our @PROVIDES;
