@@ -49,3 +49,52 @@ test "Regular users cannot register within the AS namespace",
       $register_new_user->( $http, "astest-01create-2" )
          ->$expect_http_4xx;
    };
+
+my $room_id;
+prepare "Creating a new test room",
+   requires => [qw( make_test_room user )],
+
+   do => sub {
+      my ( $make_test_room, $user ) = @_;
+
+      $make_test_room->( $user )
+         ->on_done( sub {
+            ( $room_id ) = @_;
+         });
+   };
+
+test "AS can make room aliases",
+   requires => [qw( do_request_json_for as_user first_home_server
+                    can_create_room can_create_room_alias )],
+
+   do => sub {
+      my ( $do_request_json_for, $as_user, $first_home_server ) = @_;
+      my $room_alias = "#astest-01create-1:$first_home_server";
+
+      $do_request_json_for->( $as_user,
+         method => "PUT",
+         uri    => "/directory/room/$room_alias",
+
+         content => {
+            room_id => $room_id,
+         },
+      )->then( sub {
+         # Nothing interesting in the body
+
+         $do_request_json_for->( $as_user,
+            method => "GET",
+            uri    => "/directory/room/$room_alias",
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         require_json_keys( $body, qw( room_id ));
+
+         $body->{room_id} eq $room_id or
+            die "Expected 'room_id' to be $room_id'";
+
+         Future->done(1);
+      });
+   };

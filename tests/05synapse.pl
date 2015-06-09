@@ -86,7 +86,9 @@ prepare "Starting synapse",
                   users => [
                      { regex => '@astest-.*', exclusive => "true" },
                   ],
-                  aliases => [],
+                  aliases => [
+                     { regex => '#astest-.*', exclusive => "true" },
+                  ],
                   rooms => [],
                }
             } );
