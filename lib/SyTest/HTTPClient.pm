@@ -11,6 +11,8 @@ Net::Async::HTTP->VERSION( '0.36' ); # PUT content bugfix
 
 use JSON qw( encode_json decode_json );
 
+use constant MIME_TYPE_JSON => "application/json";
+
 sub configure
 {
    my $self = shift;
@@ -56,11 +58,21 @@ sub do_request
 
       my $content = $response->content;
 
-      if( $response->header( "Content-type" ) eq "application/json" ) {
+      if( $response->header( "Content-type" ) eq MIME_TYPE_JSON ) {
          $content = decode_json $content;
       }
 
       Future->done( $content, $response );
+   })->else_with_f( sub {
+      my ( $f, $message, $name, @args ) = @_;
+      return $f unless defined $name and
+                       $name eq "http" and
+                       my $response = $args[0];
+      return $f unless $response->content_type eq MIME_TYPE_JSON;
+
+      # Most HTTP failures from synapse contain more detailed information in a
+      # JSON-encoded response body.
+      return Future->fail( "$message\n" . $response->decoded_content, $name => @args );
    });
 }
 
@@ -71,7 +83,7 @@ sub do_request_json
 
    if( defined( my $content = $params{content} ) ) {
       $params{content} = encode_json $content;
-      $params{content_type} //= "application/json";
+      $params{content_type} //= MIME_TYPE_JSON;
    }
 
    $self->do_request( %params );

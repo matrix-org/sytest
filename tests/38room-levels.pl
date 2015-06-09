@@ -16,21 +16,6 @@ prepare "Creating a new test room",
          });
    };
 
-my $EXPECT_HTTP_403 = sub {
-   my ( $f ) = @_;
-   $f->then(
-      sub { # done
-         Future->fail( "Expected to receive an HTTP 403 failure but it succeeded" )
-      },
-      sub { # fail
-         my ( undef, $name, $response ) = @_;
-         $name and $name eq "http" and $response and $response->code == 403 and
-            return Future->done;
-         Future->fail( @_ );
-      },
-   );
-};
-
 sub test_powerlevel
 {
    my ( $name, %args ) = @_;
@@ -44,11 +29,11 @@ sub test_powerlevel
    }
 
    multi_test $name,
-      requires => [qw( do_request_json_for change_room_powerlevels user local_users ),
+      requires => [qw( do_request_json_for change_room_powerlevels expect_http_403 user local_users ),
                    @requires ],
 
       do => sub {
-         my ( $do_request_json_for, $change_room_powerlevels, $user, $local_users,
+         my ( $do_request_json_for, $change_room_powerlevels, $expect_http_403, $user, $local_users,
               @dependencies ) = @_;
          my $test_user = $local_users->[1];
 
@@ -62,7 +47,7 @@ sub test_powerlevel
             $levels->{users}{ $test_user->user_id } = 0;
          })->then( sub {
             $do->( @dependencies )
-               ->$EXPECT_HTTP_403
+               ->$expect_http_403
          })->then( sub {
             pass( "Fails at powerlevel 0" );
 
@@ -162,10 +147,10 @@ test "Unprivileged users can set m.room.topic if it only needs level 0",
 
 foreach my $levelname (qw( ban kick redact )) {
    multi_test "Users cannot set $levelname powerlevel higher than their own",
-      requires => [qw( change_room_powerlevels user )],
+      requires => [qw( change_room_powerlevels expect_http_403 user )],
 
       do => sub {
-         my ( $change_room_powerlevels, $user ) = @_;
+         my ( $change_room_powerlevels, $expect_http_403, $user ) = @_;
 
          $change_room_powerlevels->( $user, $room_id, sub {
             my ( $levels ) = @_;
@@ -178,7 +163,7 @@ foreach my $levelname (qw( ban kick redact )) {
                my ( $levels ) = @_;
 
                $levels->{$levelname} = 10000000;
-            })->$EXPECT_HTTP_403
+            })->$expect_http_403
          })->on_done( sub {
             pass "Fails at setting 75";
          });
