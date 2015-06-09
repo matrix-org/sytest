@@ -29,7 +29,7 @@ END {
 sub gen_token
 {
    my ( $length ) = @_;
-   return join "", map { chr 64 + rand 64 } 1 .. $length;
+   return join "", map { chr 64 + rand 63 } 1 .. $length;
 }
 
 prepare "Starting synapse",
