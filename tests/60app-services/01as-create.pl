@@ -98,3 +98,21 @@ test "AS can make room aliases",
          Future->done(1);
       });
    };
+
+test "Regular users cannot create room aliases within the AS namespace",
+   requires => [qw( do_request_json first_home_server expect_http_4xx
+                    can_create_room can_create_room_alias )],
+
+   do => sub {
+      my ( $do_request_json, $first_home_server, $expect_http_4xx ) = @_;
+      my $room_alias = "#astest-01create-2:$first_home_server";
+
+      $do_request_json->(
+         method => "PUT",
+         uri    => "/directory/room/$room_alias",
+
+         content => {
+            room_id => $room_id,
+         }
+      )->$expect_http_4xx;
+   };
