@@ -1,6 +1,8 @@
 test "AS can create a user",
    requires => [qw( do_request_json_for as_user )],
 
+   provides => [qw( make_as_user )],
+
    do => sub {
       my ( $do_request_json_for, $as_user ) = @_;
 
@@ -18,6 +20,27 @@ test "AS can create a user",
          log_if_fail "Body", $body;
 
          require_json_keys( $body, qw( user_id home_server ));
+
+         provide make_as_user => sub {
+            my ( $user_id_fragment ) = @_;
+
+            $do_request_json_for->( $as_user,
+               method => "POST",
+               uri    => "/register",
+
+               content => {
+                  type => "m.login.application_service",
+                  user => "astest-$user_id_fragment"
+               },
+            )->then( sub {
+               my ( $body ) = @_;
+
+               # TODO: user has no event stream yet. Should they?
+               Future->done(
+                  User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, [], undef )
+               );
+            });
+         };
 
          Future->done(1);
       });
