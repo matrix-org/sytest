@@ -45,6 +45,7 @@ prepare "Environment closures for receiving HTTP pokes",
                $handle_request->( $request, $pending_future );
             }
             else {
+               warn "Received spurious HTTP request to $path\n";
                push @{ $pending_requests->{$path} }, $request;
             }
          }
