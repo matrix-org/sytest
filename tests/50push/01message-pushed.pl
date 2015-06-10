@@ -45,25 +45,29 @@ multi_test "Test that a message is pushed",
          $flush_events_for->( $bob )
       })->then( sub {
          # Now alice can invite Bob to the room.
-         $do_request_json_for->( $alice,
-            method  => "POST",
-            uri     => "/rooms/$room->{room_id}/invite",
-            content => { user_id => $bob->user_id },
-         );
-      })->then( sub {
-         Future->wait_any(
-            $await_event_for->( $bob, sub {
-               my ( $event ) = @_;
-               return unless $event->{type} eq "m.room.member" and
-                  $event->{room_id} eq $room->{room_id} and
-                  $event->{state_key} eq $bob->user_id and
-                  $event->{content}{membership} eq "invite";
-               return 1;
-            }),
+         # We also wait for the push notification for it
 
-            delay( 10 )
-               ->then_fail( "Timed out waiting for invite" ),
-         );
+         Future->needs_all(
+            Future->wait_any(
+               $await_event_for->( $bob, sub {
+                  my ( $event ) = @_;
+                  return unless $event->{type} eq "m.room.member" and
+                     $event->{room_id} eq $room->{room_id} and
+                     $event->{state_key} eq $bob->user_id and
+                     $event->{content}{membership} eq "invite";
+                  return 1;
+               }),
+
+               delay( 10 )
+                  ->then_fail( "Timed out waiting for invite" ),
+            ),
+
+            $do_request_json_for->( $alice,
+               method  => "POST",
+               uri     => "/rooms/$room->{room_id}/invite",
+               content => { user_id => $bob->user_id },
+            ),
+         )
       })->then( sub {
          # Bob accepts the invite by joining the room
          pass "Bob received invite";
@@ -96,42 +100,44 @@ multi_test "Test that a message is pushed",
          )
       })->then( sub {
          pass "Alice's pusher created";
-
          # Bob sends a message that should be pushed to Alice, since it is
          # in a "1:1" room with Alice
-         $do_request_json_for->( $bob,
-            method  => "POST",
-            uri     => "/rooms/$room->{room_id}/send/m.room.message",
-            content => {
-               msgtype => "m.text",
-               body    => "Room message for 50push-01message-pushed"
-            },
+
+         Future->needs_all(
+            # TODO(check that the HTTP poke is actually the poke we wanted)
+            Future->wait_any(
+               $await_http_request->("/alice_push", sub {
+                  my ( $body ) = @_;
+                  return unless $body->{notification}{type};
+                  return unless $body->{notification}{type} eq "m.room.message";
+                  return 1;
+               })->then( sub {
+                  my ( $body, $request ) = @_;
+
+                  $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
+                  Future->done( $body );
+               }),
+
+               delay( 10 )
+                  ->then_fail( "Timed out waiting for push" ),
+            ),
+
+            $do_request_json_for->( $bob,
+               method  => "POST",
+               uri     => "/rooms/$room->{room_id}/send/m.room.message",
+               content => {
+                  msgtype => "m.text",
+                  body    => "Room message for 50push-01message-pushed"
+               },
+            )->on_done( sub {
+               my ( $body ) = @_;
+               $event_id = $body->{event_id};
+            }),
          )
       })->then( sub {
-         my ( $body ) = @_;
-         $event_id = $body->{event_id};
-         pass "Message sent";
-
-         # Now we wait for an HTTP poke for the push request.
-         # TODO(check that the HTTP poke is actually the poke we wanted)
-         Future->wait_any(
-            $await_http_request->("/alice_push", sub {
-               my ( $body ) = @_;
-               return unless $body->{notification}{type};
-               return unless $body->{notification}{type} eq "m.room.message";
-               return 1;
-            })->then( sub {
-               my ( $body, $request ) = @_;
-
-               $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
-               Future->done( $body );
-            }),
-
-            delay( 10 )
-               ->then_fail( "Timed out waiting for push" ),
-         );
-      })->then( sub {
          my ( $request_body ) = @_;
+
+         pass "Message sent";
 
          require_json_keys( my $notification = $request_body->{notification}, qw(
             id room_id type sender content devices counts
