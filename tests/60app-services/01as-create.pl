@@ -87,20 +87,57 @@ prepare "Creating a new test room",
    };
 
 test "AS can make room aliases",
-   requires => [qw( do_request_json_for as_user first_home_server
+   requires => [qw( do_request_json_for await_http_request as_user first_home_server
                     can_create_room can_create_room_alias )],
 
    do => sub {
-      my ( $do_request_json_for, $as_user, $first_home_server ) = @_;
+      my ( $do_request_json_for, $await_http_request, $as_user, $first_home_server ) = @_;
       my $room_alias = "#astest-01create-1:$first_home_server";
 
-      $do_request_json_for->( $as_user,
-         method => "PUT",
-         uri    => "/directory/room/$room_alias",
+      Future->needs_all(
+         # TODO(paul): Can't just hardcode "1" in the path here
+         $await_http_request->( "/appserv/transactions/1",
+            sub {
+               my ( $body ) = @_;
+               $body->{events} and
+                  grep { $_->{type} eq "m.room.aliases" } @{ $body->{events} }
+            }
+         )->then( sub {
+            my ( $body, $request ) = @_;
 
-         content => {
-            room_id => $room_id,
-         },
+            require_json_keys( $body, qw( events ));
+
+            my @events = @{ $body->{events} };
+            my ( $alias_event ) = grep { $_->{type} eq "m.room.aliases" } @events;
+
+            log_if_fail "Event", $alias_event;
+
+            require_json_keys( $alias_event, qw( content room_id user_id ));
+
+            $alias_event->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+            $alias_event->{user_id} eq $as_user->user_id or
+               die "Expected user_id to be ${\$as_user->user_id}";
+
+            require_json_keys( my $content = $alias_event->{content}, qw( aliases ));
+            require_json_list( my $aliases = $content->{aliases} );
+
+            grep { $_ eq $room_alias } @$aliases or
+               die "EXpected to find our alias in the aliases list";
+
+            $request->respond_json( {} );
+
+            Future->done;
+         }),
+
+         $do_request_json_for->( $as_user,
+            method => "PUT",
+            uri    => "/directory/room/$room_alias",
+
+            content => {
+               room_id => $room_id,
+            },
+         )
       )->then( sub {
          # Nothing interesting in the body
 
