@@ -97,7 +97,7 @@ prepare "Starting synapse",
                app_service_config_files => [ $appserv_conf ],
             );
 
-            provide as_credentials => [ $as_user, $as_token ];
+            provide as_credentials => [ "\@$as_user:localhost:$secure_port", $as_token ];
          }
 
          $synapse->start;
