@@ -1,5 +1,6 @@
 use Net::Async::HTTP::Server;
 use JSON qw( decode_json );
+use URI::Escape qw( uri_unescape );
 
 use SyTest::HTTPClient;
 
@@ -32,7 +33,7 @@ prepare "Environment closures for receiving HTTP pokes",
             bless $request, "SyTest::HTTPServer::Request" if ref( $request ) eq "Net::Async::HTTP::Server::Request";
 
             my $method = $request->method;
-            my $path = $request->path;
+            my $path = uri_unescape $request->path;
 
             if( $CLIENT_LOG ) {
                print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
