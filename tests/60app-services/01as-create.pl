@@ -95,8 +95,7 @@ test "AS can make room aliases",
       my $room_alias = "#astest-01create-1:$first_home_server";
 
       Future->needs_all(
-         # TODO(paul): Can't just hardcode "1" in the path here
-         $await_http_request->( "/appserv/transactions/1",
+         $await_http_request->( qr{^/appserv/transactions/\d+$},
             sub {
                my ( $body ) = @_;
                $body->{events} and
