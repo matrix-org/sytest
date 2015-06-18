@@ -12,8 +12,7 @@ prepare "Environment closures for receiving HTTP pokes",
    do => sub {
       my $listen_host = "localhost";
 
-      # Hashes from paths to arrays of pending requests and futures.
-      my $pending_requests = {};
+      # Hashes from paths to arrays of pending futures.
       my $pending_futures = {};
 
       my $handle_request = sub {
@@ -47,7 +46,6 @@ prepare "Environment closures for receiving HTTP pokes",
             }
             else {
                warn "Received spurious HTTP request to $path\n";
-               push @{ $pending_requests->{$path} }, $request;
             }
          }
       );
@@ -58,14 +56,8 @@ prepare "Environment closures for receiving HTTP pokes",
          my ( $path, $matches ) = @_;
 
          my $f = $loop->new_future;
-         my $pending_request = shift @{ $pending_requests->{$path} };
 
-         if( defined $pending_request ) {
-            $handle_request->( $pending_request, $f );
-         }
-         else {
-            push @{ $pending_futures->{$path} }, $f;
-         }
+         push @{ $pending_futures->{$path} }, $f;
 
          return $f->then( sub {
             my ( $body, $request ) = @_;
