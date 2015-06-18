@@ -4,7 +4,6 @@ use URI::Escape qw( uri_unescape );
 
 use SyTest::HTTPClient;
 
-use Struct::Dumb;
 struct Awaiter => [qw( pathmatch filter future )];
 
 prepare "Environment closures for receiving HTTP pokes",
