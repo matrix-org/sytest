@@ -4,6 +4,9 @@ use URI::Escape qw( uri_unescape );
 
 use SyTest::HTTPClient;
 
+use Struct::Dumb;
+struct Awaiter => [qw( pathmatch filter future )];
+
 prepare "Environment closures for receiving HTTP pokes",
    requires => [qw( )],
 
@@ -12,17 +15,8 @@ prepare "Environment closures for receiving HTTP pokes",
    do => sub {
       my $listen_host = "localhost";
 
-      # Hashes from paths to arrays of pending futures.
-      my $pending_futures = {};
-
-      my $handle_request = sub {
-         my ( $request, $f ) = @_;
-         my $content = $request->body;
-         if( $request->header( "Content-Type" ) eq "application/json" ) {
-            $content = decode_json $content;
-         }
-         $f->done( $content, $request );
-      };
+      # List of Awaiter structs
+      my @pending_awaiters;
 
       my $http_server = Net::Async::HTTP::Server->new(
          on_request => sub {
@@ -34,6 +28,11 @@ prepare "Environment closures for receiving HTTP pokes",
             my $method = $request->method;
             my $path = uri_unescape $request->path;
 
+            my $content = $request->body;
+            if( $request->header( "Content-Type" ) eq "application/json" ) {
+               $content = decode_json $content;
+            }
+
             if( $CLIENT_LOG ) {
                print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
                #TODO log the HTTP Request headers
@@ -41,32 +40,33 @@ prepare "Environment closures for receiving HTTP pokes",
                print STDERR "-- \n";
             }
 
-            if( my $pending_future = shift @{ $pending_futures->{$path} } ) {
-               $handle_request->( $request, $pending_future );
+            foreach my $idx ( 0 .. $#pending_awaiters ) {
+               my $awaiter = $pending_awaiters[$idx];
+
+               my $pathmatch = $awaiter->pathmatch;
+               next unless ( !ref $pathmatch and $path eq $pathmatch ) or
+                           ( ref $pathmatch  and $path =~ $pathmatch );
+
+               next if $awaiter->filter and not $awaiter->filter->( $content );
+
+               splice @pending_awaiters, $idx, 1, ();
+               $awaiter->future->done( $content, $request );
+               return;
             }
-            else {
-               warn "Received spurious HTTP request to $path\n";
-            }
+
+            warn "Received spurious HTTP request to $path\n";
          }
       );
       $loop->add( $http_server );
 
-      my $await_http_request;
-      $await_http_request = sub {
-         my ( $path, $matches ) = @_;
+      my $await_http_request = sub {
+         my ( $pathmatch, $filter ) = @_;
 
          my $f = $loop->new_future;
 
-         push @{ $pending_futures->{$path} }, $f;
+         push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
 
-         return $f->then( sub {
-            my ( $body, $request ) = @_;
-            if( $matches->( $body, $request ) ) {
-               return Future->done( $body, $request );
-            } else {
-               return $await_http_request->( $path, $matches );
-            }
-         });
+         return $f;
       };
 
       provide await_http_request => $await_http_request;
