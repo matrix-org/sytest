@@ -137,6 +137,8 @@ multi_test "Test that a message is pushed",
       })->then( sub {
          my ( $request_body ) = @_;
 
+         log_if_fail "Request body", $request_body;
+
          pass "Message sent";
 
          require_json_keys( my $notification = $request_body->{notification}, qw(

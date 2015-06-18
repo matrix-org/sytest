@@ -17,6 +17,12 @@ use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any maxstr );
 
+use Data::Dump::Filtered;
+Data::Dump::Filtered::add_dump_filter( sub {
+   $_[1] == $IO::Async::Loop::ONE_TRUE_LOOP ? { dump => '$IO::Async::Loop::ONE_TRUE_LOOP' }
+                                            : undef;
+});
+
 use Module::Pluggable
    sub_name    => "output_formats",
    search_path => [ "SyTest::Output" ],
