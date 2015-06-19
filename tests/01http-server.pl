@@ -4,7 +4,6 @@ use URI::Escape qw( uri_unescape );
 
 use SyTest::HTTPClient;
 
-use Struct::Dumb;
 struct Awaiter => [qw( pathmatch filter future )];
 
 prepare "Environment closures for receiving HTTP pokes",
@@ -29,7 +28,7 @@ prepare "Environment closures for receiving HTTP pokes",
             my $path = uri_unescape $request->path;
 
             my $content = $request->body;
-            if( $request->header( "Content-Type" ) eq "application/json" ) {
+            if( ( $request->header( "Content-Type" ) // "" ) eq "application/json" ) {
                $content = decode_json $content;
             }
 
@@ -66,7 +65,12 @@ prepare "Environment closures for receiving HTTP pokes",
 
          push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
 
-         return $f;
+         return Future->wait_any(
+            $f,
+
+            delay( 10 )
+               ->then_fail( "Timed out waiting for an HTTP request matching $pathmatch" ),
+         );
       };
 
       provide await_http_request => $await_http_request;

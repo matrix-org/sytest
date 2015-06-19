@@ -16,6 +16,7 @@ use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any maxstr );
+use Struct::Dumb;
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {

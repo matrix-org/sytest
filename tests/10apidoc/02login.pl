@@ -1,5 +1,4 @@
 # A handy little structure for other scripts to find in 'user' and 'more_users'
-use Struct::Dumb 'struct';
 struct User => [qw( http user_id access_token eventstream_token saved_events pending_get_events )];
 
 test "GET /login yields a set of flows",
