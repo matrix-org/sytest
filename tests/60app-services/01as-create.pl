@@ -104,6 +104,8 @@ test "AS can make room aliases",
          )->then( sub {
             my ( $body, $request ) = @_;
 
+            $request->respond_json( {} );
+
             require_json_keys( $body, qw( events ));
 
             my @events = @{ $body->{events} };
@@ -123,8 +125,6 @@ test "AS can make room aliases",
 
             grep { $_ eq $room_alias } @$aliases or
                die "EXpected to find our alias in the aliases list";
-
-            $request->respond_json( {} );
 
             Future->done;
          }),
