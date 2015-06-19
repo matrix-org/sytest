@@ -65,7 +65,12 @@ prepare "Environment closures for receiving HTTP pokes",
 
          push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
 
-         return $f;
+         return Future->wait_any(
+            $f,
+
+            delay( 10 )
+               ->then_fail( "Timed out waiting for an HTTP request matching $pathmatch" ),
+         );
       };
 
       provide await_http_request => $await_http_request;
