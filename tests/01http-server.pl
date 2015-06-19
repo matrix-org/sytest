@@ -28,7 +28,7 @@ prepare "Environment closures for receiving HTTP pokes",
             my $path = uri_unescape $request->path;
 
             my $content = $request->body;
-            if( $request->header( "Content-Type" ) eq "application/json" ) {
+            if( ( $request->header( "Content-Type" ) // "" ) eq "application/json" ) {
                $content = decode_json $content;
             }
 
