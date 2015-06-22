@@ -1,9 +1,9 @@
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [qw( make_test_room make_as_user do_request_json_for await_event_for user as_user
+   requires => [qw( make_test_room make_as_user do_request_json_for await_event_for await_as_event user as_user
                     can_join_room_by_id can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $do_request_json_for, $await_event_for, $user, $as_user ) = @_;
+      my ( $make_test_room, $make_as_user, $do_request_json_for, $await_event_for, $await_as_event, $user, $as_user ) = @_;
 
       my $room_id;
       my $ghost;
@@ -19,26 +19,63 @@ multi_test "AS-ghosted users can use rooms via AS",
 
          pass "Created AS ghost";
 
-         $do_request_json_for->( $as_user,
-            method => "POST",
-            uri    => "/rooms/$room_id/join",
-            params => {
-               user_id => $ghost->user_id,
-            },
+         Future->needs_all(
+            $await_as_event->( "m.room.member" )->then( sub {
+               my ( $event ) = @_;
 
-            content => {},
+               log_if_fail "AS event", $event;
+
+               require_json_keys( $event, qw( content room_id ));
+
+               $event->{room_id} eq $room_id or
+                  die "Expected room_id to be $room_id";
+
+               require_json_keys( my $content = $event->{content}, qw( membership ) );
+
+               $content->{membership} eq "join" or
+                  die "Expected membership to be 'join'";
+
+               Future->done;
+            }),
+
+            $do_request_json_for->( $as_user,
+               method => "POST",
+               uri    => "/rooms/$room_id/join",
+               params => {
+                  user_id => $ghost->user_id,
+               },
+
+               content => {},
+            )
          )
       })->then( sub {
          pass "User joined room via AS";
 
-         $do_request_json_for->( $as_user,
-            method => "POST",
-            uri    => "/rooms/$room_id/send/m.room.message",
-            params => {
-               user_id => $ghost->user_id,
-            },
+         Future->needs_all(
+            $await_as_event->( "m.room.message" )->then( sub {
+               my ( $event ) = @_;
 
-            content => { msgtype => "m.text", body => "Message from AS directly" },
+               log_if_fail "AS event", $event;
+
+               require_json_keys( $event, qw( room_id user_id ));
+
+               $event->{room_id} eq $room_id or
+                  die "Expected room_id to be $room_id";
+               $event->{user_id} eq $ghost->user_id or
+                  die "Expected sender user_id to be ${\$ghost->user_id}";
+
+               Future->done;
+            }),
+
+            $do_request_json_for->( $as_user,
+               method => "POST",
+               uri    => "/rooms/$room_id/send/m.room.message",
+               params => {
+                  user_id => $ghost->user_id,
+               },
+
+               content => { msgtype => "m.text", body => "Message from AS directly" },
+            )
          )
       })->then( sub {
          pass "User posted message via AS";
@@ -67,11 +104,11 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [qw( make_test_room make_as_user do_request_json_for await_event_for user
+   requires => [qw( make_test_room make_as_user do_request_json_for await_event_for await_as_event user
                     can_join_room_by_id can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $do_request_json_for, $await_event_for, $user ) = @_;
+      my ( $make_test_room, $make_as_user, $do_request_json_for, $await_event_for, $await_as_event, $user ) = @_;
 
       my $room_id;
       my $ghost;
@@ -87,20 +124,57 @@ multi_test "AS-ghosted users can use rooms themselves",
 
          pass "Created AS ghost";
 
-         $do_request_json_for->( $ghost,
-            method => "POST",
-            uri    => "/rooms/$room_id/join",
+         Future->needs_all(
+            $await_as_event->( "m.room.member" )->then( sub {
+               my ( $event ) = @_;
 
-            content => {},
+               log_if_fail "AS event", $event;
+
+               require_json_keys( $event, qw( content room_id ));
+
+               $event->{room_id} eq $room_id or
+                  die "Expected room_id to be $room_id";
+
+               require_json_keys( my $content = $event->{content}, qw( membership ) );
+
+               $content->{membership} eq "join" or
+                  die "Expected membership to be 'join'";
+
+               Future->done;
+            }),
+
+            $do_request_json_for->( $ghost,
+               method => "POST",
+               uri    => "/rooms/$room_id/join",
+
+               content => {},
+            )
          )
       })->then( sub {
          pass "Ghost joined room themselves";
 
-         $do_request_json_for->( $ghost,
-            method => "POST",
-            uri    => "/rooms/$room_id/send/m.room.message",
+         Future->needs_all(
+            $await_as_event->( "m.room.message" )->then( sub {
+               my ( $event ) = @_;
 
-            content => { msgtype => "m.text", body => "Message from AS Ghost" },
+               log_if_fail "AS event", $event;
+
+               require_json_keys( $event, qw( room_id user_id ));
+
+               $event->{room_id} eq $room_id or
+                  die "Expected room_id to be $room_id";
+               $event->{user_id} eq $ghost->user_id or
+                  die "Expected sender user_id to be ${\$ghost->user_id}";
+
+               Future->done;
+            }),
+
+            $do_request_json_for->( $ghost,
+               method => "POST",
+               uri    => "/rooms/$room_id/send/m.room.message",
+
+               content => { msgtype => "m.text", body => "Message from AS Ghost" },
+            )
          )
       })->then( sub {
          pass "Ghost posted message themselves";
