@@ -26,10 +26,16 @@ END {
    }
 }
 
+sub gen_token
+{
+   my ( $length ) = @_;
+   return join "", map { chr 64 + rand 63 } 1 .. $length;
+}
+
 prepare "Starting synapse",
    requires => [qw( synapse_ports synapse_args internal_server_port want_tls )],
 
-   provides => [qw( synapse_client_locations )],
+   provides => [qw( synapse_client_locations as_credentials )],
 
    do => sub {
       my ( $ports, $args, $internal_server_port, $want_tls ) = @_;
@@ -60,9 +66,41 @@ prepare "Starting synapse",
                ( filter_output => $args->{log_filter} ) :
                () ),
 
-            internal_server_port => $internal_server_port,
+            config => {
+               # Config for testing recaptcha. 90jira/SYT-8.pl
+               recaptcha_siteverify_api => "http://localhost:$internal_server_port/recaptcha/api/siteverify",
+               recaptcha_public_key     => "sytest_recaptcha_public_key",
+               recaptcha_private_key    => "sytest_recaptcha_private_key",
+            },
          );
          $loop->add( $synapse );
+
+         if( $idx == 0 ) {
+            # Configure application services on first instance only
+            my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
+               url      => "http://localhost:$internal_server_port/appserv",
+               as_token => ( my $as_token = gen_token( 32 ) ),
+               hs_token => "TODO",
+               sender_localpart => ( my $as_user = "as-user" ),
+               namespaces => {
+                  users => [
+                     { regex => '@astest-.*', exclusive => "true" },
+                  ],
+                  aliases => [
+                     { regex => '#astest-.*', exclusive => "true" },
+                  ],
+                  rooms => [],
+               }
+            } );
+
+            $synapse->append_config(
+               app_service_config_files => [ $appserv_conf ],
+            );
+
+            provide as_credentials => [ "\@$as_user:localhost:$secure_port", $as_token ];
+         }
+
+         $synapse->start;
 
          push @synapses, $synapse;
 

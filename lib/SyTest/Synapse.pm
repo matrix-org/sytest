@@ -20,8 +20,10 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port unsecure_port output synapse_dir extra_args python internal_server_port
+      port unsecure_port output synapse_dir extra_args python config
    );
+
+   $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
 
    $self->SUPER::_init( $args );
 }
@@ -38,18 +40,50 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
-sub _add_to_loop
+sub _append
+{
+   my ( $config, $more ) = @_;
+   if( ref $more eq "HASH" ) {
+      ref $config eq "HASH" or die "Cannot append HASH to non-HASH";
+      _append( $_[0]->{$_}, $more->{$_} ) for keys %$more;
+   }
+   elsif( ref $more eq "ARRAY" ) {
+      push @{ $_[0] }, @$more;
+   }
+   else {
+      die "Not sure how to append ${\ref $more} to config\n";
+   }
+}
+
+sub append_config
 {
    my $self = shift;
-   my ( $loop ) = @_;
+   my %more = @_;
+
+   _append( $self->{config}, \%more );
+}
+
+sub write_yaml_file
+{
+   my $self = shift;
+   my ( $relpath, $content ) = @_;
+
+   my $hs_dir = $self->{hs_dir};
+   -d $hs_dir or make_path $hs_dir;
+
+   YAML::DumpFile( my $abspath = "$hs_dir/$relpath", $content );
+
+   return $abspath;
+}
+
+sub start
+{
+   my $self = shift;
 
    my $port = $self->{port};
    my $output = $self->{output};
 
-   my $hs_dir = abs_path("localhost-$port");
-   -d $hs_dir or make_path $hs_dir;
-
-   my $db_config_path = "$hs_dir/database.yaml";
+   my $db_config_path = "$self->{hs_dir}/database.yaml";
    my $db  = ":memory:"; #"$hs_dir/homeserver.db";
 
    my ( $db_type, %db_args, $db_config );
@@ -79,9 +113,9 @@ sub _add_to_loop
    }
 
    my $cwd = getcwd;
-   my $log = "$hs_dir/homeserver.log";
+   my $log = "$self->{hs_dir}/homeserver.log";
 
-   my $conf = {
+   my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
         "bind_port" => $port,
@@ -93,19 +127,14 @@ sub _add_to_loop
         "database" => $db_config,
         "database_config" => $db_config_path,
 
-        # Config for testing recaptcha. 90jira/SYT-8.pl
-        "recaptcha_siteverify_api" => "http://localhost:$self->{internal_server_port}/recaptcha/api/siteverify",
-        "recaptcha_public_key" => "sytest_recaptcha_public_key",
-        "recaptcha_private_key" => "sytest_recaptcha_private_key",
-
         # Metrics are always useful
         "enable_metrics" => 1,
         "metrics_port" => ( $port - 8000 + 9090 ),
+
         "perspectives" => {servers => {}},
-   };
 
-   YAML::DumpFile("$hs_dir/config", $conf);
-
+        %{ $self->{config} },
+   } );
 
    $self->{logpath} = $log;
 
@@ -120,15 +149,15 @@ sub _add_to_loop
       : "$self->{synapse_dir}"
    );
 
-
    my @command = (
       $self->{python}, "-m", "synapse.app.homeserver",
-         "--config-path" => "$hs_dir/config",
-         "--server-name"   => "localhost:$port",
+         "--config-path" => $config_path,
+         "--server-name" => "localhost:$port",
    );
 
    $output->diag( "Generating config for port $port" );
 
+   my $loop = $self->loop;
    $loop->run_child(
       setup => [
          env => {
