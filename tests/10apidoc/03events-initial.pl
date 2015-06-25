@@ -118,8 +118,10 @@ prepare "Environment closures for stateful /event access",
 
       provide await_event_for => sub {
          my ( $user, $filter ) = @_;
+         # Carp::shortmess is no good here as every test runs in the 'main' package
+         my $caller = sprintf "%s line %d.", (caller)[1,2];
 
-         repeat {
+         my $f = repeat {
             # Just replay saved ones the first time around, if there are any
             my $replay_saved = !shift && scalar @{ $user->saved_events };
 
@@ -139,6 +141,13 @@ prepare "Environment closures for stateful /event access",
                Future->done( $found );
             });
          } while => sub { !$_[0]->failure and !$_[0]->get };
+
+         return Future->wait_any(
+            $f,
+
+            delay( 10 )
+               ->then_fail( "Timed out waiting for an event at $caller\n" ),
+         );
       };
 
       Future->done(1);
