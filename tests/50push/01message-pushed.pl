@@ -105,22 +105,17 @@ multi_test "Test that a message is pushed",
 
          Future->needs_all(
             # TODO(check that the HTTP poke is actually the poke we wanted)
-            Future->wait_any(
-               $await_http_request->("/alice_push", sub {
-                  my ( $body ) = @_;
-                  return unless $body->{notification}{type};
-                  return unless $body->{notification}{type} eq "m.room.message";
-                  return 1;
-               })->then( sub {
-                  my ( $body, $request ) = @_;
+            $await_http_request->("/alice_push", sub {
+               my ( $body ) = @_;
+               return unless $body->{notification}{type};
+               return unless $body->{notification}{type} eq "m.room.message";
+               return 1;
+            })->then( sub {
+               my ( $body, $request ) = @_;
 
-                  $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
-                  Future->done( $body );
-               }),
-
-               delay( 10 )
-                  ->then_fail( "Timed out waiting for push" ),
-            ),
+               $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
+               Future->done( $body );
+            }),
 
             $do_request_json_for->( $bob,
                method  => "POST",
