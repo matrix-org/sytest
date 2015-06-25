@@ -1,6 +1,8 @@
 use File::Basename qw( dirname );
 use File::Slurp::Tiny qw( read_file );
 
+use Imager;
+
 my $dir = dirname __FILE__;
 
 test "POSTed media can be thumbnailed",
@@ -40,9 +42,11 @@ test "POSTed media can be thumbnailed",
       })->then( sub {
          my ( $body ) = @_;
 
-         log_if_fail "Thumbnail", $body;
+         my $image = Imager->new( data => $body )
+            or die "Unable to parse message body as image - " . Imager->errstr;
 
-         # TODO: test that it looks about right somehow
+         # TODO: assert on the size
+
          Future->done(1);
       });
    };
