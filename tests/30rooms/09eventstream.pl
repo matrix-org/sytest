@@ -37,18 +37,14 @@ multi_test "Check that event streams started after a client joined a room work (
          })->then( sub {
             my ( $body ) = @_;
             my $event_id = $body->{event_id};
+
             # Wait for the message we just sent.
-            Future->wait_any(
-                $await_event_for->( $alice, sub {
-                    my ( $event ) = @_;
-                    return unless $event->{type} eq "m.room.message";
-                    return unless $event->{event_id} eq $event_id;
-                    return 1;
-                }),
-                delay( 2 )->then_fail(
-                    "Timed out waiting for message for Alice"
-                )
-            );
+            $await_event_for->( $alice, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.message";
+               return unless $event->{event_id} eq $event_id;
+               return 1;
+            });
         })->then( sub {
             pass "Alice saw her message";
             Future->done(1);

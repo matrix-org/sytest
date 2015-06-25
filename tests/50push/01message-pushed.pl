@@ -48,19 +48,14 @@ multi_test "Test that a message is pushed",
          # We also wait for the push notification for it
 
          Future->needs_all(
-            Future->wait_any(
-               $await_event_for->( $bob, sub {
-                  my ( $event ) = @_;
-                  return unless $event->{type} eq "m.room.member" and
-                     $event->{room_id} eq $room->{room_id} and
-                     $event->{state_key} eq $bob->user_id and
-                     $event->{content}{membership} eq "invite";
-                  return 1;
-               }),
-
-               delay( 10 )
-                  ->then_fail( "Timed out waiting for invite" ),
-            ),
+            $await_event_for->( $bob, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.member" and
+                  $event->{room_id} eq $room->{room_id} and
+                  $event->{state_key} eq $bob->user_id and
+                  $event->{content}{membership} eq "invite";
+               return 1;
+            }),
 
             $do_request_json_for->( $alice,
                method  => "POST",
