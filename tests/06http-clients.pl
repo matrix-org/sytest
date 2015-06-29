@@ -11,6 +11,7 @@ prepare "Creating test HTTP clients",
       my @clients = map {
          my $location = $_;
          my $client = SyTest::HTTPClient->new(
+            max_connections_per_host => 3,
             uri_base => "$location/_matrix/client/api/v1",
          );
          $loop->add( $client );
