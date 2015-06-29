@@ -1,3 +1,6 @@
+use Future::Utils qw( fmap );
+use List::UtilsBy qw( partition_by );
+
 test "POST /rooms/:room_id/join can join a room",
    requires => [qw( do_request_json_for more_users room_id
                     can_get_room_membership )],
@@ -282,15 +285,33 @@ prepare "Creating test-room-creation helper function",
 
             log_if_fail "room_id=$room_id";
 
-            Future->needs_all( map {
-               my $user = $_;
-               $do_request_json_for->( $user,
-                  method => "POST",
-                  uri    => "/join/$room_alias_fullname",
+            # Best not to join remote users concurrently because of
+            #   https://matrix.org/jira/browse/SYN-318
+            my %members_by_server = partition_by { $_->http } @other_members;
 
-                  content => {},
-               )
-            } @other_members )
+            my @local_members = @{ delete $members_by_server{ $creator->http } // [] };
+            my @remote_members = map { @$_ } values %members_by_server;
+
+            Future->needs_all(
+               ( fmap {
+                  my $user = shift;
+                  $do_request_json_for->( $user,
+                     method => "POST",
+                     uri    => "/join/$room_alias_fullname",
+
+                     content => {},
+                  )
+               } foreach => \@remote_members ),
+
+               map {
+                  my $user = $_;
+                  $do_request_json_for->( $user,
+                     method => "POST",
+                     uri    => "/join/$room_alias_fullname",
+
+                     content => {},
+                  )
+               } @local_members )
          })->then( sub {
             return Future->done( $room_id ) unless $n_joiners;
 
