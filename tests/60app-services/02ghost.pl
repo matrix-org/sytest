@@ -29,6 +29,8 @@ multi_test "AS-ghosted users can use rooms via AS",
 
                $event->{room_id} eq $room_id or
                   die "Expected room_id to be $room_id";
+               $event->{state_key} eq $ghost->user_id or
+                  die "Expected state_key to be ${\$ghost->user_id}";
 
                require_json_keys( my $content = $event->{content}, qw( membership ) );
 
