@@ -59,7 +59,7 @@ prepare "Environment closures for receiving HTTP pokes",
       $loop->add( $http_server );
 
       my $await_http_request = sub {
-         my ( $pathmatch, $filter ) = @_;
+         my ( $pathmatch, $filter, %args ) = @_;
          # Carp::shortmess is no good here as every test runs in the 'main' package
          my $caller = sprintf "%s line %d.", (caller)[1,2];
 
@@ -67,10 +67,14 @@ prepare "Environment closures for receiving HTTP pokes",
 
          push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
 
+         my $timeout = $args{timeout} // 10;
+
+         return $f if !$timeout;
+
          return Future->wait_any(
             $f,
 
-            delay( 10 )
+            delay( $timeout )
                ->then_fail( "Timed out waiting for an HTTP request matching $pathmatch at $caller\n" ),
          );
       };
