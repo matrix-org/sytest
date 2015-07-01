@@ -20,14 +20,27 @@ prepare "Creating test helper functions",
    do => sub {
       my ( $await_http_request, $hs2as_token ) = @_;
 
+      # Map event types to ARRAYs of Futures
+      my %futures_by_type;
+
       provide await_as_event => sub {
          my ( $type ) = @_;
+         # Carp::shortmess is no good here as every test runs in the 'main' package
+         my $caller = sprintf "%s line %d.", (caller)[1,2];
 
-         $await_http_request->( qr{^/appserv/transactions/\d+$}, sub {
-            my ( $body ) = @_;
-            $body->{events} and
-               grep { $_->{type} eq $type } @{ $body->{events} }
-            }
+         push @{ $futures_by_type{$type} }, my $f = $loop->new_future;
+
+         return Future->wait_any(
+            $f,
+
+            delay( 10 )
+               ->then_fail( "Timed out waiting for an AS event of type $type at $caller\n" ),
+         );
+      };
+
+      my $f = repeat {
+         $await_http_request->( qr{^/appserv/transactions/\d+$}, sub { 1 },
+            timeout => 0,
          )->then( sub {
             my ( $body, $request ) = @_;
 
@@ -42,10 +55,30 @@ prepare "Creating test helper functions",
             $query_params{access_token} eq $hs2as_token or
                die "HS did not provide the correct token";
 
-            my ( $event ) = grep { $_->{type} eq $type } @{ $body->{events} };
-            Future->done( $event );
-         });
-      };
+            foreach my $event ( @{ $body->{events} } ) {
+               my $type = $event->{type};
+
+               my $queue = $futures_by_type{$type};
+
+               # Ignore any cancelled ones
+               shift @$queue while $queue and @$queue and $queue->[0]->is_cancelled;
+
+               if( $queue and my $f = shift @$queue ) {
+                  $f->done( $event );
+               }
+               else {
+                  print STDERR "Ignoring incoming AS event of type $type\n";
+               }
+            }
+
+            Future->done;
+         })
+      } while => sub { not $_[0]->failure };
+
+      $f->on_fail( sub { die $_[0] } );
+
+      # lifecycle it
+      $f->on_cancel( sub { undef $f } );
 
       Future->done(1);
    };
