@@ -123,3 +123,36 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
          )
       );
    };
+
+test "Events in rooms with AS-hosted room aliases are sent to AS server",
+   requires => [qw( do_request_json await_as_event
+                    can_join_room_by_alias )],
+
+   do => sub {
+      my ( $do_request_json, $await_as_event ) = @_;
+
+      Future->needs_all(
+         $await_as_event->( "m.room.message" )->then( sub {
+            my ( $event ) = @_;
+
+            log_if_fail "Event", $event;
+
+            require_json_keys( $event, qw( content room_id user_id ));
+
+            $event->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+
+            Future->done;
+         }),
+
+         $do_request_json->(
+            method => "POST",
+            uri    => "/rooms/$room_id/send/m.room.message",
+
+            content => {
+               msgtype => "m.text",
+               body    => "A message for the AS",
+            },
+         ),
+      );
+   };
