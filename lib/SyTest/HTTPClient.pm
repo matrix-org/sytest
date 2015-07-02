@@ -25,7 +25,7 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
-sub do_request
+sub full_uri_for
 {
    my $self = shift;
    my %params = @_;
@@ -38,6 +38,16 @@ sub do_request
       $uri->path( $uri->path . $params{uri} ); # In case of '#room' fragments
    }
    $uri->query_form( %{ $params{params} } ) if $params{params};
+
+   return $uri;
+}
+
+sub do_request
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $uri = $self->full_uri_for( %params );
 
    # Also set verify_mode = 0 to not complain about self-signed SSL certs
    $params{SSL_verify_mode} = 0;
