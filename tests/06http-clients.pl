@@ -3,12 +3,12 @@ use SyTest::HTTPClient;
 prepare "Creating test HTTP clients",
    requires => [qw( synapse_client_locations )],
 
-   provides => [qw( http_clients first_http_client v2_clients first_v2_client )],
+   provides => [qw( v1_clients first_v1_client v2_clients first_v2_client )],
 
    do => sub {
       my ( $locations ) = @_;
 
-      my @clients = map {
+      my @v1_clients = map {
          my $location = $_;
          my $client = SyTest::HTTPClient->new(
             max_connections_per_host => 3,
@@ -18,8 +18,8 @@ prepare "Creating test HTTP clients",
          $client;
       } @$locations;
 
-      provide http_clients => \@clients;
-      provide first_http_client => $clients[0];
+      provide v1_clients => \@v1_clients;
+      provide first_v1_client => $v1_clients[0];
 
       my @v2_clients = map {
          my $location = $_;

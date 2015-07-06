@@ -64,7 +64,7 @@ test "AS cannot create users outside its own namespace",
    };
 
 test "Regular users cannot register within the AS namespace",
-   requires => [qw( register_new_user first_http_client expect_http_4xx )],
+   requires => [qw( register_new_user first_v1_client expect_http_4xx )],
 
    do => sub {
       my ( $register_new_user, $http, $expect_http_4xx ) = @_;

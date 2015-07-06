@@ -1,5 +1,5 @@
 prepare "Creating special AS user",
-   requires => [qw( first_http_client as_credentials )],
+   requires => [qw( first_v1_client as_credentials )],
 
    provides => [qw( as_user )],
 

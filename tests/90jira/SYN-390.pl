@@ -1,5 +1,5 @@
 multi_test "Getting push rules doesn't corrupt the cache SYN-390",
-    requires => [qw( register_new_user http_clients do_request_json_for )],
+    requires => [qw( register_new_user v1_clients do_request_json_for )],
     do => sub {
         my ( $register_new_user, $clients, $do_request_json_for ) = @_;
         my $http = $clients->[0];

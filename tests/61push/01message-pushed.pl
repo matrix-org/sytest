@@ -1,6 +1,6 @@
 multi_test "Test that a message is pushed",
    requires => [qw(
-      http_clients do_request_json_for await_event_for flush_events_for
+      v1_clients do_request_json_for await_event_for flush_events_for
       test_http_server_uri_base await_http_request register_new_user_without_events
 
       can_register can_create_private_room

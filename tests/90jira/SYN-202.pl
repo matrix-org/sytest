@@ -1,5 +1,5 @@
 multi_test "Left room members do not cause problems for presence",
-   requires => [qw( register_new_user first_http_client make_test_room do_request_json_for more_users
+   requires => [qw( register_new_user first_v1_client make_test_room do_request_json_for more_users
                     can_leave_room can_room_initial_sync )],
 
    await => sub {
