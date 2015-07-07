@@ -1,7 +1,6 @@
 use List::Util qw( first );
 
 use Crypt::NaCl::Sodium;
-use MIME::Base64 qw( decode_base64 );
 
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
@@ -56,8 +55,7 @@ test "Federation key API allows unsigned requests for keys",
 
          log_if_fail "Key (base64)", $key;
 
-         require_base64_unpadded( $key );
-         $key = decode_base64( $key );
+         $key = require_base64_unpadded_and_decode( $key );
 
          exists $body->{signatures}{ $body->{server_name} }{$key_id} or
             die "Expected to find a signature by the server's own key";
@@ -65,8 +63,7 @@ test "Federation key API allows unsigned requests for keys",
 
          log_if_fail "Signature (base64)", $signature;
 
-         require_base64_unpadded( $signature );
-         $signature = decode_base64( $signature );
+         $signature = require_base64_unpadded_and_decode( $signature );
 
          my %to_sign = %$body;
          delete $to_sign{signatures};
@@ -121,7 +118,7 @@ test "Federation key API can act as a perspective server",
 
          # Just presume there's only one signature
          my ( $first_hs_sig ) = values %{ $key->{signatures}{$first_home_server} };
-         my $signature = decode_base64( $first_hs_sig );
+         my $signature = require_base64_unpadded_and_decode( $first_hs_sig );
 
          my $signed_bytes = $json_canon->encode( \%to_sign );
 
