@@ -1,3 +1,5 @@
+use List::Util qw( first );
+
 use Crypt::NaCl::Sodium;
 use MIME::Base64 qw( decode_base64 );
 
@@ -10,6 +12,8 @@ my $json_canon = JSON->new
 
 test "Federation key API allows unsigned requests for keys",
    requires => [qw( first_home_server http_client )],
+
+   provides => [qw( first_server_key )],
 
    check => sub {
       my ( $first_home_server, $client ) = @_;
@@ -25,7 +29,7 @@ test "Federation key API allows unsigned requests for keys",
          my ( $body ) = @_;
          log_if_fail "Key response", $body;
 
-         require_json_keys( $body, qw( server_name valid_until_ts signatures verify_keys tls_fingerprints ));
+         require_json_keys( $body, qw( server_name valid_until_ts signatures verify_keys old_verify_keys tls_fingerprints ));
 
          require_json_string( $body->{server_name} );
          $body->{server_name} eq $first_home_server or
@@ -78,6 +82,56 @@ test "Federation key API allows unsigned requests for keys",
          log_if_fail "Signed bytes", $signed_bytes ;
 
          $crypto_sign->verify( $signature, $signed_bytes, $key ) or
+            die "Signature verification failed";
+
+         # old_verify_keys is mandatory, even if it's empty
+         require_json_object( $body->{old_verify_keys} );
+
+         provide first_server_key => $key;
+
+         Future->done(1);
+      });
+   };
+
+test "Federation key API can act as a perspective server",
+   requires => [qw( first_home_server first_server_key local_server_name inbound_server http_client )],
+
+   check => sub {
+      my ( $first_home_server, $server_key, $local_server_name, $inbound_server, $client ) = @_;
+
+      my $key_id = $inbound_server->key_id;
+
+      # TODO: Key API might some day require this to be a signed request.
+      $client->do_request_json(
+         method => "GET",
+         uri    => "https://$first_home_server/_matrix/key/v2/query/$local_server_name/$key_id",
+      )->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Response", $body;
+
+         require_json_keys( $body, qw( server_keys ));
+         require_json_list( $body->{server_keys} );
+
+         my $key = first {
+            $_->{server_name} eq $local_server_name and exists $_->{verify_keys}{$key_id}
+         } @{ $body->{server_keys} };
+
+         $key or
+            die "Expected to find a response about $key_id from $local_server_name";
+
+         exists $key->{signatures}{$first_home_server} or
+            die "Expected the key to be signed by the first homeserver";
+
+         my %to_sign = %$key;
+         delete $to_sign{signatures};
+
+         # Just presume there's only one signature
+         my ( $first_hs_sig ) = values %{ $key->{signatures}{$first_home_server} };
+         my $signature = decode_base64( $first_hs_sig );
+
+         my $signed_bytes = $json_canon->encode( \%to_sign );
+
+         $crypto_sign->verify( $signature, $signed_bytes, $server_key ) or
             die "Signature verification failed";
 
          Future->done(1);

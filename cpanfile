@@ -12,6 +12,7 @@ requires 'IO::Socket::SSL';
 requires 'JSON';
 requires 'List::Util', '>= 1.33';
 requires 'List::UtilsBy';
+requires 'MIME::Base64';
 requires 'Module::Pluggable';
 requires 'Net::Async::HTTP', '>= 0.36';
 requires 'Net::Async::HTTP::Server';
