@@ -1,5 +1,6 @@
 # vim:ft=perl
 
+requires 'Crypt::NaCl::Sodium';  # this is a right pain to install... :/
 requires 'Data::Dump';
 requires 'File::Basename';
 requires 'File::Path';
