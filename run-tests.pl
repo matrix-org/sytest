@@ -20,8 +20,9 @@ use Struct::Dumb;
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
-   $_[1] == $IO::Async::Loop::ONE_TRUE_LOOP ? { dump => '$IO::Async::Loop::ONE_TRUE_LOOP' }
-                                            : undef;
+   Scalar::Util::refaddr($_[1]) == Scalar::Util::refaddr($IO::Async::Loop::ONE_TRUE_LOOP)
+      ? { dump => '$IO::Async::Loop::ONE_TRUE_LOOP' }
+      : undef;
 });
 
 use Module::Pluggable
