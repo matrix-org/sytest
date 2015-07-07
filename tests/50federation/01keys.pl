@@ -56,10 +56,7 @@ test "Federation key API allows unsigned requests for keys",
 
          log_if_fail "Key (base64)", $key;
 
-         $key =~ m([^A-Za-z0-9+/=]) and
-            die "Key contains invalid base64 characters";
-         $key =~ m(=) and
-            die "Key contains trailing padding";
+         require_base64_unpadded( $key );
          $key = decode_base64( $key );
 
          exists $body->{signatures}{ $body->{server_name} }{$key_id} or
@@ -68,10 +65,7 @@ test "Federation key API allows unsigned requests for keys",
 
          log_if_fail "Signature (base64)", $signature;
 
-         $signature =~ m([^A-Za-z0-9+/=]) and
-            die "Signature contains invalid base64 characters";
-         $signature =~ m(=) and
-            die "Signature contains trailing padding";
+         require_base64_unpadded( $signature );
          $signature = decode_base64( $signature );
 
          my %to_sign = %$body;

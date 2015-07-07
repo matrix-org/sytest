@@ -453,6 +453,17 @@ package assertions {
       my ( $str ) = @_;
       !ref $str and length $str or croak "Expected a non-empty JSON string";
    }
+
+   sub require_base64_unpadded
+   {
+      my ( $str ) = @_;
+      !ref $str or croak "Expected a plain string";
+
+      $str =~ m([^A-Za-z0-9+/=]) and
+         die "String contains invalid base64 characters";
+      $str =~ m(=) and
+         die "String contains trailing padding";
+   }
 }
 
 {
