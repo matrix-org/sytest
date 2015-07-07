@@ -69,7 +69,7 @@ test "Checking local federation server",
 
          require_json_keys( my $key = $body->{verify_keys}{$key_id}, qw( key ));
 
-         # TODO: check it's valid base64 WITHOUT the trailing padding
+         require_base64_unpadded( $key->{key} );
 
          keys %{ $body->{signatures} } or
             die "Expected some signatures";
@@ -77,8 +77,10 @@ test "Checking local federation server",
          $body->{signatures}{$local_server_name} or
             die "Expected a signature from $local_server_name";
 
-         $body->{signatures}{$local_server_name}{$key_id} or
+         my $signature = $body->{signatures}{$local_server_name}{$key_id} or
             die "Expected a signature from $local_server_name using $key_id";
+
+         require_base64_unpadded( $signature );
 
          # TODO: verify it?
 
