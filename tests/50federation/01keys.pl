@@ -2,12 +2,10 @@ use List::Util qw( first );
 
 use Crypt::NaCl::Sodium;
 
-my $crypto_sign = Crypt::NaCl::Sodium->sign;
+# WIP
+use Protocol::Matrix qw( encode_json_for_signing );
 
-my $json_canon = JSON->new
-                     ->convert_blessed
-                     ->canonical
-                     ->utf8;
+my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 test "Federation key API allows unsigned requests for keys",
    requires => [qw( first_home_server http_client )],
@@ -65,10 +63,7 @@ test "Federation key API allows unsigned requests for keys",
 
          $signature = require_base64_unpadded_and_decode( $signature );
 
-         my %to_sign = %$body;
-         delete $to_sign{signatures};
-
-         my $signed_bytes = $json_canon->encode( \%to_sign );
+         my $signed_bytes = encode_json_for_signing( $body );
 
          log_if_fail "Signed bytes", $signed_bytes ;
 
@@ -113,14 +108,11 @@ test "Federation key API can act as a perspective server",
          exists $key->{signatures}{$first_home_server} or
             die "Expected the key to be signed by the first homeserver";
 
-         my %to_sign = %$key;
-         delete $to_sign{signatures};
-
          # Just presume there's only one signature
          my ( $first_hs_sig ) = values %{ $key->{signatures}{$first_home_server} };
          my $signature = require_base64_unpadded_and_decode( $first_hs_sig );
 
-         my $signed_bytes = $json_canon->encode( \%to_sign );
+         my $signed_bytes = encode_json_for_signing( $key );
 
          $crypto_sign->verify( $signature, $signed_bytes, $server_key ) or
             die "Signature verification failed";

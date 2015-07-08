@@ -16,6 +16,7 @@ requires 'MIME::Base64';
 requires 'Module::Pluggable';
 requires 'Net::Async::HTTP', '>= 0.36';
 requires 'Net::Async::HTTP::Server';
+requires 'Protocol::Matrix';  ## WORK IN PROGRESS
 requires 'Struct::Dumb';
 requires 'URI::Escape';
 requires 'YAML';

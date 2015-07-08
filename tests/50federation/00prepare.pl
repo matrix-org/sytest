@@ -102,23 +102,11 @@ package SyTest::Federation::Server;
 use base qw( Net::Async::HTTP::Server );
 
 use Crypt::NaCl::Sodium;
-use MIME::Base64 (); # no import
+
+# WIP
+use Protocol::Matrix qw( encode_json_for_signing encode_base64_unpadded );
 
 BEGIN { __PACKAGE__->can( "make_request" ) or die "NaHTTP::Server too old" };
-
-my $json_canon;
-BEGIN {
-   $json_canon = JSON->new
-                     ->allow_blessed
-                     ->canonical
-                     ->utf8;
-}
-
-# A handy base64 encoder that doesn't split lines or append padding
-sub encode_base64
-{
-   return MIME::Base64::encode_base64( $_[0], "" ) =~ s/=+$//r;
-}
 
 sub _init
 {
@@ -161,13 +149,9 @@ sub sign_data
    my $self = shift;
    my ( $data ) = @_;
 
-   my %to_sign = %$data;
-   delete $to_sign{signatures};
-   delete $to_sign{unsigned};
+   my $signature = $self->{sign}->mac( encode_json_for_signing( $data ), $self->{skey} );
 
-   my $signature = $self->{sign}->mac( $json_canon->encode( \%to_sign ), $self->{skey} );
-
-   $data->{signatures}{ $self->{server_name} }{ $self->{key_id} } = encode_base64( $signature );
+   $data->{signatures}{ $self->{server_name} }{ $self->{key_id} } = encode_base64_unpadded( $signature );
 }
 
 sub on_request
@@ -210,12 +194,12 @@ sub on_request_key_v2_server
    my $response = {
       server_name => $self->{server_name},
       tls_fingerprints => [
-         { $algo => encode_base64( $fingerprint ) },
+         { $algo => encode_base64_unpadded( $fingerprint ) },
       ],
       valid_until_ts => ( time + 86400 ) * 1000, # +24h in msec
       verify_keys => {
          $self->key_id => {
-            key => encode_base64( $self->{pkey} ),
+            key => encode_base64_unpadded( $self->{pkey} ),
          },
       },
       old_verify_keys => {},
