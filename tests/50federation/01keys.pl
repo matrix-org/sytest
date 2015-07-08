@@ -2,7 +2,6 @@ use List::Util qw( first );
 
 use Crypt::NaCl::Sodium;
 
-# WIP
 use Protocol::Matrix qw( encode_json_for_signing );
 
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
