@@ -104,7 +104,7 @@ use base qw( Net::Async::HTTP::Server );
 use Crypt::NaCl::Sodium;
 
 # WIP
-use Protocol::Matrix qw( encode_json_for_signing encode_base64_unpadded );
+use Protocol::Matrix qw( sign_json encode_base64_unpadded );
 
 BEGIN { __PACKAGE__->can( "make_request" ) or die "NaHTTP::Server too old" };
 
@@ -113,8 +113,7 @@ sub _init
    my $self = shift;
    $self->SUPER::_init( @_ );
 
-   $self->{sign} = my $sign = Crypt::NaCl::Sodium->sign;
-   @{$self}{qw( pkey skey )} = $sign->keypair;
+   @{$self}{qw( pkey skey )} = Crypt::NaCl::Sodium->sign->keypair;
 
    $self->{key_id} = "ed25519:1";
 }
@@ -149,9 +148,11 @@ sub sign_data
    my $self = shift;
    my ( $data ) = @_;
 
-   my $signature = $self->{sign}->mac( encode_json_for_signing( $data ), $self->{skey} );
-
-   $data->{signatures}{ $self->{server_name} }{ $self->{key_id} } = encode_base64_unpadded( $signature );
+   sign_json( $data,
+      secret_key => $self->{skey},
+      origin     => $self->{server_name},
+      key_id     => $self->{key_id},
+   );
 }
 
 sub on_request
