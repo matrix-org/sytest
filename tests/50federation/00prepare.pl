@@ -1,6 +1,8 @@
 use File::Basename qw( dirname );
 use JSON qw( decode_json );
 
+use IO::Socket::IP 0.04; # ->sockhostname
+
 my $DIR = dirname( __FILE__ );
 
 prepare "Creating inbound federation HTTP server",
