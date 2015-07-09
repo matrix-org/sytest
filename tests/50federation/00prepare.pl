@@ -172,7 +172,15 @@ sub on_request
    while( @pc ) {
       push @trial, shift @pc;
       if( my $code = $self->can( "on_request_" . join "_", @trial ) ) {
-         return $code->( $self, $req, @pc );
+         $self->adopt_future(
+            $code->( $self, $req, @pc )->on_done( sub {
+               my ( $resp ) = @_;  # TODO: consider a type =>  ?
+               $self->sign_data( $resp );
+
+               $req->respond_json( $resp );
+            })
+         );
+         return;
       }
    }
 
@@ -193,7 +201,7 @@ sub on_request_key_v2_server
    my $algo = "sha256";
    my $fingerprint = Net::SSLeay::X509_digest( $cert, Net::SSLeay::EVP_get_digestbyname( $algo ) );
 
-   my $response = {
+   Future->done( {
       server_name => $self->{server_name},
       tls_fingerprints => [
          { $algo => encode_base64_unpadded( $fingerprint ) },
@@ -205,8 +213,5 @@ sub on_request_key_v2_server
          },
       },
       old_verify_keys => {},
-   };
-   $self->sign_data( $response );
-
-   $req->respond_json( $response );
+   } );
 }
