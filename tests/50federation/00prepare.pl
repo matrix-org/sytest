@@ -105,8 +105,6 @@ use Crypt::NaCl::Sodium;
 
 use Protocol::Matrix qw( sign_json encode_base64_unpadded );
 
-BEGIN { __PACKAGE__->can( "make_request" ) or die "NaHTTP::Server too old" };
-
 sub _init
 {
    my $self = shift;
