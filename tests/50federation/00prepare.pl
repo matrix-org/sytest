@@ -3,7 +3,11 @@ use JSON qw( decode_json );
 
 use IO::Socket::IP 0.04; # ->sockhostname
 
+use Crypt::NaCl::Sodium;
+
 my $DIR = dirname( __FILE__ );
+
+struct FederationParams => [qw( server_name key_id public_key secret_key )];
 
 prepare "Creating inbound federation HTTP server",
    provides => [qw( local_server_name inbound_server )],
@@ -31,8 +35,12 @@ prepare "Creating inbound federation HTTP server",
 
          provide local_server_name => $server_name;
 
+         my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
+
+         my $fedparams = FederationParams( $server_name, "ed25519:1", $pkey, $skey );
+
          $listener->configure(
-            server_name => $server_name,
+            federation_params => $fedparams,
          );
       });
    };
@@ -105,36 +113,24 @@ test "Checking local federation server",
 package SyTest::Federation::Server;
 use base qw( Net::Async::HTTP::Server );
 
-use Crypt::NaCl::Sodium;
-
 use Protocol::Matrix qw( sign_json encode_base64_unpadded );
-
-sub _init
-{
-   my $self = shift;
-   $self->SUPER::_init( @_ );
-
-   @{$self}{qw( pkey skey )} = Crypt::NaCl::Sodium->sign->keypair;
-
-   $self->{key_id} = "ed25519:1";
-}
-
-sub key_id
-{
-   my $self = shift;
-   return $self->{key_id};
-}
 
 sub configure
 {
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( server_name )) {
+   foreach (qw( federation_params )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
    $self->SUPER::configure( %params );
+}
+
+sub key_id
+{
+   my $self = shift;
+   return $self->{federation_params}->key_id;
 }
 
 sub make_request
@@ -163,10 +159,13 @@ sub on_request
          $self->adopt_future(
             $code->( $self, $req, @pc )->on_done( sub {
                my ( $resp ) = @_;  # TODO: consider a type =>  ?
+
+               my $fedparams = $self->{federation_params};
+
                sign_json( $resp,
-                  secret_key => $self->{skey},
-                  origin     => $self->{server_name},
-                  key_id     => $self->{key_id},
+                  secret_key => $fedparams->secret_key,
+                  origin     => $fedparams->server_name,
+                  key_id     => $fedparams->key_id,
                );
 
                $req->respond_json( $resp );
@@ -193,15 +192,17 @@ sub on_request_key_v2_server
    my $algo = "sha256";
    my $fingerprint = Net::SSLeay::X509_digest( $cert, Net::SSLeay::EVP_get_digestbyname( $algo ) );
 
+   my $fedparams = $self->{federation_params};
+
    Future->done( {
-      server_name => $self->{server_name},
+      server_name => $fedparams->server_name,
       tls_fingerprints => [
          { $algo => encode_base64_unpadded( $fingerprint ) },
       ],
       valid_until_ts => ( time + 86400 ) * 1000, # +24h in msec
       verify_keys => {
-         $self->key_id => {
-            key => encode_base64_unpadded( $self->{pkey} ),
+         $fedparams->key_id => {
+            key => encode_base64_unpadded( $fedparams->public_key ),
          },
       },
       old_verify_keys => {},
