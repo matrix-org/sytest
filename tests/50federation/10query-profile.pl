@@ -32,3 +32,42 @@ test "Outbound federation can query profile data",
          Future->done(1);
       });
    };
+
+my $dname = "Displayname Set For Federation Test";
+
+test "Inbound federation can query profile data",
+   requires => [qw( outbound_client do_request_json user
+                    can_set_displayname )],
+
+   do => sub {
+      my ( $outbound_client, $do_request_json, $user ) = @_;
+
+      $do_request_json->(
+         method => "PUT",
+         uri    => "/profile/:user_id/displayname",
+
+         content => {
+            displayname => $dname,
+         },
+      )->then( sub {
+         $outbound_client->do_request_json(
+            method => "GET",
+            uri    => "/query/profile",
+
+            params => {
+               user_id => $user->user_id,
+               field   => "displayname",
+            }
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Query response", $body;
+
+         require_json_keys( $body, qw( displayname ));
+
+         $body->{displayname} eq $dname or
+            die "Expected displayname to be '$dname'";
+
+         Future->done(1);
+      });
+   };
