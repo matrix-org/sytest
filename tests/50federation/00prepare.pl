@@ -144,18 +144,6 @@ sub make_request
    return SyTest::HTTPServer::Request->new( @_ );
 }
 
-sub sign_data
-{
-   my $self = shift;
-   my ( $data ) = @_;
-
-   sign_json( $data,
-      secret_key => $self->{skey},
-      origin     => $self->{server_name},
-      key_id     => $self->{key_id},
-   );
-}
-
 sub on_request
 {
    my $self = shift;
@@ -175,7 +163,11 @@ sub on_request
          $self->adopt_future(
             $code->( $self, $req, @pc )->on_done( sub {
                my ( $resp ) = @_;  # TODO: consider a type =>  ?
-               $self->sign_data( $resp );
+               sign_json( $resp,
+                  secret_key => $self->{skey},
+                  origin     => $self->{server_name},
+                  key_id     => $self->{key_id},
+               );
 
                $req->respond_json( $resp );
             })
