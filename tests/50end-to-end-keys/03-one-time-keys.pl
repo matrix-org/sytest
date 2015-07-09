@@ -7,7 +7,6 @@ multi_test "Can take one time key using POST",
             method => "POST",
             uri => "/keys/upload/alices_first_device",
             content => {
-                one_time_keys_valid_for => 60 * 60 * 1000,
                 one_time_keys => {
                     "test_algorithm:test_id", "test+base64+key"
                 }

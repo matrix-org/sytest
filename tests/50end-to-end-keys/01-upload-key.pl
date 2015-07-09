@@ -21,7 +21,6 @@ test "Can upload device keys",
                         user_id => "\@50-e2e-alice:localhost:8480",
                         device_id => "alices_first_device",
                     },
-                    one_time_keys_valid_for => 60 * 60 * 1000,
                     one_time_keys => {
                         "my_algorithm:my_id_1", "my+base64+key"
                     }
