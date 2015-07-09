@@ -1,4 +1,4 @@
-use Net::Async::HTTP::Server;
+use Net::Async::HTTP::Server 0.08;  # request_class
 use JSON qw( decode_json );
 use URI::Escape qw( uri_unescape );
 
@@ -20,9 +20,6 @@ prepare "Environment closures for receiving HTTP pokes",
       my $http_server = Net::Async::HTTP::Server->new(
          on_request => sub {
             my ( $self, $request ) = @_;
-
-            # TODO: This should be a parameter of NaH:Server
-            bless $request, "SyTest::HTTPServer::Request" if ref( $request ) eq "Net::Async::HTTP::Server::Request";
 
             my $method = $request->method;
             my $path = uri_unescape $request->path;
@@ -57,6 +54,11 @@ prepare "Environment closures for receiving HTTP pokes",
          }
       );
       $loop->add( $http_server );
+
+      # Upstream bug - this doesn't work at ->new time
+      $http_server->configure(
+         request_class => "SyTest::HTTPServer::Request",
+      );
 
       my $await_http_request = sub {
          my ( $pathmatch, $filter, %args ) = @_;
