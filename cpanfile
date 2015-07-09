@@ -1,6 +1,5 @@
 # vim:ft=perl
 
-requires 'Crypt::NaCl::Sodium';  # this is a right pain to install... :/
 requires 'Data::Dump';
 requires 'File::Basename';
 requires 'File::Path';
@@ -16,7 +15,10 @@ requires 'MIME::Base64';
 requires 'Module::Pluggable';
 requires 'Net::Async::HTTP', '>= 0.36';
 requires 'Net::Async::HTTP::Server', '>= 0.08';
-requires 'Protocol::Matrix';  ## WORK IN PROGRESS
+requires 'Protocol::Matrix';
 requires 'Struct::Dumb';
 requires 'URI::Escape';
 requires 'YAML';
+
+# this is a right pain to install; use libcrypt-nacl-sodium-perl from matrix.org package repo if at all possible
+requires 'Crypt::NaCl::Sodium';
