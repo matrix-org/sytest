@@ -9,10 +9,14 @@ my $DIR = dirname( __FILE__ );
 
 struct FederationParams => [qw( server_name key_id public_key secret_key )];
 
-prepare "Creating inbound federation HTTP server",
-   provides => [qw( local_server_name inbound_server )],
+prepare "Creating inbound federation HTTP server and outbound federation client",
+   requires => [qw( first_home_server )],
+
+   provides => [qw( local_server_name inbound_server outbound_client )],
 
    do => sub {
+      my ( $first_home_server ) = @_;
+
       my $inbound_server = SyTest::Federation::Server->new;
       $loop->add( $inbound_server );
 
@@ -42,6 +46,14 @@ prepare "Creating inbound federation HTTP server",
          $listener->configure(
             federation_params => $fedparams,
          );
+
+         my $outbound_client = SyTest::Federation::Client->new(
+            federation_params => $fedparams,
+            uri_base          => "https://$first_home_server/_matrix/federation/v1",
+         );
+         $loop->add( $outbound_client );
+
+         provide outbound_client => $outbound_client;
       });
    };
 
@@ -110,10 +122,10 @@ test "Checking local federation server",
       });
    };
 
-package SyTest::Federation::Server;
-use base qw( Net::Async::HTTP::Server );
+package SyTest::Federation::_Base;
 
-use Protocol::Matrix qw( sign_json encode_base64_unpadded );
+use mro 'c3';
+use Protocol::Matrix qw( sign_json );
 
 sub configure
 {
@@ -124,7 +136,7 @@ sub configure
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
-   $self->SUPER::configure( %params );
+   $self->next::method( %params );
 }
 
 sub key_id
@@ -132,6 +144,64 @@ sub key_id
    my $self = shift;
    return $self->{federation_params}->key_id;
 }
+
+sub sign_data
+{
+   my $self = shift;
+   my ( $data ) = @_;
+
+   my $fedparams = $self->{federation_params};
+
+   sign_json( $data,
+      secret_key => $fedparams->secret_key,
+      origin     => $fedparams->server_name,
+      key_id     => $fedparams->key_id,
+   );
+}
+
+package SyTest::Federation::Client;
+use base qw( SyTest::Federation::_Base SyTest::HTTPClient );
+
+sub do_request_json
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $uri = $self->full_uri_for( %params );
+
+   my $fedparams = $self->{federation_params};
+
+   my $origin = $fedparams->server_name;
+   my $key_id = $fedparams->key_id;
+
+   my %signing_block = (
+      method => "GET",
+      uri    => $uri->path_query,  ## TODO: Matrix spec is unclear on this bit
+      origin => $origin,
+      destination => $uri->authority,
+   );
+
+   if( defined $params{content} ) {
+      $signing_block{content} = $params{content};
+   }
+
+   $self->sign_data( \%signing_block );
+
+   my $signature = $signing_block{signatures}{$origin}{$key_id};
+
+   $self->SUPER::do_request_json(
+      %params,
+      headers => [
+         @{ $params{headers} || [] },
+         Authorization => "X-Matrix origin=$origin,key=$key_id,sig=$signature",
+      ],
+   );
+}
+
+package SyTest::Federation::Server;
+use base qw( SyTest::Federation::_Base Net::Async::HTTP::Server );
+
+use Protocol::Matrix qw( encode_base64_unpadded );
 
 sub make_request
 {
@@ -159,15 +229,7 @@ sub on_request
          $self->adopt_future(
             $code->( $self, $req, @pc )->on_done( sub {
                my ( $resp ) = @_;  # TODO: consider a type =>  ?
-
-               my $fedparams = $self->{federation_params};
-
-               sign_json( $resp,
-                  secret_key => $fedparams->secret_key,
-                  origin     => $fedparams->server_name,
-                  key_id     => $fedparams->key_id,
-               );
-
+               $self->sign_data( $resp );
                $req->respond_json( $resp );
             })
          );
