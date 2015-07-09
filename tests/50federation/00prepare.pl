@@ -12,6 +12,8 @@ prepare "Creating inbound federation HTTP server",
 
       provide inbound_server => $inbound_server;
 
+      require IO::Async::SSL;
+
       $inbound_server->listen(
          host    => "localhost",
          service => "",
