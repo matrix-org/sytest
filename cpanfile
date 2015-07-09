@@ -7,6 +7,7 @@ requires 'Future';
 requires 'Getopt::Long';
 requires 'IO::Async::Loop';
 requires 'IO::Async::SSL';
+requires 'IO::Socket::IP', '>= 0.04';
 requires 'IO::Socket::SSL';
 requires 'JSON';
 requires 'List::Util', '>= 1.33';
