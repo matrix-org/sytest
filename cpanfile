@@ -14,7 +14,7 @@ requires 'List::Util', '>= 1.33';
 requires 'List::UtilsBy';
 requires 'MIME::Base64';
 requires 'Module::Pluggable';
-requires 'Net::Async::HTTP', '>= 0.36';
+requires 'Net::Async::HTTP', '>= 0.39';
 requires 'Net::Async::HTTP::Server', '>= 0.08';
 requires 'Protocol::Matrix';
 requires 'Struct::Dumb';

@@ -2,6 +2,7 @@ use File::Basename qw( dirname );
 use JSON qw( decode_json );
 
 use IO::Socket::IP 0.04; # ->sockhostname
+Net::Async::HTTP->VERSION( '0.39' ); # ->GET with 'headers'
 
 use Crypt::NaCl::Sodium;
 
