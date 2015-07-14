@@ -162,6 +162,8 @@ sub sign_data
 package SyTest::Federation::Client;
 use base qw( SyTest::Federation::_Base SyTest::HTTPClient );
 
+use HTTP::Headers::Util qw( join_header_words );
+
 sub do_request_json
 {
    my $self = shift;
@@ -189,11 +191,20 @@ sub do_request_json
 
    my $signature = $signing_block{signatures}{$origin}{$key_id};
 
+   my $auth = "X-Matrix " . join_header_words(
+      [ origin => $origin ],
+      [ key    => $key_id ],
+      [ sig    => $signature ],
+   );
+
+   # TODO: SYN-437 synapse does not like OWS between auth-param elements
+   $auth =~ s/, +/,/g;
+
    $self->SUPER::do_request_json(
       %params,
       headers => [
          @{ $params{headers} || [] },
-         Authorization => "X-Matrix origin=$origin,key=$key_id,sig=$signature",
+         Authorization => $auth,
       ],
    );
 }
