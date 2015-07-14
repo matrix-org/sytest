@@ -1,4 +1,4 @@
-multi_test "Can take one time key using POST",
+multi_test "Can claim one time key using POST",
     requires => [qw(e2e_user_alice do_request_json_for e2e_can_upload_keys)],
     check => sub {
         my ($e2e_user_alice, $do_request_json_for) = @_;
@@ -28,7 +28,7 @@ multi_test "Can take one time key using POST",
             $do_request_json_for->(
                 $e2e_user_alice,
                 method => "POST",
-                uri => "/keys/take",
+                uri => "/keys/claim",
                 content => {
                     one_time_keys => {
                         $e2e_user_alice->user_id => {
