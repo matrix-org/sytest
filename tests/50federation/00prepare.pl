@@ -212,6 +212,11 @@ sub do_request_json
 package SyTest::Federation::Server;
 use base qw( SyTest::Federation::_Base Net::Async::HTTP::Server );
 
+no if $] >= 5.017011, warnings => 'experimental::smartmatch';
+use feature qw( switch );
+
+use Carp;
+
 use Protocol::Matrix qw( encode_base64_unpadded );
 
 sub make_request
@@ -238,9 +243,16 @@ sub on_request
       if( my $code = $self->can( "on_request_" . join "_", @trial ) ) {
          $self->adopt_future(
             $code->( $self, $req, @pc )->on_done( sub {
-               my ( $resp ) = @_;  # TODO: consider a type =>  ?
-               $self->sign_data( $resp );
-               $req->respond_json( $resp );
+               for ( shift ) {
+                  when( "json" ) {
+                     my ( $resp ) = @_;
+                     $self->sign_data( $resp );
+                     $req->respond_json( $resp );
+                  }
+                  default {
+                     croak "Unsure how to handle response type $_";
+                  }
+               }
             })
          );
          return;
@@ -266,7 +278,7 @@ sub on_request_key_v2_server
 
    my $fedparams = $self->{federation_params};
 
-   Future->done( {
+   Future->done( json => {
       server_name => $fedparams->server_name,
       tls_fingerprints => [
          { $algo => encode_base64_unpadded( $fingerprint ) },
