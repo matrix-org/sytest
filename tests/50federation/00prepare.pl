@@ -207,7 +207,6 @@ use Protocol::Matrix qw( encode_base64_unpadded );
 sub make_request
 {
    my $self = shift;
-   # This is to be found in tests/01http-server.pl
    return SyTest::HTTPServer::Request->new( @_ );
 }
 
