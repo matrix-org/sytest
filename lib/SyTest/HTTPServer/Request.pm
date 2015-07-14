@@ -4,7 +4,7 @@ use base qw( Net::Async::HTTP::Server::Request );
 
 # A somewhat-hackish way to give NaH:Server::Request objects a ->respond_json method
 
-use JSON qw( encode_json );
+use JSON qw( encode_json decode_json );
 
 use Carp;
 
@@ -14,6 +14,22 @@ sub DESTROY
    my $self = shift or return;
    return if $self->{__responded};
    carp "Destroying unresponded HTTP request to ${\$self->path}";
+}
+
+sub content_type_is_json
+{
+   my $self = shift;
+   return +( $self->header( "Content-Type" ) // "" ) eq "application/json";
+}
+
+sub body_json
+{
+   my $self = shift;
+
+   $self->content_type_is_json or
+      croak "Cannot ->body_json with non-application/json as content_type";
+
+   return decode_json $self->body;
 }
 
 sub respond

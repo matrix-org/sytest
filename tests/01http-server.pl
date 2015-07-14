@@ -1,5 +1,4 @@
 use Net::Async::HTTP::Server 0.08;  # request_class
-use JSON qw( decode_json );
 use URI::Escape qw( uri_unescape );
 
 use SyTest::HTTPClient;
@@ -25,10 +24,9 @@ prepare "Environment closures for receiving HTTP pokes",
             my $method = $request->method;
             my $path = uri_unescape $request->path;
 
-            my $content = $request->body;
-            if( ( $request->header( "Content-Type" ) // "" ) eq "application/json" ) {
-               $content = decode_json $content;
-            }
+            my $content = $request->content_type_is_json
+               ? $request->body_json
+               : $request->body;
 
             if( $CLIENT_LOG ) {
                print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
