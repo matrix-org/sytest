@@ -34,11 +34,14 @@ sub full_uri_for
    my $uri;
    if( defined $self->{uri_base} ) {
       $uri = URI->new( $self->{uri_base} );
-      if( defined $params{full_uri} ) {
-         $uri->path( $params{full_uri} );
+      if( !defined $params{full_uri} ) {
+         $uri->path( $uri->path . $params{uri} ); # In case of '#room' fragments
+      }
+      elsif( $params{full_uri} =~ m/^http/ ) {
+         $uri = URI->new( $params{full_uri} );
       }
       else {
-         $uri->path( $uri->path . $params{uri} ); # In case of '#room' fragments
+         $uri->path( $params{full_uri} );
       }
    }
    else {
