@@ -246,27 +246,31 @@ sub on_request
       return;
    }
 
-   # 'key' requests don't need to be signed
-   unless( $path =~ m{^key/} ) {
-      if( !eval { $self->_check_authorization( $req ); 1 } ) {
-         chomp( my $message = $@ );
+   $self->adopt_future(
+      ( # 'key' requests don't need to be signed
+         $path =~ m{^key/}
+            ? Future->done
+            : $self->_check_authorization( $req )
+      )->then( sub {
+         $self->_dispatch( $path, $req )
+      })->else_with_f( sub {
+         my ( $f, undef, $name ) = @_;
+         return $f unless $name eq "matrix_auth";
+
+         # Turn 'matrix_auth' failures into HTTP responses
+         my ( undef, $message ) = @_;
          my $body = encode_json {
             errcode => "M_UNAUTHORIZED",
             error   => $message,
          };
 
-         $req->respond( HTTP::Response->new(
+         Future->done( response => HTTP::Response->new(
             403, undef, [
                Content_Length => length $body,
                Content_Type   => "application/json",
             ], $body
          ) );
-         return;
-      }
-   }
-
-   $self->adopt_future(
-      $self->_dispatch( $path, $req )->on_done( sub {
+      })->on_done( sub {
          for ( shift ) {
             when( "response" ) {
                my ( $response ) = @_;
@@ -293,13 +297,13 @@ sub _check_authorization
    my $auth = $req->header( "Authorization" ) // "";
 
    $auth =~ s/^X-Matrix\s+// or
-      die "No Authorization of scheme X-Matrix\n";
+      return Future->fail( "No Authorization of scheme X-Matrix", matrix_auth => );
 
    # split_header_words gives us a list of two-element ARRAYrefs
    my %auth_params = map { @$_ } split_header_words( $auth );
 
    defined $auth_params{$_} or
-      die "Missing '$_' parameter to X-Matrix Authorization\n" for qw( origin key sig );
+      return Future->fail( "Missing '$_' parameter to X-Matrix Authorization", matrix_auth => ) for qw( origin key sig );
 
    my $origin = $auth_params{origin};
 
@@ -319,14 +323,14 @@ sub _check_authorization
       my $body = $req->body_json;
 
       $origin eq $body->{origin} or
-         die "'origin' in Authorization header does not match content";
+         return Future->fail( "'origin' in Authorization header does not match content", matrix_auth => );
 
       $to_sign{content} = $body;
    }
 
    # TODO: verify signature of %to_sign
 
-   return;
+   return Future->done;
 }
 
 sub _dispatch
