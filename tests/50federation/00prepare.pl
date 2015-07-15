@@ -224,6 +224,8 @@ use feature qw( switch );
 use Carp;
 
 use Protocol::Matrix qw( encode_base64_unpadded );
+use HTTP::Headers::Util qw( split_header_words );
+use JSON qw( encode_json );
 
 sub make_request
 {
@@ -236,6 +238,8 @@ sub on_request
    my $self = shift;
    my ( $req ) = @_;
 
+   ::log_if_fail "Incoming federation request", $req;
+
    my $path = $req->path;
    unless( $path =~ s{^/_matrix/}{} ) {
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
@@ -243,6 +247,26 @@ sub on_request
    }
 
    my @pc = split m{/}, $path;
+
+   # 'key' requests don't need to be signed
+   unless( $pc[0] eq "key" ) {
+      if( !eval { $self->_check_authorization( $req ); 1 } ) {
+         chomp( my $message = $@ );
+         my $body = encode_json {
+            errcode => "M_UNAUTHORIZED",
+            error   => $message,
+         };
+
+         $req->respond( HTTP::Response->new(
+            403, undef, [
+               Content_Length => length $body,
+               Content_Type   => "application/json",
+            ], $body
+         ) );
+         return;
+      }
+   }
+
    my @trial;
    while( @pc ) {
       push @trial, shift @pc;
@@ -268,6 +292,50 @@ sub on_request
    print STDERR "TODO: Respond to request to /_matrix/${\join '/', @trial}\n";
 
    $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
+}
+
+sub _check_authorization
+{
+   my $self = shift;
+   my ( $req ) = @_;
+
+   my $auth = $req->header( "Authorization" ) // "";
+
+   $auth =~ s/^X-Matrix\s+// or
+      die "No Authorization of scheme X-Matrix\n";
+
+   # split_header_words gives us a list of two-element ARRAYrefs
+   my %auth_params = map { @$_ } split_header_words( $auth );
+
+   defined $auth_params{$_} or
+      die "Missing '$_' parameter to X-Matrix Authorization\n" for qw( origin key sig );
+
+   my $origin = $auth_params{origin};
+
+   my %to_sign = (
+      method      => $req->method,
+      uri         => $req->as_http_request->uri->path_query,
+      origin      => $origin,
+      destination => $self->server_name,
+      signatures  => {
+         $origin => {
+            $auth_params{key} => $auth_params{sig},
+         },
+      },
+   );
+
+   if( length $req->body ) {
+      my $body = $req->body_json;
+
+      $origin eq $body->{origin} or
+         die "'origin' in Authorization header does not match content";
+
+      $to_sign{content} = $body;
+   }
+
+   # TODO: verify signature of %to_sign
+
+   return;
 }
 
 sub on_request_key_v2_server
