@@ -139,6 +139,12 @@ sub configure
    $self->next::method( %params );
 }
 
+sub server_name
+{
+   my $self = shift;
+   return $self->{federation_params}->server_name;
+}
+
 sub key_id
 {
    my $self = shift;
