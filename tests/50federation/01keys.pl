@@ -79,17 +79,16 @@ test "Federation key API allows unsigned requests for keys",
    };
 
 test "Federation key API can act as a perspective server",
-   requires => [qw( first_home_server first_server_key local_server_name inbound_server http_client )],
+   requires => [qw( first_home_server first_server_key local_server_name inbound_server outbound_client )],
 
    check => sub {
       my ( $first_home_server, $server_key, $local_server_name, $inbound_server, $client ) = @_;
 
       my $key_id = $inbound_server->key_id;
 
-      # TODO: Key API might some day require this to be a signed request.
       $client->do_request_json(
-         method => "GET",
-         uri    => "https://$first_home_server/_matrix/key/v2/query/$local_server_name/$key_id",
+         method   => "GET",
+         full_uri => "/_matrix/key/v2/query/$local_server_name/$key_id",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "Response", $body;
