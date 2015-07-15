@@ -246,10 +246,8 @@ sub on_request
       return;
    }
 
-   my @pc = split m{/}, $path;
-
    # 'key' requests don't need to be signed
-   unless( $pc[0] eq "key" ) {
+   unless( $path =~ m{^key/} ) {
       if( !eval { $self->_check_authorization( $req ); 1 } ) {
          chomp( my $message = $@ );
          my $body = encode_json {
@@ -267,31 +265,24 @@ sub on_request
       }
    }
 
-   my @trial;
-   while( @pc ) {
-      push @trial, shift @pc;
-      if( my $code = $self->can( "on_request_" . join "_", @trial ) ) {
-         $self->adopt_future(
-            $code->( $self, $req, @pc )->on_done( sub {
-               for ( shift ) {
-                  when( "json" ) {
-                     my ( $resp ) = @_;
-                     $self->sign_data( $resp );
-                     $req->respond_json( $resp );
-                  }
-                  default {
-                     croak "Unsure how to handle response type $_";
-                  }
-               }
-            })
-         );
-         return;
-      }
-   }
-
-   print STDERR "TODO: Respond to request to /_matrix/${\join '/', @trial}\n";
-
-   $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
+   $self->adopt_future(
+      $self->_dispatch( $path, $req )->on_done( sub {
+         for ( shift ) {
+            when( "response" ) {
+               my ( $response ) = @_;
+               $req->respond( $response );
+            }
+            when( "json" ) {
+               my ( $data ) = @_;
+               $self->sign_data( $data );
+               $req->respond_json( $data );
+            }
+            default {
+               croak "Unsure how to handle response type $_";
+            }
+         }
+      })
+   );
 }
 
 sub _check_authorization
@@ -336,6 +327,30 @@ sub _check_authorization
    # TODO: verify signature of %to_sign
 
    return;
+}
+
+sub _dispatch
+{
+   my $self = shift;
+   my ( $path, $req ) = @_;
+
+   my @pc = split m{/}, $path;
+   my @trial;
+   while( @pc ) {
+      push @trial, shift @pc;
+      if( my $code = $self->can( "on_request_" . join "_", @trial ) ) {
+         return $code->( $self, $req, @pc );
+      }
+   }
+
+   print STDERR "TODO: Respond to request to /_matrix/${\join '/', @trial}\n";
+
+   return Future->done(
+      response => HTTP::Response->new(
+         404, "Not Found",
+         [ Content_Length => 0 ],
+      )
+   );
 }
 
 sub on_request_key_v2_server
