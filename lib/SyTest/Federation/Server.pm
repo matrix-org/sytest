@@ -43,8 +43,6 @@ sub on_request
    my $self = shift;
    my ( $req ) = @_;
 
-   ::log_if_fail "Incoming federation request", $req;
-
    my $path = $req->path;
    unless( $path =~ s{^/_matrix/}{} ) {
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
