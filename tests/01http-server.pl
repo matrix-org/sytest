@@ -1,3 +1,4 @@
+use List::UtilsBy 0.10 qw( extract_first_by );
 use Net::Async::HTTP::Server 0.08;  # request_class
 use URI::Escape qw( uri_unescape );
 
@@ -35,21 +36,22 @@ prepare "Environment closures for receiving HTTP pokes",
                print STDERR "-- \n";
             }
 
-            foreach my $idx ( 0 .. $#pending_awaiters ) {
-               my $awaiter = $pending_awaiters[$idx];
+            my $awaiter = extract_first_by {
+               my $pathmatch = $_->pathmatch;
+               return 0 unless ( !ref $pathmatch and $path eq $pathmatch ) or
+                               ( ref $pathmatch  and $path =~ $pathmatch );
 
-               my $pathmatch = $awaiter->pathmatch;
-               next unless ( !ref $pathmatch and $path eq $pathmatch ) or
-                           ( ref $pathmatch  and $path =~ $pathmatch );
+               return 0 if $_->filter and not $_->filter->( $content );
 
-               next if $awaiter->filter and not $awaiter->filter->( $content );
+               return 1;
+            } @pending_awaiters;
 
-               splice @pending_awaiters, $idx, 1, ();
+            if( $awaiter ) {
                $awaiter->future->done( $content, $request );
-               return;
             }
-
-            warn "Received spurious HTTP request to $path\n";
+            else {
+               warn "Received spurious HTTP request to $path\n";
+            }
          }
       );
       $loop->add( $http_server );
