@@ -43,15 +43,21 @@ prepare "Creating inbound federation HTTP server and outbound federation client"
 
          my $fedparams = FederationParams( $server_name, "ed25519:1", $pkey, $skey );
 
-         $listener->configure(
-            federation_params => $fedparams,
-         );
+         # For now, the federation keystore is just a hash keyed on "origin/keyid"
+         my $keystore = {};
 
          my $outbound_client = SyTest::Federation::Client->new(
             federation_params => $fedparams,
+            keystore          => $keystore,
             uri_base          => "https://$first_home_server/_matrix/federation/v1",
          );
          $loop->add( $outbound_client );
+
+         $listener->configure(
+            federation_params => $fedparams,
+            keystore          => $keystore,
+            client            => $outbound_client,
+         );
 
          provide outbound_client => $outbound_client;
       });
@@ -132,7 +138,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( federation_params )) {
+   foreach (qw( federation_params keystore )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -165,10 +171,47 @@ sub sign_data
    );
 }
 
+sub get_key
+{
+   my $self = shift;
+   my %params = @_;
+
+   # hashes have keys. not the same as crypto keys. Grr.
+   my $hk = "$params{server_name}:$params{key_id}";
+
+   $self->{keystore}{$hk} //= $self->_fetch_key( $params{server_name}, $params{key_id} );
+}
+
 package SyTest::Federation::Client;
 use base qw( SyTest::Federation::_Base SyTest::HTTPClient );
 
+use MIME::Base64 qw( decode_base64 );
 use HTTP::Headers::Util qw( join_header_words );
+
+sub _fetch_key
+{
+   my $self = shift;
+   my ( $server_name, $key_id ) = @_;
+
+   $self->do_request_json(
+      method   => "GET",
+      full_uri => "https://$server_name/_matrix/key/v2/server/$key_id",
+   )->then( sub {
+      my ( $body ) = @_;
+
+      defined $body->{server_name} and $body->{server_name} eq $server_name or
+         return Future->fail( "Response 'server_name' does not match", matrix => );
+
+      $body->{verify_keys} and $body->{verify_keys}{$key_id} and my $key = $body->{verify_keys}{$key_id}{key} or
+         return Future->fail( "Response did not provide key '$key_id'", matrix => );
+
+      $key = decode_base64( $key );
+
+      # TODO: Check the self-signedness of the key response
+
+      Future->done( $key );
+   });
+}
 
 sub do_request_json
 {
@@ -223,9 +266,27 @@ use feature qw( switch );
 
 use Carp;
 
-use Protocol::Matrix qw( encode_base64_unpadded );
+use Protocol::Matrix qw( encode_base64_unpadded verify_json_signature );
 use HTTP::Headers::Util qw( split_header_words );
 use JSON qw( encode_json );
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   foreach (qw( client )) {
+      $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   return $self->SUPER::configure( %params );
+}
+
+sub _fetch_key
+{
+   my $self = shift;
+   return $self->{client}->_fetch_key( @_ );
+}
 
 sub make_request
 {
@@ -307,7 +368,7 @@ sub _check_authorization
 
    my $origin = $auth_params{origin};
 
-   my %to_sign = (
+   my %to_verify = (
       method      => $req->method,
       uri         => $req->as_http_request->uri->path_query,
       origin      => $origin,
@@ -325,12 +386,24 @@ sub _check_authorization
       $origin eq $body->{origin} or
          return Future->fail( "'origin' in Authorization header does not match content", matrix_auth => );
 
-      $to_sign{content} = $body;
+      $to_verify{content} = $body;
    }
 
-   # TODO: verify signature of %to_sign
+   $self->get_key(
+      server_name => $origin,
+      key_id      => $auth_params{key},
+   )->then( sub {
+      my ( $public_key ) = @_;
 
-   return Future->done;
+      eval { verify_json_signature( \%to_verify,
+         public_key => $public_key,
+         origin     => $auth_params{origin},
+         key_id     => $auth_params{key}
+      ) } and return Future->done;
+
+      chomp ( my $message = $@ );
+      return Future->fail( $message, matrix_auth => );
+   });
 }
 
 sub _dispatch
