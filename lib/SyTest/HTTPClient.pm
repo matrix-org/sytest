@@ -118,6 +118,9 @@ package JSON::number {
       return bless \$value, $class;
    }
 
+   # By this even more terrible hack we can be both a function name and a package
+   sub JSON::number { JSON::number::->new( $_[0] ) }
+
    sub TO_JSON { 0 + ${ $_[0] } }
 
    Data::Dump::Filtered::add_dump_filter( sub {
@@ -134,7 +137,7 @@ sub wrap_numbers
 {
    my ( $d ) = @_;
    if( defined $d and !ref $d and !SvPOK $d ) {
-      return JSON::number->new( $d );
+      return JSON::number( $d );
    }
    elsif( ref $d eq "ARRAY" ) {
       return [ map wrap_numbers($_), @$d ];
