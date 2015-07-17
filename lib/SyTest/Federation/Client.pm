@@ -46,7 +46,7 @@ sub do_request_json
    my $key_id = $fedparams->key_id;
 
    my %signing_block = (
-      method => "GET",
+      method => $params{method},
       uri    => $uri->path_query,  ## TODO: Matrix spec is unclear on this bit
       origin => $origin,
       destination => $uri->authority,
