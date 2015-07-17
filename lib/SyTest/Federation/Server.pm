@@ -10,9 +10,13 @@ use feature qw( switch );
 
 use Carp;
 
+use List::UtilsBy qw( extract_first_by );
 use Protocol::Matrix qw( encode_base64_unpadded verify_json_signature );
 use HTTP::Headers::Util qw( split_header_words );
 use JSON qw( encode_json );
+
+use Struct::Dumb qw( struct );
+struct Awaiter => [qw( type matcher f )];
 
 sub configure
 {
@@ -199,6 +203,50 @@ sub on_request_key_v2_server
       },
       old_verify_keys => {},
    } );
+}
+
+sub on_request_federation_v1_send
+{
+   my $self = shift;
+   my ( $req, $tid ) = @_;
+
+   my $body = $req->body_json;
+
+   my $origin = $body->{origin};
+
+   foreach my $edu ( @{ $body->{edus} } ) {
+      next if $self->on_edu( $edu, $origin );
+
+      print STDERR "TODO: Unhandled incoming EDU of type '$edu->{edu_type}'\n";
+   }
+
+   Future->done( json => {} );
+}
+
+sub await_edu
+{
+   my $self = shift;
+   my ( $edu_type, $matcher ) = @_;
+
+   push @{ $self->{edu_waiters} }, Awaiter( $edu_type, $matcher, my $f = $self->loop->new_future );
+
+   return $f;
+}
+
+sub on_edu
+{
+   my $self = shift;
+   my ( $edu, $origin ) = @_;
+
+   my $edu_type = $edu->{edu_type};
+
+   my $awaiter = extract_first_by {
+      $_->type eq $edu_type and ( not $_->matcher or $_->matcher->( $edu, $origin ) )
+   } @{ $self->{edu_waiters} //= [] } or
+      return;
+
+   $awaiter->f->done( $edu, $origin );
+   return 1;
 }
 
 1;
