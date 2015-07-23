@@ -99,7 +99,7 @@ sub diag
 }
 
 package SyTest::Output::TAP::Test {
-   sub new { my $class = shift; bless { @_ }, $class }
+   sub new { my $class = shift; bless { subnum => 0, @_ }, $class }
 
    sub name            { shift->{name}        }
    sub num             { shift->{num}         }

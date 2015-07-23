@@ -2,7 +2,7 @@
 my $REMOTE_USERS = 2;
 
 prepare "Remote users",
-   requires => [qw( register_new_user http_clients can_register )],
+   requires => [qw( register_new_user v1_clients can_register )],
 
    provides => [qw( remote_users )],
 

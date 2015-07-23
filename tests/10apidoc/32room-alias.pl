@@ -4,7 +4,7 @@ test "PUT /directory/room/:room_alias creates alias",
    requires => [qw( do_request_json room_id first_home_server
                     can_create_room )],
 
-   provides => [qw( can_create_room_alias )],
+   provides => [qw( can_create_room_alias can_lookup_room_alias )],
 
    do => sub {
       my ( $do_request_json, $room_id, $first_home_server ) = @_;
@@ -17,7 +17,9 @@ test "PUT /directory/room/:room_alias creates alias",
          content => {
             room_id => $room_id,
          },
-      );
+      )->on_done( sub {
+         provide can_create_room_alias => 1;
+      })
    },
 
    check => sub {
@@ -35,7 +37,7 @@ test "PUT /directory/room/:room_alias creates alias",
 
          $body->{room_id} eq $room_id or die "Expected room_id";
 
-         provide can_create_room_alias => 1;
+         provide can_lookup_room_alias => 1;
 
          Future->done(1);
       });

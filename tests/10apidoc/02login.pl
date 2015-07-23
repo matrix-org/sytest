@@ -2,7 +2,7 @@
 struct User => [qw( http user_id access_token eventstream_token saved_events pending_get_events )];
 
 test "GET /login yields a set of flows",
-   requires => [qw( first_http_client )],
+   requires => [qw( first_v1_client )],
 
    provides => [qw( can_login_password_flow )],
 
@@ -40,7 +40,7 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [qw( first_http_client can_register can_login_password_flow )],
+   requires => [qw( first_v1_client can_register can_login_password_flow )],
 
    provides => [qw( can_login user first_home_server do_request_json_for do_request_json )],
 

@@ -1,5 +1,5 @@
 test "GET /register yields a set of flows",
-   requires => [qw( first_http_client )],
+   requires => [qw( first_v1_client )],
 
    provides => [qw( can_register_password_flow )],
 
@@ -40,7 +40,7 @@ test "GET /register yields a set of flows",
 my $password = "s3kr1t";
 
 test "POST /register can create a user",
-   requires => [qw( first_http_client can_register_password_flow )],
+   requires => [qw( first_v1_client can_register_password_flow )],
 
    provides => [qw( can_register )],
 

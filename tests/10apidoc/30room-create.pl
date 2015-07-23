@@ -127,7 +127,7 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_http_client room_id can_create_room )],
+   requires => [qw( first_v1_client room_id can_create_room )],
 
    check => sub {
       my ( $http, $room_id ) = @_;

@@ -1,5 +1,5 @@
 multi_test "Check that event streams started after a client joined a room work (SYT-1)",
-    requires => [qw( first_http_client register_new_user_without_events do_request_json_for await_event_for flush_events_for
+    requires => [qw( first_v1_client register_new_user_without_events do_request_json_for await_event_for flush_events_for
                      can_register can_create_private_room )],
 
     do => sub {

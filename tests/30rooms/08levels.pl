@@ -3,16 +3,23 @@ use List::Util qw( first );
 my $room_id;
 
 prepare "Creating a new test room",
-   requires => [qw( make_test_room local_users )],
+   requires => [qw( make_test_room change_room_powerlevels local_users )],
 
    do => sub {
-      my ( $make_test_room, $local_users ) = @_;
+      my ( $make_test_room, $change_room_powerlevels, $local_users ) = @_;
       my $creator   = $local_users->[0];
       my $test_user = $local_users->[1];
 
       $make_test_room->( $creator, $test_user )
          ->on_done( sub {
             ( $room_id ) = @_;
+         })->then( sub {
+            $change_room_powerlevels->( $creator, $room_id, sub {
+               my ( $levels ) = @_;
+
+               # Allow users at 80 or above to edit any of the room state
+               $_ > 80 and $_ = 80 for values %{ $levels->{events} };
+            })
          });
    };
 
@@ -51,10 +58,10 @@ sub test_powerlevel
          })->then( sub {
             pass( "Fails at powerlevel 0" );
 
-            # Succeeds at powerlevel 100
+            # Succeeds at powerlevel 80
             $change_room_powerlevels->( $user, $room_id, sub {
                my ( $levels ) = @_;
-               $levels->{users}{ $test_user->user_id } = 100;
+               $levels->{users}{ $test_user->user_id } = 80;
             })
          })->then( sub {
             $do->( @dependencies );

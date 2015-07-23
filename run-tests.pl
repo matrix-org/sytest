@@ -20,8 +20,9 @@ use Struct::Dumb;
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
-   $_[1] == $IO::Async::Loop::ONE_TRUE_LOOP ? { dump => '$IO::Async::Loop::ONE_TRUE_LOOP' }
-                                            : undef;
+   Scalar::Util::refaddr($_[1]) == Scalar::Util::refaddr($IO::Async::Loop::ONE_TRUE_LOOP)
+      ? { dump => '$IO::Async::Loop::ONE_TRUE_LOOP' }
+      : undef;
 });
 
 use Module::Pluggable
@@ -412,7 +413,8 @@ sub prepare
 #    package so that croak will find the correct line number
 package assertions {
    use Carp;
-   use Scalar::Util qw( looks_like_number );
+
+   use MIME::Base64 qw( decode_base64 );
 
    sub require_json_object
    {
@@ -438,7 +440,8 @@ package assertions {
    sub require_json_number
    {
       my ( $num ) = @_;
-      !ref $num and looks_like_number( $num ) or croak "Expected a JSON number";
+      # Our hacked-up JSON decoder represents numbers as JSON::number instances
+      ref $num eq "JSON::number" or croak "Expected a JSON number";
    }
 
    sub require_json_string
@@ -451,6 +454,24 @@ package assertions {
    {
       my ( $str ) = @_;
       !ref $str and length $str or croak "Expected a non-empty JSON string";
+   }
+
+   sub require_base64_unpadded
+   {
+      my ( $str ) = @_;
+      !ref $str or croak "Expected a plain string";
+
+      $str =~ m([^A-Za-z0-9+/=]) and
+         die "String contains invalid base64 characters";
+      $str =~ m(=) and
+         die "String contains trailing padding";
+   }
+
+   sub require_base64_unpadded_and_decode
+   {
+      my ( $str ) = @_;
+      require_base64_unpadded $str;
+      return decode_base64 $str;
    }
 }
 
