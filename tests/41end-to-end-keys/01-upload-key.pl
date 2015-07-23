@@ -1,6 +1,6 @@
 test "Can upload device keys",
     requires => [qw(
-        register_new_user first_http_client first_v2_client do_request_json_for
+        register_new_user first_v1_client first_v2_client do_request_json_for
         can_register
     )],
     provides => [qw(e2e_user_alice e2e_can_upload_keys)],
