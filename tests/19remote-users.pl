@@ -23,3 +23,26 @@ prepare "Remote users",
          Future->done();
       });
    };
+
+prepare "Remote v2 users",
+   requires => [qw( register_new_user v1_clients v2_clients can_register )],
+
+   provides => [qw( remote_v2_users )],
+
+   do => sub {
+      my ( $register_new_user, $clients, $clients_v2 ) = @_;
+      my $http = $clients->[1];
+
+      Future->needs_all( map {
+         my $uid = "19remote-v2-users-$_";
+
+         $register_new_user->( $http, $uid )
+      } 1 .. $REMOTE_USERS
+      )->then( sub {
+         my @users = @_;
+         map { $_->http = $clients_v2->[1] } @users;
+         provide remote_v2_users => \@users;
+
+         Future->done();
+      });
+   };
