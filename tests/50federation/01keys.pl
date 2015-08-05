@@ -78,7 +78,7 @@ test "Federation key API allows unsigned requests for keys",
       });
    };
 
-test "Federation key API can act as a perspective server",
+test "Federation key API can act as a notary server",
    requires => [qw( first_home_server first_server_key local_server_name inbound_server outbound_client )],
 
    check => sub {
