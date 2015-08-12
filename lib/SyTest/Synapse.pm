@@ -9,7 +9,6 @@ use IO::Async::Process;
 use IO::Async::FileStream;
 
 use Cwd qw( getcwd abs_path );
-use File::Basename;
 use File::Path qw( make_path );
 use List::Util qw( any );
 
@@ -84,12 +83,13 @@ sub start
    my $port = $self->{port};
    my $output = $self->{output};
 
-   my $db_config_path = "$self->{hs_dir}/database.yaml";
+   my $db_config_path = "database.yaml";
+   my $db_config_abs_path = "$self->{hs_dir}/${db_config_path}";
    my $db  = ":memory:"; #"$hs_dir/homeserver.db";
 
    my ( $db_type, %db_args, $db_config );
-   if( -f $db_config_path ) {
-      $db_config = YAML::LoadFile( $db_config_path );
+   if( -f $db_config_abs_path ) {
+      $db_config = YAML::LoadFile( $db_config_abs_path );
       if( $db_config->{name} eq "psycopg2") {
           $db_type = "pg";
           %db_args = %{ $db_config->{args} };
@@ -99,16 +99,14 @@ sub start
           $db_args{path} = $db_config->{args}->{database};
       }
       else {
-         die "Unrecognised DB type '$db_config->{name}' in $db_config_path";
+         die "Unrecognised DB type '$db_config->{name}' in $db_config_abs_path";
       }
    }
    else {
       $db_type = "sqlite";
       $db_args{path} = $db;
       $db_config = { name => "sqlite3", args => { database => $db } };
-      my $db_dir = dirname($db_config_path);
-      -d $db_dir or make_path $db_dir;
-      YAML::DumpFile( $db_config_path, $db_config );
+      $self->write_yaml_file( $db_config_path, $db_config );
    }
 
    if( defined $db_type ) {
