@@ -9,6 +9,7 @@ use IO::Async::Process;
 use IO::Async::FileStream;
 
 use Cwd qw( getcwd abs_path );
+use File::Basename;
 use File::Path qw( make_path );
 use List::Util qw( any );
 
@@ -105,6 +106,8 @@ sub start
       $db_type = "sqlite";
       $db_args{path} = $db;
       $db_config = { name => "sqlite3", args => { database => $db } };
+      my $db_dir = dirname($db_config_path);
+      -d $db_dir or make_path $db_dir;
       YAML::DumpFile( $db_config_path, $db_config );
    }
 
