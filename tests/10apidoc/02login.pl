@@ -65,8 +65,9 @@ test "POST /login can log in as a user",
          provide can_login => 1;
 
          my $access_token = $body->{access_token};
+         my $refresh_token = $body->{refresh_token};
 
-         provide user => my $user = User( $http, $user_id, $access_token, undef, undef, [], undef );
+         provide user => my $user = User( $http, $user_id, $access_token, $refresh_token, undef, [], undef );
 
          provide first_home_server => $body->{home_server};
 
@@ -138,4 +139,69 @@ test "POST /login wrong password is rejected",
             Future->done(1);
          },
       );
+   };
+
+test "POST /tokenrefresh invalidates old refresh token",
+   requires => [qw( first_v2_client user )],
+   provides => [qw( refreshed_user )],
+
+   do => sub {
+      my ( $http, $old_user ) = @_;
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/tokenrefresh",
+
+         content => {
+            refresh_token => $old_user->refresh_token,
+         },
+      )->then(
+         sub {
+            my ( $body ) = @_;
+            require_json_keys( $body, qw( access_token refresh_token ));
+            my $new_access_token = $body->{access_token};
+            my $new_refresh_token = $body->{refresh_token};
+
+            $new_access_token ne $old_user->access_token or
+               die "Expected new access token";
+
+            $new_refresh_token ne $old_user->refresh_token or
+               die "Expected new refresh token";
+
+            provide refreshed_user => my $refreshed_user = User(
+               $old_user->http,
+               $old_user->user_id,
+               $new_access_token,
+               $new_refresh_token,
+               $old_user->eventstream_token,
+               $old_user->saved_events,
+               $old_user->pending_get_events
+            );
+
+            $http->do_request_json(
+               method => "POST",
+               uri    => "/tokenrefresh",
+
+               content => {
+                  refresh_token => $old_user->refresh_token,
+               },
+            )
+         }
+      )->then(
+         sub { # done
+            Future->fail( "Expected not to succeed in re-using refresh token" );
+         },
+         sub { # fail
+            my ( $failure, $name, @args ) = @_;
+
+            defined $name and $name eq "http" or
+               die "Expected failure kind to be 'http'";
+
+            my ( $resp, $req ) = @args;
+
+            $resp->code == 403 or
+               die "Expected HTTP response code to be 403 but was ${\$resp->code}";
+
+            Future->done(1);
+         }
+      )
    };
