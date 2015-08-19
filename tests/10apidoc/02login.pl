@@ -128,7 +128,7 @@ test "POST /login wrong password is rejected",
                die "Expected HTTP response code to be 403";
 
             my $body = decode_json($resp->{_content});
-               require_json_keys( $body, qw( errcode ));
+            require_json_keys( $body, qw( errcode ));
 
             my $errcode = $body->{errcode};
 
