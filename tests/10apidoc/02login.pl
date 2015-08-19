@@ -127,13 +127,13 @@ test "POST /login wrong password is rejected",
             $resp->code == 403 or
                die "Expected HTTP response code to be 403";
 
-	    my $body = decode_json($resp->{_content});
-            require_json_keys( $body, qw( errcode ));
+            my $body = decode_json($resp->{_content});
+               require_json_keys( $body, qw( errcode ));
 
             my $errcode = $body->{errcode};
 
-	    $errcode eq "M_FORBIDDEN" or
-	       die "Expected errcode to be M_FORBIDDEN but was ${errcode}";
+            $errcode eq "M_FORBIDDEN" or
+               die "Expected errcode to be M_FORBIDDEN but was ${errcode}";
 
             Future->done(1);
          },
