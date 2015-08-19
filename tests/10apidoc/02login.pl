@@ -139,6 +139,3 @@ test "POST /login wrong password is rejected",
          },
       );
    };
-
-#test "POST /tokenrefresh issues new token",
-#   requires => [
