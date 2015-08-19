@@ -89,7 +89,7 @@ prepare "Creating test-user-creation helper function",
             my ( $body ) = @_;
             my $access_token = $body->{access_token};
 
-            my $user = User( $http, $body->{user_id}, $access_token, undef, [], undef );
+            my $user = User( $http, $body->{user_id}, $access_token, undef, undef, [], undef );
 
             if( $with_events ) {
                $http->do_request_json(

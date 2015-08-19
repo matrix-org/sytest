@@ -37,7 +37,7 @@ test "AS can create a user",
 
                # TODO: user has no event stream yet. Should they?
                Future->done(
-                  User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, [], undef )
+                  User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, undef, [], undef )
                );
             });
          };

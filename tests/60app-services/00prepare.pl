@@ -7,7 +7,7 @@ prepare "Creating special AS user",
       my ( $http, $as_credentials ) = @_;
       my ( $user_id, $token ) = @$as_credentials;
 
-      provide as_user => User( $http, $user_id, $token, undef, [], undef );
+      provide as_user => User( $http, $user_id, $token, undef, undef, [], undef );
 
       Future->done(1);
    };

@@ -1,5 +1,5 @@
 # A handy little structure for other scripts to find in 'user' and 'more_users'
-struct User => [qw( http user_id access_token eventstream_token saved_events pending_get_events )];
+struct User => [qw( http user_id access_token refresh_token eventstream_token saved_events pending_get_events )];
 
 test "GET /login yields a set of flows",
    requires => [qw( first_v1_client )],
@@ -66,7 +66,7 @@ test "POST /login can log in as a user",
 
          my $access_token = $body->{access_token};
 
-         provide user => my $user = User( $http, $user_id, $access_token, undef, [], undef );
+         provide user => my $user = User( $http, $user_id, $access_token, undef, undef, [], undef );
 
          provide first_home_server => $body->{home_server};
 
@@ -139,3 +139,6 @@ test "POST /login wrong password is rejected",
          },
       );
    };
+
+#test "POST /tokenrefresh issues new token",
+#   requires => [
