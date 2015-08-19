@@ -95,3 +95,47 @@ test "POST /login can log in as a user",
          Future->done(1);
       });
    };
+
+test "POST /login wrong password is rejected",
+   requires => [qw( first_v1_client can_register can_login_password_flow )],
+
+   do => sub {
+      my ( $http, $login_details ) = @_;
+      my ( $user_id, $password ) = @$login_details;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/login",
+
+         content => {
+            type     => "m.login.password",
+            user     => $user_id,
+            password => "${password}wrong",
+         },
+      )->then(
+         sub { # done
+            Future->fail( "Expected not to succeed in logging in" );
+         },
+         sub { # fail
+            my ( $failure, $name, @args ) = @_;
+
+            defined $name and $name eq "http" or
+               die "Expected failure kind to be 'http'";
+
+            my ( $resp, $req ) = @args;
+
+            $resp->code == 403 or
+               die "Expected HTTP response code to be 403";
+
+            my $body = decode_json($resp->{_content});
+               require_json_keys( $body, qw( errcode ));
+
+            my $errcode = $body->{errcode};
+
+            $errcode eq "M_FORBIDDEN" or
+               die "Expected errcode to be M_FORBIDDEN but was ${errcode}";
+
+            Future->done(1);
+         },
+      );
+   };
