@@ -143,7 +143,6 @@ test "POST /login wrong password is rejected",
 
 test "POST /tokenrefresh invalidates old refresh token",
    requires => [qw( first_v2_client user )],
-   provides => [qw( refreshed_user )],
 
    do => sub {
       my ( $http, $old_user ) = @_;
@@ -166,16 +165,6 @@ test "POST /tokenrefresh invalidates old refresh token",
 
             $new_refresh_token ne $old_user->refresh_token or
                die "Expected new refresh token";
-
-            provide refreshed_user => my $refreshed_user = User(
-               $old_user->http,
-               $old_user->user_id,
-               $new_access_token,
-               $new_refresh_token,
-               $old_user->eventstream_token,
-               $old_user->saved_events,
-               $old_user->pending_get_events
-            );
 
             $http->do_request_json(
                method => "POST",
