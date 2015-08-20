@@ -35,11 +35,15 @@ prepare "Remote v2 users",
 
       Future->needs_all( map {
          my $uid = "19remote-v2-users-$_";
-
+         # Register the users using the v1 API.
          $register_new_user->( $http, $uid )
       } 1 .. $REMOTE_USERS
       )->then( sub {
          my @users = @_;
+         # For each of the Users that were registered set the http
+         # client to be the v2 client rather than the v1 client.
+         # We should fix this when it becomes possible to register
+         # clients for sytest using the v2 register APIs.
          map { $_->http = $clients_v2->[1] } @users;
          provide remote_v2_users => \@users;
 
