@@ -62,6 +62,7 @@ prepare "Starting synapse",
             print_output  => $args->{log},
             extra_args    => \@extra_args,
             python        => $args->{python},
+            coverage      => $args->{coverage},
             ( scalar @{ $args->{log_filter} } ?
                ( filter_output => $args->{log_filter} ) :
                () ),
