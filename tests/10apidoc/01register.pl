@@ -42,7 +42,7 @@ my $password = "s3kr1t";
 test "POST /register can create a user",
    requires => [qw( first_v1_client can_register_password_flow )],
 
-   provides => [qw( can_register )],
+   provides => [qw( can_register login_details )],
 
    do => sub {
       my ( $http ) = @_;
@@ -61,7 +61,8 @@ test "POST /register can create a user",
 
          require_json_keys( $body, qw( user_id access_token ));
 
-         provide can_register => [ $body->{user_id}, $password ];
+         provide can_register => 1;
+         provide login_details => [ $body->{user_id}, $password ];
 
          Future->done( 1 );
       });
