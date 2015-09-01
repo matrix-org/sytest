@@ -40,7 +40,8 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [qw( first_v1_client can_register can_login_password_flow )],
+   requires => [qw( first_v1_client login_details
+                    can_login_password_flow )],
 
    provides => [qw( can_login user first_home_server do_request_json_for do_request_json )],
 
@@ -97,7 +98,8 @@ test "POST /login can log in as a user",
    };
 
 test "POST /login wrong password is rejected",
-   requires => [qw( first_v1_client can_register can_login_password_flow )],
+   requires => [qw( first_v1_client login_details
+                    can_login_password_flow )],
 
    do => sub {
       my ( $http, $login_details ) = @_;
