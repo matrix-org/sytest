@@ -1,5 +1,7 @@
+use Future::Utils qw( repeat );
+
 prepare "Creating special AS user",
-   requires => [qw( first_http_client as_credentials )],
+   requires => [qw( first_v1_client as_credentials )],
 
    provides => [qw( as_user )],
 
@@ -7,37 +9,78 @@ prepare "Creating special AS user",
       my ( $http, $as_credentials ) = @_;
       my ( $user_id, $token ) = @$as_credentials;
 
-      provide as_user => User( $http, $user_id, $token, undef, [], undef );
+      provide as_user => User( $http, $user_id, $token, undef, undef, [], undef );
 
       Future->done(1);
    };
 
 prepare "Creating test helper functions",
-   requires => [qw( await_http_request )],
+   requires => [qw( await_http_request hs2as_token )],
 
    provides => [qw( await_as_event )],
 
    do => sub {
-      my ( $await_http_request ) = @_;
+      my ( $await_http_request, $hs2as_token ) = @_;
+
+      # Map event types to ARRAYs of Futures
+      my %futures_by_type;
 
       provide await_as_event => sub {
          my ( $type ) = @_;
+         # Carp::shortmess is no good here as every test runs in the 'main' package
+         my $caller = sprintf "%s line %d.", (caller)[1,2];
 
-         $await_http_request->( qr{^/appserv/transactions/\d+$}, sub {
-            my ( $body ) = @_;
-            $body->{events} and
-               grep { $_->{type} eq $type } @{ $body->{events} }
-            }
+         push @{ $futures_by_type{$type} }, my $f = $loop->new_future;
+
+         return Future->wait_any(
+            $f,
+
+            delay( 10 )
+               ->then_fail( "Timed out waiting for an AS event of type $type at $caller\n" ),
+         );
+      };
+
+      my $f = repeat {
+         $await_http_request->( qr{^/appserv/transactions/\d+$}, sub { 1 },
+            timeout => 0,
          )->then( sub {
             my ( $body, $request ) = @_;
 
             # Respond immediately to AS
             $request->respond_json( {} );
 
-            my ( $event ) = grep { $_->{type} eq $type } @{ $body->{events} };
-            Future->done( $event );
-         });
-      };
+            my $uri = $request->as_http_request->uri;
+            my %query_params = $uri->query_form;
+
+            defined $query_params{access_token} or
+               die "Expected HS to provide an access_token";
+            $query_params{access_token} eq $hs2as_token or
+               die "HS did not provide the correct token";
+
+            foreach my $event ( @{ $body->{events} } ) {
+               my $type = $event->{type};
+
+               my $queue = $futures_by_type{$type};
+
+               # Ignore any cancelled ones
+               shift @$queue while $queue and @$queue and $queue->[0]->is_cancelled;
+
+               if( $queue and my $f = shift @$queue ) {
+                  $f->done( $event );
+               }
+               else {
+                  print STDERR "Ignoring incoming AS event of type $type\n";
+               }
+            }
+
+            Future->done;
+         })
+      } while => sub { not $_[0]->failure };
+
+      $f->on_fail( sub { die $_[0] } );
+
+      # lifecycle it
+      $f->on_cancel( sub { undef $f } );
 
       Future->done(1);
    };

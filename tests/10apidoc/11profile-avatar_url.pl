@@ -39,7 +39,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
    };
 
 test "GET /profile/:user_id/avatar_url publicly accessible",
-   requires => [qw( first_http_client user can_set_avatar_url )],
+   requires => [qw( first_v1_client user can_set_avatar_url )],
 
    check => sub {
       my ( $http, $user ) = @_;

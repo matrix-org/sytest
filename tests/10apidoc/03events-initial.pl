@@ -2,7 +2,7 @@ use List::UtilsBy qw( extract_by );
 use Future::Utils qw( repeat );
 
 test "GET /events initially",
-   requires => [qw( do_request_json user first_http_client )],
+   requires => [qw( do_request_json user first_v1_client )],
 
    provides => [qw( can_get_events )],
 

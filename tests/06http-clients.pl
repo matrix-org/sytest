@@ -1,24 +1,39 @@
 use SyTest::HTTPClient;
 
-prepare "Creating test HTTP clients",
+prepare "Creating generic HTTP client",
+   provides => [qw( http_client )],
+
+   do => sub {
+      # Generic NaHTTP client, with SSL verification turned off, in case tests
+      # need to speak plain HTTP(S) to an endpoint
+
+      provide http_client => my $http_client = SyTest::HTTPClient->new;
+
+      $loop->add( $http_client );
+
+      Future->done;
+   };
+
+prepare "Creating test Matrix HTTP clients",
    requires => [qw( synapse_client_locations )],
 
-   provides => [qw( http_clients first_http_client v2_clients first_v2_client )],
+   provides => [qw( v1_clients first_v1_client v2_clients first_v2_client )],
 
    do => sub {
       my ( $locations ) = @_;
 
-      my @clients = map {
+      my @v1_clients = map {
          my $location = $_;
          my $client = SyTest::HTTPClient->new(
+            max_connections_per_host => 3,
             uri_base => "$location/_matrix/client/api/v1",
          );
          $loop->add( $client );
          $client;
       } @$locations;
 
-      provide http_clients => \@clients;
-      provide first_http_client => $clients[0];
+      provide v1_clients => \@v1_clients;
+      provide first_v1_client => $v1_clients[0];
 
       my @v2_clients = map {
          my $location = $_;

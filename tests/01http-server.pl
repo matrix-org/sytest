@@ -1,8 +1,9 @@
-use Net::Async::HTTP::Server;
+use Net::Async::HTTP::Server 0.08;  # request_class
 use JSON qw( decode_json );
 use URI::Escape qw( uri_unescape );
 
 use SyTest::HTTPClient;
+use SyTest::HTTPServer::Request;
 
 struct Awaiter => [qw( pathmatch filter future )];
 
@@ -20,9 +21,6 @@ prepare "Environment closures for receiving HTTP pokes",
       my $http_server = Net::Async::HTTP::Server->new(
          on_request => sub {
             my ( $self, $request ) = @_;
-
-            # TODO: This should be a parameter of NaH:Server
-            bless $request, "SyTest::HTTPServer::Request" if ref( $request ) eq "Net::Async::HTTP::Server::Request";
 
             my $method = $request->method;
             my $path = uri_unescape $request->path;
@@ -58,8 +56,13 @@ prepare "Environment closures for receiving HTTP pokes",
       );
       $loop->add( $http_server );
 
+      # Upstream bug - this doesn't work at ->new time
+      $http_server->configure(
+         request_class => "SyTest::HTTPServer::Request",
+      );
+
       my $await_http_request = sub {
-         my ( $pathmatch, $filter ) = @_;
+         my ( $pathmatch, $filter, %args ) = @_;
          # Carp::shortmess is no good here as every test runs in the 'main' package
          my $caller = sprintf "%s line %d.", (caller)[1,2];
 
@@ -67,10 +70,14 @@ prepare "Environment closures for receiving HTTP pokes",
 
          push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
 
+         my $timeout = $args{timeout} // 10;
+
+         return $f if !$timeout;
+
          return Future->wait_any(
             $f,
 
-            delay( 10 )
+            delay( $timeout )
                ->then_fail( "Timed out waiting for an HTTP request matching $pathmatch at $caller\n" ),
          );
       };
@@ -155,40 +162,3 @@ prepare "Environment closures for receiving HTTP pokes",
          )
       })
    };
-
-# A somewhat-hackish way to give NaH:Server::Request objects a ->respond_json method
-package SyTest::HTTPServer::Request;
-use 5.014; # ${^GLOBAL_PHASE}
-use base qw( Net::Async::HTTP::Server::Request );
-
-use JSON qw( encode_json );
-
-use Carp;
-
-sub DESTROY
-{
-   return if ${^GLOBAL_PHASE} eq "DESTRUCT";
-   my $self = shift or return;
-   return if $self->{__responded};
-   carp "Destroying unresponded HTTP request to ${\$self->path}";
-}
-
-sub respond
-{
-   my $self = shift;
-   $self->{__responded}++;
-   $self->SUPER::respond( @_ );
-}
-
-sub respond_json
-{
-   my $self = shift;
-   my ( $json ) = @_;
-
-   my $response = HTTP::Response->new( 200 );
-   $response->add_content( encode_json $json );
-   $response->content_type( "application/json" );
-   $response->content_length( length $response->content );
-
-   $self->respond( $response );
-}

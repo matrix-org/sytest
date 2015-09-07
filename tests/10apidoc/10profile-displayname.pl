@@ -39,7 +39,7 @@ test "PUT /profile/:user_id/displayname sets my name",
    };
 
 test "GET /profile/:user_id/displayname publicly accessible",
-   requires => [qw( first_http_client user can_set_displayname )],
+   requires => [qw( first_v1_client user can_set_displayname )],
 
    provides => [qw( can_get_displayname )],
 

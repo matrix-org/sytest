@@ -5,7 +5,7 @@ EOF
 my $content_type = "text/plain";
 
 test "POST /media/v1/upload can create an upload",
-   requires => [qw( first_http_client user )],
+   requires => [qw( first_v1_client user )],
 
    provides => [qw( can_upload_media content_id )],
 
@@ -37,7 +37,7 @@ test "POST /media/v1/upload can create an upload",
    };
 
 test "GET /media/v1/download can fetch the value again",
-   requires => [qw( first_http_client content_id
+   requires => [qw( first_v1_client content_id
                     can_upload_media )],
 
    provides => [qw( can_download_media )],

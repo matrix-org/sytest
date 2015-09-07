@@ -35,7 +35,7 @@ sub gen_token
 prepare "Starting synapse",
    requires => [qw( synapse_ports synapse_args internal_server_port want_tls )],
 
-   provides => [qw( synapse_client_locations as_credentials )],
+   provides => [qw( synapse_client_locations as_credentials hs2as_token )],
 
    do => sub {
       my ( $ports, $args, $internal_server_port, $want_tls ) = @_;
@@ -62,6 +62,7 @@ prepare "Starting synapse",
             print_output  => $args->{log},
             extra_args    => \@extra_args,
             python        => $args->{python},
+            coverage      => $args->{coverage},
             ( scalar @{ $args->{log_filter} } ?
                ( filter_output => $args->{log_filter} ) :
                () ),
@@ -79,8 +80,8 @@ prepare "Starting synapse",
             # Configure application services on first instance only
             my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
                url      => "http://localhost:$internal_server_port/appserv",
-               as_token => ( my $as_token = gen_token( 32 ) ),
-               hs_token => "TODO",
+               as_token => ( my $as2hs_token = gen_token( 32 ) ),
+               hs_token => ( my $hs2as_token = gen_token( 32 ) ),
                sender_localpart => ( my $as_user = "as-user" ),
                namespaces => {
                   users => [
@@ -97,7 +98,8 @@ prepare "Starting synapse",
                app_service_config_files => [ $appserv_conf ],
             );
 
-            provide as_credentials => [ "\@$as_user:localhost:$secure_port", $as_token ];
+            provide as_credentials => [ "\@$as_user:localhost:$secure_port", $as2hs_token ];
+            provide hs2as_token => $hs2as_token;
          }
 
          $synapse->start;

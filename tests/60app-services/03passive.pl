@@ -61,3 +61,98 @@ multi_test "Inviting an AS-hosted user asks the AS server",
          });
       });
    };
+
+multi_test "Accesing an AS-hosted room alias asks the AS server",
+   requires => [qw( do_request_json_for await_http_request await_as_event as_user local_users first_home_server
+                    can_join_room_by_alias )],
+
+   do => sub {
+      my ( $do_request_json_for, $await_http_request, $await_as_event, $as_user, $users, $first_home_server ) = @_;
+      my $user = $users->[1];
+      my $room_alias = "#astest-03passive-1:$first_home_server";
+
+      Future->needs_all(
+         $await_http_request->( "/appserv/rooms/$room_alias", sub { 1 } )->then( sub {
+            my ( $content, $request ) = @_;
+
+            pass "Received AS request";
+
+            Future->needs_all(
+               $await_as_event->( "m.room.aliases" )->then( sub {
+                  my ( $event ) = @_;
+
+                  log_if_fail "Event", $event;
+
+                  require_json_keys( $event, qw( content room_id user_id ));
+
+                  $event->{room_id} eq $room_id or
+                     die "Expected room_id to be $room_id";
+                  $event->{user_id} eq $as_user->user_id or
+                     die "Expected user_id to be ${\$as_user->user_id}";
+
+                  require_json_keys( my $content = $event->{content}, qw( aliases ));
+                  require_json_list( my $aliases = $content->{aliases} );
+
+                  grep { $_ eq $room_alias } @$aliases or
+                     die "Expected to find our alias in the aliases list";
+
+                  Future->done;
+               }),
+
+               $do_request_json_for->( $as_user,
+                  method => "PUT",
+                  uri    => "/directory/room/$room_alias",
+
+                  content => {
+                     room_id => $room_id,
+                  },
+               )->then( sub {
+                  pass "Created room alias mapping";
+
+                  $request->respond_json( {} );
+                  Future->done;
+               }),
+            );
+         }),
+
+         $do_request_json_for->( $user,
+            method => "POST",
+            uri    => "/join/$room_alias",
+
+            content => {},
+         )
+      );
+   };
+
+test "Events in rooms with AS-hosted room aliases are sent to AS server",
+   requires => [qw( do_request_json await_as_event
+                    can_join_room_by_alias )],
+
+   do => sub {
+      my ( $do_request_json, $await_as_event ) = @_;
+
+      Future->needs_all(
+         $await_as_event->( "m.room.message" )->then( sub {
+            my ( $event ) = @_;
+
+            log_if_fail "Event", $event;
+
+            require_json_keys( $event, qw( content room_id user_id ));
+
+            $event->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+
+            Future->done;
+         }),
+
+         $do_request_json->(
+            method => "POST",
+            uri    => "/rooms/$room_id/send/m.room.message",
+
+            content => {
+               msgtype => "m.text",
+               body    => "A message for the AS",
+            },
+         ),
+      );
+   };
