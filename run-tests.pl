@@ -40,6 +40,7 @@ my %SYNAPSE_ARGS = (
 
    log        => 0,
    log_filter => [],
+   coverage   => 0,
 );
 
 my $WANT_TLS = 1;
@@ -62,6 +63,8 @@ GetOptions(
 
    'python=s' => \$SYNAPSE_ARGS{python},
 
+   'coverage+' => \$SYNAPSE_ARGS{coverage},
+
    'p|port-base=i' => \(my $PORT_BASE = 8000),
 
    'E=s' => sub { # process -Eoption=value
@@ -83,7 +86,7 @@ sub usage
    my ( $exitcode ) = @_;
 
    print STDERR <<'EOF';
-run-tests.pl: [options...]
+run-tests.pl: [options...] [test-file]
 
 Options:
    -C, --client-log             - enable logging of requests made by the client
@@ -108,6 +111,8 @@ Options:
        --python PATH            - path to the 'python' binary
 
    -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
+
+       --coverage               - generate code coverage stats for synapse
 
 EOF
 
