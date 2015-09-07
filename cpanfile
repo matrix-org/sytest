@@ -3,7 +3,7 @@
 requires 'Data::Dump';
 requires 'File::Basename';
 requires 'File::Path';
-requires 'File::Slurp::Tiny';
+requires 'File::Slurper';
 requires 'Future';
 requires 'Getopt::Long';
 requires 'IO::Async::Loop';

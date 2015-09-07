@@ -1,5 +1,5 @@
 use File::Basename qw( dirname );
-use File::Slurp::Tiny qw( read_file );
+use File::Slurper qw( read_binary );
 
 my $dir = dirname __FILE__;
 
@@ -10,7 +10,7 @@ test "POSTed media can be thumbnailed",
    do => sub {
       my ( $http, $user ) = @_;
 
-      my $pngdata = read_file( "$dir/test.png" );
+      my $pngdata = read_binary( "$dir/test.png" );
 
       # Because we're POST'ing non-JSON
       $http->do_request(
