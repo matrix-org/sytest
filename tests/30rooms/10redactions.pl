@@ -66,10 +66,10 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
    };
 
 test "POST /rooms/:room_id/redact/:event_id as random user does not redact message",
-   requires => [qw( do_request_json_for make_test_room local_users )],
+   requires => [qw( do_request_json_for make_test_room local_users expect_http_403 )],
 
    do => sub {
-      my ( $do_request_json_for, $make_test_room, $local_users ) = @_;
+      my ( $do_request_json_for, $make_test_room, $local_users, $expect_http_403 ) = @_;
       # Both have 0 power level
       my $test_user = $local_users->[1];
       my $other_test_user = $local_users->[2];
@@ -83,20 +83,6 @@ test "POST /rooms/:room_id/redact/:event_id as random user does not redact messa
                method => "POST",
                uri    => "/rooms/$room_id/redact/$to_redact",
                content => {},
-         )->then( sub {
-            Future->fail( "Expected not to succeed in redacting message" );
-         }, sub {
-            my ( $failure, $name, @args ) = @_;
-
-            defined $name and $name eq "http" or
-               die "Expected failure kind to be 'http'";
-
-            my ( $resp, $req ) = @args;
-
-            $resp->code == 403 or
-               die "Expected HTTP response code to be 403 but was ${\$resp->code}";
-
-            Future->done(1);
-         });
-      });
+         )
+      })->$expect_http_403;
    };
