@@ -1,3 +1,5 @@
+use Future::Utils qw( repeat );
+
 multi_test "New federated private chats get full presence information (SYN-115)",
    requires => [qw( register_new_user v1_clients do_request_json_for flush_events_for await_event_for
                     can_register can_create_private_room )],

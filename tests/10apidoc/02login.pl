@@ -1,3 +1,5 @@
+use JSON qw( decode_json );
+
 test "GET /login yields a set of flows",
    requires => [qw( first_v1_client )],
 
