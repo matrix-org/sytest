@@ -20,7 +20,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port unsecure_port output synapse_dir extra_args python config
+      port unsecure_port output synapse_dir extra_args python config coverage
    );
 
    $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
@@ -150,11 +150,18 @@ sub start
       : "$self->{synapse_dir}"
    );
 
-   my @command = (
-      $self->{python}, "-m", "synapse.app.homeserver",
-         "--config-path" => $config_path,
-         "--server-name" => "localhost:$port",
-   );
+   my @command = ( $self->{python} );
+
+   if( $self->{coverage} ) {
+      # Ensures that even --generate-config has coverage reports. This is intentional
+      push @command,
+         "-m", "coverage", "run", "-p", "--source=$self->{synapse_dir}/synapse";
+   }
+
+   push @command,
+      "-m", "synapse.app.homeserver",
+      "--config-path" => $config_path,
+      "--server-name" => "localhost:$port";
 
    $output->diag( "Generating config for port $port" );
 

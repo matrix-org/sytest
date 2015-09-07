@@ -1,4 +1,5 @@
-my $gen_expect_failure = sub {
+sub gen_expect_failure
+{
    my ( $name, $match ) = @_;
 
    return sub {
@@ -16,15 +17,15 @@ my $gen_expect_failure = sub {
          },
       );
    };
-};
+}
 
 prepare "Creating test assertion helpers",
    provides => [qw( expect_http_4xx expect_http_403 )],
 
    do => sub {
-      provide expect_http_4xx => $gen_expect_failure->( '4xx' => qr/^4/ );
+      provide expect_http_4xx => gen_expect_failure( '4xx' => qr/^4/ );
 
-      provide expect_http_403 => $gen_expect_failure->( '403' => qr/^403/ );
+      provide expect_http_403 => gen_expect_failure( '403' => qr/^403/ );
 
       Future->done;
    };

@@ -40,6 +40,7 @@ my %SYNAPSE_ARGS = (
 
    log        => 0,
    log_filter => [],
+   coverage   => 0,
 );
 
 my $WANT_TLS = 1;
@@ -62,6 +63,8 @@ GetOptions(
 
    'python=s' => \$SYNAPSE_ARGS{python},
 
+   'coverage+' => \$SYNAPSE_ARGS{coverage},
+
    'p|port-base=i' => \(my $PORT_BASE = 8000),
 
    'E=s' => sub { # process -Eoption=value
@@ -83,7 +86,7 @@ sub usage
    my ( $exitcode ) = @_;
 
    print STDERR <<'EOF';
-run-tests.pl: [options...]
+run-tests.pl: [options...] [test-file]
 
 Options:
    -C, --client-log             - enable logging of requests made by the client
@@ -108,6 +111,8 @@ Options:
        --python PATH            - path to the 'python' binary
 
    -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
+
+       --coverage               - generate code coverage stats for synapse
 
 EOF
 
@@ -488,6 +493,15 @@ if( @ARGV ) {
    $stop_after = maxstr keys %only_files;
 }
 
+sub list_symbols
+{
+   my ( $pkg ) = @_;
+
+   no strict 'refs';
+   return grep { $_ !~ m/^_</ and $_ !~ m/::$/ }  # filter away filename markers and sub-packages
+          keys %{$pkg."::"};
+}
+
 TEST: {
    walkdir(
       sub {
@@ -506,9 +520,22 @@ TEST: {
 
          local $SKIPPING = 1 if %only_files and not exists $only_files{$filename};
 
+         # Protect against symbolic leakage between test files by cleaning up
+         # extra symbols in the 'main::' namespace
+         my %was_symbs = map { $_ => 1 } list_symbols( "main" );
+
          # Tell eval what the filename is so we get nicer warnings/errors that
          # give the filename instead of (eval 123)
          eval( "#line 1 $filename\n" . $code . "; 1" ) or die $@;
+
+         {
+            no strict 'refs';
+
+            # Occasionally we *do* want to export a symbol.
+            $was_symbs{$_}++ for @{"main::EXPORT"};
+
+            $was_symbs{$_} or delete ${"main::"}{$_} for list_symbols( "main" );
+         }
 
          no warnings 'exiting';
          last TEST if $stop_after and $filename eq $stop_after;
