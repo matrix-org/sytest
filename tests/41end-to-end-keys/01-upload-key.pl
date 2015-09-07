@@ -32,6 +32,7 @@ test "Can upload device keys",
          )
       })->then( sub {
          my ( $content ) = @_;
+         log_if_fail "Content", $content;
 
          require_json_keys( $content, "one_time_key_counts" );
 

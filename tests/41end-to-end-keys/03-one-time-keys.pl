@@ -21,6 +21,7 @@ multi_test "Can claim one time key using POST",
          )
       })->then( sub {
          my ( $content ) = @_;
+         log_if_fail "First device content", $content;
 
          require_json_keys( $content, "one_time_key_counts" );
          require_json_keys( $content->{one_time_key_counts}, "test_algorithm" );
@@ -43,6 +44,7 @@ multi_test "Can claim one time key using POST",
          )
       })->then( sub {
          my ( $content ) = @_;
+         log_if_fail "POST response", $content;
 
          require_json_keys( $content, "one_time_keys" );
 
@@ -66,6 +68,7 @@ multi_test "Can claim one time key using POST",
          )
       })->then( sub {
          my ( $content ) = @_;
+         log_if_fail "First device content", $content;
 
          require_json_keys( $content, "one_time_key_counts" );
 
