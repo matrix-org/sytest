@@ -6,7 +6,7 @@ use Imager;
 my $dir = dirname __FILE__;
 
 test "POSTed media can be thumbnailed",
-   requires => [qw( first_http_client user
+   requires => [qw( first_v1_client user
                     can_upload_media can_download_media )],
 
    do => sub {
