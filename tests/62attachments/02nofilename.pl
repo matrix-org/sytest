@@ -30,24 +30,32 @@ test "Can upload without a file name",
       });
    };
 
-test "Can download without a file name",
+# These next two tests do the same thing with two different HTTP clients, to
+# test locally and via federation
+
+my $test_using_client = sub {
+   my ( $client ) = @_;
+
+   $client->do_request(
+      method   => "GET",
+      full_uri => "/_matrix/media/v1/download/$content_id",
+   )->then( sub {
+      my ( $body, $response ) = @_;
+
+      my $disposition = $response->header( "Content-Disposition" );
+      defined $disposition and
+         die "Unexpected Content-Disposition header";
+
+      Future->done(1);
+   });
+};
+
+test "Can download without a file name locally",
    requires => [qw( first_v1_client )],
 
    check => sub {
       my ( $http ) = @_;
-
-      $http->do_request(
-         method   => "GET",
-         full_uri => "/_matrix/media/v1/download/$content_id",
-      )->then( sub {
-         my ( $body, $response ) = @_;
-
-         my $disposition = $response->header( "Content-Disposition" );
-         defined $disposition and
-            die "Unexpected Content-Disposition header";
-
-         Future->done(1);
-      });
+      $test_using_client->( $http );
    };
 
 test "Can download without a file name over federation",
@@ -55,17 +63,5 @@ test "Can download without a file name over federation",
 
    check => sub {
       my ( $clients ) = @_;
-
-      $clients->[1]->do_request(
-         method   => "GET",
-         full_uri => "/_matrix/media/v1/download/$content_id",
-      )->then( sub {
-         my ( $body, $response ) = @_;
-
-         my $disposition = $response->header( "Content-Disposition" );
-         defined $disposition and
-            die "Unexpected Content-Disposition header";
-
-         Future->done(1);
-      });
+      $test_using_client->( $clients->[1] );
    };
