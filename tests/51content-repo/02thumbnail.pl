@@ -1,8 +1,6 @@
 use File::Basename qw( dirname );
 use File::Slurp::Tiny qw( read_file );
 
-use Imager;
-
 my $dir = dirname __FILE__;
 
 test "POSTed media can be thumbnailed",
@@ -40,13 +38,37 @@ test "POSTed media can be thumbnailed",
             }
          )
       })->then( sub {
-         my ( $body ) = @_;
+         my ( $body, $response ) = @_;
 
-         my $image = Imager->new( data => $body )
-            or die "Unable to parse message body as image - " . Imager->errstr;
+         for( $response->content_type ) {
+            m{^image/png$} and validate_png( $body ), last;
 
-         # TODO: assert on the size
+            # TODO: should probably write a JPEG recogniser too
+
+            warn "Unrecognised Content-Type ($_) - unable to detect if this is a valid image";
+         }
 
          Future->done(1);
       });
    };
+
+# We won't assert too heavily that it's a valid image as that's hard to do
+# without using a full image parsing library like Imager. Instead we'll just
+# detect file magic of a likely-valid encoding as this should cover most common
+# implementation bugs, such as sending plain-text error messages with image
+# MIME headers, or claiming one MIME type while being another.
+
+sub validate_png
+{
+   my ( $body ) = @_;
+
+   # All PNG images begin with the same 8 byte header
+   $body =~ s/^\x89PNG\x0D\x0A\x1A\x0A// or
+      die "Invalid PNG magic";
+
+   # All PNG images have an IHDR header first. This header is 13 bytes long
+   $body =~ s/^\0\0\0\x0DIHDR// or
+      die "Invalid IHDR chunk";
+
+   return 1;
+}
