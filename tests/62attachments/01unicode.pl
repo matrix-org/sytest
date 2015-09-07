@@ -1,3 +1,8 @@
+use URI::Escape qw( uri_escape );
+
+my $FILENAME = "\xf0\x9f\x90\x94";
+my $FILENAME_ENCODED = uc uri_escape( $FILENAME );
+
 test "Can upload with unicode file name",
    requires => [qw( first_v1_client user )],
 
@@ -14,7 +19,7 @@ test "Can upload with unicode file name",
 
          params => {
             access_token => $user->access_token,
-            filename     => "\xf0\x9f\x90\x94",
+            filename     => $FILENAME,
          }
       )->then( sub {
          my ( $body ) = @_;
@@ -44,7 +49,7 @@ test "Can download with unicode file name",
          my ( $body, $response ) = @_;
 
          my $disposition = $response->header( "Content-Disposition" );
-         $disposition eq "inline; filename*=utf-8''%F0%9F%90%94" or
+         uc $disposition eq uc "inline; filename*=utf-8''$FILENAME_ENCODED" or
             die "Expected a UTF-8 filename parameter";
 
          Future->done(1);
@@ -57,14 +62,16 @@ test "Can download specifying a unicode file name",
    check => sub {
       my ( $http, $content_id ) = @_;
 
+      my $alt_filename_encoded = "%E2%98%95";
+
       $http->do_request(
          method   => "GET",
-         full_uri => "/_matrix/media/v1/download/$content_id/%E2%98%95",
+         full_uri => "/_matrix/media/v1/download/$content_id/$alt_filename_encoded",
       )->then( sub {
          my ( $body, $response ) = @_;
 
          my $disposition = $response->header( "Content-Disposition" );
-         $disposition eq "inline; filename*=utf-8''%E2%98%95" or
+         uc $disposition eq uc "inline; filename*=utf-8''$alt_filename_encoded" or
             die "Expected a UTF-8 filename parameter";
 
          Future->done(1);
@@ -84,7 +91,7 @@ test "Can download with unicode file name over federation",
          my ( $body, $response ) = @_;
 
          my $disposition = $response->header( "Content-Disposition" );
-         $disposition eq "inline; filename*=utf-8''%F0%9F%90%94" or
+         uc $disposition eq uc "inline; filename*=utf-8''$FILENAME_ENCODED" or
             die "Expected a UTF-8 filename parameter: $disposition";
 
          Future->done(1);
