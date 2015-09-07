@@ -1,7 +1,7 @@
-test "Can upload with ascii file name",
-   requires => [qw( first_v1_client user )],
+my $content_id;
 
-   provides => [qw( ascii_content_id )],
+test "Can upload with ASCII file name",
+   requires => [qw( first_v1_client user )],
 
    do => sub {
       my ( $http, $user ) = @_;
@@ -25,17 +25,17 @@ test "Can upload with ascii file name",
          my $server = $content_uri->authority;
          my $path = $content_uri->path;
 
-         provide ascii_content_id => "$server$path";
+         $content_id = "$server$path";
 
          Future->done(1)
       });
    };
 
-test "Can download with ascii file name",
-   requires => [qw( first_v1_client ascii_content_id )],
+test "Can download with ASCII file name",
+   requires => [qw( first_v1_client )],
 
    check => sub {
-      my ( $http, $content_id ) = @_;
+      my ( $http ) = @_;
 
       $http->do_request(
          method   => "GET",
@@ -51,11 +51,11 @@ test "Can download with ascii file name",
       });
    };
 
-test "Can download specifying a ascii file name",
-   requires => [qw( first_v1_client ascii_content_id )],
+test "Can download specifying a ASCII file name",
+   requires => [qw( first_v1_client )],
 
    check => sub {
-      my ( $http, $content_id ) = @_;
+      my ( $http ) = @_;
 
       $http->do_request(
          method   => "GET",
@@ -71,11 +71,11 @@ test "Can download specifying a ascii file name",
       });
    };
 
-test "Can download with ascii file name over federation",
-   requires => [qw( v1_clients ascii_content_id )],
+test "Can download with ASCII file name over federation",
+   requires => [qw( v1_clients )],
 
    check => sub {
-      my ( $clients, $content_id ) = @_;
+      my ( $clients ) = @_;
 
       $clients->[1]->do_request(
          method   => "GET",

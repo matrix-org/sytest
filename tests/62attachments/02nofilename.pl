@@ -1,7 +1,7 @@
+my $content_id;
+
 test "Can upload without a file name",
    requires => [qw( first_v1_client user )],
-
-   provides => [qw( noname_content_id )],
 
    do => sub {
       my ( $http, $user ) = @_;
@@ -24,22 +24,22 @@ test "Can upload without a file name",
          my $server = $content_uri->authority;
          my $path = $content_uri->path;
 
-         provide noname_content_id => "$server$path";
+         $content_id = "$server$path";
 
          Future->done(1)
       });
    };
 
 test "Can download without a file name",
-   requires => [qw( first_v1_client noname_content_id )],
+   requires => [qw( first_v1_client )],
 
    check => sub {
-      my ( $http, $content_id ) = @_;
+      my ( $http ) = @_;
 
       $http->do_request(
          method   => "GET",
          full_uri => "/_matrix/media/v1/download/$content_id",
-      )->then(sub {
+      )->then( sub {
          my ( $body, $response ) = @_;
 
          my $disposition = $response->header( "Content-Disposition" );
@@ -51,10 +51,10 @@ test "Can download without a file name",
    };
 
 test "Can download without a file name over federation",
-   requires => [qw( v1_clients noname_content_id )],
+   requires => [qw( v1_clients )],
 
    check => sub {
-      my ( $clients, $content_id ) = @_;
+      my ( $clients ) = @_;
 
       $clients->[1]->do_request(
          method   => "GET",

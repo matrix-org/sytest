@@ -3,10 +3,13 @@ use URI::Escape qw( uri_escape );
 my $FILENAME = "\xf0\x9f\x90\x94";
 my $FILENAME_ENCODED = uc uri_escape( $FILENAME );
 
-test "Can upload with unicode file name",
-   requires => [qw( first_v1_client user )],
+my $content_id;
 
-   provides => [qw( unicode_content_id )],
+test "Can upload with Unicode file name",
+   requires => [qw( first_v1_client user
+                    can_upload_media )],
+
+   provides => [qw( can_upload_media_unicode )],
 
    do => sub {
       my ( $http, $user ) = @_;
@@ -30,17 +33,18 @@ test "Can upload with unicode file name",
          my $server = $content_uri->authority;
          my $path = $content_uri->path;
 
-         provide unicode_content_id => "$server$path";
+         $content_id = "$server$path";
+         provide can_upload_media_unicode => 1;
 
          Future->done(1)
       });
    };
 
-test "Can download with unicode file name",
-   requires => [qw( first_v1_client unicode_content_id )],
+test "Can download with Unicode file name",
+   requires => [qw( first_v1_client can_upload_media_unicode )],
 
    check => sub {
-      my ( $http, $content_id ) = @_;
+      my ( $http ) = @_;
 
       $http->do_request(
          method   => "GET",
@@ -56,11 +60,11 @@ test "Can download with unicode file name",
       });
    };
 
-test "Can download specifying a unicode file name",
-   requires => [qw( first_v1_client unicode_content_id )],
+test "Can download specifying a Unicode file name",
+   requires => [qw( first_v1_client can_upload_media_unicode )],
 
    check => sub {
-      my ( $http, $content_id ) = @_;
+      my ( $http ) = @_;
 
       my $alt_filename_encoded = "%E2%98%95";
 
@@ -79,10 +83,10 @@ test "Can download specifying a unicode file name",
    };
 
 test "Can download with unicode file name over federation",
-   requires => [qw( v1_clients unicode_content_id )],
+   requires => [qw( v1_clients can_upload_media_unicode )],
 
    check => sub {
-      my ( $clients, $content_id ) = @_;
+      my ( $clients ) = @_;
 
       $clients->[1]->do_request(
          method   => "GET",
