@@ -43,7 +43,8 @@ test "Can upload with Unicode file name",
 # These next two tests do the same thing with two different HTTP clients, to
 # test locally and via federation
 
-my $test_using_client = sub {
+sub test_using_client
+{
    my ( $client ) = @_;
 
    $client->do_request(
@@ -58,14 +59,14 @@ my $test_using_client = sub {
 
       Future->done(1);
    });
-};
+}
 
 test "Can download with Unicode file name locally",
    requires => [qw( first_v1_client can_upload_media_unicode )],
 
    check => sub {
       my ( $http ) = @_;
-      $test_using_client->( $http );
+      test_using_client( $http );
    };
 
 test "Can download with Unicode file name over federation",
@@ -73,7 +74,7 @@ test "Can download with Unicode file name over federation",
 
    check => sub {
       my ( $clients ) = @_;
-      $test_using_client->( $clients->[1] );
+      test_using_client( $clients->[1] );
    };
 
 test "Can download specifying a different Unicode file name",
