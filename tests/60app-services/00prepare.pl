@@ -1,3 +1,5 @@
+use Future::Utils qw( repeat );
+
 prepare "Creating special AS user",
    requires => [qw( first_v1_client as_credentials )],
 
