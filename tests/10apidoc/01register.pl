@@ -1,3 +1,6 @@
+# A handy little structure for other scripts to find in 'user' and 'more_users'
+struct User => [qw( http user_id access_token refresh_token eventstream_token saved_events pending_get_events )];
+
 test "GET /register yields a set of flows",
    requires => [qw( first_v1_client )],
 
