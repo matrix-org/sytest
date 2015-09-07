@@ -150,17 +150,18 @@ sub start
       : "$self->{synapse_dir}"
    );
 
-   my @command = ($self->{python});
-   if ($self->{coverage}) {
-      push @command, (
-         "-m", "coverage", "run", "-p", "--source=$self->{synapse_dir}/synapse"
-      );
+   my @command = ( $self->{python} );
+
+   if( $self->{coverage} ) {
+      # Ensures that even --generate-config has coverage reports. This is intentional
+      push @command,
+         "-m", "coverage", "run", "-p", "--source=$self->{synapse_dir}/synapse";
    }
-   push @command, (
+
+   push @command,
       "-m", "synapse.app.homeserver",
       "--config-path" => $config_path,
-      "--server-name" => "localhost:$port",
-   );
+      "--server-name" => "localhost:$port";
 
    $output->diag( "Generating config for port $port" );
 
