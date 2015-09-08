@@ -11,7 +11,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/rooms/$room_id/state/m.room.name",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.name",
 
          content => { name => $name },
       );
@@ -22,7 +22,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/initialSync",
+         uri    => "/api/v1/rooms/$room_id/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -52,7 +52,7 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.name",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.name",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -80,7 +80,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/rooms/$room_id/state/m.room.topic",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
 
          content => { topic => $topic },
       );
@@ -91,7 +91,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/initialSync",
+         uri    => "/api/v1/rooms/$room_id/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -121,7 +121,7 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.topic",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -146,7 +146,7 @@ test "GET /rooms/:room_id/state fetches entire room state",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/state",
+         uri    => "/api/v1/rooms/$room_id/state",
       )->then( sub {
          my ( $body ) = @_;
 

@@ -13,7 +13,7 @@ test "POST /rooms/:room_id/join can join a room",
 
       $do_request_json_for->( $user,
          method => "POST",
-         uri    => "/rooms/$room_id/join",
+         uri    => "/api/v1/rooms/$room_id/join",
 
          content => {},
       );
@@ -25,7 +25,7 @@ test "POST /rooms/:room_id/join can join a room",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -50,7 +50,7 @@ test "POST /join/:room_alias can join a room",
 
       $do_request_json_for->( $user,
          method => "POST",
-         uri    => "/join/$room_alias",
+         uri    => "/api/v1/join/$room_alias",
 
          content => {},
       )->then( sub {
@@ -69,7 +69,7 @@ test "POST /join/:room_alias can join a room",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -92,7 +92,7 @@ test "POST /join/:room_id can join a room",
 
       $do_request_json_for->( $user,
          method => "POST",
-         uri    => "/join/$room_id",
+         uri    => "/api/v1/join/$room_id",
 
          content => {},
       )->then( sub {
@@ -112,7 +112,7 @@ test "POST /join/:room_id can join a room",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -135,7 +135,7 @@ test "POST /rooms/:room_id/leave can leave a room",
 
       $do_request_json_for->( $user,
          method => "POST",
-         uri    => "/rooms/$room_id/leave",
+         uri    => "/api/v1/rooms/$room_id/leave",
 
          content => {},
       );
@@ -147,7 +147,7 @@ test "POST /rooms/:room_id/leave can leave a room",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then(
          sub { # then
             my ( $body ) = @_;
@@ -184,7 +184,7 @@ test "POST /rooms/:room_id/invite can send an invite",
 
       $do_request_json_for->( $user,
          method => "POST",
-         uri    => "/rooms/$room_id/invite",
+         uri    => "/api/v1/rooms/$room_id/invite",
 
          content => { user_id => $invitee->user_id },
       );
@@ -196,7 +196,7 @@ test "POST /rooms/:room_id/invite can send an invite",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/" . $invitee->user_id,
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/" . $invitee->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -221,7 +221,7 @@ test "POST /rooms/:room_id/ban can ban a user",
 
       $do_request_json_for->( $user,
          method => "POST",
-         uri    => "/rooms/$room_id/ban",
+         uri    => "/api/v1/rooms/$room_id/ban",
 
          content => {
             user_id => $banned_user->user_id,
@@ -236,7 +236,7 @@ test "POST /rooms/:room_id/ban can ban a user",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/" . $banned_user->user_id,
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/" . $banned_user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -273,7 +273,7 @@ prepare "Creating test-room-creation helper function",
 
          $do_request_json_for->( $creator,
             method => "POST",
-            uri    => "/createRoom",
+            uri    => "/api/v1/createRoom",
 
             content => {
                visibility      => "public",
@@ -297,7 +297,7 @@ prepare "Creating test-room-creation helper function",
                   my $user = shift;
                   $do_request_json_for->( $user,
                      method => "POST",
-                     uri    => "/join/$room_alias_fullname",
+                     uri    => "/api/v1/join/$room_alias_fullname",
 
                      content => {},
                   )
@@ -307,7 +307,7 @@ prepare "Creating test-room-creation helper function",
                   my $user = $_;
                   $do_request_json_for->( $user,
                      method => "POST",
-                     uri    => "/join/$room_alias_fullname",
+                     uri    => "/api/v1/join/$room_alias_fullname",
 
                      content => {},
                   )

@@ -80,7 +80,7 @@ test_powerlevel "'ban' event respects room powerlevel",
 
       $do_request_json_for->( $test_user,
          method => "POST",
-         uri    => "/rooms/$room_id/ban",
+         uri    => "/api/v1/rooms/$room_id/ban",
 
          content => { user_id => '@random_dude:test', reason => "testing" },
       );
@@ -96,7 +96,7 @@ test_powerlevel "'ban' event respects room powerlevel",
 ## 
 ##       $do_request_json_for->( $test_user,
 ##          method => "POST",
-##          uri    => "/rooms/$room_id/invite",
+##          uri    => "/api/v1/rooms/$room_id/invite",
 ## 
 ##          content => { user_id => '@random-invitee:localhost:8001' },
 ##       );
@@ -111,7 +111,7 @@ test_powerlevel "setting 'm.room.name' respects room powerlevel",
 
       $do_request_json_for->( $test_user,
          method => "PUT",
-         uri    => "/rooms/$room_id/state/m.room.name",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.name",
 
          content => { name => "A new room name" },
       );
@@ -145,7 +145,7 @@ test "Unprivileged users can set m.room.topic if it only needs level 0",
       })->then( sub {
          $do_request_json_for->( $test_user,
             method => "PUT",
-            uri    => "/rooms/$room_id/state/m.room.topic",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
 
             content => { topic => "Here I can set the topic at powerlevel 0" },
          );

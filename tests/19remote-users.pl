@@ -2,7 +2,7 @@
 my $REMOTE_USERS = 2;
 
 prepare "Remote users",
-   requires => [qw( register_new_user v1_clients
+   requires => [qw( register_new_user api_clients
                     can_register )],
 
    provides => [qw( remote_users )],
@@ -26,7 +26,7 @@ prepare "Remote users",
    };
 
 prepare "Remote v2 users",
-   requires => [qw( register_new_user v1_clients v2_clients can_register )],
+   requires => [qw( register_new_user api_clients v2_clients can_register )],
 
    provides => [qw( remote_v2_users )],
 

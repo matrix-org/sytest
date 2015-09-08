@@ -1,5 +1,5 @@
 multi_test "Left room members do not cause problems for presence",
-   requires => [qw( register_new_user first_v1_client make_test_room do_request_json_for more_users
+   requires => [qw( register_new_user first_api_client make_test_room do_request_json_for more_users
                     can_leave_room can_room_initial_sync )],
 
    await => sub {
@@ -23,7 +23,7 @@ multi_test "Left room members do not cause problems for presence",
 
          $do_request_json_for->( $user2,
             method => "POST",
-            uri    => "/rooms/$room_id/leave",
+            uri    => "/api/v1/rooms/$room_id/leave",
 
             content => {},
          );
@@ -32,7 +32,7 @@ multi_test "Left room members do not cause problems for presence",
 
          $do_request_json_for->( $user1,
             method => "GET",
-            uri    => "/rooms/$room_id/initialSync",
+            uri    => "/api/v1/rooms/$room_id/initialSync",
          )
       })->then( sub {
          my ( $body ) = @_;

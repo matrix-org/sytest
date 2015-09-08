@@ -8,7 +8,7 @@ test "POST /createRoom makes a public room",
 
       $do_request_json->(
          method => "POST",
-         uri    => "/createRoom",
+         uri    => "/api/v1/createRoom",
 
          content => {
             visibility      => "public",
@@ -35,7 +35,7 @@ test "POST /createRoom makes a public room",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/initialSync",
+         uri    => "/api/v1/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -54,7 +54,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -79,7 +79,7 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.power_levels",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -105,7 +105,7 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/initialSync",
+         uri    => "/api/v1/rooms/$room_id/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -127,14 +127,14 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_v1_client room_id can_create_room )],
+   requires => [qw( first_api_client room_id can_create_room )],
 
    check => sub {
       my ( $http, $room_id ) = @_;
 
       $http->do_request_json(
          method => "GET",
-         uri    => "/publicRooms",
+         uri    => "/api/v1/publicRooms",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -165,7 +165,7 @@ test "GET /directory/room/:room_alias yields room ID",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/directory/room/$room_alias",
+         uri    => "/api/v1/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -189,7 +189,7 @@ test "POST /createRoom makes a private room",
 
       $do_request_json->(
          method => "POST",
-         uri    => "/createRoom",
+         uri    => "/api/v1/createRoom",
 
          content => {
             visibility => "private",
@@ -218,7 +218,7 @@ test "POST /createRoom makes a private room with invites",
 
       $do_request_json->(
          method => "POST",
-         uri    => "/createRoom",
+         uri    => "/api/v1/createRoom",
 
          content => {
             visibility => "private",

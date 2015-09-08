@@ -15,7 +15,7 @@ test "Displayname change reports an event to myself",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/profile/:user_id/displayname",
+         uri    => "/api/v1/profile/:user_id/displayname",
 
          content => { displayname => $displayname },
       );
@@ -47,7 +47,7 @@ test "Avatar URL change reports an event to myself",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/profile/:user_id/avatar_url",
+         uri    => "/api/v1/profile/:user_id/avatar_url",
 
          content => { avatar_url => $avatar_url },
       );
@@ -78,7 +78,7 @@ multi_test "Global /initialSync reports my own profile",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/initialSync",
+         uri    => "/api/v1/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 

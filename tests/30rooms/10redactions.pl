@@ -7,7 +7,7 @@ sub make_room_and_message
       ( $room_id ) = @_;
       $do_request_json_for->( $sender,
          method => "POST",
-         uri    => "/rooms/$room_id/send/m.room.message",
+         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 
          content => { msgtype => "m.message", body => "orangutans are not monkeys" },
       )
@@ -38,7 +38,7 @@ test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
 
          $do_request_json_for->( $room_creator,
             method => "POST",
-            uri    => "/rooms/$room_id/redact/$to_redact",
+            uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
             content => {},
          );
       });
@@ -59,7 +59,7 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
 
          $do_request_json_for->( $test_user,
                method => "POST",
-               uri    => "/rooms/$room_id/redact/$to_redact",
+               uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
                content => {},
          );
       });
@@ -81,7 +81,7 @@ test "POST /rooms/:room_id/redact/:event_id as random user does not redact messa
 
          $do_request_json_for->( $other_test_user,
                method => "POST",
-               uri    => "/rooms/$room_id/redact/$to_redact",
+               uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
                content => {},
          )
       })->$expect_http_403;

@@ -12,7 +12,7 @@ test "PUT /directory/room/:room_alias creates alias",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/directory/room/$room_alias",
+         uri    => "/api/v1/directory/room/$room_alias",
 
          content => {
             room_id => $room_id,
@@ -28,7 +28,7 @@ test "PUT /directory/room/:room_alias creates alias",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/directory/room/$room_alias",
+         uri    => "/api/v1/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
 

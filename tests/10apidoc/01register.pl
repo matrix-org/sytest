@@ -3,7 +3,7 @@ our @EXPORT = qw( User );
 struct User => [qw( http user_id access_token refresh_token eventstream_token saved_events pending_get_events )];
 
 test "GET /register yields a set of flows",
-   requires => [qw( first_v1_client )],
+   requires => [qw( first_api_client )],
 
    provides => [qw( can_register_password_flow )],
 
@@ -11,7 +11,7 @@ test "GET /register yields a set of flows",
       my ( $http ) = @_;
 
       $http->do_request_json(
-         uri => "/register",
+         uri => "/api/v1/register",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -44,7 +44,7 @@ test "GET /register yields a set of flows",
 my $password = "s3kr1t";
 
 test "POST /register can create a user",
-   requires => [qw( first_v1_client can_register_password_flow )],
+   requires => [qw( first_api_client can_register_password_flow )],
 
    provides => [qw( can_register login_details )],
 
@@ -53,7 +53,7 @@ test "POST /register can create a user",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/register",
+         uri    => "/api/v1/register",
 
          content => {
             type     => "m.login.password",
@@ -78,7 +78,7 @@ sub register_new_user
 
    $http->do_request_json(
       method => "POST",
-      uri    => "/register",
+      uri    => "/api/v1/register",
 
       content => {
          type     => "m.login.password",
@@ -94,7 +94,7 @@ sub register_new_user
       if( $with_events ) {
          $http->do_request_json(
             method => "GET",
-            uri    => "/events",
+            uri    => "/api/v1/events",
             params => { access_token => $access_token, timeout => 0 },
          )->then( sub {
             my ( $body ) = @_;

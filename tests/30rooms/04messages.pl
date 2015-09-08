@@ -44,7 +44,7 @@ test "Local room members see posted message events",
 
       $do_request_json->(
          method => "POST",
-         uri    => "/rooms/$room_id/send/m.room.message",
+         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 
          content => { msgtype => $msgtype, body => $msgbody },
       );
@@ -92,7 +92,7 @@ test "Fetching eventstream a second time doesn't yield the message again",
 
          $do_request_json_for->( $recvuser,
             method => "GET",
-            uri    => "/events",
+            uri    => "/api/v1/events",
             params => {
                from    => $recvuser->eventstream_token,
                timeout => 0,
@@ -149,7 +149,7 @@ test "Local room members can get room messages",
 
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/rooms/$room_id/messages",
+            uri    => "/api/v1/rooms/$room_id/messages",
 
             params => { limit => 1, dir => "b" },
          )->then( sub {
@@ -217,7 +217,7 @@ test "Remote room members can get room messages",
 
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/rooms/$room_id/messages",
+            uri    => "/api/v1/rooms/$room_id/messages",
 
             params => { limit => 1, dir => "b" },
          )->then( sub {

@@ -1,7 +1,7 @@
 my $content_id;
 
 test "Can upload without a file name",
-   requires => [qw( first_v1_client user )],
+   requires => [qw( first_api_client user )],
 
    do => sub {
       my ( $http, $user ) = @_;
@@ -52,7 +52,7 @@ sub test_using_client
 }
 
 test "Can download without a file name locally",
-   requires => [qw( first_v1_client )],
+   requires => [qw( first_api_client )],
 
    check => sub {
       my ( $http ) = @_;
@@ -60,7 +60,7 @@ test "Can download without a file name locally",
    };
 
 test "Can download without a file name over federation",
-   requires => [qw( v1_clients )],
+   requires => [qw( api_clients )],
 
    check => sub {
       my ( $clients ) = @_;

@@ -1,6 +1,6 @@
 test "Can upload device keys",
    requires => [qw(
-      register_new_user first_v1_client first_v2_client do_request_json_for
+      register_new_user first_api_client first_v2_client do_request_json_for
       can_register
       )],
 

@@ -2,7 +2,7 @@
 my $LOCAL_USERS = 3;
 
 prepare "More local users",
-   requires => [qw( register_new_user first_v1_client user
+   requires => [qw( register_new_user first_api_client user
                     can_register )],
 
    provides => [qw( more_users local_users )],

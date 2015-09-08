@@ -1,6 +1,6 @@
 multi_test "Test that a message is pushed",
    requires => [qw(
-      v1_clients do_request_json_for await_event_for flush_events_for
+      api_clients do_request_json_for await_event_for flush_events_for
       test_http_server_uri_base await_http_request register_new_user_without_events
 
       can_register can_create_private_room
@@ -35,7 +35,7 @@ multi_test "Test that a message is pushed",
          # Have Alice create a new private room
          $do_request_json_for->( $alice,
             method  => "POST",
-            uri     => "/createRoom",
+            uri     => "/api/v1/createRoom",
             content => { visibility => "private" },
          )
       })->then( sub {
@@ -59,7 +59,7 @@ multi_test "Test that a message is pushed",
 
             $do_request_json_for->( $alice,
                method  => "POST",
-               uri     => "/rooms/$room->{room_id}/invite",
+               uri     => "/api/v1/rooms/$room->{room_id}/invite",
                content => { user_id => $bob->user_id },
             ),
          )
@@ -69,7 +69,7 @@ multi_test "Test that a message is pushed",
 
          $do_request_json_for->( $bob,
             method  => "POST",
-            uri     => "/rooms/$room->{room_id}/join",
+            uri     => "/api/v1/rooms/$room->{room_id}/join",
             content => {},
          )
       })->then( sub {
@@ -79,7 +79,7 @@ multi_test "Test that a message is pushed",
          # message that Bob sent.
          $do_request_json_for->( $alice,
             method  => "POST",
-            uri     => "/pushers/set",
+            uri     => "/api/v1/pushers/set",
             content => {
                profile_tag         => "tag",
                kind                => "http",
@@ -114,7 +114,7 @@ multi_test "Test that a message is pushed",
 
             $do_request_json_for->( $bob,
                method  => "POST",
-               uri     => "/rooms/$room->{room_id}/send/m.room.message",
+               uri     => "/api/v1/rooms/$room->{room_id}/send/m.room.message",
                content => {
                   msgtype => "m.text",
                   body    => "Room message for 50push-01message-pushed"

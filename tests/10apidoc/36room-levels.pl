@@ -8,7 +8,7 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.power_levels",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -45,7 +45,7 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.power_levels",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
       )->then( sub {
          my ( $levels ) = @_;
 
@@ -53,13 +53,13 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
 
          $do_request_json->(
             method => "PUT",
-            uri    => "/rooms/$room_id/state/m.room.power_levels",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
             content => $levels,
          )
       })->then( sub {
          $do_request_json->(
             method => "GET",
-            uri    => "/rooms/$room_id/state/m.room.power_levels",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
          )
       })->then( sub {
          my ( $levels ) = @_;
@@ -86,14 +86,14 @@ prepare "Creating power_level change helper",
 
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/rooms/$room_id/state/m.room.power_levels",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
          )->then( sub {
             my ( $levels ) = @_;
             $func->( $levels );
 
             $do_request_json_for->( $user,
                method => "PUT",
-               uri    => "/rooms/$room_id/state/m.room.power_levels",
+               uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
 
                content => $levels,
             );

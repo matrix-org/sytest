@@ -1,7 +1,7 @@
 use Future::Utils qw( repeat );
 
 multi_test "New federated private chats get full presence information (SYN-115)",
-   requires => [qw( register_new_user v1_clients do_request_json_for flush_events_for await_event_for
+   requires => [qw( register_new_user api_clients do_request_json_for flush_events_for await_event_for
                     can_register can_create_private_room )],
 
    do => sub {
@@ -29,7 +29,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
          # Have Alice create a new private room
          $do_request_json_for->( $alice,
             method => "POST",
-            uri    => "/createRoom",
+            uri    => "/api/v1/createRoom",
             content => { visibility => "private" },
          )
       })->then( sub {
@@ -40,7 +40,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
          # Alice invites Bob
          $do_request_json_for->( $alice,
             method => "POST",
-            uri    => "/rooms/$room->{room_id}/invite",
+            uri    => "/api/v1/rooms/$room->{room_id}/invite",
 
             content => { user_id => $bob->user_id },
          );
@@ -63,7 +63,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
          # Bob accepts the invite by joining the room
          $do_request_json_for->( $bob,
             method => "POST",
-            uri    => "/rooms/$room->{room_id}/join",
+            uri    => "/api/v1/rooms/$room->{room_id}/join",
 
             content => {},
          );
@@ -83,7 +83,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
 
                $do_request_json_for->( $user,
                   method => "GET",
-                  uri    => $is_initial ? "/initialSync" : "/events",
+                  uri    => $is_initial ? "/api/v1/initialSync" : "/api/v1/events",
                   params => { from => $user->eventstream_token, timeout => 500 }
                )->then( sub {
                   my ( $body ) = @_;

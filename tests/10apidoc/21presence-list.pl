@@ -1,5 +1,5 @@
 # Eventually this will be changed; see SPEC-53
-my $PRESENCE_LIST_URI = "/presence/list/:user_id";
+my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
 test "GET /presence/:user_id/list initially empty",
    requires => [qw( do_request_json )],
