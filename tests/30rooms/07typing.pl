@@ -21,7 +21,7 @@ prepare "Fetching current room members",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/state",
+         uri    => "/api/v1/rooms/$room_id/state",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -44,7 +44,7 @@ test "Typing notification sent to local room members",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/rooms/$room_id/typing/:user_id",
+         uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
          content => { typing => 1, timeout => 30000 }, # msec
       );
@@ -117,7 +117,7 @@ test "Typing can be explicitly stopped",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/rooms/$room_id/typing/:user_id",
+         uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
          content => { typing => 0 },
       );
@@ -167,7 +167,7 @@ multi_test "Typing notifications timeout and can be resent",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/rooms/$room_id/typing/:user_id",
+         uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
          content => { typing => 1, timeout => 100 }, # msec; i.e. very short
       )->then( sub {
@@ -202,7 +202,7 @@ multi_test "Typing notifications timeout and can be resent",
       })->then( sub {
          $do_request_json->(
             method => "PUT",
-            uri    => "/rooms/$room_id/typing/:user_id",
+            uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
             content => { typing => 1, timeout => 10000 },
          )

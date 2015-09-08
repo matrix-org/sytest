@@ -10,7 +10,7 @@ test "A room can be created set to invite-only",
 
       $do_request_json->(
          method => "POST",
-         uri    => "/createRoom",
+         uri    => "/api/v1/createRoom",
 
          content => {
             # visibility: "private" actually means join_rule: "invite"
@@ -24,7 +24,7 @@ test "A room can be created set to invite-only",
 
          $do_request_json->(
             method => "GET",
-            uri    => "/rooms/$room_id/initialSync",
+            uri    => "/api/v1/rooms/$room_id/initialSync",
          )->then( sub {
             my ( $body ) = @_;
 
@@ -54,7 +54,7 @@ test "Uninvited users cannot join the room",
 
       $do_request_json_for->( $uninvited,
          method => "POST",
-         uri    => "/rooms/$room_id/join",
+         uri    => "/api/v1/rooms/$room_id/join",
 
          content => {},
       )->then(
@@ -88,7 +88,7 @@ test "Can invite users to invite-only rooms",
 
       $do_request_json->(
          method => "POST",
-         uri    => "/rooms/$room_id/invite",
+         uri    => "/api/v1/rooms/$room_id/invite",
 
          content => { user_id => $invitee->user_id },
       );
@@ -131,13 +131,13 @@ test "Invited user can join the room",
 
       $do_request_json_for->( $invitee,
          method => "POST",
-         uri    => "/rooms/$room_id/join",
+         uri    => "/api/v1/rooms/$room_id/join",
 
          content => {},
       )->then( sub {
          $do_request_json_for->( $invitee,
             method => "GET",
-            uri    => "/rooms/$room_id/state/m.room.member/${\$invitee->user_id}",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$invitee->user_id}",
          )
       })->then( sub {
          my ( $member_state ) = @_;
@@ -160,7 +160,7 @@ test "Banned user is kicked and may not rejoin",
       # Pre-test assertion that the user we want to ban is present
       $do_request_json_for->( $banned_user,
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
       )->then( sub {
          my ( $body ) = @_;
          $body->{membership} eq "join" or
@@ -168,14 +168,14 @@ test "Banned user is kicked and may not rejoin",
 
          $do_request_json_for->( $user,
             method => "POST",
-            uri    => "/rooms/$room_id/ban",
+            uri    => "/api/v1/rooms/$room_id/ban",
 
             content => { user_id => $banned_user->user_id, reason => "testing" },
          );
       })->then( sub {
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -184,7 +184,7 @@ test "Banned user is kicked and may not rejoin",
 
          $do_request_json_for->( $banned_user,
             method => "POST",
-            uri    => "/rooms/$room_id/join",
+            uri    => "/api/v1/rooms/$room_id/join",
 
             content => {},
          )->then(

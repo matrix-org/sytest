@@ -42,7 +42,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
             $do_request_json_for->( $as_user,
                method => "POST",
-               uri    => "/rooms/$room_id/join",
+               uri    => "/api/v1/rooms/$room_id/join",
                params => {
                   user_id => $ghost->user_id,
                },
@@ -71,7 +71,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
             $do_request_json_for->( $as_user,
                method => "POST",
-               uri    => "/rooms/$room_id/send/m.room.message",
+               uri    => "/api/v1/rooms/$room_id/send/m.room.message",
                params => {
                   user_id => $ghost->user_id,
                },
@@ -147,7 +147,7 @@ multi_test "AS-ghosted users can use rooms themselves",
 
             $do_request_json_for->( $ghost,
                method => "POST",
-               uri    => "/rooms/$room_id/join",
+               uri    => "/api/v1/rooms/$room_id/join",
 
                content => {},
             )
@@ -173,7 +173,7 @@ multi_test "AS-ghosted users can use rooms themselves",
 
             $do_request_json_for->( $ghost,
                method => "POST",
-               uri    => "/rooms/$room_id/send/m.room.message",
+               uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 
                content => { msgtype => "m.text", body => "Message from AS Ghost" },
             )

@@ -10,7 +10,7 @@ prepare "Leaving old test room",
 
          $do_request_json_for->( $user,
             method => "POST",
-            uri    => "/rooms/$room_id/leave",
+            uri    => "/api/v1/rooms/$room_id/leave",
 
             content => {},
          )->else_with_f( sub {

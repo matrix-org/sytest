@@ -6,7 +6,7 @@ multi_test "Can claim one time key using POST",
 
       $do_request_json_for->( $e2e_user_alice,
          method  => "POST",
-         uri     => "/keys/upload/alices_first_device",
+         uri     => "/v2_alpha/keys/upload/alices_first_device",
          content => {
             one_time_keys => {
                "test_algorithm:test_id", "test+base64+key"
@@ -17,7 +17,7 @@ multi_test "Can claim one time key using POST",
 
          $do_request_json_for->( $e2e_user_alice,
             method => "GET",
-            uri    => "/keys/upload/alices_first_device",
+            uri    => "/v2_alpha/keys/upload/alices_first_device",
          )
       })->then( sub {
          my ( $content ) = @_;
@@ -33,7 +33,7 @@ multi_test "Can claim one time key using POST",
 
          $do_request_json_for->( $e2e_user_alice,
             method  => "POST",
-            uri     => "/keys/claim",
+            uri     => "/v2_alpha/keys/claim",
             content => {
                one_time_keys => {
                   $e2e_user_alice->user_id => {
@@ -64,7 +64,7 @@ multi_test "Can claim one time key using POST",
 
          $do_request_json_for->( $e2e_user_alice,
             method => "GET",
-            uri    => "/keys/upload/alices_first_device",
+            uri    => "/v2_alpha/keys/upload/alices_first_device",
          )
       })->then( sub {
          my ( $content ) = @_;

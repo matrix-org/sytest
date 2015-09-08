@@ -1,5 +1,5 @@
 # Eventually this will be changed; see SPEC-53
-my $PRESENCE_LIST_URI = "/presence/list/:user_id";
+my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
 prepare "Flushing event stream",
    requires => [qw( flush_events_for user )],
@@ -16,7 +16,7 @@ test "initialSync sees my presence status",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/initialSync",
+         uri    => "/api/v1/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -54,7 +54,7 @@ test "Presence change reports an event to myself",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/presence/:user_id/status",
+         uri    => "/api/v1/presence/:user_id/status",
 
          content => { presence => "online", status_msg => $status_msg },
       )
@@ -96,7 +96,7 @@ test "Friends presence changes reports events",
       )->then( sub {
          $do_request_json_for->( $friend,
             method => "PUT",
-            uri    => "/presence/:user_id/status",
+            uri    => "/api/v1/presence/:user_id/status",
 
             content => { presence => "online", status_msg => $friend_status },
          );

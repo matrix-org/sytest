@@ -1,5 +1,5 @@
 # Eventually this will be changed; see SPEC-53
-my $PRESENCE_LIST_URI = "/presence/list/:user_id";
+my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
 # This test is at 29, just before we start doing things with rooms. We'll clear
 # out the presence list here so as to ensure any presence-based messaging that

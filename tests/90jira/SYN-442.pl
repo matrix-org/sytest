@@ -12,7 +12,7 @@ multi_test "Test that we can be reinvited to a room we created",
         my $room_id;
 
         $do_request_json_for->(
-            $user_1, method => "POST", uri => "/createRoom", content => {}
+            $user_1, method => "POST", uri => "/api/v1/createRoom", content => {}
         )->then(sub {
             pass "User A created a room";
             my ($body) = @_;
@@ -20,13 +20,13 @@ multi_test "Test that we can be reinvited to a room we created",
             $room_id = $body->{room_id};
             $do_request_json_for->(
                 $user_1, method => "PUT",
-                uri => "/rooms/$room_id/state/m.room.join_rules",
+                uri => "/api/v1/rooms/$room_id/state/m.room.join_rules",
                 content => {join_rule => "invite"},
             );
         })->then(sub {
             pass "User A set the join rules to 'invite'";
             $do_request_json_for->(
-                $user_1, method => "POST", uri => "/rooms/$room_id/invite",
+                $user_1, method => "POST", uri => "/api/v1/rooms/$room_id/invite",
                 content => {user_id => $user_2->user_id},
             );
         })->then(sub {
@@ -41,14 +41,14 @@ multi_test "Test that we can be reinvited to a room we created",
         })->then(sub {
             pass "User B received the invite from A";
             $do_request_json_for->(
-                $user_2, method => "POST", uri => "/rooms/$room_id/join",
+                $user_2, method => "POST", uri => "/api/v1/rooms/$room_id/join",
                 content => {}
             );
         })->then(sub {
             pass "User B joined the room";
             $do_request_json_for->(
                 $user_1, method => "GET",
-                uri => "/rooms/$room_id/state/m.room.power_levels",
+                uri => "/api/v1/rooms/$room_id/state/m.room.power_levels",
             );
         })->then(sub {
             pass "Downloaded the power levels for the room";
@@ -56,13 +56,13 @@ multi_test "Test that we can be reinvited to a room we created",
             $levels->{users}{$user_2->user_id} = 100;
             $do_request_json_for->(
                 $user_1, method => "PUT",
-                uri => "/rooms/$room_id/state/m.room.power_levels",
+                uri => "/api/v1/rooms/$room_id/state/m.room.power_levels",
                 content => $levels,
             );
         })->then(sub {
             pass "User A set user B's power level to 100";
             $do_request_json_for->(
-                $user_1, method => "POST", uri => "/rooms/$room_id/leave",
+                $user_1, method => "POST", uri => "/api/v1/rooms/$room_id/leave",
                 content => {}
             );
         })->then(sub {
@@ -77,7 +77,7 @@ multi_test "Test that we can be reinvited to a room we created",
         })->then(sub {
             pass "User B received the leave event";
             $do_request_json_for->(
-                $user_2, method => "POST", uri => "/rooms/$room_id/invite",
+                $user_2, method => "POST", uri => "/api/v1/rooms/$room_id/invite",
                 content => {user_id => $user_1->user_id},
             );
         })->then(sub {
@@ -92,7 +92,7 @@ multi_test "Test that we can be reinvited to a room we created",
         })->then(sub {
             pass "User A received the invite from B";
             $do_request_json_for->(
-                $user_1, method => "POST", uri => "/rooms/$room_id/join",
+                $user_1, method => "POST", uri => "/api/v1/rooms/$room_id/join",
                 content => {}
             );
         })->then(sub {

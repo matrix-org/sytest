@@ -2,7 +2,7 @@ use JSON qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha",
-   requires => [qw( first_v2_client await_http_request expect_http_4xx )],
+   requires => [qw( first_api_client await_http_request expect_http_4xx )],
 
    do => sub {
       my ( $http, $await_http_request, $expect_http_4xx ) = @_;
@@ -31,7 +31,7 @@ multi_test "Register with a recaptcha",
 
          $http->do_request_json(
             method  => "POST",
-            uri     => "/register",
+            uri     => "/v2_alpha/register",
             content => {
                username => "SYT-8-username",
                password => "my secret",

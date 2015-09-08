@@ -6,7 +6,7 @@ test "Can query device keys using POST",
 
       $do_request_json_for->( $e2e_user_alice,
          method  => "POST",
-         uri     => "/keys/query/",
+         uri     => "/v2_alpha/keys/query/",
          content => {
             device_keys => {
                $e2e_user_alice->user_id => {}
@@ -35,7 +35,7 @@ test "Can query specific device keys using POST",
 
       $do_request_json_for->( $e2e_user_alice,
          method  => "POST",
-         uri     => "/keys/query/",
+         uri     => "/v2_alpha/keys/query/",
          content => {
             device_keys => {
                $e2e_user_alice->user_id => [ "alices_first_device" ]
@@ -64,7 +64,7 @@ test "Can query device keys using GET",
 
       $do_request_json_for->( $e2e_user_alice,
          method => "GET",
-         uri    => "/keys/query/${\$e2e_user_alice->user_id}"
+         uri    => "/v2_alpha/keys/query/${\$e2e_user_alice->user_id}"
       )->then( sub {
          my ( $content ) = @_;
 

@@ -6,7 +6,7 @@ test "GET /presence/:user_id/status fetches initial status",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/presence/:user_id/status",
+         uri    => "/api/v1/presence/:user_id/status",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -31,7 +31,7 @@ test "PUT /presence/:user_id/status updates my presence",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/presence/:user_id/status",
+         uri    => "/api/v1/presence/:user_id/status",
 
          content => {
             presence   => "online",
@@ -45,7 +45,7 @@ test "PUT /presence/:user_id/status updates my presence",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/presence/:user_id/status",
+         uri    => "/api/v1/presence/:user_id/status",
       )->then( sub {
          my ( $body ) = @_;
 

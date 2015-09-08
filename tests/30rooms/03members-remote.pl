@@ -13,7 +13,7 @@ test "Remote users can join room by alias",
       $flush_events_for->( $user )->then( sub {
          $do_request_json_for->( $user,
             method => "POST",
-            uri    => "/join/$room_alias",
+            uri    => "/api/v1/join/$room_alias",
 
             content => {},
          );
@@ -26,7 +26,7 @@ test "Remote users can join room by alias",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/rooms/$room_id/state/m.room.member/:user_id",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -53,7 +53,7 @@ prepare "More remote room members",
          $flush_events_for->( $user )->then( sub {
             $do_request_json_for->( $user,
                method => "POST",
-               uri    => "/join/$room_alias",
+               uri    => "/api/v1/join/$room_alias",
 
                content => {},
             );
@@ -102,7 +102,7 @@ test "New room members see existing members' presence in room initialSync",
 
             $do_request_json_for->( $user,
                method => "GET",
-               uri    => "/rooms/$room_id/initialSync",
+               uri    => "/api/v1/rooms/$room_id/initialSync",
             )->then( sub {
                my ( $body ) = @_;
 
@@ -186,7 +186,7 @@ test "New room members see first user's profile information in global initialSyn
 
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/initialSync",
+            uri    => "/api/v1/initialSync",
          )->then( sub {
             my ( $body ) = @_;
 
@@ -220,7 +220,7 @@ test "New room members see first user's profile information in per-room initialS
 
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/rooms/$room_id/initialSync",
+            uri    => "/api/v1/rooms/$room_id/initialSync",
          )->then( sub {
             my ( $body ) = @_;
 
