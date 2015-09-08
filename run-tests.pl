@@ -44,6 +44,7 @@ my %SYNAPSE_ARGS = (
 );
 
 my $WANT_TLS = 1;
+my %FIXED_BUGS;
 
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
@@ -66,6 +67,8 @@ GetOptions(
    'coverage+' => \$SYNAPSE_ARGS{coverage},
 
    'p|port-base=i' => \(my $PORT_BASE = 8000),
+
+   'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
    'E=s' => sub { # process -Eoption=value
       my @more = split m/=/, $_[1];
@@ -109,6 +112,9 @@ Options:
                                   synapse's logging level
 
        --python PATH            - path to the 'python' binary
+
+   -F, --fixed BUGS             - bug names that are expected to be fixed
+                                  (ignores 'bug' declarations with these names)
 
    -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
 
@@ -240,6 +246,10 @@ our $SKIPPING;
 sub _run_test
 {
    my ( $t, %params ) = @_;
+
+   # We expect this test to fail if it's declared to be dependent on a bug that
+   # is not yet fixed
+   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
    undef @log_if_fail_lines;
 
