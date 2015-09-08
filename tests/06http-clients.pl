@@ -17,7 +17,7 @@ prepare "Creating generic HTTP client",
 prepare "Creating test Matrix HTTP clients",
    requires => [qw( synapse_client_locations )],
 
-   provides => [qw( api_clients first_api_client v2_clients first_v2_client )],
+   provides => [qw( api_clients first_api_client )],
 
    do => sub {
       my ( $locations ) = @_;
@@ -34,18 +34,6 @@ prepare "Creating test Matrix HTTP clients",
 
       provide api_clients => \@clients;
       provide first_api_client => $clients[0];
-
-      my @v2_clients = map {
-         my $location = $_;
-         my $client = SyTest::HTTPClient->new(
-            uri_base => "$location/_matrix/client/v2_alpha",
-         );
-         $loop->add( $client );
-         $client;
-      } @$locations;
-
-      provide v2_clients => \@v2_clients;
-      provide first_v2_client => $v2_clients[0];
 
       Future->done;
    };

@@ -129,13 +129,14 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [qw( first_v2_client user )],
+   requires => [qw( first_api_client user )],
 
    do => sub {
       my ( $http, $old_user ) = @_;
+
       $http->do_request_json(
          method => "POST",
-         uri    => "/tokenrefresh",
+         uri    => "/v2_alpha/tokenrefresh",
 
          content => {
             refresh_token => $old_user->refresh_token,
@@ -155,7 +156,7 @@ test "POST /tokenrefresh invalidates old refresh token",
 
             $http->do_request_json(
                method => "POST",
-               uri    => "/tokenrefresh",
+               uri    => "/v2_alpha/tokenrefresh",
 
                content => {
                   refresh_token => $old_user->refresh_token,
