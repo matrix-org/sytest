@@ -1,5 +1,4 @@
-# A handy little structure for other scripts to find in 'user' and 'more_users'
-struct User => [qw( http user_id access_token eventstream_token saved_events pending_get_events )];
+use JSON qw( decode_json );
 
 test "GET /login yields a set of flows",
    requires => [qw( first_v1_client )],
@@ -40,7 +39,8 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [qw( first_v1_client can_register can_login_password_flow )],
+   requires => [qw( first_v1_client login_details
+                    can_login_password_flow )],
 
    provides => [qw( can_login user first_home_server do_request_json_for do_request_json )],
 
@@ -65,8 +65,9 @@ test "POST /login can log in as a user",
          provide can_login => 1;
 
          my $access_token = $body->{access_token};
+         my $refresh_token = $body->{refresh_token};
 
-         provide user => my $user = User( $http, $user_id, $access_token, undef, [], undef );
+         provide user => my $user = User( $http, $user_id, $access_token, $refresh_token, undef, [], undef );
 
          provide first_home_server => $body->{home_server};
 
@@ -94,4 +95,89 @@ test "POST /login can log in as a user",
 
          Future->done(1);
       });
+   };
+
+test "POST /login wrong password is rejected",
+   requires => [qw( first_v1_client expect_http_403 login_details
+                    can_login_password_flow )],
+
+   do => sub {
+      my ( $http, $expect_http_403, $login_details ) = @_;
+      my ( $user_id, $password ) = @$login_details;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/login",
+
+         content => {
+            type     => "m.login.password",
+            user     => $user_id,
+            password => "${password}wrong",
+         },
+      )->$expect_http_403->then( sub {
+         my ( $resp ) = @_;
+         my $body = decode_json($resp->{_content});
+         require_json_keys( $body, qw( errcode ));
+
+         my $errcode = $body->{errcode};
+
+         $errcode eq "M_FORBIDDEN" or
+            die "Expected errcode to be M_FORBIDDEN but was ${errcode}";
+
+         Future->done(1);
+      });
+   };
+
+test "POST /tokenrefresh invalidates old refresh token",
+   requires => [qw( first_v2_client user )],
+
+   do => sub {
+      my ( $http, $old_user ) = @_;
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/tokenrefresh",
+
+         content => {
+            refresh_token => $old_user->refresh_token,
+         },
+      )->then(
+         sub {
+            my ( $body ) = @_;
+            require_json_keys( $body, qw( access_token refresh_token ));
+            my $new_access_token = $body->{access_token};
+            my $new_refresh_token = $body->{refresh_token};
+
+            $new_access_token ne $old_user->access_token or
+               die "Expected new access token";
+
+            $new_refresh_token ne $old_user->refresh_token or
+               die "Expected new refresh token";
+
+            $http->do_request_json(
+               method => "POST",
+               uri    => "/tokenrefresh",
+
+               content => {
+                  refresh_token => $old_user->refresh_token,
+               },
+            )
+         }
+      )->then(
+         sub { # done
+            Future->fail( "Expected not to succeed in re-using refresh token" );
+         },
+         sub { # fail
+            my ( $failure, $name, @args ) = @_;
+
+            defined $name and $name eq "http" or
+               die "Expected failure kind to be 'http'";
+
+            my ( $resp, $req ) = @args;
+
+            $resp->code == 403 or
+               die "Expected HTTP response code to be 403 but was ${\$resp->code}";
+
+            Future->done(1);
+         }
+      )
    };
