@@ -10,7 +10,7 @@ struct Awaiter => [qw( pathmatch filter future )];
 prepare "Environment closures for receiving HTTP pokes",
    requires => [qw( )],
 
-   provides => [qw( internal_server_port test_http_server_uri_base await_http_request )],
+   provides => [qw( test_http_server_uri_base await_http_request )],
 
    do => sub {
       my $listen_host = "localhost";
@@ -95,8 +95,6 @@ prepare "Environment closures for receiving HTTP pokes",
       )->then( sub {
          my ( $listener ) = @_;
          my $sockport = $listener->read_handle->sockport;
-
-         provide internal_server_port => $sockport;
 
          my $uri_base = "http://$listen_host:$sockport";
 
