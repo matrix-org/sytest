@@ -1,4 +1,5 @@
 use List::Util qw( first );
+use Data::Dumper;
 
 test "A room can be created set to invite-only",
    requires => [qw( do_request_json can_create_room )],
@@ -205,3 +206,158 @@ test "Banned user is kicked and may not rejoin",
          );
       });
    };
+
+test "Can invite existing 3pid",
+   requires => [qw( do_request_json more_users test_http_server_uri_base await_http_request )],
+
+   do => sub {
+      my ( $do_request_json, $more_users, $test_http_server_uri_base, $await_http_request ) = @_;
+
+      my $invitee_email = "marmosets\@monkeyworld.org";
+      my $invitee_mxid = $more_users->[0]->user_id;
+      my $room_id;
+
+      Future->needs_all(
+         stub_is_lookup($invitee_email, $invitee_mxid, $await_http_request),
+
+         make_inviteonly_room($do_request_json)
+         ->on_done( sub {
+            ( $room_id ) = @_;
+         })->then( sub {
+            $do_request_json->(
+               method => "POST",
+               uri    => "/api/v1/rooms/$room_id/invite",
+
+               content => {
+                  id_server => (substr $test_http_server_uri_base, length("https://")),
+                  medium => "email",
+                  address => $invitee_email,
+                  display_name => "Cute things",
+               },
+            ),
+         })->then( sub {
+            $do_request_json->(
+               method => "GET",
+               uri    => "/api/v1/rooms/$room_id/state/m.room.member/$invitee_mxid",
+            )->on_done( sub {
+               my ( $body ) = @_;
+               log_if_fail $body;
+               $body->{membership} eq "invite" or
+                  die "Expected invited user membership to be 'invite'";
+            }),
+         }),
+      );
+   };
+
+sub stub_is_lookup {
+   my ( $email, $mxid, $await_http_request ) = @_;
+   $await_http_request->("/_matrix/identity/api/v1/lookup", sub {
+      my ( undef, $req ) = @_;
+      my %query = $req->as_http_request->uri->query_form;
+      return unless $query{medium} eq "email";
+      return unless $query{address} eq $email;
+      return 1;
+   })->then( sub {
+      my ( $body, $request ) = @_;
+      my $content = ( defined($mxid) ? qq({"medium": "email", "address": "$email", "mxid": "$mxid"}) : qq({}) );
+      $request->respond(make_200($content));
+      Future->done( 1 );
+   })
+};
+
+sub make_200 {
+   my ( $content ) = @_;
+   HTTP::Response->new( 200, "OK", ["Content-Length", length($content)], $content );
+};
+
+sub make_inviteonly_room {
+   my ( $do_request_json ) = @_;
+
+   $do_request_json->(
+      method => "POST",
+      uri    => "/api/v1/createRoom",
+
+      content => {
+         # visibility: "private" actually means join_rule: "invite"
+         # See SPEC-74
+         visibility => "private",
+      },
+   )->then( sub {
+      my ( $body ) = @_;
+      Future->done($body->{room_id});
+   })
+};
+
+test "Can invite unbound 3pid",
+   requires => [qw( do_request_json do_request_json_for more_users test_http_server_uri_base await_http_request )],
+
+   do => sub {
+      my ( $do_request_json, $do_request_json_for, $more_users, $test_http_server_uri_base, $await_http_request ) = @_;
+
+      my $invitee = $more_users->[0];
+      my $invitee_email = "lemurs\@monkeyworld.org";
+      my $room_id;
+
+      # sha256(abc+sha256(123lemurs@monkeyworld.org)
+      # = sha256(abc+377e9ce9132221d02d9c76d0db6fe53f01552c1a7493e5001656882853e60299)
+      # = 16c2f564f9f6ecdc26250d20dfd038198b75da6acef8c6f79b8092f19e8d82fa
+      my $outer_nonce = "abc";
+      my $inner_digest = "377e9ce9132221d02d9c76d0db6fe53f01552c1a7493e5001656882853e60299";
+      my $outer_digest = "16c2f564f9f6ecdc26250d20dfd038198b75da6acef8c6f79b8092f19e8d82fa";
+
+      make_inviteonly_room($do_request_json)
+      ->on_done( sub {
+         ( $room_id ) = @_;
+      })->then( sub {
+         Future->needs_all(
+            stub_is_lookup($invitee_email, undef, $await_http_request),
+
+            $await_http_request->("/_matrix/identity/api/v1/nonce-it-up", sub {
+               my ( $raw_body, $req ) = @_;
+               # TODO: Parse body
+               return 1;
+            })->then( sub {
+               my ( $body, $request ) = @_;
+               $request->respond(make_200(qq({"nonce": "$outer_nonce", "digest": "$outer_digest"})));
+               Future->done( 1 );
+            }),
+
+            $do_request_json->(
+               method => "POST",
+               uri    => "/api/v1/rooms/$room_id/invite",
+
+               content => {
+                  id_server => (substr $test_http_server_uri_base, length("https://")),
+                  medium => "email",
+                  address => $invitee_email,
+                  display_name => "Cool tails",
+               }
+            )->then( sub {
+               $do_request_json_for->($invitee,
+                  method => "POST",
+                  uri    => "/api/v1/rooms/$room_id/join",
+
+                  content => {
+                     nonce => $outer_nonce,
+                     secret => $inner_digest,
+                     digest => $outer_digest,
+                  }
+               )
+            })->then( sub {
+               my ( $body ) = @_;
+               my $invitee_mxid = $invitee->user_id;
+
+               $do_request_json->(
+                  method => "GET",
+                  uri    => "/api/v1/rooms/$room_id/state/m.room.member/$invitee_mxid",
+               )->on_done( sub {
+                  my ( $body ) = @_;
+                  log_if_fail Dumper($body);
+                  $body->{membership} eq "join" or
+                     die "Expected invited user membership to be 'join'";
+               })
+            }),
+         )
+      })
+   };
+

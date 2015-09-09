@@ -48,7 +48,7 @@ prepare "Environment closures for receiving HTTP pokes",
                next unless ( !ref $pathmatch and $path eq $pathmatch ) or
                            ( ref $pathmatch  and $path =~ $pathmatch );
 
-               next if $awaiter->filter and not $awaiter->filter->( $content );
+               next if $awaiter->filter and not $awaiter->filter->( $content, $request );
 
                splice @pending_awaiters, $idx, 1, ();
                $awaiter->future->done( $content, $request );
