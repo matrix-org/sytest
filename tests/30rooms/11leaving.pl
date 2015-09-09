@@ -109,7 +109,9 @@ test "A departed room is still included in /initialSync (SPEC-216)",
             die "Departed room not in /initialSync"
                 unless $room;
 
-            require_json_keys( $room, qw( state messages membership ) );
+            require_json_keys( $room, qw(
+                state messages membership
+            ) );
 
             die "Membership is not leave"
                 unless $room->{membership} eq "leave";
@@ -127,4 +129,43 @@ test "A departed room is still included in /initialSync (SPEC-216)",
 
             Future->done(1);
         })
-    }
+    };
+
+test "Can get room/{roomId}/initialSync for a departed room (SPEC-216)",
+    requires => [qw(do_request_json departed_room_id)],
+    check => sub {
+        my ($do_request_json, $departed_room_id) = @_;
+
+        $do_request_json->(
+            method => "GET",
+            uri => "/rooms/$departed_room_id/initialSync",
+            params => { limit => 2 },
+        )->then( sub {
+            my ( $room ) = @_;
+
+            require_json_keys( $room, qw( state messages membership ) );
+
+            die "Membership is not leave"
+                unless $room->{membership} eq "leave";
+
+            my ( $madeup_test_state ) = grep { $_->{type} eq "madeup.test.state" }
+                @{$room->{state}};
+
+            die "Received state that happened after leaving the room"
+                unless $madeup_test_state->{content}{body}
+                    eq "S1. B's state before A left";
+
+            die "Received message that happened after leaving the room"
+                unless $room->{messages}{chunk}[0]{content}{body}
+                    eq "M2. B's message before A left";
+
+            die "Received presence information after leaving the room"
+                if @{$room->{presence}};
+
+            die "Received receipts after leaving the room"
+                if @{$room->{receipts}};
+
+            Future->done(1);
+        })
+    };
+
