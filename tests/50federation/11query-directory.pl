@@ -50,7 +50,6 @@ test "Inbound federation can query room alias directory",
       my ( $outbound_client, $do_request_json, $first_home_server, $room_id ) = @_;
 
       my $room_alias = "#50federation-11query-directory:$first_home_server";
-      #my $room_id = "!the-room-id-for-test:example.org";
 
       $do_request_json->(
          method => "PUT",
