@@ -24,8 +24,8 @@ multi_test "Inviting an AS-hosted user asks the AS server",
       my $user_id = "\@$localpart:$home_server";
 
       Future->needs_all(
-         $await_http_request->( "/appserv/users/$user_id", sub { 1 } ) ->then( sub {
-            my ( $content, $request ) = @_;
+         $await_http_request->( "/appserv/users/$user_id", sub { 1 } )->then( sub {
+            my ( $request ) = @_;
 
             $make_as_user->( $localpart )->then( sub {
                $request->respond_json( {} );
@@ -73,7 +73,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
       Future->needs_all(
          $await_http_request->( "/appserv/rooms/$room_alias", sub { 1 } )->then( sub {
-            my ( $content, $request ) = @_;
+            my ( $request ) = @_;
 
             pass "Received AS request";
 

@@ -2,9 +2,7 @@ package SyTest::HTTPServer::Request;
 use 5.014; # ${^GLOBAL_PHASE}
 use base qw( Net::Async::HTTP::Server::Request );
 
-# A somewhat-hackish way to give NaH:Server::Request objects a ->respond_json method
-
-use JSON qw( encode_json );
+use JSON qw( decode_json encode_json );
 
 use constant JSON_MIME_TYPE => "application/json";
 
@@ -23,6 +21,17 @@ sub respond
    my $self = shift;
    $self->{__responded}++;
    $self->SUPER::respond( @_ );
+}
+
+sub body_from_json
+{
+   my $self = shift;
+
+   if( ( my $type = $self->header( "Content-Type" ) // "" ) ne JSON_MIME_TYPE ) {
+      croak "Cannot ->body_from_json with Content-Type: $type";
+   }
+
+   return decode_json $self->body;
 }
 
 sub respond_json

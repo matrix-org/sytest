@@ -31,11 +31,6 @@ prepare "Environment closures for receiving HTTP pokes",
             my $method = $request->method;
             my $path = uri_unescape $request->path;
 
-            my $content = $request->body;
-            if( ( $request->header( "Content-Type" ) // "" ) eq "application/json" ) {
-               $content = decode_json $content;
-            }
-
             if( $CLIENT_LOG ) {
                print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
                #TODO log the HTTP Request headers
@@ -50,10 +45,10 @@ prepare "Environment closures for receiving HTTP pokes",
                next unless ( !ref $pathmatch and $path eq $pathmatch ) or
                            ( ref $pathmatch  and $path =~ $pathmatch );
 
-               next if $awaiter->filter and not $awaiter->filter->( $content, $request );
+               next if $awaiter->filter and not $awaiter->filter->( $request );
 
                splice @pending_awaiters, $idx, 1, ();
-               $awaiter->future->done( $content, $request );
+               $awaiter->future->done( $request );
                return;
             }
 
@@ -117,9 +112,9 @@ prepare "Environment closures for receiving HTTP pokes",
                delay( 10 )
                   ->then_fail( "Timed out waiting for request" ),
             )->then( sub {
-               my ( $request_body, $request ) = @_;
+               my ( $request ) = @_;
 
-               $request_body->{some_key} eq "some_value" or
+               $request->body_from_json->{some_key} eq "some_value" or
                   die "Expected JSON with {\"some_key\":\"some_value\"}";
 
                $request->respond_json( {} );
@@ -142,7 +137,7 @@ prepare "Environment closures for receiving HTTP pokes",
                delay( 10 )
                   ->then_fail( "Timed out waiting for request" ),
             )->then( sub {
-               my ( $request_body, $request ) = @_;
+               my ( $request ) = @_;
 
                $request->respond_json( {
                   response_key => "response_value",
