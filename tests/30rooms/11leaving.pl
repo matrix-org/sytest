@@ -131,7 +131,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
         })
     };
 
-test "Can get room/{roomId}/initialSync for a departed room (SPEC-216)",
+test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     requires => [qw(do_request_json departed_room_id)],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
@@ -169,7 +169,7 @@ test "Can get room/{roomId}/initialSync for a departed room (SPEC-216)",
         })
     };
 
-test "Can get room/{roomId}/state for a departed room (SPEC-216)",
+test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     requires => [qw(do_request_json departed_room_id)],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
@@ -186,6 +186,45 @@ test "Can get room/{roomId}/state for a departed room (SPEC-216)",
             die "Received state that happened after leaving the room"
                 unless $madeup_test_state->{content}{body}
                     eq "S1. B's state before A left";
+
+            Future->done(1);
+        })
+    };
+
+test "Can get room/{roomId}/members for a departed room (SPEC-216)",
+    requires => [qw(do_request_json departed_room_id)],
+    check => sub {
+        my ($do_request_json, $departed_room_id) = @_;
+
+        $do_request_json->(
+            method => "GET",
+            uri => "/rooms/$departed_room_id/members",
+        )->then(sub {
+            my ( $body ) = @_;
+
+            require_json_keys( $body, qw( chunk ) );
+
+            Future->done(1);
+        })
+    };
+
+test "Can get room/{roomId}/messages for a departed room (SPEC-216)",
+    requires => [qw(do_request_json departed_room_id)],
+    check => sub {
+        my ($do_request_json, $departed_room_id) = @_;
+
+        $do_request_json->(
+            method => "GET",
+            uri => "/rooms/$departed_room_id/messages",
+            params => {limit => 2, dir => 'b'},
+        )->then(sub {
+            my ( $body ) = @_;
+
+            require_json_keys( $body, qw( chunk ) );
+
+            die "Received message that happened after leaving the room"
+                unless $body->{chunk}[1]{content}{body}
+                    eq "M2. B's message before A left";
 
             Future->done(1);
         })
