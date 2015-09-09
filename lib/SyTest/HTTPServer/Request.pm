@@ -6,6 +6,8 @@ use base qw( Net::Async::HTTP::Server::Request );
 
 use JSON qw( encode_json );
 
+use constant JSON_MIME_TYPE => "application/json";
+
 use Carp;
 
 sub DESTROY
@@ -30,7 +32,7 @@ sub respond_json
 
    my $response = HTTP::Response->new( 200 );
    $response->add_content( encode_json $json );
-   $response->content_type( "application/json" );
+   $response->content_type( JSON_MIME_TYPE );
    $response->content_length( length $response->content );
 
    $self->respond( $response );
