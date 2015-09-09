@@ -47,4 +47,16 @@ sub respond_json
    $self->respond( $response );
 }
 
+sub body_from_form
+{
+   my $self = shift;
+
+   if( ( my $type = $self->header( "Content-Type" ) // "" ) ne "application/x-www-form-urlencoded" ) {
+      croak "Cannot ->body_from_form with Content-Type: $type";
+   }
+
+   # TODO: Surely there's a neater way than this??
+   return { URI->new( "http://?" . $self->body )->query_form };
+}
+
 1;
