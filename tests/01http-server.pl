@@ -1,5 +1,5 @@
 use File::Basename qw( dirname );
-use Net::Async::HTTP::Server 0.08;  # request_class
+use Net::Async::HTTP::Server 0.09;  # request_class with bugfix
 use JSON qw( decode_json );
 use URI::Escape qw( uri_unescape );
 
@@ -23,6 +23,8 @@ prepare "Environment closures for receiving HTTP pokes",
       my @pending_awaiters;
 
       my $http_server = Net::Async::HTTP::Server->new(
+         request_class => "SyTest::HTTPServer::Request",
+
          on_request => sub {
             my ( $self, $request ) = @_;
 
@@ -59,11 +61,6 @@ prepare "Environment closures for receiving HTTP pokes",
          }
       );
       $loop->add( $http_server );
-
-      # Upstream bug - this doesn't work at ->new time
-      $http_server->configure(
-         request_class => "SyTest::HTTPServer::Request",
-      );
 
       my $await_http_request = sub {
          my ( $pathmatch, $filter, %args ) = @_;
