@@ -72,6 +72,8 @@ prepare "Starting synapse",
                recaptcha_siteverify_api => "$test_http_server_uri_base/recaptcha/api/siteverify",
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
+
+               i_really_want_to_ignore_ssl_certs_when_i_am_an_http_client_even_though_it_is_woefully_insecure_because_i_hate_my_users => 1,
             },
          );
          $loop->add( $synapse );
