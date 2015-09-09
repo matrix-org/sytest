@@ -43,8 +43,8 @@ test "Outbound federation can query room alias directory",
    };
 
 test "Inbound federation can query room alias directory",
-   requires => [qw( outbound_client do_request_json first_home_server
-                    room_id can_create_room_alias)],
+   requires => [qw( outbound_client do_request_json first_home_server room_id
+                    can_create_room_alias)],
 
    do => sub {
       my ( $outbound_client, $do_request_json, $first_home_server, $room_id ) = @_;
