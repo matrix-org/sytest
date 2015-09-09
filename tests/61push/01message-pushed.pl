@@ -101,15 +101,17 @@ multi_test "Test that a message is pushed",
          Future->needs_all(
             # TODO(check that the HTTP poke is actually the poke we wanted)
             $await_http_request->("/alice_push", sub {
-               my ( $body ) = @_;
+               my ( $request ) = @_;
+               my $body = $request->body_from_json;
+
                return unless $body->{notification}{type};
                return unless $body->{notification}{type} eq "m.room.message";
                return 1;
             })->then( sub {
-               my ( $body, $request ) = @_;
+               my ( $request ) = @_;
 
                $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
-               Future->done( $body );
+               Future->done( $request );
             }),
 
             $do_request_json_for->( $bob,
@@ -125,13 +127,14 @@ multi_test "Test that a message is pushed",
             }),
          )
       })->then( sub {
-         my ( $request_body ) = @_;
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
 
-         log_if_fail "Request body", $request_body;
+         log_if_fail "Request body", $body;
 
          pass "Message sent";
 
-         require_json_keys( my $notification = $request_body->{notification}, qw(
+         require_json_keys( my $notification = $body->{notification}, qw(
             id room_id type sender content devices counts
          ));
          require_json_keys( $notification->{counts}, qw(
