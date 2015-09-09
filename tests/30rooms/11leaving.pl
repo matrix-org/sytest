@@ -148,8 +148,8 @@ test "Can get room/{roomId}/initialSync for a departed room (SPEC-216)",
             die "Membership is not leave"
                 unless $room->{membership} eq "leave";
 
-            my ( $madeup_test_state ) = grep { $_->{type} eq "madeup.test.state" }
-                @{$room->{state}};
+            my ( $madeup_test_state ) =
+                grep { $_->{type} eq "madeup.test.state" } @{$room->{state}};
 
             die "Received state that happened after leaving the room"
                 unless $madeup_test_state->{content}{body}
@@ -169,3 +169,24 @@ test "Can get room/{roomId}/initialSync for a departed room (SPEC-216)",
         })
     };
 
+test "Can get room/{roomId}/state for a departed room (SPEC-216)",
+    requires => [qw(do_request_json departed_room_id)],
+    check => sub {
+        my ($do_request_json, $departed_room_id) = @_;
+
+        $do_request_json->(
+            method => "GET",
+            uri => "/rooms/$departed_room_id/state",
+        )->then(sub {
+            my ( $state ) = @_;
+
+            my ( $madeup_test_state ) =
+                grep { $_->{type} eq "madeup.test.state" } @{$state};
+
+            die "Received state that happened after leaving the room"
+                unless $madeup_test_state->{content}{body}
+                    eq "S1. B's state before A left";
+
+            Future->done(1);
+        })
+    };
