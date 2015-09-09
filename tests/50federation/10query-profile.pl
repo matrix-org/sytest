@@ -2,10 +2,10 @@ local *SyTest::Federation::Server::on_request_federation_v1_query_profile = sub 
    my $self = shift;
    my ( $req ) = @_;
 
-   my %params = $req->as_http_request->uri->query_form;
+   my $user_id = $req->query_param( "user_id" );
 
    Future->done( {
-      displayname => "The displayname of $params{user_id}",
+      displayname => "The displayname of $user_id",
       avatar_url  => "",
    } );
 };
