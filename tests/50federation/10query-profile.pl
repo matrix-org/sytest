@@ -2,10 +2,10 @@ local *SyTest::Federation::Server::on_request_federation_v1_query_profile = sub 
    my $self = shift;
    my ( $req ) = @_;
 
-   my %params = $req->as_http_request->uri->query_form;
+   my $user_id = $req->query_param( "user_id" );
 
    Future->done( {
-      displayname => "The displayname of $params{user_id}",
+      displayname => "The displayname of $user_id",
       avatar_url  => "",
    } );
 };
@@ -19,7 +19,7 @@ test "Outbound federation can query profile data",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/profile/\@user:$local_server_name/displayname",
+         uri    => "/api/v1/profile/\@user:$local_server_name/displayname",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
@@ -44,7 +44,7 @@ test "Inbound federation can query profile data",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/profile/:user_id/displayname",
+         uri    => "/api/v1/profile/:user_id/displayname",
 
          content => {
             displayname => $dname,

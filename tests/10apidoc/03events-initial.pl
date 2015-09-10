@@ -2,7 +2,7 @@ use List::UtilsBy qw( extract_by );
 use Future::Utils qw( repeat );
 
 test "GET /events initially",
-   requires => [qw( do_request_json user first_v1_client )],
+   requires => [qw( do_request_json user first_api_client )],
 
    provides => [qw( can_get_events )],
 
@@ -11,7 +11,7 @@ test "GET /events initially",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/events",
+         uri    => "/api/v1/events",
          params => { timeout => 0 },
       )->then( sub {
          my ( $body ) = @_;
@@ -41,7 +41,7 @@ test "GET /initialSync initially",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/initialSync",
+         uri    => "/api/v1/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -78,7 +78,7 @@ prepare "Environment closures for stateful /event access",
          return $user->pending_get_events //=
             $user->http->do_request_json(
                method => "GET",
-               uri    => "/events",
+               uri    => "/api/v1/events",
                params => {
                   access_token => $user->access_token,
                   from         => $user->eventstream_token,
@@ -102,7 +102,7 @@ prepare "Environment closures for stateful /event access",
 
          $user->http->do_request_json(
             method => "GET",
-            uri    => "/events",
+            uri    => "/api/v1/events",
             params => {
                access_token => $user->access_token,
                timeout      => 0,

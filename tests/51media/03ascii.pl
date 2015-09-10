@@ -1,7 +1,7 @@
 my $content_id;
 
-test "Can upload without a file name",
-   requires => [qw( first_v1_client user )],
+test "Can upload with ASCII file name",
+   requires => [qw( first_api_client user )],
 
    do => sub {
       my ( $http, $user ) = @_;
@@ -14,8 +14,9 @@ test "Can upload without a file name",
 
          params => {
             access_token => $user->access_token,
+            filename => "ascii",
          }
-      )->then(sub {
+      )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( content_uri ));
@@ -33,7 +34,8 @@ test "Can upload without a file name",
 # These next two tests do the same thing with two different HTTP clients, to
 # test locally and via federation
 
-my $test_using_client = sub {
+sub test_using_client
+{
    my ( $client ) = @_;
 
    $client->do_request(
@@ -43,25 +45,45 @@ my $test_using_client = sub {
       my ( $body, $response ) = @_;
 
       my $disposition = $response->header( "Content-Disposition" );
-      defined $disposition and
-         die "Unexpected Content-Disposition header";
+      $disposition eq "inline; filename=ascii" or
+         die "Expected a UTF-8 filename parameter";
 
       Future->done(1);
    });
-};
+}
 
-test "Can download without a file name locally",
-   requires => [qw( first_v1_client )],
+test "Can download with ASCII file name locally",
+   requires => [qw( first_api_client )],
 
    check => sub {
       my ( $http ) = @_;
-      $test_using_client->( $http );
+      test_using_client( $http );
    };
 
-test "Can download without a file name over federation",
-   requires => [qw( v1_clients )],
+test "Can download with ASCII file name over federation",
+   requires => [qw( api_clients )],
 
    check => sub {
       my ( $clients ) = @_;
-      $test_using_client->( $clients->[1] );
+      test_using_client( $clients->[1] );
+   };
+
+test "Can download specifying a different ASCII file name",
+   requires => [qw( first_api_client )],
+
+   check => sub {
+      my ( $http ) = @_;
+
+      $http->do_request(
+         method   => "GET",
+         full_uri => "/_matrix/media/v1/download/$content_id/also_ascii",
+      )->then( sub {
+         my ( $body, $response ) = @_;
+
+         my $disposition = $response->header( "Content-Disposition" );
+         $disposition eq "inline; filename=also_ascii" or
+            die "Expected a UTF-8 filename parameter";
+
+         Future->done(1);
+      });
    };

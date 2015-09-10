@@ -33,12 +33,12 @@ sub gen_token
 }
 
 prepare "Starting synapse",
-   requires => [qw( synapse_ports synapse_args internal_server_port want_tls )],
+   requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls )],
 
    provides => [qw( synapse_client_locations as_credentials hs2as_token )],
 
    do => sub {
-      my ( $ports, $args, $internal_server_port, $want_tls ) = @_;
+      my ( $ports, $args, $test_http_server_uri_base, $want_tls ) = @_;
 
       my @locations;
 
@@ -69,7 +69,7 @@ prepare "Starting synapse",
 
             config => {
                # Config for testing recaptcha. 90jira/SYT-8.pl
-               recaptcha_siteverify_api => "http://localhost:$internal_server_port/recaptcha/api/siteverify",
+               recaptcha_siteverify_api => "$test_http_server_uri_base/recaptcha/api/siteverify",
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
             },
@@ -79,7 +79,7 @@ prepare "Starting synapse",
          if( $idx == 0 ) {
             # Configure application services on first instance only
             my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
-               url      => "http://localhost:$internal_server_port/appserv",
+               url      => "$test_http_server_uri_base/appserv",
                as_token => ( my $as2hs_token = gen_token( 32 ) ),
                hs_token => ( my $hs2as_token = gen_token( 32 ) ),
                sender_localpart => ( my $as_user = "as-user" ),

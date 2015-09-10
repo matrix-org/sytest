@@ -10,7 +10,7 @@ multi_test "Rooms can be created with an initial invite list (SYN-205)",
 
       $do_request_json_for->( $user,
          method => "POST",
-         uri    => "/createRoom",
+         uri    => "/api/v1/createRoom",
 
          content => { visibility => "private", invite => [ $invitee->user_id ] },
       )->then( sub {

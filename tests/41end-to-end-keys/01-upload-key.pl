@@ -1,25 +1,24 @@
 test "Can upload device keys",
    requires => [qw(
-      register_new_user first_v1_client first_v2_client do_request_json_for
+      register_new_user first_api_client do_request_json_for
       can_register
       )],
 
    provides => [qw( e2e_user_alice e2e_can_upload_keys )],
 
    do => sub {
-      my ( $register_new_user, $http_v1, $http_v2, $do_request_json_for ) = @_;
+      my ( $register_new_user, $http, $do_request_json_for ) = @_;
 
       my $e2e_alice;
       # Register a user
-      $register_new_user->( $http_v1, "50-e2e-alice" )->then( sub {
+      $register_new_user->( $http, "50-e2e-alice" )->then( sub {
          ( $e2e_alice ) = @_;
-         $e2e_alice->http = $http_v2;
 
          provide e2e_user_alice => $e2e_alice;
 
          $do_request_json_for->( $e2e_alice,
             method  => "POST",
-            uri     => "/keys/upload/alices_first_device",
+            uri     => "/v2_alpha/keys/upload/alices_first_device",
             content => {
                device_keys => {
                   user_id => "\@50-e2e-alice:localhost:8480",

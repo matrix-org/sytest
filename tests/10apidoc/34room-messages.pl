@@ -11,7 +11,7 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
 
       $do_request_json->(
          method => "POST",
-         uri    => "/rooms/$room_id/send/m.room.message",
+         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 
          content => { msgtype => $msgtype, body => $body },
       )->then( sub {
@@ -36,7 +36,7 @@ test "GET /rooms/:room_id/messages returns a message",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/messages",
+         uri    => "/api/v1/rooms/$room_id/messages",
 
          # With no params this does "forwards from END"; i.e. nothing useful
          params => { dir => "b" },

@@ -8,7 +8,7 @@ test "AS can create a user",
 
       $do_request_json_for->( $as_user,
          method => "POST",
-         uri    => "/register",
+         uri    => "/api/v1/register",
 
          content => {
             type => "m.login.application_service",
@@ -26,7 +26,7 @@ test "AS can create a user",
 
             $do_request_json_for->( $as_user,
                method => "POST",
-               uri    => "/register",
+               uri    => "/api/v1/register",
 
                content => {
                   type => "m.login.application_service",
@@ -54,7 +54,7 @@ test "AS cannot create users outside its own namespace",
 
       $do_request_json_for->( $as_user,
          method => "POST",
-         uri    => "/register",
+         uri    => "/api/v1/register",
 
          content => {
             type => "m.login.application_service",
@@ -64,7 +64,7 @@ test "AS cannot create users outside its own namespace",
    };
 
 test "Regular users cannot register within the AS namespace",
-   requires => [qw( register_new_user first_v1_client expect_http_4xx )],
+   requires => [qw( register_new_user first_api_client expect_http_4xx )],
 
    do => sub {
       my ( $register_new_user, $http, $expect_http_4xx ) = @_;
@@ -118,7 +118,7 @@ test "AS can make room aliases",
 
          $do_request_json_for->( $as_user,
             method => "PUT",
-            uri    => "/directory/room/$room_alias",
+            uri    => "/api/v1/directory/room/$room_alias",
 
             content => {
                room_id => $room_id,
@@ -129,7 +129,7 @@ test "AS can make room aliases",
 
          $do_request_json_for->( $as_user,
             method => "GET",
-            uri    => "/directory/room/$room_alias",
+            uri    => "/api/v1/directory/room/$room_alias",
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -155,7 +155,7 @@ test "Regular users cannot create room aliases within the AS namespace",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/directory/room/$room_alias",
+         uri    => "/api/v1/directory/room/$room_alias",
 
          content => {
             room_id => $room_id,

@@ -10,7 +10,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/profile/:user_id/avatar_url",
+         uri    => "/api/v1/profile/:user_id/avatar_url",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -30,7 +30,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/profile/:user_id/avatar_url",
+         uri    => "/api/v1/profile/:user_id/avatar_url",
 
          content => {
             avatar_url => $avatar_url,
@@ -39,7 +39,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
    };
 
 test "GET /profile/:user_id/avatar_url publicly accessible",
-   requires => [qw( first_v1_client user can_set_avatar_url )],
+   requires => [qw( first_api_client user can_set_avatar_url )],
 
    check => sub {
       my ( $http, $user ) = @_;
@@ -47,7 +47,7 @@ test "GET /profile/:user_id/avatar_url publicly accessible",
 
       $http->do_request_json(
          method => "GET",
-         uri    => "/profile/$user_id/avatar_url",
+         uri    => "/api/v1/profile/$user_id/avatar_url",
          # no access_token
       )->then( sub {
          my ( $body ) = @_;

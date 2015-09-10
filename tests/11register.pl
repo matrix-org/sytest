@@ -2,24 +2,23 @@ use JSON qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha",
-   requires => [qw( first_v2_client await_http_request expect_http_4xx )],
+   requires => [qw( first_api_client await_http_request expect_http_4xx )],
 
    do => sub {
       my ( $http, $await_http_request, $expect_http_4xx ) = @_;
 
       Future->needs_all(
          $await_http_request->( "/recaptcha/api/siteverify", sub {1} )->then( sub {
-            my ( $body, $request ) = @_;
+            my ( $request ) = @_;
 
             pass "Got captcha verify request";
 
-            # $body arrives in an HTTP query-params format
-            my %request_params = URI->new( "http://?$body" )->query_form;
+            my $params = $request->body_from_form;
 
-            $request_params{secret} eq "sytest_recaptcha_private_key" or
+            $params->{secret} eq "sytest_recaptcha_private_key" or
                die "Bad secret";
 
-            $request_params{response} eq "sytest_captcha_response" or
+            $params->{response} eq "sytest_captcha_response" or
                die "Bad response";
 
             $request->respond_json(
@@ -31,7 +30,7 @@ multi_test "Register with a recaptcha",
 
          $http->do_request_json(
             method  => "POST",
-            uri     => "/register",
+            uri     => "/v2_alpha/register",
             content => {
                username => "SYT-8-username",
                password => "my secret",

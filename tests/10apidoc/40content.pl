@@ -5,13 +5,14 @@ EOF
 my $content_type = "text/plain";
 
 test "POST /media/v1/upload can create an upload",
-   requires => [qw( first_v1_client user )],
+   requires => [qw( first_api_client user )],
 
    provides => [qw( can_upload_media content_id )],
 
    do => sub {
       my ( $http, $user ) = @_;
 
+      # Because we're POST'ing non-JSON
       $http->do_request(
          method   => "POST",
          full_uri => "/_matrix/media/v1/upload",
@@ -36,8 +37,10 @@ test "POST /media/v1/upload can create an upload",
    };
 
 test "GET /media/v1/download can fetch the value again",
-   requires => [qw( first_v1_client content_id
+   requires => [qw( first_api_client content_id
                     can_upload_media )],
+
+   provides => [qw( can_download_media )],
 
    check => sub {
       my ( $http, $content_id ) = @_;
@@ -53,6 +56,8 @@ test "GET /media/v1/download can fetch the value again",
             die "Content not as expected";
          $response->content_type eq $content_type or
             die "Content-Type not as expected";
+
+         provide can_download_media => 1;
 
          Future->done(1);
       });

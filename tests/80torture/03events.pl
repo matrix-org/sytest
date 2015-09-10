@@ -7,7 +7,7 @@ test "GET /initialSync with non-numeric 'limit'",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/initialSync",
+         uri    => "/api/v1/initialSync",
 
          params => { limit => "hello" },
       )->$expect_http_4xx;
@@ -22,7 +22,7 @@ test "GET /events with non-numeric 'limit'",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/events",
+         uri    => "/api/v1/events",
 
          params => { from => $user->eventstream_token, limit => "hello" },
       )->$expect_http_4xx;
@@ -37,7 +37,7 @@ test "GET /events with negative 'limit'",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/events",
+         uri    => "/api/v1/events",
 
          params => { from => $user->eventstream_token, limit => -2 },
       )->$expect_http_4xx;
@@ -52,7 +52,7 @@ test "GET /events with non-numeric 'timeout'",
 
       $do_request_json_for->( $user,
          method => "GET",
-         uri    => "/events",
+         uri    => "/api/v1/events",
 
          params => { from => $user->eventstream_token, timeout => "hello" },
       )->$expect_http_4xx;
