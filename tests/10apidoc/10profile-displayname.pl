@@ -10,7 +10,7 @@ test "PUT /profile/:user_id/displayname sets my name",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/profile/:user_id/displayname",
+         uri    => "/api/v1/profile/:user_id/displayname",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -30,7 +30,7 @@ test "PUT /profile/:user_id/displayname sets my name",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/profile/:user_id/displayname",
+         uri    => "/api/v1/profile/:user_id/displayname",
 
          content => {
             displayname => $displayname,
@@ -39,7 +39,7 @@ test "PUT /profile/:user_id/displayname sets my name",
    };
 
 test "GET /profile/:user_id/displayname publicly accessible",
-   requires => [qw( first_v1_client user can_set_displayname )],
+   requires => [qw( first_api_client user can_set_displayname )],
 
    provides => [qw( can_get_displayname )],
 
@@ -49,7 +49,7 @@ test "GET /profile/:user_id/displayname publicly accessible",
 
       $http->do_request_json(
          method => "GET",
-         uri    => "/profile/$user_id/displayname",
+         uri    => "/api/v1/profile/$user_id/displayname",
          # no access_token
       )->then( sub {
          my ( $body ) = @_;

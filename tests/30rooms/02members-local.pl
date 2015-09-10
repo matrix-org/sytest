@@ -11,7 +11,7 @@ prepare "More local room members",
          $flush_events_for->( $user )->then( sub {
             $do_request_json_for->( $user,
                method => "POST",
-               uri    => "/rooms/$room_id/join",
+               uri    => "/api/v1/rooms/$room_id/join",
 
                content => {},
             );
@@ -59,7 +59,7 @@ test "New room members see existing users' presence in room initialSync",
 
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/rooms/$room_id/initialSync",
+            uri    => "/api/v1/rooms/$room_id/initialSync",
          )->then( sub {
             my ( $body ) = @_;
 
@@ -140,7 +140,7 @@ test "All room members see all room members' presence in global initialSync",
 
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/initialSync",
+            uri    => "/api/v1/initialSync",
          )->then( sub {
             my ( $body ) = @_;
 
@@ -176,7 +176,7 @@ test "New room members see first user's profile information in global initialSyn
 
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/initialSync",
+            uri    => "/api/v1/initialSync",
          )->then( sub {
             my ( $body ) = @_;
 
@@ -210,7 +210,7 @@ test "New room members see first user's profile information in per-room initialS
 
          $do_request_json_for->( $user,
             method => "GET",
-            uri    => "/rooms/$room_id/initialSync",
+            uri    => "/api/v1/rooms/$room_id/initialSync",
          )->then( sub {
             my ( $body ) = @_;
 

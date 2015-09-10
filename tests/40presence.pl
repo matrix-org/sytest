@@ -33,7 +33,7 @@ test "Presence changes are reported to local room members",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/presence/:user_id/status",
+         uri    => "/api/v1/presence/:user_id/status",
 
          content => { presence => "online", status_msg => $status_msg },
       )
@@ -104,7 +104,7 @@ test "Presence changes to OFFLINE are reported to local room members",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/presence/:user_id/status",
+         uri    => "/api/v1/presence/:user_id/status",
 
          content => { presence => "offline" },
       )
@@ -167,7 +167,7 @@ prepare "Leaving test room",
 
          $do_request_json->( $user,
             method => "POST",
-            uri    => "/rooms/$room_id/leave",
+            uri    => "/api/v1/rooms/$room_id/leave",
 
             content => {},
          )

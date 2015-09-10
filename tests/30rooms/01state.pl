@@ -8,7 +8,7 @@ prepare "Creating a room",
 
       $do_request_json->(
          method => "POST",
-         uri    => "/createRoom",
+         uri    => "/api/v1/createRoom",
 
          content => {
             visibility      => "public",
@@ -78,7 +78,7 @@ test "Setting room topic reports m.room.topic to myself",
 
       $do_request_json->(
          method => "PUT",
-         uri    => "/rooms/$room_id/state/m.room.topic",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
 
          content => { topic => $topic },
       );
@@ -111,7 +111,7 @@ multi_test "Global initialSync",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/initialSync",
+         uri    => "/api/v1/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -166,7 +166,7 @@ test "Global initialSync with limit=0 gives no messages",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/initialSync",
+         uri    => "/api/v1/initialSync",
          params => { limit => 0 },
       )->then( sub {
          my ( $body ) = @_;
@@ -194,7 +194,7 @@ multi_test "Room initialSync",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/initialSync",
+         uri    => "/api/v1/rooms/$room_id/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -246,7 +246,7 @@ test "Room initialSync with limit=0 gives no messages",
 
       $do_request_json->(
          method => "GET",
-         uri    => "/rooms/$room_id/initialSync",
+         uri    => "/api/v1/rooms/$room_id/initialSync",
          params => { limit => 0 },
       )->then( sub {
          my ( $body ) = @_;

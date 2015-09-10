@@ -1,6 +1,6 @@
 test "Can query remote device keys using POST",
    requires => [qw(
-      remote_v2_users e2e_user_alice do_request_json_for e2e_can_upload_keys
+      remote_users e2e_user_alice do_request_json_for e2e_can_upload_keys
    )],
 
    check => sub {
@@ -8,7 +8,7 @@ test "Can query remote device keys using POST",
 
       $do_request_json_for->( $remote_users->[0],
          method  => "POST",
-         uri     => "/keys/query/",
+         uri     => "/v2_alpha/keys/query/",
          content => {
             device_keys => {
                $e2e_user_alice->user_id => {}

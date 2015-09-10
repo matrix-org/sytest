@@ -2,9 +2,9 @@ package SyTest::HTTPServer::Request;
 use 5.014; # ${^GLOBAL_PHASE}
 use base qw( Net::Async::HTTP::Server::Request );
 
-# A somewhat-hackish way to give NaH:Server::Request objects a ->respond_json method
+use JSON qw( decode_json encode_json );
 
-use JSON qw( encode_json decode_json );
+use constant JSON_MIME_TYPE => "application/json";
 
 use Carp;
 
@@ -16,27 +16,22 @@ sub DESTROY
    carp "Destroying unresponded HTTP request to ${\$self->path}";
 }
 
-sub content_type_is_json
-{
-   my $self = shift;
-   return +( $self->header( "Content-Type" ) // "" ) eq "application/json";
-}
-
-sub body_json
-{
-   my $self = shift;
-
-   $self->content_type_is_json or
-      croak "Cannot ->body_json with non-application/json as content_type";
-
-   return decode_json $self->body;
-}
-
 sub respond
 {
    my $self = shift;
    $self->{__responded}++;
    $self->SUPER::respond( @_ );
+}
+
+sub body_from_json
+{
+   my $self = shift;
+
+   if( ( my $type = $self->header( "Content-Type" ) // "" ) ne JSON_MIME_TYPE ) {
+      croak "Cannot ->body_from_json with Content-Type: $type";
+   }
+
+   return decode_json $self->body;
 }
 
 sub respond_json
@@ -46,10 +41,22 @@ sub respond_json
 
    my $response = HTTP::Response->new( 200 );
    $response->add_content( encode_json $json );
-   $response->content_type( "application/json" );
+   $response->content_type( JSON_MIME_TYPE );
    $response->content_length( length $response->content );
 
    $self->respond( $response );
+}
+
+sub body_from_form
+{
+   my $self = shift;
+
+   if( ( my $type = $self->header( "Content-Type" ) // "" ) ne "application/x-www-form-urlencoded" ) {
+      croak "Cannot ->body_from_form with Content-Type: $type";
+   }
+
+   # TODO: Surely there's a neater way than this??
+   return { URI->new( "http://?" . $self->body )->query_form };
 }
 
 1;

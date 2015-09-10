@@ -23,7 +23,7 @@ multi_test "Non-present room members cannot ban others",
 
          $do_request_json_for->( $testuser,
             method => "POST",
-            uri    => "/rooms/$room_id/ban",
+            uri    => "/api/v1/rooms/$room_id/ban",
 
             content => { user_id => '@random_dude:test', reason => "testing" },
          )->then(

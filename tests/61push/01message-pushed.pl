@@ -1,6 +1,6 @@
 multi_test "Test that a message is pushed",
    requires => [qw(
-      v1_clients do_request_json_for await_event_for flush_events_for
+      api_clients do_request_json_for await_event_for flush_events_for
       test_http_server_uri_base await_http_request register_new_user_without_events
 
       can_register can_create_private_room
@@ -35,7 +35,7 @@ multi_test "Test that a message is pushed",
          # Have Alice create a new private room
          $do_request_json_for->( $alice,
             method  => "POST",
-            uri     => "/createRoom",
+            uri     => "/api/v1/createRoom",
             content => { visibility => "private" },
          )
       })->then( sub {
@@ -59,7 +59,7 @@ multi_test "Test that a message is pushed",
 
             $do_request_json_for->( $alice,
                method  => "POST",
-               uri     => "/rooms/$room->{room_id}/invite",
+               uri     => "/api/v1/rooms/$room->{room_id}/invite",
                content => { user_id => $bob->user_id },
             ),
          )
@@ -69,7 +69,7 @@ multi_test "Test that a message is pushed",
 
          $do_request_json_for->( $bob,
             method  => "POST",
-            uri     => "/rooms/$room->{room_id}/join",
+            uri     => "/api/v1/rooms/$room->{room_id}/join",
             content => {},
          )
       })->then( sub {
@@ -79,7 +79,7 @@ multi_test "Test that a message is pushed",
          # message that Bob sent.
          $do_request_json_for->( $alice,
             method  => "POST",
-            uri     => "/pushers/set",
+            uri     => "/api/v1/pushers/set",
             content => {
                profile_tag         => "tag",
                kind                => "http",
@@ -101,20 +101,22 @@ multi_test "Test that a message is pushed",
          Future->needs_all(
             # TODO(check that the HTTP poke is actually the poke we wanted)
             $await_http_request->("/alice_push", sub {
-               my ( $body ) = @_;
+               my ( $request ) = @_;
+               my $body = $request->body_from_json;
+
                return unless $body->{notification}{type};
                return unless $body->{notification}{type} eq "m.room.message";
                return 1;
             })->then( sub {
-               my ( $body, $request ) = @_;
+               my ( $request ) = @_;
 
                $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
-               Future->done( $body );
+               Future->done( $request );
             }),
 
             $do_request_json_for->( $bob,
                method  => "POST",
-               uri     => "/rooms/$room->{room_id}/send/m.room.message",
+               uri     => "/api/v1/rooms/$room->{room_id}/send/m.room.message",
                content => {
                   msgtype => "m.text",
                   body    => "Room message for 50push-01message-pushed"
@@ -125,13 +127,14 @@ multi_test "Test that a message is pushed",
             }),
          )
       })->then( sub {
-         my ( $request_body ) = @_;
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
 
-         log_if_fail "Request body", $request_body;
+         log_if_fail "Request body", $body;
 
          pass "Message sent";
 
-         require_json_keys( my $notification = $request_body->{notification}, qw(
+         require_json_keys( my $notification = $body->{notification}, qw(
             id room_id type sender content devices counts
          ));
          require_json_keys( $notification->{counts}, qw(

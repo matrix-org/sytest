@@ -24,8 +24,8 @@ multi_test "Inviting an AS-hosted user asks the AS server",
       my $user_id = "\@$localpart:$home_server";
 
       Future->needs_all(
-         $await_http_request->( "/appserv/users/$user_id", sub { 1 } ) ->then( sub {
-            my ( $content, $request ) = @_;
+         $await_http_request->( "/appserv/users/$user_id", sub { 1 } )->then( sub {
+            my ( $request ) = @_;
 
             $make_as_user->( $localpart )->then( sub {
                $request->respond_json( {} );
@@ -36,7 +36,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
 
          $do_request_json->(
             method => "POST",
-            uri    => "/rooms/$room_id/invite",
+            uri    => "/api/v1/rooms/$room_id/invite",
 
             content => { user_id => $user_id },
          ),
@@ -73,7 +73,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
       Future->needs_all(
          $await_http_request->( "/appserv/rooms/$room_alias", sub { 1 } )->then( sub {
-            my ( $content, $request ) = @_;
+            my ( $request ) = @_;
 
             pass "Received AS request";
 
@@ -101,7 +101,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
                $do_request_json_for->( $as_user,
                   method => "PUT",
-                  uri    => "/directory/room/$room_alias",
+                  uri    => "/api/v1/directory/room/$room_alias",
 
                   content => {
                      room_id => $room_id,
@@ -117,7 +117,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
          $do_request_json_for->( $user,
             method => "POST",
-            uri    => "/join/$room_alias",
+            uri    => "/api/v1/join/$room_alias",
 
             content => {},
          )
@@ -147,7 +147,7 @@ test "Events in rooms with AS-hosted room aliases are sent to AS server",
 
          $do_request_json->(
             method => "POST",
-            uri    => "/rooms/$room_id/send/m.room.message",
+            uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 
             content => {
                msgtype => "m.text",
