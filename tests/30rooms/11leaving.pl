@@ -49,19 +49,19 @@ multi_test "Setup a room, and havve the first user leave (SPEC-216)",
         })->then( sub {
             $do_request_json_for->( $user_b,
                 method => "PUT",
-                uri => "/rooms/$room_id/state/m.room.name",
+                uri => "/api/v1/rooms/$room_id/state/m.room.name",
                 content => { "name" => "N1. B's room name before A left", },
             )->on_done(sub { pass "User B set the room name the first time" })
         })->then( sub {
             $do_request_json_for->( $user_b,
                 method => "PUT",
-                uri => "/rooms/$room_id/state/madeup.test.state",
+                uri => "/api/v1/rooms/$room_id/state/madeup.test.state",
                 content => { "body" => "S1. B's state before A left", },
             )->on_done(sub { pass "User B set the state the first time" })
         })->then( sub {
             $do_request_json_for->( $user_b,
                 method => "POST",
-                uri => "/rooms/$room_id/send/m.room.message",
+                uri => "/api/v1/rooms/$room_id/send/m.room.message",
                 content => {
                     "body" => "M1. B's message before A left",
                     "msgtype" => "m.room.text",
@@ -70,7 +70,7 @@ multi_test "Setup a room, and havve the first user leave (SPEC-216)",
         })->then( sub {
             $do_request_json_for->( $user_b,
                 method => "POST",
-                uri => "/rooms/$room_id/send/m.room.message",
+                uri => "/api/v1/rooms/$room_id/send/m.room.message",
                 content => {
                     "body" => "M2. B's message before A left",
                     "msgtype" => "m.room.text",
@@ -79,13 +79,13 @@ multi_test "Setup a room, and havve the first user leave (SPEC-216)",
         })->then( sub {
             $do_request_json_for->( $user_a,
                 method => "POST",
-                uri => "/rooms/$room_id/leave",
+                uri => "/api/v1/rooms/$room_id/leave",
                 content => {},
             )->on_done(sub { pass "User A left the room" })
         })->then( sub {
             $do_request_json_for->( $user_b,
                 method => "POST",
-                uri => "/rooms/$room_id/send/m.room.message",
+                uri => "/api/v1/rooms/$room_id/send/m.room.message",
                 content => {
                     "body" => "M3. B's message after A left",
                     "msgtype" => "m.room.text",
@@ -94,13 +94,13 @@ multi_test "Setup a room, and havve the first user leave (SPEC-216)",
         })->then( sub {
             $do_request_json_for->( $user_b,
                 method => "PUT",
-                uri => "/rooms/$room_id/state/m.room.name",
+                uri => "/api/v1/rooms/$room_id/state/m.room.name",
                 content => { "name" => "N2. B's room name after A left", },
             )->on_done(sub { pass "User B set the room name the second time" })
         })->then( sub {
             $do_request_json_for->( $user_b,
                 method => "PUT",
-                uri => "/rooms/$room_id/state/madeup.test.state",
+                uri => "/api/v1/rooms/$room_id/state/madeup.test.state",
                 content => { "body" => "S2. B's state after A left", },
             )->on_done(sub { pass "User B set the state the second time" })
         })
@@ -114,7 +114,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
 
         $do_request_json->(
             method => "GET",
-            uri => "/initialSync",
+            uri => "/api/v1/initialSync",
             params => { limit => 2 },
         )->then( sub {
             my ( $body ) = @_;
@@ -156,7 +156,7 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
 
         $do_request_json->(
             method => "GET",
-            uri => "/rooms/$departed_room_id/initialSync",
+            uri => "/api/v1/rooms/$departed_room_id/initialSync",
             params => { limit => 2 },
         )->then( sub {
             my ( $room ) = @_;
@@ -194,7 +194,7 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
 
         $do_request_json->(
             method => "GET",
-            uri => "/rooms/$departed_room_id/state",
+            uri => "/api/v1/rooms/$departed_room_id/state",
         )->then(sub {
             my ( $state ) = @_;
 
@@ -216,7 +216,7 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
 
         $do_request_json->(
             method => "GET",
-            uri => "/rooms/$departed_room_id/members",
+            uri => "/api/v1/rooms/$departed_room_id/members",
         )->then(sub {
             my ( $body ) = @_;
 
@@ -233,7 +233,7 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
 
         $do_request_json->(
             method => "GET",
-            uri => "/rooms/$departed_room_id/messages",
+            uri => "/api/v1/rooms/$departed_room_id/messages",
             params => {limit => 2, dir => 'b'},
         )->then(sub {
             my ( $body ) = @_;
@@ -255,7 +255,7 @@ test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
 
         $do_request_json->(
             method => "GET",
-            uri => "/rooms/$departed_room_id/state/m.room.name",
+            uri => "/api/v1/rooms/$departed_room_id/state/m.room.name",
         )->then(sub {
             my ( $body ) = @_;
 
