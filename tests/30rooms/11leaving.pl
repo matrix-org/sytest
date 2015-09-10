@@ -11,12 +11,18 @@ multi_test "Setup a room, and havve the first user leave (SPEC-216)",
     # User A creates a room.
     # User A invites User B to the room.
     # User B joins the room.
+    # User B will set the ("m.room.name", "") state of the room to {
+    #   "body": "N1. B's room name before A left"
+    # }
     # User B will set the ("madeup.test.state", "") state of the room to {
     #   "body": "S1. B's state before A left"
     # }
     # User B will send a message with body "M1. B's message before A left"
     # User B will send a message with body "M2. B's message before A left"
     # User A will leave the room.
+    # User B will set the ("m.room.name", "") state of the room to {
+    #   "body": "N2. B's room name after A left"
+    # }
     # User B will set the ("madeup.test.state", "") state of the room to {
     #   "body": "S2. B's state after A left"
     # }
@@ -40,6 +46,12 @@ multi_test "Setup a room, and havve the first user leave (SPEC-216)",
                 my ( $levels ) = @_;
                 $levels->{users}{ $user_b->user_id } = 50;
             })
+        })->then( sub {
+            $do_request_json_for->( $user_b,
+                method => "PUT",
+                uri => "/rooms/$room_id/state/m.room.name",
+                content => { "name" => "N1. B's room name before A left", },
+            )->on_done(sub { pass "User B set the room name the first time" })
         })->then( sub {
             $do_request_json_for->( $user_b,
                 method => "PUT",
@@ -79,6 +91,12 @@ multi_test "Setup a room, and havve the first user leave (SPEC-216)",
                     "msgtype" => "m.room.text",
                 },
             )->on_done(sub { pass "User B sent their third message" })
+        })->then( sub {
+            $do_request_json_for->( $user_b,
+                method => "PUT",
+                uri => "/rooms/$room_id/state/m.room.name",
+                content => { "name" => "N2. B's room name after A left", },
+            )->on_done(sub { pass "User B set the room name the second time" })
         })->then( sub {
             $do_request_json_for->( $user_b,
                 method => "PUT",
@@ -191,7 +209,7 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
         })
     };
 
-test "Can get room/{roomId}/members for a departed room (SPEC-216)",
+test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
     requires => [qw(do_request_json departed_room_id)],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
@@ -208,7 +226,7 @@ test "Can get room/{roomId}/members for a departed room (SPEC-216)",
         })
     };
 
-test "Can get room/{roomId}/messages for a departed room (SPEC-216)",
+test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
     requires => [qw(do_request_json departed_room_id)],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
@@ -229,3 +247,26 @@ test "Can get room/{roomId}/messages for a departed room (SPEC-216)",
             Future->done(1);
         })
     };
+
+test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
+    requires => [qw(do_request_json departed_room_id)],
+    check => sub {
+        my ($do_request_json, $departed_room_id) = @_;
+
+        $do_request_json->(
+            method => "GET",
+            uri => "/rooms/$departed_room_id/state/m.room.name",
+        )->then(sub {
+            my ( $body ) = @_;
+
+            require_json_keys( $body, qw( name ) );
+
+            die "Received message that happened after leaving the room"
+                unless $body->{name}
+                    eq "N1. B's room name before A left";
+
+            Future->done(1);
+        })
+    };
+
+
