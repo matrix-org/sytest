@@ -44,20 +44,19 @@ prepare "Creating test helper functions",
          $await_http_request->( qr{^/appserv/transactions/\d+$}, sub { 1 },
             timeout => 0,
          )->then( sub {
-            my ( $body, $request ) = @_;
+            my ( $request ) = @_;
 
             # Respond immediately to AS
             $request->respond_json( {} );
 
-            my $uri = $request->as_http_request->uri;
-            my %query_params = $uri->query_form;
+            my $access_token = $request->query_param( "access_token" );
 
-            defined $query_params{access_token} or
+            defined $access_token or
                die "Expected HS to provide an access_token";
-            $query_params{access_token} eq $hs2as_token or
+            $access_token eq $hs2as_token or
                die "HS did not provide the correct token";
 
-            foreach my $event ( @{ $body->{events} } ) {
+            foreach my $event ( @{ $request->body_from_json->{events} } ) {
                my $type = $event->{type};
 
                my $queue = $futures_by_type{$type};
