@@ -240,6 +240,7 @@ sub log_if_fail
 
 my $failed;
 my $expected_fail;
+my $skipped_count = 0;
 
 our $SKIPPING;
 
@@ -336,6 +337,9 @@ sub test
    if( $t->failed ) {
       $output->diag( $_ ) for @log_if_fail_lines;
    }
+   if( $t->skipped ) {
+      $skipped_count++;
+   }
 
    no warnings 'exiting';
    last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
@@ -379,6 +383,9 @@ sub test
 
       if( $t->failed ) {
          $output->diag( $_ ) for @log_if_fail_lines;
+      }
+      if( $t->skipped ) {
+         $skipped_count++;
       }
 
       no warnings 'exiting';
@@ -575,7 +582,7 @@ if( $failed ) {
    exit 1;
 }
 else {
-   $output->final_pass( $expected_fail );
+   $output->final_pass( $expected_fail, $skipped_count );
    exit 0;
 }
 

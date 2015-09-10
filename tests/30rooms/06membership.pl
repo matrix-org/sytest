@@ -252,13 +252,12 @@ test "Can invite existing 3pid",
 sub stub_is_lookup {
    my ( $email, $mxid, $await_http_request ) = @_;
    $await_http_request->("/_matrix/identity/api/v1/lookup", sub {
-      my ( undef, $req ) = @_;
-      my %query = $req->as_http_request->uri->query_form;
-      return unless $query{medium} eq "email";
-      return unless $query{address} eq $email;
+      my ( $req ) = @_;
+      return unless $req->query_param("medium") eq "email";
+      return unless $req->query_param("address") eq $email;
       return 1;
    })->then( sub {
-      my ( $body, $request ) = @_;
+      my ( $request ) = @_;
       my $content = ( defined($mxid) ? qq({"medium": "email", "address": "$email", "mxid": "$mxid"}) : qq({}) );
       $request->respond(make_200($content));
       Future->done( 1 );
@@ -317,7 +316,7 @@ test "Can invite unbound 3pid",
                # TODO: Parse body
                return 1;
             })->then( sub {
-               my ( $body, $request ) = @_;
+               my ( $request ) = @_;
                $request->respond(make_200(qq({"nonce": "$outer_nonce", "digest": "$outer_digest"})));
                Future->done( 1 );
             }),

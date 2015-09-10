@@ -9,17 +9,16 @@ multi_test "Register with a recaptcha",
 
       Future->needs_all(
          $await_http_request->( "/recaptcha/api/siteverify", sub {1} )->then( sub {
-            my ( $body, $request ) = @_;
+            my ( $request ) = @_;
 
             pass "Got captcha verify request";
 
-            # $body arrives in an HTTP query-params format
-            my %request_params = URI->new( "http://?$body" )->query_form;
+            my $params = $request->body_from_form;
 
-            $request_params{secret} eq "sytest_recaptcha_private_key" or
+            $params->{secret} eq "sytest_recaptcha_private_key" or
                die "Bad secret";
 
-            $request_params{response} eq "sytest_captcha_response" or
+            $params->{response} eq "sytest_captcha_response" or
                die "Bad response";
 
             $request->respond_json(
