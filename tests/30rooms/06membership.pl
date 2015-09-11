@@ -208,10 +208,10 @@ test "Banned user is kicked and may not rejoin",
    };
 
 test "Can invite existing 3pid",
-   requires => [qw( do_request_json more_users test_http_server_uri_base await_http_request )],
+   requires => [qw( user more_users test_http_server_uri_base do_request_json make_test_room await_http_request )],
 
    do => sub {
-      my ( $do_request_json, $more_users, $test_http_server_uri_base, $await_http_request ) = @_;
+      my ( $user, $more_users, $test_http_server_uri_base, $do_request_json, $make_test_room, $await_http_request ) = @_;
 
       my $invitee_email = "marmosets\@monkeyworld.org";
       my $invitee_mxid = $more_users->[0]->user_id;
@@ -220,10 +220,9 @@ test "Can invite existing 3pid",
       Future->needs_all(
          stub_is_lookup($invitee_email, $invitee_mxid, $await_http_request),
 
-         make_inviteonly_room($do_request_json)
-         ->on_done( sub {
+         $make_test_room->("private", $user)
+         ->then( sub {
             ( $room_id ) = @_;
-         })->then( sub {
             $do_request_json->(
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/invite",
@@ -270,29 +269,11 @@ sub make_200 {
    HTTP::Response->new( 200, "OK", ["Content-Length", length($content)], $content );
 };
 
-sub make_inviteonly_room {
-   my ( $do_request_json ) = @_;
-
-   $do_request_json->(
-      method => "POST",
-      uri    => "/api/v1/createRoom",
-
-      content => {
-         # visibility: "private" actually means join_rule: "invite"
-         # See SPEC-74
-         visibility => "private",
-      },
-   )->then( sub {
-      my ( $body ) = @_;
-      Future->done($body->{room_id});
-   })
-};
-
 test "Can invite unbound 3pid",
-   requires => [qw( do_request_json do_request_json_for more_users test_http_server_uri_base await_http_request )],
+   requires => [qw( user do_request_json do_request_json_for more_users test_http_server_uri_base make_test_room await_http_request )],
 
    do => sub {
-      my ( $do_request_json, $do_request_json_for, $more_users, $test_http_server_uri_base, $await_http_request ) = @_;
+      my ( $user, $do_request_json, $do_request_json_for, $more_users, $test_http_server_uri_base, $make_test_room, $await_http_request ) = @_;
 
       my $invitee = $more_users->[0];
       my $invitee_email = "lemurs\@monkeyworld.org";
@@ -305,10 +286,9 @@ test "Can invite unbound 3pid",
       my $inner_digest = "377e9ce9132221d02d9c76d0db6fe53f01552c1a7493e5001656882853e60299";
       my $outer_digest = "16c2f564f9f6ecdc26250d20dfd038198b75da6acef8c6f79b8092f19e8d82fa";
 
-      make_inviteonly_room($do_request_json)
-      ->on_done( sub {
+      $make_test_room->("private", $user)
+      ->then( sub {
          ( $room_id ) = @_;
-      })->then( sub {
          Future->needs_all(
             stub_is_lookup($invitee_email, undef, $await_http_request),
 

@@ -9,7 +9,7 @@ multi_test "Non-present room members cannot ban others",
 
       my $room_id;
 
-      $make_test_room->( $creator )->then( sub {
+      $make_test_room->( "public", $creator )->then( sub {
          ( $room_id ) = @_;
 
          pass "Created room";

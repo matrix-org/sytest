@@ -261,7 +261,8 @@ prepare "Creating test-room-creation helper function",
       my ( $do_request_json_for, $await_event_for ) = @_;
 
       provide make_test_room => sub {
-         my ( $creator, @other_members ) = @_;
+         my ( $visibility, $creator, @other_members ) = @_;
+
 
          my $room_id;
          my $room_alias_shortname = "test-$next_alias"; $next_alias++;
@@ -276,7 +277,7 @@ prepare "Creating test-room-creation helper function",
             uri    => "/api/v1/createRoom",
 
             content => {
-               visibility      => "public",
+               visibility      => $visibility,
                room_alias_name => $room_alias_shortname,
             },
          )->then( sub {

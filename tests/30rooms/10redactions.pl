@@ -3,7 +3,7 @@ sub make_room_and_message
    my ( $do_request_json_for, $make_test_room, $users, $sender ) = @_;
 
    my $room_id;
-   $make_test_room->( @$users )->then( sub {
+   $make_test_room->( "public", @$users )->then( sub {
       ( $room_id ) = @_;
       $do_request_json_for->( $sender,
          method => "POST",
