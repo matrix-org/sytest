@@ -248,27 +248,6 @@ test "Can invite existing 3pid",
       );
    };
 
-sub stub_is_lookup {
-   my ( $email, $mxid, $await_http_request ) = @_;
-   $await_http_request->("/_matrix/identity/api/v1/lookup", sub {
-      my ( undef, $req ) = @_;
-      my %query = $req->as_http_request->uri->query_form;
-      return unless $query{medium} eq "email";
-      return unless $query{address} eq $email;
-      return 1;
-   })->then( sub {
-      my ( $body, $request ) = @_;
-      my $content = ( defined($mxid) ? qq({"medium": "email", "address": "$email", "mxid": "$mxid"}) : qq({}) );
-      $request->respond(make_200($content));
-      Future->done( 1 );
-   })
-};
-
-sub make_200 {
-   my ( $content ) = @_;
-   HTTP::Response->new( 200, "OK", ["Content-Length", length($content)], $content );
-};
-
 test "Can invite unbound 3pid",
    requires => [qw( user do_request_json do_request_json_for more_users test_http_server_uri_base make_test_room await_http_request )],
 
@@ -340,4 +319,24 @@ test "Can invite unbound 3pid",
          )
       })
    };
+
+sub stub_is_lookup {
+   my ( $email, $mxid, $await_http_request ) = @_;
+   $await_http_request->("/_matrix/identity/api/v1/lookup", sub {
+      my ( $req ) = @_;
+      return unless $req->query_param("medium") eq "email";
+      return unless $req->query_param("address") eq $email;
+      return 1;
+   })->then( sub {
+      my ( $request ) = @_;
+      my $content = ( defined($mxid) ? qq({"medium": "email", "address": "$email", "mxid": "$mxid"}) : qq({}) );
+      $request->respond(make_200($content));
+      Future->done( 1 );
+   })
+};
+
+sub make_200 {
+   my ( $content ) = @_;
+   HTTP::Response->new( 200, "OK", ["Content-Length", length($content)], $content );
+};
 
