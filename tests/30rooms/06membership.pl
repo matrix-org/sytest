@@ -1,5 +1,6 @@
 use List::Util qw( first );
 use Data::Dumper;
+use Digest::SHA qw( sha256_hex );
 
 test "A room can be created set to invite-only",
    requires => [qw( do_request_json can_create_room )],
@@ -258,12 +259,10 @@ test "Can invite unbound 3pid",
       my $invitee_email = "lemurs\@monkeyworld.org";
       my $room_id;
 
-      # sha256(abc+sha256(123lemurs@monkeyworld.org)
-      # = sha256(abc+377e9ce9132221d02d9c76d0db6fe53f01552c1a7493e5001656882853e60299)
-      # = 16c2f564f9f6ecdc26250d20dfd038198b75da6acef8c6f79b8092f19e8d82fa
       my $outer_nonce = "abc";
-      my $inner_digest = "377e9ce9132221d02d9c76d0db6fe53f01552c1a7493e5001656882853e60299";
-      my $outer_digest = "16c2f564f9f6ecdc26250d20dfd038198b75da6acef8c6f79b8092f19e8d82fa";
+      my $inner_nonce = "123";
+      my $inner_digest = sha256_hex($inner_nonce . $invitee_email);  # 377e9ce9132221d02d9c76d0db6fe53f01552c1a7493e5001656882853e60299
+      my $outer_digest = sha256_hex($outer_nonce . $inner_digest);  # 16c2f564f9f6ecdc26250d20dfd038198b75da6acef8c6f79b8092f19e8d82fa
 
       $make_test_room->("private", $user)
       ->then( sub {
