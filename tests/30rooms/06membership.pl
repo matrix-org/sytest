@@ -276,8 +276,8 @@ test "Can invite unbound 3pid",
                # TODO: Parse body
                return 1;
             })->then( sub {
-               my ( $body, $request ) = @_;
-               $request->respond(make_200(qq({"nonce": "$outer_nonce", "digest": "$outer_digest"})));
+               my ( $request ) = @_;
+               $request->respond_json({nonce => $outer_nonce, digest => $outer_digest});
                Future->done( 1 );
             }),
 
@@ -329,14 +329,8 @@ sub stub_is_lookup {
       return 1;
    })->then( sub {
       my ( $request ) = @_;
-      my $content = ( defined($mxid) ? qq({"medium": "email", "address": "$email", "mxid": "$mxid"}) : qq({}) );
-      $request->respond(make_200($content));
+      $request->respond_json(defined($mxid) ? {medium => "email", address => $email, mxid => $mxid} : {});
       Future->done( 1 );
    })
-};
-
-sub make_200 {
-   my ( $content ) = @_;
-   HTTP::Response->new( 200, "OK", ["Content-Length", length($content)], $content );
 };
 
