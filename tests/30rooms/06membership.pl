@@ -1,5 +1,4 @@
 use List::Util qw( first );
-use Data::Dumper;
 use Digest::SHA qw( sha256_hex );
 
 test "A room can be created set to invite-only",
@@ -241,7 +240,7 @@ test "Can invite existing 3pid",
                uri    => "/api/v1/rooms/$room_id/state/m.room.member/$invitee_mxid",
             )->on_done( sub {
                my ( $body ) = @_;
-               log_if_fail $body;
+               log_if_fail "Body", $body;
                $body->{membership} eq "invite" or
                   die "Expected invited user membership to be 'invite'";
             }),
@@ -310,7 +309,7 @@ test "Can invite unbound 3pid",
                   uri    => "/api/v1/rooms/$room_id/state/m.room.member/$invitee_mxid",
                )->on_done( sub {
                   my ( $body ) = @_;
-                  log_if_fail Dumper($body);
+                  log_if_fail "Body", $body;
                   $body->{membership} eq "join" or
                      die "Expected invited user membership to be 'join'";
                })
