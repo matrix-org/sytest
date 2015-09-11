@@ -220,7 +220,7 @@ test "Can invite existing 3pid",
       Future->needs_all(
          stub_is_lookup($invitee_email, $invitee_mxid, $await_http_request),
 
-         $make_test_room->("private", $user)
+         $make_test_room->([$user], visibility => "private")
          ->then( sub {
             ( $room_id ) = @_;
             $do_request_json->(
@@ -263,7 +263,7 @@ test "Can invite unbound 3pid",
       my $inner_digest = sha256_hex($inner_nonce . $invitee_email);  # 377e9ce9132221d02d9c76d0db6fe53f01552c1a7493e5001656882853e60299
       my $outer_digest = sha256_hex($outer_nonce . $inner_digest);  # 16c2f564f9f6ecdc26250d20dfd038198b75da6acef8c6f79b8092f19e8d82fa
 
-      $make_test_room->("private", $user)
+      $make_test_room->([$user], visibility => "private")
       ->then( sub {
          ( $room_id ) = @_;
          Future->needs_all(

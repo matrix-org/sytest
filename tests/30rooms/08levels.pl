@@ -10,7 +10,7 @@ prepare "Creating a new test room",
       my $creator   = $local_users->[0];
       my $test_user = $local_users->[1];
 
-      $make_test_room->( "public", $creator, $test_user )
+      $make_test_room->( [ $creator, $test_user ] )
          ->on_done( sub {
             ( $room_id ) = @_;
          })->then( sub {

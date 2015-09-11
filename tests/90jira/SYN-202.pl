@@ -15,7 +15,7 @@ multi_test "Left room members do not cause problems for presence",
 
          pass "Registered users";
 
-         $make_test_room->( "public", $user1, $user2 )
+         $make_test_room->( [ $user1, $user2 ] )
       })->then( sub {
          ( $room_id ) = @_;
 

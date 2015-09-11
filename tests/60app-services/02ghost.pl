@@ -8,7 +8,7 @@ multi_test "AS-ghosted users can use rooms via AS",
       my $room_id;
       my $ghost;
 
-      $make_test_room->( "public", $user )->then( sub {
+      $make_test_room->( [ $user ] )->then( sub {
          ( $room_id ) = @_;
 
          pass "Created test room";
@@ -115,7 +115,7 @@ multi_test "AS-ghosted users can use rooms themselves",
       my $room_id;
       my $ghost;
 
-      $make_test_room->( "public", $user )->then( sub {
+      $make_test_room->( [ $user ] )->then( sub {
          ( $room_id ) = @_;
 
          pass "Created test room";

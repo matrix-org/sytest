@@ -17,7 +17,7 @@ prepare "Creating test room",
       # Reserve a user not in the room
       $local_nonmember = pop @local_members;
 
-      $make_test_room->( "public", @local_members, @remote_members )->on_done( sub {
+      $make_test_room->( [ @local_members, @remote_members ] )->on_done( sub {
          ( $room_id ) = @_;
       });
    };

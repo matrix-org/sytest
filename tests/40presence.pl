@@ -8,7 +8,7 @@ prepare "Creating a new test room",
    do => sub {
       my ( $make_test_room, $local_users, $remote_users ) = @_;
 
-      $make_test_room->( "public", @$local_users, @$remote_users )
+      $make_test_room->( [ @$local_users, @$remote_users ] )
          ->on_done( sub {
             ( $room_id ) = @_;
          });

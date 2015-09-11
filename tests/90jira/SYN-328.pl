@@ -10,7 +10,7 @@ multi_test "Typing notifications don't leak",
 
       my $room_id;
 
-      $make_test_room->( "public", $creator, $member )->then( sub {
+      $make_test_room->( [ $creator, $member ] )->then( sub {
          ( $room_id ) = @_;
          pass "Created room";
 
