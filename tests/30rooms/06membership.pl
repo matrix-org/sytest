@@ -270,7 +270,7 @@ test "Can invite unbound 3pid",
             stub_is_lookup($invitee_email, undef, $await_http_request),
 
             $await_http_request->("/_matrix/identity/api/v1/nonce-it-up", sub {
-               my ( $raw_body, $req ) = @_;
+               my ( $req ) = @_;
                # TODO: Parse body
                return 1;
             })->then( sub {
