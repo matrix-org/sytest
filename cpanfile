@@ -1,6 +1,7 @@
 # vim:ft=perl
 
 requires 'Data::Dump';
+requires 'Digest::SHA';
 requires 'File::Basename';
 requires 'File::Path';
 requires 'File::Slurper';

@@ -264,12 +264,11 @@ prepare "Creating test-room-creation helper function",
          # First member is the room creator
          my ( $members, %options ) = @_;
 
-         $options{visibility} = "public" unless exists $options{visibility};
+         $options{visibility} //= "public";
 
          my $room_id;
          my $room_alias_shortname = "test-$next_alias"; $next_alias++;
-         my $creator = @$members[0];
-         my @other_members = @$members[1 .. $#$members];
+         my ( $creator, @other_members ) = @$members;
 
          my ( $domain ) = $creator->user_id =~ m/:(.*)$/;
          my $room_alias_fullname = "#${room_alias_shortname}:$domain";
