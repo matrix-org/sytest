@@ -67,21 +67,21 @@ take the opening brace on the same line::
   };
 
 A blank line should separate each toplevel function, and major blocks or
-stages within them. The `@_`-unpacking statement should be first within the
+stages within them. The ``@_``-unpacking statement should be first within the
 function and have a blank line after it.
 
 Indentation uses 3 spaces. Please avoid hard tab (HT, "\t") characters, as
 inevitably someone's editor will show them wrong. A file lacking HT will
-display consistently for all. (`set et` in vim).
+display consistently for all. (``set et`` in vim).
 
-`package` does not introduce a level of indenting on its own, because otherwise
-99% of the lines in every file would be indented. Toplevel functions and other
-items start in the far lefthand edge with no leading indent.
+``package`` does not introduce a level of indenting on its own, because
+otherwise 99% of the lines in every file would be indented. Toplevel functions
+and other items start in the far lefthand edge with no leading indent.
 
 A special exception is made of indenting the body of a multi-line anonymous
 function passed as an argument to a method. Normally both the method-call
-parens and the anonymous `sub` would imply a level of indent, but to avoid the
-body becoming double-indented with respect to its surroundings, it normally
+parens and the anonymous ``sub`` would imply a level of indent, but to avoid
+the body becoming double-indented with respect to its surroundings, it normally
 takes just one overall::
 
   $object->method( sub {
@@ -163,15 +163,15 @@ appear::
 
   $user->jump
 
-`use` statements should only import the set of symbols required by the code in
-the file, listed by quote-words, using parens::
+``use`` statements should only import the set of symbols required by the code
+in the file, listed by quote-words, using parens::
 
   use Module::Name qw( list of symbols );
 
-Avoid the use of "deferred expression" style of `grep` and `map`, as they are
-too subtle and don't indicate clearly enough to the reader the deferred nature
-of those expressions (and additionally don't match the style that is available
-to additional helper functions provided by other modules)::
+Avoid the use of "deferred expression" style of ``grep`` and ``map``, as they
+are too subtle and don't indicate clearly enough to the reader the deferred
+nature of those expressions (and additionally don't match the style that is
+available to additional helper functions provided by other modules)::
 
   ## AVOID THIS
   grep condition($_), $list, $of, @things
@@ -197,22 +197,22 @@ alert the reader to pay extra attention by actually reading that comment.
 Semantic Style
 --------------
 
-The choice between `SMT if/unless COND` vs `COND and/or SMT` can be a subtle
-one. Generally the choice should fall down to whether at that point in the
-code it is the test condition or the side-effecting statement that is more
+The choice between ``SMT if/unless COND`` vs ``COND and/or SMT`` can be a
+subtle one. Generally the choice should fall down to whether at that point in
+the code it is the test condition or the side-effecting statement that is more
 important to the normal flow of the program. For example, code that checks the
 validity of some condition or assumption, throwing an exception if it does not
 hold should bring the condition up front. Additionally, the condition should be
 written in the positive sense; it should give the desired state, and use the
-`or` operator, so that it stands alone as a precondition to the following
+``or`` operator, so that it stands alone as a precondition to the following
 code::
 
   @array or die "Expected a non-empty array of things";
 
-`Future`-returning functions typically end with a final statement that spans
-the bulk of the function's body, comprised of a long sequence of `->then`
+``Future``-returning functions typically end with a final statement that spans
+the bulk of the function's body, comprised of a long sequence of ``->then``
 method calls and other chaining techniques. In such a case it is permissable
-to omit the `return` statement which would otherwise appear visually early-on
+to omit the ``return`` statement which would otherwise appear visually early-on
 in the body of the function, far away from the location where the eventual
 result of that returned future is determined.
 
@@ -226,14 +226,14 @@ Therefore, be liberal with the use of extra variables at file-scope within a
 test, defining extra toplevel functions, and so on. Utility functions can be
 imported from other modules.
 
-Each test itself should be careful to use the `do`, `check`, or both stages as
-is required by the test logic.
+Each test itself should be careful to use the ``do``, ``check``, or both stages
+as is required by the test logic.
 
-When the `do` or `check` blocks unpack `@_` (which contains values from the
-test environment) into some lexical variables, the name of each variable ought
-to match, or at least bear some resemblance to, the name of each test
+When the ``do`` or ``check`` blocks unpack ``@_`` (which contains values from
+the test environment) into some lexical variables, the name of each variable
+ought to match, or at least bear some resemblance to, the name of each test
 environment key being requested. A blank line of whitespace between named
-parameters to the `test` call should also be added::
+parameters to the ``test`` call should also be added::
 
   test "...",
      requires => [qw( do_request_json room_id )],
@@ -245,20 +245,20 @@ parameters to the `test` call should also be added::
      };
 
 Any test environment key that contains a "meaningful" value should have a name
-not beginning with `can_`. Any key that simply indicates that some ability has
-been successfully tested for should have a name starting with `can_`, whose
-value is simply `1`.
+not beginning with ``can_``. Any key that simply indicates that some ability
+has been successfully tested for should have a name starting with ``can_``,
+whose value is simply ``1``.
 
-When specifying the requirements and unpacking arguments, all the `can_` keys
+When specifying the requirements and unpacking arguments, all the ``can_`` keys
 should be listed last, ideally on a line of their own such that new value keys
-can be added after the existing ones. The values of `can_` keys are useless to
-the test code and should not be unpacked, again leaving space to add more
+can be added after the existing ones. The values of ``can_`` keys are useless
+to the test code and should not be unpacked, again leaving space to add more
 values later.
 
 If a test environment key provides an arrayref of values that the test wishes
-to use individually, these should be unpacked immediately after the `@_` line,
-so it is clear upfront at the top of the function what arguments it is acting
-on::
+to use individually, these should be unpacked immediately after the ``@_``
+line, so it is clear upfront at the top of the function what arguments it is
+acting on::
 
   test "title here",
      requires => [qw(
@@ -273,9 +273,10 @@ on::
         ...
      };
 
-As any `do` or `check` block is expected to return a `Future` instance, as are
-the bodies of most `Future` chaining or composition methods, it is sometimes
-necessary to return a dummy value when there's nothing else more interesting::
+As any ``do`` or ``check`` block is expected to return a ``Future`` instance,
+as are the bodies of most ``Future`` chaining or composition methods, it is
+sometimes necessary to return a dummy value when there's nothing else more
+interesting::
 
   do => sub {
      something_simple();
