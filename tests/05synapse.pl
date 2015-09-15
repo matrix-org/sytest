@@ -73,7 +73,7 @@ prepare "Starting synapse",
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
 
-               i_really_want_to_ignore_ssl_certs_when_i_am_an_https_client_even_though_it_is_woefully_insecure_because_i_am_testing_i_promise => 1,
+               use_insecure_ssl_client_just_for_testing_do_not_use => 1,
             },
          );
          $loop->add( $synapse );

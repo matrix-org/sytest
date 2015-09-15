@@ -96,10 +96,13 @@ sub stop_waiting
 sub final_pass
 {
    shift;
-   my ( $expected_fail ) = @_;
+   my ( $expected_fail, $skipped_count ) = @_;
    print STDERR "\n${GREEN_B}All tests PASSED${RESET}";
    if( $expected_fail ) {
       print STDERR " (with $expected_fail expected failures)";
+   }
+   if( $skipped_count ) {
+      print STDERR " (with ${YELLOW_B}$skipped_count skipped${RESET} tests)";
    }
    print STDERR "\n";
 }
