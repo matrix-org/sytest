@@ -35,7 +35,9 @@ sub gen_token
 prepare "Starting synapse",
    requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls )],
 
-   provides => [qw( synapse_client_locations as_credentials hs2as_token )],
+   provides => [qw(
+      synapse_client_locations as_credentials hs2as_token rotate_logfiles rotate_first_logfile
+   )],
 
    do => sub {
       my ( $ports, $args, $test_http_server_uri_base, $want_tls ) = @_;
@@ -115,5 +117,13 @@ prepare "Starting synapse",
       } 0 .. $#$ports )
       ->on_done( sub {
          provide synapse_client_locations => \@locations;
+
+         my @rotate_logfiles = map {
+            my $synapse = $_;
+            sub { $synapse->rotate_logfile( @_ ) }
+         } @synapses;
+
+         provide rotate_logfiles      => \@rotate_logfiles;
+         provide rotate_first_logfile => $rotate_logfiles[0];
       });
    };
