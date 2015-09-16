@@ -116,13 +116,15 @@ test "POST /login wrong password is rejected",
          },
       )->$expect_http_403->then( sub {
          my ( $resp ) = @_;
-         my $body = decode_json($resp->{_content});
+
+         my $body = decode_json $resp->content;
+
          require_json_keys( $body, qw( errcode ));
 
          my $errcode = $body->{errcode};
 
          $errcode eq "M_FORBIDDEN" or
-            die "Expected errcode to be M_FORBIDDEN but was ${errcode}";
+            die "Expected errcode to be M_FORBIDDEN but was $errcode";
 
          Future->done(1);
       });
@@ -144,7 +146,9 @@ test "POST /tokenrefresh invalidates old refresh token",
       )->then(
          sub {
             my ( $body ) = @_;
+
             require_json_keys( $body, qw( access_token refresh_token ));
+
             my $new_access_token = $body->{access_token};
             my $new_refresh_token = $body->{refresh_token};
 

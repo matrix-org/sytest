@@ -20,7 +20,7 @@ test "Can query device keys using POST",
          my $device_keys = $content->{device_keys};
          require_json_keys( $device_keys, $e2e_user_alice->user_id );
 
-         my $alice_keys = $device_keys->{$e2e_user_alice->user_id};
+         my $alice_keys = $device_keys->{ $e2e_user_alice->user_id };
          require_json_keys( $alice_keys, "alices_first_device" );
          # TODO: Check that the content matches what we uploaded.
          Future->done(1)

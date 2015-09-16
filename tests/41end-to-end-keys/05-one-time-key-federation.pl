@@ -74,7 +74,7 @@ multi_test "Can claim remote one time key using POST",
 
          require_json_keys( $content, "one_time_key_counts" );
 
-         exists $content->{one_time_key_counts}->{"test_algorithm"} and
+         exists $content->{one_time_key_counts}{test_algorithm} and
             die "Expected that the key would be removed from the counts";
 
          Future->done(1)

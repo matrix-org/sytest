@@ -107,13 +107,14 @@ test "New room members see existing members' presence in room initialSync",
                my ( $body ) = @_;
 
                my %presence;
-               $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+               $presence{ $_->{content}{user_id} } = $_ for @{ $body->{presence} };
 
                $presence{$first_user->user_id} or
                   die "Expected to find initial user's presence";
 
-               require_json_keys( $presence{$first_user->user_id}, qw( type content ));
-               require_json_keys( $presence{$first_user->user_id}{content},
+               require_json_keys( $presence{ $first_user->user_id },
+                  qw( type content ));
+               require_json_keys( $presence{ $first_user->user_id }{content},
                   qw( presence status_msg last_active_ago ));
 
                Future->done(1);
@@ -194,9 +195,9 @@ test "New room members see first user's profile information in global initialSyn
             require_json_list( $body->{presence} );
 
             my %presence_by_userid;
-            $presence_by_userid{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+            $presence_by_userid{ $_->{content}{user_id} } = $_ for @{ $body->{presence} };
 
-            my $presence = $presence_by_userid{$first_user->user_id} or
+            my $presence = $presence_by_userid{ $first_user->user_id } or
                die "Failed to find presence of first user";
 
             require_json_keys( $presence, qw( content ));
@@ -228,9 +229,10 @@ test "New room members see first user's profile information in per-room initialS
             require_json_list( $body->{state} );
 
             my %state_by_type_key;
-            $state_by_type_key{$_->{type}}{$_->{state_key}} = $_ for @{ $body->{state} };
+            $state_by_type_key{ $_->{type} }{ $_->{state_key} } = $_ for
+               @{ $body->{state} };
 
-            my $first_member = $state_by_type_key{"m.room.member"}{$first_user->user_id}
+            my $first_member = $state_by_type_key{"m.room.member"}{ $first_user->user_id }
                or die "Failed to find first user in m.room.member state";
 
             require_json_keys( $first_member, qw( user_id content ));

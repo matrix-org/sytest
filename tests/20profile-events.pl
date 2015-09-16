@@ -86,9 +86,9 @@ multi_test "Global /initialSync reports my own profile",
          require_json_list( $body->{presence} );
 
          my %presence_by_userid;
-         $presence_by_userid{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+         $presence_by_userid{ $_->{content}{user_id} } = $_ for @{ $body->{presence} };
 
-         my $presence = $presence_by_userid{$user->user_id} or
+         my $presence = $presence_by_userid{ $user->user_id } or
             die "Failed to find my own presence information";
 
          require_json_keys( $presence, qw( content ) );
