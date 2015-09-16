@@ -129,10 +129,10 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [qw( first_api_client user )],
+   requires => [qw( first_api_client user expect_http_403 )],
 
    do => sub {
-      my ( $http, $old_user ) = @_;
+      my ( $http, $old_user, $expect_http_403 ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -163,22 +163,5 @@ test "POST /tokenrefresh invalidates old refresh token",
                },
             )
          }
-      )->then(
-         sub { # done
-            Future->fail( "Expected not to succeed in re-using refresh token" );
-         },
-         sub { # fail
-            my ( $failure, $name, @args ) = @_;
-
-            defined $name and $name eq "http" or
-               die "Expected failure kind to be 'http'";
-
-            my ( $resp, $req ) = @args;
-
-            $resp->code == 403 or
-               die "Expected HTTP response code to be 403 but was ${\$resp->code}";
-
-            Future->done(1);
-         }
-      )
+      )->$expect_http_403;
    };

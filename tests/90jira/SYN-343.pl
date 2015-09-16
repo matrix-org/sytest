@@ -1,9 +1,15 @@
 multi_test "Non-present room members cannot ban others",
-   requires => [qw( make_test_room do_request_json_for change_room_powerlevels local_users
-                    can_ban_room )],
+   requires => [qw(
+      make_test_room do_request_json_for change_room_powerlevels local_users
+         expect_http_403
+      can_ban_room
+   )],
 
    await => sub {
-      my ( $make_test_room, $do_request_json_for, $change_room_powerlevels, $local_users ) = @_;
+      my (
+         $make_test_room, $do_request_json_for, $change_room_powerlevels, $local_users,
+         $expect_http_403
+      ) = @_;
       my $creator = $local_users->[0];
       my $testuser = $local_users->[1];
 
@@ -26,17 +32,7 @@ multi_test "Non-present room members cannot ban others",
             uri    => "/api/v1/rooms/$room_id/ban",
 
             content => { user_id => '@random_dude:test', reason => "testing" },
-         )->then(
-            sub { # done
-               Future->fail( "Expected not to succeed but it did" );
-            },
-            sub { # fail
-               my ( $message, $name, $response ) = @_;
-               $name and $name eq "http" and $response and $response->code == 403 and
-                  return Future->done;
-               Future->fail( @_ );
-            }
-         )
+         )->$expect_http_403;
       })->then( sub {
          pass "Attempt to ban is rejected";
 
