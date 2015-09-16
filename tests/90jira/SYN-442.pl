@@ -1,11 +1,11 @@
 multi_test "Test that we can be reinvited to a room we created",
    requires => [qw(
-      do_request_json_for await_event_for local_users remote_users
-      )],
+      do_request_json_for await_event_for change_room_powerlevels local_users remote_users
+   )],
 
    check => sub {
       my (
-         $do_request_json_for, $await_event_for, $local_users, $remote_users
+         $do_request_json_for, $await_event_for, $change_room_powerlevels, $local_users, $remote_users
       ) = @_;
       my ( $user_1 ) = @$local_users;
       my ( $user_2 ) = @$remote_users;
@@ -58,22 +58,11 @@ multi_test "Test that we can be reinvited to a room we created",
       })->then( sub {
          pass "User B joined the room";
 
-         $do_request_json_for->( $user_1,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-         );
-      })->then( sub {
-         my ( $levels ) = @_;
+         $change_room_powerlevels->( $user_1, $room_id, sub {
+            my ( $levels ) = @_;
 
-         pass "Downloaded the power levels for the room";
-
-         $levels->{users}{ $user_2->user_id } = 100;
-
-         $do_request_json_for->( $user_1,
-            method  => "PUT",
-            uri     => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-            content => $levels,
-         );
+            $levels->{users}{ $user_2->user_id } = 100;
+         });
       })->then( sub {
          pass "User A set user B's power level to 100";
 
