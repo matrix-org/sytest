@@ -93,8 +93,8 @@ likely easier to list the places that don't contain whitespace::
 
   $object->method              # either side of a deref arrow
 
-  $arref->[123]                # within an integer- or string-literal
-  $href->{key}                 #   aggregate lookup
+  $a->[123], ->[$idx]          # within an integer-, bareword, string-literal
+  $h->{key}, ->{"k"}, ->{$k}   #   or simple variable aggregate lookup
 
   if( COND ) ...               # between a flow-control keyword and the opening
   while( COND ) ...            #   paren of its controlling expression
@@ -181,6 +181,15 @@ Instead, always surround the expression with braces::
 
   grep { condition($_) } $list, $of, @things
   map { $_ + 1 } 3, 4, 5
+
+Avoid extraneous arrows in multi-level aggregate structure indexing::
+
+  $h->{outer_key}[2]{inner_key}
+
+Avoid string-quoting hash keys or LHS of fat-comma that could be done as a
+bareword::
+
+  my $h = { bareword_key => "here" };  say $h->{bareword_key};
 
 Comments
 --------
