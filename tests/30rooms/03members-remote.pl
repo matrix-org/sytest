@@ -1,4 +1,4 @@
-use Future::Utils qw( try_repeat );
+use Future::Utils 0.18 qw( try_repeat );
 
 test "Remote users can join room by alias",
    requires => [qw( do_request_json_for flush_events_for remote_users room_alias room_id
