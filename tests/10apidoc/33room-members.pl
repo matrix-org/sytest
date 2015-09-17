@@ -326,7 +326,7 @@ prepare "Creating test-room-creation helper function",
                return unless $event->{type} eq "m.room.member";
                return unless $event->{room_id} eq $room_id;
 
-               $joined_members{$event->{state_key}}++;
+               $joined_members{ $event->{state_key} }++;
 
                return 1 if keys( %joined_members ) == $n_joiners;
                return 0;

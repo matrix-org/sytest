@@ -24,11 +24,13 @@ prepare "Creating test Matrix HTTP clients",
 
       my @clients = map {
          my $location = $_;
+
          my $client = SyTest::HTTPClient->new(
             max_connections_per_host => 3,
             uri_base => "$location/_matrix/client",
          );
          $loop->add( $client );
+
          $client;
       } @$locations;
 

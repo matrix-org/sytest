@@ -29,8 +29,9 @@ test "GET /register yields a set of flows",
             ref $flow->{stages} eq "ARRAY" or defined $flow->{type} or
                die "Expected flow[$idx] to have 'stages' as a list or a 'type'";
 
-            $has_register_flow++ if $flow->{type} eq "m.login.password" or
-               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password"
+            $has_register_flow++ if
+               $flow->{type} eq "m.login.password" or
+               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password";
          }
 
          $has_register_flow and

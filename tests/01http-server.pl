@@ -1,9 +1,14 @@
+use File::Basename qw( dirname );
 use List::UtilsBy 0.10 qw( extract_first_by );
 use Net::Async::HTTP::Server 0.09;  # request_class with bugfix
+use IO::Async::SSL;
+use JSON qw( decode_json );
 use URI::Escape qw( uri_unescape );
 
 use SyTest::HTTPClient;
 use SyTest::HTTPServer::Request;
+
+my $DIR = dirname( __FILE__ );
 
 struct Awaiter => [qw( pathmatch filter future )];
 
@@ -86,11 +91,14 @@ prepare "Environment closures for receiving HTTP pokes",
             socktype => "stream",
             port     => 0,
          },
+         extensions => ["SSL"],
+         SSL_cert_file => "$DIR/../keys/tls-selfsigned.crt",
+         SSL_key_file => "$DIR/../keys/tls-selfsigned.key",
       )->then( sub {
          my ( $listener ) = @_;
          my $sockport = $listener->read_handle->sockport;
 
-         my $uri_base = "http://$listen_host:$sockport";
+         my $uri_base = "https://$listen_host:$sockport";
 
          provide test_http_server_uri_base => $uri_base;
 

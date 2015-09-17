@@ -51,7 +51,8 @@ test "Presence changes are reported to local room members",
             return unless $event->{type} eq "m.presence";
 
             require_json_keys( $event, qw( type content ));
-            require_json_keys( my $content = $event->{content}, qw( user_id presence ));
+            require_json_keys( my $content = $event->{content},
+               qw( user_id presence ));
 
             $content->{user_id} eq $senduser->user_id or return;
 
@@ -80,7 +81,8 @@ test "Presence changes are also reported to remote room members",
             return unless $event->{type} eq "m.presence";
 
             require_json_keys( $event, qw( type content ));
-            require_json_keys( my $content = $event->{content}, qw( user_id presence ));
+            require_json_keys( my $content = $event->{content},
+               qw( user_id presence ));
 
             # The next presence message we get might not necessarily be the
             # one we were expecting, given this is remote. Wait to get the

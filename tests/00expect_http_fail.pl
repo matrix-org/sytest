@@ -11,8 +11,11 @@ sub gen_expect_failure
          },
          sub {  # fail
             my ( undef, $name, $response ) = @_;
-            $name and $name eq "http" and $response and $response->code =~ $match and
-               return Future->done( $response );
+
+            $name and $name eq "http" and
+               $response and $response->code =~ $match and
+                  return Future->done( $response );
+
             Future->fail( @_ );
          },
       );
