@@ -45,11 +45,11 @@ test "A room can be created set to invite-only",
    };
 
 test "Uninvited users cannot join the room",
-   requires => [qw( do_request_json_for more_users inviteonly_room_id
+   requires => [qw( do_request_json_for more_users inviteonly_room_id expect_http_403
                     can_join_room_by_id )],
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $do_request_json_for, $more_users, $room_id, $expect_http_403 ) = @_;
       my $uninvited = $more_users->[0];
 
       $do_request_json_for->( $uninvited,
@@ -57,25 +57,7 @@ test "Uninvited users cannot join the room",
          uri    => "/api/v1/rooms/$room_id/join",
 
          content => {},
-      )->then(
-         sub { # done
-            Future->fail( "Expected not to succeed to join the room" );
-         },
-         sub { # fail
-            my ( $failure, $name, @args ) = @_;
-
-            defined $name and $name eq "http" or
-               die "Expected failure kind to be 'http'";
-
-            my ( $resp, $req ) = @args;
-            $resp->code == 403 or
-               die "Expected HTTP response code to be 403";
-
-            # TODO: Check the response content a bit?
-
-            Future->done(1);
-         },
-      );
+      )->$expect_http_403;
    };
 
 test "Can invite users to invite-only rooms",
@@ -150,11 +132,11 @@ test "Invited user can join the room",
    };
 
 test "Banned user is kicked and may not rejoin",
-   requires => [qw( do_request_json_for user more_users room_id
+   requires => [qw( do_request_json_for user more_users room_id expect_http_403
                     can_ban_room )],
 
    do => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my ( $do_request_json_for, $user, $more_users, $room_id, $expect_http_403 ) = @_;
       my $banned_user = $more_users->[0];
 
       # Pre-test assertion that the user we want to ban is present
@@ -187,21 +169,6 @@ test "Banned user is kicked and may not rejoin",
             uri    => "/api/v1/rooms/$room_id/join",
 
             content => {},
-         )->then(
-            sub { # done
-               die "Expected to receive an error joining the room when banned";
-            },
-            sub { # fail
-               my ( $failure, $name ) = @_;
-               defined $name and $name eq "http" or
-                  die "Expected an HTTP failure";
-
-               my ( undef, undef, $response, $request ) = @_;
-               $response->code == 403 or
-                  die "Expected an HTTP 403 error";
-
-               Future->done(1);
-            }
-         );
-      });
+         )
+      })->$expect_http_403;
    };

@@ -100,7 +100,7 @@ multi_test "Test that a message is pushed",
 
          Future->needs_all(
             # TODO(check that the HTTP poke is actually the poke we wanted)
-            $await_http_request->("/alice_push", sub {
+            $await_http_request->( "/alice_push", sub {
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 

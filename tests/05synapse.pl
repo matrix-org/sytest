@@ -74,6 +74,8 @@ prepare "Starting synapse",
                recaptcha_siteverify_api => "$test_http_server_uri_base/recaptcha/api/siteverify",
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
+
+               use_insecure_ssl_client_just_for_testing_do_not_use => 1,
             },
          );
          $loop->add( $synapse );

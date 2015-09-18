@@ -116,23 +116,25 @@ test "POST /login wrong password is rejected",
          },
       )->$expect_http_403->then( sub {
          my ( $resp ) = @_;
-         my $body = decode_json($resp->{_content});
+
+         my $body = decode_json $resp->content;
+
          require_json_keys( $body, qw( errcode ));
 
          my $errcode = $body->{errcode};
 
          $errcode eq "M_FORBIDDEN" or
-            die "Expected errcode to be M_FORBIDDEN but was ${errcode}";
+            die "Expected errcode to be M_FORBIDDEN but was $errcode";
 
          Future->done(1);
       });
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [qw( first_api_client user )],
+   requires => [qw( first_api_client user expect_http_403 )],
 
    do => sub {
-      my ( $http, $old_user ) = @_;
+      my ( $http, $old_user, $expect_http_403 ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -144,7 +146,9 @@ test "POST /tokenrefresh invalidates old refresh token",
       )->then(
          sub {
             my ( $body ) = @_;
+
             require_json_keys( $body, qw( access_token refresh_token ));
+
             my $new_access_token = $body->{access_token};
             my $new_refresh_token = $body->{refresh_token};
 
@@ -163,22 +167,5 @@ test "POST /tokenrefresh invalidates old refresh token",
                },
             )
          }
-      )->then(
-         sub { # done
-            Future->fail( "Expected not to succeed in re-using refresh token" );
-         },
-         sub { # fail
-            my ( $failure, $name, @args ) = @_;
-
-            defined $name and $name eq "http" or
-               die "Expected failure kind to be 'http'";
-
-            my ( $resp, $req ) = @args;
-
-            $resp->code == 403 or
-               die "Expected HTTP response code to be 403 but was ${\$resp->code}";
-
-            Future->done(1);
-         }
-      )
+      )->$expect_http_403;
    };

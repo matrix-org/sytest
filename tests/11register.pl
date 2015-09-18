@@ -50,7 +50,7 @@ multi_test "Register with a recaptcha",
             require_json_keys( $body, qw(completed) );
             require_json_list( my $completed = $body->{completed} );
 
-            @$completed eq 1 or
+            @$completed == 1 or
                die "Expected one completed stage";
 
             $completed->[0] eq "m.login.recaptcha" or
