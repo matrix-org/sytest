@@ -127,5 +127,14 @@ prepare "Starting synapse",
 
          provide rotate_logfiles      => \@rotate_logfiles;
          provide rotate_first_logfile => $rotate_logfiles[0];
+
+         # TODO(paul):
+         #   It might be nice to try to integrate this more into the core of
+         #   the test system, such that any test can just declare it wants its
+         #   own log file and the rotation happens automatically. Offhand I
+         #   can't think of a neat way to arrange that without tying the test
+         #   core too closely into this ability though. Maybe some new 'with'
+         #   decorator that looks for 'with_'-prefixed testenv keys and
+         #   codewraps the test...?
       });
    };
