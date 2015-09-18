@@ -127,7 +127,7 @@ sub _check_authorization
    );
 
    if( length $req->body ) {
-      my $body = $req->body_json;
+      my $body = $req->body_from_json;
 
       $origin eq $body->{origin} or
          return Future->fail( "'origin' in Authorization header does not match content", matrix_auth => );
@@ -210,7 +210,7 @@ sub on_request_federation_v1_send
    my $self = shift;
    my ( $req, $tid ) = @_;
 
-   my $body = $req->body_json;
+   my $body = $req->body_from_json;
 
    my $origin = $body->{origin};
 
