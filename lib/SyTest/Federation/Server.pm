@@ -18,6 +18,19 @@ use JSON qw( encode_json );
 use Struct::Dumb qw( struct );
 struct Awaiter => [qw( type matcher f )];
 
+sub _init
+{
+   my $self = shift;
+   my ( $params ) = @_;
+
+   # Use 'on_request' as a configured parameter rather than a subclass method
+   # so that the '$CLIENT_LOG' logic in run-tests.pl can properly put
+   # debug-printing wrapping logic around it.
+   $params->{on_request} = \&on_request;
+
+   return $self->SUPER::_init( @_ );
+}
+
 sub configure
 {
    my $self = shift;
