@@ -365,16 +365,13 @@ sub rotate_logfile
 
    $newname //= dirname( $logpath ) . strftime( "/homeserver-%Y-%m-%dT%H:%M:%S.log", localtime );
 
-   print STDERR "Renaming $logpath to $newname\n";
    rename( $logpath, $newname );
 
-   print STDERR "Sending SIGHUP\n";
    $self->kill( 'HUP' );
 
    try_repeat {
       -f $logpath and return Future->done(1);
 
-      print STDERR "Waiting for $logpath to exist...\n";
       $self->loop->delay_future( after => 0.5 )->then_done(0);
    } foreach => [ 1 .. 20 ],
      while => sub { !shift->get },
