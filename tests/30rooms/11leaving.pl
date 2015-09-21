@@ -269,4 +269,30 @@ test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
         })
     };
 
+test "Getting messages going forward is limited for a departed room (SPEC-216)",
+    requires => [qw(do_request_json departed_room_id)],
+    check => sub {
+        my ($do_request_json, $departed_room_id) = @_;
+
+
+        # TODO: The "t10000-0_0_0_0" token format is synapse specific.
+        #  However there isn't a way in the matrix C-S protocol to learn the
+        #  latest token for a room that you aren't in. It may be necessary
+        #  to add some extra APIs to matrix for learning this sort of thing for
+        #  testing security.
+        $do_request_json->(
+            method => "GET",
+            uri => "/api/v1/rooms/$departed_room_id/messages",
+            params => {limit => 2, to => "t10000-0_0_0_0"},
+        )->then(sub {
+            my ( $body ) = @_;
+
+            require_json_keys( $body, qw( chunk ) );
+
+            die "Received message that happened after leaving the room"
+                if @{$body->{chunk}};
+
+            Future->done(1);
+        })
+    };
 
