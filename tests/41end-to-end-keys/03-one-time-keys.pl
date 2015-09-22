@@ -12,7 +12,7 @@ multi_test "Can claim one time key using POST",
                "test_algorithm:test_id", "test+base64+key"
             }
          }
-      )->on_done( sub { pass "Uploaded one-time keys" } )
+      )->SyTest::pass_on_done( "Uploaded one-time keys" )
       ->then( sub {
          $do_request_json_for->( $e2e_user_alice,
             method => "GET",

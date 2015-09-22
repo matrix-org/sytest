@@ -27,7 +27,7 @@ multi_test "Test that a message is pushed",
       Future->needs_all(
          $register_new_user->( $http, "50push-01-alice" ),
          $register_new_user->( $http, "50push-01-bob" ),
-      )->on_done( sub { pass "Registered users" } )
+      )->SyTest::pass_on_done( "Registered users" )
       ->then( sub {
          ( $alice, $bob ) = @_;
 
@@ -54,7 +54,7 @@ multi_test "Test that a message is pushed",
                   $event->{state_key} eq $bob->user_id and
                   $event->{content}{membership} eq "invite";
                return 1;
-            })->on_done( sub { pass "Bob received invite" } ),
+            })->SyTest::pass_on_done( "Bob received invite" ),
 
             $do_request_json_for->( $alice,
                method  => "POST",
@@ -89,7 +89,7 @@ multi_test "Test that a message is pushed",
                   url => "$test_http_server_uri_base/alice_push",
                },
             },
-         )->on_done( sub { pass "Alice's pusher created" } )
+         )->SyTest::pass_on_done( "Alice's pusher created" )
       })->then( sub {
          # Bob sends a message that should be pushed to Alice, since it is
          # in a "1:1" room with Alice
@@ -117,7 +117,7 @@ multi_test "Test that a message is pushed",
                   msgtype => "m.text",
                   body    => "Room message for 50push-01message-pushed"
                },
-            )->on_done( sub { pass "Message sent" } ),
+            )->SyTest::pass_on_done( "Message sent" ),
          )
       })->then( sub {
          my ( $request ) = @_;

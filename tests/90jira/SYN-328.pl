@@ -11,7 +11,7 @@ multi_test "Typing notifications don't leak",
       my $room_id;
 
       $make_test_room->( $creator, $member )
-         ->on_done( sub { pass "Created room" } )
+         ->SyTest::pass_on_done( "Created room" )
       ->then( sub {
          ( $room_id ) = @_;
 
@@ -33,7 +33,7 @@ multi_test "Typing notifications don't leak",
                return 1;
             })
          } $creator, $member )
-            ->on_done( sub { pass "Members received notification" } )
+            ->SyTest::pass_on_done( "Members received notification" )
       })->then( sub {
 
          Future->wait_any(
@@ -46,6 +46,6 @@ multi_test "Typing notifications don't leak",
 
                return 1;
             })->then_fail( "Received unexpected typing notification" ),
-         )->on_done( sub { pass "Non-member did not receive it up to timeout" } )
+         )->SyTest::pass_on_done( "Non-member did not receive it up to timeout" )
       })->then_done(1);
    };

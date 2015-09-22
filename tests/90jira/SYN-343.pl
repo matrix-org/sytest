@@ -16,14 +16,14 @@ multi_test "Non-present room members cannot ban others",
       my $room_id;
 
       $make_test_room->( $creator )
-         ->on_done( sub { pass "Created room" } )
+         ->SyTest::pass_on_done( "Created room" )
       ->then( sub {
          ( $room_id ) = @_;
 
          $change_room_powerlevels->( $creator, $room_id, sub {
             my ( $levels ) = @_;
             $levels->{users}{ $testuser->user_id } = 100;
-         })->on_done( sub { pass "Set powerlevel" } )
+         })->SyTest::pass_on_done( "Set powerlevel" )
       })->then( sub {
 
          $do_request_json_for->( $testuser,
@@ -32,6 +32,6 @@ multi_test "Non-present room members cannot ban others",
 
             content => { user_id => '@random_dude:test', reason => "testing" },
          )->$expect_http_403
-         ->on_done( sub { pass "Attempt to ban is rejected" } )
+         ->SyTest::pass_on_done( "Attempt to ban is rejected" )
       })->then_done(1);
    };

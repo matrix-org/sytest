@@ -10,12 +10,12 @@ multi_test "Left room members do not cause problems for presence",
       # Register two users
       Future->needs_all(
          map { $register_new_user->( $http, "SYN-202-$_" ) } qw( user1 user2 )
-      )->on_done( sub { pass "Registered users" } )
+      )->SyTest::pass_on_done( "Registered users" )
       ->then( sub {
          ( $user1, $user2 ) = @_;
 
          $make_test_room->( $user1, $user2 )
-            ->on_done( sub { pass "Created room" } )
+            ->SyTest::pass_on_done( "Created room" )
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -24,7 +24,7 @@ multi_test "Left room members do not cause problems for presence",
             uri    => "/api/v1/rooms/$room_id/leave",
 
             content => {},
-         )->on_done( sub { pass "Left room" } )
+         )->SyTest::pass_on_done( "Left room" )
       })->then( sub {
 
          $do_request_json_for->( $user1,

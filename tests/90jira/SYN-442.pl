@@ -16,7 +16,7 @@ multi_test "Test that we can be reinvited to a room we created",
          method  => "POST",
          uri     => "/api/v1/createRoom",
          content => {},
-      )->on_done( sub { pass "User A created a room" } )
+      )->SyTest::pass_on_done( "User A created a room" )
       ->then( sub {
          my ( $body ) = @_;
 
@@ -27,14 +27,14 @@ multi_test "Test that we can be reinvited to a room we created",
             method  => "PUT",
             uri     => "/api/v1/rooms/$room_id/state/m.room.join_rules",
             content => { join_rule => "invite" },
-         )->on_done( sub { pass "User A set the join rules to 'invite'" } )
+         )->SyTest::pass_on_done( "User A set the join rules to 'invite'" )
       })->then( sub {
 
          $do_request_json_for->( $user_1,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/invite",
             content => { user_id => $user_2->user_id },
-         )->on_done( sub { pass "User A invited user B" } )
+         )->SyTest::pass_on_done( "User A invited user B" )
       })->then( sub {
 
          $await_event_for->( $user_2, sub {
@@ -43,28 +43,28 @@ multi_test "Test that we can be reinvited to a room we created",
             return 0 unless $event->{content}->{membership} eq "invite";
             return 0 unless $event->{room_id} eq $room_id;
             return 1;
-         })->on_done( sub { pass "User B received the invite from A" } )
+         })->SyTest::pass_on_done( "User B received the invite from A" )
       })->then( sub {
 
          $do_request_json_for->( $user_2,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/join",
             content => {},
-         )->on_done( sub { pass "User B joined the room" } )
+         )->SyTest::pass_on_done( "User B joined the room" )
       })->then( sub {
 
          $change_room_powerlevels->( $user_1, $room_id, sub {
             my ( $levels ) = @_;
 
             $levels->{users}{ $user_2->user_id } = 100;
-         })->on_done( sub { pass "User A set user B's power level to 100" } )
+         })->SyTest::pass_on_done( "User A set user B's power level to 100" )
       })->then( sub {
 
          $do_request_json_for->( $user_1,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/leave",
             content => {},
-         )->on_done( sub { pass "User A left the room" } )
+         )->SyTest::pass_on_done( "User A left the room" )
       })->then( sub {
 
          $await_event_for->( $user_2, sub {
@@ -73,14 +73,14 @@ multi_test "Test that we can be reinvited to a room we created",
             return 0 unless $event->{content}->{membership} eq "leave";
             return 0 unless $event->{room_id} eq $room_id;
             return 1;
-         })->on_done( sub { pass "User B received the leave event" } )
+         })->SyTest::pass_on_done( "User B received the leave event" )
       })->then( sub {
 
          $do_request_json_for->( $user_2,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/invite",
             content => { user_id => $user_1->user_id },
-         )->on_done( sub { pass "User B invited user A back to the room" } )
+         )->SyTest::pass_on_done( "User B invited user A back to the room" )
       })->then( sub {
 
          $await_event_for->( $user_1, sub {
@@ -89,13 +89,13 @@ multi_test "Test that we can be reinvited to a room we created",
             return 0 unless $event->{content}->{membership} eq "invite";
             return 0 unless $event->{room_id} eq $room_id;
             return 1;
-         })->on_done( sub { pass "User A received the invite from user B" } )
+         })->SyTest::pass_on_done( "User A received the invite from user B" )
       })->then( sub {
 
          $do_request_json_for->( $user_1,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/join",
             content => {},
-         )->on_done( sub { pass "User A joined the room" } )
+         )->SyTest::pass_on_done( "User A joined the room" )
       })->then_done(1);
    };

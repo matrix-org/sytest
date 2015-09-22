@@ -13,7 +13,7 @@ multi_test "Rooms can be created with an initial invite list (SYN-205)",
          uri    => "/api/v1/createRoom",
 
          content => { visibility => "private", invite => [ $invitee->user_id ] },
-      )->on_done( sub { pass "Created room" } )
+      )->SyTest::pass_on_done( "Created room" )
       ->then( sub {
          ( $room ) = @_;
 
@@ -25,6 +25,6 @@ multi_test "Rooms can be created with an initial invite list (SYN-205)",
                           $event->{content}{membership} eq "invite";
 
             return 1;
-         })->on_done( sub { pass "Invitee received invite event" } )
+         })->SyTest::pass_on_done( "Invitee received invite event" )
       })->then_done(1);
    };

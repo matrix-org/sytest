@@ -11,7 +11,7 @@ multi_test "Check that event streams started after a client joined a room work (
       my $room;
 
       $register_new_user_without_events->( $http, "90jira-SYT-1_alice" )
-         ->on_done( sub { pass "Registered user" } )
+         ->SyTest::pass_on_done( "Registered user" )
       ->then( sub {
          ( $alice ) = @_;
 
@@ -20,7 +20,7 @@ multi_test "Check that event streams started after a client joined a room work (
             method => "POST",
             uri     => "/api/v1/createRoom",
             content => { visibility => "private" },
-         )->on_done( sub { pass "Created a room" } )
+         )->SyTest::pass_on_done( "Created a room" )
       })->then( sub {
          ( $room ) = @_;
          # Now that we've joined a room, flush the event stream to get
@@ -47,6 +47,6 @@ multi_test "Check that event streams started after a client joined a room work (
             return unless $event->{type} eq "m.room.message";
             return unless $event->{event_id} eq $event_id;
             return 1;
-         })->on_done( sub { pass "Alice saw her message" } )
+         })->SyTest::pass_on_done( "Alice saw her message" )
       })->then_done(1);
    };

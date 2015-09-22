@@ -9,7 +9,7 @@ multi_test "Register with a recaptcha",
 
       Future->needs_all(
          $await_http_request->( "/recaptcha/api/siteverify", sub {1} )
-            ->on_done( sub { pass "Got recaptcha verify request" } )
+            ->SyTest::pass_on_done( "Got recaptcha verify request" )
          ->then( sub {
             my ( $request ) = @_;
 

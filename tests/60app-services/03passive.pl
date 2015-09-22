@@ -39,7 +39,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
             uri    => "/api/v1/rooms/$room_id/invite",
 
             content => { user_id => $user_id },
-         )->on_done( sub { pass "Sent invite" } ),
+         )->SyTest::pass_on_done( "Sent invite" ),
       )->then( sub {
          my ( $appserv_request, $invite_response ) = @_;
 
@@ -104,7 +104,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
                   content => {
                      room_id => $room_id,
                   },
-               )->on_done( sub { pass "Created room alias mapping" } )
+               )->SyTest::pass_on_done( "Created room alias mapping" )
                ->then( sub {
                   $request->respond_json( {} );
                   Future->done;

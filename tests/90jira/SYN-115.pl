@@ -15,7 +15,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       Future->needs_all(
          $register_new_user->( $http1, "90jira-SYN-115_alice" ),
          $register_new_user->( $http2, "90jira-SYN-115_bob" ),
-      )->on_done( sub { pass "Registered users" } )
+      )->SyTest::pass_on_done( "Registered users" )
       ->then( sub {
          ( $alice, $bob ) = @_;
 
@@ -30,7 +30,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             method => "POST",
             uri    => "/api/v1/createRoom",
             content => { visibility => "private" },
-         )->on_done( sub { pass "Created a room" } )
+         )->SyTest::pass_on_done( "Created a room" )
       })->then( sub {
          ( $room ) = @_;
 
@@ -40,7 +40,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             uri    => "/api/v1/rooms/$room->{room_id}/invite",
 
             content => { user_id => $bob->user_id },
-         )->on_done( sub { pass "Sent invite" } )
+         )->SyTest::pass_on_done( "Sent invite" )
       })->then( sub {
 
          # Bob should receive the invite
@@ -52,7 +52,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
                           $event->{content}{membership} eq "invite";
 
             return 1;
-         })->on_done( sub { pass "Received invite" } )
+         })->SyTest::pass_on_done( "Received invite" )
       })->then( sub {
 
          # Bob accepts the invite by joining the room
@@ -61,7 +61,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             uri    => "/api/v1/rooms/$room->{room_id}/join",
 
             content => {},
-         )->on_done( sub { pass "Joined room" } )
+         )->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
 
          # At this point, both users should see both users' presence, either
@@ -104,6 +104,6 @@ multi_test "New federated private chats get full presence information (SYN-115)"
                   ->then_fail( "Timed out waiting for ${\$user->user_id} to receive all presence" )
             );
          } $alice, $bob )
-         ->on_done( sub { pass "Both users see both users' presence" } )
+         ->SyTest::pass_on_done( "Both users see both users' presence" )
       })->then_done(1);
    };

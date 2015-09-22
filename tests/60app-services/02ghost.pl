@@ -9,12 +9,12 @@ multi_test "AS-ghosted users can use rooms via AS",
       my $ghost;
 
       $make_test_room->( $user )
-         ->on_done( sub { pass "Created test room" } )
+         ->SyTest::pass_on_done( "Created test room" )
       ->then( sub {
          ( $room_id ) = @_;
 
          $make_as_user->( "02ghost-1" )
-            ->on_done( sub { pass "Created AS ghost" } )
+            ->SyTest::pass_on_done( "Created AS ghost" )
       })->then( sub {
          ( $ghost ) = @_;
 
@@ -49,7 +49,7 @@ multi_test "AS-ghosted users can use rooms via AS",
                content => {},
             )
          )
-      })->on_done( sub { pass "User joined room via AS" } )
+      })->SyTest::pass_on_done( "User joined room via AS" )
       ->then( sub {
          Future->needs_all(
             $await_as_event->( "m.room.message" )->then( sub {
@@ -77,7 +77,7 @@ multi_test "AS-ghosted users can use rooms via AS",
                content => { msgtype => "m.text", body => "Message from AS directly" },
             )
          )
-      })->on_done( sub { pass "User posted message via AS" } )
+      })->SyTest::pass_on_done( "User posted message via AS" )
       ->then( sub {
          $await_event_for->( $user, sub {
             my ( $event ) = @_;
@@ -109,12 +109,12 @@ multi_test "AS-ghosted users can use rooms themselves",
       my $ghost;
 
       $make_test_room->( $user )
-         ->on_done( sub { pass "Created test room" } )
+         ->SyTest::pass_on_done( "Created test room" )
       ->then( sub {
          ( $room_id ) = @_;
 
          $make_as_user->( "02ghost-2" )
-            ->on_done( sub { pass "Created AS ghost" } )
+            ->SyTest::pass_on_done( "Created AS ghost" )
       })->then( sub {
          ( $ghost ) = @_;
 
@@ -144,7 +144,7 @@ multi_test "AS-ghosted users can use rooms themselves",
                content => {},
             )
          )
-      })->on_done( sub { pass "Ghost joined room themselves" } )
+      })->SyTest::pass_on_done( "Ghost joined room themselves" )
       ->then( sub {
          Future->needs_all(
             $await_as_event->( "m.room.message" )->then( sub {
@@ -169,7 +169,7 @@ multi_test "AS-ghosted users can use rooms themselves",
                content => { msgtype => "m.text", body => "Message from AS Ghost" },
             )
          )
-      })->on_done( sub { pass "Ghost posted message themselves" } )
+      })->SyTest::pass_on_done( "Ghost posted message themselves" )
       ->then( sub {
          $await_event_for->( $user, sub {
             my ( $event ) = @_;
@@ -186,6 +186,6 @@ multi_test "AS-ghosted users can use rooms themselves",
                die "Expected sender user_id as ${\$ghost->user_id}";
 
             return 1;
-         })->on_done( sub { pass "Creator received ghost's message" } )
+         })->SyTest::pass_on_done( "Creator received ghost's message" )
       })->then_done(1);
    };

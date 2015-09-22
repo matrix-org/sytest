@@ -354,6 +354,15 @@ sub test
       ok( 1, $testname );
    }
 
+   # A convenience for the otherwise-common pattern of
+   #   ->on_done( sub { pass $message } )
+   sub SyTest::pass_on_done
+   {
+      my $self = shift;
+      my ( $message ) = @_;
+      $self->on_done( sub { ok( 1, $message ) } );
+   }
+
    sub ok
    {
       die "Cannot call ok() outside of a multi_test\n" unless $RUNNING_TEST;
