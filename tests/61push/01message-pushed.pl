@@ -17,7 +17,6 @@ multi_test "Test that a message is pushed",
       my $alice;
       my $bob;
       my $room;
-      my $event_id;
 
       # We use the version of register new user that doesn't start the event
       # stream for Alice. Starting an event stream will make presence
@@ -121,10 +120,7 @@ multi_test "Test that a message is pushed",
                   msgtype => "m.text",
                   body    => "Room message for 50push-01message-pushed"
                },
-            )->on_done( sub {
-               my ( $body ) = @_;
-               $event_id = $body->{event_id};
-            }),
+            ),
          )
       })->then( sub {
          my ( $request ) = @_;
