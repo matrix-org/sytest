@@ -15,10 +15,9 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       Future->needs_all(
          $register_new_user->( $http1, "90jira-SYN-115_alice" ),
          $register_new_user->( $http2, "90jira-SYN-115_bob" ),
-      )->then( sub {
+      )->on_done( sub { pass "Registered users" } )
+      ->then( sub {
          ( $alice, $bob ) = @_;
-
-         pass "Registered users";
 
          # Flush event streams for both; as a side-effect will mark presence 'online'
          Future->needs_all(
@@ -31,11 +30,9 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             method => "POST",
             uri    => "/api/v1/createRoom",
             content => { visibility => "private" },
-         )
+         )->on_done( sub { pass "Created a room" } )
       })->then( sub {
          ( $room ) = @_;
-
-         pass "Created a room";
 
          # Alice invites Bob
          $do_request_json_for->( $alice,
@@ -43,9 +40,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             uri    => "/api/v1/rooms/$room->{room_id}/invite",
 
             content => { user_id => $bob->user_id },
-         );
+         )->on_done( sub { pass "Sent invite" } )
       })->then( sub {
-         pass "Sent invite";
 
          # Bob should receive the invite
          $await_event_for->( $bob, sub {
@@ -56,9 +52,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
                           $event->{content}{membership} eq "invite";
 
             return 1;
-         });
+         })->on_done( sub { pass "Received invite" } )
       })->then( sub {
-         pass "Received invite";
 
          # Bob accepts the invite by joining the room
          $do_request_json_for->( $bob,
@@ -66,9 +61,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             uri    => "/api/v1/rooms/$room->{room_id}/join",
 
             content => {},
-         );
+         )->on_done( sub { pass "Joined room" } )
       })->then( sub {
-         pass "Joined room";
 
          # At this point, both users should see both users' presence, either
          # right now via global /initialSync, or should soon receive an
@@ -109,10 +103,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
                delay( 2 )
                   ->then_fail( "Timed out waiting for ${\$user->user_id} to receive all presence" )
             );
-         } $alice, $bob );
-      })->then( sub {
-         pass "Both users see both users' presence";
-
-         Future->done(1);
-      });
+         } $alice, $bob )
+         ->on_done( sub { pass "Both users see both users' presence" } )
+      })->then_done(1);
    };

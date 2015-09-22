@@ -8,10 +8,10 @@ multi_test "Register with a recaptcha",
       my ( $http, $await_http_request, $expect_http_4xx ) = @_;
 
       Future->needs_all(
-         $await_http_request->( "/recaptcha/api/siteverify", sub {1} )->then( sub {
+         $await_http_request->( "/recaptcha/api/siteverify", sub {1} )
+            ->on_done( sub { pass "Got recaptcha verify request" } )
+         ->then( sub {
             my ( $request ) = @_;
-
-            pass "Got captcha verify request";
 
             my $params = $request->body_from_form;
 

@@ -10,9 +10,10 @@ multi_test "Typing notifications don't leak",
 
       my $room_id;
 
-      $make_test_room->( $creator, $member )->then( sub {
+      $make_test_room->( $creator, $member )
+         ->on_done( sub { pass "Created room" } )
+      ->then( sub {
          ( $room_id ) = @_;
-         pass "Created room";
 
          $do_request_json_for->( $creator,
             method => "PUT",
@@ -31,9 +32,9 @@ multi_test "Typing notifications don't leak",
 
                return 1;
             })
-         } $creator, $member );
+         } $creator, $member )
+            ->on_done( sub { pass "Members received notification" } )
       })->then( sub {
-         pass "Members received notification";
 
          Future->wait_any(
             delay( 2 ),
@@ -45,10 +46,6 @@ multi_test "Typing notifications don't leak",
 
                return 1;
             })->then_fail( "Received unexpected typing notification" ),
-         );
-      })->then( sub {
-         pass "Non-member did not receive it up to timeout";
-
-         Future->done(1);
-      });
+         )->on_done( sub { pass "Non-member did not receive it up to timeout" } )
+      })->then_done(1);
    };

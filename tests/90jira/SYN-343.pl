@@ -15,27 +15,23 @@ multi_test "Non-present room members cannot ban others",
 
       my $room_id;
 
-      $make_test_room->( $creator )->then( sub {
+      $make_test_room->( $creator )
+         ->on_done( sub { pass "Created room" } )
+      ->then( sub {
          ( $room_id ) = @_;
-
-         pass "Created room";
 
          $change_room_powerlevels->( $creator, $room_id, sub {
             my ( $levels ) = @_;
             $levels->{users}{ $testuser->user_id } = 100;
-         })
+         })->on_done( sub { pass "Set powerlevel" } )
       })->then( sub {
-         pass "Set powerlevel";
 
          $do_request_json_for->( $testuser,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/ban",
 
             content => { user_id => '@random_dude:test', reason => "testing" },
-         )->$expect_http_403;
-      })->then( sub {
-         pass "Attempt to ban is rejected";
-
-         Future->done(1);
-      });
+         )->$expect_http_403
+         ->on_done( sub { pass "Attempt to ban is rejected" } )
+      })->then_done(1);
    };

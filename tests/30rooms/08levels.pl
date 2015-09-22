@@ -163,16 +163,13 @@ foreach my $levelname (qw( ban kick redact )) {
             my ( $levels ) = @_;
 
             $levels->{$levelname} = 25;
-         })->then( sub {
-            pass "Succeeds at setting 25";
-
+         })->on_done( sub { pass "Succeeds at setting 25" } )
+         ->then( sub {
             $change_room_powerlevels->( $user, $room_id, sub {
                my ( $levels ) = @_;
 
                $levels->{$levelname} = 10000000;
             })->$expect_http_403
-         })->on_done( sub {
-            pass "Fails at setting 75";
-         });
+         })->on_done( sub { pass "Fails at setting 75" } );
       };
 }

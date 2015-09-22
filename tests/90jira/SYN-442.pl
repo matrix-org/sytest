@@ -16,10 +16,9 @@ multi_test "Test that we can be reinvited to a room we created",
          method  => "POST",
          uri     => "/api/v1/createRoom",
          content => {},
-      )->then( sub {
+      )->on_done( sub { pass "User A created a room" } )
+      ->then( sub {
          my ( $body ) = @_;
-
-         pass "User A created a room";
 
          require_json_keys( $body, qw(room_id));
          $room_id = $body->{room_id};
@@ -28,17 +27,15 @@ multi_test "Test that we can be reinvited to a room we created",
             method  => "PUT",
             uri     => "/api/v1/rooms/$room_id/state/m.room.join_rules",
             content => { join_rule => "invite" },
-         );
+         )->on_done( sub { pass "User A set the join rules to 'invite'" } )
       })->then( sub {
-         pass "User A set the join rules to 'invite'";
 
          $do_request_json_for->( $user_1,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/invite",
             content => { user_id => $user_2->user_id },
-         );
+         )->on_done( sub { pass "User A invited user B" } )
       })->then( sub {
-         pass "User A invited user B";
 
          $await_event_for->( $user_2, sub {
             my ( $event ) = @_;
@@ -46,33 +43,29 @@ multi_test "Test that we can be reinvited to a room we created",
             return 0 unless $event->{content}->{membership} eq "invite";
             return 0 unless $event->{room_id} eq $room_id;
             return 1;
-         });
+         })->on_done( sub { pass "User B received the invite from A" } )
       })->then( sub {
-         pass "User B received the invite from A";
 
          $do_request_json_for->( $user_2,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/join",
             content => {},
-         );
+         )->on_done( sub { pass "User B joined the room" } )
       })->then( sub {
-         pass "User B joined the room";
 
          $change_room_powerlevels->( $user_1, $room_id, sub {
             my ( $levels ) = @_;
 
             $levels->{users}{ $user_2->user_id } = 100;
-         });
+         })->on_done( sub { pass "User A set user B's power level to 100" } )
       })->then( sub {
-         pass "User A set user B's power level to 100";
 
          $do_request_json_for->( $user_1,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/leave",
             content => {},
-         );
+         )->on_done( sub { pass "User A left the room" } )
       })->then( sub {
-         pass "User A left the room";
 
          $await_event_for->( $user_2, sub {
             my ( $event ) = @_;
@@ -80,17 +73,15 @@ multi_test "Test that we can be reinvited to a room we created",
             return 0 unless $event->{content}->{membership} eq "leave";
             return 0 unless $event->{room_id} eq $room_id;
             return 1;
-         });
+         })->on_done( sub { pass "User B received the leave event" } )
       })->then( sub {
-         pass "User B received the leave event";
 
          $do_request_json_for->( $user_2,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/invite",
             content => { user_id => $user_1->user_id },
-         );
+         )->on_done( sub { pass "User B invited user A back to the room" } )
       })->then( sub {
-         pass "User B invited user A back to the room";
 
          $await_event_for->( $user_1, sub {
             my ( $event ) = @_;
@@ -98,18 +89,13 @@ multi_test "Test that we can be reinvited to a room we created",
             return 0 unless $event->{content}->{membership} eq "invite";
             return 0 unless $event->{room_id} eq $room_id;
             return 1;
-         });
+         })->on_done( sub { pass "User A received the invite from user B" } )
       })->then( sub {
-         pass "User A received the invite from B";
 
          $do_request_json_for->( $user_1,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/join",
             content => {},
-         );
-      })->then( sub {
-         pass "User A joined the room";
-
-         Future->done(1);
-      });
+         )->on_done( sub { pass "User A joined the room" } )
+      })->then_done(1);
    };

@@ -10,19 +10,19 @@ multi_test "Check that event streams started after a client joined a room work (
       my $alice;
       my $room;
 
-      $register_new_user_without_events->( $http, "90jira-SYT-1_alice" )->then( sub {
+      $register_new_user_without_events->( $http, "90jira-SYT-1_alice" )
+         ->on_done( sub { pass "Registered user" } )
+      ->then( sub {
          ( $alice ) = @_;
-         pass "Registered user";
 
          # Have Alice create a new private room
          $do_request_json_for->( $alice,
             method => "POST",
             uri     => "/api/v1/createRoom",
             content => { visibility => "private" },
-         )
+         )->on_done( sub { pass "Created a room" } )
       })->then( sub {
          ( $room ) = @_;
-         pass "Created a room";
          # Now that we've joined a room, flush the event stream to get
          # a stream token from before we send a message.
          $flush_events_for->( $alice );
@@ -47,9 +47,6 @@ multi_test "Check that event streams started after a client joined a room work (
             return unless $event->{type} eq "m.room.message";
             return unless $event->{event_id} eq $event_id;
             return 1;
-         });
-      })->then( sub {
-         pass "Alice saw her message";
-         Future->done(1);
-      });
+         })->on_done( sub { pass "Alice saw her message" } )
+      })->then_done(1);
    };

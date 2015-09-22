@@ -27,9 +27,9 @@ multi_test "Test that a message is pushed",
       Future->needs_all(
          $register_new_user->( $http, "50push-01-alice" ),
          $register_new_user->( $http, "50push-01-bob" ),
-      )->then( sub {
+      )->on_done( sub { pass "Registered users" } )
+      ->then( sub {
          ( $alice, $bob ) = @_;
-         pass "Registered users";
 
          # Have Alice create a new private room
          $do_request_json_for->( $alice,
@@ -54,7 +54,7 @@ multi_test "Test that a message is pushed",
                   $event->{state_key} eq $bob->user_id and
                   $event->{content}{membership} eq "invite";
                return 1;
-            }),
+            })->on_done( sub { pass "Bob received invite" } ),
 
             $do_request_json_for->( $alice,
                method  => "POST",
@@ -64,8 +64,6 @@ multi_test "Test that a message is pushed",
          )
       })->then( sub {
          # Bob accepts the invite by joining the room
-         pass "Bob received invite";
-
          $do_request_json_for->( $bob,
             method  => "POST",
             uri     => "/api/v1/rooms/$room->{room_id}/join",
@@ -91,9 +89,8 @@ multi_test "Test that a message is pushed",
                   url => "$test_http_server_uri_base/alice_push",
                },
             },
-         )
+         )->on_done( sub { pass "Alice's pusher created" } )
       })->then( sub {
-         pass "Alice's pusher created";
          # Bob sends a message that should be pushed to Alice, since it is
          # in a "1:1" room with Alice
 
@@ -120,15 +117,13 @@ multi_test "Test that a message is pushed",
                   msgtype => "m.text",
                   body    => "Room message for 50push-01message-pushed"
                },
-            ),
+            )->on_done( sub { pass "Message sent" } ),
          )
       })->then( sub {
          my ( $request ) = @_;
          my $body = $request->body_from_json;
 
          log_if_fail "Request body", $body;
-
-         pass "Message sent";
 
          require_json_keys( my $notification = $body->{notification}, qw(
             id room_id type sender content devices counts
@@ -147,7 +142,6 @@ multi_test "Test that a message is pushed",
             die "Unexpected message body";
 
          pass "Alice was pushed";  # Alice has gone down the stairs
-
          Future->done(1);
       });
    };

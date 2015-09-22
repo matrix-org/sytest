@@ -13,10 +13,9 @@ multi_test "Rooms can be created with an initial invite list (SYN-205)",
          uri    => "/api/v1/createRoom",
 
          content => { visibility => "private", invite => [ $invitee->user_id ] },
-      )->then( sub {
+      )->on_done( sub { pass "Created room" } )
+      ->then( sub {
          ( $room ) = @_;
-
-         pass "Created room";
 
          $await_event_for->( $invitee, sub {
             my ( $event ) = @_;
@@ -26,10 +25,6 @@ multi_test "Rooms can be created with an initial invite list (SYN-205)",
                           $event->{content}{membership} eq "invite";
 
             return 1;
-         });
-      })->then( sub {
-         pass "Invitee received invite event";
-
-         Future->done(1);
-      });
+         })->on_done( sub { pass "Invitee received invite event" } )
+      })->then_done(1);
    };
