@@ -76,6 +76,7 @@ prepare "Starting synapse",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
 
                use_insecure_ssl_client_just_for_testing_do_not_use => 1,
+               report_stats => "False",
             },
          );
          $loop->add( $synapse );
