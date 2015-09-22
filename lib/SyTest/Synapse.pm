@@ -179,7 +179,7 @@ sub start
          },
       ],
 
-      command => [ @command, "--generate-config" ],
+      command => [ @command, "--generate-config", "--report-stats=no" ],
 
       on_finish => sub {
          my ( $pid, $exitcode, $stdout, $stderr ) = @_;
