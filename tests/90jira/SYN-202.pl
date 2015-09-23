@@ -14,7 +14,7 @@ multi_test "Left room members do not cause problems for presence",
       ->then( sub {
          ( $user1, $user2 ) = @_;
 
-         $make_test_room->( $user1, $user2 )
+         $make_test_room->( [ $user1, $user2 ] )
             ->SyTest::pass_on_done( "Created room" )
       })->then( sub {
          ( $room_id ) = @_;

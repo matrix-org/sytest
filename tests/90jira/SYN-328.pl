@@ -10,7 +10,7 @@ multi_test "Typing notifications don't leak",
 
       my $room_id;
 
-      $make_test_room->( $creator, $member )
+      $make_test_room->( [ $creator, $member ] )
          ->SyTest::pass_on_done( "Created room" )
       ->then( sub {
          ( $room_id ) = @_;
