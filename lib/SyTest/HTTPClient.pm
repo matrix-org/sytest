@@ -12,7 +12,7 @@ Net::Async::HTTP->VERSION( '0.36' ); # PUT content bugfix
 use JSON;
 my $json = JSON->new->convert_blessed;
 
-require Net::SSLeay 1.59; # TLSv1.2
+use Net::SSLeay 1.59; # TLSv1.2
 
 use constant MIME_TYPE_JSON => "application/json";
 
