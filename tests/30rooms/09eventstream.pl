@@ -1,14 +1,19 @@
 multi_test "Check that event streams started after a client joined a room work (SYT-1)",
    requires => [qw(
-      first_api_client register_new_user_without_events do_request_json_for await_event_for flush_events_for
+      first_api_client register_new_user_without_events make_test_room
+      do_request_json_for await_event_for flush_events_for
+
       can_register can_create_private_room
    )],
 
    do => sub {
-      my ( $http, $register_new_user_without_events, $do_request_json_for, $await_event_for, $flush_events_for ) = @_;
+      my (
+         $http, $register_new_user_without_events, $make_test_room,
+         $do_request_json_for, $await_event_for, $flush_events_for,
+      ) = @_;
 
       my $alice;
-      my $room;
+      my $room_id;
 
       $register_new_user_without_events->( $http, "90jira-SYT-1_alice" )
          ->SyTest::pass_on_done( "Registered user" )
@@ -16,13 +21,11 @@ multi_test "Check that event streams started after a client joined a room work (
          ( $alice ) = @_;
 
          # Have Alice create a new private room
-         $do_request_json_for->( $alice,
-            method => "POST",
-            uri     => "/api/v1/createRoom",
-            content => { visibility => "private" },
+         $make_test_room->( [ $alice ],
+            visibility => "private",
          )->SyTest::pass_on_done( "Created a room" )
       })->then( sub {
-         ( $room ) = @_;
+         ( $room_id ) = @_;
          # Now that we've joined a room, flush the event stream to get
          # a stream token from before we send a message.
          $flush_events_for->( $alice );
@@ -30,7 +33,7 @@ multi_test "Check that event streams started after a client joined a room work (
          # Alice sends a message
          $do_request_json_for->( $alice,
             method  => "POST",
-            uri     => "/api/v1/rooms/$room->{room_id}/send/m.room.message",
+            uri     => "/api/v1/rooms/$room_id/send/m.room.message",
 
             content => {
                msgtype => "m.message",
