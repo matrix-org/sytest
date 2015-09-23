@@ -281,6 +281,9 @@ prepare "Creating test-room-creation helper function",
             content => {
                visibility      => $options{visibility},
                room_alias_name => $room_alias_shortname,
+               ( defined $options{invite} ?
+                  ( invite => $options{invite} ) :
+                  () ),
             },
          )->then( sub {
             my ( $body ) = @_;
