@@ -14,24 +14,18 @@ multi_test "Getting push rules doesn't corrupt the cache SYN-390",
             method  => "PUT",
             uri     => "/api/v1/pushrules/global/sender/%40a_user%3Amatrix.org",
             content => { "actions" => ["dont_notify"] }
-         );
+         )->SyTest::pass_on_done("Set push rules for alice" )
       })->then( sub {
-         pass "Set push rules for alice";
 
          $do_request_json_for->( $alice,
             method => "GET",
             uri    => "/api/v1/pushrules/",
-         );
+         )->SyTest::pass_on_done("Got push rules the first time" )
       })->then( sub {
-         pass "Got push rules the first time";
 
          $do_request_json_for->( $alice,
             method => "GET",
             uri    => "/api/v1/pushrules/",
-         );
-      })->then( sub {
-         pass "Got push rules the second time";
-
-         Future->done(1)
-      });
+         )->SyTest::pass_on_done("Got push rules the second time" )
+      })->then_done(1);
    }

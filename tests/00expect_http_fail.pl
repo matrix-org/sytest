@@ -22,13 +22,10 @@ sub gen_expect_failure
    };
 }
 
-prepare "Creating test assertion helpers",
-   provides => [qw( expect_http_4xx expect_http_403 )],
+our @EXPORT = qw(
+   expect_http_4xx expect_http_403
+);
 
-   do => sub {
-      provide expect_http_4xx => gen_expect_failure( '4xx' => qr/^4/ );
+*expect_http_4xx = gen_expect_failure( '4xx' => qr/^4/ );
 
-      provide expect_http_403 => gen_expect_failure( '403' => qr/^403/ );
-
-      Future->done;
-   };
+*expect_http_403 = gen_expect_failure( '403' => qr/^403/ );

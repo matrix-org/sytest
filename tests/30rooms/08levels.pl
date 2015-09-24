@@ -10,7 +10,7 @@ prepare "Creating a new test room",
       my $creator   = $local_users->[0];
       my $test_user = $local_users->[1];
 
-      $make_test_room->( $creator, $test_user )
+      $make_test_room->( [ $creator, $test_user ] )
          ->on_done( sub {
             ( $room_id ) = @_;
          })->then( sub {
@@ -36,11 +36,11 @@ sub test_powerlevel
    }
 
    multi_test $name,
-      requires => [qw( do_request_json_for change_room_powerlevels expect_http_403 user local_users ),
+      requires => [qw( do_request_json_for change_room_powerlevels user local_users ),
                    @requires ],
 
       do => sub {
-         my ( $do_request_json_for, $change_room_powerlevels, $expect_http_403, $user, $local_users,
+         my ( $do_request_json_for, $change_room_powerlevels, $user, $local_users,
               @dependencies ) = @_;
          my $test_user = $local_users->[1];
 
@@ -54,7 +54,7 @@ sub test_powerlevel
             $levels->{users}{ $test_user->user_id } = 0;
          })->then( sub {
             $do->( @dependencies )
-               ->$expect_http_403
+               ->main::expect_http_403
          })->then( sub {
             pass( "Fails at powerlevel 0" );
 
@@ -154,25 +154,22 @@ test "Unprivileged users can set m.room.topic if it only needs level 0",
 
 foreach my $levelname (qw( ban kick redact )) {
    multi_test "Users cannot set $levelname powerlevel higher than their own",
-      requires => [qw( change_room_powerlevels expect_http_403 user )],
+      requires => [qw( change_room_powerlevels user )],
 
       do => sub {
-         my ( $change_room_powerlevels, $expect_http_403, $user ) = @_;
+         my ( $change_room_powerlevels, $user ) = @_;
 
          $change_room_powerlevels->( $user, $room_id, sub {
             my ( $levels ) = @_;
 
             $levels->{$levelname} = 25;
-         })->then( sub {
-            pass "Succeeds at setting 25";
-
+         })->SyTest::pass_on_done( "Succeeds at setting 25" )
+         ->then( sub {
             $change_room_powerlevels->( $user, $room_id, sub {
                my ( $levels ) = @_;
 
                $levels->{$levelname} = 10000000;
-            })->$expect_http_403
-         })->on_done( sub {
-            pass "Fails at setting 75";
-         });
+            })->main::expect_http_403
+         })->SyTest::pass_on_done( "Fails at setting 75" );
       };
 }

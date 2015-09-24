@@ -98,11 +98,11 @@ test "POST /login can log in as a user",
    };
 
 test "POST /login wrong password is rejected",
-   requires => [qw( first_api_client expect_http_403 login_details
+   requires => [qw( first_api_client login_details
                     can_login_password_flow )],
 
    do => sub {
-      my ( $http, $expect_http_403, $login_details ) = @_;
+      my ( $http, $login_details ) = @_;
       my ( $user_id, $password ) = @$login_details;
 
       $http->do_request_json(
@@ -114,7 +114,7 @@ test "POST /login wrong password is rejected",
             user     => $user_id,
             password => "${password}wrong",
          },
-      )->$expect_http_403->then( sub {
+      )->main::expect_http_403->then( sub {
          my ( $resp ) = @_;
 
          my $body = decode_json $resp->content;
@@ -131,10 +131,10 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [qw( first_api_client user expect_http_403 )],
+   requires => [qw( first_api_client user )],
 
    do => sub {
-      my ( $http, $old_user, $expect_http_403 ) = @_;
+      my ( $http, $old_user ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -167,5 +167,5 @@ test "POST /tokenrefresh invalidates old refresh token",
                },
             )
          }
-      )->$expect_http_403;
+      )->main::expect_http_403;
    };

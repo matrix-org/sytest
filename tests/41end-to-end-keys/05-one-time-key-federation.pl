@@ -14,9 +14,8 @@ multi_test "Can claim remote one time key using POST",
                "test_algorithm:test_id", "test+base64+key"
             }
          }
-      )->then( sub {
-         pass "Uploaded one time keys";
-
+      )->SyTest::pass_on_done( "Uploaded one-time keys" )
+      ->then( sub {
          $do_request_json_for->( $e2e_user_alice,
             method => "GET",
             uri    => "/v2_alpha/keys/upload/alices_first_device"

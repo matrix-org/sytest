@@ -1,26 +1,20 @@
 use List::Util qw( first );
 
 test "A room can be created set to invite-only",
-   requires => [qw( do_request_json can_create_room )],
+   requires => [qw( make_test_room user do_request_json
+                    can_create_room )],
 
    provides => [qw( inviteonly_room_id )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $make_test_room, $user, $do_request_json ) = @_;
 
-      $do_request_json->(
-         method => "POST",
-         uri    => "/api/v1/createRoom",
-
-         content => {
-            # visibility: "private" actually means join_rule: "invite"
-            # See SPEC-74
-            visibility => "private",
-         },
+      $make_test_room->( [ $user ],
+         # visibility: "private" actually means join_rule: "invite"
+         # See SPEC-74
+         visibility => "private",
       )->then( sub {
-         my ( $body ) = @_;
-
-         my $room_id = $body->{room_id};
+         my ( $room_id ) = @_;
 
          $do_request_json->(
             method => "GET",
@@ -45,11 +39,11 @@ test "A room can be created set to invite-only",
    };
 
 test "Uninvited users cannot join the room",
-   requires => [qw( do_request_json_for more_users inviteonly_room_id expect_http_403
+   requires => [qw( do_request_json_for more_users inviteonly_room_id
                     can_join_room_by_id )],
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id, $expect_http_403 ) = @_;
+      my ( $do_request_json_for, $more_users, $room_id ) = @_;
       my $uninvited = $more_users->[0];
 
       $do_request_json_for->( $uninvited,
@@ -57,7 +51,7 @@ test "Uninvited users cannot join the room",
          uri    => "/api/v1/rooms/$room_id/join",
 
          content => {},
-      )->$expect_http_403;
+      )->main::expect_http_403;
    };
 
 test "Can invite users to invite-only rooms",
@@ -132,11 +126,11 @@ test "Invited user can join the room",
    };
 
 test "Banned user is kicked and may not rejoin",
-   requires => [qw( do_request_json_for user more_users room_id expect_http_403
+   requires => [qw( do_request_json_for user more_users room_id
                     can_ban_room )],
 
    do => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id, $expect_http_403 ) = @_;
+      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
       my $banned_user = $more_users->[0];
 
       # Pre-test assertion that the user we want to ban is present
@@ -170,5 +164,5 @@ test "Banned user is kicked and may not rejoin",
 
             content => {},
          )
-      })->$expect_http_403;
+      })->main::expect_http_403;
    };
