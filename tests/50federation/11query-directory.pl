@@ -32,9 +32,7 @@ test "Outbound federation can query room alias directory",
          $body->{room_id} eq "!the-room-id:$local_server_name" or
             die "Expected room_id to be '!the-room-id:$local_server_name'";
 
-         require_json_list( $body->{servers} );
-         @{ $body->{servers} } or
-            die "Expected a non-empty server list";
+         require_json_nonempty_list( $body->{servers} );
 
          require_json_string( $_ ) for @{ $body->{servers} };
 
@@ -77,10 +75,7 @@ test "Inbound federation can query room alias directory",
          $body->{room_id} eq $room_id or
             die "Expected room_id to be '$room_id'";
 
-         require_json_list( $body->{servers} );
-
-         @{ $body->{servers} } or
-            die "Expected a non-empty server list";
+         require_json_nonempty_list( $body->{servers} );
 
          Future->done(1);
       });

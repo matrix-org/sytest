@@ -150,8 +150,12 @@ tested.
     additionally it defines values for all of the key names given.
 
 ``require_json_list``
-    Asserts that it is given a representation of a JSON object (i.e. an
+    Asserts that it is given a representation of a JSON list (i.e. an
     ``ARRAY`` ref).
+
+``require_json_nonempty_list``
+    Asserts that it is given a representation of a JSON list, and additionally
+    that it is not empty.
 
 ``require_json_number``
     Asserts that it is given a likely representation of a JSON number (i.e. a

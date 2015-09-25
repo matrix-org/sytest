@@ -49,8 +49,7 @@ test "POST /presence/:user_id/list can invite users",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_list( $body );
-         scalar @$body > 0 or die "Expected non-empty list";
+         require_json_nonempty_list( $body );
 
          require_json_keys( $body->[0], qw( accepted presence user_id ));
          $body->[0]->{user_id} eq $friend_uid or die "Expected friend user_id";
