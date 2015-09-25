@@ -501,6 +501,13 @@ package assertions {
       ref $list eq "ARRAY" or croak "Expected a JSON list";
    }
 
+   sub require_json_nonempty_list
+   {
+      my ( $list ) = @_;
+      require_json_list( $list );
+      @$list or croak "Expected a non-empty JSON list";
+   }
+
    sub require_json_number
    {
       my ( $num ) = @_;
