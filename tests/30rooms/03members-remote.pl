@@ -1,4 +1,5 @@
 use Future::Utils 0.18 qw( try_repeat );
+use List::Util qw( first );
 use List::UtilsBy qw( partition_by );
 
 test "Remote users can join room by alias",
@@ -227,11 +228,9 @@ test "New room members see first user's profile information in per-room initialS
             require_json_keys( $body, qw( state ));
             require_json_list( $body->{state} );
 
-            my %state_by_type_key;
-            $state_by_type_key{ $_->{type} }{ $_->{state_key} } = $_ for
-               @{ $body->{state} };
-
-            my $first_member = $state_by_type_key{"m.room.member"}{ $first_user->user_id }
+            my $first_member = first {
+               $_->{type} eq "m.room.member" and $_->{state_key} eq $first_user->user_id
+            } @{ $body->{state} }
                or die "Failed to find first user in m.room.member state";
 
             require_json_keys( $first_member, qw( user_id content ));
