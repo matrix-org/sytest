@@ -1,3 +1,5 @@
+use List::UtilsBy qw( partition_by );
+
 my $name = "room name here";
 
 test "POST /rooms/:room_id/state/m.room.name sets name",
@@ -29,8 +31,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
          require_json_keys( $body, qw( state ));
          my $state = $body->{state};
 
-         my %state_by_type;
-         push @{ $state_by_type{ $_->{type} } }, $_ for @$state;
+         my %state_by_type = partition_by { $_->{type} } @$state;
 
          $state_by_type{"m.room.name"} or
             die "Expected to find m.room.name state";
@@ -98,8 +99,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
          require_json_keys( $body, qw( state ));
          my $state = $body->{state};
 
-         my %state_by_type;
-         push @{ $state_by_type{ $_->{type} } }, $_ for @$state;
+         my %state_by_type = partition_by { $_->{type} } @$state;
 
          $state_by_type{"m.room.topic"} or
             die "Expected to find m.room.topic state";
@@ -152,8 +152,7 @@ test "GET /rooms/:room_id/state fetches entire room state",
 
          require_json_list( $body );
 
-         my %state_by_type;
-         push @{ $state_by_type{ $_->{type} } }, $_ for @$body;
+         my %state_by_type = partition_by { $_->{type} } @$body;
 
          defined $state_by_type{$_} or die "Missing $_ state" for
             qw( m.room.create m.room.join_rules m.room.name m.room.power_levels );
