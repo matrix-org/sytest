@@ -63,8 +63,7 @@ test "New room members see existing users' presence in room initialSync",
          )->then( sub {
             my ( $body ) = @_;
 
-            my %presence;
-            $presence{ $_->{content}{user_id} } = $_ for @{ $body->{presence} };
+            my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
             $presence{$first_user->user_id} or
                die "Expected to find initial user's presence";
@@ -188,8 +187,7 @@ test "New room members see first user's profile information in global initialSyn
             require_json_keys( $body, qw( presence ));
             require_json_list( $body->{presence} );
 
-            my %presence_by_userid;
-            $presence_by_userid{ $_->{content}{user_id} } = $_ for @{ $body->{presence} };
+            my %presence_by_userid = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
             my $presence = $presence_by_userid{ $first_user->user_id } or
                die "Failed to find presence of first user";
