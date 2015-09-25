@@ -7,7 +7,6 @@ use base qw( SyTest::Federation::_Base SyTest::HTTPClient );
 
 use MIME::Base64 qw( decode_base64 );
 use HTTP::Headers::Util qw( join_header_words );
-use Time::HiRes qw( time );
 
 sub _fetch_key
 {
@@ -84,12 +83,11 @@ sub send_edu
    my $self = shift;
    my %params = @_;
 
-   # Force timestamp to be a JSON::number
-   my $ts = JSON::number( int( time() * 1000 ) );
+   my $ts = $self->time_ms;
 
    my %transaction = (
       origin           => $self->server_name,
-      origin_server_ts => $ts,
+      origin_server_ts => JSON::number( $ts ),
       previous_ids     => [], # TODO
       pdus             => [],
       edus             => [

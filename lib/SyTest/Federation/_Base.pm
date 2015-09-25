@@ -6,6 +6,8 @@ use warnings;
 use mro 'c3';
 use Protocol::Matrix qw( sign_json );
 
+use Time::HiRes qw( time );
+
 sub configure
 {
    my $self = shift;
@@ -53,6 +55,11 @@ sub get_key
    my $hk = "$params{server_name}:$params{key_id}";
 
    $self->{keystore}{$hk} //= $self->_fetch_key( $params{server_name}, $params{key_id} );
+}
+
+sub time_ms
+{
+   return int( time() * 1000 );
 }
 
 1;
