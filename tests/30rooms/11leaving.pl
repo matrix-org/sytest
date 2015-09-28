@@ -1,3 +1,5 @@
+use List::Util qw( first );
+
 my $room_id;
 
 multi_test "Setup a room, and have the first user leave (SPEC-216)",
@@ -119,8 +121,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
 
             require_json_keys( $body, qw( rooms ) );
 
-            my ( $room ) = grep { $_->{room_id} eq $room_id }
-                @{$body->{rooms}};
+            my $room = first { $_->{room_id} eq $room_id } @{$body->{rooms}};
 
             die "Departed room not in /initialSync"
                 unless $room;
@@ -132,7 +133,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
             die "Membership is not leave"
                 unless $room->{membership} eq "leave";
 
-            my ( $madeup_test_state ) = grep { $_->{type} eq "madeup.test.state" }
+            my $madeup_test_state = first { $_->{type} eq "madeup.test.state" }
                 @{$room->{state}};
 
             die "Received state that happened after leaving the room"
@@ -165,8 +166,8 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
             die "Membership is not leave"
                 unless $room->{membership} eq "leave";
 
-            my ( $madeup_test_state ) =
-                grep { $_->{type} eq "madeup.test.state" } @{$room->{state}};
+            my $madeup_test_state =
+                first { $_->{type} eq "madeup.test.state" } @{$room->{state}};
 
             die "Received state that happened after leaving the room"
                 unless $madeup_test_state->{content}{body}
@@ -198,8 +199,8 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
         )->then( sub {
             my ( $state ) = @_;
 
-            my ( $madeup_test_state ) =
-                grep { $_->{type} eq "madeup.test.state" } @{$state};
+            my $madeup_test_state =
+                first { $_->{type} eq "madeup.test.state" } @{$state};
 
             die "Received state that happened after leaving the room"
                 unless $madeup_test_state->{content}{body}
