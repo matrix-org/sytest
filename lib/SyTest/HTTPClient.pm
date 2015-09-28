@@ -64,8 +64,7 @@ sub do_request
    # Also set verify_mode = 0 to not complain about self-signed SSL certs
    $params{SSL_verify_mode} = 0;
 
-   # Synapse federation is only happy to use TLSv1.2
-   $params{SSL_cipher_list} = "TLSv1.2";
+   $params{SSL_cipher_list} = "HIGH";
 
    $self->SUPER::do_request(
       %params,
