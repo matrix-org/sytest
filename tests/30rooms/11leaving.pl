@@ -121,28 +121,23 @@ test "A departed room is still included in /initialSync (SPEC-216)",
 
             require_json_keys( $body, qw( rooms ) );
 
-            my $room = first { $_->{room_id} eq $room_id } @{$body->{rooms}};
+            my $room = first { $_->{room_id} eq $room_id } @{$body->{rooms}}
+                or die "Departed room not in /initialSync";
 
-            die "Departed room not in /initialSync"
-                unless $room;
+            require_json_keys( $room, qw( state messages membership) );
 
-            require_json_keys( $room, qw(
-                state messages membership
-            ) );
+            $room->{membership} eq "leave" or die "Membership is not leave";
 
-            die "Membership is not leave"
-                unless $room->{membership} eq "leave";
+            my $madeup_test_state =
+                first { $_->{type} eq "madeup.test.state" } @{$room->{state}};
 
-            my $madeup_test_state = first { $_->{type} eq "madeup.test.state" }
-                @{$room->{state}};
+            $madeup_test_state->{content}{body}
+                eq "S1. B's state before A left"
+                or die "Received state that happened after leaving the room";
 
-            die "Received state that happened after leaving the room"
-                unless $madeup_test_state->{content}{body}
-                    eq "S1. B's state before A left";
-
-            die "Received message that happened after leaving the room"
-                unless $room->{messages}{chunk}[0]{content}{body}
-                    eq "M2. B's message before A left";
+            $room->{messages}{chunk}[0]{content}{body}
+                eq "M2. B's message before A left"
+                or die "Received message that happened after leaving the room";
 
             Future->done(1);
         })
@@ -163,25 +158,23 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
 
             require_json_keys( $room, qw( state messages membership ) );
 
-            die "Membership is not leave"
-                unless $room->{membership} eq "leave";
+            $room->{membership} eq "leave" or die "Membership is not leave";
 
             my $madeup_test_state =
                 first { $_->{type} eq "madeup.test.state" } @{$room->{state}};
 
-            die "Received state that happened after leaving the room"
-                unless $madeup_test_state->{content}{body}
-                    eq "S1. B's state before A left";
+            $madeup_test_state->{content}{body} eq "S1. B's state before A left"
+                or die "Received state that happened after leaving the room";
 
-            die "Received message that happened after leaving the room"
-                unless $room->{messages}{chunk}[0]{content}{body}
-                    eq "M2. B's message before A left";
+            $room->{messages}{chunk}[0]{content}{body}
+                eq "M2. B's message before A left"
+                or die "Received message that happened after leaving the room";
 
-            die "Received presence information after leaving the room"
-                if @{$room->{presence}};
+            not @{$room->{presence}}
+                or die "Received presence information after leaving the room";
 
-            die "Received receipts after leaving the room"
-                if @{$room->{receipts}};
+            not @{$room->{receipts}}
+                or die "Received receipts after leaving the room";
 
             Future->done(1);
         })
@@ -202,9 +195,9 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
             my $madeup_test_state =
                 first { $_->{type} eq "madeup.test.state" } @{$state};
 
-            die "Received state that happened after leaving the room"
-                unless $madeup_test_state->{content}{body}
-                    eq "S1. B's state before A left";
+            $madeup_test_state->{content}{body}
+                eq "S1. B's state before A left"
+                or die "Received state that happened after leaving the room";
 
             Future->done(1);
         })
@@ -243,9 +236,8 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
 
             require_json_keys( $body, qw( chunk ) );
 
-            die "Received message that happened after leaving the room"
-                unless $body->{chunk}[1]{content}{body}
-                    eq "M2. B's message before A left";
+            $body->{chunk}[1]{content}{body} eq "M2. B's message before A left"
+                or die "Received message that happened after leaving the room";
 
             Future->done(1);
         })
@@ -265,9 +257,8 @@ test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
 
             require_json_keys( $body, qw( name ) );
 
-            die "Received message that happened after leaving the room"
-                unless $body->{name}
-                    eq "N1. B's room name before A left";
+            $body->{name} eq "N1. B's room name before A left"
+                or die "Received message that happened after leaving the room";
 
             Future->done(1);
         })
@@ -293,8 +284,8 @@ test "Getting messages going forward is limited for a departed room (SPEC-216)",
 
             require_json_keys( $body, qw( chunk ) );
 
-            die "Received message that happened after leaving the room"
-                if @{$body->{chunk}};
+            not @{$body->{chunk}}
+                or die "Received message that happened after leaving the room";
 
             Future->done(1);
         })
