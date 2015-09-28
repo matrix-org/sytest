@@ -1,9 +1,8 @@
-multi_test "Setup a room, and havve the first user leave (SPEC-216)",
+multi_test "Setup a room, and have the first user leave (SPEC-216)",
 
     requires => [qw(
-        make_test_room change_room_powerlevels
-            do_request_json_for user more_users
-        can_create_room
+        make_test_room change_room_powerlevels do_request_json_for user
+        more_users can_create_room
     )],
 
     provides => [qw( departed_room_id )],
@@ -44,6 +43,8 @@ multi_test "Setup a room, and havve the first user leave (SPEC-216)",
 
             $change_room_powerlevels->($user_a, $room_id, sub {
                 my ( $levels ) = @_;
+                # Set user B's power level so that they can set the room
+                # name. By default the level to set a room name is 50.
                 $levels->{users}{ $user_b->user_id } = 50;
             })
         })->then( sub {
@@ -108,7 +109,7 @@ multi_test "Setup a room, and havve the first user leave (SPEC-216)",
 
 
 test "A departed room is still included in /initialSync (SPEC-216)",
-    requires => [qw(do_request_json departed_room_id)],
+    requires => [qw( do_request_json departed_room_id )],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
 
@@ -150,7 +151,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
-    requires => [qw(do_request_json departed_room_id)],
+    requires => [qw( do_request_json departed_room_id )],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
 
@@ -188,7 +189,7 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
-    requires => [qw(do_request_json departed_room_id)],
+    requires => [qw( do_request_json departed_room_id )],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
 
@@ -210,7 +211,7 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
-    requires => [qw(do_request_json departed_room_id)],
+    requires => [qw( do_request_json departed_room_id )],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
 
@@ -227,7 +228,7 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
-    requires => [qw(do_request_json departed_room_id)],
+    requires => [qw( do_request_json departed_room_id )],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
 
@@ -270,7 +271,7 @@ test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
     };
 
 test "Getting messages going forward is limited for a departed room (SPEC-216)",
-    requires => [qw(do_request_json departed_room_id)],
+    requires => [qw( do_request_json departed_room_id )],
     check => sub {
         my ($do_request_json, $departed_room_id) = @_;
 
