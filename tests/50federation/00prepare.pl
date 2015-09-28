@@ -31,6 +31,8 @@ prepare "Creating inbound federation HTTP server and outbound federation client"
          host    => "localhost",
          service => "",
          extensions => [qw( SSL )],
+         # Synapse currently only talks IPv4
+         family => "inet",
 
          SSL_key_file => "$DIR/server.key",
          SSL_cert_file => "$DIR/server.crt",
