@@ -3,7 +3,7 @@ sub make_room_and_message
    my ( $do_request_json_for, $make_test_room, $users, $sender ) = @_;
 
    my $room_id;
-   $make_test_room->( @$users )->then( sub {
+   $make_test_room->( $users )->then( sub {
       ( $room_id ) = @_;
       $do_request_json_for->( $sender,
          method => "POST",
@@ -66,10 +66,10 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
    };
 
 test "POST /rooms/:room_id/redact/:event_id as random user does not redact message",
-   requires => [qw( do_request_json_for make_test_room local_users expect_http_403 )],
+   requires => [qw( do_request_json_for make_test_room local_users )],
 
    do => sub {
-      my ( $do_request_json_for, $make_test_room, $local_users, $expect_http_403 ) = @_;
+      my ( $do_request_json_for, $make_test_room, $local_users ) = @_;
       # Both have 0 power level
       my $test_user = $local_users->[1];
       my $other_test_user = $local_users->[2];
@@ -84,5 +84,5 @@ test "POST /rooms/:room_id/redact/:event_id as random user does not redact messa
                uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
                content => {},
          )
-      })->$expect_http_403;
+      })->main::expect_http_403;
    };

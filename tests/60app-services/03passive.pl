@@ -7,7 +7,7 @@ prepare "Creating a new test room",
       my ( $make_test_room, $local_users ) = @_;
       my $creator   = $local_users->[0];
 
-      $make_test_room->( $creator )
+      $make_test_room->( [ $creator ] )
          ->on_done( sub {
             ( $room_id ) = @_;
          });
@@ -39,11 +39,9 @@ multi_test "Inviting an AS-hosted user asks the AS server",
             uri    => "/api/v1/rooms/$room_id/invite",
 
             content => { user_id => $user_id },
-         ),
+         )->SyTest::pass_on_done( "Sent invite" ),
       )->then( sub {
          my ( $appserv_request, $invite_response ) = @_;
-
-         pass "Sent invite";
 
          $await_as_event->( "m.room.member" )->then( sub {
             my ( $event ) = @_;
@@ -106,9 +104,8 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
                   content => {
                      room_id => $room_id,
                   },
-               )->then( sub {
-                  pass "Created room alias mapping";
-
+               )->SyTest::pass_on_done( "Created room alias mapping" )
+               ->then( sub {
                   $request->respond_json( {} );
                   Future->done;
                }),

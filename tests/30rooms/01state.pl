@@ -36,10 +36,12 @@ test "Room creation reports m.room.create to myself",
          require_json_keys( $event, qw( room_id user_id content ));
          return unless $event->{room_id} eq $room_id;
 
-         $event->{user_id} eq $user->user_id or die "Expected user_id to be ${\$user->user_id}";
+         $event->{user_id} eq $user->user_id or
+            die "Expected user_id to be ${\$user->user_id}";
 
          require_json_keys( my $content = $event->{content}, qw( creator ));
-         $content->{creator} eq $user->user_id or die "Expected creator to be ${\$user->user_id}";
+         $content->{creator} eq $user->user_id or
+            die "Expected creator to be ${\$user->user_id}";
 
          return 1;
       });
@@ -93,10 +95,12 @@ test "Setting room topic reports m.room.topic to myself",
          require_json_keys( $event, qw( room_id user_id content ));
          return unless $event->{room_id} eq $room_id;
 
-         $event->{user_id} eq $user->user_id or die "Expected user_id to be ${\$user->user_id}";
+         $event->{user_id} eq $user->user_id or
+            die "Expected user_id to be ${\$user->user_id}";
 
          require_json_keys( my $content = $event->{content}, qw( topic ));
-         $content->{topic} eq $topic or die "Expected topic to be '$topic'";
+         $content->{topic} eq $topic or
+            die "Expected topic to be '$topic'";
 
          return 1;
       });
@@ -132,7 +136,7 @@ multi_test "Global initialSync",
          is_eq( $room->{visibility}, "public", "room visibility is 'public'" );
 
          my %state_by_type;
-         push @{ $state_by_type{$_->{type}} }, $_ for @{ $room->{state} };
+         push @{ $state_by_type{ $_->{type} } }, $_ for @{ $room->{state} };
 
          $state_by_type{"m.room.topic"} or
             die "Expected m.room.topic state";
@@ -145,8 +149,10 @@ multi_test "Global initialSync",
          require_json_keys( my $power_level_state = $state_by_type{"m.room.power_levels"}[0], qw( content ));
          require_json_keys( my $levels = $power_level_state->{content}, qw( users ));
          my $user_levels = $levels->{users};
-         ok( exists $user_levels->{$user->user_id}, "user level exists for room creator" );
-         ok( $user_levels->{$user->user_id} > 0, "room creator has nonzero power level" );
+         ok( exists $user_levels->{ $user->user_id },
+            "user level exists for room creator" );
+         ok( $user_levels->{ $user->user_id } > 0,
+            "room creator has nonzero power level" );
 
          my $messages = $room->{messages};
          require_json_keys( $messages, qw( start end chunk ));
@@ -201,7 +207,7 @@ multi_test "Room initialSync",
          require_json_keys( $body, qw( state messages presence ));
 
          my %state_by_type;
-         push @{ $state_by_type{$_->{type}} }, $_ for @{ $body->{state} };
+         push @{ $state_by_type{ $_->{type} } }, $_ for @{ $body->{state} };
 
          ok( $state_by_type{$_}, "room has state $_" ) for
             qw( m.room.create m.room.join_rules m.room.member );
@@ -213,19 +219,19 @@ multi_test "Room initialSync",
             "m.room.topic content topic" );
 
          my %members;
-         $members{$_->{user_id}} = $_ for @{ $state_by_type{"m.room.member"} };
+         $members{ $_->{user_id} } = $_ for @{ $state_by_type{"m.room.member"} };
 
-         ok( $members{$user->user_id}, "room members has my own membership" );
-         is_eq( $members{$user->user_id}->{content}{membership}, "join",
+         ok( $members{ $user->user_id }, "room members has my own membership" );
+         is_eq( $members{ $user->user_id }->{content}{membership}, "join",
             "my own room membership is 'join'" );
 
          my %presence;
-         $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+         $presence{ $_->{content}{user_id} } = $_ for @{ $body->{presence} };
 
-         ok( $presence{$user->user_id}, "found my own presence" );
+         ok( $presence{ $user->user_id }, "found my own presence" );
 
-         require_json_keys( $presence{$user->user_id}, qw( type content ));
-         require_json_keys( my $content = $presence{$user->user_id}{content},
+         require_json_keys( $presence{ $user->user_id }, qw( type content ));
+         require_json_keys( my $content = $presence{ $user->user_id }{content},
             qw( presence status_msg last_active_ago ));
 
          is_eq( $content->{presence}, "online", "my presence is 'online'" );

@@ -30,7 +30,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
          my $state = $body->{state};
 
          my %state_by_type;
-         push @{ $state_by_type{$_->{type}} }, $_ for @$state;
+         push @{ $state_by_type{ $_->{type} } }, $_ for @$state;
 
          $state_by_type{"m.room.name"} or
             die "Expected to find m.room.name state";
@@ -99,7 +99,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
          my $state = $body->{state};
 
          my %state_by_type;
-         push @{ $state_by_type{$_->{type}} }, $_ for @$state;
+         push @{ $state_by_type{ $_->{type} } }, $_ for @$state;
 
          $state_by_type{"m.room.topic"} or
             die "Expected to find m.room.topic state";
@@ -153,7 +153,7 @@ test "GET /rooms/:room_id/state fetches entire room state",
          require_json_list( $body );
 
          my %state_by_type;
-         push @{ $state_by_type{$_->{type}} }, $_ for @$body;
+         push @{ $state_by_type{ $_->{type} } }, $_ for @$body;
 
          defined $state_by_type{$_} or die "Missing $_ state" for
             qw( m.room.create m.room.join_rules m.room.name m.room.power_levels );
