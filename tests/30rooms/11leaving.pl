@@ -36,7 +36,7 @@ multi_test "Setup a room, and have the first user leave (SPEC-216)",
 
         my $room_id;
 
-        $make_test_room->($user_a, $user_b)->then( sub {
+        $make_test_room->([$user_a, $user_b])->then( sub {
             ( $room_id ) = @_;
 
             provide departed_room_id => $room_id;
