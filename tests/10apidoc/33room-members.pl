@@ -261,7 +261,10 @@ prepare "Creating test-room-creation helper function",
       my ( $do_request_json_for, $await_event_for ) = @_;
 
       provide make_test_room => sub {
-         my ( $creator, @other_members ) = @_;
+         my ( $members, %options ) = @_;
+         my ( $creator, @other_members ) = @$members;
+
+         $options{visibility} = "public" unless exists $options{visibility};
 
          my $room_id;
          my $room_alias_shortname = "test-$next_alias"; $next_alias++;
@@ -276,8 +279,11 @@ prepare "Creating test-room-creation helper function",
             uri    => "/api/v1/createRoom",
 
             content => {
-               visibility      => "public",
+               visibility      => $options{visibility},
                room_alias_name => $room_alias_shortname,
+               ( defined $options{invite} ?
+                  ( invite => $options{invite} ) :
+                  () ),
             },
          )->then( sub {
             my ( $body ) = @_;
@@ -326,7 +332,7 @@ prepare "Creating test-room-creation helper function",
                return unless $event->{type} eq "m.room.member";
                return unless $event->{room_id} eq $room_id;
 
-               $joined_members{$event->{state_key}}++;
+               $joined_members{ $event->{state_key} }++;
 
                return 1 if keys( %joined_members ) == $n_joiners;
                return 0;

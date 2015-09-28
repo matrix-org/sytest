@@ -1,26 +1,20 @@
 use List::Util qw( first );
 
 test "A room can be created set to invite-only",
-   requires => [qw( do_request_json can_create_room )],
+   requires => [qw( make_test_room user do_request_json
+                    can_create_room )],
 
    provides => [qw( inviteonly_room_id )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $make_test_room, $user, $do_request_json ) = @_;
 
-      $do_request_json->(
-         method => "POST",
-         uri    => "/api/v1/createRoom",
-
-         content => {
-            # visibility: "private" actually means join_rule: "invite"
-            # See SPEC-74
-            visibility => "private",
-         },
+      $make_test_room->( [ $user ],
+         # visibility: "private" actually means join_rule: "invite"
+         # See SPEC-74
+         visibility => "private",
       )->then( sub {
-         my ( $body ) = @_;
-
-         my $room_id = $body->{room_id};
+         my ( $room_id ) = @_;
 
          $do_request_json->(
             method => "GET",
@@ -57,25 +51,7 @@ test "Uninvited users cannot join the room",
          uri    => "/api/v1/rooms/$room_id/join",
 
          content => {},
-      )->then(
-         sub { # done
-            Future->fail( "Expected not to succeed to join the room" );
-         },
-         sub { # fail
-            my ( $failure, $name, @args ) = @_;
-
-            defined $name and $name eq "http" or
-               die "Expected failure kind to be 'http'";
-
-            my ( $resp, $req ) = @args;
-            $resp->code == 403 or
-               die "Expected HTTP response code to be 403";
-
-            # TODO: Check the response content a bit?
-
-            Future->done(1);
-         },
-      );
+      )->main::expect_http_403;
    };
 
 test "Can invite users to invite-only rooms",
@@ -187,21 +163,6 @@ test "Banned user is kicked and may not rejoin",
             uri    => "/api/v1/rooms/$room_id/join",
 
             content => {},
-         )->then(
-            sub { # done
-               die "Expected to receive an error joining the room when banned";
-            },
-            sub { # fail
-               my ( $failure, $name ) = @_;
-               defined $name and $name eq "http" or
-                  die "Expected an HTTP failure";
-
-               my ( undef, undef, $response, $request ) = @_;
-               $response->code == 403 or
-                  die "Expected an HTTP 403 error";
-
-               Future->done(1);
-            }
-         );
-      });
+         )
+      })->main::expect_http_403;
    };

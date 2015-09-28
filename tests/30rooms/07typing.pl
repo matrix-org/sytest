@@ -27,9 +27,9 @@ prepare "Fetching current room members",
 
          my %members;
          $_->{type} eq "m.room.member" and $_->{content}{membership} eq "join" and
-            $members{$_->{state_key}} = 1 for @$body;
+            $members{ $_->{state_key} } = 1 for @$body;
 
-         @local_members = grep { $members{$_->user_id} } @$local_users;
+         @local_members = grep { $members{ $_->user_id } } @$local_users;
 
          Future->done(1);
       });

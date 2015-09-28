@@ -47,10 +47,10 @@ test "AS can create a user",
    };
 
 test "AS cannot create users outside its own namespace",
-   requires => [qw( do_request_json_for as_user expect_http_4xx )],
+   requires => [qw( do_request_json_for as_user )],
 
    do => sub {
-      my ( $do_request_json_for, $as_user, $expect_http_4xx ) = @_;
+      my ( $do_request_json_for, $as_user ) = @_;
 
       $do_request_json_for->( $as_user,
          method => "POST",
@@ -60,17 +60,17 @@ test "AS cannot create users outside its own namespace",
             type => "m.login.application_service",
             user => "a-different-user",
          }
-      )->$expect_http_4xx;
+      )->main::expect_http_4xx;
    };
 
 test "Regular users cannot register within the AS namespace",
-   requires => [qw( register_new_user first_api_client expect_http_4xx )],
+   requires => [qw( register_new_user first_api_client )],
 
    do => sub {
-      my ( $register_new_user, $http, $expect_http_4xx ) = @_;
+      my ( $register_new_user, $http ) = @_;
 
       $register_new_user->( $http, "astest-01create-2" )
-         ->$expect_http_4xx;
+         ->main::expect_http_4xx;
    };
 
 my $room_id;
@@ -80,7 +80,7 @@ prepare "Creating a new test room",
    do => sub {
       my ( $make_test_room, $user ) = @_;
 
-      $make_test_room->( $user )
+      $make_test_room->( [ $user ] )
          ->on_done( sub {
             ( $room_id ) = @_;
          });
@@ -146,11 +146,11 @@ test "AS can make room aliases",
    };
 
 test "Regular users cannot create room aliases within the AS namespace",
-   requires => [qw( do_request_json first_home_server expect_http_4xx
+   requires => [qw( do_request_json first_home_server
                     can_create_room can_create_room_alias )],
 
    do => sub {
-      my ( $do_request_json, $first_home_server, $expect_http_4xx ) = @_;
+      my ( $do_request_json, $first_home_server ) = @_;
       my $room_alias = "#astest-01create-2:$first_home_server";
 
       $do_request_json->(
@@ -160,5 +160,5 @@ test "Regular users cannot create room aliases within the AS namespace",
          content => {
             room_id => $room_id,
          }
-      )->$expect_http_4xx;
+      )->main::expect_http_4xx;
    };

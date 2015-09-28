@@ -23,10 +23,10 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
 
          require_json_number( $_ ) for values %{ $body->{users} };
 
-         exists $body->{users}{$user->user_id} or
+         exists $body->{users}{ $user->user_id } or
             die "Expected room creator to exist in user powerlevel list";
 
-         $body->{users}{$user->user_id} > $body->{users_default} or
+         $body->{users}{ $user->user_id } > $body->{users_default} or
             die "Expected room creator to have a higher-than-default powerlevel";
 
          provide can_get_power_levels => 1;
