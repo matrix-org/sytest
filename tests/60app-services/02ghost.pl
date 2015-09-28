@@ -8,7 +8,7 @@ multi_test "AS-ghosted users can use rooms via AS",
       my $room_id;
       my $ghost;
 
-      $make_test_room->( $user )
+      $make_test_room->( [ $user ] )
          ->SyTest::pass_on_done( "Created test room" )
       ->then( sub {
          ( $room_id ) = @_;
@@ -108,7 +108,7 @@ multi_test "AS-ghosted users can use rooms themselves",
       my $room_id;
       my $ghost;
 
-      $make_test_room->( $user )
+      $make_test_room->( [ $user ] )
          ->SyTest::pass_on_done( "Created test room" )
       ->then( sub {
          ( $room_id ) = @_;

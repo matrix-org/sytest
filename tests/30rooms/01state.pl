@@ -1,3 +1,5 @@
+use List::UtilsBy qw( partition_by );
+
 prepare "Creating a room",
    requires => [qw( do_request_json can_create_room )],
 
@@ -135,8 +137,7 @@ multi_test "Global initialSync",
          is_eq( $room->{membership}, "join", "room membership is 'join'" );
          is_eq( $room->{visibility}, "public", "room visibility is 'public'" );
 
-         my %state_by_type;
-         push @{ $state_by_type{ $_->{type} } }, $_ for @{ $room->{state} };
+         my %state_by_type = partition_by { $_->{type} } @{ $room->{state} };
 
          $state_by_type{"m.room.topic"} or
             die "Expected m.room.topic state";
@@ -206,8 +207,7 @@ multi_test "Room initialSync",
 
          require_json_keys( $body, qw( state messages presence ));
 
-         my %state_by_type;
-         push @{ $state_by_type{ $_->{type} } }, $_ for @{ $body->{state} };
+         my %state_by_type = partition_by { $_->{type} } @{ $body->{state} };
 
          ok( $state_by_type{$_}, "room has state $_" ) for
             qw( m.room.create m.room.join_rules m.room.member );
@@ -218,15 +218,13 @@ multi_test "Room initialSync",
          is_eq( $state_by_type{"m.room.topic"}[0]{content}{topic}, $topic,
             "m.room.topic content topic" );
 
-         my %members;
-         $members{ $_->{user_id} } = $_ for @{ $state_by_type{"m.room.member"} };
+         my %members = map { $_->{user_id} => $_ } @{ $state_by_type{"m.room.member"} };
 
          ok( $members{ $user->user_id }, "room members has my own membership" );
          is_eq( $members{ $user->user_id }->{content}{membership}, "join",
             "my own room membership is 'join'" );
 
-         my %presence;
-         $presence{ $_->{content}{user_id} } = $_ for @{ $body->{presence} };
+         my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
          ok( $presence{ $user->user_id }, "found my own presence" );
 

@@ -1,6 +1,6 @@
 multi_test "Test that a message is pushed",
    requires => [qw(
-      api_clients do_request_json_for await_event_for flush_events_for
+      api_clients make_test_room do_request_json_for await_event_for flush_events_for
       test_http_server_uri_base await_http_request register_new_user_without_events
 
       can_register can_create_private_room
@@ -8,7 +8,7 @@ multi_test "Test that a message is pushed",
 
    do => sub {
       my (
-         $clients, $do_request_json_for, $await_event_for, $flush_events_for,
+         $clients, $make_test_room, $do_request_json_for, $await_event_for, $flush_events_for,
          $test_http_server_uri_base, $await_http_request, $register_new_user,
       ) = @_;
 
@@ -16,7 +16,7 @@ multi_test "Test that a message is pushed",
 
       my $alice;
       my $bob;
-      my $room;
+      my $room_id;
 
       # We use the version of register new user that doesn't start the event
       # stream for Alice. Starting an event stream will make presence
@@ -32,13 +32,11 @@ multi_test "Test that a message is pushed",
          ( $alice, $bob ) = @_;
 
          # Have Alice create a new private room
-         $do_request_json_for->( $alice,
-            method  => "POST",
-            uri     => "/api/v1/createRoom",
-            content => { visibility => "private" },
+         $make_test_room->( [ $alice ],
+            visibility => "private",
          )
       })->then( sub {
-         ( $room ) = @_;
+         ( $room_id ) = @_;
          # Flush Bob's event stream so that we get a token from before
          # Alice sending the invite request.
          $flush_events_for->( $bob )
@@ -50,7 +48,7 @@ multi_test "Test that a message is pushed",
             $await_event_for->( $bob, sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.room.member" and
-                  $event->{room_id} eq $room->{room_id} and
+                  $event->{room_id} eq $room_id and
                   $event->{state_key} eq $bob->user_id and
                   $event->{content}{membership} eq "invite";
                return 1;
@@ -58,7 +56,7 @@ multi_test "Test that a message is pushed",
 
             $do_request_json_for->( $alice,
                method  => "POST",
-               uri     => "/api/v1/rooms/$room->{room_id}/invite",
+               uri     => "/api/v1/rooms/$room_id/invite",
                content => { user_id => $bob->user_id },
             ),
          )
@@ -66,7 +64,7 @@ multi_test "Test that a message is pushed",
          # Bob accepts the invite by joining the room
          $do_request_json_for->( $bob,
             method  => "POST",
-            uri     => "/api/v1/rooms/$room->{room_id}/join",
+            uri     => "/api/v1/rooms/$room_id/join",
             content => {},
          )
       })->then( sub {
@@ -112,7 +110,7 @@ multi_test "Test that a message is pushed",
 
             $do_request_json_for->( $bob,
                method  => "POST",
-               uri     => "/api/v1/rooms/$room->{room_id}/send/m.room.message",
+               uri     => "/api/v1/rooms/$room_id/send/m.room.message",
                content => {
                   msgtype => "m.text",
                   body    => "Room message for 50push-01message-pushed"

@@ -1,26 +1,20 @@
 use List::Util qw( first );
 
 test "A room can be created set to invite-only",
-   requires => [qw( do_request_json can_create_room )],
+   requires => [qw( make_test_room user do_request_json
+                    can_create_room )],
 
    provides => [qw( inviteonly_room_id )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $make_test_room, $user, $do_request_json ) = @_;
 
-      $do_request_json->(
-         method => "POST",
-         uri    => "/api/v1/createRoom",
-
-         content => {
-            # visibility: "private" actually means join_rule: "invite"
-            # See SPEC-74
-            visibility => "private",
-         },
+      $make_test_room->( [ $user ],
+         # visibility: "private" actually means join_rule: "invite"
+         # See SPEC-74
+         visibility => "private",
       )->then( sub {
-         my ( $body ) = @_;
-
-         my $room_id = $body->{room_id};
+         my ( $room_id ) = @_;
 
          $do_request_json->(
             method => "GET",

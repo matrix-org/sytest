@@ -12,6 +12,8 @@ Net::Async::HTTP->VERSION( '0.36' ); # PUT content bugfix
 use JSON;
 my $json = JSON->new->convert_blessed;
 
+use Net::SSLeay 1.59; # TLSv1.2
+
 use constant MIME_TYPE_JSON => "application/json";
 
 sub configure
@@ -59,7 +61,8 @@ sub do_request
    # Also set verify_mode = 0 to not complain about self-signed SSL certs
    $params{SSL_verify_mode} = 0;
 
-   $params{SSL_cipher_list} = "HIGH";
+   # Synapse federation is only happy to use TLSv1.2
+   $params{SSL_cipher_list} = "TLSv1.2";
 
    $self->SUPER::do_request(
       %params,

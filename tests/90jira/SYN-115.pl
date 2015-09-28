@@ -1,15 +1,17 @@
 use Future::Utils qw( repeat );
 
 multi_test "New federated private chats get full presence information (SYN-115)",
-   requires => [qw( register_new_user api_clients do_request_json_for flush_events_for await_event_for
-                    can_register can_create_private_room )],
+   requires => [qw(
+      register_new_user api_clients make_test_room do_request_json_for flush_events_for await_event_for
+      can_register can_create_private_room
+   )],
 
    do => sub {
-      my ( $register_new_user, $clients, $do_request_json_for, $flush_events_for, $await_event_for ) = @_;
+      my ( $register_new_user, $clients, $make_test_room, $do_request_json_for, $flush_events_for, $await_event_for ) = @_;
       my ( $http1, $http2 ) = @$clients;
 
       my ( $alice, $bob );
-      my $room;
+      my $room_id;
 
       # Register two users
       Future->needs_all(
@@ -25,19 +27,18 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             $flush_events_for->( $bob   ),
          )
       })->then( sub {
+
          # Have Alice create a new private room
-         $do_request_json_for->( $alice,
-            method => "POST",
-            uri    => "/api/v1/createRoom",
-            content => { visibility => "private" },
+         $make_test_room->( [ $alice ],
+            visibility => "private",
          )->SyTest::pass_on_done( "Created a room" )
       })->then( sub {
-         ( $room ) = @_;
+         ( $room_id ) = @_;
 
          # Alice invites Bob
          $do_request_json_for->( $alice,
             method => "POST",
-            uri    => "/api/v1/rooms/$room->{room_id}/invite",
+            uri    => "/api/v1/rooms/$room_id/invite",
 
             content => { user_id => $bob->user_id },
          )->SyTest::pass_on_done( "Sent invite" )
@@ -47,7 +48,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
          $await_event_for->( $bob, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member" and
-                          $event->{room_id} eq $room->{room_id} and
+                          $event->{room_id} eq $room_id and
                           $event->{state_key} eq $bob->user_id and
                           $event->{content}{membership} eq "invite";
 
@@ -58,7 +59,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
          # Bob accepts the invite by joining the room
          $do_request_json_for->( $bob,
             method => "POST",
-            uri    => "/api/v1/rooms/$room->{room_id}/join",
+            uri    => "/api/v1/rooms/$room_id/join",
 
             content => {},
          )->SyTest::pass_on_done( "Joined room" )

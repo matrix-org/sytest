@@ -1,27 +1,21 @@
 multi_test "Test that we can be reinvited to a room we created",
    requires => [qw(
-      do_request_json_for await_event_for change_room_powerlevels local_users remote_users
+      make_test_room do_request_json_for await_event_for change_room_powerlevels local_users remote_users
    )],
 
    check => sub {
       my (
-         $do_request_json_for, $await_event_for, $change_room_powerlevels, $local_users, $remote_users
+         $make_test_room, $do_request_json_for, $await_event_for, $change_room_powerlevels, $local_users, $remote_users
       ) = @_;
       my ( $user_1 ) = @$local_users;
       my ( $user_2 ) = @$remote_users;
 
       my $room_id;
 
-      $do_request_json_for->( $user_1,
-         method  => "POST",
-         uri     => "/api/v1/createRoom",
-         content => {},
-      )->SyTest::pass_on_done( "User A created a room" )
+      $make_test_room->( [ $user_1 ] )
+         ->SyTest::pass_on_done( "User A created a room" )
       ->then( sub {
-         my ( $body ) = @_;
-
-         require_json_keys( $body, qw(room_id));
-         $room_id = $body->{room_id};
+         ( $room_id ) = @_;
 
          $do_request_json_for->( $user_1,
             method  => "PUT",
