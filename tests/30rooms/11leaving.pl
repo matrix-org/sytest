@@ -1,7 +1,6 @@
 my $room_id;
 
 multi_test "Setup a room, and have the first user leave (SPEC-216)",
-
     requires => [qw(
         make_test_room change_room_powerlevels do_request_json_for user
         more_users
@@ -107,6 +106,7 @@ multi_test "Setup a room, and have the first user leave (SPEC-216)",
 
 test "A departed room is still included in /initialSync (SPEC-216)",
     requires => [qw( do_request_json )],
+
     check => sub {
         my ( $do_request_json ) = @_;
 
@@ -149,6 +149,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
 
 test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     requires => [qw( do_request_json )],
+
     check => sub {
         my ( $do_request_json ) = @_;
 
@@ -187,13 +188,14 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
 
 test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     requires => [qw( do_request_json )],
+
     check => sub {
         my ( $do_request_json ) = @_;
 
         $do_request_json->(
             method => "GET",
             uri => "/api/v1/rooms/$room_id/state",
-        )->then(sub {
+        )->then( sub {
             my ( $state ) = @_;
 
             my ( $madeup_test_state ) =
@@ -209,13 +211,14 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
 
 test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
     requires => [qw( do_request_json )],
+
     check => sub {
         my ( $do_request_json ) = @_;
 
         $do_request_json->(
             method => "GET",
             uri => "/api/v1/rooms/$room_id/members",
-        )->then(sub {
+        )->then( sub {
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( chunk ) );
@@ -226,6 +229,7 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
 
 test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
     requires => [qw( do_request_json)],
+
     check => sub {
         my ( $do_request_json ) = @_;
 
@@ -233,7 +237,7 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
             method => "GET",
             uri => "/api/v1/rooms/$room_id/messages",
             params => {limit => 2, dir => 'b'},
-        )->then(sub {
+        )->then( sub {
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( chunk ) );
@@ -248,13 +252,14 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
 
 test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
     requires => [qw( do_request_json )],
+
     check => sub {
         my ( $do_request_json ) = @_;
 
         $do_request_json->(
             method => "GET",
             uri => "/api/v1/rooms/$room_id/state/m.room.name",
-        )->then(sub {
+        )->then( sub {
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( name ) );
@@ -269,9 +274,9 @@ test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
 
 test "Getting messages going forward is limited for a departed room (SPEC-216)",
     requires => [qw( do_request_json )],
+
     check => sub {
         my ( $do_request_json ) = @_;
-
 
         # TODO: The "t10000-0_0_0_0" token format is synapse specific.
         #  However there isn't a way in the matrix C-S protocol to learn the
@@ -282,7 +287,7 @@ test "Getting messages going forward is limited for a departed room (SPEC-216)",
             method => "GET",
             uri => "/api/v1/rooms/$room_id/messages",
             params => {limit => 2, to => "t10000-0_0_0_0"},
-        )->then(sub {
+        )->then( sub {
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( chunk ) );
@@ -293,4 +298,3 @@ test "Getting messages going forward is limited for a departed room (SPEC-216)",
             Future->done(1);
         })
     };
-
