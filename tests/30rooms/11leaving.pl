@@ -1,11 +1,12 @@
+my $room_id;
+
 multi_test "Setup a room, and have the first user leave (SPEC-216)",
 
     requires => [qw(
         make_test_room change_room_powerlevels do_request_json_for user
-        more_users can_create_room
+        more_users
+        can_create_room
     )],
-
-    provides => [qw( departed_room_id )],
 
     # User A creates a room.
     # User A invites User B to the room.
@@ -34,12 +35,8 @@ multi_test "Setup a room, and have the first user leave (SPEC-216)",
         ) = @_;
         my $user_b = $more_users->[1];
 
-        my $room_id;
-
         $make_test_room->([$user_a, $user_b])->then( sub {
             ( $room_id ) = @_;
-
-            provide departed_room_id => $room_id;
 
             $change_room_powerlevels->($user_a, $room_id, sub {
                 my ( $levels ) = @_;
@@ -109,9 +106,9 @@ multi_test "Setup a room, and have the first user leave (SPEC-216)",
 
 
 test "A departed room is still included in /initialSync (SPEC-216)",
-    requires => [qw( do_request_json departed_room_id )],
+    requires => [qw( do_request_json )],
     check => sub {
-        my ($do_request_json, $departed_room_id) = @_;
+        my ($do_request_json) = @_;
 
         $do_request_json->(
             method => "GET",
@@ -122,7 +119,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
 
             require_json_keys( $body, qw( rooms ) );
 
-            my ( $room ) = grep { $_->{room_id} eq $departed_room_id }
+            my ( $room ) = grep { $_->{room_id} eq $room_id }
                 @{$body->{rooms}};
 
             die "Departed room not in /initialSync"
@@ -151,13 +148,13 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
-    requires => [qw( do_request_json departed_room_id )],
+    requires => [qw( do_request_json )],
     check => sub {
-        my ($do_request_json, $departed_room_id) = @_;
+        my ($do_request_json) = @_;
 
         $do_request_json->(
             method => "GET",
-            uri => "/api/v1/rooms/$departed_room_id/initialSync",
+            uri => "/api/v1/rooms/$room_id/initialSync",
             params => { limit => 2 },
         )->then( sub {
             my ( $room ) = @_;
@@ -189,13 +186,13 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
-    requires => [qw( do_request_json departed_room_id )],
+    requires => [qw( do_request_json )],
     check => sub {
-        my ($do_request_json, $departed_room_id) = @_;
+        my ($do_request_json) = @_;
 
         $do_request_json->(
             method => "GET",
-            uri => "/api/v1/rooms/$departed_room_id/state",
+            uri => "/api/v1/rooms/$room_id/state",
         )->then(sub {
             my ( $state ) = @_;
 
@@ -211,13 +208,13 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
-    requires => [qw( do_request_json departed_room_id )],
+    requires => [qw( do_request_json )],
     check => sub {
-        my ($do_request_json, $departed_room_id) = @_;
+        my ($do_request_json) = @_;
 
         $do_request_json->(
             method => "GET",
-            uri => "/api/v1/rooms/$departed_room_id/members",
+            uri => "/api/v1/rooms/$room_id/members",
         )->then(sub {
             my ( $body ) = @_;
 
@@ -228,13 +225,13 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
-    requires => [qw( do_request_json departed_room_id )],
+    requires => [qw( do_request_json)],
     check => sub {
-        my ($do_request_json, $departed_room_id) = @_;
+        my ($do_request_json) = @_;
 
         $do_request_json->(
             method => "GET",
-            uri => "/api/v1/rooms/$departed_room_id/messages",
+            uri => "/api/v1/rooms/$room_id/messages",
             params => {limit => 2, dir => 'b'},
         )->then(sub {
             my ( $body ) = @_;
@@ -250,13 +247,13 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
-    requires => [qw(do_request_json departed_room_id)],
+    requires => [qw( do_request_json )],
     check => sub {
-        my ($do_request_json, $departed_room_id) = @_;
+        my ($do_request_json) = @_;
 
         $do_request_json->(
             method => "GET",
-            uri => "/api/v1/rooms/$departed_room_id/state/m.room.name",
+            uri => "/api/v1/rooms/$room_id/state/m.room.name",
         )->then(sub {
             my ( $body ) = @_;
 
@@ -271,9 +268,9 @@ test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
     };
 
 test "Getting messages going forward is limited for a departed room (SPEC-216)",
-    requires => [qw( do_request_json departed_room_id )],
+    requires => [qw( do_request_json )],
     check => sub {
-        my ($do_request_json, $departed_room_id) = @_;
+        my ($do_request_json) = @_;
 
 
         # TODO: The "t10000-0_0_0_0" token format is synapse specific.
@@ -283,7 +280,7 @@ test "Getting messages going forward is limited for a departed room (SPEC-216)",
         #  testing security.
         $do_request_json->(
             method => "GET",
-            uri => "/api/v1/rooms/$departed_room_id/messages",
+            uri => "/api/v1/rooms/$room_id/messages",
             params => {limit => 2, to => "t10000-0_0_0_0"},
         )->then(sub {
             my ( $body ) = @_;
