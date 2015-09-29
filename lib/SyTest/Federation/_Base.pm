@@ -32,6 +32,7 @@ sub key_id
    return $self->{federation_params}->key_id;
 }
 
+# mutates the data
 sub sign_data
 {
    my $self = shift;
@@ -44,6 +45,17 @@ sub sign_data
       origin     => $fedparams->server_name,
       key_id     => $fedparams->key_id,
    );
+}
+
+# returns a signed copy of the data
+sub signed_data
+{
+   my $self = shift;
+   my ( $orig ) = @_;
+
+   $self->sign_data( my $copy = { %$orig } );
+
+   return $copy;
 }
 
 sub get_key

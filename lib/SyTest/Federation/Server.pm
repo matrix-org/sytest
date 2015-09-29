@@ -106,7 +106,6 @@ sub on_request
             }
             when( "json" ) {
                my ( $data ) = @_;
-               $self->sign_data( $data );
                $req->respond_json( $data );
             }
             default {
@@ -211,7 +210,7 @@ sub on_request_key_v2_server
 
    my $fedparams = $self->{federation_params};
 
-   Future->done( json => {
+   Future->done( json => $self->signed_data( {
       server_name => $fedparams->server_name,
       tls_fingerprints => [
          { $algo => encode_base64_unpadded( $fingerprint ) },
@@ -223,7 +222,7 @@ sub on_request_key_v2_server
          },
       },
       old_verify_keys => {},
-   } );
+   } ) );
 }
 
 sub on_request_federation_v1_send
