@@ -62,8 +62,8 @@ multi_test "Inbound federation can receive room-join requests",
                auth_events content depth prev_events prev_state room_id sender
                state_key type ) ),
 
-            event_id => "\$TODO:$local_server_name",
-            origin  => $local_server_name,
+            event_id         => $inbound_server->next_event_id,
+            origin           => $local_server_name,
             origin_server_ts => $inbound_server->time_ms,
          );
 
