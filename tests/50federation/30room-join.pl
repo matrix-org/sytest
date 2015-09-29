@@ -93,11 +93,11 @@ multi_test "Inbound federation can receive room-join requests",
          require_json_keys( $response, qw( auth_chain state ));
 
          require_json_nonempty_list( $response->{auth_chain} );
-         my @auth_events = @{ $response->{auth_chain} };
+         my @auth_chain = @{ $response->{auth_chain} };
 
-         log_if_fail "Auth events", \@auth_events;
+         log_if_fail "Auth chain", \@auth_chain;
 
-         foreach my $event ( @auth_events ) {
+         foreach my $event ( @auth_chain ) {
             require_json_keys( $event, qw(
                auth_events content depth event_id hashes origin origin_server_ts
                prev_events prev_state room_id sender signatures state_key type
