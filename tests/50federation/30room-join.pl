@@ -97,7 +97,34 @@ multi_test "Inbound federation can receive room-join requests",
 
          log_if_fail "Auth events", \@auth_events;
 
-         # TODO: Check signatures of every auth event
+         foreach my $event ( @auth_events ) {
+            require_json_keys( $event, qw(
+               auth_events content depth event_id hashes origin origin_server_ts
+               prev_events prev_state room_id sender signatures state_key type
+            ));
+
+            require_json_list( $event->{auth_events} );
+            require_json_number( $event->{depth} );
+            require_json_string( $event->{event_id} );
+            require_json_object( $event->{hashes} );
+
+            require_json_string( $event->{origin} );
+
+            require_json_number( $event->{origin_server_ts} );
+            require_json_list( $event->{prev_events} );
+            require_json_list( $event->{prev_state} );
+
+            require_json_string( $event->{room_id} );
+            $event->{room_id} eq $room_id or
+               die "Expected auth_event room_id to be $room_id";
+
+            require_json_string( $event->{sender} );
+            require_json_object( $event->{signatures} );
+            require_json_string( $event->{state_key} );
+            require_json_string( $event->{type} );
+
+            # TODO: Check signatures of every auth event
+         }
 
          # TODO: Perform some linkage checking between the auth events
 
