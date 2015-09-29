@@ -136,7 +136,7 @@ package JSON::number {
 }
 
 # A terrible internals hack that relies on the dualvar nature of the ^ operator
-sub SvPOK { ( $_[0] ^ $_[0] ) =~ m/\0/ }
+sub SvPOK { ( $_[0] ^ $_[0] ) ne "0" }
 
 sub wrap_numbers
 {
