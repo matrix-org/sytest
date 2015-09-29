@@ -75,7 +75,7 @@ sub on_request
          $self->_dispatch( $path, $req )
       })->else_with_f( sub {
          my ( $f, undef, $name ) = @_;
-         return $f unless $name eq "matrix_auth";
+         return $f unless $name and $name eq "matrix_auth";
 
          # Turn 'matrix_auth' failures into HTTP responses
          my ( undef, $message ) = @_;
