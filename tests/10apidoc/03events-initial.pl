@@ -4,7 +4,7 @@ use Future::Utils qw( repeat );
 test "GET /events initially",
    requires => [qw( user first_api_client )],
 
-   provides => [qw( can_get_events )],
+   critical => 1,
 
    check => sub {
       my ( $user, $http ) = @_;
@@ -18,8 +18,6 @@ test "GET /events initially",
 
          require_json_keys( $body, qw( start end chunk ));
          require_json_list( $body->{chunk} );
-
-         provide can_get_events => 1;
 
          # We can't be absolutely sure that there won't be any events yet, so
          # don't check that.
@@ -62,8 +60,6 @@ test "GET /initialSync initially",
    };
 
 prepare "Environment closures for stateful /event access",
-   requires => [qw( can_get_events )],
-
    provides => [qw( flush_events_for await_event_for )],
 
    do => sub {
