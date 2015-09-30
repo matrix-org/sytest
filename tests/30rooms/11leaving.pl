@@ -2,39 +2,48 @@ use List::Util qw( first );
 
 my $room_id;
 
-multi_test "Setup a room, and have the first user leave (SPEC-216)",
+prepare "Setup a room, and have the first user leave (SPEC-216)",
     requires => [qw(
         make_test_room change_room_powerlevels do_request_json_for user
         more_users
         can_create_room
     )],
 
-    # User A creates a room.
-    # User A invites User B to the room.
-    # User B joins the room.
-    # User B will set the ("m.room.name", "") state of the room to {
-    #   "body": "N1. B's room name before A left"
-    # }
-    # User B will set the ("madeup.test.state", "") state of the room to {
-    #   "body": "S1. B's state before A left"
-    # }
-    # User B will send a message with body "M1. B's message before A left"
-    # User B will send a message with body "M2. B's message before A left"
-    # User A will leave the room.
-    # User B will set the ("m.room.name", "") state of the room to {
-    #   "body": "N2. B's room name after A left"
-    # }
-    # User B will set the ("madeup.test.state", "") state of the room to {
-    #   "body": "S2. B's state after A left"
-    # }
-    # User B will send a message with text "M3. B's message after A left"
-    #
     do => sub {
         my (
             $make_test_room, $change_room_powerlevels, $do_request_json_for,
             $user_a, $more_users
         ) = @_;
         my $user_b = $more_users->[1];
+
+        my $send_text_message = sub {
+            my ( $user, $room_id, $message ) = @_;
+            $do_request_json_for->( $user,
+                method => "POST",
+                uri => "/api/v1/rooms/$room_id/send/m.room.message",
+                content => {
+                    "body" => $message, "msgtype" => "m.room.text",
+                },
+            )
+        };
+
+        my $set_room_state = sub {
+            my ( $user, $room_id, $type, $state_key, $content ) = @_;
+            $do_request_json_for->( $user,
+                method => "PUT",
+                uri => "/api/v1/rooms/$room_id/state/$type/$state_key",
+                content => $content,
+            )
+        };
+
+        my $leave_room = sub {
+            my ( $user, $room_id ) = @_;
+            $do_request_json_for->( $user,
+                method => "POST",
+                uri => "/api/v1/rooms/$room_id/leave",
+                content => {},
+            )
+        };
 
         $make_test_room->( [$user_a, $user_b] )->then( sub {
             ( $room_id ) = @_;
@@ -49,65 +58,31 @@ multi_test "Setup a room, and have the first user leave (SPEC-216)",
                 $levels->{users}{ $user_b->user_id } = 50;
             })
         })->then( sub {
-            $do_request_json_for->( $user_b,
-                method => "PUT",
-                uri => "/api/v1/rooms/$room_id/state/m.room.name",
-                content => { "name" => "N1. B's room name before A left", },
-            )->on_done( sub { pass "User B set the room name the first time" } )
+            $set_room_state->($user_b, $room_id, "m.room.name", "", {
+                "name" => "N1. B's room name before A left",
+            })
         })->then( sub {
-            $do_request_json_for->( $user_b,
-                method => "PUT",
-                uri => "/api/v1/rooms/$room_id/state/madeup.test.state",
-                content => { "body" => "S1. B's state before A left", },
-            )->on_done( sub { pass "User B set the state the first time" } )
+            $set_room_state->($user_b, $room_id, "madeup.test.state", "", {
+                "body" => "S1. B's state before A left",
+            })
         })->then( sub {
-            $do_request_json_for->( $user_b,
-                method => "POST",
-                uri => "/api/v1/rooms/$room_id/send/m.room.message",
-                content => {
-                    "body" => "M1. B's message before A left",
-                    "msgtype" => "m.room.text",
-                },
-            )->on_done( sub { pass "User B sent their first message" } )
+            $send_text_message->($user_b, $room_id, "M1. B's message before A left")
         })->then( sub {
-            $do_request_json_for->( $user_b,
-                method => "POST",
-                uri => "/api/v1/rooms/$room_id/send/m.room.message",
-                content => {
-                    "body" => "M2. B's message before A left",
-                    "msgtype" => "m.room.text",
-                },
-            )->on_done( sub { pass "User B sent their second message" } )
+            $send_text_message->($user_b, $room_id, "M2. B's message before A left")
         })->then( sub {
-            $do_request_json_for->( $user_a,
-                method => "POST",
-                uri => "/api/v1/rooms/$room_id/leave",
-                content => {},
-            )->on_done(sub { pass "User A left the room" })
+            $leave_room->($user_a, $room_id)
         })->then( sub {
-            $do_request_json_for->( $user_b,
-                method => "POST",
-                uri => "/api/v1/rooms/$room_id/send/m.room.message",
-                content => {
-                    "body" => "M3. B's message after A left",
-                    "msgtype" => "m.room.text",
-                },
-            )->on_done( sub { pass "User B sent their third message" } )
+            $send_text_message->($user_b, $room_id, "M3. B's message after A left")
         })->then( sub {
-            $do_request_json_for->( $user_b,
-                method => "PUT",
-                uri => "/api/v1/rooms/$room_id/state/m.room.name",
-                content => { "name" => "N2. B's room name after A left", },
-            )->on_done( sub { pass "User B set the room name the second time" } )
+            $set_room_state->($user_b, $room_id, "m.room.name", "", {
+                "name" => "N2. B's room name after A left",
+            })
         })->then( sub {
-            $do_request_json_for->( $user_b,
-                method => "PUT",
-                uri => "/api/v1/rooms/$room_id/state/madeup.test.state",
-                content => { "body" => "S2. B's state after A left", },
-            )->on_done( sub { pass "User B set the state the second time" } )
+            $set_room_state->($user_b, $room_id, "madeup.test.state", "", {
+                "body" => "S2. B's state after A left",
+            })
         })
     };
-
 
 test "A departed room is still included in /initialSync (SPEC-216)",
     requires => [qw( do_request_json )],
