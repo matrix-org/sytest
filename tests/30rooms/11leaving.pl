@@ -207,10 +207,10 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
-    requires => [qw( do_request_json )],
+    requires => [qw( user do_request_json )],
 
     check => sub {
-        my ( $do_request_json ) = @_;
+        my ( $user, $do_request_json ) = @_;
 
         $do_request_json->(
             method => "GET",
@@ -219,6 +219,13 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( chunk ) );
+
+            my $membership =
+                first { $_->{state_key} eq $user->user_id } @{$body->{chunk}}
+                or die "Couldn't find own membership event";
+
+            $membership->{content}{membership} eq "leave"
+                or die "My membership event wasn't leave";
 
             Future->done(1);
         })
