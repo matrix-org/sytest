@@ -14,8 +14,7 @@ test "GET /initialSync with non-numeric 'limit'",
    };
 
 test "GET /events with non-numeric 'limit'",
-   requires => [qw( user
-                    can_get_events )],
+   requires => [qw( user )],
 
    check => sub {
       my ( $user ) = @_;
@@ -29,8 +28,7 @@ test "GET /events with non-numeric 'limit'",
    };
 
 test "GET /events with negative 'limit'",
-   requires => [qw( user
-                    can_get_events )],
+   requires => [qw( user )],
 
    check => sub {
       my ( $user ) = @_;
@@ -44,8 +42,7 @@ test "GET /events with negative 'limit'",
    };
 
 test "GET /events with non-numeric 'timeout'",
-   requires => [qw( user
-                    can_get_events )],
+   requires => [qw( user )],
 
    check => sub {
       my ( $user ) = @_;
