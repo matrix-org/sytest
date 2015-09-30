@@ -1,11 +1,11 @@
 multi_test "Test that we can be reinvited to a room we created",
    requires => [qw(
-      make_test_room do_request_json_for await_event_for change_room_powerlevels local_users remote_users
+      make_test_room await_event_for change_room_powerlevels local_users remote_users
    )],
 
    check => sub {
       my (
-         $make_test_room, $do_request_json_for, $await_event_for, $change_room_powerlevels, $local_users, $remote_users
+         $make_test_room, $await_event_for, $change_room_powerlevels, $local_users, $remote_users
       ) = @_;
       my ( $user_1 ) = @$local_users;
       my ( $user_2 ) = @$remote_users;
@@ -17,14 +17,14 @@ multi_test "Test that we can be reinvited to a room we created",
       ->then( sub {
          ( $room_id ) = @_;
 
-         $do_request_json_for->( $user_1,
+         do_request_json_for( $user_1,
             method  => "PUT",
             uri     => "/api/v1/rooms/$room_id/state/m.room.join_rules",
             content => { join_rule => "invite" },
          )->SyTest::pass_on_done( "User A set the join rules to 'invite'" )
       })->then( sub {
 
-         $do_request_json_for->( $user_1,
+         do_request_json_for( $user_1,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/invite",
             content => { user_id => $user_2->user_id },
@@ -40,7 +40,7 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User B received the invite from A" )
       })->then( sub {
 
-         $do_request_json_for->( $user_2,
+         do_request_json_for( $user_2,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/join",
             content => {},
@@ -54,7 +54,7 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User A set user B's power level to 100" )
       })->then( sub {
 
-         $do_request_json_for->( $user_1,
+         do_request_json_for( $user_1,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/leave",
             content => {},
@@ -70,7 +70,7 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User B received the leave event" )
       })->then( sub {
 
-         $do_request_json_for->( $user_2,
+         do_request_json_for( $user_2,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/invite",
             content => { user_id => $user_1->user_id },
@@ -86,7 +86,7 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User A received the invite from user B" )
       })->then( sub {
 
-         $do_request_json_for->( $user_1,
+         do_request_json_for( $user_1,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/join",
             content => {},

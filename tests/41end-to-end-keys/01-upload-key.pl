@@ -1,13 +1,13 @@
 test "Can upload device keys",
    requires => [qw(
-      register_new_user first_api_client do_request_json_for
+      register_new_user first_api_client
       can_register
       )],
 
    provides => [qw( e2e_user_alice e2e_can_upload_keys )],
 
    do => sub {
-      my ( $register_new_user, $http, $do_request_json_for ) = @_;
+      my ( $register_new_user, $http ) = @_;
 
       my $e2e_alice;
       # Register a user
@@ -16,7 +16,7 @@ test "Can upload device keys",
 
          provide e2e_user_alice => $e2e_alice;
 
-         $do_request_json_for->( $e2e_alice,
+         do_request_json_for( $e2e_alice,
             method  => "POST",
             uri     => "/v2_alpha/keys/upload/alices_first_device",
             content => {

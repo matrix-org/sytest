@@ -79,14 +79,14 @@ test "Presence change reports an event to myself",
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
-   requires => [qw( do_request_json_for await_event_for user more_users
+   requires => [qw( await_event_for user more_users
                     can_set_presence can_invite_presence )],
 
    do => sub {
-      my ( $do_request_json_for, undef, $user, $more_users ) = @_;
+      my ( undef, $user, $more_users ) = @_;
       my $friend = $more_users->[0];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => $PRESENCE_LIST_URI,
 
@@ -94,7 +94,7 @@ test "Friends presence changes reports events",
             invite => [ $friend->user_id ],
          }
       )->then( sub {
-         $do_request_json_for->( $friend,
+         do_request_json_for( $friend,
             method => "PUT",
             uri    => "/api/v1/presence/:user_id/status",
 
@@ -104,7 +104,7 @@ test "Friends presence changes reports events",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $user, $more_users ) = @_;
+      my ( $await_event_for, $user, $more_users ) = @_;
       my $friend = $more_users->[0];
 
       $await_event_for->( $user, sub {

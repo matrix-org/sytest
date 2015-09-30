@@ -2,16 +2,16 @@ use Future::Utils qw( fmap );
 use List::UtilsBy qw( partition_by );
 
 test "POST /rooms/:room_id/join can join a room",
-   requires => [qw( do_request_json_for more_users room_id
+   requires => [qw( more_users room_id
                     can_get_room_membership )],
 
    provides => [qw( can_join_room_by_id )],
 
    do => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[0];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/join",
 
@@ -20,10 +20,10 @@ test "POST /rooms/:room_id/join can join a room",
    },
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[0];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
@@ -39,16 +39,16 @@ test "POST /rooms/:room_id/join can join a room",
    };
 
 test "POST /join/:room_alias can join a room",
-   requires => [qw( do_request_json_for more_users room_id room_alias
+   requires => [qw( more_users room_id room_alias
                     can_get_room_membership )],
 
    provides => [qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $do_request_json_for, $more_users, $room_id, $room_alias ) = @_;
+      my ( $more_users, $room_id, $room_alias ) = @_;
       my $user = $more_users->[1];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/join/$room_alias",
 
@@ -64,10 +64,10 @@ test "POST /join/:room_alias can join a room",
    },
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[1];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
@@ -83,14 +83,14 @@ test "POST /join/:room_alias can join a room",
    };
 
 test "POST /join/:room_id can join a room",
-   requires => [qw( do_request_json_for more_users room_id
+   requires => [qw( more_users room_id
                     can_get_room_membership )],
 
    do => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[2];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/join/$room_id",
 
@@ -107,10 +107,10 @@ test "POST /join/:room_id can join a room",
    },
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[2];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
@@ -124,16 +124,16 @@ test "POST /join/:room_id can join a room",
    };
 
 test "POST /rooms/:room_id/leave can leave a room",
-   requires => [qw( do_request_json_for more_users room_id
+   requires => [qw( more_users room_id
                     can_join_room_by_id can_get_room_membership )],
 
    provides => [qw( can_leave_room )],
 
    do => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[1];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/leave",
 
@@ -142,10 +142,10 @@ test "POST /rooms/:room_id/leave can leave a room",
    },
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[1];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then(
@@ -173,16 +173,16 @@ test "POST /rooms/:room_id/leave can leave a room",
    };
 
 test "POST /rooms/:room_id/invite can send an invite",
-   requires => [qw( do_request_json_for user more_users room_id
+   requires => [qw( user more_users room_id
                     can_get_room_membership )],
 
    provides => [qw( can_invite_room )],
 
    do => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/invite",
 
@@ -191,10 +191,10 @@ test "POST /rooms/:room_id/invite can send an invite",
    },
 
    check => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.member/" . $invitee->user_id,
       )->then( sub {
@@ -210,16 +210,16 @@ test "POST /rooms/:room_id/invite can send an invite",
    };
 
 test "POST /rooms/:room_id/ban can ban a user",
-   requires => [qw( do_request_json_for user more_users room_id
+   requires => [qw( user more_users room_id
                     can_get_room_membership )],
 
    provides => [qw( can_ban_room )],
 
    do => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
       my $banned_user = $more_users->[2];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/ban",
 
@@ -231,10 +231,10 @@ test "POST /rooms/:room_id/ban can ban a user",
    },
 
    check => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
       my $banned_user = $more_users->[2];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.member/" . $banned_user->user_id,
       )->then( sub {
@@ -252,13 +252,13 @@ test "POST /rooms/:room_id/ban can ban a user",
 my $next_alias = 1;
 
 prepare "Creating test-room-creation helper function",
-   requires => [qw( do_request_json_for await_event_for
+   requires => [qw( await_event_for
                     can_create_room can_join_room_by_alias )],
 
    provides => [qw( make_test_room )],
 
    do => sub {
-      my ( $do_request_json_for, $await_event_for ) = @_;
+      my ( $await_event_for ) = @_;
 
       provide make_test_room => sub {
          my ( $members, %options ) = @_;
@@ -274,7 +274,7 @@ prepare "Creating test-room-creation helper function",
 
          my $n_joiners = scalar @other_members;
 
-         $do_request_json_for->( $creator,
+         do_request_json_for( $creator,
             method => "POST",
             uri    => "/api/v1/createRoom",
 
@@ -301,7 +301,7 @@ prepare "Creating test-room-creation helper function",
             Future->needs_all(
                ( fmap {
                   my $user = shift;
-                  $do_request_json_for->( $user,
+                  do_request_json_for( $user,
                      method => "POST",
                      uri    => "/api/v1/join/$room_alias_fullname",
 
@@ -311,7 +311,7 @@ prepare "Creating test-room-creation helper function",
 
                map {
                   my $user = $_;
-                  $do_request_json_for->( $user,
+                  do_request_json_for( $user,
                      method => "POST",
                      uri    => "/api/v1/join/$room_alias_fullname",
 

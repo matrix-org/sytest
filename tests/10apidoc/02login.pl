@@ -74,7 +74,7 @@ test "POST /login can log in as a user",
 
          provide first_home_server => $body->{home_server};
 
-         provide do_request_json_for => \&do_request_json_for;
+         provide do_request_json_for => sub { die "Dead - see do_request_json_for() instead" };
 
          provide do_request_json => sub {
             do_request_json_for( $user, @_ );

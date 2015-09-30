@@ -1,9 +1,9 @@
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [qw( make_test_room make_as_user do_request_json_for await_event_for await_as_event user as_user
+   requires => [qw( make_test_room make_as_user await_event_for await_as_event user as_user
                     can_join_room_by_id can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $do_request_json_for, $await_event_for, $await_as_event, $user, $as_user ) = @_;
+      my ( $make_test_room, $make_as_user, $await_event_for, $await_as_event, $user, $as_user ) = @_;
 
       my $room_id;
       my $ghost;
@@ -39,7 +39,7 @@ multi_test "AS-ghosted users can use rooms via AS",
                Future->done;
             }),
 
-            $do_request_json_for->( $as_user,
+            do_request_json_for( $as_user,
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/join",
                params => {
@@ -67,7 +67,7 @@ multi_test "AS-ghosted users can use rooms via AS",
                Future->done;
             }),
 
-            $do_request_json_for->( $as_user,
+            do_request_json_for( $as_user,
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/send/m.room.message",
                params => {
@@ -99,11 +99,11 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [qw( make_test_room make_as_user do_request_json_for await_event_for await_as_event user
+   requires => [qw( make_test_room make_as_user await_event_for await_as_event user
                     can_join_room_by_id can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $do_request_json_for, $await_event_for, $await_as_event, $user ) = @_;
+      my ( $make_test_room, $make_as_user, $await_event_for, $await_as_event, $user ) = @_;
 
       my $room_id;
       my $ghost;
@@ -137,7 +137,7 @@ multi_test "AS-ghosted users can use rooms themselves",
                Future->done;
             }),
 
-            $do_request_json_for->( $ghost,
+            do_request_json_for( $ghost,
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/join",
 
@@ -162,7 +162,7 @@ multi_test "AS-ghosted users can use rooms themselves",
                Future->done;
             }),
 
-            $do_request_json_for->( $ghost,
+            do_request_json_for( $ghost,
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 

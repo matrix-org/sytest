@@ -1,14 +1,14 @@
 prepare "Leaving old test room",
-   requires => [qw( do_request_json_for local_users room_id
+   requires => [qw( local_users room_id
                     can_leave_room )],
 
    do => sub {
-      my ( $do_request_json_for, $users, $room_id ) = @_;
+      my ( $users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/leave",
 
