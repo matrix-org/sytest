@@ -39,10 +39,13 @@ multi_test "Setup a room, and have the first user leave (SPEC-216)",
         $make_test_room->( [$user_a, $user_b] )->then( sub {
             ( $room_id ) = @_;
 
-            $change_room_powerlevels->($user_a, $room_id, sub {
+            $change_room_powerlevels->( $user_a, $room_id, sub {
                 my ( $levels ) = @_;
                 # Set user B's power level so that they can set the room
-                # name. By default the level to set a room name is 50.
+                # name. By default the level to set a room name is 50. But
+                # we set the level to 50 anyway incase the default changes.
+                $levels->{events}{"m.room.name"} = 50;
+                $levels->{events}{"madeup.test.state"} = 50;
                 $levels->{users}{ $user_b->user_id } = 50;
             })
         })->then( sub {
