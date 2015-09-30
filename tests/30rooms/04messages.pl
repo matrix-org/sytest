@@ -34,15 +34,15 @@ my $msgtype = "m.message";
 my $msgbody = "Room message for 33room-messages";
 
 test "Local room members see posted message events",
-   requires => [qw( do_request_json await_event_for
+   requires => [qw( user await_event_for
                     can_send_message )],
 
    provides => [qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 

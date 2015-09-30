@@ -1,13 +1,13 @@
 use List::Util qw( first );
 
 test "A room can be created set to invite-only",
-   requires => [qw( make_test_room user do_request_json
+   requires => [qw( make_test_room user
                     can_create_room )],
 
    provides => [qw( inviteonly_room_id )],
 
    do => sub {
-      my ( $make_test_room, $user, $do_request_json ) = @_;
+      my ( $make_test_room, $user ) = @_;
 
       $make_test_room->( [ $user ],
          # visibility: "private" actually means join_rule: "invite"
@@ -16,7 +16,7 @@ test "A room can be created set to invite-only",
       )->then( sub {
          my ( $room_id ) = @_;
 
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/initialSync",
          )->then( sub {
@@ -55,14 +55,14 @@ test "Uninvited users cannot join the room",
    };
 
 test "Can invite users to invite-only rooms",
-   requires => [qw( do_request_json more_users inviteonly_room_id
+   requires => [qw( user more_users inviteonly_room_id
                     can_invite_room )],
 
    do => sub {
-      my ( $do_request_json, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/invite",
 

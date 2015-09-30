@@ -2,12 +2,12 @@
 my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
 test "GET /presence/:user_id/list initially empty",
-   requires => [qw( do_request_json )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => $PRESENCE_LIST_URI,
       )->then( sub {
@@ -21,15 +21,15 @@ test "GET /presence/:user_id/list initially empty",
    };
 
 test "POST /presence/:user_id/list can invite users",
-   requires => [qw( do_request_json more_users )],
+   requires => [qw( user more_users )],
 
    provides => [qw( can_invite_presence )],
 
    do => sub {
-      my ( $do_request_json, $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
       my $friend_uid = $more_users->[0]->user_id;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "POST",
          uri    => $PRESENCE_LIST_URI,
 
@@ -40,10 +40,10 @@ test "POST /presence/:user_id/list can invite users",
    },
 
    check => sub {
-      my ( $do_request_json, $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
       my $friend_uid = $more_users->[0]->user_id;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => $PRESENCE_LIST_URI,
       )->then( sub {

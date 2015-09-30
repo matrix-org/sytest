@@ -3,15 +3,15 @@ use List::UtilsBy qw( partition_by );
 my $name = "room name here";
 
 test "POST /rooms/:room_id/state/m.room.name sets name",
-   requires => [qw( do_request_json room_id
+   requires => [qw( user room_id
                     can_room_initial_sync )],
 
    provides => [qw( can_set_room_name )],
 
    do => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/state/m.room.name",
 
@@ -20,9 +20,9 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    },
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/initialSync",
       )->then( sub {
@@ -43,15 +43,15 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    };
 
 test "GET /rooms/:room_id/state/m.room.name gets name",
-   requires => [qw( do_request_json room_id
+   requires => [qw( user room_id
                     can_set_room_name )],
 
    provides => [qw( can_get_room_name )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.name",
       )->then( sub {
@@ -71,15 +71,15 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
 my $topic = "A new topic for the room";
 
 test "POST /rooms/:room_id/state/m.room.topic sets topic",
-   requires => [qw( do_request_json room_id
+   requires => [qw( user room_id
                     can_room_initial_sync )],
 
    provides => [qw( can_set_room_topic )],
 
    do => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
 
@@ -88,9 +88,9 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    },
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/initialSync",
       )->then( sub {
@@ -111,15 +111,15 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    };
 
 test "GET /rooms/:room_id/state/m.room.topic gets topic",
-   requires => [qw( do_request_json room_id
+   requires => [qw( user room_id
                     can_set_room_topic )],
 
    provides => [qw( can_get_room_topic )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
       )->then( sub {
@@ -137,14 +137,14 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
    };
 
 test "GET /rooms/:room_id/state fetches entire room state",
-   requires => [qw( do_request_json room_id )],
+   requires => [qw( user room_id )],
 
    provides => [qw( can_get_room_all_state )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state",
       )->then( sub {

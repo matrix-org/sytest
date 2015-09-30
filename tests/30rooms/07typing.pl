@@ -14,12 +14,12 @@ prepare "Flushing event streams",
 
 my @local_members;
 prepare "Fetching current room members",
-   requires => [qw( do_request_json local_users room_id )],
+   requires => [qw( user local_users room_id )],
 
    do => sub {
-      my ( $do_request_json, $local_users, $room_id ) = @_;
+      my ( $user, $local_users, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state",
       )->then( sub {
@@ -36,13 +36,13 @@ prepare "Fetching current room members",
    };
 
 test "Typing notification sent to local room members",
-   requires => [qw( do_request_json await_event_for user room_id
+   requires => [qw( user await_event_for user room_id
                     can_set_room_typing can_create_room can_join_room_by_id )],
 
    do => sub {
-      my ( $do_request_json, undef, undef, $room_id ) = @_;
+      my ( $user, undef, undef, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
@@ -109,13 +109,13 @@ test "Typing notifications also sent to remove room members",
    };
 
 test "Typing can be explicitly stopped",
-   requires => [qw( do_request_json await_event_for user room_id
+   requires => [qw( user await_event_for user room_id
                     can_set_room_typing can_create_room can_join_room_by_id )],
 
    do => sub {
-      my ( $do_request_json, undef, undef, $room_id ) = @_;
+      my ( $user, undef, undef, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
@@ -157,15 +157,15 @@ prepare "Flushing event streams",
    };
 
 multi_test "Typing notifications timeout and can be resent",
-   requires => [qw( do_request_json await_event_for user room_id
+   requires => [qw( user await_event_for room_id
                     can_set_room_typing can_create_room )],
 
    await => sub {
-      my ( $do_request_json, $await_event_for, $user, $room_id ) = @_;
+      my ( $user, $await_event_for, $room_id ) = @_;
 
       my $start_time = time();
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
@@ -200,7 +200,7 @@ multi_test "Typing notifications timeout and can be resent",
             return 1;
          })
       })->then( sub {
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "PUT",
             uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 

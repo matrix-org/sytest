@@ -6,16 +6,16 @@ my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 # happens now only happens because of presence in rooms.
 
 test "POST /presence/:user_id/list can drop users",
-   requires => [qw( do_request_json can_invite_presence )],
+   requires => [qw( user can_invite_presence )],
 
    provides => [qw( can_drop_presence )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
       # To be robust at this point, find out what friends we have and drop
       # them all
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => $PRESENCE_LIST_URI,
       )->then( sub {
@@ -23,7 +23,7 @@ test "POST /presence/:user_id/list can drop users",
 
          my @friends = map { $_->{user_id} } @$body;
 
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "POST",
             uri    => $PRESENCE_LIST_URI,
 
@@ -35,9 +35,9 @@ test "POST /presence/:user_id/list can drop users",
    },
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => $PRESENCE_LIST_URI,
       )->then( sub {

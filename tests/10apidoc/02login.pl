@@ -76,9 +76,7 @@ test "POST /login can log in as a user",
 
          provide do_request_json_for => sub { die "Dead - see do_request_json_for() instead" };
 
-         provide do_request_json => sub {
-            do_request_json_for( $user, @_ );
-         };
+         provide do_request_json => sub { die "Dead - see do_request_json_for() on \$user instead" };
 
          Future->done(1);
       });

@@ -146,14 +146,14 @@ test "AS can make room aliases",
    };
 
 test "Regular users cannot create room aliases within the AS namespace",
-   requires => [qw( do_request_json first_home_server
+   requires => [qw( user first_home_server
                     can_create_room can_create_room_alias )],
 
    do => sub {
-      my ( $do_request_json, $first_home_server ) = @_;
+      my ( $user, $first_home_server ) = @_;
       my $room_alias = "#astest-01create-2:$first_home_server";
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/directory/room/$room_alias",
 

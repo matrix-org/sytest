@@ -2,14 +2,14 @@ my $msgtype = "m.message";
 my $body = "Here is the message content";
 
 test "POST /rooms/:room_id/send/:event_type sends a message",
-   requires => [qw( do_request_json room_id )],
+   requires => [qw( user room_id )],
 
    provides => [qw( can_send_message )],
 
    do => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 
@@ -27,14 +27,14 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
    };
 
 test "GET /rooms/:room_id/messages returns a message",
-   requires => [qw( do_request_json room_id can_send_message )],
+   requires => [qw( user room_id can_send_message )],
 
    provides => [qw( can_get_messages )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/messages",
 

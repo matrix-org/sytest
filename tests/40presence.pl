@@ -25,13 +25,13 @@ prepare "Flushing event streams",
 my $status_msg = "Update for room members";
 
 test "Presence changes are reported to local room members",
-   requires => [qw( do_request_json await_event_for local_users
+   requires => [qw( user await_event_for local_users
                     can_set_presence can_create_room can_join_room_by_id )],
 
    do => sub {
-      my ( $do_request_json, undef, undef ) = @_;
+      my ( $user, undef, undef ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
 
@@ -98,13 +98,13 @@ test "Presence changes are also reported to remote room members",
    };
 
 test "Presence changes to OFFLINE are reported to local room members",
-   requires => [qw( do_request_json await_event_for local_users
+   requires => [qw( user await_event_for local_users
                     can_set_presence can_create_room can_join_room_by_id )],
 
    do => sub {
-      my ( $do_request_json, undef, undef ) = @_;
+      my ( $user, undef, undef ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
 
