@@ -1,9 +1,9 @@
 multi_test "Typing notifications don't leak",
-   requires => [qw( make_test_room do_request_json_for await_event_for local_users
+   requires => [qw( make_test_room await_event_for local_users
                     can_create_room can_set_room_typing )],
 
    do => sub {
-      my ( $make_test_room, $do_request_json_for, $await_event_for, $local_users ) = @_;
+      my ( $make_test_room, $await_event_for, $local_users ) = @_;
       my $creator = $local_users->[0];
       my $member  = $local_users->[1];
       my $nonmember = $local_users->[2];
@@ -15,7 +15,7 @@ multi_test "Typing notifications don't leak",
       ->then( sub {
          ( $room_id ) = @_;
 
-         $do_request_json_for->( $creator,
+         do_request_json_for( $creator,
             method => "PUT",
             uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 

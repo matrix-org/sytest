@@ -1,12 +1,12 @@
 test "AS can create a user",
-   requires => [qw( do_request_json_for as_user )],
+   requires => [qw( as_user )],
 
    provides => [qw( make_as_user )],
 
    do => sub {
-      my ( $do_request_json_for, $as_user ) = @_;
+      my ( $as_user ) = @_;
 
-      $do_request_json_for->( $as_user,
+      do_request_json_for( $as_user,
          method => "POST",
          uri    => "/api/v1/register",
 
@@ -24,7 +24,7 @@ test "AS can create a user",
          provide make_as_user => sub {
             my ( $user_id_fragment ) = @_;
 
-            $do_request_json_for->( $as_user,
+            do_request_json_for( $as_user,
                method => "POST",
                uri    => "/api/v1/register",
 
@@ -47,12 +47,12 @@ test "AS can create a user",
    };
 
 test "AS cannot create users outside its own namespace",
-   requires => [qw( do_request_json_for as_user )],
+   requires => [qw( as_user )],
 
    do => sub {
-      my ( $do_request_json_for, $as_user ) = @_;
+      my ( $as_user ) = @_;
 
-      $do_request_json_for->( $as_user,
+      do_request_json_for( $as_user,
          method => "POST",
          uri    => "/api/v1/register",
 
@@ -87,11 +87,11 @@ prepare "Creating a new test room",
    };
 
 test "AS can make room aliases",
-   requires => [qw( do_request_json_for await_as_event as_user first_home_server
+   requires => [qw( await_as_event as_user first_home_server
                     can_create_room can_create_room_alias )],
 
    do => sub {
-      my ( $do_request_json_for, $await_as_event, $as_user, $first_home_server ) = @_;
+      my ( $await_as_event, $as_user, $first_home_server ) = @_;
       my $room_alias = "#astest-01create-1:$first_home_server";
 
       Future->needs_all(
@@ -116,7 +116,7 @@ test "AS can make room aliases",
             Future->done;
          }),
 
-         $do_request_json_for->( $as_user,
+         do_request_json_for( $as_user,
             method => "PUT",
             uri    => "/api/v1/directory/room/$room_alias",
 
@@ -127,7 +127,7 @@ test "AS can make room aliases",
       )->then( sub {
          # Nothing interesting in the body
 
-         $do_request_json_for->( $as_user,
+         do_request_json_for( $as_user,
             method => "GET",
             uri    => "/api/v1/directory/room/$room_alias",
          )

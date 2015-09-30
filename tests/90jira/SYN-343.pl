@@ -1,12 +1,12 @@
 multi_test "Non-present room members cannot ban others",
    requires => [qw(
-      make_test_room do_request_json_for change_room_powerlevels local_users
+      make_test_room change_room_powerlevels local_users
       can_ban_room
    )],
 
    await => sub {
       my (
-         $make_test_room, $do_request_json_for, $change_room_powerlevels, $local_users,
+         $make_test_room, $change_room_powerlevels, $local_users,
       ) = @_;
       my $creator = $local_users->[0];
       my $testuser = $local_users->[1];
@@ -24,7 +24,7 @@ multi_test "Non-present room members cannot ban others",
          })->SyTest::pass_on_done( "Set powerlevel" )
       })->then( sub {
 
-         $do_request_json_for->( $testuser,
+         do_request_json_for( $testuser,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/ban",
 

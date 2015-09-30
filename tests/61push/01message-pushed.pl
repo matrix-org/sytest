@@ -1,6 +1,6 @@
 multi_test "Test that a message is pushed",
    requires => [qw(
-      api_clients make_test_room do_request_json_for await_event_for flush_events_for
+      api_clients make_test_room await_event_for flush_events_for
       test_http_server_uri_base await_http_request register_new_user_without_events
 
       can_register can_create_private_room
@@ -8,7 +8,7 @@ multi_test "Test that a message is pushed",
 
    do => sub {
       my (
-         $clients, $make_test_room, $do_request_json_for, $await_event_for, $flush_events_for,
+         $clients, $make_test_room, $await_event_for, $flush_events_for,
          $test_http_server_uri_base, $await_http_request, $register_new_user,
       ) = @_;
 
@@ -54,7 +54,7 @@ multi_test "Test that a message is pushed",
                return 1;
             })->SyTest::pass_on_done( "Bob received invite" ),
 
-            $do_request_json_for->( $alice,
+            do_request_json_for( $alice,
                method  => "POST",
                uri     => "/api/v1/rooms/$room_id/invite",
                content => { user_id => $bob->user_id },
@@ -62,7 +62,7 @@ multi_test "Test that a message is pushed",
          )
       })->then( sub {
          # Bob accepts the invite by joining the room
-         $do_request_json_for->( $bob,
+         do_request_json_for( $bob,
             method  => "POST",
             uri     => "/api/v1/rooms/$room_id/join",
             content => {},
@@ -72,7 +72,7 @@ multi_test "Test that a message is pushed",
          # Alice. This may race with Bob joining the room. So the first
          # message received may be due to Bob joining rather than the
          # message that Bob sent.
-         $do_request_json_for->( $alice,
+         do_request_json_for( $alice,
             method  => "POST",
             uri     => "/api/v1/pushers/set",
             content => {
@@ -108,7 +108,7 @@ multi_test "Test that a message is pushed",
                Future->done( $request );
             }),
 
-            $do_request_json_for->( $bob,
+            do_request_json_for( $bob,
                method  => "POST",
                uri     => "/api/v1/rooms/$room_id/send/m.room.message",
                content => {

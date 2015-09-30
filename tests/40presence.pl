@@ -159,15 +159,15 @@ test "Presence changes to OFFLINE are reported to remote room members",
    };
 
 prepare "Leaving test room",
-   requires => [qw( do_request_json_for local_users remote_users )],
+   requires => [qw( local_users remote_users )],
 
    do => sub {
-      my ( $do_request_json, $local_users, $remote_users ) = @_;
+      my ( $local_users, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json->( $user,
+         do_request_json_for( $user,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/leave",
 

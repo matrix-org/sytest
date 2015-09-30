@@ -81,16 +81,13 @@ test "Local room members see posted message events",
    };
 
 test "Fetching eventstream a second time doesn't yield the message again",
-   requires => [qw( do_request_json_for
-                    can_receive_room_message_locally )],
+   requires => [qw( can_receive_room_message_locally )],
 
    check => sub {
-      my ( $do_request_json_for ) = @_;
-
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $do_request_json_for->( $recvuser,
+         do_request_json_for( $recvuser,
             method => "GET",
             uri    => "/api/v1/events",
             params => {
@@ -138,16 +135,13 @@ test "Local non-members don't see posted message events",
    };
 
 test "Local room members can get room messages",
-   requires => [qw( do_request_json_for
-                    can_send_message can_get_messages )],
+   requires => [qw( can_send_message can_get_messages )],
 
    check => sub {
-      my ( $do_request_json_for ) = @_;
-
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/messages",
 
@@ -206,16 +200,13 @@ test "Remote room members also see posted message events",
    };
 
 test "Remote room members can get room messages",
-   requires => [qw( do_request_json_for
-                    can_send_message can_get_messages )],
+   requires => [qw( can_send_message can_get_messages )],
 
    check => sub {
-      my ( $do_request_json_for ) = @_;
-
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/messages",
 

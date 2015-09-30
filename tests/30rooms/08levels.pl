@@ -36,11 +36,11 @@ sub test_powerlevel
    }
 
    multi_test $name,
-      requires => [qw( do_request_json_for change_room_powerlevels user local_users ),
+      requires => [qw( change_room_powerlevels user local_users ),
                    @requires ],
 
       do => sub {
-         my ( $do_request_json_for, $change_room_powerlevels, $user, $local_users,
+         my ( $change_room_powerlevels, $user, $local_users,
               @dependencies ) = @_;
          my $test_user = $local_users->[1];
 
@@ -72,13 +72,13 @@ sub test_powerlevel
 }
 
 test_powerlevel "'ban' event respects room powerlevel",
-   requires => [qw( do_request_json_for test_user
+   requires => [qw( test_user
                     can_ban_room )],
 
    do => sub {
-      my ( $do_request_json_for, $test_user ) = @_;
+      my ( $test_user ) = @_;
 
-      $do_request_json_for->( $test_user,
+      do_request_json_for( $test_user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/ban",
 
@@ -88,13 +88,13 @@ test_powerlevel "'ban' event respects room powerlevel",
 
 # Currently there's no way to limit permission on invites
 ## test_powerlevel "'invite' event respects room powerlevel",
-##    requires => [qw( do_request_json_for test_user
+##    requires => [qw( test_user
 ##                     can_invite_room )],
 ## 
 ##    do => sub {
-##       my ( $do_request_json_for, $test_user ) = @_;
+##       my ( $test_user ) = @_;
 ## 
-##       $do_request_json_for->( $test_user,
+##       do_request_json_for( $test_user,
 ##          method => "POST",
 ##          uri    => "/api/v1/rooms/$room_id/invite",
 ## 
@@ -103,13 +103,13 @@ test_powerlevel "'ban' event respects room powerlevel",
 ##    };
 
 test_powerlevel "setting 'm.room.name' respects room powerlevel",
-   requires => [qw( do_request_json_for test_user
+   requires => [qw( test_user
                     can_set_room_name )],
 
    do => sub {
-      my ( $do_request_json_for, $test_user ) = @_;
+      my ( $test_user ) = @_;
 
-      $do_request_json_for->( $test_user,
+      do_request_json_for( $test_user,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/state/m.room.name",
 
@@ -131,10 +131,10 @@ test_powerlevel "setting 'm.room.power_levels' respects room powerlevel",
    };
 
 test "Unprivileged users can set m.room.topic if it only needs level 0",
-   requires => [qw( do_request_json_for change_room_powerlevels local_users )],
+   requires => [qw( change_room_powerlevels local_users )],
 
    do => sub {
-      my ( $do_request_json_for, $change_room_powerlevels, $local_users ) = @_;
+      my ( $change_room_powerlevels, $local_users ) = @_;
       my $creator = $local_users->[0];
       my $test_user = $local_users->[1];
 
@@ -143,7 +143,7 @@ test "Unprivileged users can set m.room.topic if it only needs level 0",
          delete $levels->{users}{ $test_user->user_id };
          $levels->{events}{"m.room.topic"} = 0;
       })->then( sub {
-         $do_request_json_for->( $test_user,
+         do_request_json_for( $test_user,
             method => "PUT",
             uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
 
