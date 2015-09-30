@@ -343,6 +343,8 @@ sub test
 
    no warnings 'exiting';
    last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
+
+   die "This CRITICAL test has failed - bailing out\n" if $t->failed and $params{critical};
 }
 
 {
