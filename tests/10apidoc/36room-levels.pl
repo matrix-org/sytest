@@ -1,12 +1,12 @@
 test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
-   requires => [qw( do_request_json user room_id )],
+   requires => [qw( user room_id )],
 
    provides => [qw( can_get_power_levels )],
 
    check => sub {
-      my ( $do_request_json, $user, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
       )->then( sub {
@@ -35,15 +35,15 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
    };
 
 test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
-   requires => [qw( do_request_json user more_users room_id
+   requires => [qw( user more_users room_id
                     can_get_power_levels )],
 
    provides => [qw( can_set_power_levels )],
 
    do => sub {
-      my ( $do_request_json, $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
       )->then( sub {
@@ -51,13 +51,13 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
 
          $levels->{users}{'@random-other-user:their.home'} = 20;
 
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "PUT",
             uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
             content => $levels,
          )
       })->then( sub {
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
          )

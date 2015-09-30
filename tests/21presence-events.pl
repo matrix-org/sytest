@@ -9,12 +9,12 @@ prepare "Flushing event stream",
    };
 
 test "initialSync sees my presence status",
-   requires => [qw( do_request_json user can_initial_sync )],
+   requires => [qw( user can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json, $user ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
       )->then( sub {
@@ -47,12 +47,12 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   requires => [qw( do_request_json await_event_for user can_set_presence )],
+   requires => [qw( user await_event_for user can_set_presence )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
 
@@ -127,12 +127,12 @@ test "Friends presence changes reports events",
    };
 
 prepare "Clearing presence list",
-   requires => [qw( do_request_json can_invite_presence can_drop_presence )],
+   requires => [qw( user can_invite_presence can_drop_presence )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => $PRESENCE_LIST_URI,
       )->then( sub {
@@ -140,7 +140,7 @@ prepare "Clearing presence list",
 
          my @ids = map { $_->{user_id} } @$body;
 
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "POST",
             uri    => $PRESENCE_LIST_URI,
 

@@ -14,11 +14,11 @@ prepare "Creating a new test room",
    };
 
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [qw( do_request_json await_http_request await_as_event make_as_user first_home_server
+   requires => [qw( user await_http_request await_as_event make_as_user first_home_server
                     can_invite_room )],
 
    do => sub {
-      my ( $do_request_json, $await_http_request, $await_as_event, $make_as_user, $home_server ) = @_;
+      my ( $user, $await_http_request, $await_as_event, $make_as_user, $home_server ) = @_;
 
       my $localpart = "astest-03passive-1";
       my $user_id = "\@$localpart:$home_server";
@@ -34,7 +34,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
             });
          }),
 
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/invite",
 
@@ -122,11 +122,11 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
    };
 
 test "Events in rooms with AS-hosted room aliases are sent to AS server",
-   requires => [qw( do_request_json await_as_event
+   requires => [qw( user await_as_event
                     can_join_room_by_alias )],
 
    do => sub {
-      my ( $do_request_json, $await_as_event ) = @_;
+      my ( $user, $await_as_event ) = @_;
 
       Future->needs_all(
          $await_as_event->( "m.room.message" )->then( sub {
@@ -142,7 +142,7 @@ test "Events in rooms with AS-hosted room aliases are sent to AS server",
             Future->done;
          }),
 
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 

@@ -2,14 +2,14 @@ use List::UtilsBy qw( extract_by );
 use Future::Utils qw( repeat );
 
 test "GET /events initially",
-   requires => [qw( do_request_json user first_api_client )],
+   requires => [qw( user first_api_client )],
 
    provides => [qw( can_get_events )],
 
    check => sub {
-      my ( $do_request_json, $user, $http ) = @_;
+      my ( $user, $http ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
          params => { timeout => 0 },
@@ -32,14 +32,14 @@ test "GET /events initially",
    };
 
 test "GET /initialSync initially",
-   requires => [qw( do_request_json )],
+   requires => [qw( user )],
 
    provides => [qw( can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
       )->then( sub {

@@ -13,14 +13,14 @@ local *SyTest::Federation::Server::on_request_federation_v1_query_directory = su
 };
 
 test "Outbound federation can query room alias directory",
-   requires => [qw( do_request_json local_server_name
+   requires => [qw( user local_server_name
                     can_lookup_room_alias )],
 
    check => sub {
-      my ( $do_request_json, $local_server_name ) = @_;
+      my ( $user, $local_server_name ) = @_;
       my $room_alias = "#test:$local_server_name";
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/directory/room/$room_alias",
       )->then( sub {
@@ -41,15 +41,15 @@ test "Outbound federation can query room alias directory",
    };
 
 test "Inbound federation can query room alias directory",
-   requires => [qw( outbound_client do_request_json first_home_server room_id
+   requires => [qw( outbound_client user first_home_server room_id
                     can_create_room_alias)],
 
    do => sub {
-      my ( $outbound_client, $do_request_json, $first_home_server, $room_id ) = @_;
+      my ( $outbound_client, $user, $first_home_server, $room_id ) = @_;
 
       my $room_alias = "#50federation-11query-directory:$first_home_server";
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/directory/room/$room_alias",
 
