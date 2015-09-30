@@ -62,13 +62,11 @@ test "GET /initialSync initially",
    };
 
 prepare "Environment closures for stateful /event access",
-   requires => [qw( user can_get_events )],
+   requires => [qw( can_get_events )],
 
    provides => [qw( flush_events_for await_event_for )],
 
    do => sub {
-      my ( $first_user ) = @_;
-
       # A useful closure, which keeps track of the current eventstream token
       # and fetches new events since it
 
