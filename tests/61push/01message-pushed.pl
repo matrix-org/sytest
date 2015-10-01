@@ -50,11 +50,7 @@ multi_test "Test that a message is pushed",
                return 1;
             })->SyTest::pass_on_done( "Bob received invite" ),
 
-            do_request_json_for( $alice,
-               method  => "POST",
-               uri     => "/api/v1/rooms/$room_id/invite",
-               content => { user_id => $bob->user_id },
-            ),
+            matrix_invite_user_to_room( $alice, $bob, $room_id ),
          )
       })->then( sub {
          # Bob accepts the invite by joining the room

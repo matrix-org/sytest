@@ -95,12 +95,7 @@ test_powerlevel "'ban' event respects room powerlevel",
 ##    do => sub {
 ##       my ( $test_user ) = @_;
 ## 
-##       do_request_json_for( $test_user,
-##          method => "POST",
-##          uri    => "/api/v1/rooms/$room_id/invite",
-## 
-##          content => { user_id => '@random-invitee:localhost:8001' },
-##       );
+##       matrix_invite_user_to_room( $test_user, '@random-invitee:localhost:8001', $room_id );
 ##    };
 
 test_powerlevel "setting 'm.room.name' respects room powerlevel",

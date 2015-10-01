@@ -36,12 +36,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
          ( $room_id ) = @_;
 
          # Alice invites Bob
-         do_request_json_for( $alice,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/invite",
-
-            content => { user_id => $bob->user_id },
-         )->SyTest::pass_on_done( "Sent invite" )
+         matrix_invite_user_to_room( $alice, $bob, $room_id )
+            ->SyTest::pass_on_done( "Sent invite" )
       })->then( sub {
 
          # Bob should receive the invite
