@@ -43,10 +43,8 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
    do => sub {
       my ( $user, $more_users, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-      )->then( sub {
+      matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
+      ->then( sub {
          my ( $levels ) = @_;
 
          $levels->{users}{'@random-other-user:their.home'} = 20;
@@ -57,10 +55,7 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
             content => $levels,
          )
       })->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-         )
+         matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
       })->then( sub {
          my ( $levels ) = @_;
 
@@ -81,10 +76,8 @@ prepare "Creating power_level change helper",
       provide change_room_powerlevels => sub {
          my ( $user, $room_id, $func ) = @_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-         )->then( sub {
+         matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
+         ->then( sub {
             my ( $levels ) = @_;
             $func->( $levels );
 
