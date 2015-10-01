@@ -39,7 +39,7 @@ prepare "Fetching current room members",
 
 test "Typing notification sent to local room members",
    requires => [qw( user room_id
-                    can_set_room_typing can_join_room_by_id )],
+                    can_set_room_typing )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -112,7 +112,7 @@ test "Typing notifications also sent to remove room members",
 
 test "Typing can be explicitly stopped",
    requires => [qw( user room_id
-                    can_set_room_typing can_join_room_by_id )],
+                    can_set_room_typing )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
