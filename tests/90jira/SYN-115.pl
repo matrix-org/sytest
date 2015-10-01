@@ -57,12 +57,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       })->then( sub {
 
          # Bob accepts the invite by joining the room
-         do_request_json_for( $bob,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/join",
-
-            content => {},
-         )->SyTest::pass_on_done( "Joined room" )
+         matrix_join_room( $bob, $room_id )
+            ->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
 
          # At this point, both users should see both users' presence, either

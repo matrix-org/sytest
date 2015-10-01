@@ -10,12 +10,7 @@ prepare "More local room members",
          my $user = $_;
 
          flush_events_for( $user )->then( sub {
-            do_request_json_for( $user,
-               method => "POST",
-               uri    => "/api/v1/rooms/$room_id/join",
-
-               content => {},
-            );
+            matrix_join_room( $user, $room_id )
          });
       } @$more_users );
    };
