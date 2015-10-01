@@ -71,7 +71,7 @@ test "POST /register can create a user",
 
 sub register_new_user
 {
-   my ( $with_events, $http, $uid ) = @_;
+   my ( $http, $uid, %opts ) = @_;
 
    $http->do_request_json(
       method => "POST",
@@ -88,21 +88,23 @@ sub register_new_user
 
       my $user = User( $http, $body->{user_id}, $access_token, undef, undef, [], undef );
 
-      if( $with_events ) {
-         $http->do_request_json(
-            method => "GET",
-            uri    => "/api/v1/events",
-            params => { access_token => $access_token, timeout => 0 },
-         )->then( sub {
+      my $f = Future->done;
+
+      if( $opts{with_events} // 1 ) {
+         $f = $f->then( sub {
+            $http->do_request_json(
+               method => "GET",
+               uri    => "/api/v1/events",
+               params => { access_token => $access_token, timeout => 0 },
+            )
+         })->on_done( sub {
             my ( $body ) = @_;
 
             $user->eventstream_token = $body->{end};
-            Future->done( $user );
-         })
+         });
       }
-      else {
-         Future->done( $user );
-      }
+
+      return $f->then_done( $user );
    });
 }
 
@@ -113,10 +115,10 @@ prepare "Creating test-user-creation helper function",
 
    do => sub {
       provide register_new_user =>
-         sub { register_new_user( 1, @_ ) };
+         sub { register_new_user( @_[0,1] ) };
 
       provide register_new_user_without_events =>
-         sub { register_new_user( 0, @_ ) };
+         sub { register_new_user( @_[0,1], with_events => 0 ) };
 
       Future->done;
    };
