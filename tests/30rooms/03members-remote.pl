@@ -211,7 +211,7 @@ test "New room members see first user's profile information in global initialSyn
 
 test "New room members see first user's profile information in per-room initialSync",
    requires => [qw( user remote_users room_id
-                    can_join_room_by_id can_room_initial_sync can_set_displayname can_set_avatar_url )],
+                    can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $remote_users, $room_id ) = @_;

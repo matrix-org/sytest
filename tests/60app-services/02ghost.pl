@@ -1,6 +1,6 @@
 multi_test "AS-ghosted users can use rooms via AS",
    requires => [qw( make_as_user await_as_event user as_user
-                    can_join_room_by_id can_receive_room_message_locally )],
+                    can_receive_room_message_locally )],
 
    do => sub {
       my ( $make_as_user, $await_as_event, $user, $as_user ) = @_;
@@ -100,7 +100,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
 multi_test "AS-ghosted users can use rooms themselves",
    requires => [qw( make_as_user await_as_event user
-                    can_join_room_by_id can_receive_room_message_locally )],
+                    can_receive_room_message_locally )],
 
    do => sub {
       my ( $make_as_user, $await_as_event, $user ) = @_;

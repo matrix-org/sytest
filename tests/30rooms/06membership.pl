@@ -38,8 +38,7 @@ test "A room can be created set to invite-only",
    };
 
 test "Uninvited users cannot join the room",
-   requires => [qw( more_users inviteonly_room_id
-                    can_join_room_by_id )],
+   requires => [qw( more_users inviteonly_room_id )],
 
    check => sub {
       my ( $more_users, $room_id ) = @_;
@@ -98,7 +97,7 @@ test "Invited user receives invite",
 
 test "Invited user can join the room",
    requires => [qw( more_users inviteonly_room_id
-                    can_invite_room can_join_room_by_id )],
+                    can_invite_room )],
 
    do => sub {
       my ( $more_users, $room_id ) = @_;

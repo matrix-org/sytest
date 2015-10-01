@@ -5,7 +5,7 @@ test "POST /rooms/:room_id/join can join a room",
    requires => [qw( more_users room_id
                     can_get_room_membership )],
 
-   provides => [qw( can_join_room_by_id )],
+   critical => 1,
 
    do => sub {
       my ( $more_users, $room_id ) = @_;
@@ -31,8 +31,6 @@ test "POST /rooms/:room_id/join can join a room",
 
          $body->{membership} eq "join" or
             die "Expected membership to be 'join'";
-
-         provide can_join_room_by_id => 1;
 
          Future->done(1);
       });
@@ -125,7 +123,7 @@ test "POST /join/:room_id can join a room",
 
 test "POST /rooms/:room_id/leave can leave a room",
    requires => [qw( more_users room_id
-                    can_join_room_by_id can_get_room_membership )],
+                    can_get_room_membership )],
 
    provides => [qw( can_leave_room )],
 

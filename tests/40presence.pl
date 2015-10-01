@@ -28,7 +28,7 @@ my $status_msg = "Update for room members";
 
 test "Presence changes are reported to local room members",
    requires => [qw( user local_users
-                    can_set_presence can_join_room_by_id )],
+                    can_set_presence )],
 
    do => sub {
       my ( $user, undef ) = @_;
@@ -101,7 +101,7 @@ test "Presence changes are also reported to remote room members",
 
 test "Presence changes to OFFLINE are reported to local room members",
    requires => [qw( user local_users
-                    can_set_presence can_join_room_by_id )],
+                    can_set_presence )],
 
    do => sub {
       my ( $user, undef ) = @_;

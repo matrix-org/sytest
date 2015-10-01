@@ -1,8 +1,7 @@
 use List::Util qw( first );
 
 prepare "More local room members",
-   requires => [qw( more_users room_id
-                    can_join_room_by_id )],
+   requires => [qw( more_users room_id )],
 
    do => sub {
       my ( $more_users, $room_id ) = @_;
@@ -22,8 +21,7 @@ prepare "More local room members",
    };
 
 test "New room members see their own join event",
-   requires => [qw( more_users room_id
-                    can_join_room_by_id )],
+   requires => [qw( more_users room_id )],
 
    await => sub {
       my ( $more_users, $room_id ) = @_;
@@ -51,7 +49,7 @@ test "New room members see their own join event",
 
 test "New room members see existing users' presence in room initialSync",
    requires => [qw( user more_users room_id
-                    can_join_room_by_id can_room_initial_sync )],
+                    can_room_initial_sync )],
 
    check => sub {
       my ( $first_user, $more_users, $room_id ) = @_;
@@ -80,8 +78,7 @@ test "New room members see existing users' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( user more_users room_id
-                    can_join_room_by_id )],
+   requires => [qw( user more_users room_id )],
 
    await => sub {
       my ( $user, $more_users, $room_id ) = @_;
@@ -107,8 +104,7 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new members' presence",
-   requires => [qw( user more_users
-                    can_join_room_by_id )],
+   requires => [qw( user more_users )],
 
    await => sub {
       my ( $user, $more_users ) = @_;
@@ -130,7 +126,7 @@ test "Existing members see new members' presence",
 
 test "All room members see all room members' presence in global initialSync",
    requires => [qw( user more_users
-                    can_join_room_by_id can_initial_sync )],
+                    can_initial_sync )],
 
    check => sub {
       my ( $user, $more_users ) = @_;
@@ -172,7 +168,7 @@ test "All room members see all room members' presence in global initialSync",
 
 test "New room members see first user's profile information in global initialSync",
    requires => [qw( user more_users
-                    can_join_room_by_id can_initial_sync can_set_displayname can_set_avatar_url )],
+                    can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $more_users ) = @_;
@@ -205,7 +201,7 @@ test "New room members see first user's profile information in global initialSyn
 
 test "New room members see first user's profile information in per-room initialSync",
    requires => [qw( user more_users room_id
-                    can_join_room_by_id can_room_initial_sync can_set_displayname can_set_avatar_url )],
+                    can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $more_users, $room_id ) = @_;
