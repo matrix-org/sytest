@@ -261,30 +261,16 @@ prepare "Creating test-room-creation helper function",
          my ( $members, %options ) = @_;
          my ( $creator, @other_members ) = @$members;
 
-         $options{visibility} = "public" unless exists $options{visibility};
-
          my $room_id;
-         my $room_alias_shortname = "test-$next_alias"; $next_alias++;
-
-         my ( $domain ) = $creator->user_id =~ m/:(.*)$/;
-         my $room_alias_fullname = "#${room_alias_shortname}:$domain";
+         my $room_alias_fullname;
 
          my $n_joiners = scalar @other_members;
 
-         do_request_json_for( $creator,
-            method => "POST",
-            uri    => "/api/v1/createRoom",
-
-            content => {
-               visibility      => $options{visibility},
-               room_alias_name => $room_alias_shortname,
-               ( defined $options{invite} ?
-                  ( invite => $options{invite} ) :
-                  () ),
-            },
+         matrix_create_room( $creator,
+            %options,
+            room_alias_name => sprintf( "test-%d", $next_alias++ ),
          )->then( sub {
-            my ( $body ) = @_;
-            $room_id = $body->{room_id};
+            ( $room_id, $room_alias_fullname ) = @_;
 
             log_if_fail "room_id=$room_id";
 
