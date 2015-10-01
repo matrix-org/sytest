@@ -88,7 +88,7 @@ prepare "Creating a new test room",
 
 test "AS can make room aliases",
    requires => [qw( await_as_event as_user first_home_server
-                    can_create_room can_create_room_alias )],
+                    can_create_room_alias )],
 
    do => sub {
       my ( $await_as_event, $as_user, $first_home_server ) = @_;
@@ -147,7 +147,7 @@ test "AS can make room aliases",
 
 test "Regular users cannot create room aliases within the AS namespace",
    requires => [qw( user first_home_server
-                    can_create_room can_create_room_alias )],
+                    can_create_room_alias )],
 
    do => sub {
       my ( $user, $first_home_server ) = @_;

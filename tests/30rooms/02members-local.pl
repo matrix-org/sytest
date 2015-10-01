@@ -130,7 +130,7 @@ test "Existing members see new members' presence",
 
 test "All room members see all room members' presence in global initialSync",
    requires => [qw( user more_users
-                    can_create_room can_join_room_by_id can_initial_sync )],
+                    can_join_room_by_id can_initial_sync )],
 
    check => sub {
       my ( $user, $more_users ) = @_;
@@ -172,7 +172,7 @@ test "All room members see all room members' presence in global initialSync",
 
 test "New room members see first user's profile information in global initialSync",
    requires => [qw( user more_users
-                    can_create_room can_join_room_by_id can_initial_sync can_set_displayname can_set_avatar_url )],
+                    can_join_room_by_id can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $more_users ) = @_;
@@ -205,7 +205,7 @@ test "New room members see first user's profile information in global initialSyn
 
 test "New room members see first user's profile information in per-room initialSync",
    requires => [qw( user more_users room_id
-                    can_create_room can_join_room_by_id can_room_initial_sync can_set_displayname can_set_avatar_url )],
+                    can_join_room_by_id can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $more_users, $room_id ) = @_;

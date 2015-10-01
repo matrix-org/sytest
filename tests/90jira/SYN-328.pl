@@ -1,6 +1,6 @@
 multi_test "Typing notifications don't leak",
    requires => [qw( make_test_room local_users
-                    can_create_room can_set_room_typing )],
+                    can_set_room_typing )],
 
    do => sub {
       my ( $make_test_room, $local_users ) = @_;

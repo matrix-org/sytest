@@ -1,7 +1,9 @@
 test "POST /createRoom makes a public room",
    requires => [qw( user can_initial_sync )],
 
-   provides => [qw( can_create_room room_id room_alias )],
+   provides => [qw( room_id room_alias )],
+
+   critical => 1,
 
    do => sub {
       my ( $user ) = @_;
@@ -22,7 +24,6 @@ test "POST /createRoom makes a public room",
          require_json_nonempty_string( $body->{room_id} );
          require_json_nonempty_string( $body->{room_alias} );
 
-         provide can_create_room => 1;
          provide room_id    => $body->{room_id};
          provide room_alias => $body->{room_alias};
 
@@ -45,7 +46,7 @@ test "POST /createRoom makes a public room",
    };
 
 test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
-   requires => [qw( user room_id can_create_room )],
+   requires => [qw( user room_id )],
 
    provides => [qw( can_get_room_membership )],
 
@@ -70,7 +71,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
    };
 
 test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
-   requires => [qw( user room_id can_create_room )],
+   requires => [qw( user room_id )],
 
    provides => [qw( can_get_room_powerlevels )],
 
@@ -96,7 +97,7 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
    };
 
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
-   requires => [qw( user room_id can_create_room )],
+   requires => [qw( user room_id )],
 
    provides => [qw( can_room_initial_sync )],
 
@@ -127,7 +128,7 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_api_client room_id can_create_room )],
+   requires => [qw( first_api_client room_id )],
 
    check => sub {
       my ( $http, $room_id ) = @_;
@@ -158,7 +159,7 @@ test "GET /publicRooms lists newly-created room",
    };
 
 test "GET /directory/room/:room_alias yields room ID",
-   requires => [qw( user room_alias room_id can_create_room )],
+   requires => [qw( user room_alias room_id )],
 
    check => sub {
       my ( $user, $room_alias, $room_id ) = @_;
