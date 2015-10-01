@@ -1,16 +1,12 @@
 multi_test "Test that a message is pushed",
    requires => [qw(
-      api_clients make_test_room
-      test_http_server_uri_base await_http_request register_new_user_without_events
+      api_clients make_test_room test_http_server_uri_base await_http_request
 
       can_create_private_room
    )],
 
    do => sub {
-      my (
-         $clients, $make_test_room,
-         $test_http_server_uri_base, $await_http_request, $register_new_user,
-      ) = @_;
+      my ( $clients, $make_test_room, $test_http_server_uri_base, $await_http_request ) = @_;
 
       my $http = $clients->[0];
 
@@ -25,8 +21,8 @@ multi_test "Test that a message is pushed",
       # We need to register two users because you are never pushed for
       # messages that you send yourself.
       Future->needs_all(
-         $register_new_user->( $http, "50push-01-alice" ),
-         $register_new_user->( $http, "50push-01-bob" ),
+         matrix_register_user( $http, "50push-01-alice", with_events => 0 ),
+         matrix_register_user( $http, "50push-01-bob",   with_events => 0 ),
       )->SyTest::pass_on_done( "Registered users" )
       ->then( sub {
          ( $alice, $bob ) = @_;

@@ -2,18 +2,18 @@
 my $REMOTE_USERS = 2;
 
 prepare "Remote users",
-   requires => [qw( register_new_user api_clients )],
+   requires => [qw( api_clients )],
 
    provides => [qw( remote_users )],
 
    do => sub {
-      my ( $register_new_user, $clients ) = @_;
+      my ( $clients ) = @_;
       my $http = $clients->[1];
 
       Future->needs_all( map {
          my $uid = "19remote-users-$_";
 
-         $register_new_user->( $http, $uid )
+         matrix_register_user( $http, $uid )
       } 1 .. $REMOTE_USERS
       )->then( sub {
          my @users = @_;
