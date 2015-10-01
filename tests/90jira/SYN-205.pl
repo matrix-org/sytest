@@ -1,12 +1,12 @@
 multi_test "Rooms can be created with an initial invite list (SYN-205)",
-   requires => [qw( make_test_room user more_users
+   requires => [qw( user more_users
                     can_create_private_room_with_invite )],
 
    do => sub {
-      my ( $make_test_room, $user, $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
       my $invitee = $more_users->[0];
 
-      $make_test_room->( [ $user ],
+      matrix_create_room( $user,
          invite => [ $invitee->user_id ],
       )->SyTest::pass_on_done( "Created room" )
       ->then( sub {

@@ -1,12 +1,11 @@
 multi_test "Check that event streams started after a client joined a room work (SYT-1)",
    requires => [qw(
-      first_api_client make_test_room
-
+      first_api_client
       can_create_private_room
    )],
 
    do => sub {
-      my ( $http, $make_test_room ) = @_;
+      my ( $http ) = @_;
 
       my $alice;
       my $room_id;
@@ -18,7 +17,7 @@ multi_test "Check that event streams started after a client joined a room work (
          ( $alice ) = @_;
 
          # Have Alice create a new private room
-         $make_test_room->( [ $alice ],
+         matrix_create_room( $alice,
             visibility => "private",
          )->SyTest::pass_on_done( "Created a room" )
       })->then( sub {

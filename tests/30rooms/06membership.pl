@@ -1,14 +1,14 @@
 use List::Util qw( first );
 
 test "A room can be created set to invite-only",
-   requires => [qw( make_test_room user )],
+   requires => [qw( user )],
 
    provides => [qw( inviteonly_room_id )],
 
    do => sub {
-      my ( $make_test_room, $user ) = @_;
+      my ( $user ) = @_;
 
-      $make_test_room->( [ $user ],
+      matrix_create_room( $user,
          # visibility: "private" actually means join_rule: "invite"
          # See SPEC-74
          visibility => "private",

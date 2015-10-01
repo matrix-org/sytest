@@ -2,12 +2,12 @@ use Future::Utils qw( repeat );
 
 multi_test "New federated private chats get full presence information (SYN-115)",
    requires => [qw(
-      api_clients make_test_room
+      api_clients
       can_create_private_room
    )],
 
    do => sub {
-      my ( $clients, $make_test_room ) = @_;
+      my ( $clients ) = @_;
       my ( $http1, $http2 ) = @$clients;
 
       my ( $alice, $bob );
@@ -29,7 +29,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       })->then( sub {
 
          # Have Alice create a new private room
-         $make_test_room->( [ $alice ],
+         matrix_create_room( $alice,
             visibility => "private",
          )->SyTest::pass_on_done( "Created a room" )
       })->then( sub {

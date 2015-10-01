@@ -1,13 +1,12 @@
 my $room_id;
 
 prepare "Creating a new test room",
-   requires => [qw( make_test_room local_users )],
+   requires => [qw( user )],
 
    do => sub {
-      my ( $make_test_room, $local_users ) = @_;
-      my $creator   = $local_users->[0];
+      my ( $user ) = @_;
 
-      $make_test_room->( [ $creator ] )
+      matrix_create_room( $user )
          ->on_done( sub {
             ( $room_id ) = @_;
          });
