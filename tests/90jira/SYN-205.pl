@@ -1,6 +1,6 @@
 multi_test "Rooms can be created with an initial invite list (SYN-205)",
    requires => [qw( make_test_room user more_users
-                    can_register can_create_private_room_with_invite )],
+                    can_create_private_room_with_invite )],
 
    do => sub {
       my ( $make_test_room, $user, $more_users ) = @_;

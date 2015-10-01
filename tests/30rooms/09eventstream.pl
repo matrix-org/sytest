@@ -2,7 +2,7 @@ multi_test "Check that event streams started after a client joined a room work (
    requires => [qw(
       first_api_client register_new_user_without_events make_test_room
 
-      can_register can_create_private_room
+      can_create_private_room
    )],
 
    do => sub {

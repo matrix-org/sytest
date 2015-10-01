@@ -43,7 +43,9 @@ my $password = "s3kr1t";
 test "POST /register can create a user",
    requires => [qw( first_api_client can_register_password_flow )],
 
-   provides => [qw( can_register login_details )],
+   provides => [qw( login_details )],
+
+   critical => 1,
 
    do => sub {
       my ( $http ) = @_;
@@ -62,7 +64,6 @@ test "POST /register can create a user",
 
          require_json_keys( $body, qw( user_id access_token ));
 
-         provide can_register => 1;
          provide login_details => [ $body->{user_id}, $password ];
 
          Future->done( 1 );
@@ -109,8 +110,6 @@ sub register_new_user
 }
 
 prepare "Creating test-user-creation helper function",
-   requires => [qw( can_register )],
-
    provides => [qw( register_new_user register_new_user_without_events)],
 
    do => sub {

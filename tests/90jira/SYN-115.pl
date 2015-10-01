@@ -3,7 +3,7 @@ use Future::Utils qw( repeat );
 multi_test "New federated private chats get full presence information (SYN-115)",
    requires => [qw(
       register_new_user api_clients make_test_room
-      can_register can_create_private_room
+      can_create_private_room
    )],
 
    do => sub {

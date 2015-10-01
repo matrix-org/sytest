@@ -1,8 +1,5 @@
 test "Can upload device keys",
-   requires => [qw(
-      register_new_user first_api_client
-      can_register
-      )],
+   requires => [qw( register_new_user first_api_client )],
 
    provides => [qw( e2e_user_alice e2e_can_upload_keys )],
 
