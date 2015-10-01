@@ -1,6 +1,6 @@
 multi_test "Left room members do not cause problems for presence",
    requires => [qw( first_api_client make_test_room more_users
-                    can_leave_room can_room_initial_sync )],
+                    can_room_initial_sync )],
 
    await => sub {
       my ( $http, $make_test_room, $more_users ) = @_;

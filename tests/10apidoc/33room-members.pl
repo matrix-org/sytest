@@ -139,7 +139,7 @@ test "POST /rooms/:room_id/leave can leave a room",
    requires => [qw( more_users room_id
                     can_get_room_membership )],
 
-   provides => [qw( can_leave_room )],
+   critical => 1,
 
    do => sub {
       my ( $more_users, $room_id ) = @_;
@@ -167,8 +167,6 @@ test "POST /rooms/:room_id/leave can leave a room",
             $body->{membership} eq "join" and
                die "Expected membership not to be 'join'";
 
-            provide can_leave_room => 1;
-
             Future->done(1);
          },
          sub { # else
@@ -177,7 +175,6 @@ test "POST /rooms/:room_id/leave can leave a room",
             Future->fail( @_ ) unless $response->code == 403;
 
             # We're expecting a 403 so that's fine
-            provide can_leave_room => 1;
 
             Future->done(1);
          },

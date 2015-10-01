@@ -1,6 +1,5 @@
 prepare "Leaving old test room",
-   requires => [qw( local_users room_id
-                    can_leave_room )],
+   requires => [qw( local_users room_id )],
 
    do => sub {
       my ( $users, $room_id ) = @_;
