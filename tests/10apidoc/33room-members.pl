@@ -228,9 +228,34 @@ test "POST /rooms/:room_id/invite can send an invite",
 
          provide can_invite_room => 1;
 
+         push our @EXPORT, qw( matrix_invite_user_to_room );
+
          Future->done(1);
       });
    };
+
+sub matrix_invite_user_to_room
+{
+   my ( $user, $invitee, $room_id ) = @_;
+
+   my $invitee_id;
+   if( is_User( $invitee ) ) {
+      $invitee_id = $invitee->user_id;
+   }
+   elsif( !ref $invitee ) {
+      $invitee_id = $invitee;
+   }
+   else {
+      croak "Expected invtee to be a User struct or plain string; got $invitee";
+   }
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/api/v1/rooms/$room_id/invite",
+
+      content => { user_id => $invitee_id }
+   )->then_done(1);
+}
 
 test "POST /rooms/:room_id/ban can ban a user",
    requires => [qw( user more_users room_id

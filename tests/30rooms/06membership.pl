@@ -56,12 +56,7 @@ test "Can invite users to invite-only rooms",
       my ( $user, $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/invite",
-
-         content => { user_id => $invitee->user_id },
-      );
+      matrix_invite_user_to_room( $user, $invitee, $room_id )
    };
 
 test "Invited user receives invite",

@@ -33,14 +33,10 @@ multi_test "Inviting an AS-hosted user asks the AS server",
             });
          }),
 
-         do_request_json_for( $user,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/invite",
-
-            content => { user_id => $user_id },
-         )->SyTest::pass_on_done( "Sent invite" ),
+         matrix_invite_user_to_room( $user, $user_id, $room_id )
+            ->SyTest::pass_on_done( "Sent invite" )
       )->then( sub {
-         my ( $appserv_request, $invite_response ) = @_;
+         my ( $appserv_request ) = @_;
 
          $await_as_event->( "m.room.member" )->then( sub {
             my ( $event ) = @_;
