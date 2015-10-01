@@ -252,14 +252,11 @@ test "POST /rooms/:room_id/ban can ban a user",
 my $next_alias = 1;
 
 prepare "Creating test-room-creation helper function",
-   requires => [qw( await_event_for
-                    can_create_room can_join_room_by_alias )],
+   requires => [qw( can_create_room can_join_room_by_alias )],
 
    provides => [qw( make_test_room )],
 
    do => sub {
-      my ( $await_event_for ) = @_;
-
       provide make_test_room => sub {
          my ( $members, %options ) = @_;
          my ( $creator, @other_members ) = @$members;
@@ -325,7 +322,7 @@ prepare "Creating test-room-creation helper function",
             # the remote joins have happened
             my %joined_members;
 
-            $await_event_for->( $creator, sub {
+            await_event_for( $creator, sub {
                my ( $event ) = @_;
                log_if_fail "Creator event", $event;
 

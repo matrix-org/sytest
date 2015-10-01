@@ -2,10 +2,10 @@
 my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
 prepare "Flushing event stream",
-   requires => [qw( flush_events_for user )],
+   requires => [qw( user )],
    do => sub {
-      my ( $flush_events_for, $user ) = @_;
-      $flush_events_for->( $user );
+      my ( $user ) = @_;
+      flush_events_for( $user );
    };
 
 test "initialSync sees my presence status",
@@ -47,7 +47,7 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   requires => [qw( user await_event_for user can_set_presence )],
+   requires => [qw( user can_set_presence )],
 
    do => sub {
       my ( $user ) = @_;
@@ -61,9 +61,9 @@ test "Presence change reports an event to myself",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $user ) = @_;
+      my ( $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          next unless $event->{type} eq "m.presence";
          my $content = $event->{content};
@@ -79,11 +79,11 @@ test "Presence change reports an event to myself",
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
-   requires => [qw( await_event_for user more_users
+   requires => [qw( user more_users
                     can_set_presence can_invite_presence )],
 
    do => sub {
-      my ( undef, $user, $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
       my $friend = $more_users->[0];
 
       do_request_json_for( $user,
@@ -104,10 +104,10 @@ test "Friends presence changes reports events",
    },
 
    await => sub {
-      my ( $await_event_for, $user, $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
       my $friend = $more_users->[0];
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
 

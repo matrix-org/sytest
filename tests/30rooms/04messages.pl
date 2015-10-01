@@ -6,10 +6,10 @@ my @remote_members;
 my $local_nonmember;
 
 prepare "Creating test room",
-   requires => [qw( make_test_room await_event_for local_users remote_users )],
+   requires => [qw( make_test_room local_users remote_users )],
 
    do => sub {
-      my ( $make_test_room, $await_event_for, $local_users, $remote_users ) = @_;
+      my ( $make_test_room, $local_users, $remote_users ) = @_;
 
       @local_members = @$local_users;
       @remote_members = @$remote_users;
@@ -23,18 +23,18 @@ prepare "Creating test room",
    };
 
 prepare "Flushing event streams",
-   requires => [qw( flush_events_for local_users )],
+   requires => [qw( local_users )],
    do => sub {
-      my ( $flush_events_for, $users ) = @_;
+      my ( $users ) = @_;
 
-      Future->needs_all( map { $flush_events_for->( $_ ) } @$users );
+      Future->needs_all( map { flush_events_for( $_ ) } @$users );
    };
 
 my $msgtype = "m.message";
 my $msgbody = "Room message for 33room-messages";
 
 test "Local room members see posted message events",
-   requires => [qw( user await_event_for
+   requires => [qw( user
                     can_send_message )],
 
    provides => [qw( can_receive_room_message_locally )],
@@ -51,13 +51,12 @@ test "Local room members see posted message events",
    },
 
    await => sub {
-      my ( undef, $await_event_for ) = @_;
       my ( $senduser ) = @local_members;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $await_event_for->( $recvuser, sub {
+         await_event_for( $recvuser, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
 
@@ -111,13 +110,9 @@ test "Fetching eventstream a second time doesn't yield the message again",
    };
 
 test "Local non-members don't see posted message events",
-   requires => [qw( await_event_for )],
-
    await => sub {
-      my ( $await_event_for ) = @_;
-
       Future->wait_any(
-         $await_event_for->( $local_nonmember, sub {
+         await_event_for( $local_nonmember, sub {
             my ( $event ) = @_;
             log_if_fail "Received event:", $event;
 
@@ -169,16 +164,16 @@ test "Local room members can get room messages",
    };
 
 test "Remote room members also see posted message events",
-   requires => [qw( await_event_for user
+   requires => [qw( user
                     can_receive_room_message_locally )],
 
    await => sub {
-      my ( $await_event_for, $senduser ) = @_;
+      my ( $senduser ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $await_event_for->( $recvuser, sub {
+         await_event_for( $recvuser, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
 

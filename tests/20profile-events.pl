@@ -1,17 +1,17 @@
 prepare "Flushing event stream",
-   requires => [qw( flush_events_for user )],
+   requires => [qw( user )],
    do => sub {
-      my ( $flush_events_for, $user ) = @_;
-      $flush_events_for->( $user );
+      my ( $user ) = @_;
+      flush_events_for( $user );
    };
 
 my $displayname = "New displayname for 20profile-events.pl";
 
 test "Displayname change reports an event to myself",
-   requires => [qw( user await_event_for can_set_displayname )],
+   requires => [qw( user can_set_displayname )],
 
    do => sub {
-      my ( $user, undef ) = @_;
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -22,9 +22,9 @@ test "Displayname change reports an event to myself",
    },
 
    await => sub {
-      my ( $user, $await_event_for ) = @_;
+      my ( $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
          my $content = $event->{content};
@@ -40,10 +40,10 @@ test "Displayname change reports an event to myself",
 my $avatar_url = "http://a.new.url/for/20profile-events.pl";
 
 test "Avatar URL change reports an event to myself",
-   requires => [qw( user await_event_for can_set_avatar_url )],
+   requires => [qw( user can_set_avatar_url )],
 
    do => sub {
-      my ( $user, undef ) = @_;
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -54,9 +54,9 @@ test "Avatar URL change reports an event to myself",
    },
 
    await => sub {
-      my ( $user, $await_event_for ) = @_;
+      my ( $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
          my $content = $event->{content};

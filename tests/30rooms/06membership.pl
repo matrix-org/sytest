@@ -71,14 +71,14 @@ test "Can invite users to invite-only rooms",
    };
 
 test "Invited user receives invite",
-   requires => [qw( await_event_for more_users inviteonly_room_id
+   requires => [qw( more_users inviteonly_room_id
                     can_invite_room )],
 
    await => sub {
-      my ( $await_event_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      $await_event_for->( $invitee, sub {
+      await_event_for( $invitee, sub {
          my ( $event ) = @_;
 
          require_json_keys( $event, qw( type ));

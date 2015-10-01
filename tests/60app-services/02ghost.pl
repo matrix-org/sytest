@@ -1,9 +1,9 @@
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [qw( make_test_room make_as_user await_event_for await_as_event user as_user
+   requires => [qw( make_test_room make_as_user await_as_event user as_user
                     can_join_room_by_id can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $await_event_for, $await_as_event, $user, $as_user ) = @_;
+      my ( $make_test_room, $make_as_user, $await_as_event, $user, $as_user ) = @_;
 
       my $room_id;
       my $ghost;
@@ -79,7 +79,7 @@ multi_test "AS-ghosted users can use rooms via AS",
          )
       })->SyTest::pass_on_done( "User posted message via AS" )
       ->then( sub {
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{room_id} eq $room_id;
@@ -99,11 +99,11 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [qw( make_test_room make_as_user await_event_for await_as_event user
+   requires => [qw( make_test_room make_as_user await_as_event user
                     can_join_room_by_id can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $await_event_for, $await_as_event, $user ) = @_;
+      my ( $make_test_room, $make_as_user, $await_as_event, $user ) = @_;
 
       my $room_id;
       my $ghost;
@@ -171,7 +171,7 @@ multi_test "AS-ghosted users can use rooms themselves",
          )
       })->SyTest::pass_on_done( "Ghost posted message themselves" )
       ->then( sub {
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{room_id} eq $room_id;
