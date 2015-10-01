@@ -1,8 +1,7 @@
 use List::Util qw( first );
 
 test "A room can be created set to invite-only",
-   requires => [qw( make_test_room user
-                    can_create_room )],
+   requires => [qw( make_test_room user )],
 
    provides => [qw( inviteonly_room_id )],
 

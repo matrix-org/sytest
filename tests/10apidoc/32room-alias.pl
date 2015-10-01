@@ -1,8 +1,7 @@
 my $alias_localpart = "#another-alias";
 
 test "PUT /directory/room/:room_alias creates alias",
-   requires => [qw( user room_id first_home_server
-                    can_create_room )],
+   requires => [qw( user room_id first_home_server )],
 
    provides => [qw( can_create_room_alias can_lookup_room_alias )],
 

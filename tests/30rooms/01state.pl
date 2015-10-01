@@ -1,7 +1,7 @@
 use List::UtilsBy qw( partition_by );
 
 prepare "Creating a room",
-   requires => [qw( user can_create_room )],
+   requires => [qw( user )],
 
    provides => [qw( room_id room_alias )],
 

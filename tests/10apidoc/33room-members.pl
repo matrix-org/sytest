@@ -252,7 +252,7 @@ test "POST /rooms/:room_id/ban can ban a user",
 my $next_alias = 1;
 
 prepare "Creating test-room-creation helper function",
-   requires => [qw( can_create_room can_join_room_by_alias )],
+   requires => [qw( can_join_room_by_alias )],
 
    provides => [qw( make_test_room )],
 

@@ -39,7 +39,7 @@ prepare "Fetching current room members",
 
 test "Typing notification sent to local room members",
    requires => [qw( user room_id
-                    can_set_room_typing can_create_room can_join_room_by_id )],
+                    can_set_room_typing can_join_room_by_id )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -81,7 +81,7 @@ test "Typing notification sent to local room members",
 
 test "Typing notifications also sent to remove room members",
    requires => [qw( user remote_users room_id
-                    can_set_room_typing can_create_room can_join_remote_room_by_alias )],
+                    can_set_room_typing can_join_remote_room_by_alias )],
 
    await => sub {
       my ( $typinguser, $remote_users, $room_id ) = @_;
@@ -112,7 +112,7 @@ test "Typing notifications also sent to remove room members",
 
 test "Typing can be explicitly stopped",
    requires => [qw( user room_id
-                    can_set_room_typing can_create_room can_join_room_by_id )],
+                    can_set_room_typing can_join_room_by_id )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -162,7 +162,7 @@ prepare "Flushing event streams",
 
 multi_test "Typing notifications timeout and can be resent",
    requires => [qw( user room_id
-                    can_set_room_typing can_create_room )],
+                    can_set_room_typing )],
 
    await => sub {
       my ( $user, $room_id ) = @_;
