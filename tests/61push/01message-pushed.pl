@@ -3,7 +3,7 @@ multi_test "Test that a message is pushed",
       api_clients make_test_room
       test_http_server_uri_base await_http_request register_new_user_without_events
 
-      can_register can_create_private_room
+      can_create_private_room
    )],
 
    do => sub {
