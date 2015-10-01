@@ -181,7 +181,7 @@ test "POST /rooms/:room_id/leave can leave a room",
       );
    };
 
-push our @EXPORT, qw( matrix_leave_room );
+push @EXPORT, qw( matrix_leave_room );
 
 sub matrix_leave_room
 {
