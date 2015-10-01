@@ -2,12 +2,12 @@ use Future::Utils qw( repeat );
 
 multi_test "New federated private chats get full presence information (SYN-115)",
    requires => [qw(
-      register_new_user api_clients make_test_room flush_events_for await_event_for
+      register_new_user api_clients make_test_room
       can_register can_create_private_room
    )],
 
    do => sub {
-      my ( $register_new_user, $clients, $make_test_room, $flush_events_for, $await_event_for ) = @_;
+      my ( $register_new_user, $clients, $make_test_room ) = @_;
       my ( $http1, $http2 ) = @$clients;
 
       my ( $alice, $bob );
@@ -23,8 +23,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
 
          # Flush event streams for both; as a side-effect will mark presence 'online'
          Future->needs_all(
-            $flush_events_for->( $alice ),
-            $flush_events_for->( $bob   ),
+            flush_events_for( $alice ),
+            flush_events_for( $bob   ),
          )
       })->then( sub {
 
@@ -45,7 +45,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       })->then( sub {
 
          # Bob should receive the invite
-         $await_event_for->( $bob, sub {
+         await_event_for( $bob, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member" and
                           $event->{room_id} eq $room_id and

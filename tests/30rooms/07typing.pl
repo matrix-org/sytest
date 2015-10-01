@@ -1,11 +1,13 @@
 use Time::HiRes qw( time );
 
 prepare "Flushing event streams",
-   requires => [qw( flush_events_for local_users remote_users )],
+   requires => [qw( local_users remote_users )],
    do => sub {
-      my ( $flush_events_for, $local_users, $remote_users ) = @_;
+      my ( $local_users, $remote_users ) = @_;
 
-      Future->needs_all( map { $flush_events_for->( $_ ) } @$local_users, @$remote_users );
+      Future->needs_all(
+         map { flush_events_for( $_ ) } @$local_users, @$remote_users
+      );
    };
 
 # This file only operates on members of the room; so we'll just work out who of
@@ -36,11 +38,11 @@ prepare "Fetching current room members",
    };
 
 test "Typing notification sent to local room members",
-   requires => [qw( user await_event_for user room_id
+   requires => [qw( user room_id
                     can_set_room_typing can_create_room can_join_room_by_id )],
 
    do => sub {
-      my ( $user, undef, undef, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -51,12 +53,12 @@ test "Typing notification sent to local room members",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $typinguser, $room_id ) = @_;
+      my ( $typinguser, $room_id ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $await_event_for->( $recvuser, sub {
+         await_event_for( $recvuser, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
 
@@ -78,16 +80,16 @@ test "Typing notification sent to local room members",
    };
 
 test "Typing notifications also sent to remove room members",
-   requires => [qw( await_event_for user remote_users room_id
+   requires => [qw( user remote_users room_id
                     can_set_room_typing can_create_room can_join_remote_room_by_alias )],
 
    await => sub {
-      my ( $await_event_for, $typinguser, $remote_users, $room_id ) = @_;
+      my ( $typinguser, $remote_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $await_event_for->( $recvuser, sub {
+         await_event_for( $recvuser, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
 
@@ -109,11 +111,11 @@ test "Typing notifications also sent to remove room members",
    };
 
 test "Typing can be explicitly stopped",
-   requires => [qw( user await_event_for user room_id
+   requires => [qw( user room_id
                     can_set_room_typing can_create_room can_join_room_by_id )],
 
    do => sub {
-      my ( $user, undef, undef, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -124,12 +126,12 @@ test "Typing can be explicitly stopped",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $typinguser, $room_id ) = @_;
+      my ( $typinguser, $room_id ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $await_event_for->( $recvuser, sub {
+         await_event_for( $recvuser, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
 
@@ -149,19 +151,21 @@ test "Typing can be explicitly stopped",
    };
 
 prepare "Flushing event streams",
-   requires => [qw( flush_events_for remote_users )],
+   requires => [qw( remote_users )],
    do => sub {
-      my ( $flush_events_for, $remote_users ) = @_;
+      my ( $remote_users ) = @_;
 
-      Future->needs_all( map { $flush_events_for->( $_ ) } @local_members, @$remote_users );
+      Future->needs_all(
+         map { flush_events_for( $_ ) } @local_members, @$remote_users
+      );
    };
 
 multi_test "Typing notifications timeout and can be resent",
-   requires => [qw( user await_event_for room_id
+   requires => [qw( user room_id
                     can_set_room_typing can_create_room )],
 
    await => sub {
-      my ( $user, $await_event_for, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
       my $start_time = time();
 
@@ -174,7 +178,7 @@ multi_test "Typing notifications timeout and can be resent",
          pass( "Sent typing notification" );
 
          # start typing
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
             return unless $event->{room_id} eq $room_id;
@@ -186,7 +190,7 @@ multi_test "Typing notifications timeout and can be resent",
          })
       })->then( sub {
          # stop typing
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
             return unless $event->{room_id} eq $room_id;

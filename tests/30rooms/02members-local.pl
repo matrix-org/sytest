@@ -1,16 +1,16 @@
 use List::Util qw( first );
 
 prepare "More local room members",
-   requires => [qw( flush_events_for more_users room_id
+   requires => [qw( more_users room_id
                     can_join_room_by_id )],
 
    do => sub {
-      my ( $flush_events_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $flush_events_for->( $user )->then( sub {
+         flush_events_for( $user )->then( sub {
             do_request_json_for( $user,
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/join",
@@ -22,16 +22,16 @@ prepare "More local room members",
    };
 
 test "New room members see their own join event",
-   requires => [qw( await_event_for more_users room_id
+   requires => [qw( more_users room_id
                     can_join_room_by_id )],
 
    await => sub {
-      my ( $await_event_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
 
@@ -80,16 +80,16 @@ test "New room members see existing users' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( await_event_for user more_users room_id
+   requires => [qw( user more_users room_id
                     can_join_room_by_id )],
 
    await => sub {
-      my ( $await_event_for, $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $other_user = $_;
 
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
             require_json_keys( $event, qw( type room_id user_id ));
@@ -107,16 +107,16 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new members' presence",
-   requires => [qw( await_event_for user more_users
+   requires => [qw( user more_users
                     can_join_room_by_id )],
 
    await => sub {
-      my ( $await_event_for, $user, $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
 
       Future->needs_all( map {
          my $other_user = $_;
 
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
             require_json_keys( $event, qw( type content ));

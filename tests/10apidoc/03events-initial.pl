@@ -59,90 +59,89 @@ test "GET /initialSync initially",
       });
    };
 
-prepare "Environment closures for stateful /event access",
-   provides => [qw( flush_events_for await_event_for )],
+# A useful function which keeps track of the current eventstream token and
+#   fetches new events since it
+sub GET_new_events_for
+{
+   my ( $user ) = @_;
 
-   do => sub {
-      # A useful closure, which keeps track of the current eventstream token
-      # and fetches new events since it
+   return $user->pending_get_events //=
+      $user->http->do_request_json(
+         method => "GET",
+         uri    => "/api/v1/events",
+         params => {
+            access_token => $user->access_token,
+            from         => $user->eventstream_token,
+            timeout      => 500,
+         }
+      )->on_ready( sub {
+         undef $user->pending_get_events;
+      })->then( sub {
+         my ( $body ) = @_;
+         $user->eventstream_token = $body->{end};
 
-      my $GET_new_events_for = sub {
-         my ( $user ) = @_;
+         my @events = ( @{ $user->saved_events }, @{ $body->{chunk} } );
+         @{ $user->saved_events } = ();
 
-         return $user->pending_get_events //=
-            $user->http->do_request_json(
-               method => "GET",
-               uri    => "/api/v1/events",
-               params => {
-                  access_token => $user->access_token,
-                  from         => $user->eventstream_token,
-                  timeout      => 500,
-               }
-            )->on_ready( sub {
-               undef $user->pending_get_events;
-            })->then( sub {
-               my ( $body ) = @_;
-               $user->eventstream_token = $body->{end};
+         Future->done( @events );
+      });
+}
 
-               my @events = ( @{ $user->saved_events }, @{ $body->{chunk} } );
-               @{ $user->saved_events } = ();
+# Some Matrix protocol helper functions
 
-               Future->done( @events );
-            });
-      };
+push our @EXPORT, qw( flush_events_for await_event_for );
 
-      provide flush_events_for => sub {
-         my ( $user ) = @_;
+sub flush_events_for
+{
+   my ( $user ) = @_;
 
-         $user->http->do_request_json(
-            method => "GET",
-            uri    => "/api/v1/events",
-            params => {
-               access_token => $user->access_token,
-               timeout      => 0,
-            }
-         )->then( sub {
-            my ( $body ) = @_;
-            $user->eventstream_token = $body->{end};
-            @{ $user->saved_events } = ();
+   $user->http->do_request_json(
+      method => "GET",
+      uri    => "/api/v1/events",
+      params => {
+         access_token => $user->access_token,
+         timeout      => 0,
+      }
+   )->then( sub {
+      my ( $body ) = @_;
+      $user->eventstream_token = $body->{end};
+      @{ $user->saved_events } = ();
 
-            Future->done;
-         });
-      };
+      Future->done;
+   });
+}
 
-      provide await_event_for => sub {
-         my ( $user, $filter ) = @_;
-         # Carp::shortmess is no good here as every test runs in the 'main' package
-         my $caller = sprintf "%s line %d.", (caller)[1,2];
+sub await_event_for
+{
+   my ( $user, $filter ) = @_;
+   # Carp::shortmess is no good here as every test runs in the 'main' package
+   my $caller = sprintf "%s line %d.", (caller)[1,2];
 
-         my $f = repeat {
-            # Just replay saved ones the first time around, if there are any
-            my $replay_saved = !shift && scalar @{ $user->saved_events };
+   my $f = repeat {
+      # Just replay saved ones the first time around, if there are any
+      my $replay_saved = !shift && scalar @{ $user->saved_events };
 
-            ( $replay_saved
-               ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
-               : $GET_new_events_for->( $user )
-            )->then( sub {
-               my $found;
-               foreach my $event ( @_ ) {
-                  not $found and $filter->( $event ) and
-                     $found = 1, next;
+      ( $replay_saved
+         ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
+         : GET_new_events_for( $user )
+      )->then( sub {
+         my $found;
+         foreach my $event ( @_ ) {
+            not $found and $filter->( $event ) and
+               $found = 1, next;
 
-                  # Save it for later
-                  push @{ $user->saved_events }, $event;
-               }
+            # Save it for later
+            push @{ $user->saved_events }, $event;
+         }
 
-               Future->done( $found );
-            });
-         } while => sub { !$_[0]->failure and !$_[0]->get };
+         Future->done( $found );
+      });
+   } while => sub { !$_[0]->failure and !$_[0]->get };
 
-         return Future->wait_any(
-            $f,
+   return Future->wait_any(
+      $f,
 
-            delay( 10 )
-               ->then_fail( "Timed out waiting for an event at $caller\n" ),
-         );
-      };
-
-      Future->done(1);
-   };
+      delay( 10 )
+         ->then_fail( "Timed out waiting for an event at $caller\n" ),
+   );
+}

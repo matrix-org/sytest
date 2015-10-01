@@ -1,6 +1,6 @@
 multi_test "Test that a message is pushed",
    requires => [qw(
-      api_clients make_test_room await_event_for flush_events_for
+      api_clients make_test_room
       test_http_server_uri_base await_http_request register_new_user_without_events
 
       can_register can_create_private_room
@@ -8,7 +8,7 @@ multi_test "Test that a message is pushed",
 
    do => sub {
       my (
-         $clients, $make_test_room, $await_event_for, $flush_events_for,
+         $clients, $make_test_room,
          $test_http_server_uri_base, $await_http_request, $register_new_user,
       ) = @_;
 
@@ -39,13 +39,13 @@ multi_test "Test that a message is pushed",
          ( $room_id ) = @_;
          # Flush Bob's event stream so that we get a token from before
          # Alice sending the invite request.
-         $flush_events_for->( $bob )
+         flush_events_for( $bob )
       })->then( sub {
          # Now alice can invite Bob to the room.
          # We also wait for the push notification for it
 
          Future->needs_all(
-            $await_event_for->( $bob, sub {
+            await_event_for( $bob, sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.room.member" and
                   $event->{room_id} eq $room_id and

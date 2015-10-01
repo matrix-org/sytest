@@ -27,12 +27,12 @@ prepare "Creating a room",
    };
 
 test "Room creation reports m.room.create to myself",
-   requires => [qw( await_event_for room_id user )],
+   requires => [qw( room_id user )],
 
    await => sub {
-      my ( $await_event_for, $room_id, $user ) = @_;
+      my ( $room_id, $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.create";
          require_json_keys( $event, qw( room_id user_id content ));
@@ -50,12 +50,12 @@ test "Room creation reports m.room.create to myself",
    };
 
 test "Room creation reports m.room.member to myself",
-   requires => [qw( await_event_for room_id user )],
+   requires => [qw( room_id user )],
 
    await => sub {
-      my ( $await_event_for, $room_id, $user ) = @_;
+      my ( $room_id, $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
          require_json_keys( $event, qw( room_id user_id state_key content ));
@@ -74,11 +74,11 @@ test "Room creation reports m.room.member to myself",
 my $topic = "Testing topic for the new room";
 
 test "Setting room topic reports m.room.topic to myself",
-   requires => [qw( user await_event_for room_id user
+   requires => [qw( user room_id
                     can_set_room_topic )],
 
    do => sub {
-      my ( $user, undef, $room_id, undef ) = @_;
+      my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -89,9 +89,9 @@ test "Setting room topic reports m.room.topic to myself",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $room_id, $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.topic";
          require_json_keys( $event, qw( room_id user_id content ));
