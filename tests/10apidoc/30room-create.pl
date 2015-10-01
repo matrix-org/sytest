@@ -237,3 +237,25 @@ test "POST /createRoom makes a private room with invites",
          Future->done(1);
       });
    };
+
+push our @EXPORT, qw( matrix_create_room );
+
+sub matrix_create_room
+{
+   my ( $user, %opts ) = @_;
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/api/v1/createRoom",
+
+      content => {
+         visibility => $opts{visibility} || "public",
+         ( defined $opts{room_alias_name} ?
+            ( room_alias_name => $opts{room_alias_name} ) : () ),
+      }
+   )->then( sub {
+      my ( $body ) = @_;
+
+      Future->done( $body->{room_id}, $body->{room_alias} );
+   });
+}

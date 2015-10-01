@@ -8,19 +8,14 @@ prepare "Creating a room",
    do => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/api/v1/createRoom",
-
-         content => {
-            visibility      => "public",
-            room_alias_name => "30room-state",
-         },
+      matrix_create_room( $user,
+         visibility      => "public",
+         room_alias_name => "30room-state",
       )->then( sub {
-         my ( $body ) = @_;
+         my ( $room_id, $room_alias ) = @_;
 
-         provide room_id    => $body->{room_id};
-         provide room_alias => $body->{room_alias};
+         provide room_id    => $room_id;
+         provide room_alias => $room_alias;
 
          Future->done(1);
       });
