@@ -70,25 +70,27 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
 prepare "Creating power_level change helper",
    requires => [qw( can_get_power_levels can_set_power_levels )],
 
-   provides => [qw( change_room_powerlevels )],
+   provides => [qw( can_change_power_levels )],
 
    do => sub {
-      provide change_room_powerlevels => sub {
-         my ( $user, $room_id, $func ) = @_;
+      push our @EXPORT, qw( matrix_change_room_powerlevels );
 
-         matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
-         ->then( sub {
-            my ( $levels ) = @_;
-            $func->( $levels );
-
-            do_request_json_for( $user,
-               method => "PUT",
-               uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-
-               content => $levels,
-            );
-         });
-      };
+      provide can_change_power_levels => 1;
 
       Future->done(1);
    };
+
+sub matrix_change_room_powerlevels
+{
+   my ( $user, $room_id, $func ) = @_;
+
+   matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
+   ->then( sub {
+      my ( $levels ) = @_;
+      $func->( $levels );
+
+      matrix_put_room_state( $user, $room_id, type => "m.room.power_levels",
+         content => $levels,
+      );
+   });
+}
