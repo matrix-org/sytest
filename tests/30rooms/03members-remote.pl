@@ -26,9 +26,9 @@ test "Remote users can join room by alias",
       my ( $remote_users, undef, $room_id ) = @_;
       my $user = $remote_users->[0];
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 

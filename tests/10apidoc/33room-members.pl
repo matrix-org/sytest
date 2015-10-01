@@ -23,9 +23,9 @@ test "POST /rooms/:room_id/join can join a room",
       my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[0];
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -79,9 +79,9 @@ test "POST /join/:room_alias can join a room",
       my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[1];
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -122,9 +122,9 @@ test "POST /join/:room_id can join a room",
       my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[2];
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -157,9 +157,9 @@ test "POST /rooms/:room_id/leave can leave a room",
       my ( $more_users, $room_id ) = @_;
       my $user = $more_users->[1];
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
       )->then(
          sub { # then
             my ( $body ) = @_;
@@ -217,9 +217,9 @@ test "POST /rooms/:room_id/invite can send an invite",
       my ( $user, $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/" . $invitee->user_id,
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $invitee->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -257,9 +257,9 @@ test "POST /rooms/:room_id/ban can ban a user",
       my ( $user, $more_users, $room_id ) = @_;
       my $banned_user = $more_users->[2];
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/" . $banned_user->user_id,
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $banned_user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 

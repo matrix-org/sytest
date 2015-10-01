@@ -101,9 +101,9 @@ test "Invited user can join the room",
 
       matrix_join_room( $invitee, $room_id )
       ->then( sub {
-         do_request_json_for( $invitee,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$invitee->user_id}",
+         matrix_get_room_state( $invitee, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
          )
       })->then( sub {
          my ( $member_state ) = @_;
@@ -124,9 +124,9 @@ test "Banned user is kicked and may not rejoin",
       my $banned_user = $more_users->[0];
 
       # Pre-test assertion that the user we want to ban is present
-      do_request_json_for( $banned_user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
+      matrix_get_room_state( $banned_user, $room_id,
+         type      => "m.room.member",
+         state_key => $banned_user->user_id,
       )->then( sub {
          my ( $body ) = @_;
          $body->{membership} eq "join" or
@@ -139,10 +139,10 @@ test "Banned user is kicked and may not rejoin",
             content => { user_id => $banned_user->user_id, reason => "testing" },
          );
       })->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
-         );
+         matrix_get_room_state( $user, $room_id,
+            type      => "m.room.member",
+            state_key => $banned_user->user_id,
+         )
       })->then( sub {
          my ( $body ) = @_;
          $body->{membership} eq "ban" or
