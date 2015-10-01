@@ -181,6 +181,20 @@ test "POST /rooms/:room_id/leave can leave a room",
       );
    };
 
+push our @EXPORT, qw( matrix_leave_room );
+
+sub matrix_leave_room
+{
+   my ( $user, $room_id ) = @_;
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/api/v1/rooms/$room_id/leave",
+
+      content => {},
+   )->then_done(1);
+}
+
 test "POST /rooms/:room_id/invite can send an invite",
    requires => [qw( user more_users room_id
                     can_get_room_membership )],

@@ -49,11 +49,8 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User A set user B's power level to 100" )
       })->then( sub {
 
-         do_request_json_for( $user_1,
-            method  => "POST",
-            uri     => "/api/v1/rooms/$room_id/leave",
-            content => {},
-         )->SyTest::pass_on_done( "User A left the room" )
+         matrix_leave_room( $user_1, $room_id )
+            ->SyTest::pass_on_done( "User A left the room" )
       })->then( sub {
 
          await_event_for( $user_2, sub {
