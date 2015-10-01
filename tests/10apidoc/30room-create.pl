@@ -252,6 +252,8 @@ sub matrix_create_room
          visibility => $opts{visibility} || "public",
          ( defined $opts{room_alias_name} ?
             ( room_alias_name => $opts{room_alias_name} ) : () ),
+         ( defined $opts{invite} ?
+            ( invite => $opts{invite} ) : () ),
       }
    )->then( sub {
       my ( $body ) = @_;
