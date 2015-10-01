@@ -1,18 +1,16 @@
 multi_test "Test that we can be reinvited to a room we created",
    requires => [qw(
-      make_test_room change_room_powerlevels local_users remote_users
+      change_room_powerlevels local_users remote_users
    )],
 
    check => sub {
-      my (
-         $make_test_room, $change_room_powerlevels, $local_users, $remote_users
-      ) = @_;
+      my ( $change_room_powerlevels, $local_users, $remote_users ) = @_;
       my ( $user_1 ) = @$local_users;
       my ( $user_2 ) = @$remote_users;
 
       my $room_id;
 
-      $make_test_room->( [ $user_1 ] )
+      matrix_create_room( $user_1 )
          ->SyTest::pass_on_done( "User A created a room" )
       ->then( sub {
          ( $room_id ) = @_;

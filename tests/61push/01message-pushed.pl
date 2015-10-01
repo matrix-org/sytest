@@ -1,12 +1,12 @@
 multi_test "Test that a message is pushed",
    requires => [qw(
-      api_clients make_test_room test_http_server_uri_base await_http_request
+      api_clients test_http_server_uri_base await_http_request
 
       can_create_private_room
    )],
 
    do => sub {
-      my ( $clients, $make_test_room, $test_http_server_uri_base, $await_http_request ) = @_;
+      my ( $clients, $test_http_server_uri_base, $await_http_request ) = @_;
 
       my $http = $clients->[0];
 
@@ -28,7 +28,7 @@ multi_test "Test that a message is pushed",
          ( $alice, $bob ) = @_;
 
          # Have Alice create a new private room
-         $make_test_room->( [ $alice ],
+         matrix_create_room( $alice,
             visibility => "private",
          )
       })->then( sub {

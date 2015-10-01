@@ -1,14 +1,14 @@
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [qw( make_test_room make_as_user await_as_event user as_user
+   requires => [qw( make_as_user await_as_event user as_user
                     can_join_room_by_id can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $await_as_event, $user, $as_user ) = @_;
+      my ( $make_as_user, $await_as_event, $user, $as_user ) = @_;
 
       my $room_id;
       my $ghost;
 
-      $make_test_room->( [ $user ] )
+      matrix_create_room( $user )
          ->SyTest::pass_on_done( "Created test room" )
       ->then( sub {
          ( $room_id ) = @_;
@@ -99,16 +99,16 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [qw( make_test_room make_as_user await_as_event user
+   requires => [qw( make_as_user await_as_event user
                     can_join_room_by_id can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $await_as_event, $user ) = @_;
+      my ( $make_as_user, $await_as_event, $user ) = @_;
 
       my $room_id;
       my $ghost;
 
-      $make_test_room->( [ $user ] )
+      matrix_create_room( $user )
          ->SyTest::pass_on_done( "Created test room" )
       ->then( sub {
          ( $room_id ) = @_;

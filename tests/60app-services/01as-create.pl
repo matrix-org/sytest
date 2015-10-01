@@ -75,12 +75,12 @@ test "Regular users cannot register within the AS namespace",
 
 my $room_id;
 prepare "Creating a new test room",
-   requires => [qw( make_test_room user )],
+   requires => [qw( user )],
 
    do => sub {
-      my ( $make_test_room, $user ) = @_;
+      my ( $user ) = @_;
 
-      $make_test_room->( [ $user ] )
+      matrix_create_room( $user )
          ->on_done( sub {
             ( $room_id ) = @_;
          });
