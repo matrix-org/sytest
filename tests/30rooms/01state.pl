@@ -75,10 +75,8 @@ test "Setting room topic reports m.room.topic to myself",
    do => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
-
+      matrix_put_room_state( $user, $room_id,
+         type    => "m.room.topic",
          content => { topic => $topic },
       );
    },

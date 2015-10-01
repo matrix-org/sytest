@@ -163,7 +163,7 @@ test "GET /rooms/:room_id/state fetches entire room state",
       });
    };
 
-push our @EXPORT, qw( matrix_get_room_state );
+push our @EXPORT, qw( matrix_get_room_state matrix_put_room_state );
 
 sub matrix_get_room_state
 {
@@ -177,5 +177,25 @@ sub matrix_get_room_state
       uri    => join( "/",
          "/api/v1/rooms/$room_id/state", grep { defined } $opts{type}, $opts{state_key}
       ),
+   );
+}
+
+sub matrix_put_room_state
+{
+   my ( $user, $room_id, %opts ) = @_;
+
+   defined $opts{state_key} and not defined $opts{type} and
+      croak "Cannot matrix_put_room_state() with a state_key but no type";
+
+   defined $opts{content} or
+      croak "Cannot matrix_put_room_state() with no content";
+
+   do_request_json_for( $user,
+      method => "PUT",
+      uri    => join( "/",
+         "/api/v1/rooms/$room_id/state", grep { defined } $opts{type}, $opts{state_key}
+      ),
+
+      content => $opts{content},
    );
 }

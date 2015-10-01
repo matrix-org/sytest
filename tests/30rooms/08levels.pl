@@ -109,10 +109,8 @@ test_powerlevel "setting 'm.room.name' respects room powerlevel",
    do => sub {
       my ( $test_user ) = @_;
 
-      do_request_json_for( $test_user,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.name",
-
+      matrix_put_room_state( $test_user, $room_id,
+         type    => "m.room.name",
          content => { name => "A new room name" },
       );
    };
@@ -143,10 +141,8 @@ test "Unprivileged users can set m.room.topic if it only needs level 0",
          delete $levels->{users}{ $test_user->user_id };
          $levels->{events}{"m.room.topic"} = 0;
       })->then( sub {
-         do_request_json_for( $test_user,
-            method => "PUT",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
-
+         matrix_put_room_state( $test_user, $room_id,
+            type    => "m.room.topic",
             content => { topic => "Here I can set the topic at powerlevel 0" },
          );
       });

@@ -15,9 +15,8 @@ multi_test "Test that we can be reinvited to a room we created",
       ->then( sub {
          ( $room_id ) = @_;
 
-         do_request_json_for( $user_1,
-            method  => "PUT",
-            uri     => "/api/v1/rooms/$room_id/state/m.room.join_rules",
+         matrix_put_room_state( $user_1, $room_id,
+            type    => "m.room.join_rules",
             content => { join_rule => "invite" },
          )->SyTest::pass_on_done( "User A set the join rules to 'invite'" )
       })->then( sub {
