@@ -36,6 +36,20 @@ test "POST /rooms/:room_id/join can join a room",
       });
    };
 
+push our @EXPORT, qw( matrix_join_room );
+
+sub matrix_join_room
+{
+   my ( $user, $room_id ) = @_;
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/api/v1/rooms/$room_id/join",
+
+      content => {},
+   )->then_done(1);
+}
+
 test "POST /join/:room_alias can join a room",
    requires => [qw( more_users room_id room_alias
                     can_get_room_membership )],

@@ -58,11 +58,7 @@ multi_test "Test that a message is pushed",
          )
       })->then( sub {
          # Bob accepts the invite by joining the room
-         do_request_json_for( $bob,
-            method  => "POST",
-            uri     => "/api/v1/rooms/$room_id/join",
-            content => {},
-         )
+         matrix_join_room( $bob, $room_id )
       })->then( sub {
          # Now that Bob has joined the room, we will create a pusher for
          # Alice. This may race with Bob joining the room. So the first

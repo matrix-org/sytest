@@ -38,11 +38,8 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User B received the invite from A" )
       })->then( sub {
 
-         do_request_json_for( $user_2,
-            method  => "POST",
-            uri     => "/api/v1/rooms/$room_id/join",
-            content => {},
-         )->SyTest::pass_on_done( "User B joined the room" )
+         matrix_join_room( $user_2, $room_id )
+            ->SyTest::pass_on_done( "User B joined the room" )
       })->then( sub {
 
          $change_room_powerlevels->( $user_1, $room_id, sub {
@@ -84,10 +81,7 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User A received the invite from user B" )
       })->then( sub {
 
-         do_request_json_for( $user_1,
-            method  => "POST",
-            uri     => "/api/v1/rooms/$room_id/join",
-            content => {},
-         )->SyTest::pass_on_done( "User A joined the room" )
+         matrix_join_room( $user_1, $room_id )
+            ->SyTest::pass_on_done( "User A joined the room" )
       })->then_done(1);
    };

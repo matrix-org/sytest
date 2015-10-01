@@ -137,12 +137,7 @@ multi_test "AS-ghosted users can use rooms themselves",
                Future->done;
             }),
 
-            do_request_json_for( $ghost,
-               method => "POST",
-               uri    => "/api/v1/rooms/$room_id/join",
-
-               content => {},
-            )
+            matrix_join_room( $ghost, $room_id )
          )
       })->SyTest::pass_on_done( "Ghost joined room themselves" )
       ->then( sub {

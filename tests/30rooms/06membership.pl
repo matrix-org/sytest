@@ -44,12 +44,8 @@ test "Uninvited users cannot join the room",
       my ( $more_users, $room_id ) = @_;
       my $uninvited = $more_users->[0];
 
-      do_request_json_for( $uninvited,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/join",
-
-         content => {},
-      )->main::expect_http_403;
+      matrix_join_room( $uninvited, $room_id )
+         ->main::expect_http_403;
    };
 
 test "Can invite users to invite-only rooms",
@@ -103,12 +99,8 @@ test "Invited user can join the room",
       my ( $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      do_request_json_for( $invitee,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/join",
-
-         content => {},
-      )->then( sub {
+      matrix_join_room( $invitee, $room_id )
+      ->then( sub {
          do_request_json_for( $invitee,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$invitee->user_id}",
@@ -156,11 +148,6 @@ test "Banned user is kicked and may not rejoin",
          $body->{membership} eq "ban" or
             die "Expected banned user membership to be 'ban'";
 
-         do_request_json_for( $banned_user,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/join",
-
-            content => {},
-         )
+         matrix_join_room( $banned_user, $room_id )
       })->main::expect_http_403;
    };
