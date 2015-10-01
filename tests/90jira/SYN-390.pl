@@ -1,13 +1,13 @@
 multi_test "Getting push rules doesn't corrupt the cache SYN-390",
-   requires => [qw( register_new_user api_clients )],
+   requires => [qw( api_clients )],
 
    do => sub {
-      my ( $register_new_user, $clients ) = @_;
+      my ( $clients ) = @_;
       my $http = $clients->[0];
 
       my $alice;
 
-      $register_new_user->( $http, "90jira-SYN-390_alice" )->then( sub {
+      matrix_register_user( $http, "90jira-SYN-390_alice" )->then( sub {
          ( $alice ) = @_;
 
          do_request_json_for( $alice,

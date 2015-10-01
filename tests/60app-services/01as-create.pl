@@ -64,12 +64,12 @@ test "AS cannot create users outside its own namespace",
    };
 
 test "Regular users cannot register within the AS namespace",
-   requires => [qw( register_new_user first_api_client )],
+   requires => [qw( first_api_client )],
 
    do => sub {
-      my ( $register_new_user, $http ) = @_;
+      my ( $http ) = @_;
 
-      $register_new_user->( $http, "astest-01create-2" )
+      matrix_register_user( $http, "astest-01create-2" )
          ->main::expect_http_4xx;
    };
 

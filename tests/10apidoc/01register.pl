@@ -70,7 +70,9 @@ test "POST /register can create a user",
       });
    };
 
-sub register_new_user
+push our @EXPORT, qw( matrix_register_user );
+
+sub matrix_register_user
 {
    my ( $http, $uid, %opts ) = @_;
 
@@ -108,16 +110,3 @@ sub register_new_user
       return $f->then_done( $user );
    });
 }
-
-prepare "Creating test-user-creation helper function",
-   provides => [qw( register_new_user register_new_user_without_events)],
-
-   do => sub {
-      provide register_new_user =>
-         sub { register_new_user( @_[0,1] ) };
-
-      provide register_new_user_without_events =>
-         sub { register_new_user( @_[0,1], with_events => 0 ) };
-
-      Future->done;
-   };

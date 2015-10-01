@@ -2,12 +2,12 @@ use Future::Utils qw( repeat );
 
 multi_test "New federated private chats get full presence information (SYN-115)",
    requires => [qw(
-      register_new_user api_clients make_test_room
+      api_clients make_test_room
       can_create_private_room
    )],
 
    do => sub {
-      my ( $register_new_user, $clients, $make_test_room ) = @_;
+      my ( $clients, $make_test_room ) = @_;
       my ( $http1, $http2 ) = @$clients;
 
       my ( $alice, $bob );
@@ -15,8 +15,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
 
       # Register two users
       Future->needs_all(
-         $register_new_user->( $http1, "90jira-SYN-115_alice" ),
-         $register_new_user->( $http2, "90jira-SYN-115_bob" ),
+         matrix_register_user( $http1, "90jira-SYN-115_alice" ),
+         matrix_register_user( $http2, "90jira-SYN-115_bob" ),
       )->SyTest::pass_on_done( "Registered users" )
       ->then( sub {
          ( $alice, $bob ) = @_;

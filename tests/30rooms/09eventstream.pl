@@ -1,18 +1,19 @@
 multi_test "Check that event streams started after a client joined a room work (SYT-1)",
    requires => [qw(
-      first_api_client register_new_user_without_events make_test_room
+      first_api_client make_test_room
 
       can_create_private_room
    )],
 
    do => sub {
-      my ( $http, $register_new_user_without_events, $make_test_room ) = @_;
+      my ( $http, $make_test_room ) = @_;
 
       my $alice;
       my $room_id;
 
-      $register_new_user_without_events->( $http, "90jira-SYT-1_alice" )
-         ->SyTest::pass_on_done( "Registered user" )
+      matrix_register_user( $http, "90jira-SYT-1_alice",
+         with_events => 0
+      )->SyTest::pass_on_done( "Registered user" )
       ->then( sub {
          ( $alice ) = @_;
 
