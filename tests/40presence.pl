@@ -169,11 +169,6 @@ prepare "Leaving test room",
       Future->needs_all( map {
          my $user = $_;
 
-         do_request_json_for( $user,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/leave",
-
-            content => {},
-         )
+         matrix_leave_room( $user, $room_id )
       } @$local_users, @$remote_users )
    };

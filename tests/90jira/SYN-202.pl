@@ -19,12 +19,8 @@ multi_test "Left room members do not cause problems for presence",
       })->then( sub {
          ( $room_id ) = @_;
 
-         do_request_json_for( $user2,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/leave",
-
-            content => {},
-         )->SyTest::pass_on_done( "Left room" )
+         matrix_leave_room( $user2, $room_id )
+            ->SyTest::pass_on_done( "Left room" )
       })->then( sub {
 
          do_request_json_for( $user1,
