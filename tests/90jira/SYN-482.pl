@@ -17,28 +17,15 @@ multi_test "Limit on room/initialSync is reached over federation (SYN-482)",
                 content => { history_visibility => "invited" },
             )
         })->then( sub {
-            do_request_json_for( $user_a,
-                method  => "POST",
-                uri     => "/api/v1/rooms/$room_id/invite",
-                content => { user_id => $user_b->user_id },
-            )
+            matrix_invite_user_to_room( $user_a, $user_b, $room_id )
         })->then( sub {
             Future->needs_all(map {
-                do_request_json_for( $user_a,
-                    method  => "POST",
-                    uri     => "/api/v1/rooms/$room_id/send/m.room.message",
-                    content => {
-                        msgtype => "m.message",
-                        body => "Message #$_",
-                    },
+                matrix_send_room_text_message( $user_a, $room_id,
+                    body => "Message #$_",
                 )
             } 1..3)
         })->then( sub {
-            do_request_json_for( $user_b,
-                method  => "POST",
-                uri     => "/api/v1/rooms/$room_id/join",
-                content => {},
-            )
+            matrix_join_room( $user_b, $room_id )
         })->then( sub {
             do_request_json_for( $user_b,
                 method => "GET",
