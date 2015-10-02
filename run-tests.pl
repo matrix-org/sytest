@@ -6,7 +6,7 @@ use 5.014; # package NAME { BLOCK }
 
 use lib 'lib';
 
-use Carp;
+use SyTest::CarpByFile;
 
 use Future;
 use IO::Async::Loop;
