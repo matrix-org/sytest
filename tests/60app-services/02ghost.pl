@@ -100,7 +100,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
 multi_test "AS-ghosted users can use rooms themselves",
    requires => [qw( make_as_user await_as_event user
-                    can_receive_room_message_locally )],
+                    can_receive_room_message_locally can_send_message )],
 
    do => sub {
       my ( $make_as_user, $await_as_event, $user ) = @_;
@@ -157,11 +157,8 @@ multi_test "AS-ghosted users can use rooms themselves",
                Future->done;
             }),
 
-            do_request_json_for( $ghost,
-               method => "POST",
-               uri    => "/api/v1/rooms/$room_id/send/m.room.message",
-
-               content => { msgtype => "m.text", body => "Message from AS Ghost" },
+            matrix_send_room_text_message( $ghost, $room_id,
+               body => "Message from AS Ghost",
             )
          )
       })->SyTest::pass_on_done( "Ghost posted message themselves" )

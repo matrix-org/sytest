@@ -1,7 +1,7 @@
 multi_test "Check that event streams started after a client joined a room work (SYT-1)",
    requires => [qw(
       first_api_client
-      can_create_private_room
+      can_create_private_room can_send_message
    )],
 
    do => sub {
@@ -27,18 +27,14 @@ multi_test "Check that event streams started after a client joined a room work (
          flush_events_for( $alice );
       })->then( sub {
          # Alice sends a message
-         do_request_json_for( $alice,
-            method  => "POST",
-            uri     => "/api/v1/rooms/$room_id/send/m.room.message",
-
+         matrix_send_room_message( $alice, $room_id,
             content => {
                msgtype => "m.message",
                body    => "Room message for 90jira-SYT-1"
             },
          )
       })->then( sub {
-         my ( $body ) = @_;
-         my $event_id = $body->{event_id};
+         my ( $event_id ) = @_;
 
          # Wait for the message we just sent.
          await_event_for( $alice, sub {

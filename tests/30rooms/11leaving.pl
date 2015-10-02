@@ -3,22 +3,12 @@ use List::Util qw( first );
 my $room_id;
 
 prepare "Setup a room, and have the first user leave (SPEC-216)",
-    requires => [qw( make_test_room user more_users )],
+    requires => [qw( make_test_room user more_users
+                     can_send_message )],
 
     do => sub {
         my ( $make_test_room, $user_a, $more_users ) = @_;
         my $user_b = $more_users->[1];
-
-        my $send_text_message = sub {
-            my ( $user, $room_id, $message ) = @_;
-            do_request_json_for( $user,
-                method => "POST",
-                uri => "/api/v1/rooms/$room_id/send/m.room.message",
-                content => {
-                    "body" => $message, "msgtype" => "m.room.text",
-                },
-            )
-        };
 
         $make_test_room->( [$user_a, $user_b] )->then( sub {
             ( $room_id ) = @_;
@@ -43,13 +33,19 @@ prepare "Setup a room, and have the first user leave (SPEC-216)",
                content => { body => "S1. B's state before A left" },
             )
         })->then( sub {
-            $send_text_message->($user_b, $room_id, "M1. B's message before A left")
+            matrix_send_room_text_message( $user_b, $room_id,
+               body => "M1. B's message before A left",
+            )
         })->then( sub {
-            $send_text_message->($user_b, $room_id, "M2. B's message before A left")
+            matrix_send_room_text_message( $user_b, $room_id,
+               body => "M2. B's message before A left",
+            )
         })->then( sub {
             matrix_leave_room( $user_a, $room_id )
         })->then( sub {
-            $send_text_message->($user_b, $room_id, "M3. B's message after A left")
+            matrix_send_room_text_message( $user_b, $room_id,
+               body => "M3. B's message after A left",
+            )
         })->then( sub {
             matrix_put_room_state( $user_b, $room_id,
                type    => "m.room.name",
