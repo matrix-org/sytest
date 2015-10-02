@@ -17,6 +17,7 @@ use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any maxstr );
 use Struct::Dumb 0.04;
+use MIME::Base64 qw( decode_base64 );
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
@@ -475,82 +476,71 @@ sub prepare
       for @PROVIDES;
 }
 
-## Some assertion functions useful by test scripts. Put them in their own
-#    package so that croak will find the correct line number
-package assertions {
-   use Carp;
+## Some assertion functions useful by test scripts
 
-   use MIME::Base64 qw( decode_base64 );
+sub require_json_object
+{
+   my ( $obj ) = @_;
+   ref $obj eq "HASH" or croak "Expected a JSON object";
+}
 
-   sub require_json_object
-   {
-      my ( $obj ) = @_;
-      ref $obj eq "HASH" or croak "Expected a JSON object";
-   }
-
-   sub require_json_keys
-   {
-      my ( $obj, @keys ) = @_;
-      require_json_object( $obj );
-      foreach ( @keys ) {
-         defined $obj->{$_} or croak "Expected a '$_' key";
-      }
-   }
-
-   sub require_json_list
-   {
-      my ( $list ) = @_;
-      ref $list eq "ARRAY" or croak "Expected a JSON list";
-   }
-
-   sub require_json_nonempty_list
-   {
-      my ( $list ) = @_;
-      require_json_list( $list );
-      @$list or croak "Expected a non-empty JSON list";
-   }
-
-   sub require_json_number
-   {
-      my ( $num ) = @_;
-      # Our hacked-up JSON decoder represents numbers as JSON::number instances
-      ref $num eq "JSON::number" or croak "Expected a JSON number";
-   }
-
-   sub require_json_string
-   {
-      my ( $str ) = @_;
-      !ref $str or croak "Expected a JSON string";
-   }
-
-   sub require_json_nonempty_string
-   {
-      my ( $str ) = @_;
-      !ref $str and length $str or croak "Expected a non-empty JSON string";
-   }
-
-   sub require_base64_unpadded
-   {
-      my ( $str ) = @_;
-      !ref $str or croak "Expected a plain string";
-
-      $str =~ m([^A-Za-z0-9+/=]) and
-         die "String contains invalid base64 characters";
-      $str =~ m(=) and
-         die "String contains trailing padding";
-   }
-
-   sub require_base64_unpadded_and_decode
-   {
-      my ( $str ) = @_;
-      require_base64_unpadded $str;
-      return decode_base64 $str;
+sub require_json_keys
+{
+   my ( $obj, @keys ) = @_;
+   require_json_object( $obj );
+   foreach ( @keys ) {
+      defined $obj->{$_} or croak "Expected a '$_' key";
    }
 }
 
+sub require_json_list
 {
-   no strict 'refs';
-   *$_ = \&{"assertions::$_"} for grep m/^require_/, keys %{"assertions::"};
+   my ( $list ) = @_;
+   ref $list eq "ARRAY" or croak "Expected a JSON list";
+}
+
+sub require_json_nonempty_list
+{
+   my ( $list ) = @_;
+   require_json_list( $list );
+   @$list or croak "Expected a non-empty JSON list";
+}
+
+sub require_json_number
+{
+   my ( $num ) = @_;
+   # Our hacked-up JSON decoder represents numbers as JSON::number instances
+   ref $num eq "JSON::number" or croak "Expected a JSON number";
+}
+
+sub require_json_string
+{
+   my ( $str ) = @_;
+   !ref $str or croak "Expected a JSON string";
+}
+
+sub require_json_nonempty_string
+{
+   my ( $str ) = @_;
+   !ref $str and length $str or croak "Expected a non-empty JSON string";
+}
+
+sub require_base64_unpadded
+{
+   my ( $str ) = @_;
+   !ref $str or croak "Expected a plain string";
+
+   $str =~ m([^A-Za-z0-9+/=]) and
+      die "String contains invalid base64 characters";
+   $str =~ m(=) and
+      die "String contains trailing padding";
+}
+
+sub require_base64_unpadded_and_decode
+{
+   my ( $str ) = @_;
+   require_base64_unpadded $str;
+   return decode_base64 $str;
 }
 
 my %only_files;

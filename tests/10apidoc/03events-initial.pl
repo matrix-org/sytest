@@ -114,8 +114,7 @@ sub flush_events_for
 sub await_event_for
 {
    my ( $user, $filter ) = @_;
-   # Carp::shortmess is no good here as every test runs in the 'main' package
-   my $caller = sprintf "%s line %d.", (caller)[1,2];
+   my $failmsg = SyTest::CarpByFile::shortmess( "Timed out waiting for an event" );
 
    my $f = repeat {
       # Just replay saved ones the first time around, if there are any
@@ -142,6 +141,6 @@ sub await_event_for
       $f,
 
       delay( 10 )
-         ->then_fail( "Timed out waiting for an event at $caller\n" ),
+         ->then_fail( $failmsg ),
    );
 }
