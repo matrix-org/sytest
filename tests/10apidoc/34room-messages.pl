@@ -20,11 +20,52 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
          require_json_keys( $body, qw( event_id ));
          require_json_nonempty_string( $body->{event_id} );
 
+         push our @EXPORT, qw(
+            matrix_send_room_message matrix_send_room_text_message
+         );
+
          provide can_send_message => 1;
 
          Future->done(1);
       });
    };
+
+sub matrix_send_room_message
+{
+   my ( $user, $room_id, %opts ) = @_;
+
+   defined $opts{content} or
+      croak "Cannot matrix_send_room_message() with no content";
+
+   my $type = $opts{type} // "m.room.message";
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/api/v1/rooms/$room_id/send/$type",
+
+      content => $opts{content},
+   )->then( sub {
+      my ( $body ) = @_;
+
+      Future->done( $body->{event_id} );
+   });
+}
+
+# Further convenience for the majority of cases
+sub matrix_send_room_text_message
+{
+   my ( $user, $room_id, %opts ) = @_;
+
+   defined $opts{body} or
+      croak "Cannot matrix_send_room_text_message() with no body";
+
+   matrix_send_room_message( $user, $room_id,
+      content => {
+         msgtype => $opts{msgtype} // "m.text",
+         body    => $opts{body},
+      },
+   )
+}
 
 test "GET /rooms/:room_id/messages returns a message",
    requires => [qw( user room_id can_send_message )],

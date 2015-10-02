@@ -118,7 +118,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
 test "Events in rooms with AS-hosted room aliases are sent to AS server",
    requires => [qw( user await_as_event
-                    can_join_room_by_alias )],
+                    can_join_room_by_alias can_send_message )],
 
    do => sub {
       my ( $user, $await_as_event ) = @_;
@@ -137,14 +137,8 @@ test "Events in rooms with AS-hosted room aliases are sent to AS server",
             Future->done;
          }),
 
-         do_request_json_for( $user,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/send/m.room.message",
-
-            content => {
-               msgtype => "m.text",
-               body    => "A message for the AS",
-            },
+         matrix_send_room_text_message( $user, $room_id,
+            body => "A message for the AS",
          ),
       );
    };

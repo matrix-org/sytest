@@ -42,10 +42,7 @@ test "Local room members see posted message events",
    do => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
-
+      matrix_send_room_message( $user, $room_id,
          content => { msgtype => $msgtype, body => $msgbody },
       );
    },

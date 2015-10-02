@@ -6,24 +6,19 @@ sub make_room_and_message
    $make_test_room->( $users )->then( sub {
       ( $room_id ) = @_;
 
-      do_request_json_for( $sender,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
-
+      matrix_send_room_message( $sender, $room_id,
          content => { msgtype => "m.message", body => "orangutans are not monkeys" },
       )
    })->then( sub {
-      my ( $body ) = @_;
+      my ( $event_id ) = @_;
 
-      require_json_keys( $body, qw( event_id ));
-      require_json_nonempty_string( $body->{event_id} );
-
-      return Future->done( $room_id, $body->{event_id} );
+      return Future->done( $room_id, $event_id );
    });
 }
 
 test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
-   requires => [qw( make_test_room local_users )],
+   requires => [qw( make_test_room local_users
+                    can_send_message )],
 
    do => sub {
       my ( $make_test_room, $local_users ) = @_;
@@ -46,7 +41,8 @@ test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
    };
 
 test "POST /rooms/:room_id/redact/:event_id as original message sender redacts message",
-   requires => [qw( make_test_room local_users )],
+   requires => [qw( make_test_room local_users
+                    can_send_message )],
 
    do => sub {
       my ( $make_test_room, $local_users ) = @_;
@@ -67,7 +63,8 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
    };
 
 test "POST /rooms/:room_id/redact/:event_id as random user does not redact message",
-   requires => [qw( make_test_room local_users )],
+   requires => [qw( make_test_room local_users
+                    can_send_message )],
 
    do => sub {
       my ( $make_test_room, $local_users ) = @_;

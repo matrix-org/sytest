@@ -96,13 +96,8 @@ multi_test "Test that a message is pushed",
                Future->done( $request );
             }),
 
-            do_request_json_for( $bob,
-               method  => "POST",
-               uri     => "/api/v1/rooms/$room_id/send/m.room.message",
-               content => {
-                  msgtype => "m.text",
-                  body    => "Room message for 50push-01message-pushed"
-               },
+            matrix_send_room_text_message( $bob, $room_id,
+               body => "Room message for 50push-01message-pushed",
             )->SyTest::pass_on_done( "Message sent" ),
          )
       })->then( sub {
