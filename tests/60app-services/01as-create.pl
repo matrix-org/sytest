@@ -1,12 +1,12 @@
 test "AS can create a user",
-   requires => [qw( do_request_json_for as_user )],
+   requires => [qw( as_user )],
 
    provides => [qw( make_as_user )],
 
    do => sub {
-      my ( $do_request_json_for, $as_user ) = @_;
+      my ( $as_user ) = @_;
 
-      $do_request_json_for->( $as_user,
+      do_request_json_for( $as_user,
          method => "POST",
          uri    => "/api/v1/register",
 
@@ -24,7 +24,7 @@ test "AS can create a user",
          provide make_as_user => sub {
             my ( $user_id_fragment ) = @_;
 
-            $do_request_json_for->( $as_user,
+            do_request_json_for( $as_user,
                method => "POST",
                uri    => "/api/v1/register",
 
@@ -47,12 +47,12 @@ test "AS can create a user",
    };
 
 test "AS cannot create users outside its own namespace",
-   requires => [qw( do_request_json_for as_user expect_http_4xx )],
+   requires => [qw( as_user )],
 
    do => sub {
-      my ( $do_request_json_for, $as_user, $expect_http_4xx ) = @_;
+      my ( $as_user ) = @_;
 
-      $do_request_json_for->( $as_user,
+      do_request_json_for( $as_user,
          method => "POST",
          uri    => "/api/v1/register",
 
@@ -60,38 +60,38 @@ test "AS cannot create users outside its own namespace",
             type => "m.login.application_service",
             user => "a-different-user",
          }
-      )->$expect_http_4xx;
+      )->main::expect_http_4xx;
    };
 
 test "Regular users cannot register within the AS namespace",
-   requires => [qw( register_new_user first_api_client expect_http_4xx )],
+   requires => [qw( first_api_client )],
 
    do => sub {
-      my ( $register_new_user, $http, $expect_http_4xx ) = @_;
+      my ( $http ) = @_;
 
-      $register_new_user->( $http, "astest-01create-2" )
-         ->$expect_http_4xx;
+      matrix_register_user( $http, "astest-01create-2" )
+         ->main::expect_http_4xx;
    };
 
 my $room_id;
 prepare "Creating a new test room",
-   requires => [qw( make_test_room user )],
+   requires => [qw( user )],
 
    do => sub {
-      my ( $make_test_room, $user ) = @_;
+      my ( $user ) = @_;
 
-      $make_test_room->( $user )
+      matrix_create_room( $user )
          ->on_done( sub {
             ( $room_id ) = @_;
          });
    };
 
 test "AS can make room aliases",
-   requires => [qw( do_request_json_for await_as_event as_user first_home_server
-                    can_create_room can_create_room_alias )],
+   requires => [qw( await_as_event as_user first_home_server
+                    can_create_room_alias )],
 
    do => sub {
-      my ( $do_request_json_for, $await_as_event, $as_user, $first_home_server ) = @_;
+      my ( $await_as_event, $as_user, $first_home_server ) = @_;
       my $room_alias = "#astest-01create-1:$first_home_server";
 
       Future->needs_all(
@@ -116,7 +116,7 @@ test "AS can make room aliases",
             Future->done;
          }),
 
-         $do_request_json_for->( $as_user,
+         do_request_json_for( $as_user,
             method => "PUT",
             uri    => "/api/v1/directory/room/$room_alias",
 
@@ -127,7 +127,7 @@ test "AS can make room aliases",
       )->then( sub {
          # Nothing interesting in the body
 
-         $do_request_json_for->( $as_user,
+         do_request_json_for( $as_user,
             method => "GET",
             uri    => "/api/v1/directory/room/$room_alias",
          )
@@ -146,19 +146,19 @@ test "AS can make room aliases",
    };
 
 test "Regular users cannot create room aliases within the AS namespace",
-   requires => [qw( do_request_json first_home_server expect_http_4xx
-                    can_create_room can_create_room_alias )],
+   requires => [qw( user first_home_server
+                    can_create_room_alias )],
 
    do => sub {
-      my ( $do_request_json, $first_home_server, $expect_http_4xx ) = @_;
+      my ( $user, $first_home_server ) = @_;
       my $room_alias = "#astest-01create-2:$first_home_server";
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/directory/room/$room_alias",
 
          content => {
             room_id => $room_id,
          }
-      )->$expect_http_4xx;
+      )->main::expect_http_4xx;
    };

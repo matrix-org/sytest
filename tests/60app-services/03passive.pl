@@ -1,24 +1,23 @@
 my $room_id;
 
 prepare "Creating a new test room",
-   requires => [qw( make_test_room local_users )],
+   requires => [qw( user )],
 
    do => sub {
-      my ( $make_test_room, $local_users ) = @_;
-      my $creator   = $local_users->[0];
+      my ( $user ) = @_;
 
-      $make_test_room->( $creator )
+      matrix_create_room( $user )
          ->on_done( sub {
             ( $room_id ) = @_;
          });
    };
 
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [qw( do_request_json await_http_request await_as_event make_as_user first_home_server
+   requires => [qw( user await_http_request await_as_event make_as_user first_home_server
                     can_invite_room )],
 
    do => sub {
-      my ( $do_request_json, $await_http_request, $await_as_event, $make_as_user, $home_server ) = @_;
+      my ( $user, $await_http_request, $await_as_event, $make_as_user, $home_server ) = @_;
 
       my $localpart = "astest-03passive-1";
       my $user_id = "\@$localpart:$home_server";
@@ -34,16 +33,10 @@ multi_test "Inviting an AS-hosted user asks the AS server",
             });
          }),
 
-         $do_request_json->(
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/invite",
-
-            content => { user_id => $user_id },
-         ),
+         matrix_invite_user_to_room( $user, $user_id, $room_id )
+            ->SyTest::pass_on_done( "Sent invite" )
       )->then( sub {
-         my ( $appserv_request, $invite_response ) = @_;
-
-         pass "Sent invite";
+         my ( $appserv_request ) = @_;
 
          $await_as_event->( "m.room.member" )->then( sub {
             my ( $event ) = @_;
@@ -63,11 +56,11 @@ multi_test "Inviting an AS-hosted user asks the AS server",
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
-   requires => [qw( do_request_json_for await_http_request await_as_event as_user local_users first_home_server
+   requires => [qw( await_http_request await_as_event as_user local_users first_home_server
                     can_join_room_by_alias )],
 
    do => sub {
-      my ( $do_request_json_for, $await_http_request, $await_as_event, $as_user, $users, $first_home_server ) = @_;
+      my ( $await_http_request, $await_as_event, $as_user, $users, $first_home_server ) = @_;
       my $user = $users->[1];
       my $room_alias = "#astest-03passive-1:$first_home_server";
 
@@ -99,23 +92,22 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
                   Future->done;
                }),
 
-               $do_request_json_for->( $as_user,
+               do_request_json_for( $as_user,
                   method => "PUT",
                   uri    => "/api/v1/directory/room/$room_alias",
 
                   content => {
                      room_id => $room_id,
                   },
-               )->then( sub {
-                  pass "Created room alias mapping";
-
+               )->SyTest::pass_on_done( "Created room alias mapping" )
+               ->then( sub {
                   $request->respond_json( {} );
                   Future->done;
                }),
             );
          }),
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "POST",
             uri    => "/api/v1/join/$room_alias",
 
@@ -125,11 +117,11 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
    };
 
 test "Events in rooms with AS-hosted room aliases are sent to AS server",
-   requires => [qw( do_request_json await_as_event
-                    can_join_room_by_alias )],
+   requires => [qw( user await_as_event
+                    can_join_room_by_alias can_send_message )],
 
    do => sub {
-      my ( $do_request_json, $await_as_event ) = @_;
+      my ( $user, $await_as_event ) = @_;
 
       Future->needs_all(
          $await_as_event->( "m.room.message" )->then( sub {
@@ -145,14 +137,8 @@ test "Events in rooms with AS-hosted room aliases are sent to AS server",
             Future->done;
          }),
 
-         $do_request_json->(
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/send/m.room.message",
-
-            content => {
-               msgtype => "m.text",
-               body    => "A message for the AS",
-            },
+         matrix_send_room_text_message( $user, $room_id,
+            body => "A message for the AS",
          ),
       );
    };

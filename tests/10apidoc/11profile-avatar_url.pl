@@ -1,14 +1,14 @@
 my $avatar_url = "http://somewhere/my-pic.jpg";
 
 test "PUT /profile/:user_id/avatar_url sets my avatar",
-   requires => [qw( do_request_json )],
+   requires => [qw( user )],
 
    provides => [qw( can_set_avatar_url )],
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/profile/:user_id/avatar_url",
       )->then( sub {
@@ -26,9 +26,9 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
    },
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/profile/:user_id/avatar_url",
 

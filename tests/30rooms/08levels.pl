@@ -3,18 +3,19 @@ use List::Util qw( first );
 my $room_id;
 
 prepare "Creating a new test room",
-   requires => [qw( make_test_room change_room_powerlevels local_users )],
+   requires => [qw( make_test_room local_users
+                    can_change_power_levels )],
 
    do => sub {
-      my ( $make_test_room, $change_room_powerlevels, $local_users ) = @_;
+      my ( $make_test_room, $local_users ) = @_;
       my $creator   = $local_users->[0];
       my $test_user = $local_users->[1];
 
-      $make_test_room->( $creator, $test_user )
+      $make_test_room->( [ $creator, $test_user ] )
          ->on_done( sub {
             ( $room_id ) = @_;
          })->then( sub {
-            $change_room_powerlevels->( $creator, $room_id, sub {
+            matrix_change_room_powerlevels( $creator, $room_id, sub {
                my ( $levels ) = @_;
 
                # Allow users at 80 or above to edit any of the room state
@@ -36,11 +37,11 @@ sub test_powerlevel
    }
 
    multi_test $name,
-      requires => [qw( do_request_json_for change_room_powerlevels expect_http_403 user local_users ),
+      requires => [qw( user local_users can_change_power_levels ),
                    @requires ],
 
       do => sub {
-         my ( $do_request_json_for, $change_room_powerlevels, $expect_http_403, $user, $local_users,
+         my ( $user, $local_users, undef,
               @dependencies ) = @_;
          my $test_user = $local_users->[1];
 
@@ -49,17 +50,17 @@ sub test_powerlevel
          }
 
          # Fails at powerlevel 0
-         $change_room_powerlevels->( $user, $room_id, sub {
+         matrix_change_room_powerlevels( $user, $room_id, sub {
             my ( $levels ) = @_;
             $levels->{users}{ $test_user->user_id } = 0;
          })->then( sub {
             $do->( @dependencies )
-               ->$expect_http_403
+               ->main::expect_http_403
          })->then( sub {
             pass( "Fails at powerlevel 0" );
 
             # Succeeds at powerlevel 80
-            $change_room_powerlevels->( $user, $room_id, sub {
+            matrix_change_room_powerlevels( $user, $room_id, sub {
                my ( $levels ) = @_;
                $levels->{users}{ $test_user->user_id } = 80;
             })
@@ -72,13 +73,13 @@ sub test_powerlevel
 }
 
 test_powerlevel "'ban' event respects room powerlevel",
-   requires => [qw( do_request_json_for test_user
+   requires => [qw( test_user
                     can_ban_room )],
 
    do => sub {
-      my ( $do_request_json_for, $test_user ) = @_;
+      my ( $test_user ) = @_;
 
-      $do_request_json_for->( $test_user,
+      do_request_json_for( $test_user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/ban",
 
@@ -88,65 +89,57 @@ test_powerlevel "'ban' event respects room powerlevel",
 
 # Currently there's no way to limit permission on invites
 ## test_powerlevel "'invite' event respects room powerlevel",
-##    requires => [qw( do_request_json_for test_user
+##    requires => [qw( test_user
 ##                     can_invite_room )],
 ## 
 ##    do => sub {
-##       my ( $do_request_json_for, $test_user ) = @_;
+##       my ( $test_user ) = @_;
 ## 
-##       $do_request_json_for->( $test_user,
-##          method => "POST",
-##          uri    => "/api/v1/rooms/$room_id/invite",
-## 
-##          content => { user_id => '@random-invitee:localhost:8001' },
-##       );
+##       matrix_invite_user_to_room( $test_user, '@random-invitee:localhost:8001', $room_id );
 ##    };
 
 test_powerlevel "setting 'm.room.name' respects room powerlevel",
-   requires => [qw( do_request_json_for test_user
+   requires => [qw( test_user
                     can_set_room_name )],
 
    do => sub {
-      my ( $do_request_json_for, $test_user ) = @_;
+      my ( $test_user ) = @_;
 
-      $do_request_json_for->( $test_user,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.name",
-
+      matrix_put_room_state( $test_user, $room_id,
+         type    => "m.room.name",
          content => { name => "A new room name" },
       );
    };
 
 test_powerlevel "setting 'm.room.power_levels' respects room powerlevel",
-   requires => [qw( change_room_powerlevels test_user
-                    can_get_power_levels )],
+   requires => [qw( test_user
+                    can_change_power_levels )],
 
    do => sub {
-      my ( $change_room_powerlevels, $test_user ) = @_;
+      my ( $test_user ) = @_;
 
-      $change_room_powerlevels->( $test_user, $room_id, sub {
+      matrix_change_room_powerlevels( $test_user, $room_id, sub {
          my ( $levels ) = @_;
          $levels->{users}{'@some-random-user:here'} = 50;
       });
    };
 
 test "Unprivileged users can set m.room.topic if it only needs level 0",
-   requires => [qw( do_request_json_for change_room_powerlevels local_users )],
+   requires => [qw( local_users
+                    can_change_power_levels )],
 
    do => sub {
-      my ( $do_request_json_for, $change_room_powerlevels, $local_users ) = @_;
+      my ( $local_users ) = @_;
       my $creator = $local_users->[0];
       my $test_user = $local_users->[1];
 
-      $change_room_powerlevels->( $creator, $room_id, sub {
+      matrix_change_room_powerlevels( $creator, $room_id, sub {
          my ( $levels ) = @_;
          delete $levels->{users}{ $test_user->user_id };
          $levels->{events}{"m.room.topic"} = 0;
       })->then( sub {
-         $do_request_json_for->( $test_user,
-            method => "PUT",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
-
+         matrix_put_room_state( $test_user, $room_id,
+            type    => "m.room.topic",
             content => { topic => "Here I can set the topic at powerlevel 0" },
          );
       });
@@ -154,25 +147,23 @@ test "Unprivileged users can set m.room.topic if it only needs level 0",
 
 foreach my $levelname (qw( ban kick redact )) {
    multi_test "Users cannot set $levelname powerlevel higher than their own",
-      requires => [qw( change_room_powerlevels expect_http_403 user )],
+      requires => [qw( user
+                       can_change_power_levels )],
 
       do => sub {
-         my ( $change_room_powerlevels, $expect_http_403, $user ) = @_;
+         my ( $user ) = @_;
 
-         $change_room_powerlevels->( $user, $room_id, sub {
+         matrix_change_room_powerlevels( $user, $room_id, sub {
             my ( $levels ) = @_;
 
             $levels->{$levelname} = 25;
-         })->then( sub {
-            pass "Succeeds at setting 25";
-
-            $change_room_powerlevels->( $user, $room_id, sub {
+         })->SyTest::pass_on_done( "Succeeds at setting 25" )
+         ->then( sub {
+            matrix_change_room_powerlevels( $user, $room_id, sub {
                my ( $levels ) = @_;
 
                $levels->{$levelname} = 10000000;
-            })->$expect_http_403
-         })->on_done( sub {
-            pass "Fails at setting 75";
-         });
+            })->main::expect_http_403
+         })->SyTest::pass_on_done( "Fails at setting 75" );
       };
 }

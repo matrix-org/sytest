@@ -1,28 +1,21 @@
 use List::Util qw( first );
 
 test "A room can be created set to invite-only",
-   requires => [qw( do_request_json can_create_room )],
+   requires => [qw( user )],
 
    provides => [qw( inviteonly_room_id )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
-         method => "POST",
-         uri    => "/api/v1/createRoom",
-
-         content => {
-            # visibility: "private" actually means join_rule: "invite"
-            # See SPEC-74
-            visibility => "private",
-         },
+      matrix_create_room( $user,
+         # visibility: "private" actually means join_rule: "invite"
+         # See SPEC-74
+         visibility => "private",
       )->then( sub {
-         my ( $body ) = @_;
+         my ( $room_id ) = @_;
 
-         my $room_id = $body->{room_id};
-
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/initialSync",
          )->then( sub {
@@ -45,64 +38,36 @@ test "A room can be created set to invite-only",
    };
 
 test "Uninvited users cannot join the room",
-   requires => [qw( do_request_json_for more_users inviteonly_room_id
-                    can_join_room_by_id )],
+   requires => [qw( more_users inviteonly_room_id )],
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $uninvited = $more_users->[0];
 
-      $do_request_json_for->( $uninvited,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/join",
-
-         content => {},
-      )->then(
-         sub { # done
-            Future->fail( "Expected not to succeed to join the room" );
-         },
-         sub { # fail
-            my ( $failure, $name, @args ) = @_;
-
-            defined $name and $name eq "http" or
-               die "Expected failure kind to be 'http'";
-
-            my ( $resp, $req ) = @args;
-            $resp->code == 403 or
-               die "Expected HTTP response code to be 403";
-
-            # TODO: Check the response content a bit?
-
-            Future->done(1);
-         },
-      );
+      matrix_join_room( $uninvited, $room_id )
+         ->main::expect_http_403;
    };
 
 test "Can invite users to invite-only rooms",
-   requires => [qw( do_request_json more_users inviteonly_room_id
+   requires => [qw( user more_users inviteonly_room_id
                     can_invite_room )],
 
    do => sub {
-      my ( $do_request_json, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      $do_request_json->(
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/invite",
-
-         content => { user_id => $invitee->user_id },
-      );
+      matrix_invite_user_to_room( $user, $invitee, $room_id )
    };
 
 test "Invited user receives invite",
-   requires => [qw( await_event_for more_users inviteonly_room_id
+   requires => [qw( more_users inviteonly_room_id
                     can_invite_room )],
 
    await => sub {
-      my ( $await_event_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      $await_event_for->( $invitee, sub {
+      await_event_for( $invitee, sub {
          my ( $event ) = @_;
 
          require_json_keys( $event, qw( type ));
@@ -122,22 +87,18 @@ test "Invited user receives invite",
    };
 
 test "Invited user can join the room",
-   requires => [qw( do_request_json_for more_users inviteonly_room_id
-                    can_invite_room can_join_room_by_id )],
+   requires => [qw( more_users inviteonly_room_id
+                    can_invite_room )],
 
    do => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
       my $invitee = $more_users->[1];
 
-      $do_request_json_for->( $invitee,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/join",
-
-         content => {},
-      )->then( sub {
-         $do_request_json_for->( $invitee,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$invitee->user_id}",
+      matrix_join_room( $invitee, $room_id )
+      ->then( sub {
+         matrix_get_room_state( $invitee, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
          )
       })->then( sub {
          my ( $member_state ) = @_;
@@ -150,58 +111,38 @@ test "Invited user can join the room",
    };
 
 test "Banned user is kicked and may not rejoin",
-   requires => [qw( do_request_json_for user more_users room_id
+   requires => [qw( user more_users room_id
                     can_ban_room )],
 
    do => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
       my $banned_user = $more_users->[0];
 
       # Pre-test assertion that the user we want to ban is present
-      $do_request_json_for->( $banned_user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
+      matrix_get_room_state( $banned_user, $room_id,
+         type      => "m.room.member",
+         state_key => $banned_user->user_id,
       )->then( sub {
          my ( $body ) = @_;
          $body->{membership} eq "join" or
             die "Pretest assertion failed: expected user to be in 'join' state";
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/ban",
 
             content => { user_id => $banned_user->user_id, reason => "testing" },
          );
       })->then( sub {
-         $do_request_json_for->( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.member/${\$banned_user->user_id}",
-         );
+         matrix_get_room_state( $user, $room_id,
+            type      => "m.room.member",
+            state_key => $banned_user->user_id,
+         )
       })->then( sub {
          my ( $body ) = @_;
          $body->{membership} eq "ban" or
             die "Expected banned user membership to be 'ban'";
 
-         $do_request_json_for->( $banned_user,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/join",
-
-            content => {},
-         )->then(
-            sub { # done
-               die "Expected to receive an error joining the room when banned";
-            },
-            sub { # fail
-               my ( $failure, $name ) = @_;
-               defined $name and $name eq "http" or
-                  die "Expected an HTTP failure";
-
-               my ( undef, undef, $response, $request ) = @_;
-               $response->code == 403 or
-                  die "Expected an HTTP 403 error";
-
-               Future->done(1);
-            }
-         );
-      });
+         matrix_join_room( $banned_user, $room_id )
+      })->main::expect_http_403;
    };

@@ -1,10 +1,10 @@
 multi_test "Can claim one time key using POST",
-   requires => [qw( e2e_user_alice do_request_json_for e2e_can_upload_keys )],
+   requires => [qw( e2e_user_alice e2e_can_upload_keys )],
 
    check => sub {
-      my ( $e2e_user_alice, $do_request_json_for ) = @_;
+      my ( $e2e_user_alice ) = @_;
 
-      $do_request_json_for->( $e2e_user_alice,
+      do_request_json_for( $e2e_user_alice,
          method  => "POST",
          uri     => "/v2_alpha/keys/upload/alices_first_device",
          content => {
@@ -12,10 +12,9 @@ multi_test "Can claim one time key using POST",
                "test_algorithm:test_id", "test+base64+key"
             }
          }
-      )->then( sub {
-         pass "Uploaded one time keys";
-
-         $do_request_json_for->( $e2e_user_alice,
+      )->SyTest::pass_on_done( "Uploaded one-time keys" )
+      ->then( sub {
+         do_request_json_for( $e2e_user_alice,
             method => "GET",
             uri    => "/v2_alpha/keys/upload/alices_first_device",
          )
@@ -31,7 +30,7 @@ multi_test "Can claim one time key using POST",
 
          pass "Counted one time keys";
 
-         $do_request_json_for->( $e2e_user_alice,
+         do_request_json_for( $e2e_user_alice,
             method  => "POST",
             uri     => "/v2_alpha/keys/claim",
             content => {
@@ -62,7 +61,7 @@ multi_test "Can claim one time key using POST",
 
          pass "Took one time key";
 
-         $do_request_json_for->( $e2e_user_alice,
+         do_request_json_for( $e2e_user_alice,
             method => "GET",
             uri    => "/v2_alpha/keys/upload/alices_first_device",
          )
@@ -72,7 +71,7 @@ multi_test "Can claim one time key using POST",
 
          require_json_keys( $content, "one_time_key_counts" );
 
-         exists $content->{one_time_key_counts}->{test_algorithm} and
+         exists $content->{one_time_key_counts}{test_algorithm} and
             die "Expected that the key would be removed from the counts";
 
          Future->done(1)
