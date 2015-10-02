@@ -142,10 +142,8 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     check => sub {
         my ( $do_request_json ) = @_;
 
-        $do_request_json->(
-            method => "GET",
-            uri => "/api/v1/rooms/$room_id/state",
-        )->then( sub {
+        matrix_get_room_state( $user, $room_id )
+        ->then( sub {
             my ( $state ) = @_;
 
             my $madeup_test_state =
@@ -206,15 +204,14 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
         })
     };
 
-test "Can get rooms/{roomId}/state/m.room.name for a departed room (SPEC-216)",
-    requires => [qw( do_request_json )],
+test "Can get 'm.room.name' state for a departed room (SPEC-216)",
+    requires => [qw( user )],
 
     check => sub {
         my ( $do_request_json ) = @_;
 
-        $do_request_json->(
-            method => "GET",
-            uri => "/api/v1/rooms/$room_id/state/m.room.name",
+        matrix_get_room_state( $user, $room_id,
+           type => "m.room.name",
         )->then( sub {
             my ( $body ) = @_;
 
