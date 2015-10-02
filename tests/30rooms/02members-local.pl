@@ -1,37 +1,30 @@
 use List::Util qw( first );
 
 prepare "More local room members",
-   requires => [qw( do_request_json_for flush_events_for more_users room_id
-                    can_join_room_by_id )],
+   requires => [qw( more_users room_id )],
 
    do => sub {
-      my ( $do_request_json_for, $flush_events_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $flush_events_for->( $user )->then( sub {
-            $do_request_json_for->( $user,
-               method => "POST",
-               uri    => "/api/v1/rooms/$room_id/join",
-
-               content => {},
-            );
+         flush_events_for( $user )->then( sub {
+            matrix_join_room( $user, $room_id )
          });
       } @$more_users );
    };
 
 test "New room members see their own join event",
-   requires => [qw( await_event_for more_users room_id
-                    can_join_room_by_id )],
+   requires => [qw( more_users room_id )],
 
    await => sub {
-      my ( $await_event_for, $more_users, $room_id ) = @_;
+      my ( $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
 
@@ -50,16 +43,16 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing users' presence in room initialSync",
-   requires => [qw( do_request_json_for user more_users room_id
-                    can_join_room_by_id can_room_initial_sync )],
+   requires => [qw( user more_users room_id
+                    can_room_initial_sync )],
 
    check => sub {
-      my ( $do_request_json_for, $first_user, $more_users, $room_id ) = @_;
+      my ( $first_user, $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/initialSync",
          )->then( sub {
@@ -80,16 +73,15 @@ test "New room members see existing users' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( await_event_for user more_users room_id
-                    can_join_room_by_id )],
+   requires => [qw( user more_users room_id )],
 
    await => sub {
-      my ( $await_event_for, $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $other_user = $_;
 
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
             require_json_keys( $event, qw( type room_id user_id ));
@@ -107,16 +99,15 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new members' presence",
-   requires => [qw( await_event_for user more_users
-                    can_join_room_by_id )],
+   requires => [qw( user more_users )],
 
    await => sub {
-      my ( $await_event_for, $user, $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
 
       Future->needs_all( map {
          my $other_user = $_;
 
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
             require_json_keys( $event, qw( type content ));
@@ -129,17 +120,17 @@ test "Existing members see new members' presence",
    };
 
 test "All room members see all room members' presence in global initialSync",
-   requires => [qw( do_request_json_for user more_users
-                    can_create_room can_join_room_by_id can_initial_sync )],
+   requires => [qw( user more_users
+                    can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json_for, $user, $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
       my @all_users = ( $user, @$more_users );
 
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/initialSync",
          )->then( sub {
@@ -171,16 +162,16 @@ test "All room members see all room members' presence in global initialSync",
    };
 
 test "New room members see first user's profile information in global initialSync",
-   requires => [qw( do_request_json_for user more_users
-                    can_create_room can_join_room_by_id can_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [qw( user more_users
+                    can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $do_request_json_for, $first_user, $more_users ) = @_;
+      my ( $first_user, $more_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/initialSync",
          )->then( sub {
@@ -204,16 +195,16 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [qw( do_request_json_for user more_users room_id
-                    can_create_room can_join_room_by_id can_room_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [qw( user more_users room_id
+                    can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $do_request_json_for, $first_user, $more_users, $room_id ) = @_;
+      my ( $first_user, $more_users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/initialSync",
          )->then( sub {

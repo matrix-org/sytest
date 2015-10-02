@@ -1,12 +1,12 @@
 test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
-   requires => [qw( do_request_json user room_id )],
+   requires => [qw( user room_id )],
 
    provides => [qw( can_get_power_levels )],
 
    check => sub {
-      my ( $do_request_json, $user, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
       )->then( sub {
@@ -35,32 +35,27 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
    };
 
 test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
-   requires => [qw( do_request_json user more_users room_id
+   requires => [qw( user more_users room_id
                     can_get_power_levels )],
 
    provides => [qw( can_set_power_levels )],
 
    do => sub {
-      my ( $do_request_json, $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users, $room_id ) = @_;
 
-      $do_request_json->(
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-      )->then( sub {
+      matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
+      ->then( sub {
          my ( $levels ) = @_;
 
          $levels->{users}{'@random-other-user:their.home'} = 20;
 
-         $do_request_json->(
+         do_request_json_for( $user,
             method => "PUT",
             uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
             content => $levels,
          )
       })->then( sub {
-         $do_request_json->(
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-         )
+         matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
       })->then( sub {
          my ( $levels ) = @_;
 
@@ -73,32 +68,29 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
    };
 
 prepare "Creating power_level change helper",
-   requires => [qw( do_request_json_for
-                    can_get_power_levels can_set_power_levels )],
+   requires => [qw( can_get_power_levels can_set_power_levels )],
 
-   provides => [qw( change_room_powerlevels )],
+   provides => [qw( can_change_power_levels )],
 
    do => sub {
-      my ( $do_request_json_for ) = @_;
+      push our @EXPORT, qw( matrix_change_room_powerlevels );
 
-      provide change_room_powerlevels => sub {
-         my ( $user, $room_id, $func ) = @_;
-
-         $do_request_json_for->( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-         )->then( sub {
-            my ( $levels ) = @_;
-            $func->( $levels );
-
-            $do_request_json_for->( $user,
-               method => "PUT",
-               uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-
-               content => $levels,
-            );
-         });
-      };
+      provide can_change_power_levels => 1;
 
       Future->done(1);
    };
+
+sub matrix_change_room_powerlevels
+{
+   my ( $user, $room_id, $func ) = @_;
+
+   matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
+   ->then( sub {
+      my ( $levels ) = @_;
+      $func->( $levels );
+
+      matrix_put_room_state( $user, $room_id, type => "m.room.power_levels",
+         content => $levels,
+      );
+   });
+}

@@ -1,19 +1,19 @@
 prepare "Flushing event stream",
-   requires => [qw( flush_events_for user )],
+   requires => [qw( user )],
    do => sub {
-      my ( $flush_events_for, $user ) = @_;
-      $flush_events_for->( $user );
+      my ( $user ) = @_;
+      flush_events_for( $user );
    };
 
 my $displayname = "New displayname for 20profile-events.pl";
 
 test "Displayname change reports an event to myself",
-   requires => [qw( do_request_json await_event_for user can_set_displayname )],
+   requires => [qw( user can_set_displayname )],
 
    do => sub {
-      my ( $do_request_json, undef, $user ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/profile/:user_id/displayname",
 
@@ -22,9 +22,9 @@ test "Displayname change reports an event to myself",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $user ) = @_;
+      my ( $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
          my $content = $event->{content};
@@ -40,12 +40,12 @@ test "Displayname change reports an event to myself",
 my $avatar_url = "http://a.new.url/for/20profile-events.pl";
 
 test "Avatar URL change reports an event to myself",
-   requires => [qw( do_request_json await_event_for user can_set_avatar_url )],
+   requires => [qw( user can_set_avatar_url )],
 
    do => sub {
-      my ( $do_request_json, undef, $user ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/profile/:user_id/avatar_url",
 
@@ -54,9 +54,9 @@ test "Avatar URL change reports an event to myself",
    },
 
    await => sub {
-      my ( undef, $await_event_for, $user ) = @_;
+      my ( $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
          my $content = $event->{content};
@@ -70,13 +70,13 @@ test "Avatar URL change reports an event to myself",
    };
 
 multi_test "Global /initialSync reports my own profile",
-   requires => [qw( do_request_json user
+   requires => [qw( user
                     can_set_displayname can_set_avatar_url can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json, $user ) = @_;
+      my ( $user) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
       )->then( sub {

@@ -1,14 +1,14 @@
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [qw( make_test_room make_as_user do_request_json_for await_event_for await_as_event user as_user
-                    can_join_room_by_id can_receive_room_message_locally )],
+   requires => [qw( make_as_user await_as_event user as_user
+                    can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $do_request_json_for, $await_event_for, $await_as_event, $user, $as_user ) = @_;
+      my ( $make_as_user, $await_as_event, $user, $as_user ) = @_;
 
       my $room_id;
       my $ghost;
 
-      $make_test_room->( [ $user ] )
+      matrix_create_room( $user )
          ->SyTest::pass_on_done( "Created test room" )
       ->then( sub {
          ( $room_id ) = @_;
@@ -39,7 +39,7 @@ multi_test "AS-ghosted users can use rooms via AS",
                Future->done;
             }),
 
-            $do_request_json_for->( $as_user,
+            do_request_json_for( $as_user,
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/join",
                params => {
@@ -67,7 +67,7 @@ multi_test "AS-ghosted users can use rooms via AS",
                Future->done;
             }),
 
-            $do_request_json_for->( $as_user,
+            do_request_json_for( $as_user,
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/send/m.room.message",
                params => {
@@ -79,7 +79,7 @@ multi_test "AS-ghosted users can use rooms via AS",
          )
       })->SyTest::pass_on_done( "User posted message via AS" )
       ->then( sub {
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{room_id} eq $room_id;
@@ -99,16 +99,16 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [qw( make_test_room make_as_user do_request_json_for await_event_for await_as_event user
-                    can_join_room_by_id can_receive_room_message_locally )],
+   requires => [qw( make_as_user await_as_event user
+                    can_receive_room_message_locally can_send_message )],
 
    do => sub {
-      my ( $make_test_room, $make_as_user, $do_request_json_for, $await_event_for, $await_as_event, $user ) = @_;
+      my ( $make_as_user, $await_as_event, $user ) = @_;
 
       my $room_id;
       my $ghost;
 
-      $make_test_room->( [ $user ] )
+      matrix_create_room( $user )
          ->SyTest::pass_on_done( "Created test room" )
       ->then( sub {
          ( $room_id ) = @_;
@@ -137,12 +137,7 @@ multi_test "AS-ghosted users can use rooms themselves",
                Future->done;
             }),
 
-            $do_request_json_for->( $ghost,
-               method => "POST",
-               uri    => "/api/v1/rooms/$room_id/join",
-
-               content => {},
-            )
+            matrix_join_room( $ghost, $room_id )
          )
       })->SyTest::pass_on_done( "Ghost joined room themselves" )
       ->then( sub {
@@ -162,16 +157,13 @@ multi_test "AS-ghosted users can use rooms themselves",
                Future->done;
             }),
 
-            $do_request_json_for->( $ghost,
-               method => "POST",
-               uri    => "/api/v1/rooms/$room_id/send/m.room.message",
-
-               content => { msgtype => "m.text", body => "Message from AS Ghost" },
+            matrix_send_room_text_message( $ghost, $room_id,
+               body => "Message from AS Ghost",
             )
          )
       })->SyTest::pass_on_done( "Ghost posted message themselves" )
       ->then( sub {
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{room_id} eq $room_id;

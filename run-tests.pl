@@ -16,7 +16,7 @@ use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any maxstr );
-use Struct::Dumb;
+use Struct::Dumb 0.04;
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
@@ -343,6 +343,8 @@ sub test
 
    no warnings 'exiting';
    last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
+
+   die "This CRITICAL test has failed - bailing out\n" if $t->failed and $params{critical};
 }
 
 {

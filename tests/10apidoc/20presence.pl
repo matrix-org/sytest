@@ -1,10 +1,10 @@
 test "GET /presence/:user_id/status fetches initial status",
-   requires => [qw( do_request_json )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/presence/:user_id/status",
       )->then( sub {
@@ -22,14 +22,14 @@ test "GET /presence/:user_id/status fetches initial status",
 my $status_msg = "Testing something";
 
 test "PUT /presence/:user_id/status updates my presence",
-   requires => [qw( do_request_json )],
+   requires => [qw( user )],
 
    provides => [qw( can_set_presence )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
 
@@ -41,9 +41,9 @@ test "PUT /presence/:user_id/status updates my presence",
    },
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/presence/:user_id/status",
       )->then( sub {

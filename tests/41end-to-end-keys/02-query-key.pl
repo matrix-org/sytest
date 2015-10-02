@@ -1,10 +1,10 @@
 test "Can query device keys using POST",
-   requires => [qw( e2e_user_alice do_request_json_for e2e_can_upload_keys )],
+   requires => [qw( e2e_user_alice e2e_can_upload_keys )],
 
    check => sub {
-      my ( $e2e_user_alice, $do_request_json_for ) = @_;
+      my ( $e2e_user_alice ) = @_;
 
-      $do_request_json_for->( $e2e_user_alice,
+      do_request_json_for( $e2e_user_alice,
          method  => "POST",
          uri     => "/v2_alpha/keys/query/",
          content => {
@@ -28,12 +28,12 @@ test "Can query device keys using POST",
    };
 
 test "Can query specific device keys using POST",
-   requires => [qw( e2e_user_alice do_request_json_for e2e_can_upload_keys )],
+   requires => [qw( e2e_user_alice e2e_can_upload_keys )],
 
    check => sub {
-      my ( $e2e_user_alice, $do_request_json_for ) = @_;
+      my ( $e2e_user_alice ) = @_;
 
-      $do_request_json_for->( $e2e_user_alice,
+      do_request_json_for( $e2e_user_alice,
          method  => "POST",
          uri     => "/v2_alpha/keys/query/",
          content => {
@@ -57,12 +57,12 @@ test "Can query specific device keys using POST",
    };
 
 test "Can query device keys using GET",
-   requires => [qw( e2e_user_alice do_request_json_for e2e_can_upload_keys )],
+   requires => [qw( e2e_user_alice e2e_can_upload_keys )],
 
    check => sub {
-      my ( $e2e_user_alice, $do_request_json_for ) = @_;
+      my ( $e2e_user_alice ) = @_;
 
-      $do_request_json_for->( $e2e_user_alice,
+      do_request_json_for( $e2e_user_alice,
          method => "GET",
          uri    => "/v2_alpha/keys/query/${\$e2e_user_alice->user_id}"
       )->then( sub {

@@ -1,19 +1,14 @@
 prepare "Leaving old test room",
-   requires => [qw( do_request_json_for local_users room_id
-                    can_leave_room )],
+   requires => [qw( local_users room_id )],
 
    do => sub {
-      my ( $do_request_json_for, $users, $room_id ) = @_;
+      my ( $users, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/leave",
-
-            content => {},
-         )->else_with_f( sub {
+         matrix_leave_room( $user, $room_id )
+         ->else_with_f( sub {
             my ( $f, $failure, $name, $response ) = @_;
 
             # Ignore 403 forbidden because of not being in the room
