@@ -21,15 +21,13 @@ prepare "Fetching current room members",
    do => sub {
       my ( $user, $local_users, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state",
-      )->then( sub {
-         my ( $body ) = @_;
+      matrix_get_room_state( $user, $room_id )
+      ->then( sub {
+         my ( $state ) = @_;
 
          my %members;
          $_->{type} eq "m.room.member" and $_->{content}{membership} eq "join" and
-            $members{ $_->{state_key} } = 1 for @$body;
+            $members{ $_->{state_key} } = 1 for @$state;
 
          @local_members = grep { $members{ $_->user_id } } @$local_users;
 
