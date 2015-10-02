@@ -33,6 +33,7 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
 sub matrix_send_room_message
 {
    my ( $user, $room_id, %opts ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
 
    defined $opts{content} or
       croak "Cannot matrix_send_room_message() with no content";
@@ -55,6 +56,7 @@ sub matrix_send_room_message
 sub matrix_send_room_text_message
 {
    my ( $user, $room_id, %opts ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
 
    defined $opts{body} or
       croak "Cannot matrix_send_room_text_message() with no body";

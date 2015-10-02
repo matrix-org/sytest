@@ -168,6 +168,7 @@ push our @EXPORT, qw( matrix_get_room_state matrix_put_room_state );
 sub matrix_get_room_state
 {
    my ( $user, $room_id, %opts ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
 
    defined $opts{state_key} and not defined $opts{type} and
       croak "Cannot matrix_get_room_state() with a state_key but no type";
@@ -183,6 +184,7 @@ sub matrix_get_room_state
 sub matrix_put_room_state
 {
    my ( $user, $room_id, %opts ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
 
    defined $opts{state_key} and not defined $opts{type} and
       croak "Cannot matrix_put_room_state() with a state_key but no type";

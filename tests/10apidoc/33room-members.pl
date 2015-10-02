@@ -41,6 +41,7 @@ push our @EXPORT, qw( matrix_join_room );
 sub matrix_join_room
 {
    my ( $user, $room_id ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
 
    do_request_json_for( $user,
       method => "POST",
@@ -186,6 +187,7 @@ push @EXPORT, qw( matrix_leave_room );
 sub matrix_leave_room
 {
    my ( $user, $room_id ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
 
    do_request_json_for( $user,
       method => "POST",
@@ -237,6 +239,7 @@ test "POST /rooms/:room_id/invite can send an invite",
 sub matrix_invite_user_to_room
 {
    my ( $user, $invitee, $room_id ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
 
    my $invitee_id;
    if( is_User( $invitee ) ) {
@@ -246,7 +249,7 @@ sub matrix_invite_user_to_room
       $invitee_id = $invitee;
    }
    else {
-      croak "Expected invtee to be a User struct or plain string; got $invitee";
+      croak "Expected invitee to be a User struct or plain string; got $invitee";
    }
 
    do_request_json_for( $user,

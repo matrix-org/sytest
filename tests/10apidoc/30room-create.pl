@@ -243,6 +243,7 @@ push our @EXPORT, qw( matrix_create_room );
 sub matrix_create_room
 {
    my ( $user, %opts ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
 
    do_request_json_for( $user,
       method => "POST",
