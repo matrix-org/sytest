@@ -312,6 +312,11 @@ prepare "Creating test-room-creation helper function",
          my ( $members, %options ) = @_;
          my ( $creator, @other_members ) = @$members;
 
+         is_User( $creator ) or croak "Expected a User for creator; got $creator";
+
+         is_User( $_ ) or croak "Expected a User for a member; got $_"
+            for @other_members;
+
          my $room_id;
          my $room_alias_fullname;
 
