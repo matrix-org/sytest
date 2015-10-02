@@ -1,25 +1,35 @@
 use List::Util qw( first );
 
-prepare "More local room members",
-   requires => [qw( more_users room_id )],
+my $room_id;
+
+prepare "Creating test room",
+   requires => [qw( user more_users )],
 
    do => sub {
-      my ( $more_users, $room_id ) = @_;
+      my ( $user, $more_users ) = @_;
 
-      Future->needs_all( map {
-         my $user = $_;
+      # Don't use make_test_room here because we explicitly do not want to wait
+      # for the join events; as we'll be testing later on that we do in fact
+      # receive them
 
-         flush_events_for( $user )->then( sub {
-            matrix_join_room( $user, $room_id )
-         });
-      } @$more_users );
+      Future->needs_all(
+         map { flush_events_for( $_ ) } $user, @$more_users
+      )->then( sub {
+         matrix_create_room( $user )
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         Future->needs_all(
+            map { matrix_join_room( $_, $room_id ) } @$more_users
+         )
+      });
    };
 
 test "New room members see their own join event",
-   requires => [qw( more_users room_id )],
+   requires => [qw( more_users )],
 
    await => sub {
-      my ( $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
@@ -43,11 +53,11 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing users' presence in room initialSync",
-   requires => [qw( user more_users room_id
+   requires => [qw( user more_users
                     can_room_initial_sync )],
 
    check => sub {
-      my ( $first_user, $more_users, $room_id ) = @_;
+      my ( $first_user, $more_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
@@ -73,10 +83,10 @@ test "New room members see existing users' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( user more_users room_id )],
+   requires => [qw( user more_users )],
 
    await => sub {
-      my ( $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users ) = @_;
 
       Future->needs_all( map {
          my $other_user = $_;
@@ -195,11 +205,11 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [qw( user more_users room_id
+   requires => [qw( user more_users
                     can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $first_user, $more_users, $room_id ) = @_;
+      my ( $first_user, $more_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
