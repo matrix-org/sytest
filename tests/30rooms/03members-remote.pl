@@ -2,14 +2,30 @@ use Future::Utils 0.18 qw( try_repeat );
 use List::Util qw( first );
 use List::UtilsBy qw( partition_by );
 
+my $room_id;
+my $room_alias;
+
+prepare "Creating test room",
+   requires => [qw( user )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room( $user,
+         room_alias_name => "03members-remote",
+      )->on_done( sub {
+         ( $room_id, $room_alias ) = @_;
+      });
+   };
+
 test "Remote users can join room by alias",
-   requires => [qw( remote_users room_alias room_id
+   requires => [qw( remote_users
                     can_join_room_by_alias can_get_room_membership )],
 
    provides => [qw( can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $remote_users, $room_alias ) = @_;
+      my ( $remote_users ) = @_;
       my $user = $remote_users->[0];
 
       flush_events_for( $user )->then( sub {
@@ -23,7 +39,7 @@ test "Remote users can join room by alias",
    },
 
    check => sub {
-      my ( $remote_users, undef, $room_id ) = @_;
+      my ( $remote_users ) = @_;
       my $user = $remote_users->[0];
 
       matrix_get_room_state( $user, $room_id,
@@ -42,11 +58,11 @@ test "Remote users can join room by alias",
    };
 
 prepare "More remote room members",
-   requires => [qw( remote_users room_alias
+   requires => [qw( remote_users
                     can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $remote_users, $room_alias ) = @_;
+      my ( $remote_users ) = @_;
       my ( undef, @users ) = @$remote_users;
 
       Future->needs_all( map {
@@ -64,11 +80,11 @@ prepare "More remote room members",
    };
 
 test "New room members see their own join event",
-   requires => [qw( remote_users room_id
+   requires => [qw( remote_users
                     can_join_remote_room_by_alias )],
 
    await => sub {
-      my ( $remote_users, $room_id ) = @_;
+      my ( $remote_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
@@ -92,11 +108,11 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing members' presence in room initialSync",
-   requires => [qw( user remote_users room_id
+   requires => [qw( user remote_users
                     can_join_remote_room_by_alias can_room_initial_sync )],
 
    await => sub {
-      my ( $first_user, $remote_users, $room_id ) = @_;
+      my ( $first_user, $remote_users ) = @_;
 
       try_repeat {
          Future->needs_all( map {
@@ -128,11 +144,11 @@ test "New room members see existing members' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( user remote_users room_id
+   requires => [qw( user remote_users
                     can_join_remote_room_by_alias )],
 
    await => sub {
-      my ( $user, $remote_users, $room_id ) = @_;
+      my ( $user, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $other_user = $_;
@@ -210,11 +226,11 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [qw( user remote_users room_id
+   requires => [qw( user remote_users
                     can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $first_user, $remote_users, $room_id ) = @_;
+      my ( $first_user, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
