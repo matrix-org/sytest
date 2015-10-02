@@ -83,6 +83,7 @@ prepare "Creating power_level change helper",
 sub matrix_change_room_powerlevels
 {
    my ( $user, $room_id, $func ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
 
    matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
    ->then( sub {
