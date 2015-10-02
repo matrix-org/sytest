@@ -7,16 +7,13 @@ prepare "Setup a room, and have the first user leave (SPEC-216)",
                      can_send_message )],
 
     do => sub {
-        my (
-            $make_test_room, $change_room_powerlevels, $do_request_json_for,
-            $user_a, $more_users
-        ) = @_;
+        my ( $make_test_room, $user_a, $more_users ) = @_;
         my $user_b = $more_users->[1];
 
         $make_test_room->( [$user_a, $user_b] )->then( sub {
             ( $room_id ) = @_;
 
-            $change_room_powerlevels->( $user_a, $room_id, sub {
+            matrix_change_room_powerlevels( $user_a, $room_id, sub {
                 my ( $levels ) = @_;
                 # Set user B's power level so that they can set the room
                 # name. By default the level to set a room name is 50. But
@@ -63,12 +60,12 @@ prepare "Setup a room, and have the first user leave (SPEC-216)",
     };
 
 test "A departed room is still included in /initialSync (SPEC-216)",
-    requires => [qw( do_request_json )],
+    requires => [qw( user )],
 
     check => sub {
-        my ( $do_request_json ) = @_;
+        my ( $user ) = @_;
 
-        $do_request_json->(
+        do_request_json_for( $user,
             method => "GET",
             uri => "/api/v1/initialSync",
             params => { limit => 2 },
@@ -100,12 +97,12 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
-    requires => [qw( do_request_json )],
+    requires => [qw( user )],
 
     check => sub {
-        my ( $do_request_json ) = @_;
+        my ( $user ) = @_;
 
-        $do_request_json->(
+        do_request_json_for( $user,
             method => "GET",
             uri => "/api/v1/rooms/$room_id/initialSync",
             params => { limit => 2 },
@@ -137,10 +134,10 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
-    requires => [qw( do_request_json )],
+    requires => [qw( user )],
 
     check => sub {
-        my ( $do_request_json ) = @_;
+        my ( $user ) = @_;
 
         matrix_get_room_state( $user, $room_id )
         ->then( sub {
@@ -158,12 +155,12 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
-    requires => [qw( user do_request_json )],
+    requires => [qw( user )],
 
     check => sub {
-        my ( $user, $do_request_json ) = @_;
+        my ( $user ) = @_;
 
-        $do_request_json->(
+        do_request_json_for( $user,
             method => "GET",
             uri => "/api/v1/rooms/$room_id/members",
         )->then( sub {
@@ -183,12 +180,12 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
-    requires => [qw( do_request_json)],
+    requires => [qw( user )],
 
     check => sub {
-        my ( $do_request_json ) = @_;
+        my ( $user ) = @_;
 
-        $do_request_json->(
+        do_request_json_for( $user,
             method => "GET",
             uri => "/api/v1/rooms/$room_id/messages",
             params => {limit => 2, dir => 'b'},
@@ -208,7 +205,7 @@ test "Can get 'm.room.name' state for a departed room (SPEC-216)",
     requires => [qw( user )],
 
     check => sub {
-        my ( $do_request_json ) = @_;
+        my ( $user ) = @_;
 
         matrix_get_room_state( $user, $room_id,
            type => "m.room.name",
@@ -225,17 +222,17 @@ test "Can get 'm.room.name' state for a departed room (SPEC-216)",
     };
 
 test "Getting messages going forward is limited for a departed room (SPEC-216)",
-    requires => [qw( do_request_json )],
+    requires => [qw( user )],
 
     check => sub {
-        my ( $do_request_json ) = @_;
+        my ( $user ) = @_;
 
         # TODO: The "t10000-0_0_0_0" token format is synapse specific.
         #  However there isn't a way in the matrix C-S protocol to learn the
         #  latest token for a room that you aren't in. It may be necessary
         #  to add some extra APIs to matrix for learning this sort of thing for
         #  testing security.
-        $do_request_json->(
+        do_request_json_for( $user,
             method => "GET",
             uri => "/api/v1/rooms/$room_id/messages",
             params => {limit => 2, to => "t10000-0_0_0_0"},
