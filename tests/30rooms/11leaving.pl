@@ -20,24 +20,6 @@ prepare "Setup a room, and have the first user leave (SPEC-216)",
             )
         };
 
-        my $set_room_state = sub {
-            my ( $user, $room_id, $type, $state_key, $content ) = @_;
-            do_request_json_for( $user,
-                method => "PUT",
-                uri => "/api/v1/rooms/$room_id/state/$type/$state_key",
-                content => $content,
-            )
-        };
-
-        my $leave_room = sub {
-            my ( $user, $room_id ) = @_;
-            do_request_json_for( $user,
-                method => "POST",
-                uri => "/api/v1/rooms/$room_id/leave",
-                content => {},
-            )
-        };
-
         $make_test_room->( [$user_a, $user_b] )->then( sub {
             ( $room_id ) = @_;
 
@@ -51,29 +33,33 @@ prepare "Setup a room, and have the first user leave (SPEC-216)",
                 $levels->{users}{ $user_b->user_id } = 50;
             })
         })->then( sub {
-            $set_room_state->($user_b, $room_id, "m.room.name", "", {
-                "name" => "N1. B's room name before A left",
-            })
+            matrix_put_room_state( $user_b, $room_id,
+               type    => "m.room.name",
+               content => { name => "N1. B's room name before A left" },
+            )
         })->then( sub {
-            $set_room_state->($user_b, $room_id, "madeup.test.state", "", {
-                "body" => "S1. B's state before A left",
-            })
+            matrix_put_room_state( $user_b, $room_id,
+               type    => "madeup.test.state",
+               content => { body => "S1. B's state before A left" },
+            )
         })->then( sub {
             $send_text_message->($user_b, $room_id, "M1. B's message before A left")
         })->then( sub {
             $send_text_message->($user_b, $room_id, "M2. B's message before A left")
         })->then( sub {
-            $leave_room->($user_a, $room_id)
+            matrix_leave_room( $user_a, $room_id )
         })->then( sub {
             $send_text_message->($user_b, $room_id, "M3. B's message after A left")
         })->then( sub {
-            $set_room_state->($user_b, $room_id, "m.room.name", "", {
-                "name" => "N2. B's room name after A left",
-            })
+            matrix_put_room_state( $user_b, $room_id,
+               type    => "m.room.name",
+               content => { name => "N2. B's room name after A left" },
+            )
         })->then( sub {
-            $set_room_state->($user_b, $room_id, "madeup.test.state", "", {
-                "body" => "S2. B's state after A left",
-            })
+            matrix_put_room_state( $user_b, $room_id,
+               type    => "madeup.test.state",
+               content => { body => "S2. B's state after A left" },
+            )
         })
     };
 
