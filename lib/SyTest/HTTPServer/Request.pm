@@ -6,7 +6,7 @@ use JSON qw( decode_json encode_json );
 
 use constant JSON_MIME_TYPE => "application/json";
 
-use Carp;
+use SyTest::CarpByFile;
 
 sub DESTROY
 {
