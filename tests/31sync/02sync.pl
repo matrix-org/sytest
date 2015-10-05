@@ -21,8 +21,24 @@ test "Can sync",
 
     check => sub {
         my ( $do_sync, $sync_user, $sync_filter ) = @_;
-        $do_sync->( $sync_user, filter => $sync_filter )->then(sub {
+
+        my $check_empty_sync = sub {
             my ( $body ) = @_;
+            require_json_keys( $body, qw( rooms room_map presence next_batch ) );
+            require_json_keys( my $rooms = $body->{rooms}, qw( default ));
+            require_json_keys( $rooms->{default}, qw( joined invited archived ) );
+        };
+
+        $do_sync->( $sync_user, filter => $sync_filter )->then( sub {
+            my ( $body ) = @_;
+            $check_empty_sync->( $body );
+            $do_sync->( $sync_user,
+                filter => $sync_filter,
+                since => $body->{next_batch},
+            )
+        })->then( sub {
+            my ( $body ) = @_;
+            $check_empty_sync->( $body );
             Future->done(1);
         })
     };

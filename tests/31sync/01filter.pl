@@ -46,9 +46,9 @@ test "Can download filter",
             uri     => "/v2_alpha/user/${\$sync_user->user_id}/filter/$sync_filter",
         )->then( sub {
             my ( $body ) = @_;
-            require_json_keys($body, "room");
-            require_json_keys(my $room = $body->{room}, "timeline");
-            require_json_keys(my $timeline = $room->{timeline}, "limit");
+            require_json_keys( $body, "room" );
+            require_json_keys( my $room = $body->{room}, "timeline" );
+            require_json_keys( my $timeline = $room->{timeline}, "limit" );
             $timeline->{limit} eq 10 or die "Expected timeline limit to be 10";
             Future->done(1)
         })
