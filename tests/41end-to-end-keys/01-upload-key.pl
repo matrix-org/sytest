@@ -18,7 +18,7 @@ test "Can upload device keys",
             uri     => "/v2_alpha/keys/upload/alices_first_device",
             content => {
                device_keys => {
-                  user_id => "\@50-e2e-alice:localhost:8480",
+                  user_id => $e2e_alice->user_id,
                   device_id => "alices_first_device",
                },
                one_time_keys => {
