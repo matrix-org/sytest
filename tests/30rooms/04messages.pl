@@ -6,10 +6,10 @@ my @remote_members;
 my $local_nonmember;
 
 prepare "Creating test room",
-   requires => [qw( make_test_room local_users remote_users )],
+   requires => [qw( local_users remote_users )],
 
    do => sub {
-      my ( $make_test_room, $local_users, $remote_users ) = @_;
+      my ( $local_users, $remote_users ) = @_;
 
       @local_members = @$local_users;
       @remote_members = @$remote_users;
@@ -17,7 +17,8 @@ prepare "Creating test room",
       # Reserve a user not in the room
       $local_nonmember = pop @local_members;
 
-      $make_test_room->( [ @local_members, @remote_members ] )->on_done( sub {
+      matrix_create_and_join_room( [ @local_members, @remote_members ] )
+      ->on_done( sub {
          ( $room_id ) = @_;
       });
    };

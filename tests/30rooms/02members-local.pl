@@ -8,9 +8,9 @@ prepare "Creating test room",
    do => sub {
       my ( $user, $more_users ) = @_;
 
-      # Don't use make_test_room here because we explicitly do not want to wait
-      # for the join events; as we'll be testing later on that we do in fact
-      # receive them
+      # Don't use matrix_create_and_join_room here because we explicitly do
+      # not want to wait for the join events; as we'll be testing later on
+      # that we do in fact receive them
 
       Future->needs_all(
          map { flush_events_for( $_ ) } $user, @$more_users

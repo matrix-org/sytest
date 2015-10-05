@@ -3,12 +3,12 @@ my $room_id;
 # Ensure all the users are members of a shared room, so that we know presence
 # messages can be shared between them all
 prepare "Creating a new test room",
-   requires => [qw( make_test_room local_users remote_users )],
+   requires => [qw( local_users remote_users )],
 
    do => sub {
-      my ( $make_test_room, $local_users, $remote_users ) = @_;
+      my ( $local_users, $remote_users ) = @_;
 
-      $make_test_room->( [ @$local_users, @$remote_users ] )
+      matrix_create_and_join_room( [ @$local_users, @$remote_users ] )
          ->on_done( sub {
             ( $room_id ) = @_;
          });

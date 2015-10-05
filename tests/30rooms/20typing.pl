@@ -14,14 +14,14 @@ my $room_id;
 my @local_members;
 
 prepare "Creating test room",
-   requires => [qw( make_test_room local_users remote_users )],
+   requires => [qw( local_users remote_users )],
 
    do => sub {
-      my ( $make_test_room, $local_users, $remote_users ) = @_;
+      my ( $local_users, $remote_users ) = @_;
 
       @local_members = @$local_users;
 
-      $make_test_room->( [ @$local_users, @$remote_users ] )
+      matrix_create_and_join_room( [ @$local_users, @$remote_users ] )
       ->on_done( sub {
          ( $room_id ) = @_;
       });
