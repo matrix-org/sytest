@@ -42,3 +42,26 @@ test "Can upload device keys",
          Future->done(1)
       })
    };
+
+push our @EXPORT, qw( matrix_put_e2e_keys );
+
+sub matrix_put_e2e_keys
+{
+   # TODO(paul): I don't really know what's parametric about this
+   my ( $user, $device_id ) = @_;
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/v2_alpha/keys/upload/$device_id",
+
+      content => {
+         device_keys => {
+            user_id => $user->user_id,
+            device_id => $device_id,
+         },
+         one_time_keys => {
+            "my_algorithm:my_id_1" => "my+base64+key",
+         }
+      }
+   )->then_done(1);
+}
