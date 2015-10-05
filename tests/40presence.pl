@@ -159,16 +159,3 @@ test "Presence changes to OFFLINE are reported to remote room members",
          });
       } @$remote_users );
    };
-
-prepare "Leaving test room",
-   requires => [qw( local_users remote_users )],
-
-   do => sub {
-      my ( $local_users, $remote_users ) = @_;
-
-      Future->needs_all( map {
-         my $user = $_;
-
-         matrix_leave_room( $user, $room_id )
-      } @$local_users, @$remote_users )
-   };
