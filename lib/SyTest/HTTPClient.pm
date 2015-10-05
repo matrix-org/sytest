@@ -93,7 +93,11 @@ sub do_request
 
       # Most HTTP failures from synapse contain more detailed information in a
       # JSON-encoded response body.
-      return Future->fail( "$message\n" . $response->decoded_content, $name => @args );
+
+      # Full URI is going to be long and messy because of query params; trim them
+      my $uri_without_query = join "", $uri->scheme, "://", $uri->authority, $uri->path, "?...";
+
+      return Future->fail( "$message from $params{method} $uri_without_query\n" . $response->decoded_content, $name => @args );
    });
 }
 
