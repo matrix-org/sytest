@@ -10,7 +10,7 @@ multi_test "Check that event streams started after a client joined a room work (
       my $alice;
       my $room_id;
 
-      matrix_register_user( $http, "90jira-SYT-1_alice",
+      matrix_register_user( $http, undef,
          with_events => 0
       )->SyTest::pass_on_done( "Registered user" )
       ->then( sub {

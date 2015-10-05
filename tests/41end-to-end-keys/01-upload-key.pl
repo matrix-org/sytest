@@ -8,7 +8,7 @@ test "Can upload device keys",
 
       my $e2e_alice;
       # Register a user
-      matrix_register_user( $http, "50-e2e-alice" )->then( sub {
+      matrix_register_user( $http )->then( sub {
          ( $e2e_alice ) = @_;
 
          provide e2e_user_alice => $e2e_alice;

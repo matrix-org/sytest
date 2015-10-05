@@ -15,8 +15,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
 
       # Register two users
       Future->needs_all(
-         matrix_register_user( $http1, "90jira-SYN-115_alice" ),
-         matrix_register_user( $http2, "90jira-SYN-115_bob" ),
+         matrix_register_user( $http1 ),
+         matrix_register_user( $http2 ),
       )->SyTest::pass_on_done( "Registered users" )
       ->then( sub {
          ( $alice, $bob ) = @_;
