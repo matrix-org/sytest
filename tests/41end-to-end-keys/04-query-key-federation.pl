@@ -1,6 +1,6 @@
 test "Can query remote device keys using POST",
    requires => [qw(
-      remote_users e2e_user_alice e2e_can_upload_keys
+      remote_users e2e_user_alice can_upload_e2e_keys
    )],
 
    check => sub {

@@ -1,7 +1,7 @@
 test "Can upload device keys",
    requires => [qw( first_api_client )],
 
-   provides => [qw( e2e_user_alice e2e_can_upload_keys )],
+   provides => [qw( e2e_user_alice can_upload_e2e_keys )],
 
    do => sub {
       my ( $http ) = @_;
@@ -37,7 +37,7 @@ test "Can upload device keys",
          $content->{one_time_key_counts}{my_algorithm} eq "1" or
             die "Expected 1 one time key";
 
-         provide e2e_can_upload_keys => 1;
+         provide can_upload_e2e_keys => 1;
 
          Future->done(1)
       })

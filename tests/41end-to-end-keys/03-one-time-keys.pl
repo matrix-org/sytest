@@ -1,5 +1,5 @@
 multi_test "Can claim one time key using POST",
-   requires => [qw( e2e_user_alice e2e_can_upload_keys )],
+   requires => [qw( e2e_user_alice can_upload_e2e_keys )],
 
    check => sub {
       my ( $e2e_user_alice ) = @_;
