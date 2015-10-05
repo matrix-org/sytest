@@ -140,16 +140,6 @@ test "Typing can be explicitly stopped",
       } @local_members );
    };
 
-prepare "Flushing event streams",
-   requires => [qw( remote_users )],
-   do => sub {
-      my ( $remote_users ) = @_;
-
-      Future->needs_all(
-         map { flush_events_for( $_ ) } @local_members, @$remote_users
-      );
-   };
-
 multi_test "Typing notifications timeout and can be resent",
    requires => [qw( user
                     can_set_room_typing )],
@@ -159,12 +149,15 @@ multi_test "Typing notifications timeout and can be resent",
 
       my $start_time = time();
 
-      do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/typing/:user_id",
+      flush_events_for( $user )
+      ->then( sub {
+         do_request_json_for( $user,
+            method => "PUT",
+            uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
-         content => { typing => 1, timeout => 100 }, # msec; i.e. very short
-      )->then( sub {
+            content => { typing => 1, timeout => 100 }, # msec; i.e. very short
+         )
+      })->then( sub {
          pass( "Sent typing notification" );
 
          # start typing
