@@ -9,7 +9,7 @@ multi_test "Left room members do not cause problems for presence",
 
       # Register two users
       Future->needs_all(
-         map { matrix_register_user( $http, "SYN-202-$_" ) } qw( user1 user2 )
+         map { matrix_register_user( $http ) } 1, 2
       )->SyTest::pass_on_done( "Registered users" )
       ->then( sub {
          ( $user1, $user2 ) = @_;

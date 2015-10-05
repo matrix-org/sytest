@@ -7,7 +7,7 @@ multi_test "Getting push rules doesn't corrupt the cache SYN-390",
 
       my $alice;
 
-      matrix_register_user( $http, "90jira-SYN-390_alice" )->then( sub {
+      matrix_register_user( $http )->then( sub {
          ( $alice ) = @_;
 
          do_request_json_for( $alice,

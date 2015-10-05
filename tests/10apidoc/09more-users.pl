@@ -10,9 +10,7 @@ prepare "More local users",
       my ( $http, $user ) = @_;
 
       Future->needs_all( map {
-         my $uid = "09more-users-$_";
-
-         matrix_register_user( $http, $uid );
+         matrix_register_user( $http );
       } 1 .. $LOCAL_USERS
       )->then( sub {
          my @users = @_;
