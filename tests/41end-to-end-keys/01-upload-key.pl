@@ -1,24 +1,23 @@
+my $user;
+
 test "Can upload device keys",
    requires => [qw( first_api_client )],
 
-   provides => [qw( e2e_user_alice can_upload_e2e_keys )],
+   provides => [qw( can_upload_e2e_keys )],
 
    do => sub {
       my ( $http ) = @_;
 
-      my $e2e_alice;
       # Register a user
       matrix_register_user( $http )->then( sub {
-         ( $e2e_alice ) = @_;
+         ( $user ) = @_;
 
-         provide e2e_user_alice => $e2e_alice;
-
-         do_request_json_for( $e2e_alice,
+         do_request_json_for( $user,
             method  => "POST",
             uri     => "/v2_alpha/keys/upload/alices_first_device",
             content => {
                device_keys => {
-                  user_id => $e2e_alice->user_id,
+                  user_id => $user->user_id,
                   device_id => "alices_first_device",
                },
                one_time_keys => {
@@ -39,6 +38,82 @@ test "Can upload device keys",
 
          provide can_upload_e2e_keys => 1;
 
+         Future->done(1)
+      })
+   };
+
+test "Can query device keys using POST",
+   requires => [qw( can_upload_e2e_keys )],
+
+   check => sub {
+      do_request_json_for( $user,
+         method  => "POST",
+         uri     => "/v2_alpha/keys/query/",
+         content => {
+            device_keys => {
+               $user->user_id => {}
+            }
+         }
+      )->then( sub {
+         my ( $content ) = @_;
+
+         require_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         require_json_keys( $device_keys, $user->user_id );
+
+         my $alice_keys = $device_keys->{ $user->user_id };
+         require_json_keys( $alice_keys, "alices_first_device" );
+         # TODO: Check that the content matches what we uploaded.
+         Future->done(1)
+      })
+   };
+
+test "Can query specific device keys using POST",
+   requires => [qw( can_upload_e2e_keys )],
+
+   check => sub {
+      do_request_json_for( $user,
+         method  => "POST",
+         uri     => "/v2_alpha/keys/query/",
+         content => {
+            device_keys => {
+               $user->user_id => [ "alices_first_device" ]
+            }
+         }
+      )->then( sub {
+         my ( $content ) = @_;
+
+         require_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         require_json_keys( $device_keys, $user->user_id );
+
+         my $alice_keys = $device_keys->{ $user->user_id };
+         require_json_keys( $alice_keys, "alices_first_device" );
+         # TODO: Check that the content matches what we uploaded.
+         Future->done(1)
+      })
+   };
+
+test "Can query device keys using GET",
+   requires => [qw( can_upload_e2e_keys )],
+
+   check => sub {
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/v2_alpha/keys/query/${\$user->user_id}"
+      )->then( sub {
+         my ( $content ) = @_;
+
+         require_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         require_json_keys( $device_keys, $user->user_id );
+
+         my $alice_keys = $device_keys->{ $user->user_id };
+         require_json_keys( $alice_keys, "alices_first_device" );
+         # TODO: Check that the content matches what we uploaded.
          Future->done(1)
       })
    };
