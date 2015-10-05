@@ -1,12 +1,26 @@
 my $alias_localpart = "#another-alias";
 
+my $room_id;
+
+prepare "Creating test room",
+   requires => [qw( user )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room( $user )
+      ->on_done( sub {
+         ( $room_id ) = @_;
+      });
+   };
+
 test "PUT /directory/room/:room_alias creates alias",
-   requires => [qw( user room_id first_home_server )],
+   requires => [qw( user first_home_server )],
 
    provides => [qw( can_create_room_alias can_lookup_room_alias )],
 
    do => sub {
-      my ( $user, $room_id, $first_home_server ) = @_;
+      my ( $user, $first_home_server ) = @_;
       my $room_alias = "${alias_localpart}:$first_home_server";
 
       do_request_json_for( $user,
@@ -22,7 +36,7 @@ test "PUT /directory/room/:room_alias creates alias",
    },
 
    check => sub {
-      my ( $user, $room_id, $first_home_server ) = @_;
+      my ( $user, $first_home_server ) = @_;
       my $room_alias = "${alias_localpart}:$first_home_server";
 
       do_request_json_for( $user,

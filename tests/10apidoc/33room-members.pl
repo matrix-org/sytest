@@ -1,14 +1,30 @@
 use Future::Utils qw( fmap );
 use List::UtilsBy qw( partition_by );
 
+my $room_id;
+my $room_alias;
+
+prepare "Creating testing room",
+   requires => [qw( user )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room( $user,
+         room_alias_name => "33room-members",
+      )->on_done( sub {
+         ( $room_id, $room_alias ) = @_;
+      });
+   };
+
 test "POST /rooms/:room_id/join can join a room",
-   requires => [qw( more_users room_id
+   requires => [qw( more_users
                     can_get_room_membership )],
 
    critical => 1,
 
    do => sub {
-      my ( $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[0];
 
       do_request_json_for( $user,
@@ -20,7 +36,7 @@ test "POST /rooms/:room_id/join can join a room",
    },
 
    check => sub {
-      my ( $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[0];
 
       matrix_get_room_state( $user, $room_id,
@@ -52,13 +68,13 @@ sub matrix_join_room
 }
 
 test "POST /join/:room_alias can join a room",
-   requires => [qw( more_users room_id room_alias
+   requires => [qw( more_users
                     can_get_room_membership )],
 
    provides => [qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $more_users, $room_id, $room_alias ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[1];
 
       do_request_json_for( $user,
@@ -77,7 +93,7 @@ test "POST /join/:room_alias can join a room",
    },
 
    check => sub {
-      my ( $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[1];
 
       matrix_get_room_state( $user, $room_id,
@@ -96,11 +112,11 @@ test "POST /join/:room_alias can join a room",
    };
 
 test "POST /join/:room_id can join a room",
-   requires => [qw( more_users room_id
+   requires => [qw( more_users
                     can_get_room_membership )],
 
    do => sub {
-      my ( $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[2];
 
       do_request_json_for( $user,
@@ -120,7 +136,7 @@ test "POST /join/:room_id can join a room",
    },
 
    check => sub {
-      my ( $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[2];
 
       matrix_get_room_state( $user, $room_id,
@@ -137,13 +153,13 @@ test "POST /join/:room_id can join a room",
    };
 
 test "POST /rooms/:room_id/leave can leave a room",
-   requires => [qw( more_users room_id
+   requires => [qw( more_users
                     can_get_room_membership )],
 
    critical => 1,
 
    do => sub {
-      my ( $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[1];
 
       do_request_json_for( $user,
@@ -155,7 +171,7 @@ test "POST /rooms/:room_id/leave can leave a room",
    },
 
    check => sub {
-      my ( $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[1];
 
       matrix_get_room_state( $user, $room_id,
@@ -198,13 +214,13 @@ sub matrix_leave_room
 }
 
 test "POST /rooms/:room_id/invite can send an invite",
-   requires => [qw( user more_users room_id
+   requires => [qw( user more_users
                     can_get_room_membership )],
 
    provides => [qw( can_invite_room )],
 
    do => sub {
-      my ( $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users ) = @_;
       my $invitee = $more_users->[1];
 
       do_request_json_for( $user,
@@ -216,7 +232,7 @@ test "POST /rooms/:room_id/invite can send an invite",
    },
 
    check => sub {
-      my ( $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users ) = @_;
       my $invitee = $more_users->[1];
 
       matrix_get_room_state( $user, $room_id,
@@ -261,13 +277,13 @@ sub matrix_invite_user_to_room
 }
 
 test "POST /rooms/:room_id/ban can ban a user",
-   requires => [qw( user more_users room_id
+   requires => [qw( user more_users
                     can_get_room_membership )],
 
    provides => [qw( can_ban_room )],
 
    do => sub {
-      my ( $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users ) = @_;
       my $banned_user = $more_users->[2];
 
       do_request_json_for( $user,
@@ -282,7 +298,7 @@ test "POST /rooms/:room_id/ban can ban a user",
    },
 
    check => sub {
-      my ( $user, $more_users, $room_id ) = @_;
+      my ( $user, $more_users ) = @_;
       my $banned_user = $more_users->[2];
 
       matrix_get_room_state( $user, $room_id,

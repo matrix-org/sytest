@@ -1,20 +1,24 @@
-my $msgtype = "m.message";
-my $body = "Here is the message content";
-
 test "POST /rooms/:room_id/send/:event_type sends a message",
-   requires => [qw( user room_id )],
+   requires => [qw( user )],
 
    provides => [qw( can_send_message )],
 
    do => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
+      my $room_id;
 
-         content => { msgtype => $msgtype, body => $body },
-      )->then( sub {
+      matrix_create_room( $user )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/api/v1/rooms/$room_id/send/m.room.message",
+
+            content => { msgtype => "m.message", body => "Here is the message content" },
+         )
+      })->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( event_id ));
@@ -70,20 +74,32 @@ sub matrix_send_room_text_message
 }
 
 test "GET /rooms/:room_id/messages returns a message",
-   requires => [qw( user room_id can_send_message )],
+   requires => [qw( user
+                    can_send_message )],
 
    provides => [qw( can_get_messages )],
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/messages",
+      my $room_id;
 
-         # With no params this does "forwards from END"; i.e. nothing useful
-         params => { dir => "b" },
-      )->then( sub {
+      matrix_create_room( $user )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_send_room_text_message( $user, $room_id,
+            body => "Here is the message content",
+         )
+      })->then( sub {
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/messages",
+
+            # With no params this does "forwards from END"; i.e. nothing useful
+            params => { dir => "b" },
+         )
+      })->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( start end chunk ));

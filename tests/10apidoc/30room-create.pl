@@ -1,7 +1,8 @@
+my $room_id;
+my $room_alias;
+
 test "POST /createRoom makes a public room",
    requires => [qw( user can_initial_sync )],
-
-   provides => [qw( room_id room_alias )],
 
    critical => 1,
 
@@ -24,8 +25,8 @@ test "POST /createRoom makes a public room",
          require_json_nonempty_string( $body->{room_id} );
          require_json_nonempty_string( $body->{room_alias} );
 
-         provide room_id    => $body->{room_id};
-         provide room_alias => $body->{room_alias};
+         $room_id    = $body->{room_id};
+         $room_alias = $body->{room_alias};
 
          Future->done(1);
       });
@@ -46,12 +47,12 @@ test "POST /createRoom makes a public room",
    };
 
 test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
-   requires => [qw( user room_id )],
+   requires => [qw( user )],
 
    provides => [qw( can_get_room_membership )],
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -71,12 +72,12 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
    };
 
 test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
-   requires => [qw( user room_id )],
+   requires => [qw( user )],
 
    provides => [qw( can_get_room_powerlevels )],
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -97,12 +98,12 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
    };
 
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
-   requires => [qw( user room_id )],
+   requires => [qw( user )],
 
    provides => [qw( can_room_initial_sync )],
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -128,10 +129,10 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_api_client room_id )],
+   requires => [qw( first_api_client )],
 
    check => sub {
-      my ( $http, $room_id ) = @_;
+      my ( $http ) = @_;
 
       $http->do_request_json(
          method => "GET",
@@ -159,10 +160,10 @@ test "GET /publicRooms lists newly-created room",
    };
 
 test "GET /directory/room/:room_alias yields room ID",
-   requires => [qw( user room_alias room_id )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $user, $room_alias, $room_id ) = @_;
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
