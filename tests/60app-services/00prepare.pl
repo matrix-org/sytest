@@ -27,8 +27,9 @@ prepare "Creating test helper functions",
 
       provide await_as_event => sub {
          my ( $type ) = @_;
-         # Carp::shortmess is no good here as every test runs in the 'main' package
-         my $caller = sprintf "%s line %d.", (caller)[1,2];
+         my $failmsg = SyTest::CarpByFile::shortmess(
+            "Timed out waiting for an AS event of type $type"
+         );
 
          push @{ $futures_by_type{$type} }, my $f = $loop->new_future;
 
@@ -36,7 +37,7 @@ prepare "Creating test helper functions",
             $f,
 
             delay( 10 )
-               ->then_fail( "Timed out waiting for an AS event of type $type at $caller\n" ),
+               ->then_fail( $failmsg ),
          );
       };
 

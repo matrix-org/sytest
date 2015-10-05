@@ -1,7 +1,3 @@
-# A handy little structure for other scripts to find in 'user' and 'more_users'
-our @EXPORT = qw( User );
-struct User => [qw( http user_id access_token refresh_token eventstream_token saved_events pending_get_events )];
-
 test "GET /register yields a set of flows",
    requires => [qw( first_api_client )],
 
@@ -47,7 +43,9 @@ my $password = "s3kr1t";
 test "POST /register can create a user",
    requires => [qw( first_api_client can_register_password_flow )],
 
-   provides => [qw( can_register login_details )],
+   provides => [qw( login_details )],
+
+   critical => 1,
 
    do => sub {
       my ( $http ) = @_;
@@ -66,16 +64,21 @@ test "POST /register can create a user",
 
          require_json_keys( $body, qw( user_id access_token ));
 
-         provide can_register => 1;
          provide login_details => [ $body->{user_id}, $password ];
 
          Future->done( 1 );
       });
    };
 
-sub register_new_user
+push our @EXPORT, qw( matrix_register_user );
+
+my $next_anon_uid = 1;
+
+sub matrix_register_user
 {
-   my ( $with_events, $http, $uid ) = @_;
+   my ( $http, $uid, %opts ) = @_;
+
+   $uid //= sprintf "_ANON_-%d", $next_anon_uid++;
 
    $http->do_request_json(
       method => "POST",
@@ -92,35 +95,25 @@ sub register_new_user
 
       my $user = User( $http, $body->{user_id}, $access_token, undef, undef, [], undef );
 
-      if( $with_events ) {
-         $http->do_request_json(
-            method => "GET",
-            uri    => "/api/v1/events",
-            params => { access_token => $access_token, timeout => 0 },
-         )->then( sub {
+      my $f = Future->done;
+
+      if( $opts{with_events} // 1 ) {
+         $f = $f->then( sub {
+            $http->do_request_json(
+               method => "GET",
+               uri    => "/api/v1/events",
+               params => { access_token => $access_token, timeout => 0 },
+            )
+         })->on_done( sub {
             my ( $body ) = @_;
 
             $user->eventstream_token = $body->{end};
-            Future->done( $user );
-         })
+         });
       }
-      else {
-         Future->done( $user );
-      }
+
+      return $f->then_done( $user )
+         ->on_done( sub {
+            log_if_fail "Registered new user $uid";
+         });
    });
 }
-
-prepare "Creating test-user-creation helper function",
-   requires => [qw( can_register )],
-
-   provides => [qw( register_new_user register_new_user_without_events)],
-
-   do => sub {
-      provide register_new_user =>
-         sub { register_new_user( 1, @_ ) };
-
-      provide register_new_user_without_events =>
-         sub { register_new_user( 0, @_ ) };
-
-      Future->done;
-   };

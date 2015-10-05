@@ -2,12 +2,12 @@ use Future::Utils qw( repeat );
 
 multi_test "New federated private chats get full presence information (SYN-115)",
    requires => [qw(
-      register_new_user api_clients make_test_room do_request_json_for flush_events_for await_event_for
-      can_register can_create_private_room
+      api_clients
+      can_create_private_room
    )],
 
    do => sub {
-      my ( $register_new_user, $clients, $make_test_room, $do_request_json_for, $flush_events_for, $await_event_for ) = @_;
+      my ( $clients ) = @_;
       my ( $http1, $http2 ) = @$clients;
 
       my ( $alice, $bob );
@@ -15,37 +15,33 @@ multi_test "New federated private chats get full presence information (SYN-115)"
 
       # Register two users
       Future->needs_all(
-         $register_new_user->( $http1, "90jira-SYN-115_alice" ),
-         $register_new_user->( $http2, "90jira-SYN-115_bob" ),
+         matrix_register_user( $http1 ),
+         matrix_register_user( $http2 ),
       )->SyTest::pass_on_done( "Registered users" )
       ->then( sub {
          ( $alice, $bob ) = @_;
 
          # Flush event streams for both; as a side-effect will mark presence 'online'
          Future->needs_all(
-            $flush_events_for->( $alice ),
-            $flush_events_for->( $bob   ),
+            flush_events_for( $alice ),
+            flush_events_for( $bob   ),
          )
       })->then( sub {
 
          # Have Alice create a new private room
-         $make_test_room->( [ $alice ],
+         matrix_create_room( $alice,
             visibility => "private",
          )->SyTest::pass_on_done( "Created a room" )
       })->then( sub {
          ( $room_id ) = @_;
 
          # Alice invites Bob
-         $do_request_json_for->( $alice,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/invite",
-
-            content => { user_id => $bob->user_id },
-         )->SyTest::pass_on_done( "Sent invite" )
+         matrix_invite_user_to_room( $alice, $bob, $room_id )
+            ->SyTest::pass_on_done( "Sent invite" )
       })->then( sub {
 
          # Bob should receive the invite
-         $await_event_for->( $bob, sub {
+         await_event_for( $bob, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member" and
                           $event->{room_id} eq $room_id and
@@ -57,12 +53,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       })->then( sub {
 
          # Bob accepts the invite by joining the room
-         $do_request_json_for->( $bob,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/join",
-
-            content => {},
-         )->SyTest::pass_on_done( "Joined room" )
+         matrix_join_room( $bob, $room_id )
+            ->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
 
          # At this point, both users should see both users' presence, either
@@ -76,7 +68,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             my $f = repeat {
                my $is_initial = !$_[0];
 
-               $do_request_json_for->( $user,
+               do_request_json_for( $user,
                   method => "GET",
                   uri    => $is_initial ? "/api/v1/initialSync" : "/api/v1/events",
                   params => { from => $user->eventstream_token, timeout => 500 }

@@ -74,27 +74,9 @@ test "POST /login can log in as a user",
 
          provide first_home_server => $body->{home_server};
 
-         provide do_request_json_for => my $do_request_json_for = sub {
-            my ( $user, %args ) = @_;
+         provide do_request_json_for => sub { die "Dead - see do_request_json_for() instead" };
 
-            my $user_id = $user->user_id;
-            ( my $uri = delete $args{uri} ) =~ s/:user_id/$user_id/g;
-
-            my %params = (
-               access_token => $user->access_token,
-               %{ delete $args{params} || {} },
-            );
-
-            $user->http->do_request_json(
-               uri    => $uri,
-               params => \%params,
-               %args,
-            );
-         };
-
-         provide do_request_json => sub {
-            $do_request_json_for->( $user, @_ );
-         };
+         provide do_request_json => sub { die "Dead - see do_request_json_for() on \$user instead" };
 
          Future->done(1);
       });

@@ -1,38 +1,29 @@
 use List::UtilsBy qw( partition_by );
 
-prepare "Creating a room",
-   requires => [qw( do_request_json can_create_room )],
+my $room_id;
+my $room_alias;
 
-   provides => [qw( room_id room_alias )],
+prepare "Creating a room",
+   requires => [qw( user )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
-         method => "POST",
-         uri    => "/api/v1/createRoom",
-
-         content => {
-            visibility      => "public",
-            room_alias_name => "30room-state",
-         },
-      )->then( sub {
-         my ( $body ) = @_;
-
-         provide room_id    => $body->{room_id};
-         provide room_alias => $body->{room_alias};
-
-         Future->done(1);
+      matrix_create_room( $user,
+         visibility      => "public",
+         room_alias_name => "30room-state",
+      )->on_done( sub {
+         ( $room_id, $room_alias ) = @_;
       });
    };
 
 test "Room creation reports m.room.create to myself",
-   requires => [qw( await_event_for room_id user )],
+   requires => [qw( user )],
 
    await => sub {
-      my ( $await_event_for, $room_id, $user ) = @_;
+      my ( $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.create";
          require_json_keys( $event, qw( room_id user_id content ));
@@ -50,12 +41,12 @@ test "Room creation reports m.room.create to myself",
    };
 
 test "Room creation reports m.room.member to myself",
-   requires => [qw( await_event_for room_id user )],
+   requires => [qw( user )],
 
    await => sub {
-      my ( $await_event_for, $room_id, $user ) = @_;
+      my ( $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
          require_json_keys( $event, qw( room_id user_id state_key content ));
@@ -74,24 +65,22 @@ test "Room creation reports m.room.member to myself",
 my $topic = "Testing topic for the new room";
 
 test "Setting room topic reports m.room.topic to myself",
-   requires => [qw( do_request_json await_event_for room_id user
+   requires => [qw( user
                     can_set_room_topic )],
 
    do => sub {
-      my ( $do_request_json, undef, $room_id, undef ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.topic",
-
+      matrix_put_room_state( $user, $room_id,
+         type    => "m.room.topic",
          content => { topic => $topic },
       );
    },
 
    await => sub {
-      my ( undef, $await_event_for, $room_id, $user ) = @_;
+      my ( $user ) = @_;
 
-      $await_event_for->( $user, sub {
+      await_event_for( $user, sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.topic";
          require_json_keys( $event, qw( room_id user_id content ));
@@ -109,13 +98,13 @@ test "Setting room topic reports m.room.topic to myself",
    };
 
 multi_test "Global initialSync",
-   requires => [qw( do_request_json user room_id
+   requires => [qw( user
                     can_initial_sync can_set_room_topic )],
 
    check => sub {
-      my ( $do_request_json, $user, $room_id ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
       )->then( sub {
@@ -166,12 +155,12 @@ multi_test "Global initialSync",
    };
 
 test "Global initialSync with limit=0 gives no messages",
-   requires => [qw( do_request_json room_id can_initial_sync )],
+   requires => [qw( user can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
          params => { limit => 0 },
@@ -194,12 +183,12 @@ test "Global initialSync with limit=0 gives no messages",
    };
 
 multi_test "Room initialSync",
-   requires => [qw( do_request_json room_id user can_room_initial_sync )],
+   requires => [qw( user can_room_initial_sync )],
 
    check => sub {
-      my ( $do_request_json, $room_id, $user ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/initialSync",
       )->then( sub {
@@ -243,12 +232,12 @@ multi_test "Room initialSync",
    };
 
 test "Room initialSync with limit=0 gives no messages",
-   requires => [qw( do_request_json room_id can_initial_sync )],
+   requires => [qw( user can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/initialSync",
          params => { limit => 0 },

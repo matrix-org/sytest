@@ -1,21 +1,21 @@
 multi_test "Typing notifications don't leak",
-   requires => [qw( make_test_room do_request_json_for await_event_for local_users
-                    can_create_room can_set_room_typing )],
+   requires => [qw( local_users
+                    can_set_room_typing )],
 
    do => sub {
-      my ( $make_test_room, $do_request_json_for, $await_event_for, $local_users ) = @_;
+      my ( $local_users ) = @_;
       my $creator = $local_users->[0];
       my $member  = $local_users->[1];
       my $nonmember = $local_users->[2];
 
       my $room_id;
 
-      $make_test_room->( [ $creator, $member ] )
+      matrix_create_and_join_room( [ $creator, $member ] )
          ->SyTest::pass_on_done( "Created room" )
       ->then( sub {
          ( $room_id ) = @_;
 
-         $do_request_json_for->( $creator,
+         do_request_json_for( $creator,
             method => "PUT",
             uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
@@ -25,7 +25,7 @@ multi_test "Typing notifications don't leak",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            $await_event_for->( $recvuser, sub {
+            await_event_for( $recvuser, sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.typing";
                return unless $event->{room_id} eq $room_id;
@@ -39,7 +39,7 @@ multi_test "Typing notifications don't leak",
          Future->wait_any(
             delay( 2 ),
 
-            $await_event_for->( $nonmember, sub {
+            await_event_for( $nonmember, sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.typing";
                return unless $event->{room_id} eq $room_id;

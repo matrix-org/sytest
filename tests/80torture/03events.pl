@@ -1,11 +1,11 @@
 test "GET /initialSync with non-numeric 'limit'",
-   requires => [qw( do_request_json
+   requires => [qw( user
                     can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
 
@@ -14,13 +14,12 @@ test "GET /initialSync with non-numeric 'limit'",
    };
 
 test "GET /events with non-numeric 'limit'",
-   requires => [qw( do_request_json_for user
-                    can_get_events )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $do_request_json_for, $user ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
 
@@ -29,13 +28,12 @@ test "GET /events with non-numeric 'limit'",
    };
 
 test "GET /events with negative 'limit'",
-   requires => [qw( do_request_json_for user
-                    can_get_events )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $do_request_json_for, $user ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
 
@@ -44,13 +42,12 @@ test "GET /events with negative 'limit'",
    };
 
 test "GET /events with non-numeric 'timeout'",
-   requires => [qw( do_request_json_for user
-                    can_get_events )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $do_request_json_for, $user ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
 

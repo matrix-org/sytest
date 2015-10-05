@@ -1,12 +1,15 @@
-test "POST /createRoom makes a public room",
-   requires => [qw( do_request_json can_initial_sync )],
+my $room_id;
+my $room_alias;
 
-   provides => [qw( can_create_room room_id room_alias )],
+test "POST /createRoom makes a public room",
+   requires => [qw( user can_initial_sync )],
+
+   critical => 1,
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/createRoom",
 
@@ -22,18 +25,17 @@ test "POST /createRoom makes a public room",
          require_json_nonempty_string( $body->{room_id} );
          require_json_nonempty_string( $body->{room_alias} );
 
-         provide can_create_room => 1;
-         provide room_id    => $body->{room_id};
-         provide room_alias => $body->{room_alias};
+         $room_id    = $body->{room_id};
+         $room_alias = $body->{room_alias};
 
          Future->done(1);
       });
    },
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
       )->then( sub {
@@ -45,14 +47,14 @@ test "POST /createRoom makes a public room",
    };
 
 test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
-   requires => [qw( do_request_json room_id can_create_room )],
+   requires => [qw( user )],
 
    provides => [qw( can_get_room_membership )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
@@ -70,14 +72,14 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
    };
 
 test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
-   requires => [qw( do_request_json room_id can_create_room )],
+   requires => [qw( user )],
 
    provides => [qw( can_get_room_powerlevels )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
       )->then( sub {
@@ -96,14 +98,14 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
    };
 
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
-   requires => [qw( do_request_json room_id can_create_room )],
+   requires => [qw( user )],
 
    provides => [qw( can_room_initial_sync )],
 
    check => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/initialSync",
       )->then( sub {
@@ -127,10 +129,10 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_api_client room_id can_create_room )],
+   requires => [qw( first_api_client )],
 
    check => sub {
-      my ( $http, $room_id ) = @_;
+      my ( $http ) = @_;
 
       $http->do_request_json(
          method => "GET",
@@ -158,12 +160,12 @@ test "GET /publicRooms lists newly-created room",
    };
 
 test "GET /directory/room/:room_alias yields room ID",
-   requires => [qw( do_request_json room_alias room_id can_create_room )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $do_request_json, $room_alias, $room_id ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/directory/room/$room_alias",
       )->then( sub {
@@ -180,14 +182,14 @@ test "GET /directory/room/:room_alias yields room ID",
 
 # Other forms of /createRoom
 test "POST /createRoom makes a private room",
-   requires => [qw( do_request_json )],
+   requires => [qw( user )],
 
    provides => [qw( can_create_private_room )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/createRoom",
 
@@ -207,16 +209,16 @@ test "POST /createRoom makes a private room",
    };
 
 test "POST /createRoom makes a private room with invites",
-   requires => [qw( do_request_json more_users
+   requires => [qw( user more_users
                     can_create_private_room )],
 
    provides => [qw( can_create_private_room_with_invite )],
 
    do => sub {
-      my ( $do_request_json, $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
       my $invitee = $more_users->[0];
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/createRoom",
 
@@ -236,3 +238,28 @@ test "POST /createRoom makes a private room with invites",
          Future->done(1);
       });
    };
+
+push our @EXPORT, qw( matrix_create_room );
+
+sub matrix_create_room
+{
+   my ( $user, %opts ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/api/v1/createRoom",
+
+      content => {
+         visibility => $opts{visibility} || "public",
+         ( defined $opts{room_alias_name} ?
+            ( room_alias_name => $opts{room_alias_name} ) : () ),
+         ( defined $opts{invite} ?
+            ( invite => $opts{invite} ) : () ),
+      }
+   )->then( sub {
+      my ( $body ) = @_;
+
+      Future->done( $body->{room_id}, $body->{room_alias} );
+   });
+}
