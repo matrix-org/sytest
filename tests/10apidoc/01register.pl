@@ -117,3 +117,32 @@ sub matrix_register_user
          });
    });
 }
+
+push @EXPORT, qw( prepare_local_user prepare_local_users );
+
+sub prepare_local_user
+{
+   return ( prepare_local_users( 1 ) )[0];
+}
+
+sub prepare_local_users
+{
+   my ( $count ) = @_;
+
+   my @users;
+   prepare "Creating test " . ( $count == 1 ? "user" : "users" ),
+      requires => [qw( first_api_client )],
+
+      do => sub {
+         my ( $api_client ) = @_;
+
+         Future->needs_all( map {
+            my $idx = $_;
+
+            matrix_register_user( $api_client )
+               ->on_done( sub { ( $users[$idx] ) = @_; } )
+         } 0 .. ($count-1) )
+      };
+
+   return @users;
+}

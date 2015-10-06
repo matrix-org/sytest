@@ -453,8 +453,12 @@ sub prepare
       $failed++;
    }
 
-    no warnings 'exiting';
-    last TEST if $STOP_ON_FAIL and not $success;
+   if( not $success ) {
+      no warnings 'exiting';
+      last TEST if $STOP_ON_FAIL;
+
+      die "prepare failed\n";
+   }
 
    exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
       for @PROVIDES;
@@ -568,7 +572,24 @@ TEST: {
 
          # Tell eval what the filename is so we get nicer warnings/errors that
          # give the filename instead of (eval 123)
-         eval( "#line 1 $filename\n" . $code . "; 1" ) or die $@;
+         my $died_during_compile;
+
+         my $success = do {
+            local $SIG{__DIE__} = sub {
+               return if $^S;
+               $died_during_compile = 1 if !defined $^S;
+               die @_;
+            };
+
+            eval( "#line 1 $filename\n" . $code . "; 1" );
+         };
+
+         if( !$success ) {
+            die $@ if $died_during_compile;
+
+            chomp( my $e = $@ );
+            $output->abort_file( $filename, $e );
+         }
 
          {
             no strict 'refs';

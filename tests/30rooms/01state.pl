@@ -17,6 +17,23 @@ prepare "Creating a room",
       });
    };
 
+prepare "Setting my presence state",
+   requires => [qw( user can_set_presence )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for( $user,
+         method => "PUT",
+         uri    => "/api/v1/presence/:user_id/status",
+
+         content => {
+            presence   => "online",
+            status_msg => "Online",
+         }
+      );
+   };
+
 test "Room creation reports m.room.create to myself",
    requires => [qw( user )],
 

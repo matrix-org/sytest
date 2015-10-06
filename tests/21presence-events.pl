@@ -1,19 +1,7 @@
 # Eventually this will be changed; see SPEC-53
 my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
-my $user;
-
-prepare "Creating a test user",
-   requires => [qw( first_api_client )],
-
-   do => sub {
-      my ( $first_api_client ) = @_;
-
-      matrix_register_user( $first_api_client )
-      ->on_done( sub {
-         ( $user ) = @_;
-      });
-   };
+my $user = prepare_local_user;
 
 test "initialSync sees my presence status",
    requires => [qw( can_initial_sync )],

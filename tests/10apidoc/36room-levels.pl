@@ -78,12 +78,14 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
       });
    };
 
-prepare "Creating power_level change helper",
+test "Both GET and PUT work",
    requires => [qw( can_get_power_levels can_set_power_levels )],
 
    provides => [qw( can_change_power_levels )],
 
-   do => sub {
+   check => sub {
+      # Nothing to be done
+
       push our @EXPORT, qw( matrix_change_room_powerlevels );
 
       provide can_change_power_levels => 1;
