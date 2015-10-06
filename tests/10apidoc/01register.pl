@@ -146,3 +146,19 @@ sub prepare_local_users
 
    return @users;
 }
+
+# New-style preparer
+push @EXPORT, qw( local_user_preparer );
+
+sub local_user_preparer
+{
+   preparer(
+      requires => [qw( first_api_client )],
+
+      do => sub {
+         my ( $api_client ) = @_;
+
+         matrix_register_user( $api_client )
+      },
+   );
+}
