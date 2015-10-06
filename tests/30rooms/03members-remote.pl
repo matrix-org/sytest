@@ -2,32 +2,28 @@ use Future::Utils 0.18 qw( try_repeat );
 use List::Util qw( first );
 use List::UtilsBy qw( partition_by );
 
-my $room_id;
-my $room_alias;
+my $remote_user_preparer = remote_user_preparer();
 
-my $preparer = remote_user_preparer();
-
-prepare "Creating test room",
+my $room_preparer = preparer(
    requires => [qw( user )],
 
    do => sub {
       my ( $user ) = @_;
 
       matrix_create_room( $user,
-         room_alias_name => "03members-remote",
-      )->on_done( sub {
-         ( $room_id, $room_alias ) = @_;
-      });
-   };
+         room_alias_name => "03members-remote"
+      );
+   },
+);
 
 test "Remote users can join room by alias",
-   requires => [ $preparer,
+   requires => [ $remote_user_preparer, $room_preparer,
                  qw( can_join_room_by_alias can_get_room_membership )],
 
    provides => [qw( can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, $room_alias ) = @_;
 
       flush_events_for( $user )->then( sub {
          do_request_json_for( $user,
@@ -40,7 +36,7 @@ test "Remote users can join room by alias",
    },
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, $room_alias ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
@@ -58,11 +54,11 @@ test "Remote users can join room by alias",
    };
 
 test "New room members see their own join event",
-   requires => [ $preparer,
+   requires => [ $remote_user_preparer, $room_preparer,
                  qw( can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, $room_alias ) = @_;
 
       await_event_for( $user, sub {
          my ( $event ) = @_;
@@ -82,11 +78,11 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing members' presence in room initialSync",
-   requires => [qw( user ), $preparer,
+   requires => [qw( user ), $remote_user_preparer, $room_preparer,
                 qw( can_join_remote_room_by_alias can_room_initial_sync )],
 
    do => sub {
-      my ( $first_user, $user ) = @_;
+      my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
       try_repeat {
          do_request_json_for( $user,
@@ -113,11 +109,11 @@ test "New room members see existing members' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( user ), $preparer,
+   requires => [qw( user ), $remote_user_preparer, $room_preparer,
                 qw( can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $first_user, $user ) = @_;
+      my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
       await_event_for( $first_user, sub {
          my ( $event ) = @_;
@@ -136,11 +132,11 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new member's presence",
-   requires => [qw( user ), $preparer,
+   requires => [qw( user ), $remote_user_preparer, $room_preparer,
                 qw( can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $first_user, $user ) = @_;
+      my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
       await_event_for( $first_user, sub {
          my ( $event ) = @_;
@@ -154,11 +150,11 @@ test "Existing members see new member's presence",
    };
 
 test "New room members see first user's profile information in global initialSync",
-   requires => [qw( user ), $preparer,
+   requires => [qw( user ), $remote_user_preparer, $room_preparer,
                 qw( can_join_remote_room_by_alias can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $first_user, $user ) = @_;
+      my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -183,11 +179,11 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [qw( user ), $preparer,
+   requires => [qw( user ), $remote_user_preparer, $room_preparer,
                 qw( can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $first_user, $user ) = @_;
+      my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
