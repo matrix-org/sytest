@@ -1,9 +1,9 @@
 multi_test "Left room members do not cause problems for presence",
-   requires => [qw( first_api_client make_test_room more_users
+   requires => [qw( first_api_client more_users
                     can_room_initial_sync )],
 
-   await => sub {
-      my ( $http, $make_test_room, $more_users ) = @_;
+   do => sub {
+      my ( $http, $more_users ) = @_;
       my ( $user1, $user2 );
       my $room_id;
 
@@ -14,7 +14,7 @@ multi_test "Left room members do not cause problems for presence",
       ->then( sub {
          ( $user1, $user2 ) = @_;
 
-         $make_test_room->( [ $user1, $user2 ] )
+         matrix_create_and_join_room( [ $user1, $user2 ] )
             ->SyTest::pass_on_done( "Created room" )
       })->then( sub {
          ( $room_id ) = @_;

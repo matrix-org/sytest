@@ -6,10 +6,10 @@ my @remote_members;
 my $local_nonmember;
 
 prepare "Creating test room",
-   requires => [qw( make_test_room local_users remote_users )],
+   requires => [qw( local_users remote_users )],
 
    do => sub {
-      my ( $make_test_room, $local_users, $remote_users ) = @_;
+      my ( $local_users, $remote_users ) = @_;
 
       @local_members = @$local_users;
       @remote_members = @$remote_users;
@@ -17,13 +17,15 @@ prepare "Creating test room",
       # Reserve a user not in the room
       $local_nonmember = pop @local_members;
 
-      $make_test_room->( [ @local_members, @remote_members ] )->on_done( sub {
+      matrix_create_and_join_room( [ @local_members, @remote_members ] )
+      ->on_done( sub {
          ( $room_id ) = @_;
       });
    };
 
 prepare "Flushing event streams",
    requires => [qw( local_users )],
+
    do => sub {
       my ( $users ) = @_;
 
@@ -41,37 +43,34 @@ test "Local room members see posted message events",
 
    do => sub {
       my ( $user ) = @_;
+      my ( $senduser ) = @local_members;
 
       matrix_send_room_message( $user, $room_id,
          content => { msgtype => $msgtype, body => $msgbody },
-      );
-   },
+      )->then( sub {
+         Future->needs_all( map {
+            my $recvuser = $_;
 
-   await => sub {
-      my ( $senduser ) = @local_members;
+            await_event_for( $recvuser, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.message";
 
-      Future->needs_all( map {
-         my $recvuser = $_;
+               require_json_keys( $event, qw( type content room_id user_id ));
+               require_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
-         await_event_for( $recvuser, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.message";
+               return unless $event->{room_id} eq $room_id;
 
-            require_json_keys( $event, qw( type content room_id user_id ));
-            require_json_keys( my $content = $event->{content}, qw( msgtype body ));
+               $content->{msgtype} eq $msgtype or
+                  die "Expected msgtype as $msgtype";
+               $content->{body} eq $msgbody or
+                  die "Expected body as '$msgbody'";
+               $event->{user_id} eq $senduser->user_id or
+                  die "Expected sender user_id as ${\$senduser->user_id}\n";
 
-            return unless $event->{room_id} eq $room_id;
-
-            $content->{msgtype} eq $msgtype or
-               die "Expected msgtype as $msgtype";
-            $content->{body} eq $msgbody or
-               die "Expected body as '$msgbody'";
-            $event->{user_id} eq $senduser->user_id or
-               die "Expected sender user_id as ${\$senduser->user_id}\n";
-
-            return 1;
-         });
-      } @local_members )->on_done( sub {
+               return 1;
+            });
+         } @local_members )
+      })->on_done( sub {
          provide can_receive_room_message_locally => 1;
       });
    };
@@ -107,7 +106,7 @@ test "Fetching eventstream a second time doesn't yield the message again",
    };
 
 test "Local non-members don't see posted message events",
-   await => sub {
+   do => sub {
       Future->wait_any(
          await_event_for( $local_nonmember, sub {
             my ( $event ) = @_;
@@ -164,7 +163,7 @@ test "Remote room members also see posted message events",
    requires => [qw( user
                     can_receive_room_message_locally )],
 
-   await => sub {
+   do => sub {
       my ( $senduser ) = @_;
 
       Future->needs_all( map {

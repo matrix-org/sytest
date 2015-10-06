@@ -3,15 +3,15 @@ use List::Util qw( first );
 my $room_id;
 
 prepare "Creating a new test room",
-   requires => [qw( make_test_room local_users
+   requires => [qw( local_users
                     can_change_power_levels )],
 
    do => sub {
-      my ( $make_test_room, $local_users ) = @_;
+      my ( $local_users ) = @_;
       my $creator   = $local_users->[0];
       my $test_user = $local_users->[1];
 
-      $make_test_room->( [ $creator, $test_user ] )
+      matrix_create_and_join_room( [ $creator, $test_user ] )
          ->on_done( sub {
             ( $room_id ) = @_;
          })->then( sub {

@@ -8,9 +8,9 @@ prepare "Creating test room",
    do => sub {
       my ( $user, $more_users ) = @_;
 
-      # Don't use make_test_room here because we explicitly do not want to wait
-      # for the join events; as we'll be testing later on that we do in fact
-      # receive them
+      # Don't use matrix_create_and_join_room here because we explicitly do
+      # not want to wait for the join events; as we'll be testing later on
+      # that we do in fact receive them
 
       Future->needs_all(
          map { flush_events_for( $_ ) } $user, @$more_users
@@ -28,7 +28,7 @@ prepare "Creating test room",
 test "New room members see their own join event",
    requires => [qw( more_users )],
 
-   await => sub {
+   do => sub {
       my ( $more_users ) = @_;
 
       Future->needs_all( map {
@@ -85,7 +85,7 @@ test "New room members see existing users' presence in room initialSync",
 test "Existing members see new members' join events",
    requires => [qw( user more_users )],
 
-   await => sub {
+   do => sub {
       my ( $user, $more_users ) = @_;
 
       Future->needs_all( map {
@@ -111,7 +111,7 @@ test "Existing members see new members' join events",
 test "Existing members see new members' presence",
    requires => [qw( user more_users )],
 
-   await => sub {
+   do => sub {
       my ( $user, $more_users ) = @_;
 
       Future->needs_all( map {

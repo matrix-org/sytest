@@ -1,3 +1,4 @@
+use Future 0.33; # then catch semantics
 use Future::Utils qw( fmap );
 use List::UtilsBy qw( partition_by );
 
@@ -186,9 +187,8 @@ test "POST /rooms/:room_id/leave can leave a room",
 
             Future->done(1);
          },
-         sub { # else
-            my ( $failure, $name, $response ) = @_;
-            Future->fail( @_ ) unless defined $name and $name eq "http";
+         http => sub { # catch
+            my ( $failure, undef, $response ) = @_;
             Future->fail( @_ ) unless $response->code == 403;
 
             # We're expecting a 403 so that's fine
@@ -318,82 +318,76 @@ test "POST /rooms/:room_id/ban can ban a user",
 
 my $next_alias = 1;
 
-prepare "Creating test-room-creation helper function",
-   requires => [qw( can_join_room_by_alias )],
+push @EXPORT, qw( matrix_create_and_join_room );
 
-   provides => [qw( make_test_room )],
+sub matrix_create_and_join_room
+{
+   my ( $members, %options ) = @_;
+   my ( $creator, @other_members ) = @$members;
 
-   do => sub {
-      provide make_test_room => sub {
-         my ( $members, %options ) = @_;
-         my ( $creator, @other_members ) = @$members;
+   is_User( $creator ) or croak "Expected a User for creator; got $creator";
 
-         is_User( $creator ) or croak "Expected a User for creator; got $creator";
+   is_User( $_ ) or croak "Expected a User for a member; got $_"
+      for @other_members;
 
-         is_User( $_ ) or croak "Expected a User for a member; got $_"
-            for @other_members;
+   my $room_id;
+   my $room_alias_fullname;
 
-         my $room_id;
-         my $room_alias_fullname;
+   my $n_joiners = scalar @other_members;
 
-         my $n_joiners = scalar @other_members;
+   matrix_create_room( $creator,
+      %options,
+      room_alias_name => sprintf( "test-%d", $next_alias++ ),
+   )->then( sub {
+      ( $room_id, $room_alias_fullname ) = @_;
 
-         matrix_create_room( $creator,
-            %options,
-            room_alias_name => sprintf( "test-%d", $next_alias++ ),
-         )->then( sub {
-            ( $room_id, $room_alias_fullname ) = @_;
+      log_if_fail "room_id=$room_id";
 
-            log_if_fail "room_id=$room_id";
+      # Best not to join remote users concurrently because of
+      #   https://matrix.org/jira/browse/SYN-318
+      my %members_by_server = partition_by { $_->http } @other_members;
 
-            # Best not to join remote users concurrently because of
-            #   https://matrix.org/jira/browse/SYN-318
-            my %members_by_server = partition_by { $_->http } @other_members;
+      my @local_members = @{ delete $members_by_server{ $creator->http } // [] };
+      my @remote_members = map { @$_ } values %members_by_server;
 
-            my @local_members = @{ delete $members_by_server{ $creator->http } // [] };
-            my @remote_members = map { @$_ } values %members_by_server;
+      Future->needs_all(
+         ( fmap {
+            my $user = shift;
+            do_request_json_for( $user,
+               method => "POST",
+               uri    => "/api/v1/join/$room_alias_fullname",
 
-            Future->needs_all(
-               ( fmap {
-                  my $user = shift;
-                  do_request_json_for( $user,
-                     method => "POST",
-                     uri    => "/api/v1/join/$room_alias_fullname",
+               content => {},
+            )
+         } foreach => \@remote_members ),
 
-                     content => {},
-                  )
-               } foreach => \@remote_members ),
+         map {
+            my $user = $_;
+            do_request_json_for( $user,
+               method => "POST",
+               uri    => "/api/v1/join/$room_alias_fullname",
 
-               map {
-                  my $user = $_;
-                  do_request_json_for( $user,
-                     method => "POST",
-                     uri    => "/api/v1/join/$room_alias_fullname",
+               content => {},
+            )
+         } @local_members )
+   })->then( sub {
+      return Future->done( $room_id ) unless $n_joiners;
 
-                     content => {},
-                  )
-               } @local_members )
-         })->then( sub {
-            return Future->done( $room_id ) unless $n_joiners;
+      # Now wait for the creator to see every join event, so we're sure
+      # the remote joins have happened
+      my %joined_members;
 
-            # Now wait for the creator to see every join event, so we're sure
-            # the remote joins have happened
-            my %joined_members;
+      await_event_for( $creator, sub {
+         my ( $event ) = @_;
+         log_if_fail "Creator event", $event;
 
-            await_event_for( $creator, sub {
-               my ( $event ) = @_;
-               log_if_fail "Creator event", $event;
+         return unless $event->{type} eq "m.room.member";
+         return unless $event->{room_id} eq $room_id;
 
-               return unless $event->{type} eq "m.room.member";
-               return unless $event->{room_id} eq $room_id;
+         $joined_members{ $event->{state_key} }++;
 
-               $joined_members{ $event->{state_key} }++;
-
-               return 1 if keys( %joined_members ) == $n_joiners;
-               return 0;
-            })->then_done( $room_id );
-         })
-      };
-
-      Future->done;
-   };
+         return 1 if keys( %joined_members ) == $n_joiners;
+         return 0;
+      })->then_done( $room_id );
+   })
+}

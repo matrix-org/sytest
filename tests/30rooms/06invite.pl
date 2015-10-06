@@ -61,7 +61,7 @@ test "Invited user receives invite",
    requires => [qw( more_users
                     can_invite_room )],
 
-   await => sub {
+   do => sub {
       my ( $more_users ) = @_;
       my $invitee = $more_users->[1];
 

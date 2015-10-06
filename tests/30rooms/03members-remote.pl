@@ -83,7 +83,7 @@ test "New room members see their own join event",
    requires => [qw( remote_users
                     can_join_remote_room_by_alias )],
 
-   await => sub {
+   do => sub {
       my ( $remote_users ) = @_;
 
       Future->needs_all( map {
@@ -111,7 +111,7 @@ test "New room members see existing members' presence in room initialSync",
    requires => [qw( user remote_users
                     can_join_remote_room_by_alias can_room_initial_sync )],
 
-   await => sub {
+   do => sub {
       my ( $first_user, $remote_users ) = @_;
 
       try_repeat {
@@ -147,7 +147,7 @@ test "Existing members see new members' join events",
    requires => [qw( user remote_users
                     can_join_remote_room_by_alias )],
 
-   await => sub {
+   do => sub {
       my ( $user, $remote_users ) = @_;
 
       Future->needs_all( map {
@@ -174,7 +174,7 @@ test "Existing members see new member's presence",
    requires => [qw( user remote_users
                     can_join_remote_room_by_alias )],
 
-   await => sub {
+   do => sub {
       my ( $user, $remote_users ) = @_;
 
       Future->needs_all( map {

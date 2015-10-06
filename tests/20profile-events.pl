@@ -18,22 +18,18 @@ test "Displayname change reports an event to myself",
          uri    => "/api/v1/profile/:user_id/displayname",
 
          content => { displayname => $displayname },
-      );
-   },
+      )->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
+            my $content = $event->{content};
+            return unless $content->{user_id} eq $user->user_id;
 
-   await => sub {
-      my ( $user ) = @_;
+            $content->{displayname} eq $displayname or
+               die "Expected displayname to be '$displayname'";
 
-      await_event_for( $user, sub {
-         my ( $event ) = @_;
-         return unless $event->{type} eq "m.presence";
-         my $content = $event->{content};
-         return unless $content->{user_id} eq $user->user_id;
-
-         $content->{displayname} eq $displayname or
-            die "Expected displayname to be '$displayname'";
-
-         return 1;
+            return 1;
+         });
       });
    };
 
@@ -50,22 +46,18 @@ test "Avatar URL change reports an event to myself",
          uri    => "/api/v1/profile/:user_id/avatar_url",
 
          content => { avatar_url => $avatar_url },
-      );
-   },
+      )->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
+            my $content = $event->{content};
+            return unless $content->{user_id} eq $user->user_id;
 
-   await => sub {
-      my ( $user ) = @_;
+            $content->{avatar_url} eq $avatar_url or
+               die "Expected avatar_url to be '$avatar_url'";
 
-      await_event_for( $user, sub {
-         my ( $event ) = @_;
-         return unless $event->{type} eq "m.presence";
-         my $content = $event->{content};
-         return unless $content->{user_id} eq $user->user_id;
-
-         $content->{avatar_url} eq $avatar_url or
-            die "Expected avatar_url to be '$avatar_url'";
-
-         return 1;
+            return 1;
+         });
       });
    };
 

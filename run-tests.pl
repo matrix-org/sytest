@@ -274,39 +274,56 @@ sub _run_test
    $t->start;
 
    my $success = eval {
+      my $f_test = Future->done;
+
       my $check = $params{check};
       if( my $do = $params{do} ) {
          if( $check ) {
-            eval { Future->wrap( $check->( @reqs ) )->get } and
-               warn "Warning: ${\$t->name} was already passing before we did anything\n";
+            $f_test = $f_test->then( sub {
+               Future->wrap( $check->( @reqs ) )
+            })->followed_by( sub {
+               my ( $f ) = @_;
+
+               $f->failure or
+                  warn "Warning: ${\$t->name} was already passing before we did anything\n";
+
+               Future->done;
+            });
          }
 
-         Future->wrap( $do->( @reqs ) )->get;
+         $f_test = $f_test->then( sub {
+            Future->wrap( $do->( @reqs ) )
+         });
       }
 
       if( $check ) {
-         Future->wrap( $check->( @reqs ) )->get or
-            die "Test check function failed to return a true value"
+         $f_test = $f_test->then( sub {
+            Future->wrap( $check->( @reqs ) )
+         })->then( sub {
+            my ( $result ) = @_;
+            $result or
+               die "Test check function failed to return a true value";
+
+            Future->done;
+         });
       }
 
       if( my $await = $params{await} ) {
-         Future->wait_any(
-            Future->wrap( $await->( @reqs ) )->then( sub {
-               my ( $success ) = @_;
-               $success or die "'await' check did not return a true value";
-               Future->done
+         die "TODO: 'await' now dead";
+      }
+
+      Future->wait_any(
+         $f_test,
+
+         $loop->delay_future( after => 2 )
+            ->then( sub {
+               $output->start_waiting;
+               $loop->new_future->on_cancel( sub { $output->stop_waiting });
             }),
 
-            $loop->delay_future( after => 2 )
-               ->then( sub {
-                  $output->start_waiting;
-                  $loop->new_future->on_cancel( sub { $output->stop_waiting });
-               }),
-
-            $loop->delay_future( after => $params{timeout} // 10 )
-               ->then_fail( "Timed out waiting for 'await'" )
-         )->get;
-      }
+         $loop->delay_future( after => $params{timeout} // 10 )
+            ->then_fail( "Timed out waiting for test" )
+      )->get;
 
       1;
    };

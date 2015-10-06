@@ -3,14 +3,14 @@ use List::Util qw( first );
 my $room_id;
 
 prepare "Setup a room, and have the first user leave (SPEC-216)",
-    requires => [qw( make_test_room user more_users
+    requires => [qw( user more_users
                      can_send_message )],
 
     do => sub {
-        my ( $make_test_room, $user_a, $more_users ) = @_;
+        my ( $user_a, $more_users ) = @_;
         my $user_b = $more_users->[1];
 
-        $make_test_room->( [$user_a, $user_b] )->then( sub {
+        matrix_create_and_join_room( [$user_a, $user_b] )->then( sub {
             ( $room_id ) = @_;
 
             matrix_change_room_powerlevels( $user_a, $room_id, sub {
