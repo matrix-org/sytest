@@ -148,17 +148,26 @@ sub prepare_local_users
 }
 
 # New-style preparer
-push @EXPORT, qw( local_user_preparer );
+push @EXPORT, qw( local_user_preparer local_users_preparer );
 
 sub local_user_preparer
 {
+   local_users_preparer( 1 );
+}
+
+sub local_users_preparer
+{
+   my ( $count ) = @_;
+
    preparer(
       requires => [qw( first_api_client )],
 
       do => sub {
          my ( $api_client ) = @_;
 
-         matrix_register_user( $api_client )
+         Future->needs_all( map {
+            matrix_register_user( $api_client )
+         } 1 .. $count );
       },
    );
 }
