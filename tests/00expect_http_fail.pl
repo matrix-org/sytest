@@ -1,3 +1,5 @@
+use Future 0.33; # ->then catch semantics
+
 sub gen_expect_failure
 {
    my ( $name, $match ) = @_;
@@ -5,18 +7,17 @@ sub gen_expect_failure
    return sub {
       my ( $f ) = @_;
 
-      $f->then(
+      $f->then_with_f(
          sub {  # done
             Future->fail( "Expected to receive an HTTP $name failure but it succeeded" )
          },
-         sub {  # fail
-            my ( undef, $name, $response ) = @_;
+         http => sub {  # catch http
+            my ( $f, undef, $name, $response ) = @_;
 
-            $name and $name eq "http" and
-               $response and $response->code =~ $match and
-                  return Future->done( $response );
+            $response and $response->code =~ $match and
+               return Future->done( $response );
 
-            Future->fail( @_ );
+            return $f;
          },
       );
    };
