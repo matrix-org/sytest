@@ -56,14 +56,13 @@ test "Room aliases can contain Unicode",
    };
 
 test "Remote room alias queries can handle Unicode",
-   requires => [qw( remote_users
-                    can_create_room_alias_unicode )],
+   requires => [ remote_user_preparer(),
+                 qw( can_create_room_alias_unicode )],
 
    provides => [qw( can_federate_room_alias_unicode )],
 
    check => sub {
-      my ( $remote_users ) = @_;
-      my $user = $remote_users->[0];
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
