@@ -18,8 +18,6 @@ prepare "Creating testing room",
       });
    };
 
-my ( $invited_user, $banned_user ) = prepare_local_users( 2 );
-
 test "POST /rooms/:room_id/join can join a room",
    requires => [qw( more_users
                     can_get_room_membership )],
@@ -214,13 +212,15 @@ sub matrix_leave_room
 }
 
 test "POST /rooms/:room_id/invite can send an invite",
+   prepare => local_user_preparer(),
+
    requires => [qw( user
                     can_get_room_membership )],
 
    provides => [qw( can_invite_room )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $invited_user, $user ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -231,7 +231,7 @@ test "POST /rooms/:room_id/invite can send an invite",
    },
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $invited_user, $user ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
@@ -275,13 +275,15 @@ sub matrix_invite_user_to_room
 }
 
 test "POST /rooms/:room_id/ban can ban a user",
+   prepare => local_user_preparer(),
+
    requires => [qw( user
                     can_get_room_membership )],
 
    provides => [qw( can_ban_room )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $banned_user, $user ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -295,7 +297,7 @@ test "POST /rooms/:room_id/ban can ban a user",
    },
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $banned_user, $user ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
