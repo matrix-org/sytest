@@ -14,7 +14,7 @@ struct Awaiter => [qw( pathmatch filter future )];
 prepare "Environment closures for receiving HTTP pokes",
    requires => [qw( )],
 
-   provides => [qw( test_http_server_uri_base await_http_request )],
+   provides => [qw( test_http_server_uri_base test_http_server_hostandport await_http_request )],
 
    do => sub {
       my $listen_host = "localhost";
@@ -98,6 +98,7 @@ prepare "Environment closures for receiving HTTP pokes",
 
          my $uri_base = "https://$listen_host:$sockport";
 
+         provide test_http_server_hostandport => "$listen_host:$sockport";
          provide test_http_server_uri_base => $uri_base;
 
          $http_client = SyTest::HTTPClient->new(
