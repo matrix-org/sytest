@@ -1,10 +1,3 @@
-prepare "Flushing event stream",
-   requires => [qw( user )],
-   do => sub {
-      my ( $user ) = @_;
-      flush_events_for( $user );
-   };
-
 my $displayname = "New displayname for 20profile-events.pl";
 
 test "Displayname change reports an event to myself",
@@ -13,12 +6,15 @@ test "Displayname change reports an event to myself",
    do => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/profile/:user_id/displayname",
+      flush_events_for( $user )
+      ->then( sub {
+         do_request_json_for( $user,
+            method => "PUT",
+            uri    => "/api/v1/profile/:user_id/displayname",
 
-         content => { displayname => $displayname },
-      )->then( sub {
+            content => { displayname => $displayname },
+         )
+      })->then( sub {
          await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
