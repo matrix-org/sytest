@@ -4,7 +4,7 @@ my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 my $preparer = local_user_preparer();
 
 test "GET /presence/:user_id/list initially empty",
-   prepare => $preparer,
+   requires => [ $preparer ],
 
    check => sub {
       my ( $user ) = @_;
@@ -23,9 +23,7 @@ test "GET /presence/:user_id/list initially empty",
    };
 
 test "POST /presence/:user_id/list can invite users",
-   prepare => $preparer,
-
-   requires => [qw( more_users )],
+   requires => [ $preparer, qw( more_users )],
 
    provides => [qw( can_invite_presence )],
 
@@ -65,9 +63,8 @@ test "POST /presence/:user_id/list can invite users",
    };
 
 test "POST /presence/:user_id/list can drop users",
-   prepare => $preparer,
-
-   requires => [qw( can_invite_presence )],
+   requires => [ $preparer,
+                 qw( can_invite_presence )],
 
    provides => [qw( can_drop_presence )],
 

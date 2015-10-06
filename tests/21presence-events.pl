@@ -4,9 +4,8 @@ my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 my $preparer = local_user_preparer();
 
 test "initialSync sees my presence status",
-   prepare => $preparer,
-
-   requires => [qw( can_initial_sync )],
+   requires => [ $preparer,
+                 qw( can_initial_sync )],
 
    check => sub {
       my ( $user ) = @_;
@@ -44,9 +43,8 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   prepare => $preparer,
-
-   requires => [qw( can_set_presence )],
+   requires => [ $preparer,
+                 qw( can_set_presence )],
 
    do => sub {
       my ( $user ) = @_;
@@ -74,14 +72,11 @@ test "Presence change reports an event to myself",
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
-   prepare => $preparer,
-
-   requires => [qw( more_users
-                    can_set_presence can_invite_presence )],
+   requires => [ $preparer, qw( more_users
+                 can_set_presence can_invite_presence )],
 
    do => sub {
-      my ( $user,
-           $more_users ) = @_;
+      my ( $user, $more_users ) = @_;
       my $friend = $more_users->[0];
 
       do_request_json_for( $user,

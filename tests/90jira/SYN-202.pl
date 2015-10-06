@@ -1,7 +1,6 @@
 multi_test "Left room members do not cause problems for presence",
-   prepare => local_users_preparer( 2 ),
-
-   requires => [qw( can_room_initial_sync )],
+   requires => [ local_users_preparer( 2 ),
+                 qw( can_room_initial_sync )],
 
    do => sub {
       my ( $user1, $user2 ) = @_;

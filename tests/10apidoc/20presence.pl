@@ -1,7 +1,7 @@
 my $preparer = local_user_preparer();
 
 test "GET /presence/:user_id/status fetches initial status",
-   prepare => $preparer,
+   requires => [ $preparer ],
 
    check => sub {
       my ( $user ) = @_;
@@ -27,7 +27,7 @@ test "GET /presence/:user_id/status fetches initial status",
 my $status_msg = "Testing something";
 
 test "PUT /presence/:user_id/status updates my presence",
-   prepare => $preparer,
+   requires => [ $preparer ],
 
    provides => [qw( can_set_presence )],
 

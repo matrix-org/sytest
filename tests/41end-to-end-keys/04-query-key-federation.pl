@@ -1,8 +1,6 @@
 multi_test "Can query remote device keys using POST",
-   prepare => local_user_preparer(),
-
-   requires => [qw( remote_users
-                    can_upload_e2e_keys )],
+   requires => [ local_user_preparer(), qw( remote_users
+                 can_upload_e2e_keys )],
 
    check => sub {
       my ( $user, $remote_users ) = @_;

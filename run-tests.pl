@@ -239,7 +239,7 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
-struct Preparer => [qw( requires do result )];
+struct Preparer => [qw( requires do result )], predicate => "is_Preparer";
 
 sub preparer
 {
@@ -275,31 +275,40 @@ sub _run_test
       return;
    }
 
-   my @reqs;
+   my $f_start = Future->new;
+   my @req_futures;
+
    foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
+      if( is_Preparer( $req ) ) {
+         my $preparer = $req;
 
-      $t->skip( "lack of $req" );
-      return;
-   }
-
-   $t->start;
-
-   my $success = eval {
-      my $f_test = Future->done;
-
-      if( my $preparer = $params{prepare} ) {
          exists $test_environment{$_} or die "TODO: Missing preparer dependency $_"
             for @{ $preparer->requires };
 
          my @preparer_reqs = @test_environment{ @{ $preparer->requires } };
 
-         $f_test = $f_test->then( sub {
+         push @req_futures, $f_start->then( sub {
             $preparer->result //= $preparer->do->( @preparer_reqs )
-         })->on_done( sub {
-            unshift @reqs, @_
          });
       }
+      else {
+         if( !exists $test_environment{$req} ) {
+            $t->skip( "lack of $req" );
+            return;
+         }
+
+         # Fetch its value immediately
+         push @req_futures, Future->done( $test_environment{$req} );
+      }
+   }
+
+   $t->start;
+   $f_start->done;
+
+   my $success = eval {
+      my @reqs;
+      my $f_test = Future->needs_all( @req_futures )
+         ->on_done( sub { @reqs = @_ } );
 
       my $check = $params{check};
       if( my $do = $params{do} ) {

@@ -1,7 +1,6 @@
 multi_test "Can claim one time key using POST",
-   prepare => local_user_preparer(),
-
-   requires => [qw( can_upload_e2e_keys )],
+   requires => [ local_user_preparer(),
+                 qw( can_upload_e2e_keys )],
 
    check => sub {
       my ( $user ) = @_;

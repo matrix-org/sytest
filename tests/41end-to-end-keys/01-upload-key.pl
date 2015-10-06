@@ -1,7 +1,7 @@
 my $preparer = local_user_preparer();
 
 test "Can upload device keys",
-   prepare => $preparer,
+   requires => [ $preparer ],
 
    provides => [qw( can_upload_e2e_keys )],
 
@@ -38,9 +38,8 @@ test "Can upload device keys",
    };
 
 test "Can query device keys using POST",
-   prepare => $preparer,
-
-   requires => [qw( can_upload_e2e_keys )],
+   requires => [ $preparer,
+                 qw( can_upload_e2e_keys )],
 
    check => sub {
       my ( $user ) = @_;
@@ -69,9 +68,8 @@ test "Can query device keys using POST",
    };
 
 test "Can query specific device keys using POST",
-   prepare => $preparer,
-
-   requires => [qw( can_upload_e2e_keys )],
+   requires => [ $preparer,
+                 qw( can_upload_e2e_keys )],
 
    check => sub {
       my ( $user ) = @_;
@@ -100,9 +98,8 @@ test "Can query specific device keys using POST",
    };
 
 test "Can query device keys using GET",
-   prepare => $preparer,
-
-   requires => [qw( can_upload_e2e_keys )],
+   requires => [ $preparer,
+                 qw( can_upload_e2e_keys )],
 
    check => sub {
       my ( $user ) = @_;
