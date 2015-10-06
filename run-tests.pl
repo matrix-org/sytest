@@ -274,20 +274,41 @@ sub _run_test
    $t->start;
 
    my $success = eval {
+      my $f_test = Future->done;
+
       my $check = $params{check};
       if( my $do = $params{do} ) {
          if( $check ) {
-            eval { Future->wrap( $check->( @reqs ) )->get } and
-               warn "Warning: ${\$t->name} was already passing before we did anything\n";
+            $f_test = $f_test->then( sub {
+               Future->wrap( $check->( @reqs ) )
+            })->followed_by( sub {
+               my ( $f ) = @_;
+
+               $f->failure or
+                  warn "Warning: ${\$t->name} was already passing before we did anything\n";
+
+               Future->done;
+            });
          }
 
-         Future->wrap( $do->( @reqs ) )->get;
+         $f_test = $f_test->then( sub {
+            Future->wrap( $do->( @reqs ) )
+         });
       }
 
       if( $check ) {
-         Future->wrap( $check->( @reqs ) )->get or
-            die "Test check function failed to return a true value"
+         $f_test = $f_test->then( sub {
+            Future->wrap( $check->( @reqs ) )
+         })->then( sub {
+            my ( $result ) = @_;
+            $result or
+               die "Test check function failed to return a true value";
+
+            Future->done;
+         });
       }
+
+      $f_test->get;
 
       if( my $await = $params{await} ) {
          Future->wait_any(
