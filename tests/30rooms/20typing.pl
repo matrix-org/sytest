@@ -31,7 +31,7 @@ test "Typing notification sent to local room members",
    requires => [qw( user
                     can_set_room_typing )],
 
-   await => sub {
+   do => sub {
       my ( $typinguser ) = @_;
 
       do_request_json_for( $typinguser,
@@ -69,7 +69,7 @@ test "Typing notifications also sent to remove room members",
    requires => [qw( user remote_users
                     can_set_room_typing can_join_remote_room_by_alias )],
 
-   await => sub {
+   do => sub {
       my ( $typinguser, $remote_users ) = @_;
 
       Future->needs_all( map {
@@ -100,7 +100,7 @@ test "Typing can be explicitly stopped",
    requires => [qw( user
                     can_set_room_typing )],
 
-   await => sub {
+   do => sub {
       my ( $typinguser ) = @_;
 
       do_request_json_for( $typinguser,
@@ -147,7 +147,7 @@ multi_test "Typing notifications timeout and can be resent",
    requires => [qw( user
                     can_set_room_typing )],
 
-   await => sub {
+   do => sub {
       my ( $user ) = @_;
 
       my $start_time = time();

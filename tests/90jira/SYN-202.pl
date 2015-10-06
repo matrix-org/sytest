@@ -2,7 +2,7 @@ multi_test "Left room members do not cause problems for presence",
    requires => [qw( first_api_client more_users
                     can_room_initial_sync )],
 
-   await => sub {
+   do => sub {
       my ( $http, $more_users ) = @_;
       my ( $user1, $user2 );
       my $room_id;

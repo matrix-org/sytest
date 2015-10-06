@@ -10,7 +10,7 @@ my $displayname = "New displayname for 20profile-events.pl";
 test "Displayname change reports an event to myself",
    requires => [qw( user can_set_displayname )],
 
-   await => sub {
+   do => sub {
       my ( $user ) = @_;
 
       do_request_json_for( $user,
@@ -38,7 +38,7 @@ my $avatar_url = "http://a.new.url/for/20profile-events.pl";
 test "Avatar URL change reports an event to myself",
    requires => [qw( user can_set_avatar_url )],
 
-   await => sub {
+   do => sub {
       my ( $user ) = @_;
 
       do_request_json_for( $user,

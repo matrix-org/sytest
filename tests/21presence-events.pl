@@ -54,7 +54,7 @@ my $status_msg = "A status set by 21presence-events.pl";
 test "Presence change reports an event to myself",
    requires => [qw( can_set_presence )],
 
-   await => sub {
+   do => sub {
       do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
@@ -81,7 +81,7 @@ test "Friends presence changes reports events",
    requires => [qw( more_users
                     can_set_presence can_invite_presence )],
 
-   await => sub {
+   do => sub {
       my ( $more_users ) = @_;
       my $friend = $more_users->[0];
 

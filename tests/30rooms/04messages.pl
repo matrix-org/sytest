@@ -41,7 +41,7 @@ test "Local room members see posted message events",
 
    provides => [qw( can_receive_room_message_locally )],
 
-   await => sub {
+   do => sub {
       my ( $user ) = @_;
       my ( $senduser ) = @local_members;
 
@@ -106,7 +106,7 @@ test "Fetching eventstream a second time doesn't yield the message again",
    };
 
 test "Local non-members don't see posted message events",
-   await => sub {
+   do => sub {
       Future->wait_any(
          await_event_for( $local_nonmember, sub {
             my ( $event ) = @_;
@@ -163,7 +163,7 @@ test "Remote room members also see posted message events",
    requires => [qw( user
                     can_receive_room_message_locally )],
 
-   await => sub {
+   do => sub {
       my ( $senduser ) = @_;
 
       Future->needs_all( map {

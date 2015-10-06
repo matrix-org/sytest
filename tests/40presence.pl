@@ -31,7 +31,7 @@ test "Presence changes are reported to local room members",
    requires => [qw( user local_users
                     can_set_presence )],
 
-   await => sub {
+   do => sub {
       my ( $senduser, $local_users ) = @_;
 
       do_request_json_for( $senduser,
@@ -68,7 +68,7 @@ test "Presence changes are also reported to remote room members",
    requires => [qw( user remote_users
                     can_set_presence can_join_remote_room_by_alias )],
 
-   await => sub {
+   do => sub {
       my ( $senduser, $remote_users ) = @_;
 
       Future->needs_all( map {
@@ -99,7 +99,7 @@ test "Presence changes to OFFLINE are reported to local room members",
    requires => [qw( user local_users
                     can_set_presence )],
 
-   await => sub {
+   do => sub {
       my ( $senduser, $local_users ) = @_;
 
       do_request_json_for( $senduser,
@@ -130,7 +130,7 @@ test "Presence changes to OFFLINE are reported to remote room members",
    requires => [qw( user remote_users
                     can_set_presence can_join_remote_room_by_alias )],
 
-   await => sub {
+   do => sub {
       my ( $senduser, $remote_users ) = @_;
 
       Future->needs_all( map {

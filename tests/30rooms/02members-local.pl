@@ -28,7 +28,7 @@ prepare "Creating test room",
 test "New room members see their own join event",
    requires => [qw( more_users )],
 
-   await => sub {
+   do => sub {
       my ( $more_users ) = @_;
 
       Future->needs_all( map {
@@ -85,7 +85,7 @@ test "New room members see existing users' presence in room initialSync",
 test "Existing members see new members' join events",
    requires => [qw( user more_users )],
 
-   await => sub {
+   do => sub {
       my ( $user, $more_users ) = @_;
 
       Future->needs_all( map {
@@ -111,7 +111,7 @@ test "Existing members see new members' join events",
 test "Existing members see new members' presence",
    requires => [qw( user more_users )],
 
-   await => sub {
+   do => sub {
       my ( $user, $more_users ) = @_;
 
       Future->needs_all( map {

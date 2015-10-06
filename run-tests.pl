@@ -308,26 +308,22 @@ sub _run_test
          });
       }
 
-      $f_test->get;
-
       if( my $await = $params{await} ) {
-         Future->wait_any(
-            Future->wrap( $await->( @reqs ) )->then( sub {
-               my ( $success ) = @_;
-               $success or die "'await' check did not return a true value";
-               Future->done
+         die "TODO: 'await' now dead";
+      }
+
+      Future->wait_any(
+         $f_test,
+
+         $loop->delay_future( after => 2 )
+            ->then( sub {
+               $output->start_waiting;
+               $loop->new_future->on_cancel( sub { $output->stop_waiting });
             }),
 
-            $loop->delay_future( after => 2 )
-               ->then( sub {
-                  $output->start_waiting;
-                  $loop->new_future->on_cancel( sub { $output->stop_waiting });
-               }),
-
-            $loop->delay_future( after => $params{timeout} // 10 )
-               ->then_fail( "Timed out waiting for 'await'" )
-         )->get;
-      }
+         $loop->delay_future( after => $params{timeout} // 10 )
+            ->then_fail( "Timed out waiting for test" )
+      )->get;
 
       1;
    };

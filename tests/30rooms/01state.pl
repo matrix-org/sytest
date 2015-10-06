@@ -20,7 +20,7 @@ prepare "Creating a room",
 test "Room creation reports m.room.create to myself",
    requires => [qw( user )],
 
-   await => sub {
+   do => sub {
       my ( $user ) = @_;
 
       await_event_for( $user, sub {
@@ -43,7 +43,7 @@ test "Room creation reports m.room.create to myself",
 test "Room creation reports m.room.member to myself",
    requires => [qw( user )],
 
-   await => sub {
+   do => sub {
       my ( $user ) = @_;
 
       await_event_for( $user, sub {
@@ -68,7 +68,7 @@ test "Setting room topic reports m.room.topic to myself",
    requires => [qw( user
                     can_set_room_topic )],
 
-   await => sub {
+   do => sub {
       my ( $user ) = @_;
 
       matrix_put_room_state( $user, $room_id,
