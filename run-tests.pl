@@ -239,6 +239,18 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
+struct Preparer => [qw( requires do result )];
+
+sub preparer
+{
+   my %args = @_;
+
+   my $do = $args{do} or croak "preparer needs a 'do' block";
+   ref( $do ) eq "CODE" or croak "Expected preparer 'do' block to be CODE";
+
+   return Preparer( $args{requires} // [], $do, undef );
+}
+
 my $failed;
 my $expected_fail;
 my $skipped_count = 0;
@@ -275,6 +287,19 @@ sub _run_test
 
    my $success = eval {
       my $f_test = Future->done;
+
+      if( my $preparer = $params{prepare} ) {
+         exists $test_environment{$_} or die "TODO: Missing preparer dependency $_"
+            for @{ $preparer->requires };
+
+         my @preparer_reqs = @test_environment{ @{ $preparer->requires } };
+
+         $f_test = $f_test->then( sub {
+            $preparer->result //= $preparer->do->( @preparer_reqs )
+         })->on_done( sub {
+            unshift @reqs, @_
+         });
+      }
 
       my $check = $params{check};
       if( my $do = $params{do} ) {
