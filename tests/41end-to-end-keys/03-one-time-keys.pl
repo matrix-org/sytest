@@ -1,25 +1,21 @@
 multi_test "Can claim one time key using POST",
-   requires => [qw( first_api_client can_upload_e2e_keys )],
+   prepare => local_user_preparer(),
+
+   requires => [qw( can_upload_e2e_keys )],
 
    check => sub {
-      my ( $first_api_client ) = @_;
+      my ( $user ) = @_;
 
-      my $user;
-
-      matrix_register_user( $first_api_client )
-      ->then( sub {
-         ( $user ) = @_;
-
-         do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/v2_alpha/keys/upload/alices_first_device",
-            content => {
-               one_time_keys => {
-                  "test_algorithm:test_id", "test+base64+key"
-               }
+      do_request_json_for( $user,
+         method  => "POST",
+         uri     => "/v2_alpha/keys/upload/alices_first_device",
+         content => {
+            one_time_keys => {
+               "test_algorithm:test_id", "test+base64+key"
             }
-         )->SyTest::pass_on_done( "Uploaded one-time keys" )
-      })->then( sub {
+         }
+      )->SyTest::pass_on_done( "Uploaded one-time keys" )
+      ->then( sub {
          do_request_json_for( $user,
             method => "GET",
             uri    => "/v2_alpha/keys/upload/alices_first_device",

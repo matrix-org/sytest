@@ -156,22 +156,17 @@ test "POST /join/:room_id can join a room",
    };
 
 test "POST /rooms/:room_id/leave can leave a room",
-   requires => [qw( first_api_client
-                    can_get_room_membership )],
+   prepare => local_user_preparer(),
+
+   requires => [qw( can_get_room_membership )],
 
    critical => 1,
 
    do => sub {
-      my ( $api_client ) = @_;
+      my ( $joiner_to_leave ) = @_;
 
-      my $joiner_to_leave;
-
-      matrix_register_user( $api_client )
+      matrix_join_room( $joiner_to_leave, $room_id )
       ->then( sub {
-         ( $joiner_to_leave ) = @_;
-
-         matrix_join_room( $joiner_to_leave, $room_id )
-      })->then( sub {
          do_request_json_for( $joiner_to_leave,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/leave",

@@ -1,31 +1,26 @@
-my $user;
+my $preparer = local_user_preparer();
 
 test "Can upload device keys",
-   requires => [qw( first_api_client )],
+   prepare => $preparer,
 
    provides => [qw( can_upload_e2e_keys )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      # Register a user
-      matrix_register_user( $http )->then( sub {
-         ( $user ) = @_;
-
-         do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/v2_alpha/keys/upload/alices_first_device",
-            content => {
-               device_keys => {
-                  user_id => $user->user_id,
-                  device_id => "alices_first_device",
-               },
-               one_time_keys => {
-                  "my_algorithm:my_id_1", "my+base64+key"
-               }
+      do_request_json_for( $user,
+         method  => "POST",
+         uri     => "/v2_alpha/keys/upload/alices_first_device",
+         content => {
+            device_keys => {
+               user_id => $user->user_id,
+               device_id => "alices_first_device",
+            },
+            one_time_keys => {
+               "my_algorithm:my_id_1", "my+base64+key"
             }
-         )
-      })->then( sub {
+         }
+      )->then( sub {
          my ( $content ) = @_;
          log_if_fail "Content", $content;
 
@@ -43,9 +38,13 @@ test "Can upload device keys",
    };
 
 test "Can query device keys using POST",
+   prepare => $preparer,
+
    requires => [qw( can_upload_e2e_keys )],
 
    check => sub {
+      my ( $user ) = @_;
+
       do_request_json_for( $user,
          method  => "POST",
          uri     => "/v2_alpha/keys/query/",
@@ -70,9 +69,13 @@ test "Can query device keys using POST",
    };
 
 test "Can query specific device keys using POST",
+   prepare => $preparer,
+
    requires => [qw( can_upload_e2e_keys )],
 
    check => sub {
+      my ( $user ) = @_;
+
       do_request_json_for( $user,
          method  => "POST",
          uri     => "/v2_alpha/keys/query/",
@@ -97,9 +100,13 @@ test "Can query specific device keys using POST",
    };
 
 test "Can query device keys using GET",
+   prepare => $preparer,
+
    requires => [qw( can_upload_e2e_keys )],
 
    check => sub {
+      my ( $user ) = @_;
+
       do_request_json_for( $user,
          method => "GET",
          uri    => "/v2_alpha/keys/query/${\$user->user_id}"
