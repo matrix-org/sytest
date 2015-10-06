@@ -1,3 +1,4 @@
+use Future 0.33; # then catch semantics
 use Future::Utils qw( fmap );
 use List::UtilsBy qw( partition_by );
 
@@ -186,9 +187,8 @@ test "POST /rooms/:room_id/leave can leave a room",
 
             Future->done(1);
          },
-         sub { # else
-            my ( $failure, $name, $response ) = @_;
-            Future->fail( @_ ) unless defined $name and $name eq "http";
+         http => sub { # catch
+            my ( $failure, undef, $response ) = @_;
             Future->fail( @_ ) unless $response->code == 403;
 
             # We're expecting a 403 so that's fine
