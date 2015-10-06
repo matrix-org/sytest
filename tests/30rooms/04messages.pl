@@ -3,8 +3,6 @@ my $room_id;
 my @local_members;
 my @remote_members;
 
-my $local_nonmember;
-
 prepare "Creating test room",
    requires => [qw( local_users remote_users )],
 
@@ -13,9 +11,6 @@ prepare "Creating test room",
 
       @local_members = @$local_users;
       @remote_members = @$remote_users;
-
-      # Reserve a user not in the room
-      $local_nonmember = pop @local_members;
 
       matrix_create_and_join_room( [ @local_members, @remote_members ] )
       ->on_done( sub {
@@ -106,9 +101,13 @@ test "Fetching eventstream a second time doesn't yield the message again",
    };
 
 test "Local non-members don't see posted message events",
+   requires => [ local_user_preparer() ],
+
    do => sub {
+      my ( $nonmember ) = @_;
+
       Future->wait_any(
-         await_event_for( $local_nonmember, sub {
+         await_event_for( $nonmember, sub {
             my ( $event ) = @_;
             log_if_fail "Received event:", $event;
 
