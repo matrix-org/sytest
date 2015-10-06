@@ -453,8 +453,8 @@ sub prepare
       $failed++;
    }
 
-    no warnings 'exiting';
-    last TEST if $STOP_ON_FAIL and not $success;
+   no warnings 'exiting';
+   last TEST if $STOP_ON_FAIL and not $success;
 
    exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
       for @PROVIDES;
