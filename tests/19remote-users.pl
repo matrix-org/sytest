@@ -23,3 +23,28 @@ prepare "Remote users",
          Future->done();
       });
    };
+
+push our @EXPORT, qw( remote_user_preparer remote_users_preparer );
+
+sub remote_user_preparer
+{
+   remote_users_preparer( 1 );
+}
+
+sub remote_users_preparer
+{
+   my ( $count ) = @_;
+
+   preparer(
+      requires => [qw( api_clients )],
+
+      do => sub {
+         my ( $clients ) = @_;
+         my $http = $clients->[1];
+
+         Future->needs_all( map {
+            matrix_register_user( $http )
+         } 1 .. $count )
+      }
+   );
+}
