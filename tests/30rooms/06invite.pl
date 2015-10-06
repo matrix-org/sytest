@@ -505,7 +505,8 @@ sub stub_is_key_validation {
    $await_http_request->( "/_matrix/identity/api/v1/pubkey/isvalid", sub {
       my ( $req ) = @_;
       !defined $user_agent_substring and return 1;
-      index( $req->header( "User-Agent" ), $user_agent_substring ) ge 0
+      my $user_agent = $req->header( "User-Agent" );
+      defined $user_agent and index( $user_agent, $user_agent_substring ) ge 0
          or return 0;
       # TODO: Parse body
       return 1;
