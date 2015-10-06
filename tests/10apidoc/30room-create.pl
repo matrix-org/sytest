@@ -42,7 +42,10 @@ test "POST /createRoom makes a public room",
          my ( $body ) = @_;
 
          require_json_list( $body->{rooms} );
-         Future->done( scalar @{ $body->{rooms} } > 0 );
+         @{ $body->{rooms} } or
+            die "Expected a list of rooms";
+
+         Future->done(1);
       });
    };
 
