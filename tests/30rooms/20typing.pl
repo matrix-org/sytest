@@ -31,42 +31,38 @@ test "Typing notification sent to local room members",
    requires => [qw( user
                     can_set_room_typing )],
 
-   do => sub {
-      my ( $user ) = @_;
+   await => sub {
+      my ( $typinguser ) = @_;
 
-      do_request_json_for( $user,
+      do_request_json_for( $typinguser,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
          content => { typing => 1, timeout => 30000 }, # msec
-      );
-   },
+      )->then( sub {
+         Future->needs_all( map {
+            my $recvuser = $_;
 
-   await => sub {
-      my ( $typinguser ) = @_;
+            await_event_for( $recvuser, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.typing";
 
-      Future->needs_all( map {
-         my $recvuser = $_;
+               require_json_keys( $event, qw( type room_id content ));
+               require_json_keys( my $content = $event->{content}, qw( user_ids ));
 
-         await_event_for( $recvuser, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.typing";
+               return unless $event->{room_id} eq $room_id;
 
-            require_json_keys( $event, qw( type room_id content ));
-            require_json_keys( my $content = $event->{content}, qw( user_ids ));
+               require_json_list( my $users = $content->{user_ids} );
 
-            return unless $event->{room_id} eq $room_id;
+               scalar @$users == 1 or
+                  die "Expected 1 member to be typing";
+               $users->[0] eq $typinguser->user_id or
+                  die "Expected ${\$typinguser->user_id} to be typing";
 
-            require_json_list( my $users = $content->{user_ids} );
-
-            scalar @$users == 1 or
-               die "Expected 1 member to be typing";
-            $users->[0] eq $typinguser->user_id or
-               die "Expected ${\$typinguser->user_id} to be typing";
-
-            return 1;
-         })
-      } @local_members );
+               return 1;
+            })
+         } @local_members );
+      });
    };
 
 test "Typing notifications also sent to remove room members",
@@ -104,44 +100,41 @@ test "Typing can be explicitly stopped",
    requires => [qw( user
                     can_set_room_typing )],
 
-   do => sub {
-      my ( $user ) = @_;
+   await => sub {
+      my ( $typinguser ) = @_;
 
-      do_request_json_for( $user,
+      do_request_json_for( $typinguser,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
          content => { typing => 0 },
-      );
-   },
+      )->then( sub {
+         Future->needs_all( map {
+            my $recvuser = $_;
 
-   await => sub {
-      my ( $typinguser ) = @_;
+            await_event_for( $recvuser, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.typing";
 
-      Future->needs_all( map {
-         my $recvuser = $_;
+               require_json_keys( $event, qw( type room_id content ));
+               require_json_keys( my $content = $event->{content}, qw( user_ids ));
 
-         await_event_for( $recvuser, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.typing";
+               return unless $event->{room_id} eq $room_id;
 
-            require_json_keys( $event, qw( type room_id content ));
-            require_json_keys( my $content = $event->{content}, qw( user_ids ));
+               require_json_list( my $users = $content->{user_ids} );
 
-            return unless $event->{room_id} eq $room_id;
+               scalar @$users and
+                  die "Expected 0 members to be typing";
 
-            require_json_list( my $users = $content->{user_ids} );
-
-            scalar @$users and
-               die "Expected 0 members to be typing";
-
-            return 1;
-         })
-      } @local_members );
+               return 1;
+            })
+         } @local_members );
+      });
    };
 
 prepare "Flushing event streams",
    requires => [qw( remote_users )],
+
    do => sub {
       my ( $remote_users ) = @_;
 

@@ -16,6 +16,7 @@ prepare "Creating a new test room",
 
 prepare "Flushing event streams",
    requires => [qw( local_users remote_users )],
+
    do => sub {
       my ( $local_users, $remote_users ) = @_;
 
@@ -30,42 +31,37 @@ test "Presence changes are reported to local room members",
    requires => [qw( user local_users
                     can_set_presence )],
 
-   do => sub {
-      my ( $user, undef ) = @_;
+   await => sub {
+      my ( $senduser, $local_users ) = @_;
 
-      do_request_json_for( $user,
+      do_request_json_for( $senduser,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
 
          content => { presence => "online", status_msg => $status_msg },
-      )
-   },
+      )->then( sub {
+         Future->needs_all( map {
+            my $recvuser = $_;
 
-   await => sub {
-      my ( undef, $users ) = @_;
-      my ( $senduser ) = @$users;
+            await_event_for( $recvuser, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.presence";
 
-      Future->needs_all( map {
-         my $recvuser = $_;
+               require_json_keys( $event, qw( type content ));
+               require_json_keys( my $content = $event->{content},
+                  qw( user_id presence ));
 
-         await_event_for( $recvuser, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.presence";
+               $content->{user_id} eq $senduser->user_id or return;
 
-            require_json_keys( $event, qw( type content ));
-            require_json_keys( my $content = $event->{content},
-               qw( user_id presence ));
+               require_json_keys( $content, qw( status_msg ));
 
-            $content->{user_id} eq $senduser->user_id or return;
+               $content->{status_msg} eq $status_msg or
+                  die "Expected content status_msg to '$status_msg'";
 
-            require_json_keys( $content, qw( status_msg ));
-
-            $content->{status_msg} eq $status_msg or
-               die "Expected content status_msg to '$status_msg'";
-
-            return 1;
-         });
-      } @$users );
+               return 1;
+            });
+         } @$local_users );
+      });
    };
 
 test "Presence changes are also reported to remote room members",
@@ -103,36 +99,31 @@ test "Presence changes to OFFLINE are reported to local room members",
    requires => [qw( user local_users
                     can_set_presence )],
 
-   do => sub {
-      my ( $user, undef ) = @_;
+   await => sub {
+      my ( $senduser, $local_users ) = @_;
 
-      do_request_json_for( $user,
+      do_request_json_for( $senduser,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
 
          content => { presence => "offline" },
-      )
-   },
+      )->then( sub {
+         Future->needs_all( map {
+            my $recvuser = $_;
 
-   await => sub {
-      my ( undef, $users ) = @_;
-      my ( $senduser ) = @$users;
+            await_event_for( $recvuser, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.presence";
 
-      Future->needs_all( map {
-         my $recvuser = $_;
+               my $content = $event->{content};
+               return unless $content->{user_id} eq $senduser->user_id;
 
-         await_event_for( $recvuser, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.presence";
+               return unless $content->{presence} eq "offline";
 
-            my $content = $event->{content};
-            return unless $content->{user_id} eq $senduser->user_id;
-
-            return unless $content->{presence} eq "offline";
-
-            return 1;
-         })
-      } @$users );
+               return 1;
+            })
+         } @$local_users );
+      });
    };
 
 test "Presence changes to OFFLINE are reported to remote room members",

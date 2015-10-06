@@ -25,6 +25,7 @@ prepare "Creating test room",
 
 prepare "Flushing event streams",
    requires => [qw( local_users )],
+
    do => sub {
       my ( $users ) = @_;
 
@@ -40,39 +41,36 @@ test "Local room members see posted message events",
 
    provides => [qw( can_receive_room_message_locally )],
 
-   do => sub {
+   await => sub {
       my ( $user ) = @_;
+      my ( $senduser ) = @local_members;
 
       matrix_send_room_message( $user, $room_id,
          content => { msgtype => $msgtype, body => $msgbody },
-      );
-   },
+      )->then( sub {
+         Future->needs_all( map {
+            my $recvuser = $_;
 
-   await => sub {
-      my ( $senduser ) = @local_members;
+            await_event_for( $recvuser, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.message";
 
-      Future->needs_all( map {
-         my $recvuser = $_;
+               require_json_keys( $event, qw( type content room_id user_id ));
+               require_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
-         await_event_for( $recvuser, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.message";
+               return unless $event->{room_id} eq $room_id;
 
-            require_json_keys( $event, qw( type content room_id user_id ));
-            require_json_keys( my $content = $event->{content}, qw( msgtype body ));
+               $content->{msgtype} eq $msgtype or
+                  die "Expected msgtype as $msgtype";
+               $content->{body} eq $msgbody or
+                  die "Expected body as '$msgbody'";
+               $event->{user_id} eq $senduser->user_id or
+                  die "Expected sender user_id as ${\$senduser->user_id}\n";
 
-            return unless $event->{room_id} eq $room_id;
-
-            $content->{msgtype} eq $msgtype or
-               die "Expected msgtype as $msgtype";
-            $content->{body} eq $msgbody or
-               die "Expected body as '$msgbody'";
-            $event->{user_id} eq $senduser->user_id or
-               die "Expected sender user_id as ${\$senduser->user_id}\n";
-
-            return 1;
-         });
-      } @local_members )->on_done( sub {
+               return 1;
+            });
+         } @local_members )
+      })->on_done( sub {
          provide can_receive_room_message_locally => 1;
       });
    };

@@ -54,26 +54,24 @@ my $status_msg = "A status set by 21presence-events.pl";
 test "Presence change reports an event to myself",
    requires => [qw( can_set_presence )],
 
-   do => sub {
+   await => sub {
       do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
 
          content => { presence => "online", status_msg => $status_msg },
-      )
-   },
+      )->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            next unless $event->{type} eq "m.presence";
+            my $content = $event->{content};
+            next unless $content->{user_id} eq $user->user_id;
 
-   await => sub {
-      await_event_for( $user, sub {
-         my ( $event ) = @_;
-         next unless $event->{type} eq "m.presence";
-         my $content = $event->{content};
-         next unless $content->{user_id} eq $user->user_id;
+            $content->{status_msg} eq $status_msg or
+               die "Expected status_msg to be '$status_msg'";
 
-         $content->{status_msg} eq $status_msg or
-            die "Expected status_msg to be '$status_msg'";
-
-         return 1;
+            return 1;
+         });
       });
    };
 
@@ -83,7 +81,7 @@ test "Friends presence changes reports events",
    requires => [qw( more_users
                     can_set_presence can_invite_presence )],
 
-   do => sub {
+   await => sub {
       my ( $more_users ) = @_;
       my $friend = $more_users->[0];
 
@@ -101,28 +99,23 @@ test "Friends presence changes reports events",
 
             content => { presence => "online", status_msg => $friend_status },
          );
-      });
-   },
+      })->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
 
-   await => sub {
-      my ( $more_users ) = @_;
-      my $friend = $more_users->[0];
+            my $content = $event->{content};
+            require_json_keys( $content, qw( user_id ));
 
-      await_event_for( $user, sub {
-         my ( $event ) = @_;
-         return unless $event->{type} eq "m.presence";
+            return unless $content->{user_id} eq $friend->user_id;
 
-         my $content = $event->{content};
-         require_json_keys( $content, qw( user_id ));
+            require_json_keys( $content, qw( presence status_msg ));
+            $content->{presence} eq "online" or
+               die "Expected presence to be 'online'";
+            $content->{status_msg} eq $friend_status or
+               die "Expected status_msg to be '$friend_status'";
 
-         return unless $content->{user_id} eq $friend->user_id;
-
-         require_json_keys( $content, qw( presence status_msg ));
-         $content->{presence} eq "online" or
-            die "Expected presence to be 'online'";
-         $content->{status_msg} eq $friend_status or
-            die "Expected status_msg to be '$friend_status'";
-
-         return 1;
+            return 1;
+         });
       });
    };

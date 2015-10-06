@@ -68,32 +68,28 @@ test "Setting room topic reports m.room.topic to myself",
    requires => [qw( user
                     can_set_room_topic )],
 
-   do => sub {
+   await => sub {
       my ( $user ) = @_;
 
       matrix_put_room_state( $user, $room_id,
          type    => "m.room.topic",
          content => { topic => $topic },
-      );
-   },
+      )->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.topic";
+            require_json_keys( $event, qw( room_id user_id content ));
+            return unless $event->{room_id} eq $room_id;
 
-   await => sub {
-      my ( $user ) = @_;
+            $event->{user_id} eq $user->user_id or
+               die "Expected user_id to be ${\$user->user_id}";
 
-      await_event_for( $user, sub {
-         my ( $event ) = @_;
-         return unless $event->{type} eq "m.room.topic";
-         require_json_keys( $event, qw( room_id user_id content ));
-         return unless $event->{room_id} eq $room_id;
+            require_json_keys( my $content = $event->{content}, qw( topic ));
+            $content->{topic} eq $topic or
+               die "Expected topic to be '$topic'";
 
-         $event->{user_id} eq $user->user_id or
-            die "Expected user_id to be ${\$user->user_id}";
-
-         require_json_keys( my $content = $event->{content}, qw( topic ));
-         $content->{topic} eq $topic or
-            die "Expected topic to be '$topic'";
-
-         return 1;
+            return 1;
+         });
       });
    };
 
