@@ -239,7 +239,7 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
-struct Preparer => [qw( requires do result )], predicate => "is_Preparer";
+struct Preparer => [qw( requires start result )], predicate => "is_Preparer";
 
 sub preparer
 {
@@ -248,7 +248,39 @@ sub preparer
    my $do = $args{do} or croak "preparer needs a 'do' block";
    ref( $do ) eq "CODE" or croak "Expected preparer 'do' block to be CODE";
 
-   return Preparer( $args{requires} // [], $do, undef );
+   my @req_futures;
+   my $f_start = Future->new;
+
+   my @requires;
+   foreach my $req ( @{ $args{requires} // [] } ) {
+      if( is_Preparer( $req ) ) {
+         push @requires, @{ $req->requires };
+         push @req_futures, $f_start->then( sub {
+            my ( $env ) = @_;
+
+            $req->start->( $env );
+            $req->result;
+         });
+      }
+      else {
+         push @requires, $req;
+         push @req_futures, $f_start->then( sub {
+            my ( $env ) = @_;
+
+            exists $env->{$req} or die "TODO: Missing preparer dependency $req\n";
+            Future->done( $env->{$req} );
+         });
+      }
+   }
+
+   return Preparer(
+      \@requires,
+
+      sub { $f_start->done( @_ ) unless $f_start->is_ready },
+
+      Future->needs_all( @req_futures )
+         ->then( $do )
+   );
 }
 
 my $failed;
@@ -285,10 +317,9 @@ sub _run_test
          exists $test_environment{$_} or die "TODO: Missing preparer dependency $_"
             for @{ $preparer->requires };
 
-         my @preparer_reqs = @test_environment{ @{ $preparer->requires } };
-
          push @req_futures, $f_start->then( sub {
-            $preparer->result //= $preparer->do->( @preparer_reqs )
+            $preparer->start->( \%test_environment );
+            $preparer->result;
          });
       }
       else {
