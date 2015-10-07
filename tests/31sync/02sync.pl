@@ -1,13 +1,10 @@
 prepare "Helper method for syncing",
-    requires => [qw( do_request_json_for )],
-
     provides => [qw( do_sync )],
 
     do => sub {
-        my ( $do_request_json_for ) = @_;
         provide do_sync => sub {
             my ( $user, %params ) = @_;
-            $do_request_json_for->($user,
+            do_request_json_for( $user,
                 method  => "GET",
                 uri     => "/v2_alpha/sync",
                 params  => \%params,

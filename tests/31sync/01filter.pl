@@ -1,13 +1,11 @@
 prepare "Helper method for creating filters",
-    requires => [qw( do_request_json_for )],
-
     provides => [qw( create_filter )],
 
     do => sub {
-        my ( $do_request_json_for ) = @_;
+        my ( ) = @_;
         provide create_filter => sub {
             my ( $user, $filter ) = @_;
-            $do_request_json_for->($user,
+            do_request_json_for( $user,
                 method  => "POST",
                 uri     => "/v2_alpha/user/${\$user->user_id}/filter",
                 content => $filter,
@@ -37,11 +35,11 @@ test "Can create filter",
     };
 
 test "Can download filter",
-    requires => [qw ( do_request_json_for sync_user sync_filter )],
+    requires => [qw ( sync_user sync_filter )],
 
     check => sub {
-        my ( $do_request_json_for, $sync_user, $sync_filter ) = @_;
-        $do_request_json_for->( $sync_user,
+        my ( $sync_user, $sync_filter ) = @_;
+        do_request_json_for( $sync_user,
             method  => "GET",
             uri     => "/v2_alpha/user/${\$sync_user->user_id}/filter/$sync_filter",
         )->then( sub {
