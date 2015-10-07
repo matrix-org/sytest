@@ -1,9 +1,9 @@
 multi_test "Can claim remote one time key using POST",
-   requires => [ local_user_preparer(), qw( remote_users
-                 can_upload_e2e_keys )],
+   requires => [ local_user_preparer(), remote_user_preparer(),
+                 qw( can_upload_e2e_keys )],
 
    check => sub {
-      my ( $user, $remote_users ) = @_;
+      my ( $user, $remote_user ) = @_;
 
       do_request_json_for( $user,
          method  => "POST",
@@ -31,7 +31,7 @@ multi_test "Can claim remote one time key using POST",
 
          pass "Counted one time keys";
 
-         do_request_json_for( $remote_users->[0],
+         do_request_json_for( $remote_user,
             method  => "POST",
             uri     => "/v2_alpha/keys/claim",
             content => {
