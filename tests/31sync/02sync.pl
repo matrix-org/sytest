@@ -17,7 +17,7 @@ test "Can sync",
     requires => [qw( first_api_client can_create_filter )],
     provides => [qw( can_sync )],
 
-    check => sub {
+    do => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id );
         matrix_register_sync_user( $http )->then( sub {
