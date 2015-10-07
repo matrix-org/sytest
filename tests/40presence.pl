@@ -1,36 +1,21 @@
+my $local_users_preparer = local_users_preparer( 2 );
+
 my $remote_user_preparer = remote_user_preparer();
 
 # Ensure all the users are members of a shared room, so that we know presence
 # messages can be shared between them all
-my $room_preparer = preparer(
-   requires => [ qw( local_users ), $remote_user_preparer ],
-
-   do => sub {
-      my ( $local_users, $remote_user ) = @_;
-
-      matrix_create_and_join_room( [ @$local_users, $remote_user ] )
-   },
+my $room_preparer = room_preparer(
+   requires_users => [ $local_users_preparer, $remote_user_preparer ],
 );
-
-prepare "Flushing event streams",
-   requires => [qw( local_users ) ],
-
-   do => sub {
-      my ( $local_users ) = @_;
-
-      Future->needs_all(
-         map { flush_events_for( $_ ) } @$local_users
-      );
-   };
 
 my $status_msg = "Update for room members";
 
 test "Presence changes are reported to local room members",
-   requires => [qw( user local_users ), $room_preparer,
-                qw( can_set_presence )],
+   requires => [ $local_users_preparer, $room_preparer,
+                 qw( can_set_presence )],
 
    do => sub {
-      my ( $senduser, $local_users ) = @_;
+      my ( $senduser, $local_user, undef ) = @_;
 
       do_request_json_for( $senduser,
          method => "PUT",
@@ -51,24 +36,24 @@ test "Presence changes are reported to local room members",
 
                $content->{user_id} eq $senduser->user_id or return;
 
-               require_json_keys( $content, qw( status_msg ));
-
-               # Disalbed for now; see SYT-34
+               # Disabled for now; see SYT-34
+               # require_json_keys( $content, qw( status_msg ));
+               #
                # $content->{status_msg} eq $status_msg or
                #    die "Expected content status_msg to '$status_msg'";
 
                return 1;
             });
-         } @$local_users );
+         } $senduser, $local_user );
       });
    };
 
 test "Presence changes are also reported to remote room members",
-   requires => [qw( user ), $remote_user_preparer, $room_preparer,
-                qw( can_set_presence can_join_remote_room_by_alias )],
+   requires => [ $local_users_preparer, $remote_user_preparer, $room_preparer,
+                 qw( can_set_presence can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $senduser, $remote_user ) = @_;
+      my ( $senduser, undef, $remote_user, undef ) = @_;
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
@@ -91,11 +76,11 @@ test "Presence changes are also reported to remote room members",
    };
 
 test "Presence changes to OFFLINE are reported to local room members",
-   requires => [qw( user local_users ), $room_preparer,
-                qw( can_set_presence )],
+   requires => [ $local_users_preparer, $room_preparer,
+                 qw( can_set_presence )],
 
    do => sub {
-      my ( $senduser, $local_users ) = @_;
+      my ( $senduser, $local_user, undef ) = @_;
 
       do_request_json_for( $senduser,
          method => "PUT",
@@ -117,16 +102,16 @@ test "Presence changes to OFFLINE are reported to local room members",
 
                return 1;
             })
-         } @$local_users );
+         } $senduser, $local_user );
       });
    };
 
 test "Presence changes to OFFLINE are reported to remote room members",
-   requires => [qw( user ), $remote_user_preparer, $room_preparer,
-                qw( can_set_presence can_join_remote_room_by_alias )],
+   requires => [ $local_users_preparer, $remote_user_preparer, $room_preparer,
+                 qw( can_set_presence can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $senduser, $remote_user ) = @_;
+      my ( $senduser, undef, $remote_user ) = @_;
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
