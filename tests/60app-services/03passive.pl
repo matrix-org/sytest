@@ -56,12 +56,11 @@ multi_test "Inviting an AS-hosted user asks the AS server",
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
-   requires => [qw( await_as_event as_user local_users first_home_server
-                    can_join_room_by_alias )],
+   requires => [qw( await_as_event as_user first_home_server ), local_user_preparer(),
+                qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $await_as_event, $as_user, $users, $first_home_server ) = @_;
-      my $user = $users->[1];
+      my ( $await_as_event, $as_user, $first_home_server, $local_user ) = @_;
       my $room_alias = "#astest-03passive-1:$first_home_server";
 
       Future->needs_all(
@@ -107,7 +106,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
             );
          }),
 
-         do_request_json_for( $user,
+         do_request_json_for( $local_user,
             method => "POST",
             uri    => "/api/v1/join/$room_alias",
 
