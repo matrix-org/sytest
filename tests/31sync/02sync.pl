@@ -8,9 +8,8 @@ sub matrix_sync {
         params  => \%params,
     )->on_done(sub {
         my ( $body ) = @_;
-        require_json_keys( $body, qw( rooms room_map presence next_batch ) );
-        require_json_keys( my $rooms = $body->{rooms}, qw( default ));
-        require_json_keys( $rooms->{default}, qw( joined invited archived ) );
+        require_json_keys( $body, qw( rooms presence next_batch ) );
+        require_json_keys( my $rooms = $body->{rooms}, qw( joined invited archived ) );
     });
 }
 
