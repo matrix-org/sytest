@@ -123,7 +123,7 @@ test "Can invite existing 3pid",
       my $room_id;
 
       Future->needs_all(
-         stub_is_lookup($invitee_email, $invitee_mxid, $await_http_request),
+         stub_is_lookup( $invitee_email, $invitee_mxid, $await_http_request ),
 
          matrix_create_and_join_room( [ $inviter ], visibility => "private" )
          ->then( sub {
@@ -155,18 +155,12 @@ test "Can invite existing 3pid",
    };
 
 test "Can invite unbound 3pid",
-   requires => [qw( user more_users test_http_server_hostandport await_http_request first_home_server synapse_client_locations )],
-   do => sub {
-      my ( $user, $users, $id_server, $await_http_request, $user_agent ) = @_;
-      can_invite_unbound_3pid( $user, $users, $id_server, $await_http_request, $user_agent );
-   };
+   requires => [qw( user more_users test_http_server_hostandport await_http_request first_home_server )],
+   do => \&can_invite_unbound_3pid;
 
 test "Can invite unbound 3pid over federation",
-   requires => [qw( user remote_users test_http_server_hostandport await_http_request synapse_client_locations )],
-   do => sub {
-      my ( $user, $users, $id_server, $await_http_request, undef, $user_agent ) = @_;
-      can_invite_unbound_3pid( $user, $users, $id_server, $await_http_request, $user_agent );
-   };
+   requires => [qw( user remote_users test_http_server_hostandport await_http_request first_home_server )],
+   do => \&can_invite_unbound_3pid;
 
 sub can_invite_unbound_3pid {
    my ( $inviter, $other_users, $id_server, $await_http_request, $user_agent ) = @_;
@@ -500,13 +494,14 @@ sub stub_is_token_generation {
 };
 
 sub stub_is_key_validation {
-   my ( $validity, $await_http_request, $user_agent_substring ) = @_;
+   my ( $validity, $await_http_request, $wanted_user_agent_substring ) = @_;
 
    $await_http_request->( "/_matrix/identity/api/v1/pubkey/isvalid", sub {
       my ( $req ) = @_;
-      !defined $user_agent_substring and return 1;
-      index( $req->header( "User-Agent" ), $user_agent_substring ) ge 0
-         or return 0;
+      !defined $wanted_user_agent_substring and return 1;
+      my $user_agent = $req->header( "User-Agent" );
+      defined $user_agent and $user_agent =~ m/\Q$wanted_user_agent_substring/ or
+         return 0;
       # TODO: Parse body
       return 1;
    })->then( sub {
