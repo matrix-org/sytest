@@ -1,3 +1,4 @@
+use Future 0.33; # then catch semantics
 use Future::Utils qw( fmap );
 use List::UtilsBy qw( partition_by );
 
@@ -16,6 +17,8 @@ prepare "Creating testing room",
          ( $room_id, $room_alias ) = @_;
       });
    };
+
+my ( $invited_user, $banned_user ) = prepare_local_users( 2 );
 
 test "POST /rooms/:room_id/join can join a room",
    requires => [qw( more_users
@@ -153,31 +156,34 @@ test "POST /join/:room_id can join a room",
    };
 
 test "POST /rooms/:room_id/leave can leave a room",
-   requires => [qw( more_users
+   requires => [qw( first_api_client
                     can_get_room_membership )],
 
    critical => 1,
 
    do => sub {
-      my ( $more_users ) = @_;
-      my $user = $more_users->[1];
+      my ( $api_client ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/leave",
+      my $joiner_to_leave;
 
-         content => {},
-      );
-   },
+      matrix_register_user( $api_client )
+      ->then( sub {
+         ( $joiner_to_leave ) = @_;
 
-   check => sub {
-      my ( $more_users ) = @_;
-      my $user = $more_users->[1];
+         matrix_join_room( $joiner_to_leave, $room_id )
+      })->then( sub {
+         do_request_json_for( $joiner_to_leave,
+            method => "POST",
+            uri    => "/api/v1/rooms/$room_id/leave",
 
-      matrix_get_room_state( $user, $room_id,
-         type      => "m.room.member",
-         state_key => $user->user_id,
-      )->then(
+            content => {},
+         );
+      })->then( sub {
+         matrix_get_room_state( $joiner_to_leave, $room_id,
+            type      => "m.room.member",
+            state_key => $joiner_to_leave->user_id,
+         )
+      })->then(
          sub { # then
             my ( $body ) = @_;
 
@@ -186,9 +192,8 @@ test "POST /rooms/:room_id/leave can leave a room",
 
             Future->done(1);
          },
-         sub { # else
-            my ( $failure, $name, $response ) = @_;
-            Future->fail( @_ ) unless defined $name and $name eq "http";
+         http => sub { # catch
+            my ( $failure, undef, $response ) = @_;
             Future->fail( @_ ) unless $response->code == 403;
 
             # We're expecting a 403 so that's fine
@@ -214,30 +219,28 @@ sub matrix_leave_room
 }
 
 test "POST /rooms/:room_id/invite can send an invite",
-   requires => [qw( user more_users
+   requires => [qw( user
                     can_get_room_membership )],
 
    provides => [qw( can_invite_room )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
-      my $invitee = $more_users->[1];
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/invite",
 
-         content => { user_id => $invitee->user_id },
+         content => { user_id => $invited_user->user_id },
       );
    },
 
    check => sub {
-      my ( $user, $more_users ) = @_;
-      my $invitee = $more_users->[1];
+      my ( $user ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
-         state_key => $invitee->user_id,
+         state_key => $invited_user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -277,14 +280,13 @@ sub matrix_invite_user_to_room
 }
 
 test "POST /rooms/:room_id/ban can ban a user",
-   requires => [qw( user more_users
+   requires => [qw( user
                     can_get_room_membership )],
 
    provides => [qw( can_ban_room )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
-      my $banned_user = $more_users->[2];
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -298,8 +300,7 @@ test "POST /rooms/:room_id/ban can ban a user",
    },
 
    check => sub {
-      my ( $user, $more_users ) = @_;
-      my $banned_user = $more_users->[2];
+      my ( $user ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",

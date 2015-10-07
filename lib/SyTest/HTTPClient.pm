@@ -12,6 +12,7 @@ Net::Async::HTTP->VERSION( '0.36' ); # PUT content bugfix
 use JSON;
 my $json = JSON->new->convert_blessed;
 
+use Future 0.33; # ->catch
 use Net::SSLeay 1.59; # TLSv1.2
 
 use constant MIME_TYPE_JSON => "application/json";
@@ -84,16 +85,18 @@ sub do_request
       }
 
       Future->done( $content, $response );
-   })->else_with_f( sub {
+   })->catch_with_f( http => sub {
       my ( $f, $message, $name, @args ) = @_;
-      return $f unless defined $name and
-                       $name eq "http" and
-                       my $response = $args[0];
+      return $f unless my $response = $args[0];
       return $f unless $response->content_type eq MIME_TYPE_JSON;
 
       # Most HTTP failures from synapse contain more detailed information in a
       # JSON-encoded response body.
-      return Future->fail( "$message\n" . $response->decoded_content, $name => @args );
+
+      # Full URI is going to be long and messy because of query params; trim them
+      my $uri_without_query = join "", $uri->scheme, "://", $uri->authority, $uri->path, "?...";
+
+      return Future->fail( "$message from $params{method} $uri_without_query\n" . $response->decoded_content, $name => @args );
    });
 }
 

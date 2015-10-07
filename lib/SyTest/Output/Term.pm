@@ -30,6 +30,13 @@ sub run_file
    print "${CYAN_B}Running $filename...${RESET}\n";
 }
 
+sub abort_file
+{
+   shift;
+   my ( $filename, $reason ) = @_;
+   print "${RED_B}ABORT${RESET} ${CYAN_B}$filename${RESET} because $reason\n";
+}
+
 # General test status
 sub enter_test
 {

@@ -4,7 +4,7 @@ multi_test "Non-present room members cannot ban others",
       can_ban_room can_change_power_levels
    )],
 
-   await => sub {
+   do => sub {
       my ( $local_users ) = @_;
       my $creator = $local_users->[0];
       my $testuser = $local_users->[1];

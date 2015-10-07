@@ -1,3 +1,17 @@
+my $room_id;
+
+prepare "Creating a new test room",
+   requires => [qw( user )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room( $user )
+         ->on_done( sub {
+            ( $room_id ) = @_;
+         });
+   };
+
 test "AS can create a user",
    requires => [qw( as_user )],
 
@@ -71,19 +85,6 @@ test "Regular users cannot register within the AS namespace",
 
       matrix_register_user( $http, "astest-01create-2" )
          ->main::expect_http_4xx;
-   };
-
-my $room_id;
-prepare "Creating a new test room",
-   requires => [qw( user )],
-
-   do => sub {
-      my ( $user ) = @_;
-
-      matrix_create_room( $user )
-         ->on_done( sub {
-            ( $room_id ) = @_;
-         });
    };
 
 test "AS can make room aliases",

@@ -32,48 +32,44 @@ test "Typing notification sent to local room members",
                     can_set_room_typing )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $typinguser ) = @_;
 
-      do_request_json_for( $user,
+      do_request_json_for( $typinguser,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
          content => { typing => 1, timeout => 30000 }, # msec
-      );
-   },
+      )->then( sub {
+         Future->needs_all( map {
+            my $recvuser = $_;
 
-   await => sub {
-      my ( $typinguser ) = @_;
+            await_event_for( $recvuser, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.typing";
 
-      Future->needs_all( map {
-         my $recvuser = $_;
+               require_json_keys( $event, qw( type room_id content ));
+               require_json_keys( my $content = $event->{content}, qw( user_ids ));
 
-         await_event_for( $recvuser, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.typing";
+               return unless $event->{room_id} eq $room_id;
 
-            require_json_keys( $event, qw( type room_id content ));
-            require_json_keys( my $content = $event->{content}, qw( user_ids ));
+               require_json_list( my $users = $content->{user_ids} );
 
-            return unless $event->{room_id} eq $room_id;
+               scalar @$users == 1 or
+                  die "Expected 1 member to be typing";
+               $users->[0] eq $typinguser->user_id or
+                  die "Expected ${\$typinguser->user_id} to be typing";
 
-            require_json_list( my $users = $content->{user_ids} );
-
-            scalar @$users == 1 or
-               die "Expected 1 member to be typing";
-            $users->[0] eq $typinguser->user_id or
-               die "Expected ${\$typinguser->user_id} to be typing";
-
-            return 1;
-         })
-      } @local_members );
+               return 1;
+            })
+         } @local_members );
+      });
    };
 
 test "Typing notifications also sent to remove room members",
    requires => [qw( user remote_users
                     can_set_room_typing can_join_remote_room_by_alias )],
 
-   await => sub {
+   do => sub {
       my ( $typinguser, $remote_users ) = @_;
 
       Future->needs_all( map {
@@ -105,66 +101,55 @@ test "Typing can be explicitly stopped",
                     can_set_room_typing )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $typinguser ) = @_;
 
-      do_request_json_for( $user,
+      do_request_json_for( $typinguser,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
          content => { typing => 0 },
-      );
-   },
+      )->then( sub {
+         Future->needs_all( map {
+            my $recvuser = $_;
 
-   await => sub {
-      my ( $typinguser ) = @_;
+            await_event_for( $recvuser, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.typing";
 
-      Future->needs_all( map {
-         my $recvuser = $_;
+               require_json_keys( $event, qw( type room_id content ));
+               require_json_keys( my $content = $event->{content}, qw( user_ids ));
 
-         await_event_for( $recvuser, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.typing";
+               return unless $event->{room_id} eq $room_id;
 
-            require_json_keys( $event, qw( type room_id content ));
-            require_json_keys( my $content = $event->{content}, qw( user_ids ));
+               require_json_list( my $users = $content->{user_ids} );
 
-            return unless $event->{room_id} eq $room_id;
+               scalar @$users and
+                  die "Expected 0 members to be typing";
 
-            require_json_list( my $users = $content->{user_ids} );
-
-            scalar @$users and
-               die "Expected 0 members to be typing";
-
-            return 1;
-         })
-      } @local_members );
-   };
-
-prepare "Flushing event streams",
-   requires => [qw( remote_users )],
-   do => sub {
-      my ( $remote_users ) = @_;
-
-      Future->needs_all(
-         map { flush_events_for( $_ ) } @local_members, @$remote_users
-      );
+               return 1;
+            })
+         } @local_members );
+      });
    };
 
 multi_test "Typing notifications timeout and can be resent",
    requires => [qw( user
                     can_set_room_typing )],
 
-   await => sub {
+   do => sub {
       my ( $user ) = @_;
 
       my $start_time = time();
 
-      do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/typing/:user_id",
+      flush_events_for( $user )
+      ->then( sub {
+         do_request_json_for( $user,
+            method => "PUT",
+            uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
-         content => { typing => 1, timeout => 100 }, # msec; i.e. very short
-      )->then( sub {
+            content => { typing => 1, timeout => 100 }, # msec; i.e. very short
+         )
+      })->then( sub {
          pass( "Sent typing notification" );
 
          # start typing

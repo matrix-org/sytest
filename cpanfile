@@ -4,7 +4,7 @@ requires 'Data::Dump';
 requires 'File::Basename';
 requires 'File::Path';
 requires 'File::Slurper';
-requires 'Future', '>= 0.18';
+requires 'Future', '>= 0.33';
 requires 'Getopt::Long';
 requires 'IO::Async::Loop';
 requires 'IO::Async::SSL';
