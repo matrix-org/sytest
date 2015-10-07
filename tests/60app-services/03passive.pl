@@ -13,17 +13,17 @@ prepare "Creating a new test room",
    };
 
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [qw( user await_http_request await_as_event make_as_user first_home_server
+   requires => [qw( user await_as_event make_as_user first_home_server
                     can_invite_room )],
 
    do => sub {
-      my ( $user, $await_http_request, $await_as_event, $make_as_user, $home_server ) = @_;
+      my ( $user, $await_as_event, $make_as_user, $home_server ) = @_;
 
       my $localpart = "astest-03passive-1";
       my $user_id = "\@$localpart:$home_server";
 
       Future->needs_all(
-         $await_http_request->( "/appserv/users/$user_id", sub { 1 } )->then( sub {
+         await_http_request( "/appserv/users/$user_id", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
             $make_as_user->( $localpart )->then( sub {
@@ -56,16 +56,16 @@ multi_test "Inviting an AS-hosted user asks the AS server",
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
-   requires => [qw( await_http_request await_as_event as_user local_users first_home_server
+   requires => [qw( await_as_event as_user local_users first_home_server
                     can_join_room_by_alias )],
 
    do => sub {
-      my ( $await_http_request, $await_as_event, $as_user, $users, $first_home_server ) = @_;
+      my ( $await_as_event, $as_user, $users, $first_home_server ) = @_;
       my $user = $users->[1];
       my $room_alias = "#astest-03passive-1:$first_home_server";
 
       Future->needs_all(
-         $await_http_request->( "/appserv/rooms/$room_alias", sub { 1 } )->then( sub {
+         await_http_request( "/appserv/rooms/$room_alias", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
             pass "Received AS request";
