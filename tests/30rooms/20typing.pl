@@ -1,27 +1,19 @@
 use Time::HiRes qw( time );
 
-my @local_members;
+my $local_users_preparer = local_users_preparer( 2 );
 
 my $remote_user_preparer = remote_user_preparer();
 
-my $room_preparer = preparer(
-   requires => [qw( local_users ), $remote_user_preparer ],
-
-   do => sub {
-      my ( $local_users, $remote_user ) = @_;
-
-      @local_members = @$local_users;
-
-      matrix_create_and_join_room( [ @$local_users, $remote_user ] )
-   },
+my $room_preparer = room_preparer(
+   requires_users => [ $local_users_preparer, $remote_user_preparer ],
 );
 
 test "Typing notification sent to local room members",
-   requires => [qw( user ), $room_preparer,
+   requires => [ $local_users_preparer, $room_preparer,
                 qw( can_set_room_typing )],
 
    do => sub {
-      my ( $typinguser, $room_id ) = @_;
+      my ( $typinguser, $local_user, $room_id ) = @_;
 
       do_request_json_for( $typinguser,
          method => "PUT",
@@ -50,16 +42,16 @@ test "Typing notification sent to local room members",
 
                return 1;
             })
-         } @local_members );
+         } $typinguser, $local_user );
       });
    };
 
-test "Typing notifications also sent to remove room members",
-   requires => [qw( user ), $remote_user_preparer, $room_preparer,
+test "Typing notifications also sent to remote room members",
+   requires => [ $local_users_preparer, $remote_user_preparer, $room_preparer,
                 qw( can_set_room_typing can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $typinguser, $remote_user, $room_id ) = @_;
+      my ( $typinguser, undef, $remote_user, $room_id ) = @_;
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
@@ -82,11 +74,11 @@ test "Typing notifications also sent to remove room members",
    };
 
 test "Typing can be explicitly stopped",
-   requires => [qw( user ), $room_preparer,
+   requires => [ $local_users_preparer, $room_preparer,
                 qw( can_set_room_typing )],
 
    do => sub {
-      my ( $typinguser, $room_id ) = @_;
+      my ( $typinguser, $local_user, $room_id ) = @_;
 
       do_request_json_for( $typinguser,
          method => "PUT",
@@ -113,16 +105,16 @@ test "Typing can be explicitly stopped",
 
                return 1;
             })
-         } @local_members );
+         } $typinguser, $local_user );
       });
    };
 
 multi_test "Typing notifications timeout and can be resent",
-   requires => [qw( user ), $room_preparer,
+   requires => [ $local_users_preparer, $room_preparer,
                 qw( can_set_room_typing )],
 
    do => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, undef, $room_id ) = @_;
 
       my $start_time = time();
 
