@@ -15,27 +15,24 @@ sub matrix_sync {
 }
 
 test "Can sync",
-    requires => [qw( sync_user can_create_filter )],
+    requires => [qw( first_api_client can_create_filter )],
     provides => [qw( can_sync )],
 
     check => sub {
-        my (  $sync_user ) = @_;
-
-        my $sync_filter;
-
-        my $check_empty_sync = sub {
-            my ( $body ) = @_;
-        };
-
-        matrix_create_filter( $sync_user, {
-            room => { timeline => { limit => 10 } }
+        my ( $http ) = @_;
+        my ( $user, $filter_id );
+        matrix_register_sync_user( $http )->then( sub {
+            ( $user ) = @_;
+            matrix_create_filter( $user, {
+                room => { timeline => { limit => 10 }}
+            })
         })->then( sub {
-            ( $sync_filter ) = @_;
-            matrix_sync( $sync_user, filter => $sync_filter )
+            ( $filter_id ) = @_;
+            matrix_sync( $user, filter => $filter_id )
         })->then( sub {
             my ( $body ) = @_;
-            matrix_sync( $sync_user,
-                filter => $sync_filter,
+            matrix_sync( $user,
+                filter => $filter_id,
                 since => $body->{next_batch},
             )
         })->then( sub {

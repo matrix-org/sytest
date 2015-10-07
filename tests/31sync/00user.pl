@@ -1,13 +1,10 @@
-prepare "Create user for testing sync",
-    requires => [qw( first_api_client )],
+push our @EXPORT, qw( matrix_register_sync_user );
 
-    provides => [qw( sync_user )],
+my $counter = 0;
 
-    do => sub {
-        my ( $http,) = @_;
-        matrix_register_user( $http, "31sync_user" )->then( sub {
-            my ( $sync_user ) = @_;
-            provide sync_user => $sync_user;
-            Future->done()
-        })
-    };
+sub matrix_register_sync_user {
+    my ( $http ) = @_;
+    my $user_id = "31sync_user_$counter";
+    $counter += 1;
+    matrix_register_user( $http, $user_id, with_events => 0);
+}
