@@ -1,42 +1,24 @@
-my @local_members;
+my $local_users_preparer = local_users_preparer( 2 );
 
 my $remote_preparer = remote_user_preparer();
 
-my $room_preparer = preparer(
-   requires => [qw( local_users ), $remote_preparer ],
-
-   do => sub {
-      my ( $local_users, $remote_user ) = @_;
-
-      @local_members = @$local_users;
-
-      matrix_create_and_join_room( [ @local_members, $remote_user ] )
-   },
+my $room_preparer = room_preparer(
+   requires_users => [ $local_users_preparer, $remote_preparer ],
 );
-
-prepare "Flushing event streams",
-   requires => [qw( local_users )],
-
-   do => sub {
-      my ( $users ) = @_;
-
-      Future->needs_all( map { flush_events_for( $_ ) } @$users );
-   };
 
 my $msgtype = "m.message";
 my $msgbody = "Room message for 33room-messages";
 
 test "Local room members see posted message events",
-   requires => [qw( user ), $room_preparer,
-                qw( can_send_message )],
+   requires => [ $local_users_preparer, $room_preparer,
+                 qw( can_send_message )],
 
    provides => [qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $user, $room_id ) = @_;
-      my ( $senduser ) = @local_members;
+      my ( $senduser, $local_user, $room_id ) = @_;
 
-      matrix_send_room_message( $user, $room_id,
+      matrix_send_room_message( $senduser, $room_id,
          content => { msgtype => $msgtype, body => $msgbody },
       )->then( sub {
          Future->needs_all( map {
@@ -60,16 +42,19 @@ test "Local room members see posted message events",
 
                return 1;
             });
-         } @local_members )
+         } $senduser, $local_user )
       })->on_done( sub {
          provide can_receive_room_message_locally => 1;
       });
    };
 
 test "Fetching eventstream a second time doesn't yield the message again",
-   requires => [qw( can_receive_room_message_locally )],
+   requires => [ $local_users_preparer,
+                 qw( can_receive_room_message_locally )],
 
    check => sub {
+      my ( $senduser, $local_user ) = @_;
+
       Future->needs_all( map {
          my $recvuser = $_;
 
@@ -93,7 +78,7 @@ test "Fetching eventstream a second time doesn't yield the message again",
 
             Future->done;
          })
-      } @local_members )->then_done(1);
+      } $senduser, $local_user )->then_done(1);
    };
 
 test "Local non-members don't see posted message events",
@@ -121,11 +106,11 @@ test "Local non-members don't see posted message events",
    };
 
 test "Local room members can get room messages",
-   requires => [ $room_preparer,
+   requires => [ $local_users_preparer, $room_preparer,
                  qw( can_send_message can_get_messages )],
 
    check => sub {
-      my ( $room_id ) = @_;
+      my ( $senduser, $local_user, $room_id ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
@@ -154,15 +139,15 @@ test "Local room members can get room messages",
 
             Future->done(1);
          });
-      } @local_members )
+      } $senduser, $local_user )
    };
 
 test "Remote room members also see posted message events",
-   requires => [qw( user ), $remote_preparer, $room_preparer,
+   requires => [ $local_users_preparer, $remote_preparer, $room_preparer,
                 qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $senduser, $remote_user, $room_id ) = @_;
+      my ( $senduser, undef, $remote_user, $room_id ) = @_;
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
