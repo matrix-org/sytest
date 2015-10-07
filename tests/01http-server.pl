@@ -1,8 +1,6 @@
 use File::Basename qw( dirname );
 use Net::Async::HTTP::Server 0.09;  # request_class with bugfix
 use IO::Async::SSL;
-use JSON qw( decode_json );
-use URI::Escape qw( uri_unescape );
 
 use SyTest::HTTPClient;
 use SyTest::HTTPServer::Request;
@@ -10,6 +8,9 @@ use SyTest::HTTPServer::Request;
 my $DIR = dirname( __FILE__ );
 
 struct Awaiter => [qw( pathmatch filter future )];
+
+# List of Awaiter structs
+my @pending_awaiters;
 
 prepare "Environment closures for receiving HTTP pokes",
    requires => [qw( )],
@@ -19,42 +20,7 @@ prepare "Environment closures for receiving HTTP pokes",
    do => sub {
       my $listen_host = "localhost";
 
-      # List of Awaiter structs
-      my @pending_awaiters;
-
-      my $http_server = Net::Async::HTTP::Server->new(
-         request_class => "SyTest::HTTPServer::Request",
-
-         on_request => sub {
-            my ( $self, $request ) = @_;
-
-            my $method = $request->method;
-            my $path = uri_unescape $request->path;
-
-            if( $CLIENT_LOG ) {
-               print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
-               #TODO log the HTTP Request headers
-               print STDERR "  $_\n" for split m/\n/, $request->body;
-               print STDERR "-- \n";
-            }
-
-            foreach my $idx ( 0 .. $#pending_awaiters ) {
-               my $awaiter = $pending_awaiters[$idx];
-
-               my $pathmatch = $awaiter->pathmatch;
-               next unless ( !ref $pathmatch and $path eq $pathmatch ) or
-                           ( ref $pathmatch  and $path =~ $pathmatch );
-
-               next if $awaiter->filter and not $awaiter->filter->( $request );
-
-               splice @pending_awaiters, $idx, 1, ();
-               $awaiter->future->done( $request );
-               return;
-            }
-
-            warn "Received spurious HTTP request to $path\n";
-         }
-      );
+      my $http_server = SyTest::HTTPServer->new;
       $loop->add( $http_server );
 
       my $await_http_request = sub {
@@ -160,3 +126,49 @@ prepare "Environment closures for receiving HTTP pokes",
          )
       })
    };
+
+package SyTest::HTTPServer {
+   use base qw( Net::Async::HTTP::Server );
+
+   use URI::Escape qw( uri_unescape );
+
+   sub _init
+   {
+      my $self = shift;
+      my ( $params ) = @_;
+
+      $params->{request_class} ||= "SyTest::HTTPServer::Request";
+      $self->SUPER::_init( $params );
+   }
+
+   sub on_request
+   {
+      my ( $self, $request ) = @_;
+
+      my $method = $request->method;
+      my $path = uri_unescape $request->path;
+
+      if( $CLIENT_LOG ) {
+         print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
+         #TODO log the HTTP Request headers
+         print STDERR "  $_\n" for split m/\n/, $request->body;
+         print STDERR "-- \n";
+      }
+
+      foreach my $idx ( 0 .. $#pending_awaiters ) {
+         my $awaiter = $pending_awaiters[$idx];
+
+         my $pathmatch = $awaiter->pathmatch;
+         next unless ( !ref $pathmatch and $path eq $pathmatch ) or
+                     ( ref $pathmatch  and $path =~ $pathmatch );
+
+         next if $awaiter->filter and not $awaiter->filter->( $request );
+
+         splice @pending_awaiters, $idx, 1, ();
+         $awaiter->future->done( $request );
+         return;
+      }
+
+      warn "Received spurious HTTP request to $path\n";
+   }
+}
