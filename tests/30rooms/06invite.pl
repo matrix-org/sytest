@@ -416,6 +416,8 @@ sub make_3pid_invite {
       }
       : \&main::expect_http_4xx;
 
+   my $room_id;
+
    Future->needs_all(
       stub_is_lookup( $invitee_email, undef, $await_http_request ),
 
@@ -425,19 +427,17 @@ sub make_3pid_invite {
 
       matrix_create_room( $inviter, visibility => "private" )
       ->then(sub {
-         my ( $room_id ) = @_;
+         ( $room_id ) = @_;
          do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
-         ->then( sub {
-            $join_sub->( $token, $public_key, $signature, $room_id )
-            ->followed_by($response_verifier)
-            ->then( sub {
-               matrix_get_room_state( $inviter, $room_id,
-                  type => "m.room.member",
-                  state_key => $invitee->user_id,
-               )
-            })->followed_by(assert_membership( $inviter, $expect_join_success ? "join" : undef ) );
-         })
-      }),
+      })->then( sub {
+         $join_sub->( $token, $public_key, $signature, $room_id )
+      })->followed_by($response_verifier)
+      ->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type => "m.room.member",
+            state_key => $invitee->user_id,
+         )
+      })->followed_by(assert_membership( $inviter, $expect_join_success ? "join" : undef ) ),
    );
 }
 
