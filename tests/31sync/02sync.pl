@@ -14,10 +14,12 @@ prepare "Helper method for syncing",
     };
 
 test "Can sync",
-    requires => [qw( do_sync sync_user sync_filter )],
+    requires => [qw( do_sync sync_user can_create_filter )],
 
     check => sub {
-        my ( $do_sync, $sync_user, $sync_filter ) = @_;
+        my ( $do_sync, $sync_user ) = @_;
+
+        my $sync_filter;
 
         my $check_empty_sync = sub {
             my ( $body ) = @_;
@@ -26,7 +28,12 @@ test "Can sync",
             require_json_keys( $rooms->{default}, qw( joined invited archived ) );
         };
 
-        $do_sync->( $sync_user, filter => $sync_filter )->then( sub {
+        matrix_create_filter( $sync_user, {
+            room => { timeline => { limit => 10 } }
+        })->then( sub {
+            ( $sync_filter ) = @_;
+            $do_sync->( $sync_user, filter => $sync_filter )
+        })->then( sub {
             my ( $body ) = @_;
             $check_empty_sync->( $body );
             $do_sync->( $sync_user,
