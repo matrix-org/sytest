@@ -359,10 +359,13 @@ sub test
       $skipped_count++;
    }
 
-   no warnings 'exiting';
-   last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
+   if( $t->failed ) {
+      no warnings 'exiting';
 
-   die "This CRITICAL test has failed - bailing out\n" if $t->failed and $params{critical};
+      last TEST if $STOP_ON_FAIL and not $params{expect_fail};
+
+      warn( "This CRITICAL test has failed - bailing out\n" ), last TEST if $params{critical};
+   }
 }
 
 {
