@@ -10,6 +10,8 @@ STDOUT->autoflush(1);
 # File status
 sub run_file {}
 
+sub abort_file {}
+
 my $test_num;
 
 # General test status
