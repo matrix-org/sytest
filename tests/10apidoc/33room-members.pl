@@ -384,3 +384,20 @@ sub matrix_create_and_join_room
       })->then_done( $room_id );
    })
 }
+
+push @EXPORT, qw( room_preparer );
+
+sub room_preparer
+{
+   my %args = @_;
+
+   preparer(
+      requires => $args{requires_users},
+
+      do => sub {
+         my @members = @_;
+
+         matrix_create_and_join_room( \@members )
+      }
+   );
+}
