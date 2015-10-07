@@ -113,17 +113,17 @@ test "Invited user can join the room",
    };
 
 test "Can invite existing 3pid",
-   requires => [qw( user more_users test_http_server_hostandport await_http_request )],
+   requires => [qw( user more_users test_http_server_hostandport )],
 
    do => sub {
-      my ( $inviter, $more_users, $id_server, $await_http_request ) = @_;
+      my ( $inviter, $more_users, $id_server ) = @_;
 
       my $invitee_email = "marmosets\@monkeyworld.org";
       my $invitee_mxid = $more_users->[0]->user_id;
       my $room_id;
 
       Future->needs_all(
-         stub_is_lookup( $invitee_email, $invitee_mxid, $await_http_request ),
+         stub_is_lookup( $invitee_email, $invitee_mxid ),
 
          matrix_create_and_join_room( [ $inviter ], visibility => "private" )
          ->then( sub {
@@ -155,18 +155,18 @@ test "Can invite existing 3pid",
    };
 
 test "Can invite unbound 3pid",
-   requires => [qw( user more_users test_http_server_hostandport await_http_request first_home_server )],
+   requires => [qw( user more_users test_http_server_hostandport first_home_server )],
    do => \&can_invite_unbound_3pid;
 
 test "Can invite unbound 3pid over federation",
-   requires => [qw( user remote_users test_http_server_hostandport await_http_request first_home_server )],
+   requires => [qw( user remote_users test_http_server_hostandport first_home_server )],
    do => \&can_invite_unbound_3pid;
 
 sub can_invite_unbound_3pid {
-   my ( $inviter, $other_users, $id_server, $await_http_request, $user_agent ) = @_;
+   my ( $inviter, $other_users, $id_server, $user_agent ) = @_;
    my $invitee = $other_users->[0];
 
-   make_3pid_invite( $inviter, $invitee, $id_server, $await_http_request, 1, sub {
+   make_3pid_invite( $inviter, $invitee, $id_server, 1, sub {
       my ( $token, $public_key, $signature, $room_id ) = @_;
 
       do_request_json_for( $invitee,
@@ -181,16 +181,16 @@ sub can_invite_unbound_3pid {
          }
       );
    },
-   [ stub_is_key_validation( JSON::true, $await_http_request, $user_agent ) ] );
+   [ stub_is_key_validation( JSON::true, $user_agent ) ] );
 };
 
 test "3pid invite join with wrong signature are rejected",
-   requires => [qw( user more_users test_http_server_hostandport await_http_request )],
+   requires => [qw( user more_users test_http_server_hostandport )],
    do => sub {
-      my ( $user, $other_users, $id_server, $await_http_request ) = @_;
+      my ( $user, $other_users, $id_server ) = @_;
       my $invitee = $other_users->[0];
 
-      make_3pid_invite( $user, $invitee, $id_server, $await_http_request, 0, sub {
+      make_3pid_invite( $user, $invitee, $id_server, 0, sub {
          my ( $token, $public_key, $signature, $room_id ) = @_;
 
          do_request_json_for( $invitee,
@@ -206,18 +206,18 @@ test "3pid invite join with wrong signature are rejected",
          );
       },
       # This should really be an optional stub
-      #[ stub_is_key_validation( JSON::true, $await_http_request ) ],
+      #[ stub_is_key_validation( JSON::true ) ],
       [],
       );
    };
 
 test "3pid invite join with missing signature are rejected",
-   requires => [qw( user more_users test_http_server_hostandport await_http_request )],
+   requires => [qw( user more_users test_http_server_hostandport )],
    do => sub {
-      my ( $user, $other_users, $id_server, $await_http_request ) = @_;
+      my ( $user, $other_users, $id_server ) = @_;
       my $invitee = $other_users->[0];
 
-      make_3pid_invite( $user, $invitee, $id_server, $await_http_request, 0, sub {
+      make_3pid_invite( $user, $invitee, $id_server, 0, sub {
          my ( $token, $public_key, $signature, $room_id ) = @_;
 
          do_request_json_for( $invitee,
@@ -236,12 +236,12 @@ test "3pid invite join with missing signature are rejected",
    };
 
 test "3pid invite join with wrong key_validity_url are rejected",
-   requires => [qw( user more_users test_http_server_hostandport await_http_request )],
+   requires => [qw( user more_users test_http_server_hostandport )],
    do => sub {
-      my ( $user, $other_users, $id_server, $await_http_request ) = @_;
+      my ( $user, $other_users, $id_server ) = @_;
       my $invitee = $other_users->[0];
 
-      make_3pid_invite( $user, $invitee, $id_server, $await_http_request, 0, sub {
+      make_3pid_invite( $user, $invitee, $id_server, 0, sub {
          my ( $token, $public_key, $signature, $room_id ) = @_;
 
          do_request_json_for( $invitee,
@@ -261,12 +261,12 @@ test "3pid invite join with wrong key_validity_url are rejected",
    };
 
 test "3pid invite join with missing key_validity_url are rejected",
-   requires => [qw( user more_users test_http_server_hostandport await_http_request )],
+   requires => [qw( user more_users test_http_server_hostandport )],
    do => sub {
-      my ( $user, $other_users, $id_server, $await_http_request ) = @_;
+      my ( $user, $other_users, $id_server ) = @_;
       my $invitee = $other_users->[0];
 
-      make_3pid_invite( $user, $invitee, $id_server, $await_http_request, 0, sub {
+      make_3pid_invite( $user, $invitee, $id_server, 0, sub {
          my ( $token, $public_key, $signature, $room_id ) = @_;
 
          do_request_json_for( $invitee,
@@ -285,12 +285,12 @@ test "3pid invite join with missing key_validity_url are rejected",
    };
 
 test "3pid invite join with wrong signature are rejected",
-   requires => [qw( user more_users test_http_server_hostandport await_http_request )],
+   requires => [qw( user more_users test_http_server_hostandport )],
    do => sub {
-      my ( $user, $other_users, $id_server, $await_http_request ) = @_;
+      my ( $user, $other_users, $id_server ) = @_;
       my $invitee = $other_users->[0];
 
-      make_3pid_invite( $user, $invitee, $id_server, $await_http_request, 0, sub {
+      make_3pid_invite( $user, $invitee, $id_server, 0, sub {
          my ( $token, $public_key, $signature, $room_id ) = @_;
 
          my ( $wrong_public_key, $wrong_private_key ) = $crypto_sign->keypair;
@@ -312,12 +312,12 @@ test "3pid invite join with wrong signature are rejected",
    };
 
 test "3pid invite join fails if key revoked",
-   requires => [qw( user more_users test_http_server_hostandport await_http_request )],
+   requires => [qw( user more_users test_http_server_hostandport )],
    do => sub {
-      my ( $inviter, $other_users, $id_server, $await_http_request ) = @_;
+      my ( $inviter, $other_users, $id_server ) = @_;
       my $invitee = $other_users->[0];
 
-      make_3pid_invite ($inviter, $invitee, $id_server, $await_http_request, 0, sub {
+      make_3pid_invite ($inviter, $invitee, $id_server, 0, sub {
          my ( $token, $public_key, $signature, $room_id ) = @_;
 
          do_request_json_for( $invitee,
@@ -332,15 +332,15 @@ test "3pid invite join fails if key revoked",
             }
          );
       },
-      [ stub_is_key_validation( JSON::false, $await_http_request ) ],
+      [ stub_is_key_validation( JSON::false ) ],
       );
    };
 
 # TODO: Work out how to require an id_server which only listens for one request then closes the socket
 #test "3pid invite join fails if keyserver cannot be reached",
-#   requires => [qw( user more_users test_http_server_hostandport await_http_request )],
+#   requires => [qw( user more_users test_http_server_hostandport )],
 #   do => sub {
-#      my ( $user, $other_users, $id_server, $make_test_room, $await_http_request ) = @_;
+#      my ( $user, $other_users, $id_server, $make_test_room ) = @_;
 #
 #      my $non_existent_id_server = "ireallyhopethishostdoesnotexist";
 #      my $invitee_email = 'lemurs@monkeyworld.org';
@@ -354,9 +354,9 @@ test "3pid invite join fails if key revoked",
 #      my $signature = encode_base64_unpadded( $crypto_sign->mac( $token, $private_key ) );
 #
 #      Future->needs_all(
-#         stub_is_lookup( $invitee_email, undef, $await_http_request ),
+#         stub_is_lookup( $invitee_email, undef ),
 #
-#         stub_is_token_generation( $token, $encoded_public_key, $await_http_request ),
+#         stub_is_token_generation( $token, $encoded_public_key ),
 #
 #         matrix_create_room->( $inviter, visibility => "private" )
 #         ->then(sub {
@@ -393,7 +393,7 @@ test "3pid invite join fails if key revoked",
 #  4. Asserts that invitee did/didn't join the room, depending on truthiness of expect_join_success
 #  5. Awaits on all passed futures, so that you can stub/mock things as you wish
 sub make_3pid_invite {
-   my ( $inviter, $invitee, $id_server, $await_http_request, $expect_join_success, $join_sub, $futures ) = @_;
+   my ( $inviter, $invitee, $id_server, $expect_join_success, $join_sub, $futures ) = @_;
 
    my $invitee_email = 'lemurs@monkeyworld.org';
 
@@ -419,9 +419,9 @@ sub make_3pid_invite {
    my $room_id;
 
    Future->needs_all(
-      stub_is_lookup( $invitee_email, undef, $await_http_request ),
+      stub_is_lookup( $invitee_email, undef ),
 
-      stub_is_token_generation( $token, $encoded_public_key, $await_http_request ),
+      stub_is_token_generation( $token, $encoded_public_key ),
 
       @$futures,
 
@@ -462,9 +462,9 @@ sub assert_membership {
 };
 
 sub stub_is_lookup {
-   my ( $email, $mxid, $await_http_request ) = @_;
+   my ( $email, $mxid ) = @_;
 
-   $await_http_request->("/_matrix/identity/api/v1/lookup", sub {
+   await_http_request("/_matrix/identity/api/v1/lookup", sub {
       my ( $req ) = @_;
       return unless $req->query_param("medium") eq "email";
       return unless $req->query_param("address") eq $email;
@@ -477,9 +477,9 @@ sub stub_is_lookup {
 };
 
 sub stub_is_token_generation {
-   my ( $token, $encoded_public_key, $await_http_request ) = @_;
+   my ( $token, $encoded_public_key ) = @_;
 
-   $await_http_request->( "/_matrix/identity/api/v1/nonce-it-up", sub {
+   await_http_request( "/_matrix/identity/api/v1/nonce-it-up", sub {
       my ( $req ) = @_;
       # TODO: Parse body
       return 1;
@@ -494,9 +494,9 @@ sub stub_is_token_generation {
 };
 
 sub stub_is_key_validation {
-   my ( $validity, $await_http_request, $wanted_user_agent_substring ) = @_;
+   my ( $validity, $wanted_user_agent_substring ) = @_;
 
-   $await_http_request->( "/_matrix/identity/api/v1/pubkey/isvalid", sub {
+   await_http_request( "/_matrix/identity/api/v1/pubkey/isvalid", sub {
       my ( $req ) = @_;
       !defined $wanted_user_agent_substring and return 1;
       my $user_agent = $req->header( "User-Agent" );
