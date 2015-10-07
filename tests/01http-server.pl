@@ -9,13 +9,10 @@ my $DIR = dirname( __FILE__ );
 
 struct Awaiter => [qw( pathmatch filter future )];
 
-# List of Awaiter structs
-my @pending_awaiters;
-
 prepare "Environment closures for receiving HTTP pokes",
    requires => [qw( )],
 
-   provides => [qw( test_http_server_uri_base await_http_request )],
+   provides => [qw( test_http_server_uri_base )],
 
    do => sub {
       my $listen_host = "localhost";
@@ -23,29 +20,7 @@ prepare "Environment closures for receiving HTTP pokes",
       my $http_server = SyTest::HTTPServer->new;
       $loop->add( $http_server );
 
-      my $await_http_request = sub {
-         my ( $pathmatch, $filter, %args ) = @_;
-         my $failmsg = SyTest::CarpByFile::shortmess(
-            "Timed out waiting for an HTTP request matching $pathmatch"
-         );
-
-         my $f = $loop->new_future;
-
-         push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
-
-         my $timeout = $args{timeout} // 10;
-
-         return $f if !$timeout;
-
-         return Future->wait_any(
-            $f,
-
-            delay( $timeout )
-               ->then_fail( $failmsg ),
-         );
-      };
-
-      provide await_http_request => $await_http_request;
+      push our @EXPORT, qw( await_http_request );
 
       my $http_client;
 
@@ -73,7 +48,7 @@ prepare "Environment closures for receiving HTTP pokes",
 
          Future->needs_all(
             Future->wait_any(
-               $await_http_request->( "/http_server_self_test", sub {1} ),
+               await_http_request( "/http_server_self_test", sub {1} ),
 
                delay( 10 )
                   ->then_fail( "Timed out waiting for request" ),
@@ -98,7 +73,7 @@ prepare "Environment closures for receiving HTTP pokes",
       })->then( sub {
          Future->needs_all(
             Future->wait_any(
-               $await_http_request->( "/http_server_self_test", sub {1} ),
+               await_http_request( "/http_server_self_test", sub {1} ),
 
                delay( 10 )
                   ->then_fail( "Timed out waiting for request" ),
@@ -126,6 +101,9 @@ prepare "Environment closures for receiving HTTP pokes",
          )
       })
    };
+
+# List of Awaiter structs
+my @pending_awaiters;
 
 package SyTest::HTTPServer {
    use base qw( Net::Async::HTTP::Server );
@@ -172,3 +150,26 @@ package SyTest::HTTPServer {
       warn "Received spurious HTTP request to $path\n";
    }
 }
+
+sub await_http_request
+{
+   my ( $pathmatch, $filter, %args ) = @_;
+   my $failmsg = SyTest::CarpByFile::shortmess(
+      "Timed out waiting for an HTTP request matching $pathmatch"
+   );
+
+   my $f = $loop->new_future;
+
+   push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
+
+   my $timeout = $args{timeout} // 10;
+
+   return $f if !$timeout;
+
+   return Future->wait_any(
+      $f,
+
+      delay( $timeout )
+         ->then_fail( $failmsg ),
+   );
+};
