@@ -6,6 +6,8 @@ use warnings;
 # A subclass of NaHTTP that stores a URI base, and has convenient JSON
 # encoding/decoding wrapper methods
 
+use Carp;
+
 use base qw( Net::Async::HTTP );
 Net::Async::HTTP->VERSION( '0.36' ); # PUT content bugfix
 
@@ -14,6 +16,7 @@ my $json = JSON->new->convert_blessed;
 
 use Future 0.33; # ->catch
 use Net::SSLeay 1.59; # TLSv1.2
+use Scalar::Util qw( blessed );
 
 use constant MIME_TYPE_JSON => "application/json";
 
@@ -106,6 +109,9 @@ sub do_request_json
    my %params = @_;
 
    if( defined( my $content = $params{content} ) ) {
+      !blessed $content and ( ref $content eq "HASH" or ref $content eq "ARRAY" ) or
+         croak "->do_request_json content must be a plain HASH or ARRAY reference";
+
       $params{content} = $json->encode( $content );
       $params{content_type} //= MIME_TYPE_JSON;
    }
