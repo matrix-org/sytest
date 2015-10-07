@@ -4,7 +4,7 @@ my $LOCAL_USERS = 3;
 prepare "More local users",
    requires => [qw( first_api_client user )],
 
-   provides => [qw( more_users local_users )],
+   provides => [qw( more_users )],
 
    do => sub {
       my ( $http, $user ) = @_;
@@ -16,7 +16,6 @@ prepare "More local users",
          my @users = @_;
 
          provide more_users => \@users;
-         provide local_users => [ $user, @users ];
 
          Future->done();
       })
