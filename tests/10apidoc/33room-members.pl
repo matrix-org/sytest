@@ -378,17 +378,24 @@ sub matrix_create_and_join_room
       # the remote joins have happened
       my %joined_members;
 
-      await_event_for( $creator, sub {
-         my ( $event ) = @_;
-         log_if_fail "Creator event", $event;
+      # This really ought to happen within, say, 3 seconds. We'll pick a
+      #   timeout smaller than the default overall test timeout so if this
+      #   fails to happen we'll fail sooner, and get a better message
+      Future->wait_any(
+         await_event_for( $creator, sub {
+            my ( $event ) = @_;
 
-         return unless $event->{type} eq "m.room.member";
-         return unless $event->{room_id} eq $room_id;
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{room_id} eq $room_id;
 
-         $joined_members{ $event->{state_key} }++;
+            $joined_members{ $event->{state_key} }++;
 
-         return 1 if keys( %joined_members ) == $n_joiners;
-         return 0;
-      })->then_done( $room_id );
+            return 1 if keys( %joined_members ) == $n_joiners;
+            return 0;
+         }),
+
+         delay( 3 )
+            ->then_fail( "Timed out waiting to receive m.room.member join events to newly-created room" )
+      )->then_done( $room_id );
    })
 }
