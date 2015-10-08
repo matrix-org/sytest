@@ -68,7 +68,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
         do_request_json_for( $user,
             method => "GET",
             uri => "/api/v1/initialSync",
-            params => { limit => 2 },
+            params => { limit => 2, archived => 1 },
         )->then( sub {
             my ( $body ) = @_;
 
