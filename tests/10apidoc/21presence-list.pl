@@ -2,6 +2,7 @@
 my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
 my $preparer = local_user_preparer();
+my $friend_preparer = local_user_preparer();
 
 test "GET /presence/:user_id/list initially empty",
    requires => [ $preparer ],
@@ -23,27 +24,25 @@ test "GET /presence/:user_id/list initially empty",
    };
 
 test "POST /presence/:user_id/list can invite users",
-   requires => [ $preparer, qw( more_users )],
+   requires => [ $preparer, $friend_preparer ],
 
    provides => [qw( can_invite_presence )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
-      my $friend_uid = $more_users->[0]->user_id;
+      my ( $user, $friend ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
          uri    => $PRESENCE_LIST_URI,
 
          content => {
-            invite => [ $friend_uid ],
+            invite => [ $friend->user_id ],
          },
       );
    },
 
    check => sub {
-      my ( $user, $more_users ) = @_;
-      my $friend_uid = $more_users->[0]->user_id;
+      my ( $user, $friend ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -54,7 +53,8 @@ test "POST /presence/:user_id/list can invite users",
          require_json_nonempty_list( $body );
 
          require_json_keys( $body->[0], qw( accepted presence user_id ));
-         $body->[0]->{user_id} eq $friend_uid or die "Expected friend user_id";
+         $body->[0]->{user_id} eq $friend->user_id or
+            die "Expected friend user_id";
 
          provide can_invite_presence => 1;
 
