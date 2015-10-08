@@ -1,10 +1,9 @@
 test "Banned user is kicked and may not rejoin",
-   requires => [qw( user more_users
-                    can_ban_room )],
+   requires => [qw( user ), local_user_preparer(),
+                qw( can_ban_room )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
-      my $banned_user = $more_users->[0];
+      my ( $user, $banned_user ) = @_;
 
       my $room_id;
 
