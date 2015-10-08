@@ -71,14 +71,13 @@ test "POST /createRoom makes a private room",
    };
 
 test "POST /createRoom makes a private room with invites",
-   requires => [qw( user more_users
-                    can_create_private_room )],
+   requires => [qw( user ), local_user_preparer(),
+                qw( can_create_private_room )],
 
    provides => [qw( can_create_private_room_with_invite )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
-      my $invitee = $more_users->[0];
+      my ( $user, $invitee ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
