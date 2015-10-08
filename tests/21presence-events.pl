@@ -77,12 +77,11 @@ test "Presence change reports an event to myself",
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
-   requires => [ $preparer, qw( more_users
-                 can_set_presence can_invite_presence )],
+   requires => [ $preparer, local_user_preparer(),
+                 qw( can_set_presence can_invite_presence )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
-      my $friend = $more_users->[0];
+      my ( $user, $friend ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
