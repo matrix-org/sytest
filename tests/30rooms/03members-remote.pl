@@ -1,17 +1,35 @@
-use Future::Utils qw( try_repeat );
+use Future::Utils 0.18 qw( try_repeat );
+use List::Util qw( first );
+use List::UtilsBy qw( partition_by );
+
+my $room_id;
+my $room_alias;
+
+prepare "Creating test room",
+   requires => [qw( user )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room( $user,
+         room_alias_name => "03members-remote",
+      )->on_done( sub {
+         ( $room_id, $room_alias ) = @_;
+      });
+   };
 
 test "Remote users can join room by alias",
-   requires => [qw( do_request_json_for flush_events_for remote_users room_alias room_id
+   requires => [qw( remote_users
                     can_join_room_by_alias can_get_room_membership )],
 
    provides => [qw( can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $do_request_json_for, $flush_events_for, $remote_users, $room_alias ) = @_;
+      my ( $remote_users ) = @_;
       my $user = $remote_users->[0];
 
-      $flush_events_for->( $user )->then( sub {
-         $do_request_json_for->( $user,
+      flush_events_for( $user )->then( sub {
+         do_request_json_for( $user,
             method => "POST",
             uri    => "/api/v1/join/$room_alias",
 
@@ -21,12 +39,12 @@ test "Remote users can join room by alias",
    },
 
    check => sub {
-      my ( $do_request_json_for, undef, $remote_users, undef, $room_id ) = @_;
+      my ( $remote_users ) = @_;
       my $user = $remote_users->[0];
 
-      $do_request_json_for->( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -40,18 +58,18 @@ test "Remote users can join room by alias",
    };
 
 prepare "More remote room members",
-   requires => [qw( do_request_json_for flush_events_for remote_users room_alias
+   requires => [qw( remote_users
                     can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $do_request_json_for, $flush_events_for, $remote_users, $room_alias ) = @_;
+      my ( $remote_users ) = @_;
       my ( undef, @users ) = @$remote_users;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $flush_events_for->( $user )->then( sub {
-            $do_request_json_for->( $user,
+         flush_events_for( $user )->then( sub {
+            do_request_json_for( $user,
                method => "POST",
                uri    => "/api/v1/join/$room_alias",
 
@@ -62,16 +80,16 @@ prepare "More remote room members",
    };
 
 test "New room members see their own join event",
-   requires => [qw( await_event_for remote_users room_id
+   requires => [qw( remote_users
                     can_join_remote_room_by_alias )],
 
-   await => sub {
-      my ( $await_event_for, $remote_users, $room_id ) = @_;
+   do => sub {
+      my ( $remote_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
 
@@ -90,30 +108,30 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing members' presence in room initialSync",
-   requires => [qw( do_request_json_for user remote_users room_id
+   requires => [qw( user remote_users
                     can_join_remote_room_by_alias can_room_initial_sync )],
 
-   await => sub {
-      my ( $do_request_json_for, $first_user, $remote_users, $room_id ) = @_;
+   do => sub {
+      my ( $first_user, $remote_users ) = @_;
 
       try_repeat {
          Future->needs_all( map {
             my $user = $_;
 
-            $do_request_json_for->( $user,
+            do_request_json_for( $user,
                method => "GET",
                uri    => "/api/v1/rooms/$room_id/initialSync",
             )->then( sub {
                my ( $body ) = @_;
 
-               my %presence;
-               $presence{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+               my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
                $presence{$first_user->user_id} or
                   die "Expected to find initial user's presence";
 
-               require_json_keys( $presence{$first_user->user_id}, qw( type content ));
-               require_json_keys( $presence{$first_user->user_id}{content},
+               require_json_keys( $presence{ $first_user->user_id },
+                  qw( type content ));
+               require_json_keys( $presence{ $first_user->user_id }{content},
                   qw( presence status_msg last_active_ago ));
 
                Future->done(1);
@@ -126,16 +144,16 @@ test "New room members see existing members' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( await_event_for user remote_users room_id
+   requires => [qw( user remote_users
                     can_join_remote_room_by_alias )],
 
-   await => sub {
-      my ( $await_event_for, $user, $remote_users, $room_id ) = @_;
+   do => sub {
+      my ( $user, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $other_user = $_;
 
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
             require_json_keys( $event, qw( type room_id user_id ));
@@ -153,16 +171,16 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new member's presence",
-   requires => [qw( await_event_for user remote_users
+   requires => [qw( user remote_users
                     can_join_remote_room_by_alias )],
 
-   await => sub {
-      my ( $await_event_for, $user, $remote_users ) = @_;
+   do => sub {
+      my ( $user, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $other_user = $_;
 
-         $await_event_for->( $user, sub {
+         await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
             require_json_keys( $event, qw( type content ));
@@ -175,16 +193,16 @@ test "Existing members see new member's presence",
    };
 
 test "New room members see first user's profile information in global initialSync",
-   requires => [qw( do_request_json_for user remote_users
-                    can_create_room can_join_remote_room_by_alias can_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [qw( user remote_users
+                    can_join_remote_room_by_alias can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $do_request_json_for, $first_user, $remote_users ) = @_;
+      my ( $first_user, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/initialSync",
          )->then( sub {
@@ -193,10 +211,9 @@ test "New room members see first user's profile information in global initialSyn
             require_json_keys( $body, qw( presence ));
             require_json_list( $body->{presence} );
 
-            my %presence_by_userid;
-            $presence_by_userid{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+            my %presence_by_userid = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
-            my $presence = $presence_by_userid{$first_user->user_id} or
+            my $presence = $presence_by_userid{ $first_user->user_id } or
                die "Failed to find presence of first user";
 
             require_json_keys( $presence, qw( content ));
@@ -209,16 +226,16 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [qw( do_request_json_for user remote_users room_id
-                    can_create_room can_join_room_by_id can_room_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [qw( user remote_users
+                    can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $do_request_json_for, $first_user, $remote_users, $room_id ) = @_;
+      my ( $first_user, $remote_users ) = @_;
 
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/initialSync",
          )->then( sub {
@@ -227,10 +244,9 @@ test "New room members see first user's profile information in per-room initialS
             require_json_keys( $body, qw( state ));
             require_json_list( $body->{state} );
 
-            my %state_by_type_key;
-            $state_by_type_key{$_->{type}}{$_->{state_key}} = $_ for @{ $body->{state} };
-
-            my $first_member = $state_by_type_key{"m.room.member"}{$first_user->user_id}
+            my $first_member = first {
+               $_->{type} eq "m.room.member" and $_->{state_key} eq $first_user->user_id
+            } @{ $body->{state} }
                or die "Failed to find first user in m.room.member state";
 
             require_json_keys( $first_member, qw( user_id content ));

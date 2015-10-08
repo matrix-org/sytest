@@ -6,10 +6,10 @@ my @remote_members;
 my $local_nonmember;
 
 prepare "Creating test room",
-   requires => [qw( make_test_room await_event_for local_users remote_users )],
+   requires => [qw( local_users remote_users )],
 
    do => sub {
-      my ( $make_test_room, $await_event_for, $local_users, $remote_users ) = @_;
+      my ( $local_users, $remote_users ) = @_;
 
       @local_members = @$local_users;
       @remote_members = @$remote_users;
@@ -17,80 +17,72 @@ prepare "Creating test room",
       # Reserve a user not in the room
       $local_nonmember = pop @local_members;
 
-      $make_test_room->( @local_members, @remote_members )->on_done( sub {
+      matrix_create_and_join_room( [ @local_members, @remote_members ] )
+      ->on_done( sub {
          ( $room_id ) = @_;
       });
    };
 
 prepare "Flushing event streams",
-   requires => [qw( flush_events_for local_users )],
-   do => sub {
-      my ( $flush_events_for, $users ) = @_;
+   requires => [qw( local_users )],
 
-      Future->needs_all( map { $flush_events_for->( $_ ) } @$users );
+   do => sub {
+      my ( $users ) = @_;
+
+      Future->needs_all( map { flush_events_for( $_ ) } @$users );
    };
 
 my $msgtype = "m.message";
 my $msgbody = "Room message for 33room-messages";
 
 test "Local room members see posted message events",
-   requires => [qw( do_request_json await_event_for
+   requires => [qw( user
                     can_send_message )],
 
    provides => [qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
-
-      $do_request_json->(
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
-
-         content => { msgtype => $msgtype, body => $msgbody },
-      );
-   },
-
-   await => sub {
-      my ( undef, $await_event_for ) = @_;
+      my ( $user ) = @_;
       my ( $senduser ) = @local_members;
 
-      Future->needs_all( map {
-         my $recvuser = $_;
+      matrix_send_room_message( $user, $room_id,
+         content => { msgtype => $msgtype, body => $msgbody },
+      )->then( sub {
+         Future->needs_all( map {
+            my $recvuser = $_;
 
-         $await_event_for->( $recvuser, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.message";
+            await_event_for( $recvuser, sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.message";
 
-            require_json_keys( $event, qw( type content room_id user_id ));
-            require_json_keys( my $content = $event->{content}, qw( msgtype body ));
+               require_json_keys( $event, qw( type content room_id user_id ));
+               require_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
-            return unless $event->{room_id} eq $room_id;
+               return unless $event->{room_id} eq $room_id;
 
-            $content->{msgtype} eq $msgtype or
-               die "Expected msgtype as $msgtype";
-            $content->{body} eq $msgbody or
-               die "Expected body as '$msgbody'";
-            $event->{user_id} eq $senduser->user_id or
-               die "Expected sender user_id as ${\$senduser->user_id}\n";
+               $content->{msgtype} eq $msgtype or
+                  die "Expected msgtype as $msgtype";
+               $content->{body} eq $msgbody or
+                  die "Expected body as '$msgbody'";
+               $event->{user_id} eq $senduser->user_id or
+                  die "Expected sender user_id as ${\$senduser->user_id}\n";
 
-            return 1;
-         });
-      } @local_members )->on_done( sub {
+               return 1;
+            });
+         } @local_members )
+      })->on_done( sub {
          provide can_receive_room_message_locally => 1;
       });
    };
 
 test "Fetching eventstream a second time doesn't yield the message again",
-   requires => [qw( do_request_json_for
-                    can_receive_room_message_locally )],
+   requires => [qw( can_receive_room_message_locally )],
 
    check => sub {
-      my ( $do_request_json_for ) = @_;
-
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $do_request_json_for->( $recvuser,
+         do_request_json_for( $recvuser,
             method => "GET",
             uri    => "/api/v1/events",
             params => {
@@ -114,13 +106,9 @@ test "Fetching eventstream a second time doesn't yield the message again",
    };
 
 test "Local non-members don't see posted message events",
-   requires => [qw( await_event_for )],
-
-   await => sub {
-      my ( $await_event_for ) = @_;
-
+   do => sub {
       Future->wait_any(
-         $await_event_for->( $local_nonmember, sub {
+         await_event_for( $local_nonmember, sub {
             my ( $event ) = @_;
             log_if_fail "Received event:", $event;
 
@@ -138,16 +126,13 @@ test "Local non-members don't see posted message events",
    };
 
 test "Local room members can get room messages",
-   requires => [qw( do_request_json_for
-                    can_send_message can_get_messages )],
+   requires => [qw( can_send_message can_get_messages )],
 
    check => sub {
-      my ( $do_request_json_for ) = @_;
-
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/messages",
 
@@ -175,16 +160,16 @@ test "Local room members can get room messages",
    };
 
 test "Remote room members also see posted message events",
-   requires => [qw( await_event_for user
+   requires => [qw( user
                     can_receive_room_message_locally )],
 
-   await => sub {
-      my ( $await_event_for, $senduser ) = @_;
+   do => sub {
+      my ( $senduser ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
-         $await_event_for->( $recvuser, sub {
+         await_event_for( $recvuser, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
 
@@ -206,16 +191,13 @@ test "Remote room members also see posted message events",
    };
 
 test "Remote room members can get room messages",
-   requires => [qw( do_request_json_for
-                    can_send_message can_get_messages )],
+   requires => [qw( can_send_message can_get_messages )],
 
    check => sub {
-      my ( $do_request_json_for ) = @_;
-
       Future->needs_all( map {
          my $user = $_;
 
-         $do_request_json_for->( $user,
+         do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/messages",
 

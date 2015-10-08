@@ -47,12 +47,12 @@ is described in more detail in the following sections.
     Provides a ``CODE`` reference similar to the ``do`` argument, which
     contains "immediate" checking code for the test.
 
-``await``
-    Provides a ``CODE`` reference similar to the ``check`` argument, which
-    contains "deferred" checking code for the test.
-
 ``requires``
     Provides an ``ARRAY`` reference giving a list of named requirements.
+
+``critical``
+    If true and the test fails, the entire test run will bail out at this
+    point; no further tests will be attempted at all.
 
 A call to ``test`` is a simplified version of ``multi_test`` which produces
 only a single line of test output indicating success or failure automatically.
@@ -66,11 +66,10 @@ checking blocks, only a ``do``.
 Code Blocks
 -----------
 
-The blocks of code given to ``do``, ``check`` and ``await`` arguments follow
-the same basic pattern. Each is given a list of arguments matching the
-dependencies of the test (see below), and is expected to return a ``Future``.
-The interpretation of the return value of this future depends on the type of
-block.
+The blocks of code given to ``do`` and ``check`` arguments follow the same
+basic pattern. Each is given a list of arguments matching the dependencies of
+the test (see below), and is expected to return a ``Future``. The
+interpretation of the return value of this future depends on the type of block.
 
 If a test provides both a ``do`` and a ``check`` block, then the checking one
 is run either side of the main step code, to test that it fails before the main
@@ -86,11 +85,9 @@ real distinction between ``do`` and ``check`` at presence, though stylistically
 activity, in case a distinction is introduced later (for example, allowing
 multiple blocks to execute concurrently).
 
-If an ``await`` block is provided it is called after any ``do`` or ``check``
-functions, expecting it to return a true value. If it returns false, fails,
-or times out after (a default of) 10 seconds, the test fails. If the test needs
-to perform some activity repeatedly to poll for something it is waiting to
-happen, it should use a ``Future::Utils::repeat`` loop.
+The entire combination of one or both ``check`` blocks and the ``do`` block are
+given a total deadline of 10 seconds between them. If they have not succeeded
+by this time, they will be aborted and the test will fail.
 
 Dependencies and Environment
 ----------------------------
@@ -150,8 +147,12 @@ tested.
     additionally it defines values for all of the key names given.
 
 ``require_json_list``
-    Asserts that it is given a representation of a JSON object (i.e. an
+    Asserts that it is given a representation of a JSON list (i.e. an
     ``ARRAY`` ref).
+
+``require_json_nonempty_list``
+    Asserts that it is given a representation of a JSON list, and additionally
+    that it is not empty.
 
 ``require_json_number``
     Asserts that it is given a likely representation of a JSON number (i.e. a

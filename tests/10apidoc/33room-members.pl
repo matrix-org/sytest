@@ -1,17 +1,36 @@
+use Future 0.33; # then catch semantics
 use Future::Utils qw( fmap );
 use List::UtilsBy qw( partition_by );
 
-test "POST /rooms/:room_id/join can join a room",
-   requires => [qw( do_request_json_for more_users room_id
-                    can_get_room_membership )],
+my $room_id;
+my $room_alias;
 
-   provides => [qw( can_join_room_by_id )],
+prepare "Creating testing room",
+   requires => [qw( user )],
 
    do => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $user ) = @_;
+
+      matrix_create_room( $user,
+         room_alias_name => "33room-members",
+      )->on_done( sub {
+         ( $room_id, $room_alias ) = @_;
+      });
+   };
+
+my ( $invited_user, $banned_user ) = prepare_local_users( 2 );
+
+test "POST /rooms/:room_id/join can join a room",
+   requires => [qw( more_users
+                    can_get_room_membership )],
+
+   critical => 1,
+
+   do => sub {
+      my ( $more_users ) = @_;
       my $user = $more_users->[0];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/join",
 
@@ -20,35 +39,48 @@ test "POST /rooms/:room_id/join can join a room",
    },
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[0];
 
-      $do_request_json_for->( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
          $body->{membership} eq "join" or
             die "Expected membership to be 'join'";
 
-         provide can_join_room_by_id => 1;
-
          Future->done(1);
       });
    };
 
+push our @EXPORT, qw( matrix_join_room );
+
+sub matrix_join_room
+{
+   my ( $user, $room_id ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/api/v1/rooms/$room_id/join",
+
+      content => {},
+   )->then_done(1);
+}
+
 test "POST /join/:room_alias can join a room",
-   requires => [qw( do_request_json_for more_users room_id room_alias
+   requires => [qw( more_users
                     can_get_room_membership )],
 
    provides => [qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $do_request_json_for, $more_users, $room_id, $room_alias ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[1];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/join/$room_alias",
 
@@ -64,12 +96,12 @@ test "POST /join/:room_alias can join a room",
    },
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[1];
 
-      $do_request_json_for->( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -83,14 +115,14 @@ test "POST /join/:room_alias can join a room",
    };
 
 test "POST /join/:room_id can join a room",
-   requires => [qw( do_request_json_for more_users room_id
+   requires => [qw( more_users
                     can_get_room_membership )],
 
    do => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[2];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/join/$room_id",
 
@@ -107,12 +139,12 @@ test "POST /join/:room_id can join a room",
    },
 
    check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
+      my ( $more_users ) = @_;
       my $user = $more_users->[2];
 
-      $do_request_json_for->( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -124,79 +156,91 @@ test "POST /join/:room_id can join a room",
    };
 
 test "POST /rooms/:room_id/leave can leave a room",
-   requires => [qw( do_request_json_for more_users room_id
-                    can_join_room_by_id can_get_room_membership )],
+   requires => [qw( first_api_client
+                    can_get_room_membership )],
 
-   provides => [qw( can_leave_room )],
+   critical => 1,
 
    do => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
-      my $user = $more_users->[1];
+      my ( $api_client ) = @_;
 
-      $do_request_json_for->( $user,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/leave",
+      my $joiner_to_leave;
 
-         content => {},
-      );
-   },
+      matrix_register_user( $api_client )
+      ->then( sub {
+         ( $joiner_to_leave ) = @_;
 
-   check => sub {
-      my ( $do_request_json_for, $more_users, $room_id ) = @_;
-      my $user = $more_users->[1];
+         matrix_join_room( $joiner_to_leave, $room_id )
+      })->then( sub {
+         do_request_json_for( $joiner_to_leave,
+            method => "POST",
+            uri    => "/api/v1/rooms/$room_id/leave",
 
-      $do_request_json_for->( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
-      )->then(
+            content => {},
+         );
+      })->then( sub {
+         matrix_get_room_state( $joiner_to_leave, $room_id,
+            type      => "m.room.member",
+            state_key => $joiner_to_leave->user_id,
+         )
+      })->then(
          sub { # then
             my ( $body ) = @_;
 
             $body->{membership} eq "join" and
                die "Expected membership not to be 'join'";
 
-            provide can_leave_room => 1;
-
             Future->done(1);
          },
-         sub { # else
-            my ( $failure, $name, $response ) = @_;
-            Future->fail( @_ ) unless defined $name and $name eq "http";
+         http => sub { # catch
+            my ( $failure, undef, $response ) = @_;
             Future->fail( @_ ) unless $response->code == 403;
 
             # We're expecting a 403 so that's fine
-            provide can_leave_room => 1;
 
             Future->done(1);
          },
       );
    };
 
+push @EXPORT, qw( matrix_leave_room );
+
+sub matrix_leave_room
+{
+   my ( $user, $room_id ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/api/v1/rooms/$room_id/leave",
+
+      content => {},
+   )->then_done(1);
+}
+
 test "POST /rooms/:room_id/invite can send an invite",
-   requires => [qw( do_request_json_for user more_users room_id
+   requires => [qw( user
                     can_get_room_membership )],
 
    provides => [qw( can_invite_room )],
 
    do => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
-      my $invitee = $more_users->[1];
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/invite",
 
-         content => { user_id => $invitee->user_id },
+         content => { user_id => $invited_user->user_id },
       );
    },
 
    check => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
-      my $invitee = $more_users->[1];
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/" . $invitee->user_id,
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $invited_user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -205,21 +249,46 @@ test "POST /rooms/:room_id/invite can send an invite",
 
          provide can_invite_room => 1;
 
+         push our @EXPORT, qw( matrix_invite_user_to_room );
+
          Future->done(1);
       });
    };
 
+sub matrix_invite_user_to_room
+{
+   my ( $user, $invitee, $room_id ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
+
+   my $invitee_id;
+   if( is_User( $invitee ) ) {
+      $invitee_id = $invitee->user_id;
+   }
+   elsif( !ref $invitee ) {
+      $invitee_id = $invitee;
+   }
+   else {
+      croak "Expected invitee to be a User struct or plain string; got $invitee";
+   }
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/api/v1/rooms/$room_id/invite",
+
+      content => { user_id => $invitee_id }
+   )->then_done(1);
+}
+
 test "POST /rooms/:room_id/ban can ban a user",
-   requires => [qw( do_request_json_for user more_users room_id
+   requires => [qw( user
                     can_get_room_membership )],
 
    provides => [qw( can_ban_room )],
 
    do => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
-      my $banned_user = $more_users->[2];
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/ban",
 
@@ -231,12 +300,11 @@ test "POST /rooms/:room_id/ban can ban a user",
    },
 
    check => sub {
-      my ( $do_request_json_for, $user, $more_users, $room_id ) = @_;
-      my $banned_user = $more_users->[2];
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/" . $banned_user->user_id,
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $banned_user->user_id,
       )->then( sub {
          my ( $body ) = @_;
 
@@ -251,88 +319,76 @@ test "POST /rooms/:room_id/ban can ban a user",
 
 my $next_alias = 1;
 
-prepare "Creating test-room-creation helper function",
-   requires => [qw( do_request_json_for await_event_for
-                    can_create_room can_join_room_by_alias )],
+push @EXPORT, qw( matrix_create_and_join_room );
 
-   provides => [qw( make_test_room )],
+sub matrix_create_and_join_room
+{
+   my ( $members, %options ) = @_;
+   my ( $creator, @other_members ) = @$members;
 
-   do => sub {
-      my ( $do_request_json_for, $await_event_for ) = @_;
+   is_User( $creator ) or croak "Expected a User for creator; got $creator";
 
-      provide make_test_room => sub {
-         my ( $creator, @other_members ) = @_;
+   is_User( $_ ) or croak "Expected a User for a member; got $_"
+      for @other_members;
 
-         my $room_id;
-         my $room_alias_shortname = "test-$next_alias"; $next_alias++;
+   my $room_id;
+   my $room_alias_fullname;
 
-         my ( $domain ) = $creator->user_id =~ m/:(.*)$/;
-         my $room_alias_fullname = "#${room_alias_shortname}:$domain";
+   my $n_joiners = scalar @other_members;
 
-         my $n_joiners = scalar @other_members;
+   matrix_create_room( $creator,
+      %options,
+      room_alias_name => sprintf( "test-%d", $next_alias++ ),
+   )->then( sub {
+      ( $room_id, $room_alias_fullname ) = @_;
 
-         $do_request_json_for->( $creator,
-            method => "POST",
-            uri    => "/api/v1/createRoom",
+      log_if_fail "room_id=$room_id";
 
-            content => {
-               visibility      => "public",
-               room_alias_name => $room_alias_shortname,
-            },
-         )->then( sub {
-            my ( $body ) = @_;
-            $room_id = $body->{room_id};
+      # Best not to join remote users concurrently because of
+      #   https://matrix.org/jira/browse/SYN-318
+      my %members_by_server = partition_by { $_->http } @other_members;
 
-            log_if_fail "room_id=$room_id";
+      my @local_members = @{ delete $members_by_server{ $creator->http } // [] };
+      my @remote_members = map { @$_ } values %members_by_server;
 
-            # Best not to join remote users concurrently because of
-            #   https://matrix.org/jira/browse/SYN-318
-            my %members_by_server = partition_by { $_->http } @other_members;
+      Future->needs_all(
+         ( fmap {
+            my $user = shift;
+            do_request_json_for( $user,
+               method => "POST",
+               uri    => "/api/v1/join/$room_alias_fullname",
 
-            my @local_members = @{ delete $members_by_server{ $creator->http } // [] };
-            my @remote_members = map { @$_ } values %members_by_server;
+               content => {},
+            )
+         } foreach => \@remote_members ),
 
-            Future->needs_all(
-               ( fmap {
-                  my $user = shift;
-                  $do_request_json_for->( $user,
-                     method => "POST",
-                     uri    => "/api/v1/join/$room_alias_fullname",
+         map {
+            my $user = $_;
+            do_request_json_for( $user,
+               method => "POST",
+               uri    => "/api/v1/join/$room_alias_fullname",
 
-                     content => {},
-                  )
-               } foreach => \@remote_members ),
+               content => {},
+            )
+         } @local_members )
+   })->then( sub {
+      return Future->done( $room_id ) unless $n_joiners;
 
-               map {
-                  my $user = $_;
-                  $do_request_json_for->( $user,
-                     method => "POST",
-                     uri    => "/api/v1/join/$room_alias_fullname",
+      # Now wait for the creator to see every join event, so we're sure
+      # the remote joins have happened
+      my %joined_members;
 
-                     content => {},
-                  )
-               } @local_members )
-         })->then( sub {
-            return Future->done( $room_id ) unless $n_joiners;
+      await_event_for( $creator, sub {
+         my ( $event ) = @_;
+         log_if_fail "Creator event", $event;
 
-            # Now wait for the creator to see every join event, so we're sure
-            # the remote joins have happened
-            my %joined_members;
+         return unless $event->{type} eq "m.room.member";
+         return unless $event->{room_id} eq $room_id;
 
-            $await_event_for->( $creator, sub {
-               my ( $event ) = @_;
-               log_if_fail "Creator event", $event;
+         $joined_members{ $event->{state_key} }++;
 
-               return unless $event->{type} eq "m.room.member";
-               return unless $event->{room_id} eq $room_id;
-
-               $joined_members{$event->{state_key}}++;
-
-               return 1 if keys( %joined_members ) == $n_joiners;
-               return 0;
-            })->then_done( $room_id );
-         })
-      };
-
-      Future->done;
-   };
+         return 1 if keys( %joined_members ) == $n_joiners;
+         return 0;
+      })->then_done( $room_id );
+   })
+}

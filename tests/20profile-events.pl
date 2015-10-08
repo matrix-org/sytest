@@ -1,82 +1,70 @@
-prepare "Flushing event stream",
-   requires => [qw( flush_events_for user )],
-   do => sub {
-      my ( $flush_events_for, $user ) = @_;
-      $flush_events_for->( $user );
-   };
-
 my $displayname = "New displayname for 20profile-events.pl";
 
 test "Displayname change reports an event to myself",
-   requires => [qw( do_request_json await_event_for user can_set_displayname )],
+   requires => [qw( user can_set_displayname )],
 
    do => sub {
-      my ( $do_request_json, undef, $user ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
-         method => "PUT",
-         uri    => "/api/v1/profile/:user_id/displayname",
+      flush_events_for( $user )
+      ->then( sub {
+         do_request_json_for( $user,
+            method => "PUT",
+            uri    => "/api/v1/profile/:user_id/displayname",
 
-         content => { displayname => $displayname },
-      );
-   },
+            content => { displayname => $displayname },
+         )
+      })->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
+            my $content = $event->{content};
+            return unless $content->{user_id} eq $user->user_id;
 
-   await => sub {
-      my ( undef, $await_event_for, $user ) = @_;
+            $content->{displayname} eq $displayname or
+               die "Expected displayname to be '$displayname'";
 
-      $await_event_for->( $user, sub {
-         my ( $event ) = @_;
-         return unless $event->{type} eq "m.presence";
-         my $content = $event->{content};
-         return unless $content->{user_id} eq $user->user_id;
-
-         $content->{displayname} eq $displayname or
-            die "Expected displayname to be '$displayname'";
-
-         return 1;
+            return 1;
+         });
       });
    };
 
 my $avatar_url = "http://a.new.url/for/20profile-events.pl";
 
 test "Avatar URL change reports an event to myself",
-   requires => [qw( do_request_json await_event_for user can_set_avatar_url )],
+   requires => [qw( user can_set_avatar_url )],
 
    do => sub {
-      my ( $do_request_json, undef, $user ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/profile/:user_id/avatar_url",
 
          content => { avatar_url => $avatar_url },
-      );
-   },
+      )->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
+            my $content = $event->{content};
+            return unless $content->{user_id} eq $user->user_id;
 
-   await => sub {
-      my ( undef, $await_event_for, $user ) = @_;
+            $content->{avatar_url} eq $avatar_url or
+               die "Expected avatar_url to be '$avatar_url'";
 
-      $await_event_for->( $user, sub {
-         my ( $event ) = @_;
-         return unless $event->{type} eq "m.presence";
-         my $content = $event->{content};
-         return unless $content->{user_id} eq $user->user_id;
-
-         $content->{avatar_url} eq $avatar_url or
-            die "Expected avatar_url to be '$avatar_url'";
-
-         return 1;
+            return 1;
+         });
       });
    };
 
 multi_test "Global /initialSync reports my own profile",
-   requires => [qw( do_request_json user
+   requires => [qw( user
                     can_set_displayname can_set_avatar_url can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json, $user ) = @_;
+      my ( $user) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
       )->then( sub {
@@ -86,9 +74,9 @@ multi_test "Global /initialSync reports my own profile",
          require_json_list( $body->{presence} );
 
          my %presence_by_userid;
-         $presence_by_userid{$_->{content}{user_id}} = $_ for @{ $body->{presence} };
+         $presence_by_userid{ $_->{content}{user_id} } = $_ for @{ $body->{presence} };
 
-         my $presence = $presence_by_userid{$user->user_id} or
+         my $presence = $presence_by_userid{ $user->user_id } or
             die "Failed to find my own presence information";
 
          require_json_keys( $presence, qw( content ) );

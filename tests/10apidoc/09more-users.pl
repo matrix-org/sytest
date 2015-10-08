@@ -2,18 +2,15 @@
 my $LOCAL_USERS = 3;
 
 prepare "More local users",
-   requires => [qw( register_new_user first_api_client user
-                    can_register )],
+   requires => [qw( first_api_client user )],
 
    provides => [qw( more_users local_users )],
 
    do => sub {
-      my ( $register_new_user, $http, $user ) = @_;
+      my ( $http, $user ) = @_;
 
       Future->needs_all( map {
-         my $uid = "09more-users-$_";
-
-         $register_new_user->( $http, $uid );
+         matrix_register_user( $http );
       } 1 .. $LOCAL_USERS
       )->then( sub {
          my @users = @_;

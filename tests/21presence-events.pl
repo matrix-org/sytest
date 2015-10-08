@@ -1,20 +1,13 @@
 # Eventually this will be changed; see SPEC-53
 my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
-prepare "Flushing event stream",
-   requires => [qw( flush_events_for user )],
-   do => sub {
-      my ( $flush_events_for, $user ) = @_;
-      $flush_events_for->( $user );
-   };
+my $user = prepare_local_user;
 
 test "initialSync sees my presence status",
-   requires => [qw( do_request_json user can_initial_sync )],
+   requires => [qw( can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json, $user ) = @_;
-
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
       )->then( sub {
@@ -47,46 +40,40 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   requires => [qw( do_request_json await_event_for user can_set_presence )],
+   requires => [qw( can_set_presence )],
 
    do => sub {
-      my ( $do_request_json ) = @_;
-
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
 
          content => { presence => "online", status_msg => $status_msg },
-      )
-   },
+      )->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            next unless $event->{type} eq "m.presence";
+            my $content = $event->{content};
+            next unless $content->{user_id} eq $user->user_id;
 
-   await => sub {
-      my ( undef, $await_event_for, $user ) = @_;
+            $content->{status_msg} eq $status_msg or
+               die "Expected status_msg to be '$status_msg'";
 
-      $await_event_for->( $user, sub {
-         my ( $event ) = @_;
-         next unless $event->{type} eq "m.presence";
-         my $content = $event->{content};
-         next unless $content->{user_id} eq $user->user_id;
-
-         $content->{status_msg} eq $status_msg or
-            die "Expected status_msg to be '$status_msg'";
-
-         return 1;
+            return 1;
+         });
       });
    };
 
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
-   requires => [qw( do_request_json_for await_event_for user more_users
+   requires => [qw( more_users
                     can_set_presence can_invite_presence )],
 
    do => sub {
-      my ( $do_request_json_for, undef, $user, $more_users ) = @_;
+      my ( $more_users ) = @_;
       my $friend = $more_users->[0];
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "POST",
          uri    => $PRESENCE_LIST_URI,
 
@@ -94,57 +81,29 @@ test "Friends presence changes reports events",
             invite => [ $friend->user_id ],
          }
       )->then( sub {
-         $do_request_json_for->( $friend,
+         do_request_json_for( $friend,
             method => "PUT",
             uri    => "/api/v1/presence/:user_id/status",
 
             content => { presence => "online", status_msg => $friend_status },
          );
-      });
-   },
+      })->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.presence";
 
-   await => sub {
-      my ( undef, $await_event_for, $user, $more_users ) = @_;
-      my $friend = $more_users->[0];
+            my $content = $event->{content};
+            require_json_keys( $content, qw( user_id ));
 
-      $await_event_for->( $user, sub {
-         my ( $event ) = @_;
-         return unless $event->{type} eq "m.presence";
+            return unless $content->{user_id} eq $friend->user_id;
 
-         my $content = $event->{content};
-         require_json_keys( $content, qw( user_id ));
+            require_json_keys( $content, qw( presence status_msg ));
+            $content->{presence} eq "online" or
+               die "Expected presence to be 'online'";
+            $content->{status_msg} eq $friend_status or
+               die "Expected status_msg to be '$friend_status'";
 
-         return unless $content->{user_id} eq $friend->user_id;
-
-         require_json_keys( $content, qw( presence status_msg ));
-         $content->{presence} eq "online" or
-            die "Expected presence to be 'online'";
-         $content->{status_msg} eq $friend_status or
-            die "Expected status_msg to be '$friend_status'";
-
-         return 1;
-      });
-   };
-
-prepare "Clearing presence list",
-   requires => [qw( do_request_json can_invite_presence can_drop_presence )],
-
-   do => sub {
-      my ( $do_request_json ) = @_;
-
-      $do_request_json->(
-         method => "GET",
-         uri    => $PRESENCE_LIST_URI,
-      )->then( sub {
-         my ( $body ) = @_;
-
-         my @ids = map { $_->{user_id} } @$body;
-
-         $do_request_json->(
-            method => "POST",
-            uri    => $PRESENCE_LIST_URI,
-
-            content => { drop => \@ids },
-         );
+            return 1;
+         });
       });
    };

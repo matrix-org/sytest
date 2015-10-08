@@ -6,7 +6,7 @@ use 5.014; # package NAME { BLOCK }
 
 use lib 'lib';
 
-use Carp;
+use SyTest::CarpByFile;
 
 use Future;
 use IO::Async::Loop;
@@ -16,7 +16,8 @@ use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any maxstr );
-use Struct::Dumb;
+use Struct::Dumb 0.04;
+use MIME::Base64 qw( decode_base64 );
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
@@ -273,39 +274,56 @@ sub _run_test
    $t->start;
 
    my $success = eval {
+      my $f_test = Future->done;
+
       my $check = $params{check};
       if( my $do = $params{do} ) {
          if( $check ) {
-            eval { Future->wrap( $check->( @reqs ) )->get } and
-               warn "Warning: ${\$t->name} was already passing before we did anything\n";
+            $f_test = $f_test->then( sub {
+               Future->wrap( $check->( @reqs ) )
+            })->followed_by( sub {
+               my ( $f ) = @_;
+
+               $f->failure or
+                  warn "Warning: ${\$t->name} was already passing before we did anything\n";
+
+               Future->done;
+            });
          }
 
-         Future->wrap( $do->( @reqs ) )->get;
+         $f_test = $f_test->then( sub {
+            Future->wrap( $do->( @reqs ) )
+         });
       }
 
       if( $check ) {
-         Future->wrap( $check->( @reqs ) )->get or
-            die "Test check function failed to return a true value"
+         $f_test = $f_test->then( sub {
+            Future->wrap( $check->( @reqs ) )
+         })->then( sub {
+            my ( $result ) = @_;
+            $result or
+               die "Test check function failed to return a true value";
+
+            Future->done;
+         });
       }
 
       if( my $await = $params{await} ) {
-         Future->wait_any(
-            Future->wrap( $await->( @reqs ) )->then( sub {
-               my ( $success ) = @_;
-               $success or die "'await' check did not return a true value";
-               Future->done
+         die "TODO: 'await' now dead";
+      }
+
+      Future->wait_any(
+         $f_test,
+
+         $loop->delay_future( after => 2 )
+            ->then( sub {
+               $output->start_waiting;
+               $loop->new_future->on_cancel( sub { $output->stop_waiting });
             }),
 
-            $loop->delay_future( after => 2 )
-               ->then( sub {
-                  $output->start_waiting;
-                  $loop->new_future->on_cancel( sub { $output->stop_waiting });
-               }),
-
-            $loop->delay_future( after => $params{timeout} // 10 )
-               ->then_fail( "Timed out waiting for 'await'" )
-         )->get;
-      }
+         $loop->delay_future( after => $params{timeout} // 10 )
+            ->then_fail( "Timed out waiting for test" )
+      )->get;
 
       1;
    };
@@ -343,6 +361,8 @@ sub test
 
    no warnings 'exiting';
    last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
+
+   die "This CRITICAL test has failed - bailing out\n" if $t->failed and $params{critical};
 }
 
 {
@@ -352,6 +372,15 @@ sub test
    {
       my ( $testname ) = @_;
       ok( 1, $testname );
+   }
+
+   # A convenience for the otherwise-common pattern of
+   #   ->on_done( sub { pass $message } )
+   sub SyTest::pass_on_done
+   {
+      my $self = shift;
+      my ( $message ) = @_;
+      $self->on_done( sub { ok( 1, $message ) } );
    }
 
    sub ok
@@ -424,82 +453,82 @@ sub prepare
       $failed++;
    }
 
-    no warnings 'exiting';
-    last TEST if $STOP_ON_FAIL and not $success;
+   if( not $success ) {
+      no warnings 'exiting';
+      last TEST if $STOP_ON_FAIL;
+
+      die "prepare failed\n";
+   }
 
    exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
       for @PROVIDES;
 }
 
-## Some assertion functions useful by test scripts. Put them in their own
-#    package so that croak will find the correct line number
-package assertions {
-   use Carp;
+## Some assertion functions useful by test scripts
 
-   use MIME::Base64 qw( decode_base64 );
+sub require_json_object
+{
+   my ( $obj ) = @_;
+   ref $obj eq "HASH" or croak "Expected a JSON object";
+}
 
-   sub require_json_object
-   {
-      my ( $obj ) = @_;
-      ref $obj eq "HASH" or croak "Expected a JSON object";
-   }
-
-   sub require_json_keys
-   {
-      my ( $obj, @keys ) = @_;
-      require_json_object( $obj );
-      foreach ( @keys ) {
-         defined $obj->{$_} or croak "Expected a '$_' key";
-      }
-   }
-
-   sub require_json_list
-   {
-      my ( $list ) = @_;
-      ref $list eq "ARRAY" or croak "Expected a JSON list";
-   }
-
-   sub require_json_number
-   {
-      my ( $num ) = @_;
-      # Our hacked-up JSON decoder represents numbers as JSON::number instances
-      ref $num eq "JSON::number" or croak "Expected a JSON number";
-   }
-
-   sub require_json_string
-   {
-      my ( $str ) = @_;
-      !ref $str or croak "Expected a JSON string";
-   }
-
-   sub require_json_nonempty_string
-   {
-      my ( $str ) = @_;
-      !ref $str and length $str or croak "Expected a non-empty JSON string";
-   }
-
-   sub require_base64_unpadded
-   {
-      my ( $str ) = @_;
-      !ref $str or croak "Expected a plain string";
-
-      $str =~ m([^A-Za-z0-9+/=]) and
-         die "String contains invalid base64 characters";
-      $str =~ m(=) and
-         die "String contains trailing padding";
-   }
-
-   sub require_base64_unpadded_and_decode
-   {
-      my ( $str ) = @_;
-      require_base64_unpadded $str;
-      return decode_base64 $str;
+sub require_json_keys
+{
+   my ( $obj, @keys ) = @_;
+   require_json_object( $obj );
+   foreach ( @keys ) {
+      defined $obj->{$_} or croak "Expected a '$_' key";
    }
 }
 
+sub require_json_list
 {
-   no strict 'refs';
-   *$_ = \&{"assertions::$_"} for grep m/^require_/, keys %{"assertions::"};
+   my ( $list ) = @_;
+   ref $list eq "ARRAY" or croak "Expected a JSON list";
+}
+
+sub require_json_nonempty_list
+{
+   my ( $list ) = @_;
+   require_json_list( $list );
+   @$list or croak "Expected a non-empty JSON list";
+}
+
+sub require_json_number
+{
+   my ( $num ) = @_;
+   # Our hacked-up JSON decoder represents numbers as JSON::number instances
+   ref $num eq "JSON::number" or croak "Expected a JSON number";
+}
+
+sub require_json_string
+{
+   my ( $str ) = @_;
+   !ref $str or croak "Expected a JSON string";
+}
+
+sub require_json_nonempty_string
+{
+   my ( $str ) = @_;
+   !ref $str and length $str or croak "Expected a non-empty JSON string";
+}
+
+sub require_base64_unpadded
+{
+   my ( $str ) = @_;
+   !ref $str or croak "Expected a plain string";
+
+   $str =~ m([^A-Za-z0-9+/=]) and
+      die "String contains invalid base64 characters";
+   $str =~ m(=) and
+      die "String contains trailing padding";
+}
+
+sub require_base64_unpadded_and_decode
+{
+   my ( $str ) = @_;
+   require_base64_unpadded $str;
+   return decode_base64 $str;
 }
 
 my %only_files;
@@ -543,7 +572,24 @@ TEST: {
 
          # Tell eval what the filename is so we get nicer warnings/errors that
          # give the filename instead of (eval 123)
-         eval( "#line 1 $filename\n" . $code . "; 1" ) or die $@;
+         my $died_during_compile;
+
+         my $success = do {
+            local $SIG{__DIE__} = sub {
+               return if $^S;
+               $died_during_compile = 1 if !defined $^S;
+               die @_;
+            };
+
+            eval( "#line 1 $filename\n" . $code . "; 1" );
+         };
+
+         if( !$success ) {
+            die $@ if $died_during_compile;
+
+            chomp( my $e = $@ );
+            $output->abort_file( $filename, $e );
+         }
 
          {
             no strict 'refs';

@@ -1,59 +1,56 @@
 test "GET /initialSync with non-numeric 'limit'",
-   requires => [qw( do_request_json expect_http_4xx
+   requires => [qw( user
                     can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json, $expect_http_4xx ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
 
          params => { limit => "hello" },
-      )->$expect_http_4xx;
+      )->main::expect_http_4xx;
    };
 
 test "GET /events with non-numeric 'limit'",
-   requires => [qw( do_request_json_for user expect_http_4xx
-                    can_get_events )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $do_request_json_for, $user, $expect_http_4xx ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
 
          params => { from => $user->eventstream_token, limit => "hello" },
-      )->$expect_http_4xx;
+      )->main::expect_http_4xx;
    };
 
 test "GET /events with negative 'limit'",
-   requires => [qw( do_request_json_for user expect_http_4xx
-                    can_get_events )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $do_request_json_for, $user, $expect_http_4xx ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
 
          params => { from => $user->eventstream_token, limit => -2 },
-      )->$expect_http_4xx;
+      )->main::expect_http_4xx;
    };
 
 test "GET /events with non-numeric 'timeout'",
-   requires => [qw( do_request_json_for user expect_http_4xx
-                    can_get_events )],
+   requires => [qw( user )],
 
    check => sub {
-      my ( $do_request_json_for, $user, $expect_http_4xx ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json_for->( $user,
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
 
          params => { from => $user->eventstream_token, timeout => "hello" },
-      )->$expect_http_4xx;
+      )->main::expect_http_4xx;
    };
