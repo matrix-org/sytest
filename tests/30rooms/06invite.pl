@@ -36,34 +36,33 @@ test "A room can be created set to invite-only",
    };
 
 test "Uninvited users cannot join the room",
-   requires => [qw( more_users )],
+   requires => [ local_user_preparer() ],
 
    check => sub {
-      my ( $more_users ) = @_;
-      my $uninvited = $more_users->[0];
+      my ( $uninvited ) = @_;
 
       matrix_join_room( $uninvited, $inviteonly_room_id )
          ->main::expect_http_403;
    };
 
+my $invited_user_preparer = local_user_preparer();
+
 test "Can invite users to invite-only rooms",
-   requires => [qw( user more_users
-                    can_invite_room )],
+   requires => [qw( user ), $invited_user_preparer,
+                qw( can_invite_room )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
-      my $invitee = $more_users->[1];
+      my ( $user, $invitee ) = @_;
 
       matrix_invite_user_to_room( $user, $invitee, $inviteonly_room_id )
    };
 
 test "Invited user receives invite",
-   requires => [qw( more_users
-                    can_invite_room )],
+   requires => [ $invited_user_preparer,
+                 qw( can_invite_room )],
 
    do => sub {
-      my ( $more_users ) = @_;
-      my $invitee = $more_users->[1];
+      my ( $invitee ) = @_;
 
       await_event_for( $invitee, sub {
          my ( $event ) = @_;
@@ -85,12 +84,11 @@ test "Invited user receives invite",
    };
 
 test "Invited user can join the room",
-   requires => [qw( more_users
-                    can_invite_room )],
+   requires => [ $invited_user_preparer,
+                 qw( can_invite_room )],
 
    do => sub {
-      my ( $more_users ) = @_;
-      my $invitee = $more_users->[1];
+      my ( $invitee ) = @_;
 
       matrix_join_room( $invitee, $inviteonly_room_id )
       ->then( sub {
