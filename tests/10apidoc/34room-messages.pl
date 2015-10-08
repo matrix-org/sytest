@@ -44,10 +44,17 @@ sub matrix_send_room_message
 
    my $type = $opts{type} // "m.room.message";
 
-   do_request_json_for( $user,
-      method => "POST",
-      uri    => "/api/v1/rooms/$room_id/send/$type",
+   my $method = "POST";
+   my $uri = "/api/v1/rooms/$room_id/send/$type";
 
+   if (defined $opts{txn_id}) {
+      $method = "PUT";
+      $uri = "$uri/${\ $opts{txn_id} }";
+   }
+
+   do_request_json_for( $user,
+      method => $method,
+      uri    => $uri,
       content => $opts{content},
    )->then( sub {
       my ( $body ) = @_;
@@ -70,6 +77,7 @@ sub matrix_send_room_text_message
          msgtype => $opts{msgtype} // "m.text",
          body    => $opts{body},
       },
+      txn_id  => $opts{txn_id},
    )
 }
 
