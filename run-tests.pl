@@ -140,19 +140,8 @@ if( $CLIENT_LOG ) {
          my $request = $args{request};
 
          my $request_uri = $request->uri;
-         my $request_uri_str = "$request_uri";
 
          my $request_user = $args{request_user};
-
-         if( defined $request_user ) {
-            if( defined $request_uri->query_param( 'access_token' ) ) {
-               $request_uri_str = do {
-                  my $uri = URI->new( $request_uri );
-                  $uri->query_param( access_token => "..." );
-                  $uri;
-               } . "for $request_user";
-            }
-         }
 
          if( $request_uri->path =~ m{/events$} ) {
             my %params = $request_uri->query_form;
@@ -183,17 +172,17 @@ if( $CLIENT_LOG ) {
             );
          }
          else {
-            print STDERR "\e[1;32mRequesting\e[m:\n";
-            print STDERR "  ${\$request->method} $request_uri_str ${\$request->protocol}\n";
-            my ( undef, @headers ) = split m/\n/, $request->as_string;
-            print STDERR "  $_\n" for @headers;
+            my $request_for = defined $request_user ? " for user=$request_user" : "";
+
+            print STDERR "\e[1;32mRequesting\e[m${request_for}:\n";
+            print STDERR "  $_\n" for split m/\n/, $request->as_string;
             print STDERR "-- \n";
 
             return $orig->( $self, %args )
                ->on_done( sub {
                   my ( $response ) = @_;
 
-                  print STDERR "\e[1;33mResponse\e[m from $request_uri_str:\n";
+                  print STDERR "\e[1;33mResponse\e[m from ${ \$request->method } ${ \$request->uri->path }${request_for}:\n";
                   print STDERR "  $_\n" for split m/\n/, $response->as_string;
                   print STDERR "-- \n";
                }
