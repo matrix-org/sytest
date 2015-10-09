@@ -140,11 +140,25 @@ if( $CLIENT_LOG ) {
          my $request = $args{request};
 
          my $request_uri = $request->uri;
+         my $request_uri_str = "$request_uri";
+
+         my $request_user = $args{request_user};
+
+         if( defined $request_user ) {
+            if( defined $request_uri->query_param( 'access_token' ) ) {
+               $request_uri_str = do {
+                  my $uri = URI->new( $request_uri );
+                  $uri->query_param( access_token => "..." );
+                  $uri;
+               } . "for $request_user";
+            }
+         }
+
          if( $request_uri->path =~ m{/events$} ) {
             my %params = $request_uri->query_form;
             print STDERR "\e[1;32mPolling events\e[m",
                ( defined $params{from} ? " since $params{from}" : "" ),
-               " for token=$params{access_token}\n";
+               " for " . ( defined $request_user ? "user=$request_user" : "token=$params{access_token}\n" );
 
             return $orig->( $self, %args )
                ->on_done( sub {
@@ -169,14 +183,16 @@ if( $CLIENT_LOG ) {
          }
          else {
             print STDERR "\e[1;32mRequesting\e[m:\n";
-            print STDERR "  $_\n" for split m/\n/, $request->as_string;
+            print STDERR "  ${\$request->method} $request_uri_str ${\$request->protocol}\n";
+            my ( undef, @headers ) = split m/\n/, $request->as_string;
+            print STDERR "  $_\n" for @headers;
             print STDERR "-- \n";
 
             return $orig->( $self, %args )
                ->on_done( sub {
                   my ( $response ) = @_;
 
-                  print STDERR "\e[1;33mResponse\e[m from $request_uri:\n";
+                  print STDERR "\e[1;33mResponse\e[m from $request_uri_str:\n";
                   print STDERR "  $_\n" for split m/\n/, $response->as_string;
                   print STDERR "-- \n";
                }
