@@ -19,14 +19,13 @@ prepare "Creating testing room",
    };
 
 test "POST /rooms/:room_id/join can join a room",
-   requires => [qw( more_users
-                    can_get_room_membership )],
+   requires => [ local_user_preparer(),
+                 qw( can_get_room_membership )],
 
    critical => 1,
 
    do => sub {
-      my ( $more_users ) = @_;
-      my $user = $more_users->[0];
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -37,8 +36,7 @@ test "POST /rooms/:room_id/join can join a room",
    },
 
    check => sub {
-      my ( $more_users ) = @_;
-      my $user = $more_users->[0];
+      my ( $user ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
@@ -69,14 +67,13 @@ sub matrix_join_room
 }
 
 test "POST /join/:room_alias can join a room",
-   requires => [qw( more_users
-                    can_get_room_membership )],
+   requires => [ local_user_preparer(),
+                 qw( can_get_room_membership )],
 
    provides => [qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $more_users ) = @_;
-      my $user = $more_users->[1];
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -94,8 +91,7 @@ test "POST /join/:room_alias can join a room",
    },
 
    check => sub {
-      my ( $more_users ) = @_;
-      my $user = $more_users->[1];
+      my ( $user ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
@@ -113,12 +109,11 @@ test "POST /join/:room_alias can join a room",
    };
 
 test "POST /join/:room_id can join a room",
-   requires => [qw( more_users
-                    can_get_room_membership )],
+   requires => [ local_user_preparer(), 
+                 qw( can_get_room_membership )],
 
    do => sub {
-      my ( $more_users ) = @_;
-      my $user = $more_users->[2];
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -137,8 +132,7 @@ test "POST /join/:room_id can join a room",
    },
 
    check => sub {
-      my ( $more_users ) = @_;
-      my $user = $more_users->[2];
+      my ( $user ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
