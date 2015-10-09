@@ -2,10 +2,8 @@ use List::UtilsBy qw( partition_by );
 
 my $name = "room name here";
 
-my $room_id;
-my $room_alias;
-
-prepare "Creating test room",
+# This provides $room_id *AND* $room_alias
+my $room_preparer = preparer(
    requires => [qw( user )],
 
    do => sub {
@@ -13,18 +11,17 @@ prepare "Creating test room",
 
       matrix_create_room( $user,
          room_alias_name => "31room-state",
-      )->on_done( sub {
-         ( $room_id, $room_alias ) = @_;
-      });
-   };
+      );
+   },
+);
 
 test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
-   requires => [qw( user )],
+   requires => [qw( user ), $room_preparer ],
 
    provides => [qw( can_get_room_membership )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -44,12 +41,12 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
    };
 
 test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
-   requires => [qw( user )],
+   requires => [qw( user ), $room_preparer ],
 
    provides => [qw( can_get_room_powerlevels )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -70,12 +67,12 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
    };
 
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
-   requires => [qw( user )],
+   requires => [qw( user ), $room_preparer ],
 
    provides => [qw( can_room_initial_sync )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -101,10 +98,10 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_api_client )],
+   requires => [qw( first_api_client ), $room_preparer ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $http, $room_id, undef ) = @_;
 
       $http->do_request_json(
          method => "GET",
@@ -132,10 +129,10 @@ test "GET /publicRooms lists newly-created room",
    };
 
 test "GET /directory/room/:room_alias yields room ID",
-   requires => [qw( user )],
+   requires => [qw( user ), $room_preparer ],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -153,13 +150,13 @@ test "GET /directory/room/:room_alias yields room ID",
    };
 
 test "POST /rooms/:room_id/state/m.room.name sets name",
-   requires => [qw( user
-                    can_room_initial_sync )],
+   requires => [qw( user ), $room_preparer,
+                qw( can_room_initial_sync )],
 
    provides => [qw( can_set_room_name )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -170,7 +167,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    },
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -193,13 +190,13 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    };
 
 test "GET /rooms/:room_id/state/m.room.name gets name",
-   requires => [qw( user
-                    can_set_room_name )],
+   requires => [qw( user ), $room_preparer,
+                qw( can_set_room_name )],
 
    provides => [qw( can_get_room_name )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -221,13 +218,13 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
 my $topic = "A new topic for the room";
 
 test "POST /rooms/:room_id/state/m.room.topic sets topic",
-   requires => [qw( user
-                    can_room_initial_sync )],
+   requires => [qw( user ), $room_preparer,
+                qw( can_room_initial_sync )],
 
    provides => [qw( can_set_room_topic )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -238,7 +235,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    },
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -261,13 +258,13 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    };
 
 test "GET /rooms/:room_id/state/m.room.topic gets topic",
-   requires => [qw( user
-                    can_set_room_topic )],
+   requires => [qw( user ), $room_preparer,
+                qw( can_set_room_topic )],
 
    provides => [qw( can_get_room_topic )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -287,12 +284,12 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
    };
 
 test "GET /rooms/:room_id/state fetches entire room state",
-   requires => [qw( user )],
+   requires => [qw( user ), $room_preparer ],
 
    provides => [qw( can_get_room_all_state )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
