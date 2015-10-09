@@ -345,7 +345,8 @@ sub _run_test
    my $success = eval {
       my @reqs;
       my $f_test = Future->needs_all( @req_futures )
-         ->on_done( sub { @reqs = @_ } );
+         ->on_done( sub { @reqs = @_ } )
+         ->on_fail( sub { die "preparer failed - $_[0]\n" } );
 
       my $check = $params{check};
       if( my $do = $params{do} ) {
