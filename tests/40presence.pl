@@ -1,17 +1,21 @@
-my $local_users_preparer = local_users_preparer( 2 );
+my $senduser_preparer = local_user_preparer();
+
+my $local_user_preparer = local_user_preparer();
 
 my $remote_user_preparer = remote_user_preparer();
 
 # Ensure all the users are members of a shared room, so that we know presence
 # messages can be shared between them all
 my $room_preparer = room_preparer(
-   requires_users => [ $local_users_preparer, $remote_user_preparer ],
+   requires_users => [
+      $senduser_preparer, $local_user_preparer, $remote_user_preparer
+   ],
 );
 
 my $status_msg = "Update for room members";
 
 test "Presence changes are reported to local room members",
-   requires => [ $local_users_preparer, $room_preparer,
+   requires => [ $senduser_preparer, $local_user_preparer, $room_preparer,
                  qw( can_set_presence )],
 
    do => sub {
@@ -49,11 +53,11 @@ test "Presence changes are reported to local room members",
    };
 
 test "Presence changes are also reported to remote room members",
-   requires => [ $local_users_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $senduser_preparer, $remote_user_preparer, $room_preparer,
                  qw( can_set_presence can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $senduser, undef, $remote_user, undef ) = @_;
+      my ( $senduser, $remote_user, undef ) = @_;
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
@@ -76,7 +80,7 @@ test "Presence changes are also reported to remote room members",
    };
 
 test "Presence changes to OFFLINE are reported to local room members",
-   requires => [ $local_users_preparer, $room_preparer,
+   requires => [ $senduser_preparer, $local_user_preparer, $room_preparer,
                  qw( can_set_presence )],
 
    do => sub {
@@ -107,11 +111,11 @@ test "Presence changes to OFFLINE are reported to local room members",
    };
 
 test "Presence changes to OFFLINE are reported to remote room members",
-   requires => [ $local_users_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $senduser_preparer, $remote_user_preparer, $room_preparer,
                  qw( can_set_presence can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $senduser, undef, $remote_user ) = @_;
+      my ( $senduser, $remote_user, undef ) = @_;
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;

@@ -1,16 +1,18 @@
-my $local_users_preparer = local_users_preparer( 2 );
+my $senduser_preparer = local_user_preparer();
+
+my $local_user_preparer = local_user_preparer();
 
 my $remote_preparer = remote_user_preparer();
 
 my $room_preparer = room_preparer(
-   requires_users => [ $local_users_preparer, $remote_preparer ],
+   requires_users => [ $senduser_preparer, $local_user_preparer, $remote_preparer ],
 );
 
 my $msgtype = "m.message";
 my $msgbody = "Room message for 33room-messages";
 
 test "Local room members see posted message events",
-   requires => [ $local_users_preparer, $room_preparer,
+   requires => [ $senduser_preparer, $local_user_preparer, $room_preparer,
                  qw( can_send_message )],
 
    provides => [qw( can_receive_room_message_locally )],
@@ -49,7 +51,7 @@ test "Local room members see posted message events",
    };
 
 test "Fetching eventstream a second time doesn't yield the message again",
-   requires => [ $local_users_preparer,
+   requires => [ $senduser_preparer, $local_user_preparer,
                  qw( can_receive_room_message_locally )],
 
    check => sub {
@@ -106,7 +108,7 @@ test "Local non-members don't see posted message events",
    };
 
 test "Local room members can get room messages",
-   requires => [ $local_users_preparer, $room_preparer,
+   requires => [ $senduser_preparer, $local_user_preparer, $room_preparer,
                  qw( can_send_message can_get_messages )],
 
    check => sub {
@@ -143,11 +145,11 @@ test "Local room members can get room messages",
    };
 
 test "Remote room members also see posted message events",
-   requires => [ $local_users_preparer, $remote_preparer, $room_preparer,
+   requires => [ $senduser_preparer, $remote_preparer, $room_preparer,
                 qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $senduser, undef, $remote_user, $room_id ) = @_;
+      my ( $senduser, $remote_user, $room_id ) = @_;
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;

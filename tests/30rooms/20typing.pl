@@ -1,15 +1,19 @@
 use Time::HiRes qw( time );
 
-my $local_users_preparer = local_users_preparer( 2 );
+my $typing_user_preparer = local_user_preparer();
+
+my $local_user_preparer = local_user_preparer();
 
 my $remote_user_preparer = remote_user_preparer();
 
 my $room_preparer = room_preparer(
-   requires_users => [ $local_users_preparer, $remote_user_preparer ],
+   requires_users => [
+      $typing_user_preparer, $local_user_preparer, $remote_user_preparer
+   ],
 );
 
 test "Typing notification sent to local room members",
-   requires => [ $local_users_preparer, $room_preparer,
+   requires => [ $typing_user_preparer, $local_user_preparer, $room_preparer,
                 qw( can_set_room_typing )],
 
    do => sub {
@@ -47,11 +51,11 @@ test "Typing notification sent to local room members",
    };
 
 test "Typing notifications also sent to remote room members",
-   requires => [ $local_users_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $typing_user_preparer, $remote_user_preparer, $room_preparer,
                 qw( can_set_room_typing can_join_remote_room_by_alias )],
 
    do => sub {
-      my ( $typinguser, undef, $remote_user, $room_id ) = @_;
+      my ( $typinguser, $remote_user, $room_id ) = @_;
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
@@ -74,7 +78,7 @@ test "Typing notifications also sent to remote room members",
    };
 
 test "Typing can be explicitly stopped",
-   requires => [ $local_users_preparer, $room_preparer,
+   requires => [ $typing_user_preparer, $local_user_preparer, $room_preparer,
                 qw( can_set_room_typing )],
 
    do => sub {
@@ -110,11 +114,11 @@ test "Typing can be explicitly stopped",
    };
 
 multi_test "Typing notifications timeout and can be resent",
-   requires => [ $local_users_preparer, $room_preparer,
+   requires => [ $typing_user_preparer, $room_preparer,
                 qw( can_set_room_typing )],
 
    do => sub {
-      my ( $user, undef, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
       my $start_time = time();
 
