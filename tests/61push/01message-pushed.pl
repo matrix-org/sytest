@@ -1,12 +1,12 @@
 multi_test "Test that a message is pushed",
    requires => [qw(
-      api_clients test_http_server_uri_base await_http_request
+      api_clients test_http_server_uri_base
 
       can_create_private_room
    )],
 
    do => sub {
-      my ( $clients, $test_http_server_uri_base, $await_http_request ) = @_;
+      my ( $clients, $test_http_server_uri_base ) = @_;
 
       my $http = $clients->[0];
 
@@ -82,7 +82,7 @@ multi_test "Test that a message is pushed",
 
          Future->needs_all(
             # TODO(check that the HTTP poke is actually the poke we wanted)
-            $await_http_request->( "/alice_push", sub {
+            await_http_request( "/alice_push", sub {
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 

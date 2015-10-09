@@ -140,11 +140,15 @@ if( $CLIENT_LOG ) {
          my $request = $args{request};
 
          my $request_uri = $request->uri;
+
+         my $request_user = $args{request_user};
+
          if( $request_uri->path =~ m{/events$} ) {
             my %params = $request_uri->query_form;
+            my $request_for = defined $request_user ? "user=$request_user" : "token=$params{access_token}";
+
             print STDERR "\e[1;32mPolling events\e[m",
-               ( defined $params{from} ? " since $params{from}" : "" ),
-               " for token=$params{access_token}\n";
+               ( defined $params{from} ? " since $params{from}" : "" ) . " for $request_for\n";
 
             return $orig->( $self, %args )
                ->on_done( sub {
@@ -154,7 +158,7 @@ if( $CLIENT_LOG ) {
                      my $content_decoded = JSON::decode_json( $response->content );
                      my $events = $content_decoded->{chunk};
                      foreach my $event ( @$events ) {
-                        print STDERR "\e[1;33mReceived event\e[m for token=$params{access_token}:\n";
+                        print STDERR "\e[1;33mReceived event\e[m for ${request_for}:\n";
                         print STDERR "  $_\n" for split m/\n/, pp( $event );
                         print STDERR "-- \n";
                      }
@@ -168,7 +172,9 @@ if( $CLIENT_LOG ) {
             );
          }
          else {
-            print STDERR "\e[1;32mRequesting\e[m:\n";
+            my $request_for = defined $request_user ? " for user=$request_user" : "";
+
+            print STDERR "\e[1;32mRequesting\e[m${request_for}:\n";
             print STDERR "  $_\n" for split m/\n/, $request->as_string;
             print STDERR "-- \n";
 
@@ -176,7 +182,7 @@ if( $CLIENT_LOG ) {
                ->on_done( sub {
                   my ( $response ) = @_;
 
-                  print STDERR "\e[1;33mResponse\e[m from $request_uri:\n";
+                  print STDERR "\e[1;33mResponse\e[m from ${ \$request->method } ${ \$request->uri->path }${request_for}:\n";
                   print STDERR "  $_\n" for split m/\n/, $response->as_string;
                   print STDERR "-- \n";
                }
@@ -359,10 +365,13 @@ sub test
       $skipped_count++;
    }
 
-   no warnings 'exiting';
-   last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
+   if( $t->failed ) {
+      no warnings 'exiting';
 
-   die "This CRITICAL test has failed - bailing out\n" if $t->failed and $params{critical};
+      last TEST if $STOP_ON_FAIL and not $params{expect_fail};
+
+      warn( "This CRITICAL test has failed - bailing out\n" ), last TEST if $params{critical};
+   }
 }
 
 {

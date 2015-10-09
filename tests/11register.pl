@@ -2,13 +2,13 @@ use JSON qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha",
-   requires => [qw( first_api_client await_http_request )],
+   requires => [qw( first_api_client )],
 
    do => sub {
-      my ( $http, $await_http_request ) = @_;
+      my ( $http ) = @_;
 
       Future->needs_all(
-         $await_http_request->( "/recaptcha/api/siteverify", sub {1} )
+         await_http_request( "/recaptcha/api/siteverify", sub {1} )
             ->SyTest::pass_on_done( "Got recaptcha verify request" )
          ->then( sub {
             my ( $request ) = @_;
