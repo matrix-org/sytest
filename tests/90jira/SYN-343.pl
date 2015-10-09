@@ -1,5 +1,5 @@
 multi_test "Non-present room members cannot ban others",
-   requires => [ local_users_preparer( 2 ), 
+   requires => [ local_user_preparers( 2 ),
                  qw( can_ban_room can_change_power_levels )],
 
    do => sub {

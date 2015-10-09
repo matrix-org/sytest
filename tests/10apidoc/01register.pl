@@ -118,28 +118,26 @@ sub matrix_register_user
    });
 }
 
-push @EXPORT, qw( local_user_preparer local_users_preparer );
+push @EXPORT, qw( local_user_preparer local_user_preparers );
 
 sub local_user_preparer
 {
-   local_users_preparer( 1 );
-}
-
-sub local_users_preparer
-{
-   my ( $count ) = @_;
-
    preparer(
       requires => [qw( first_api_client )],
 
       do => sub {
          my ( $api_client ) = @_;
 
-         Future->needs_all( map {
-            matrix_register_user( $api_client )
-         } 1 .. $count );
+         matrix_register_user( $api_client )
       },
    );
+}
+
+sub local_user_preparers
+{
+   my ( $count ) = @_;
+
+   return map { local_user_preparer() } 1 .. $count;
 }
 
 push @EXPORT, qw( remote_user_preparer );
