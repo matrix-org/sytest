@@ -40,13 +40,13 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
    };
 
 test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
-   requires => [qw( user more_users
+   requires => [qw( user
                     can_get_power_levels )],
 
    provides => [qw( can_set_power_levels )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
+      my ( $user ) = @_;
 
       my $room_id;
 
