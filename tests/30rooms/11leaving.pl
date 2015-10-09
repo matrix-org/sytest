@@ -1,14 +1,13 @@
 use List::Util qw( first );
 
-my $room_id;
-
-prepare "Setup a room, and have the first user leave (SPEC-216)",
-    requires => [qw( user more_users
-                     can_send_message )],
+my $room_preparer = preparer(
+    requires => [qw( user ), local_user_preparer(),
+                 qw( can_send_message )],
 
     do => sub {
-        my ( $user_a, $more_users ) = @_;
-        my $user_b = $more_users->[1];
+        my ( $user_a, $user_b ) = @_;
+
+        my $room_id;
 
         matrix_create_and_join_room( [$user_a, $user_b] )->then( sub {
             ( $room_id ) = @_;
@@ -56,14 +55,17 @@ prepare "Setup a room, and have the first user leave (SPEC-216)",
                type    => "madeup.test.state",
                content => { body => "S2. B's state after A left" },
             )
-        })
-    };
+        })->then( sub {
+           Future->done( $room_id );
+        });
+    },
+);
 
 test "A departed room is still included in /initialSync (SPEC-216)",
-    requires => [qw( user )],
+    requires => [qw( user ), $room_preparer ],
 
     check => sub {
-        my ( $user ) = @_;
+        my ( $user, $room_id ) = @_;
 
         do_request_json_for( $user,
             method => "GET",
@@ -97,10 +99,10 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
-    requires => [qw( user )],
+    requires => [qw( user ), $room_preparer ],
 
     check => sub {
-        my ( $user ) = @_;
+        my ( $user, $room_id ) = @_;
 
         do_request_json_for( $user,
             method => "GET",
@@ -134,10 +136,10 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
-    requires => [qw( user )],
+    requires => [qw( user ), $room_preparer ],
 
     check => sub {
-        my ( $user ) = @_;
+        my ( $user, $room_id ) = @_;
 
         matrix_get_room_state( $user, $room_id )
         ->then( sub {
@@ -155,10 +157,10 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
-    requires => [qw( user )],
+    requires => [qw( user ), $room_preparer ],
 
     check => sub {
-        my ( $user ) = @_;
+        my ( $user, $room_id ) = @_;
 
         do_request_json_for( $user,
             method => "GET",
@@ -180,10 +182,10 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
-    requires => [qw( user )],
+    requires => [qw( user ), $room_preparer ],
 
     check => sub {
-        my ( $user ) = @_;
+        my ( $user, $room_id ) = @_;
 
         do_request_json_for( $user,
             method => "GET",
@@ -202,10 +204,10 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
     };
 
 test "Can get 'm.room.name' state for a departed room (SPEC-216)",
-    requires => [qw( user )],
+    requires => [qw( user ), $room_preparer ],
 
     check => sub {
-        my ( $user ) = @_;
+        my ( $user, $room_id ) = @_;
 
         matrix_get_room_state( $user, $room_id,
            type => "m.room.name",
@@ -222,10 +224,10 @@ test "Can get 'm.room.name' state for a departed room (SPEC-216)",
     };
 
 test "Getting messages going forward is limited for a departed room (SPEC-216)",
-    requires => [qw( user )],
+    requires => [qw( user ), $room_preparer ],
 
     check => sub {
-        my ( $user ) = @_;
+        my ( $user, $room_id ) = @_;
 
         # TODO: The "t10000-0_0_0_0" token format is synapse specific.
         #  However there isn't a way in the matrix C-S protocol to learn the
