@@ -142,17 +142,10 @@ sub local_users_preparer
    );
 }
 
-push @EXPORT, qw( remote_user_preparer remote_users_preparer );
+push @EXPORT, qw( remote_user_preparer );
 
 sub remote_user_preparer
 {
-   remote_users_preparer( 1 );
-}
-
-sub remote_users_preparer
-{
-   my ( $count ) = @_;
-
    preparer(
       requires => [qw( api_clients )],
 
@@ -160,9 +153,7 @@ sub remote_users_preparer
          my ( $clients ) = @_;
          my $http = $clients->[1];
 
-         Future->needs_all( map {
-            matrix_register_user( $http )
-         } 1 .. $count )
+         matrix_register_user( $http )
       }
    );
 }
