@@ -2,29 +2,20 @@ use utf8;
 
 # [U+2615] - HOT BEVERAGE
 my $alias_localpart = "#☕";
-my $room_id;
 my $room_alias;
 
-prepare "Creating a test room",
-   requires => [qw( user )],
-
-   do => sub {
-      my ( $user ) = @_;
-
-      matrix_create_room( $user )
-      ->on_done( sub {
-         ( $room_id ) = @_;
-      });
-   };
+my $room_preparer = room_preparer(
+   requires_users => [qw( user )],
+);
 
 test "Room aliases can contain Unicode",
-   requires => [qw( user first_home_server
-                    can_create_room_alias )],
+   requires => [qw( user first_home_server ), $room_preparer,
+                qw( can_create_room_alias )],
 
    provides => [qw( can_create_room_alias_unicode )],
 
    do => sub {
-      my ( $user, $first_home_server ) = @_;
+      my ( $user, $first_home_server, $room_id ) = @_;
       $room_alias = "${alias_localpart}:$first_home_server";
 
       do_request_json_for( $user,
@@ -36,7 +27,7 @@ test "Room aliases can contain Unicode",
    },
 
    check => sub {
-      my ( $user, $first_home_server ) = @_;
+      my ( $user, $first_home_server, $room_id ) = @_;
       $room_alias = "${alias_localpart}:$first_home_server";
 
       do_request_json_for( $user,
@@ -56,13 +47,13 @@ test "Room aliases can contain Unicode",
    };
 
 test "Remote room alias queries can handle Unicode",
-   requires => [ remote_user_preparer(),
+   requires => [ remote_user_preparer(), $room_preparer,
                  qw( can_create_room_alias_unicode )],
 
    provides => [qw( can_federate_room_alias_unicode )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
