@@ -49,7 +49,7 @@ sub matrix_send_room_message
 
    if (defined $opts{txn_id}) {
       $method = "PUT";
-      $uri = "$uri/${\ $opts{txn_id} }";
+      $uri = "$uri/$opts{txn_id}";
    }
 
    do_request_json_for( $user,
