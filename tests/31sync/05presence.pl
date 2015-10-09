@@ -6,10 +6,11 @@ test "User sees their own presence in a sync",
     check => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id );
-        matrix_register_sync_user( $http )->then( sub {
+        matrix_register_user( $http, undef, with_events => 0 )->then( sub {
             ( $user ) = @_;
             matrix_create_filter( $user, {} )
         })->then( sub {
+            ( $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id )
         })->then( sub {
             my ( $body ) = @_;
@@ -29,10 +30,11 @@ test "User is offline if they set_presence=offline in their sync",
     check => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id );
-        matrix_register_sync_user( $http )->then( sub {
+        matrix_register_user( $http, undef, with_events => 0 )->then( sub {
             ( $user ) = @_;
             matrix_create_filter( $user, {} )
         })->then( sub {
+            ( $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id, set_presence => "offline")
         })->then( sub {
             my ( $body ) = @_;

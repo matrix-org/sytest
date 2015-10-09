@@ -21,7 +21,7 @@ test "Can sync",
     do => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id );
-        matrix_register_sync_user( $http )->then( sub {
+        matrix_register_user( $http, undef, with_events => 0 )->then( sub {
             ( $user ) = @_;
             matrix_create_filter( $user, {
                 room => { timeline => { limit => 10 }}
