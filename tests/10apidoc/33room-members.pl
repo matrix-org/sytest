@@ -2,10 +2,8 @@ use Future 0.33; # then catch semantics
 use Future::Utils qw( fmap );
 use List::UtilsBy qw( partition_by );
 
-my $room_id;
-my $room_alias;
-
-prepare "Creating testing room",
+# This provides $room_id *AND* $room_alias
+my $room_preparer = preparer(
    requires => [qw( user )],
 
    do => sub {
@@ -13,19 +11,18 @@ prepare "Creating testing room",
 
       matrix_create_room( $user,
          room_alias_name => "33room-members",
-      )->on_done( sub {
-         ( $room_id, $room_alias ) = @_;
-      });
-   };
+      );
+   },
+);
 
 test "POST /rooms/:room_id/join can join a room",
-   requires => [ local_user_preparer(),
+   requires => [ local_user_preparer(), $room_preparer,
                  qw( can_get_room_membership )],
 
    critical => 1,
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -36,7 +33,7 @@ test "POST /rooms/:room_id/join can join a room",
    },
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
@@ -67,13 +64,13 @@ sub matrix_join_room
 }
 
 test "POST /join/:room_alias can join a room",
-   requires => [ local_user_preparer(),
+   requires => [ local_user_preparer(), $room_preparer,
                  qw( can_get_room_membership )],
 
    provides => [qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -91,7 +88,7 @@ test "POST /join/:room_alias can join a room",
    },
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
@@ -109,11 +106,11 @@ test "POST /join/:room_alias can join a room",
    };
 
 test "POST /join/:room_id can join a room",
-   requires => [ local_user_preparer(), 
+   requires => [ local_user_preparer(), $room_preparer,
                  qw( can_get_room_membership )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -132,7 +129,7 @@ test "POST /join/:room_id can join a room",
    },
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
@@ -148,13 +145,13 @@ test "POST /join/:room_id can join a room",
    };
 
 test "POST /rooms/:room_id/leave can leave a room",
-   requires => [ local_user_preparer(),
+   requires => [ local_user_preparer(), $room_preparer,
                  qw( can_get_room_membership )],
 
    critical => 1,
 
    do => sub {
-      my ( $joiner_to_leave ) = @_;
+      my ( $joiner_to_leave, $room_id, undef ) = @_;
 
       matrix_join_room( $joiner_to_leave, $room_id )
       ->then( sub {
@@ -205,13 +202,13 @@ sub matrix_leave_room
 }
 
 test "POST /rooms/:room_id/invite can send an invite",
-   requires => [qw( user ), local_user_preparer(),
+   requires => [qw( user ), local_user_preparer(), $room_preparer,
                 qw( can_get_room_membership )],
 
    provides => [qw( can_invite_room )],
 
    do => sub {
-      my ( $user, $invited_user ) = @_;
+      my ( $user, $invited_user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -222,7 +219,7 @@ test "POST /rooms/:room_id/invite can send an invite",
    },
 
    check => sub {
-      my ( $user, $invited_user ) = @_;
+      my ( $user, $invited_user, $room_id, undef ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
@@ -266,13 +263,13 @@ sub matrix_invite_user_to_room
 }
 
 test "POST /rooms/:room_id/ban can ban a user",
-   requires => [qw( user ), local_user_preparer(),
+   requires => [qw( user ), local_user_preparer(), $room_preparer,
                 qw( can_get_room_membership )],
 
    provides => [qw( can_ban_room )],
 
    do => sub {
-      my ( $user, $banned_user ) = @_;
+      my ( $user, $banned_user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "POST",
@@ -286,7 +283,7 @@ test "POST /rooms/:room_id/ban can ban a user",
    },
 
    check => sub {
-      my ( $user, $banned_user ) = @_;
+      my ( $user, $banned_user, $room_id, undef ) = @_;
 
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
