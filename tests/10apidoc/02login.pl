@@ -1,5 +1,31 @@
 use JSON qw( decode_json );
 
+# Doesn't matter what this is, but later tests will use it.
+my $password = "s3kr1t";
+
+my $registered_user_preparer = preparer(
+   requires => [qw( first_api_client )],
+
+   do => sub {
+      my ( $api_client ) = @_;
+
+      $api_client->do_request_json(
+         method => "POST",
+         uri    => "/api/v1/register",
+
+         content => {
+            type     => "m.login.password",
+            user     => "02login",
+            password => $password,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         Future->done( $body->{user_id} );
+      });
+   },
+);
+
 test "GET /login yields a set of flows",
    requires => [qw( first_api_client )],
 
@@ -42,14 +68,13 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [qw( first_api_client login_details
-                    can_login_password_flow )],
+   requires => [qw( first_api_client ), $registered_user_preparer,
+                qw( can_login_password_flow )],
 
    provides => [qw( can_login user first_home_server do_request_json_for do_request_json )],
 
    do => sub {
-      my ( $http, $login_details ) = @_;
-      my ( $user_id, $password ) = @$login_details;
+      my ( $http, $user_id ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -83,12 +108,11 @@ test "POST /login can log in as a user",
    };
 
 test "POST /login wrong password is rejected",
-   requires => [qw( first_api_client login_details
-                    can_login_password_flow )],
+   requires => [qw( first_api_client ), $registered_user_preparer,
+                qw( can_login_password_flow )],
 
    do => sub {
-      my ( $http, $login_details ) = @_;
-      my ( $user_id, $password ) = @$login_details;
+      my ( $http, $user_id ) = @_;
 
       $http->do_request_json(
          method => "POST",

@@ -37,13 +37,8 @@ test "GET /register yields a set of flows",
       });
    };
 
-# Doesn't matter what this is, but later tests will use it.
-my $password = "s3kr1t";
-
 test "POST /register can create a user",
    requires => [qw( first_api_client can_register_password_flow )],
-
-   provides => [qw( login_details )],
 
    critical => 1,
 
@@ -57,14 +52,12 @@ test "POST /register can create a user",
          content => {
             type     => "m.login.password",
             user     => "01register-user",
-            password => $password,
+            password => "s3kr1t",
          },
       )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( user_id access_token ));
-
-         provide login_details => [ $body->{user_id}, $password ];
 
          Future->done( 1 );
       });
