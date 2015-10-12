@@ -157,7 +157,7 @@ test "That a filtered timeline reaches its limit",
                     content => { "filler" => $_ },
                     type => "a.made.up.filler.type",
                 )
-            } 0 .. 10 );
+            } 0 .. 10 )
         })->then( sub {
              matrix_sync( $user, filter => $filter_id )
         })->then( sub {
