@@ -36,8 +36,8 @@ test "Outbound federation can query profile data",
 my $dname = "Displayname Set For Federation Test";
 
 test "Inbound federation can query profile data",
-   requires => [qw( outbound_client user
-                    can_set_displayname )],
+   requires => [qw( outbound_client ), local_user_preparer(),
+                qw( can_set_displayname )],
 
    do => sub {
       my ( $outbound_client, $user ) = @_;
