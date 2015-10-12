@@ -1,5 +1,3 @@
-use Future::Utils 0.18 qw( try_repeat_until_success );
-
 # Eventually this will be changed; see SPEC-53
 my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
@@ -12,37 +10,30 @@ test "initialSync sees my presence status",
    check => sub {
       my ( $user ) = @_;
 
-      # First initialSync might not give me my own presence straight away
-      # See SYT-34
-      try_repeat_until_success {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/initialSync",
-         )->then( sub {
-            my ( $body ) = @_;
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/api/v1/initialSync",
+      )->then( sub {
+         my ( $body ) = @_;
 
-            require_json_keys( $body, qw( presence ));
+         require_json_keys( $body, qw( presence ));
 
-            log_if_fail "Initial sync presence", $body->{presence};
+         log_if_fail "Initial sync presence", $body->{presence};
 
-            my $event = first {
-               ( $_->{content}{user_id} // "" ) eq $user->user_id
-            } @{ $body->{presence} } or
-               die "Did not find an initial presence message about myself";
+         my $event = first {
+            ( $_->{content}{user_id} // "" ) eq $user->user_id
+         } @{ $body->{presence} } or
+            die "Did not find an initial presence message about myself";
 
-            require_json_object( $event, qw( type content ));
-            $event->{type} eq "m.presence" or
-               die "Expected type of event to be m.presence";
+         require_json_object( $event, qw( type content ));
+         $event->{type} eq "m.presence" or
+            die "Expected type of event to be m.presence";
 
-            my $content = $event->{content};
-            require_json_object( $content, qw( user_id presence last_active_ago ));
+         my $content = $event->{content};
+         require_json_object( $content, qw( user_id presence last_active_ago ));
 
-            Future->done(1);
-         })->else_with_f( sub {
-            my ( $f ) = @_;
-            delay( 0.2 )->then( sub { $f } );
-         });
-      };
+         Future->done(1);
+      });
    };
 
 my $status_msg = "A status set by 21presence-events.pl";

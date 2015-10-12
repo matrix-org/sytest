@@ -68,7 +68,7 @@ test "New room members see existing users' presence in room initialSync",
 
          require_json_keys( $presence{ $first_user->user_id }, qw( type content ));
          require_json_keys( $presence{ $first_user->user_id }{content},
-            qw( presence ));
+            qw( presence last_active_ago ));
 
          # No status_msg or last_active_ago - see SYT-34
 
