@@ -130,3 +130,41 @@ test "Presence changes to OFFLINE are reported to remote room members",
          return 1;
       });
    };
+
+test "Newly created users see their own presence in /initialSync (SYT-34)",
+   requires => [qw( first_api_client
+                    can_initial_sync )],
+
+   do => sub {
+      my ( $api_client ) = @_;
+
+      my $user;
+
+      matrix_register_user( $api_client )
+      ->then( sub {
+         ( $user ) = @_;
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/api/v1/initialSync",
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "initialSync response", $body;
+
+         require_json_keys( $body, qw( presence ));
+         require_json_list( my $presence = $body->{presence} );
+
+         my $user_presence = first {
+            $_->{content}{user_id} eq $user->user_id
+         } @$presence or die "Expected to find my own presence";
+
+         # Doesn't necessarily have a status_msg yet
+         require_json_keys( $user_presence, qw( type content ));
+         require_json_keys( $user_presence->{content},
+            qw( presence last_active_ago ));
+
+         Future->done(1);
+      });
+   };
