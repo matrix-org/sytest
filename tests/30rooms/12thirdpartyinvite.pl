@@ -59,13 +59,13 @@ sub can_invite_unbound_3pid
    my $invitee = $other_users->[0];
 
    make_3pid_invite(
-      inviter => $inviter,
-      invitee => $invitee,
-      id_server => $id_server,
+      inviter             => $inviter,
+      invitee             => $invitee,
+      id_server           => $id_server,
       expect_join_success => 1,
-      is_key_validity => 1,
-      is_user_agent => $user_agent,
-      join_sub => sub {
+      is_key_validity     => 1,
+      is_user_agent       => $user_agent,
+      join_sub            => sub {
          my ( $token, $public_key, $signature, $room_id ) = @_;
 
          do_request_json_for( $invitee,
@@ -91,12 +91,12 @@ test "3pid invite join with wrong signature are rejected",
       my $invitee = $other_users->[0];
 
       make_3pid_invite(
-         inviter => $user,
-         invitee => $invitee,
-         id_server => $id_server,
+         inviter             => $user,
+         invitee             => $invitee,
+         id_server           => $id_server,
          expect_join_success => 0,
-         is_key_validity => undef, # Should really be an optionally called stub for true
-         join_sub => sub {
+         is_key_validity     => undef, # Should really be an optionally called stub for true
+         join_sub            => sub {
             my ( $token, $public_key, $signature, $room_id ) = @_;
 
             do_request_json_for( $invitee,
@@ -121,11 +121,11 @@ test "3pid invite join with missing signature are rejected",
       my $invitee = $other_users->[0];
 
       make_3pid_invite(
-         inviter => $user,
-         invitee => $invitee,
-         id_server => $id_server,
+         inviter             => $user,
+         invitee             => $invitee,
+         id_server           => $id_server,
          expect_join_success => 0,
-         join_sub => sub {
+         join_sub            => sub {
             my ( $token, $public_key, $signature, $room_id ) = @_;
 
             do_request_json_for( $invitee,
@@ -149,11 +149,11 @@ test "3pid invite join with wrong key_validity_url are rejected",
       my $invitee = $other_users->[0];
 
       make_3pid_invite(
-         inviter => $user,
-         invitee => $invitee,
-         id_server => $id_server,
+         inviter             => $user,
+         invitee             => $invitee,
+         id_server           => $id_server,
          expect_join_success => 0,
-         join_sub => sub {
+         join_sub            => sub {
             my ( $token, $public_key, $signature, $room_id ) = @_;
 
             do_request_json_for( $invitee,
@@ -178,11 +178,11 @@ test "3pid invite join with missing key_validity_url are rejected",
       my $invitee = $other_users->[0];
 
       make_3pid_invite(
-         inviter => $user,
-         invitee => $invitee,
-         id_server => $id_server,
+         inviter             => $user,
+         invitee             => $invitee,
+         id_server           => $id_server,
          expect_join_success => 0,
-         join_sub => sub {
+         join_sub            => sub {
             my ( $token, $public_key, $signature, $room_id ) = @_;
 
             do_request_json_for( $invitee,
@@ -206,11 +206,11 @@ test "3pid invite join with wrong signature are rejected",
       my $invitee = $other_users->[0];
 
       make_3pid_invite(
-         inviter => $user,
-         invitee => $invitee,
-         id_server => $id_server,
+         inviter             => $user,
+         invitee             => $invitee,
+         id_server           => $id_server,
          expect_join_success => 0,
-         join_sub => sub {
+         join_sub            => sub {
             my ( $token, $public_key, $signature, $room_id ) = @_;
 
             my ( $wrong_public_key, $wrong_private_key ) = $crypto_sign->keypair;
@@ -237,12 +237,12 @@ test "3pid invite join fails if key revoked",
       my $invitee = $other_users->[0];
 
       make_3pid_invite(
-         inviter => $inviter,
-         invitee => $invitee,
-         id_server => $id_server,
+         inviter             => $inviter,
+         invitee             => $invitee,
+         id_server           => $id_server,
          expect_join_success => 0,
-         is_key_validity => 0,
-         join_sub => sub {
+         is_key_validity     => 0,
+         join_sub            => sub {
             my ( $token, $public_key, $signature, $room_id ) = @_;
 
             do_request_json_for( $invitee,
@@ -444,9 +444,8 @@ sub do_3pid_invite {
    my ( $inviter, $room_id, $id_server, $invitee_email ) = @_;
 
    do_request_json_for( $inviter,
-      method => "POST",
-      uri    => "/api/v1/rooms/$room_id/invite",
-
+      method  => "POST",
+      uri     => "/api/v1/rooms/$room_id/invite",
       content => {
          id_server    => $id_server,
          medium       => "email",
