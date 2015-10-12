@@ -1,5 +1,7 @@
+my $user_preparer = local_user_preparer();
+
 my $room_preparer = room_preparer(
-   requires_users => [qw( user )],
+   requires_users => [ $user_preparer ],
 );
 
 test "AS can create a user",
@@ -137,11 +139,11 @@ test "AS can make room aliases",
    };
 
 test "Regular users cannot create room aliases within the AS namespace",
-   requires => [qw( user first_home_server ), $room_preparer,
+   requires => [qw( first_home_server ), $user_preparer, $room_preparer,
                 qw( can_create_room_alias )],
 
    do => sub {
-      my ( $user, $first_home_server, $room_id ) = @_;
+      my ( $first_home_server, $user, $room_id ) = @_;
       my $room_alias = "#astest-01create-2:$first_home_server";
 
       do_request_json_for( $user,
