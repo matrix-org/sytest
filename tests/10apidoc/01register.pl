@@ -176,3 +176,31 @@ sub remote_user_preparer
       }
    );
 }
+
+push @EXPORT, qw( SPYGLASS_USER );
+
+# A special user which we'll allow to be shared among tests, because we only
+# allow it to perform HEAD and GET requests. This user is useful for tests that
+# don't mutate server-side state, so it's fairly safe to reüse this user among
+# different tests.
+our $SPYGLASS_USER = preparer(
+   requires => [qw( first_api_client )],
+
+   do => sub {
+      my ( $api_client ) = @_;
+
+      matrix_register_user( $api_client )
+      ->on_done( sub {
+         my ( $user ) = @_;
+
+         $user->http = SyTest::HTTPClient->new(
+            max_connections_per_host => 3,
+            uri_base                 => $user->http->{uri_base}, # cheating
+
+            restrict_methods => [qw( HEAD GET )],
+         );
+
+         $loop->add( $user->http );
+      });
+   },
+);
