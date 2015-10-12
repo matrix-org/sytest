@@ -179,3 +179,29 @@ test "That a filtered timeline reaches its limit",
             Future->done(1)
         });
     };
+
+
+test "That syncing a new room with a large timline limit isn't limited",
+    requires => [qw( first_api_client can_sync )],
+
+    check => sub {
+        my ( $http ) = @_;
+        my ( $user, $filter_id, $room_id, $event_id );
+        my $filter = { room => { timeline => { limit => 100 } } };
+        matrix_register_user_with_filter( $http, $filter )->then( sub {
+            ( $user, $filter_id ) = @_;
+            matrix_create_room( $user )
+        })->then( sub {
+            ( $room_id ) = @_;
+            matrix_sync( $user, filter => $filter_id )
+        })->then( sub {
+            my ( $body ) = @_;
+            my $room = $body->{rooms}{joined}{$room_id};
+            require_json_keys( $room, qw( event_map timeline state ephemeral ));
+            require_json_keys( $room->{state}, qw( events ));
+            require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+            (not $room->{timeline}{limited})
+                or die "Did not expect timeline to be limited";
+            Future->done(1);
+        })
+    };
