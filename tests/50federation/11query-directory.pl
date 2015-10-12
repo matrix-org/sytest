@@ -41,11 +41,14 @@ test "Outbound federation can query room alias directory",
    };
 
 test "Inbound federation can query room alias directory",
-   requires => [qw( outbound_client user first_home_server
-                    can_create_room_alias)],
+   # TODO(paul): technically this doesn't need local_user_preparer(), if we had
+   #   some user we could assert can perform media/directory/etc... operations
+   #   but doesn't mutate any of its own state, or join rooms, etc...
+   requires => [qw( outbound_client first_home_server ), local_user_preparer(),
+                qw( can_create_room_alias)],
 
    do => sub {
-      my ( $outbound_client, $user, $first_home_server ) = @_;
+      my ( $outbound_client, $first_home_server, $user ) = @_;
 
       my $room_id;
       my $room_alias = "#50federation-11query-directory:$first_home_server";
