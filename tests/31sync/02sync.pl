@@ -1,5 +1,14 @@
 push our @EXPORT, qw( matrix_sync );
 
+=head2 matrix_sync
+
+    my ( $sync_body ) = matrix_sync( $user, %query_params )->get;
+
+Make a v2_alpha/sync request for the user. Returns the response body as a
+reference to a hash.
+
+=cut
+
 sub matrix_sync {
     my ( $user, %params ) = @_;
     do_request_json_for( $user,
@@ -21,13 +30,8 @@ test "Can sync",
     do => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id );
-        matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-            ( $user ) = @_;
-            matrix_create_filter( $user, {
-                room => { timeline => { limit => 10 }}
-            })
-        })->then( sub {
-            ( $filter_id ) = @_;
+        matrix_register_user_with_filter( $http, {} )->then( sub {
+            ( $user, $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id )
         })->then( sub {
             my ( $body ) = @_;

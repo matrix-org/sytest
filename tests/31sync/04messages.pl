@@ -3,8 +3,9 @@ test "Can sync a room with a single message",
     check => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id, $room_id, $event_id );
-        matrix_register_sync_user( $http )->then( sub {
-            ( $user ) = @_;
+        my $filter = { room => { timeline => { limit => 1 } } };
+        matrix_register_user_with_filter( $http, $filter)->then( sub {
+            ( $user , $filter_id ) = @_;
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
@@ -13,11 +14,6 @@ test "Can sync a room with a single message",
             )
         })->then( sub {
             ( $event_id ) = @_;
-            matrix_create_filter( $user, {
-                room => { timeline => { limit => 1 }}
-            })
-        })->then( sub {
-            ( $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id )
         })->then( sub {
             my ( $body ) = @_;
@@ -42,8 +38,15 @@ test "Can sync a room with a message with a transaction id",
     check => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id, $room_id, $event_id );
-        matrix_register_sync_user( $http )->then( sub {
-            ( $user ) = @_;
+        my $filter = {
+            room => {
+                timeline => { limit => 1 },
+                state => { types => [] },
+            },
+            presence => { types => [] },
+        };
+        matrix_register_user_with_filter( $http, $filter )->then(sub {
+            ( $user, $filter_id ) = @_;
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
@@ -52,15 +55,6 @@ test "Can sync a room with a message with a transaction id",
             )
         })->then( sub {
             ( $event_id ) = @_;
-            matrix_create_filter( $user, {
-                room => {
-                    timeline => { limit => 1 },
-                    state => { types => [] }
-                },
-                presence => { types => [] }
-            })
-        })->then( sub {
-            ( $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id )
         })->then( sub {
             my ( $body ) = @_;
@@ -87,20 +81,18 @@ test "A message sent after an initial sync appears in the timeline of an increme
     check => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id, $room_id, $event_id, $next_batch );
-        matrix_register_sync_user( $http )->then( sub {
-            ( $user ) = @_;
+        my $filter = {
+            room => {
+                timeline => { limit => 1 },
+                state => { types => [] },
+            },
+            presence => { types => [] },
+        };
+        matrix_register_user_with_filter( $http, $filter )->then( sub {
+            ( $user, $filter_id ) = @_;
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
-            matrix_create_filter( $user, {
-                room => {
-                    timeline => { limit => 1 },
-                    state => { types => [] }
-                },
-                presence => { types => [] }
-            })
-        })->then( sub {
-            ( $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id )
         })->then( sub {
             my ( $body ) = @_;

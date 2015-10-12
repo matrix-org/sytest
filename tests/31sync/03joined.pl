@@ -4,16 +4,12 @@ test "Can sync a joined room",
     check => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id, $room_id );
-        matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-            ( $user ) = @_;
+        my $filter = { room => { timeline => { limit => 10 } } };
+        matrix_register_user_with_filter( $http, $filter )->then( sub {
+            ( $user, $filter ) = @_;
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
-            matrix_create_filter( $user, {
-                room => { timeline => { limit => 10 }}
-            })
-        })->then( sub {
-            ( $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id )
         })->then( sub {
             my ( $body ) = @_;
@@ -40,13 +36,9 @@ test "Newly joined room is included in an incremental sync",
     check => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id, $room_id, $next_batch);
-        matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-            ( $user ) = @_;
-            matrix_create_filter( $user, {
-                room => { timeline => { limit => 10 }}
-            })
-        })->then( sub {
-            ( $filter_id ) = @_;
+        my $filter = { room => { timeline => { limit => 10 } } };
+        matrix_register_user_with_filter( $http, $filter )->then( sub {
+            ( $user, $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id )
         })->then( sub {
             my ( $body ) = @_;

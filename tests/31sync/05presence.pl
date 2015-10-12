@@ -6,11 +6,8 @@ test "User sees their own presence in a sync",
     check => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id );
-        matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-            ( $user ) = @_;
-            matrix_create_filter( $user, {} )
-        })->then( sub {
-            ( $filter_id ) = @_;
+        matrix_register_user_with_filter( $http, {} )->then( sub {
+            ( $user, $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id )
         })->then( sub {
             my ( $body ) = @_;
@@ -30,11 +27,8 @@ test "User is offline if they set_presence=offline in their sync",
     check => sub {
         my ( $http ) = @_;
         my ( $user, $filter_id );
-        matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-            ( $user ) = @_;
-            matrix_create_filter( $user, {} )
-        })->then( sub {
-            ( $filter_id ) = @_;
+        matrix_register_user_with_filter( $http, {} )->then( sub {
+            ( $user, $filter_id ) = @_;
             matrix_sync( $user, filter => $filter_id, set_presence => "offline")
         })->then( sub {
             my ( $body ) = @_;
@@ -55,16 +49,10 @@ test "User sees updates to presence from other users in the incremental sync.",
         my ( $http ) = @_;
         my ( $user_a, $user_b, $filter_id_a, $filter_id_b, $next_a );
         Future->needs_all(
-            matrix_register_user( $http, undef, with_events => 0 ),
-            matrix_register_user( $http, undef, with_events => 0 ),
+            matrix_register_user_with_filter( $http, {} ),
+            matrix_register_user_with_filter( $http, {} ),
         )->then( sub {
-            ( $user_a, $user_b ) = @_;
-            Future->needs_all(
-                matrix_create_filter( $user_a, {} ),
-                matrix_create_filter( $user_b, {} ),
-            )
-        })->then( sub {
-            ( $filter_id_a, $filter_id_b ) = @_;
+            ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
             # We can't use matrix_create_and_join since that polls the event
             # stream to check that the user has joined.
             matrix_create_room( $user_a )->then( sub {
