@@ -132,23 +132,16 @@ test "Presence changes to OFFLINE are reported to remote room members",
    };
 
 test "Newly created users see their own presence in /initialSync (SYT-34)",
-   requires => [qw( first_api_client
-                    can_initial_sync )],
+   requires => [ local_user_preparer(),
+                 qw( can_initial_sync )],
 
    do => sub {
-      my ( $api_client ) = @_;
+      my ( $user ) = @_;
 
-      my $user;
-
-      matrix_register_user( $api_client )
-      ->then( sub {
-         ( $user ) = @_;
-
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/initialSync",
-         )
-      })->then( sub {
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/api/v1/initialSync",
+      )->then( sub {
          my ( $body ) = @_;
 
          log_if_fail "initialSync response", $body;
