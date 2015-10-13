@@ -1,6 +1,6 @@
 test "GET /initialSync with non-numeric 'limit'",
-   requires => [qw( user
-                    can_initial_sync )],
+   requires => [ our $SPYGLASS_USER,
+                 qw( can_initial_sync )],
 
    check => sub {
       my ( $user ) = @_;
@@ -14,7 +14,7 @@ test "GET /initialSync with non-numeric 'limit'",
    };
 
 test "GET /events with non-numeric 'limit'",
-   requires => [qw( user )],
+   requires => [ $SPYGLASS_USER ],
 
    check => sub {
       my ( $user ) = @_;
@@ -28,7 +28,7 @@ test "GET /events with non-numeric 'limit'",
    };
 
 test "GET /events with negative 'limit'",
-   requires => [qw( user )],
+   requires => [ $SPYGLASS_USER ],
 
    check => sub {
       my ( $user ) = @_;
@@ -42,7 +42,7 @@ test "GET /events with negative 'limit'",
    };
 
 test "GET /events with non-numeric 'timeout'",
-   requires => [qw( user )],
+   requires => [ $SPYGLASS_USER ],
 
    check => sub {
       my ( $user ) = @_;
