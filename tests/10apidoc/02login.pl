@@ -71,7 +71,7 @@ test "POST /login can log in as a user",
    requires => [qw( first_api_client ), $registered_user_preparer,
                 qw( can_login_password_flow )],
 
-   provides => [qw( can_login user first_home_server do_request_json_for do_request_json )],
+   provides => [qw( can_login first_home_server do_request_json_for do_request_json )],
 
    do => sub {
       my ( $http, $user_id ) = @_;
@@ -91,11 +91,6 @@ test "POST /login can log in as a user",
          require_json_keys( $body, qw( access_token home_server ));
 
          provide can_login => 1;
-
-         my $access_token = $body->{access_token};
-         my $refresh_token = $body->{refresh_token};
-
-         provide user => my $user = User( $http, $user_id, $access_token, $refresh_token, undef, [], undef );
 
          provide first_home_server => $body->{home_server};
 
