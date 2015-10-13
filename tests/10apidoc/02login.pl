@@ -140,41 +140,50 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [qw( first_api_client user )],
+   requires => [qw( first_api_client ), $registered_user_preparer ],
 
    do => sub {
-      my ( $http, $old_user ) = @_;
+      my ( $http, $user_id ) = @_;
+
+      my $first_body;
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/v2_alpha/tokenrefresh",
+         uri    => "/api/v1/login",
 
          content => {
-            refresh_token => $old_user->refresh_token,
+            type     => "m.login.password",
+            user     => $user_id,
+            password => $password,
          },
-      )->then(
+      )->then( sub {
+         ( $first_body ) = @_;
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/v2_alpha/tokenrefresh",
+
+            content => {
+               refresh_token => $first_body->{refresh_token},
+            },
+         )
+      })->then(
          sub {
-            my ( $body ) = @_;
+            my ( $second_body ) = @_;
 
-            require_json_keys( $body, qw( access_token refresh_token ));
+            require_json_keys( $second_body, qw( access_token refresh_token ));
 
-            my $new_access_token = $body->{access_token};
-            my $new_refresh_token = $body->{refresh_token};
-
-            $new_access_token ne $old_user->access_token or
-               die "Expected new access token";
-
-            $new_refresh_token ne $old_user->refresh_token or
-               die "Expected new refresh token";
+            $second_body->{$_} ne $first_body->{$_} or
+               die "Expected new '$_'" for qw( access_token refresh_token );
 
             $http->do_request_json(
                method => "POST",
                uri    => "/v2_alpha/tokenrefresh",
 
                content => {
-                  refresh_token => $old_user->refresh_token,
+                  refresh_token => $first_body->{refresh_token},
                },
-            )
+            )->main::expect_http_403;
          }
-      )->main::expect_http_403;
+      );
    };
