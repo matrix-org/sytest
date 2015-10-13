@@ -127,7 +127,9 @@ package SyTest::HTTPServer {
       my $path = uri_unescape $request->path;
 
       if( $CLIENT_LOG ) {
-         print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
+         my $green = -t STDERR ? "\e[1;32m" : "";
+         my $reset = -t STDERR ? "\e[m" : "";
+         print STDERR "${green}Received Request${reset} for $method $path:\n";
          #TODO log the HTTP Request headers
          print STDERR "  $_\n" for split m/\n/, $request->body;
          print STDERR "-- \n";
