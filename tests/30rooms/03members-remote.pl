@@ -2,10 +2,15 @@ use Future::Utils 0.18 qw( try_repeat );
 use List::Util qw( first );
 use List::UtilsBy qw( partition_by );
 
+my $creator_preparer = local_user_preparer(
+   # Some of these tests depend on the user having a displayname
+   displayname => "My name here",
+);
+
 my $remote_user_preparer = remote_user_preparer();
 
 my $room_preparer = preparer(
-   requires => [qw( user )],
+   requires => [ $creator_preparer ],
 
    do => sub {
       my ( $user ) = @_;
@@ -78,8 +83,8 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing members' presence in room initialSync",
-   requires => [qw( user ), $remote_user_preparer, $room_preparer,
-                qw( can_join_remote_room_by_alias can_room_initial_sync )],
+   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+                 qw( can_join_remote_room_by_alias can_room_initial_sync )],
 
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
@@ -109,8 +114,8 @@ test "New room members see existing members' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( user ), $remote_user_preparer, $room_preparer,
-                qw( can_join_remote_room_by_alias )],
+   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+                 qw( can_join_remote_room_by_alias )],
 
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
@@ -132,8 +137,8 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new member's presence",
-   requires => [qw( user ), $remote_user_preparer, $room_preparer,
-                qw( can_join_remote_room_by_alias )],
+   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+                 qw( can_join_remote_room_by_alias )],
 
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
@@ -150,8 +155,8 @@ test "Existing members see new member's presence",
    };
 
 test "New room members see first user's profile information in global initialSync",
-   requires => [qw( user ), $remote_user_preparer, $room_preparer,
-                qw( can_join_remote_room_by_alias can_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+                 qw( can_join_remote_room_by_alias can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
@@ -179,8 +184,8 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [qw( user ), $remote_user_preparer, $room_preparer,
-                qw( can_room_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+                 qw( can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;

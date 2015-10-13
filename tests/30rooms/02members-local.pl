@@ -1,9 +1,14 @@
 use List::Util qw( first );
 
+my $creator_preparer = local_user_preparer(
+   # Some of these tests depend on the user having a displayname
+   displayname => "My name here",
+);
+
 my $local_user_preparer = local_user_preparer();
 
 my $room_preparer = preparer(
-   requires => [qw( user ), $local_user_preparer ],
+   requires => [ $creator_preparer, $local_user_preparer ],
 
    do => sub {
       my ( $creator, $local_user ) = @_;
@@ -49,8 +54,8 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing users' presence in room initialSync",
-   requires => [qw( user ), $local_user_preparer, $room_preparer,
-                qw( can_room_initial_sync )],
+   requires => [ $creator_preparer, $local_user_preparer, $room_preparer,
+                 qw( can_room_initial_sync )],
 
    check => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
@@ -77,7 +82,7 @@ test "New room members see existing users' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( user ), $local_user_preparer, $room_preparer ],
+   requires => [ $creator_preparer, $local_user_preparer, $room_preparer ],
 
    do => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
@@ -99,7 +104,7 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new members' presence",
-   requires => [qw( user ), $local_user_preparer, $room_preparer ],
+   requires => [ $creator_preparer, $local_user_preparer, $room_preparer ],
 
    do => sub {
       my ( $first_user, $local_user ) = @_;
@@ -116,8 +121,8 @@ test "Existing members see new members' presence",
    };
 
 test "All room members see all room members' presence in global initialSync",
-   requires => [qw( user ), $local_user_preparer, $room_preparer,
-                qw( can_initial_sync )],
+   requires => [ $creator_preparer, $local_user_preparer, $room_preparer,
+                 qw( can_initial_sync )],
 
    check => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
@@ -158,8 +163,8 @@ test "All room members see all room members' presence in global initialSync",
    };
 
 test "New room members see first user's profile information in global initialSync",
-   requires => [qw( user ), $local_user_preparer, $room_preparer,
-                qw( can_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [ $creator_preparer, $local_user_preparer, $room_preparer,
+                 qw( can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
@@ -187,8 +192,8 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [qw( user ), $local_user_preparer, $room_preparer,
-                qw( can_room_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [ $creator_preparer, $local_user_preparer, $room_preparer,
+                 qw( can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
