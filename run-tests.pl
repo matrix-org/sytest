@@ -592,6 +592,7 @@ TEST: {
 
             chomp( my $e = $@ );
             $output->abort_file( $filename, $e );
+            $failed++;
          }
 
          {
