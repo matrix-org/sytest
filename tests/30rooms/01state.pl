@@ -1,7 +1,11 @@
 use List::UtilsBy qw( partition_by );
 
+my $user_preparer = local_user_preparer(
+   presence => "online",
+);
+
 my $room_preparer = preparer(
-   requires => [qw( user )],
+   requires => [ $user_preparer ],
 
    do => sub {
       my ( $user ) = @_;
@@ -12,25 +16,8 @@ my $room_preparer = preparer(
    },
 );
 
-prepare "Setting my presence state",
-   requires => [qw( user can_set_presence )],
-
-   do => sub {
-      my ( $user ) = @_;
-
-      do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/presence/:user_id/status",
-
-         content => {
-            presence   => "online",
-            status_msg => "Online",
-         }
-      );
-   };
-
 test "Room creation reports m.room.create to myself",
-   requires => [qw( user ), $room_preparer ],
+   requires => [ $user_preparer, $room_preparer ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -53,7 +40,7 @@ test "Room creation reports m.room.create to myself",
    };
 
 test "Room creation reports m.room.member to myself",
-   requires => [qw( user ), $room_preparer ],
+   requires => [ $user_preparer, $room_preparer ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -77,7 +64,7 @@ test "Room creation reports m.room.member to myself",
 my $topic = "Testing topic for the new room";
 
 test "Setting room topic reports m.room.topic to myself",
-   requires => [qw( user ), $room_preparer,
+   requires => [ $user_preparer, $room_preparer,
                 qw( can_set_room_topic )],
 
    do => sub {
@@ -106,7 +93,7 @@ test "Setting room topic reports m.room.topic to myself",
    };
 
 multi_test "Global initialSync",
-   requires => [qw( user ), $room_preparer,
+   requires => [ $user_preparer, $room_preparer,
                 qw( can_initial_sync can_set_room_topic )],
 
    check => sub {
@@ -163,7 +150,7 @@ multi_test "Global initialSync",
    };
 
 test "Global initialSync with limit=0 gives no messages",
-   requires => [qw( user ), $room_preparer,
+   requires => [ $user_preparer, $room_preparer,
                 qw( can_initial_sync )],
 
    check => sub {
@@ -192,7 +179,7 @@ test "Global initialSync with limit=0 gives no messages",
    };
 
 multi_test "Room initialSync",
-   requires => [qw( user ), $room_preparer,
+   requires => [ $user_preparer, $room_preparer,
                 qw( can_room_initial_sync )],
 
    check => sub {
@@ -242,7 +229,7 @@ multi_test "Room initialSync",
    };
 
 test "Room initialSync with limit=0 gives no messages",
-   requires => [qw( user ), $room_preparer,
+   requires => [ $user_preparer, $room_preparer,
                 qw( can_initial_sync )],
 
    check => sub {
