@@ -4,18 +4,20 @@ use utf8;
 my $alias_localpart = "#☕";
 my $room_alias;
 
+my $creator_preparer = local_user_preparer();
+
 my $room_preparer = room_preparer(
-   requires_users => [qw( user )],
+   requires_users => [ $creator_preparer ],
 );
 
 test "Room aliases can contain Unicode",
-   requires => [qw( user first_home_server ), $room_preparer,
+   requires => [qw( first_home_server ), $creator_preparer, $room_preparer,
                 qw( can_create_room_alias )],
 
    provides => [qw( can_create_room_alias_unicode )],
 
    do => sub {
-      my ( $user, $first_home_server, $room_id ) = @_;
+      my ( $first_home_server, $user, $room_id ) = @_;
       $room_alias = "${alias_localpart}:$first_home_server";
 
       do_request_json_for( $user,
@@ -27,7 +29,7 @@ test "Room aliases can contain Unicode",
    },
 
    check => sub {
-      my ( $user, $first_home_server, $room_id ) = @_;
+      my ( $first_home_server, $user, $room_id ) = @_;
       $room_alias = "${alias_localpart}:$first_home_server";
 
       do_request_json_for( $user,
