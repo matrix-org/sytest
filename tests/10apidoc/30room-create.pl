@@ -1,5 +1,8 @@
+my $user_preparer = local_user_preparer();
+
 test "POST /createRoom makes a public room",
-   requires => [qw( user can_initial_sync )],
+   requires => [ $user_preparer,
+                 qw( can_initial_sync )],
 
    critical => 1,
 
@@ -44,7 +47,7 @@ test "POST /createRoom makes a public room",
    };
 
 test "POST /createRoom makes a private room",
-   requires => [qw( user )],
+   requires => [ $user_preparer ],
 
    provides => [qw( can_create_private_room )],
 
@@ -71,8 +74,8 @@ test "POST /createRoom makes a private room",
    };
 
 test "POST /createRoom makes a private room with invites",
-   requires => [qw( user ), local_user_preparer(),
-                qw( can_create_private_room )],
+   requires => [ $user_preparer, local_user_preparer(),
+                 qw( can_create_private_room )],
 
    provides => [qw( can_create_private_room_with_invite )],
 

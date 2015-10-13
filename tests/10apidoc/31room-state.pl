@@ -2,9 +2,11 @@ use List::UtilsBy qw( partition_by );
 
 my $name = "room name here";
 
+my $user_preparer = local_user_preparer();
+
 # This provides $room_id *AND* $room_alias
 my $room_preparer = preparer(
-   requires => [qw( user )],
+   requires => [ $user_preparer ],
 
    do => sub {
       my ( $user ) = @_;
@@ -16,7 +18,7 @@ my $room_preparer = preparer(
 );
 
 test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
-   requires => [qw( user ), $room_preparer ],
+   requires => [ $user_preparer, $room_preparer ],
 
    provides => [qw( can_get_room_membership )],
 
@@ -41,7 +43,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
    };
 
 test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
-   requires => [qw( user ), $room_preparer ],
+   requires => [ $user_preparer, $room_preparer ],
 
    provides => [qw( can_get_room_powerlevels )],
 
@@ -67,7 +69,7 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
    };
 
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
-   requires => [qw( user ), $room_preparer ],
+   requires => [ $user_preparer, $room_preparer ],
 
    provides => [qw( can_room_initial_sync )],
 
@@ -150,8 +152,8 @@ test "GET /directory/room/:room_alias yields room ID",
    };
 
 test "POST /rooms/:room_id/state/m.room.name sets name",
-   requires => [qw( user ), $room_preparer,
-                qw( can_room_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_room_initial_sync )],
 
    provides => [qw( can_set_room_name )],
 
@@ -190,8 +192,8 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    };
 
 test "GET /rooms/:room_id/state/m.room.name gets name",
-   requires => [qw( user ), $room_preparer,
-                qw( can_set_room_name )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_set_room_name )],
 
    provides => [qw( can_get_room_name )],
 
@@ -218,8 +220,8 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
 my $topic = "A new topic for the room";
 
 test "POST /rooms/:room_id/state/m.room.topic sets topic",
-   requires => [qw( user ), $room_preparer,
-                qw( can_room_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_room_initial_sync )],
 
    provides => [qw( can_set_room_topic )],
 
@@ -258,8 +260,8 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    };
 
 test "GET /rooms/:room_id/state/m.room.topic gets topic",
-   requires => [qw( user ), $room_preparer,
-                qw( can_set_room_topic )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_set_room_topic )],
 
    provides => [qw( can_get_room_topic )],
 
@@ -284,7 +286,7 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
    };
 
 test "GET /rooms/:room_id/state fetches entire room state",
-   requires => [qw( user ), $room_preparer ],
+   requires => [ $user_preparer, $room_preparer ],
 
    provides => [qw( can_get_room_all_state )],
 

@@ -2,9 +2,11 @@ use Future 0.33; # then catch semantics
 use Future::Utils qw( fmap );
 use List::UtilsBy qw( partition_by );
 
+my $creator_preparer = local_user_preparer();
+
 # This provides $room_id *AND* $room_alias
 my $room_preparer = preparer(
-   requires => [qw( user )],
+   requires => [ $creator_preparer ],
 
    do => sub {
       my ( $user ) = @_;
@@ -202,15 +204,15 @@ sub matrix_leave_room
 }
 
 test "POST /rooms/:room_id/invite can send an invite",
-   requires => [qw( user ), local_user_preparer(), $room_preparer,
-                qw( can_get_room_membership )],
+   requires => [ $creator_preparer, local_user_preparer(), $room_preparer,
+                 qw( can_get_room_membership )],
 
    provides => [qw( can_invite_room )],
 
    do => sub {
-      my ( $user, $invited_user, $room_id, undef ) = @_;
+      my ( $creator, $invited_user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
+      do_request_json_for( $creator,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/invite",
 
@@ -219,9 +221,9 @@ test "POST /rooms/:room_id/invite can send an invite",
    },
 
    check => sub {
-      my ( $user, $invited_user, $room_id, undef ) = @_;
+      my ( $creator, $invited_user, $room_id, undef ) = @_;
 
-      matrix_get_room_state( $user, $room_id,
+      matrix_get_room_state( $creator, $room_id,
          type      => "m.room.member",
          state_key => $invited_user->user_id,
       )->then( sub {
@@ -263,15 +265,15 @@ sub matrix_invite_user_to_room
 }
 
 test "POST /rooms/:room_id/ban can ban a user",
-   requires => [qw( user ), local_user_preparer(), $room_preparer,
-                qw( can_get_room_membership )],
+   requires => [ $creator_preparer, local_user_preparer(), $room_preparer,
+                 qw( can_get_room_membership )],
 
    provides => [qw( can_ban_room )],
 
    do => sub {
-      my ( $user, $banned_user, $room_id, undef ) = @_;
+      my ( $creator, $banned_user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
+      do_request_json_for( $creator,
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/ban",
 
@@ -283,9 +285,9 @@ test "POST /rooms/:room_id/ban can ban a user",
    },
 
    check => sub {
-      my ( $user, $banned_user, $room_id, undef ) = @_;
+      my ( $creator, $banned_user, $room_id, undef ) = @_;
 
-      matrix_get_room_state( $user, $room_id,
+      matrix_get_room_state( $creator, $room_id,
          type      => "m.room.member",
          state_key => $banned_user->user_id,
       )->then( sub {
