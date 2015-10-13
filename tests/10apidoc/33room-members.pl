@@ -399,3 +399,15 @@ sub room_preparer
       }
    );
 }
+
+push @EXPORT, qw( local_user_and_room_preparers );
+
+sub local_user_and_room_preparers
+{
+   my $user_preparer = local_user_preparer();
+
+   return (
+      $user_preparer,
+      room_preparer( requires_users => [ $user_preparer ] ),
+   );
+}
