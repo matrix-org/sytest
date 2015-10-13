@@ -1,24 +1,17 @@
 test "POST /rooms/:room_id/send/:event_type sends a message",
-   requires => [qw( user )],
+   requires => [ local_user_and_room_preparers() ],
 
    provides => [qw( can_send_message )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      my $room_id;
+      do_request_json_for( $user,
+         method => "POST",
+         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 
-      matrix_create_room( $user )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         do_request_json_for( $user,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/send/m.room.message",
-
-            content => { msgtype => "m.message", body => "Here is the message content" },
-         )
-      })->then( sub {
+         content => { msgtype => "m.message", body => "Here is the message content" },
+      )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( event_id ));
@@ -74,24 +67,17 @@ sub matrix_send_room_text_message
 }
 
 test "GET /rooms/:room_id/messages returns a message",
-   requires => [qw( user
-                    can_send_message )],
+   requires => [ local_user_and_room_preparers(),
+                 qw( can_send_message )],
 
    provides => [qw( can_get_messages )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      my $room_id;
-
-      matrix_create_room( $user )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_send_room_text_message( $user, $room_id,
-            body => "Here is the message content",
-         )
-      })->then( sub {
+      matrix_send_room_text_message( $user, $room_id,
+         body => "Here is the message content",
+      )->then( sub {
          do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/messages",
