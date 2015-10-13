@@ -122,6 +122,8 @@ push @EXPORT, qw( local_user_preparer local_user_preparers );
 
 sub local_user_preparer
 {
+   my %args = @_;
+
    preparer(
       requires => [qw( first_api_client )],
 
@@ -129,6 +131,32 @@ sub local_user_preparer
          my ( $api_client ) = @_;
 
          matrix_register_user( $api_client )
+         ->then_with_f( sub {
+            my $f = shift;
+            return $f unless defined( my $displayname = $args{displayname} );
+
+            my $user = $f->get;
+            do_request_json_for( $user,
+               method => "PUT",
+               uri    => "/api/v1/profile/:user_id/displayname",
+
+               content => { displayname => $displayname },
+            )->then_done( $user );
+         })->then_with_f( sub {
+            my $f = shift;
+            return $f unless defined( my $presence = $args{presence} );
+
+            my $user = $f->get;
+            do_request_json_for( $user,
+               method => "PUT",
+               uri    => "/api/v1/presence/:user_id/status",
+
+               content => {
+                  presence   => $presence,
+                  status_msg => ucfirst $presence,
+               }
+            )->then_done( $user );
+         });
       },
    );
 }
