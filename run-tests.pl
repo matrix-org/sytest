@@ -387,12 +387,6 @@ sub _run_test
       Future->wait_any(
          $f_test,
 
-         $loop->delay_future( after => 2 )
-            ->then( sub {
-               $output->start_waiting;
-               $loop->new_future->on_cancel( sub { $output->stop_waiting });
-            }),
-
          $loop->delay_future( after => $params{timeout} // 10 )
             ->then_fail( "Timed out waiting for test" )
       )->get;
@@ -664,6 +658,7 @@ TEST: {
 
             chomp( my $e = $@ );
             $output->abort_file( $filename, $e );
+            $failed++;
          }
 
          {

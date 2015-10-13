@@ -7,20 +7,15 @@ use constant FORMAT => "term";
 
 # Some terminal control strings
 
-my $RED = "\e[31m";
-my $RED_B = "\e[1;31m";
-my $GREEN = "\e[32m";
-my $GREEN_B = "\e[1;32m";
-my $YELLOW_B = "\e[1;33m";
-my $CYAN = "\e[36m";
-my $CYAN_B = "\e[1;36m";
+my $RED = -t STDOUT ? "\e[31m" : "";
+my $RED_B = -t STDOUT ? "\e[1;31m" : "";
+my $GREEN = -t STDOUT ? "\e[32m" : "";
+my $GREEN_B = -t STDOUT ? "\e[1;32m" : "";
+my $YELLOW_B = -t STDOUT ? "\e[1;33m" : "";
+my $CYAN = -t STDOUT ? "\e[36m" : "";
+my $CYAN_B = -t STDOUT ? "\e[1;36m" : "";
 
-my $RESET = "\e[m";
-
-# Backspace
-my $BS = "\x08";
-# Erase to end of line
-my $EL_TO_EOL = "\e[K";
+my $RESET = -t STDOUT ? "\e[m" : "";
 
 # File status
 sub run_file
@@ -83,42 +78,26 @@ sub fail_prepare
    print " +----------------------\n";
 }
 
-# Wait status on longrunning tests
-
-my $waiting = "Waiting...";
-
-sub start_waiting
-{
-   shift;
-   print STDERR $waiting;
-}
-
-sub stop_waiting
-{
-   shift;
-   print STDERR $BS x length($waiting), $EL_TO_EOL;
-}
-
 # Overall summary
 sub final_pass
 {
    shift;
    my ( $expected_fail, $skipped_count ) = @_;
-   print STDERR "\n${GREEN_B}All tests PASSED${RESET}";
+   print "\n${GREEN_B}All tests PASSED${RESET}";
    if( $expected_fail ) {
-      print STDERR " (with $expected_fail expected failures)";
+      print " (with $expected_fail expected failures)";
    }
    if( $skipped_count ) {
-      print STDERR " (with ${YELLOW_B}$skipped_count skipped${RESET} tests)";
+      print " (with ${YELLOW_B}$skipped_count skipped${RESET} tests)";
    }
-   print STDERR "\n";
+   print "\n";
 }
 
 sub final_fail
 {
    shift;
    my ( $failed ) = @_;
-   print STDERR "\n${RED_B}$failed tests FAILED${RESET}\n";
+   print "\n${RED_B}$failed tests FAILED${RESET}\n";
 }
 
 # General diagnostic status
@@ -126,7 +105,7 @@ sub diag
 {
    shift;
    my ( $message ) = @_;
-   print STDERR "$message\n";
+   print "$message\n";
 }
 
 package SyTest::Output::Term::Test {
