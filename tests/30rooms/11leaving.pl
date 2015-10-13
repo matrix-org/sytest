@@ -1,57 +1,59 @@
 use List::Util qw( first );
 
+my $left_user_preparer = local_user_preparer();
+
 my $room_preparer = preparer(
-    requires => [qw( user ), local_user_preparer(),
+    requires => [ $left_user_preparer, local_user_preparer(),
                  qw( can_send_message )],
 
     do => sub {
-        my ( $user_a, $user_b ) = @_;
+        my ( $leaving_user, $other_user ) = @_;
 
         my $room_id;
 
-        matrix_create_and_join_room( [$user_a, $user_b] )->then( sub {
+        matrix_create_and_join_room( [ $leaving_user, $other_user ] )->then( sub {
             ( $room_id ) = @_;
 
-            matrix_change_room_powerlevels( $user_a, $room_id, sub {
+            matrix_change_room_powerlevels( $leaving_user, $room_id, sub {
                 my ( $levels ) = @_;
                 # Set user B's power level so that they can set the room
                 # name. By default the level to set a room name is 50. But
                 # we set the level to 50 anyway incase the default changes.
                 $levels->{events}{"m.room.name"} = 50;
                 $levels->{events}{"madeup.test.state"} = 50;
-                $levels->{users}{ $user_b->user_id } = 50;
+                $levels->{users}{ $other_user->user_id } = 50;
             })
         })->then( sub {
-            matrix_put_room_state( $user_b, $room_id,
+            matrix_put_room_state( $other_user, $room_id,
                type    => "m.room.name",
                content => { name => "N1. B's room name before A left" },
             )
         })->then( sub {
-            matrix_put_room_state( $user_b, $room_id,
+            matrix_put_room_state( $other_user, $room_id,
                type    => "madeup.test.state",
                content => { body => "S1. B's state before A left" },
             )
         })->then( sub {
-            matrix_send_room_text_message( $user_b, $room_id,
+            matrix_send_room_text_message( $other_user, $room_id,
                body => "M1. B's message before A left",
             )
         })->then( sub {
-            matrix_send_room_text_message( $user_b, $room_id,
+            matrix_send_room_text_message( $other_user, $room_id,
                body => "M2. B's message before A left",
             )
         })->then( sub {
-            matrix_leave_room( $user_a, $room_id )
+            matrix_leave_room( $leaving_user, $room_id )
         })->then( sub {
-            matrix_send_room_text_message( $user_b, $room_id,
+            matrix_send_room_text_message( $other_user, $room_id,
                body => "M3. B's message after A left",
             )
         })->then( sub {
-            matrix_put_room_state( $user_b, $room_id,
+            matrix_put_room_state( $other_user, $room_id,
                type    => "m.room.name",
                content => { name => "N2. B's room name after A left" },
             )
         })->then( sub {
-            matrix_put_room_state( $user_b, $room_id,
+            matrix_put_room_state( $other_user, $room_id,
                type    => "madeup.test.state",
                content => { body => "S2. B's state after A left" },
             )
@@ -62,7 +64,7 @@ my $room_preparer = preparer(
 );
 
 test "A departed room is still included in /initialSync (SPEC-216)",
-    requires => [qw( user ), $room_preparer ],
+    requires => [ $left_user_preparer, $room_preparer ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -99,7 +101,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
-    requires => [qw( user ), $room_preparer ],
+    requires => [ $left_user_preparer, $room_preparer ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -136,7 +138,7 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
-    requires => [qw( user ), $room_preparer ],
+    requires => [ $left_user_preparer, $room_preparer ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -157,7 +159,7 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
-    requires => [qw( user ), $room_preparer ],
+    requires => [ $left_user_preparer, $room_preparer ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -182,7 +184,7 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
-    requires => [qw( user ), $room_preparer ],
+    requires => [ $left_user_preparer, $room_preparer ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -204,7 +206,7 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
     };
 
 test "Can get 'm.room.name' state for a departed room (SPEC-216)",
-    requires => [qw( user ), $room_preparer ],
+    requires => [ $left_user_preparer, $room_preparer ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -224,7 +226,7 @@ test "Can get 'm.room.name' state for a departed room (SPEC-216)",
     };
 
 test "Getting messages going forward is limited for a departed room (SPEC-216)",
-    requires => [qw( user ), $room_preparer ],
+    requires => [ $left_user_preparer, $room_preparer ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
