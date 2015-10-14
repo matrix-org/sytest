@@ -1,12 +1,15 @@
 # Eventually this will be changed; see SPEC-53
 my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
-my $user = prepare_local_user;
+my $preparer = local_user_preparer();
 
 test "initialSync sees my presence status",
-   requires => [qw( can_initial_sync )],
+   requires => [ $preparer,
+                 qw( can_initial_sync )],
 
    check => sub {
+      my ( $user ) = @_;
+
       do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
@@ -15,23 +18,19 @@ test "initialSync sees my presence status",
 
          require_json_keys( $body, qw( presence ));
 
-         my $found;
+         log_if_fail "Initial sync presence", $body->{presence};
 
-         foreach my $event ( @{ $body->{presence} } ) {
-            require_json_object( $event, qw( type content ));
-            $event->{type} eq "m.presence" or
-               die "Expected type of event to be m.presence";
-
-            my $content = $event->{content};
-            require_json_object( $content, qw( user_id presence last_active_ago ));
-
-            next unless $content->{user_id} eq $user->user_id;
-
-            $found = 1;
-         }
-
-         $found or
+         my $event = first {
+            ( $_->{content}{user_id} // "" ) eq $user->user_id
+         } @{ $body->{presence} } or
             die "Did not find an initial presence message about myself";
+
+         require_json_object( $event, qw( type content ));
+         $event->{type} eq "m.presence" or
+            die "Expected type of event to be m.presence";
+
+         my $content = $event->{content};
+         require_json_object( $content, qw( user_id presence last_active_ago ));
 
          Future->done(1);
       });
@@ -40,9 +39,12 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   requires => [qw( can_set_presence )],
+   requires => [ $preparer,
+                 qw( can_set_presence )],
 
    do => sub {
+      my ( $user ) = @_;
+
       do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
@@ -66,12 +68,11 @@ test "Presence change reports an event to myself",
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
-   requires => [qw( more_users
-                    can_set_presence can_invite_presence )],
+   requires => [ $preparer, local_user_preparer(),
+                 qw( can_set_presence can_invite_presence )],
 
    do => sub {
-      my ( $more_users ) = @_;
-      my $friend = $more_users->[0];
+      my ( $user, $friend ) = @_;
 
       do_request_json_for( $user,
          method => "POST",

@@ -1,20 +1,14 @@
 multi_test "Can query remote device keys using POST",
-   requires => [qw( first_api_client remote_users
-                    can_upload_e2e_keys )],
+   requires => [ local_user_preparer(), remote_user_preparer(),
+                 qw( can_upload_e2e_keys )],
 
    check => sub {
-      my ( $first_api_client, $remote_users ) = @_;
+      my ( $user, $remote_user ) = @_;
 
-      my $user;
-
-      matrix_register_user( $first_api_client )
+      matrix_put_e2e_keys( $user, "alices_first_device" )
+         ->SyTest::pass_on_done( "Uploaded key" )
       ->then( sub {
-         ( $user ) = @_;
-
-         matrix_put_e2e_keys( $user, "alices_first_device" )
-            ->SyTest::pass_on_done( "Uploaded key" )
-      })->then( sub {
-         do_request_json_for( $remote_users->[0],
+         do_request_json_for( $remote_user,
             method  => "POST",
             uri     => "/v2_alpha/keys/query/",
             content => {

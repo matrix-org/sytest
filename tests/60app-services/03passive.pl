@@ -1,23 +1,17 @@
-my $room_id;
+my $user_preparer = local_user_preparer();
 
-prepare "Creating a new test room",
-   requires => [qw( user )],
-
-   do => sub {
-      my ( $user ) = @_;
-
-      matrix_create_room( $user )
-         ->on_done( sub {
-            ( $room_id ) = @_;
-         });
-   };
+my $room_preparer = room_preparer(
+   requires_users => [ $user_preparer ],
+);
 
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [qw( user await_as_event make_as_user first_home_server
-                    can_invite_room )],
+   requires => [qw( await_as_event make_as_user first_home_server ),
+                     $user_preparer, $room_preparer,
+                qw( can_invite_room )],
 
    do => sub {
-      my ( $user, $await_as_event, $make_as_user, $home_server ) = @_;
+      my ( $await_as_event, $make_as_user, $home_server,
+            $creator, $room_id ) = @_;
 
       my $localpart = "astest-03passive-1";
       my $user_id = "\@$localpart:$home_server";
@@ -33,7 +27,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
             });
          }),
 
-         matrix_invite_user_to_room( $user, $user_id, $room_id )
+         matrix_invite_user_to_room( $creator, $user_id, $room_id )
             ->SyTest::pass_on_done( "Sent invite" )
       )->then( sub {
          my ( $appserv_request ) = @_;
@@ -56,12 +50,14 @@ multi_test "Inviting an AS-hosted user asks the AS server",
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
-   requires => [qw( await_as_event as_user local_users first_home_server
-                    can_join_room_by_alias )],
+   requires => [qw( await_as_event as_user first_home_server ),
+                  local_user_preparer(), $room_preparer,
+
+                qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $await_as_event, $as_user, $users, $first_home_server ) = @_;
-      my $user = $users->[1];
+      my ( $await_as_event, $as_user, $first_home_server,
+           $local_user, $room_id ) = @_;
       my $room_alias = "#astest-03passive-1:$first_home_server";
 
       Future->needs_all(
@@ -107,7 +103,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
             );
          }),
 
-         do_request_json_for( $user,
+         do_request_json_for( $local_user,
             method => "POST",
             uri    => "/api/v1/join/$room_alias",
 
@@ -117,11 +113,11 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
    };
 
 test "Events in rooms with AS-hosted room aliases are sent to AS server",
-   requires => [qw( user await_as_event
-                    can_join_room_by_alias can_send_message )],
+   requires => [qw( await_as_event ), $user_preparer, $room_preparer,
+                qw( can_join_room_by_alias can_send_message )],
 
    do => sub {
-      my ( $user, $await_as_event ) = @_;
+      my ( $await_as_event, $creator, $room_id ) = @_;
 
       Future->needs_all(
          $await_as_event->( "m.room.message" )->then( sub {
@@ -137,7 +133,7 @@ test "Events in rooms with AS-hosted room aliases are sent to AS server",
             Future->done;
          }),
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message( $creator, $room_id,
             body => "A message for the AS",
          ),
       );
