@@ -69,7 +69,7 @@ prepare "Creating test helper functions",
                   $f->done( $event );
                }
                else {
-                  print STDERR "Ignoring incoming AS event of type $type\n";
+                  print "Ignoring incoming AS event of type $type\n";
                }
             }
 
