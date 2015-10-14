@@ -18,8 +18,8 @@ test "Can sync a joined room",
             require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
             require_json_keys( $room->{state}, qw( events ));
             require_json_keys( $room->{ephemeral}, qw( events ));
-            require_json_keys( $room->{event_map}, @{$room->{timeline}{events}} );
-            require_json_keys( $room->{event_map}, @{$room->{state}{events}} );
+            require_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
+            require_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
             matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
         })->then( sub {
             my ( $body ) = @_;
@@ -54,8 +54,8 @@ test "Newly joined room is included in an incremental sync",
             require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
             require_json_keys( $room->{state}, qw( events ));
             require_json_keys( $room->{ephemeral}, qw( events ));
-            require_json_keys( $room->{event_map}, @{$room->{timeline}{events}} );
-            require_json_keys( $room->{event_map}, @{$room->{state}{events}} );
+            require_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
+            require_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
             matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
         })->then( sub {
             my ( $body ) = @_;

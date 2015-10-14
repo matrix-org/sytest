@@ -15,7 +15,7 @@ test "That state is included in the initial sync",
         };
 
         matrix_register_user_with_filter( $http, $filter )->then( sub {
-            ( $user,  $filter_id ) = @_;
+            ( $user, $filter_id ) = @_;
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
@@ -29,7 +29,7 @@ test "That state is included in the initial sync",
             my ( $body ) = @_;
             my $room = $body->{rooms}{joined}{$room_id};
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
-            @{$room->{state}{events}} == 1
+            @{ $room->{state}{events} } == 1
                 or die "Expected only one state event";
             my $event_id = $room->{state}{events}[0];
             $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
@@ -57,7 +57,7 @@ test "That changes to state are included in an incremental sync",
         };
 
         matrix_register_user_with_filter( $http, $filter )->then( sub {
-            ( $user,  $filter_id ) = @_;
+            ( $user, $filter_id ) = @_;
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
@@ -88,7 +88,7 @@ test "That changes to state are included in an incremental sync",
             my ( $body ) = @_;
             my $room = $body->{rooms}{joined}{$room_id};
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
-            @{$room->{state}{events}} == 1
+            @{ $room->{state}{events} } == 1
                 or die "Expected only one state event";
             my $event_id = $room->{state}{events}[0];
             $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
@@ -116,7 +116,7 @@ test "That changes to state are included in an gapped incremental sync",
         };
 
         matrix_register_user_with_filter( $http, $filter )->then( sub {
-            ( $user,  $filter_id ) = @_;
+            ( $user, $filter_id ) = @_;
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
@@ -136,7 +136,7 @@ test "That changes to state are included in an gapped incremental sync",
         })->then( sub {
             my ( $body ) = @_;
             $next_batch = $body->{next_batch};
-            @{$body->{rooms}{joined}{$room_id}{state}{events}} == 2
+            @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 2
                 or die "Expected two state events";
             matrix_put_room_state( $user, $room_id,
                 type => "a.madeup.test.state",
@@ -156,7 +156,7 @@ test "That changes to state are included in an gapped incremental sync",
             my ( $body ) = @_;
             my $room = $body->{rooms}{joined}{$room_id};
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
-            @{$room->{state}{events}} == 1
+            @{ $room->{state}{events} } == 1
                 or die "Expected only one state event";
             my $event_id = $room->{state}{events}[0];
             $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
@@ -210,7 +210,7 @@ test "That when user joins a room the state is included in the next sync",
             my ( $body ) = @_;
             my $room = $body->{rooms}{joined}{$room_id};
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
-            @{$room->{state}{events}} == 1
+            @{ $room->{state}{events} } == 1
                 or die "Expected only one state event";
             my $event_id = $room->{state}{events}[0];
             $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
@@ -270,7 +270,7 @@ test "That when user joins a room the state is included in a gapped sync",
             my ( $body ) = @_;
             my $room = $body->{rooms}{joined}{$room_id};
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
-            @{$room->{state}{events}} == 1
+            @{ $room->{state}{events} } == 1
                 or die "Expected only one state event";
             my $event_id = $room->{state}{events}[0];
             $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"

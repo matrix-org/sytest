@@ -23,6 +23,7 @@ sub matrix_sync {
     });
 }
 
+
 test "Can sync",
     requires => [qw( first_api_client can_create_filter )],
     provides => [qw( can_sync )],

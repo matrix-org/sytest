@@ -20,7 +20,7 @@ test "Can sync a room with a single message",
             my $room = $body->{rooms}{joined}{$room_id};
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
             require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-            @{$room->{timeline}{events}} == 1
+            @{ $room->{timeline}{events} } == 1
                 or die "Expected only one timeline event";
             $room->{timeline}{events}[0] eq $event_id
                 or die "Unexpected timeline event";
@@ -61,7 +61,7 @@ test "Can sync a room with a message with a transaction id",
             my $room = $body->{rooms}{joined}{$room_id};
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
             require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-            @{$room->{timeline}{events}} == 1
+            @{ $room->{timeline}{events} } == 1
                 or die "Expected only one timeline event";
             $room->{timeline}{events}[0] eq $event_id
                 or die "Unexpected timeline event";
@@ -110,9 +110,9 @@ test "A message sent after an initial sync appears in the timeline of an increme
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
             require_json_keys( $room->{state}, qw( events ));
             require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-            @{$room->{state}{events}} == 0
+            @{ $room->{state}{events} } == 0
                 or die "Did not expect a state event";
-            @{$room->{timeline}{events}} == 1
+            @{ $room->{timeline}{events} } == 1
                 or die "Expected only one timeline event";
             $room->{timeline}{events}[0] eq $event_id
                 or die "Unexpected timeline event";
@@ -166,9 +166,9 @@ test "That a filtered timeline reaches its limit",
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
             require_json_keys( $room->{state}, qw( events ));
             require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-            @{$room->{state}{events}} == 0
+            @{ $room->{state}{events} } == 0
                 or die "Did not expect a state event";
-            @{$room->{timeline}{events}} == 1
+            @{ $room->{timeline}{events} } == 1
                 or die "Expected only one timeline event";
             $room->{timeline}{events}[0] eq $event_id
                 or die "Unexpected timeline event";
@@ -214,7 +214,7 @@ test "That a prev_batch token can be used in the v1 messages API",
         my ( $user, $filter_id, $room_id, $event_id_1, $event_id_2 );
         my $filter = { room => { timeline => { limit => 1 } } };
         matrix_register_user_with_filter( $http, $filter )->then( sub {
-            ( $user,  $filter_id ) = @_;
+            ( $user, $filter_id ) = @_;
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
@@ -231,7 +231,7 @@ test "That a prev_batch token can be used in the v1 messages API",
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
             require_json_keys( $room->{state}, qw( events ));
             require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-            @{$room->{timeline}{events}} == 1
+            @{ $room->{timeline}{events} } == 1
                 or die "Expected only one timeline event";
             $room->{timeline}{events}[0] eq $event_id_2
                 or die "Unexpected timeline event";
@@ -252,7 +252,7 @@ test "That a prev_batch token can be used in the v1 messages API",
         })->then( sub {
             my ( $body ) = @_;
             require_json_keys( $body, qw( chunk start end ) );
-            @{$body->{chunk}} == 1 or die "Expected only one event";
+            @{ $body->{chunk} } == 1 or die "Expected only one event";
             $body->{chunk}[0]{event_id} eq $event_id_1
                 or die "Unexpected event";
             $body->{chunk}[0]{content}{body} eq "1"

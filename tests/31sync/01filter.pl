@@ -71,7 +71,7 @@ test "Can download filter",
         matrix_register_user( $http, undef, with_events => 0 )->then( sub {
             ( $user ) = @_;
             matrix_create_filter( $user, {
-                room => { timeline => { limit => 10 }}
+                room => { timeline => { limit => 10 } }
             })
         })->then( sub {
             my ( $filter_id ) = @_;

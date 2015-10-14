@@ -25,7 +25,7 @@ test "Check that rooms a user is invited to appear in an initial sync",
             my $invite = first {
                 $_->{type} eq "m.room.member"
                     and $_->{state_key} eq $user_b->user_id
-            } @{$room->{invite_state}{events}};
+            } @{ $room->{ invite_state}{events} };
             require_json_keys( $invite, qw( sender content state_key type ));
             $invite->{content}{membership} eq "invite"
                 or die "Expected an invite event";
@@ -64,7 +64,7 @@ test "Check that rooms a user is invited to appear in an incremental sync",
             my $invite = first {
                 $_->{type} eq "m.room.member"
                     and $_->{state_key} eq $user_b->user_id
-            } @{$room->{invite_state}{events}};
+            } @{ $room->{invite_state}{events} };
             require_json_keys( $invite, qw( sender content state_key type ));
             $invite->{content}{membership} eq "invite"
                 or die "Expected an invite event";
