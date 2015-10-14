@@ -21,6 +21,7 @@ test "User sees their own presence in a sync",
         })
     };
 
+
 test "User is offline if they set_presence=offline in their sync",
     requires => [qw( first_api_client can_sync )],
 
@@ -41,6 +42,7 @@ test "User is offline if they set_presence=offline in their sync",
             Future->done(1)
         })
     };
+
 
 test "User sees updates to presence from other users in the incremental sync.",
     requires => [qw( first_api_client can_sync )],

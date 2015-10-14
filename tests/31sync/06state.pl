@@ -1,4 +1,4 @@
-test "That state is included in the initial sync",
+test "State is included in the initial sync",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {
@@ -40,7 +40,8 @@ test "That state is included in the initial sync",
         })
     };
 
-test "That changes to state are included in an incremental sync",
+
+test "Changes to state are included in an incremental sync",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {
@@ -98,6 +99,7 @@ test "That changes to state are included in an incremental sync",
             Future->done(1)
         })
     };
+
 
 test "That changes to state are included in an gapped incremental sync",
     requires => [qw( first_api_client can_sync )],
@@ -168,7 +170,7 @@ test "That changes to state are included in an gapped incremental sync",
     };
 
 
-test "That when user joins a room the state is included in the next sync",
+test "When user joins a room the state is included in the next sync",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {
@@ -221,7 +223,8 @@ test "That when user joins a room the state is included in the next sync",
         })
     };
 
-test "That when user joins a room the state is included in a gapped sync",
+
+test "When user joins a room the state is included in a gapped sync",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {

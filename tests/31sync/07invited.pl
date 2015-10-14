@@ -1,6 +1,6 @@
 use List::Util qw( first );
 
-test "Check that rooms a user is invited to appear in an initial sync",
+test "Rooms a user is invited to appear in an initial sync",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {
@@ -35,7 +35,8 @@ test "Check that rooms a user is invited to appear in an initial sync",
         })
     };
 
-test "Check that rooms a user is invited to appear in an incremental sync",
+
+test "Rooms a user is invited to appear in an incremental sync",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {

@@ -127,7 +127,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
     };
 
 
-test "That a filtered timeline reaches its limit",
+test "A filtered timeline reaches its limit",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {
@@ -181,7 +181,7 @@ test "That a filtered timeline reaches its limit",
     };
 
 
-test "That syncing a new room with a large timline limit isn't limited",
+test "Syncing a new room with a large timeline limit isn't limited",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {
@@ -206,7 +206,8 @@ test "That syncing a new room with a large timline limit isn't limited",
         })
     };
 
-test "That a prev_batch token can be used in the v1 messages API",
+
+test "A prev_batch token can be used in the v1 messages API",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {
