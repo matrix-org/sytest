@@ -112,14 +112,19 @@ Options:
    -v, --verbose                - increase the verbosity of output and
                                   synapse's logging level
 
+   -n, --no-tls                 - prefer plaintext client connections where
+                                  possible
+
        --python PATH            - path to the 'python' binary
+
+       --coverage               - generate code coverage stats for synapse
+
+   -p, --port-base NUMBER       - initial port number to run server under test
 
    -F, --fixed BUGS             - bug names that are expected to be fixed
                                   (ignores 'bug' declarations with these names)
 
    -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
-
-       --coverage               - generate code coverage stats for synapse
 
 EOF
 
