@@ -14,18 +14,15 @@ test "That sync can be polled for updates",
         })->then( sub {
             my ( $body ) = @_;
             $next = $body->{next_batch};
-            Future->wait_any(
-                Future->needs_all(
-                    matrix_sync( $user,
-                        filter => $filter_id, since => $next, timeout => 10000
-                    ),
-                    delay( 0.1 )->then( sub {
-                        matrix_send_room_text_message(
-                            $user, $room_id, body => "1"
-                        )
-                    })
+            Future->needs_all(
+                matrix_sync( $user,
+                    filter => $filter_id, since => $next, timeout => 10000
                 ),
-                delay( 10 )->then_fail("Timeout waiting for sync")
+                delay( 0.1 )->then( sub {
+                    matrix_send_room_text_message(
+                        $user, $room_id, body => "1"
+                    )
+                })
             )
         })->then( sub {
             my ( $body, $response, $event_id ) = @_;
