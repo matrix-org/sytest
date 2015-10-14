@@ -61,17 +61,16 @@ test "That changes to state are included in an incremental sync",
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
-            Future->needs_all(
-                matrix_put_room_state( $user, $room_id,
-                    type => "a.madeup.test.state",
-                    content => { "my_key" => 1 },
-                    state_key => "this_state_changes"
-                ),
-                matrix_put_room_state( $user, $room_id,
-                    type => "a.madeup.test.state",
-                    content => { "my_key" => 1 },
-                    state_key => "this_state_does_not_change"
-                ),
+            matrix_put_room_state( $user, $room_id,
+                type => "a.madeup.test.state",
+                content => { "my_key" => 1 },
+                state_key => "this_state_changes"
+            )
+        })->then( sub {
+            matrix_put_room_state( $user, $room_id,
+                type => "a.madeup.test.state",
+                content => { "my_key" => 1 },
+                state_key => "this_state_does_not_change"
             )
         })->then( sub {
             matrix_sync( $user, filter => $filter_id );
@@ -121,23 +120,24 @@ test "That changes to state are included in an gapped incremental sync",
             matrix_create_room( $user )
         })->then( sub {
             ( $room_id ) = @_;
-            Future->needs_all(
-                matrix_put_room_state( $user, $room_id,
-                    type => "a.madeup.test.state",
-                    content => { "my_key" => 1 },
-                    state_key => "this_state_changes"
-                ),
-                matrix_put_room_state( $user, $room_id,
-                    type => "a.madeup.test.state",
-                    content => { "my_key" => 1 },
-                    state_key => "this_state_does_not_change"
-                ),
+            matrix_put_room_state( $user, $room_id,
+                type => "a.madeup.test.state",
+                content => { "my_key" => 1 },
+                state_key => "this_state_changes"
+            )
+        })->then( sub {
+            matrix_put_room_state( $user, $room_id,
+                type => "a.madeup.test.state",
+                content => { "my_key" => 1 },
+                state_key => "this_state_does_not_change"
             )
         })->then( sub {
             matrix_sync( $user, filter => $filter_id );
         })->then( sub {
             my ( $body ) = @_;
             $next_batch = $body->{next_batch};
+            @{$body->{rooms}{joined}{$room_id}{state}{events}} == 2
+                or die "Expected two state events";
             matrix_put_room_state( $user, $room_id,
                 type => "a.madeup.test.state",
                 content => { "my_key" => 2 },
