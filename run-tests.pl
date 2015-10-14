@@ -47,13 +47,16 @@ my %SYNAPSE_ARGS = (
 my $WANT_TLS = 1;
 my %FIXED_BUGS;
 
+my $STOP_ON_FAIL;
+
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \$SYNAPSE_ARGS{log},
    'server-grep=s' => \$SYNAPSE_ARGS{log_filter},
    'd|synapse-directory=s' => \$SYNAPSE_ARGS{directory},
 
-   's|stop-on-fail+' => \my $STOP_ON_FAIL,
+   's|stop-on-fail' => sub { $STOP_ON_FAIL = 1 },
+   'a|all'          => sub { $STOP_ON_FAIL = 0 },
 
    'O|output-format=s' => \(my $OUTPUT_FORMAT = "term"),
 
@@ -104,6 +107,9 @@ Options:
 
    -s, --stop-on-fail           - stop after the first failed test
 
+   -a, --all                    - don't stop after the first failed test;
+                                  attempt as many as possible
+
    -O, --output-format FORMAT   - set the style of test output report
 
    -w, --wait-at-end            - pause for input before shutting down testing
@@ -112,14 +118,19 @@ Options:
    -v, --verbose                - increase the verbosity of output and
                                   synapse's logging level
 
+   -n, --no-tls                 - prefer plaintext client connections where
+                                  possible
+
        --python PATH            - path to the 'python' binary
+
+       --coverage               - generate code coverage stats for synapse
+
+   -p, --port-base NUMBER       - initial port number to run server under test
 
    -F, --fixed BUGS             - bug names that are expected to be fixed
                                   (ignores 'bug' declarations with these names)
 
    -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
-
-       --coverage               - generate code coverage stats for synapse
 
 EOF
 
@@ -245,6 +256,50 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
+struct Preparer => [qw( requires start result )], predicate => "is_Preparer";
+
+sub preparer
+{
+   my %args = @_;
+
+   my $do = $args{do} or croak "preparer needs a 'do' block";
+   ref( $do ) eq "CODE" or croak "Expected preparer 'do' block to be CODE";
+
+   my @req_futures;
+   my $f_start = Future->new;
+
+   my @requires;
+   foreach my $req ( @{ $args{requires} // [] } ) {
+      if( is_Preparer( $req ) ) {
+         push @requires, @{ $req->requires };
+         push @req_futures, $f_start->then( sub {
+            my ( $env ) = @_;
+
+            $req->start->( $env );
+            $req->result;
+         });
+      }
+      else {
+         push @requires, $req;
+         push @req_futures, $f_start->then( sub {
+            my ( $env ) = @_;
+
+            exists $env->{$req} or die "TODO: Missing preparer dependency $req\n";
+            Future->done( $env->{$req} );
+         });
+      }
+   }
+
+   return Preparer(
+      \@requires,
+
+      sub { $f_start->done( @_ ) unless $f_start->is_ready },
+
+      Future->needs_all( @req_futures )
+         ->then( $do )
+   );
+}
+
 my $failed;
 my $expected_fail;
 my $skipped_count = 0;
@@ -269,18 +324,40 @@ sub _run_test
       return;
    }
 
-   my @reqs;
-   foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
+   my $f_start = Future->new;
+   my @req_futures;
 
-      $t->skip( "lack of $req" );
-      return;
+   foreach my $req ( @{ $params{requires} || [] } ) {
+      if( is_Preparer( $req ) ) {
+         my $preparer = $req;
+
+         exists $test_environment{$_} or die "TODO: Missing preparer dependency $_"
+            for @{ $preparer->requires };
+
+         push @req_futures, $f_start->then( sub {
+            $preparer->start->( \%test_environment );
+            $preparer->result;
+         });
+      }
+      else {
+         if( !exists $test_environment{$req} ) {
+            $t->skip( "lack of $req" );
+            return;
+         }
+
+         # Fetch its value immediately
+         push @req_futures, Future->done( $test_environment{$req} );
+      }
    }
 
    $t->start;
+   $f_start->done;
 
    my $success = eval {
-      my $f_test = Future->done;
+      my @reqs;
+      my $f_test = Future->needs_all( @req_futures )
+         ->on_done( sub { @reqs = @_ } )
+         ->on_fail( sub { die "preparer failed - $_[0]\n" } );
 
       my $check = $params{check};
       if( my $do = $params{do} ) {
@@ -592,6 +669,7 @@ TEST: {
 
             chomp( my $e = $@ );
             $output->abort_file( $filename, $e );
+            $failed++;
          }
 
          {

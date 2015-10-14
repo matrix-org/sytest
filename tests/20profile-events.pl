@@ -1,7 +1,10 @@
+my $user_preparer = local_user_preparer();
+
 my $displayname = "New displayname for 20profile-events.pl";
 
 test "Displayname change reports an event to myself",
-   requires => [qw( user can_set_displayname )],
+   requires => [ $user_preparer,
+                 qw( can_set_displayname )],
 
    do => sub {
       my ( $user ) = @_;
@@ -32,7 +35,8 @@ test "Displayname change reports an event to myself",
 my $avatar_url = "http://a.new.url/for/20profile-events.pl";
 
 test "Avatar URL change reports an event to myself",
-   requires => [qw( user can_set_avatar_url )],
+   requires => [ $user_preparer,
+                 qw( can_set_avatar_url )],
 
    do => sub {
       my ( $user ) = @_;
@@ -58,8 +62,8 @@ test "Avatar URL change reports an event to myself",
    };
 
 multi_test "Global /initialSync reports my own profile",
-   requires => [qw( user
-                    can_set_displayname can_set_avatar_url can_initial_sync )],
+   requires => [ $user_preparer,
+                 qw( can_set_displayname can_set_avatar_url can_initial_sync )],
 
    check => sub {
       my ( $user) = @_;

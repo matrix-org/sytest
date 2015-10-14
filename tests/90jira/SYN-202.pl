@@ -1,9 +1,10 @@
-my ( $user1, $user2 ) = prepare_local_users( 2 );
-
 multi_test "Left room members do not cause problems for presence",
-   requires => [qw( can_room_initial_sync )],
+   requires => [ local_user_preparers( 2 ),
+                 qw( can_room_initial_sync )],
 
    do => sub {
+      my ( $user1, $user2 ) = @_;
+
       my $room_id;
 
       matrix_create_and_join_room( [ $user1, $user2 ] )

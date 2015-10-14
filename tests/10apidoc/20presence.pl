@@ -1,7 +1,11 @@
-my $user = prepare_local_user;
+my $preparer = local_user_preparer();
 
 test "GET /presence/:user_id/status fetches initial status",
+   requires => [ $preparer ],
+
    check => sub {
+      my ( $user ) = @_;
+
       do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/presence/:user_id/status",
@@ -23,9 +27,13 @@ test "GET /presence/:user_id/status fetches initial status",
 my $status_msg = "Testing something";
 
 test "PUT /presence/:user_id/status updates my presence",
+   requires => [ $preparer ],
+
    provides => [qw( can_set_presence )],
 
    do => sub {
+      my ( $user ) = @_;
+
       do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/presence/:user_id/status",
@@ -38,6 +46,8 @@ test "PUT /presence/:user_id/status updates my presence",
    },
 
    check => sub {
+      my ( $user ) = @_;
+
       do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/presence/:user_id/status",

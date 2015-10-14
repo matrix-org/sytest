@@ -1,44 +1,26 @@
 use List::UtilsBy qw( partition_by );
 
-my $room_id;
-my $room_alias;
+my $user_preparer = local_user_preparer(
+   presence => "online",
+);
 
-prepare "Creating a room",
-   requires => [qw( user )],
+my $room_preparer = preparer(
+   requires => [ $user_preparer ],
 
    do => sub {
       my ( $user ) = @_;
 
       matrix_create_room( $user,
-         visibility      => "public",
-         room_alias_name => "30room-state",
-      )->on_done( sub {
-         ( $room_id, $room_alias ) = @_;
-      });
-   };
-
-prepare "Setting my presence state",
-   requires => [qw( user can_set_presence )],
-
-   do => sub {
-      my ( $user ) = @_;
-
-      do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/presence/:user_id/status",
-
-         content => {
-            presence   => "online",
-            status_msg => "Online",
-         }
+         visibility => "public",
       );
-   };
+   },
+);
 
 test "Room creation reports m.room.create to myself",
-   requires => [qw( user )],
+   requires => [ $user_preparer, $room_preparer ],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
       await_event_for( $user, sub {
          my ( $event ) = @_;
@@ -58,10 +40,10 @@ test "Room creation reports m.room.create to myself",
    };
 
 test "Room creation reports m.room.member to myself",
-   requires => [qw( user )],
+   requires => [ $user_preparer, $room_preparer ],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
       await_event_for( $user, sub {
          my ( $event ) = @_;
@@ -82,11 +64,11 @@ test "Room creation reports m.room.member to myself",
 my $topic = "Testing topic for the new room";
 
 test "Setting room topic reports m.room.topic to myself",
-   requires => [qw( user
-                    can_set_room_topic )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_set_room_topic )],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
       matrix_put_room_state( $user, $room_id,
          type    => "m.room.topic",
@@ -111,11 +93,11 @@ test "Setting room topic reports m.room.topic to myself",
    };
 
 multi_test "Global initialSync",
-   requires => [qw( user
-                    can_initial_sync can_set_room_topic )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_initial_sync can_set_room_topic )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -168,10 +150,11 @@ multi_test "Global initialSync",
    };
 
 test "Global initialSync with limit=0 gives no messages",
-   requires => [qw( user can_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_initial_sync )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -196,10 +179,11 @@ test "Global initialSync with limit=0 gives no messages",
    };
 
 multi_test "Room initialSync",
-   requires => [qw( user can_room_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_room_initial_sync )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -245,10 +229,11 @@ multi_test "Room initialSync",
    };
 
 test "Room initialSync with limit=0 gives no messages",
-   requires => [qw( user can_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_initial_sync )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
          method => "GET",

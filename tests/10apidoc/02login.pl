@@ -1,5 +1,31 @@
 use JSON qw( decode_json );
 
+# Doesn't matter what this is, but later tests will use it.
+my $password = "s3kr1t";
+
+my $registered_user_preparer = preparer(
+   requires => [qw( first_api_client )],
+
+   do => sub {
+      my ( $api_client ) = @_;
+
+      $api_client->do_request_json(
+         method => "POST",
+         uri    => "/api/v1/register",
+
+         content => {
+            type     => "m.login.password",
+            user     => "02login",
+            password => $password,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         Future->done( $body->{user_id} );
+      });
+   },
+);
+
 test "GET /login yields a set of flows",
    requires => [qw( first_api_client )],
 
@@ -42,14 +68,13 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [qw( first_api_client login_details
-                    can_login_password_flow )],
+   requires => [qw( first_api_client ), $registered_user_preparer,
+                qw( can_login_password_flow )],
 
-   provides => [qw( can_login user first_home_server do_request_json_for do_request_json )],
+   provides => [qw( can_login first_home_server do_request_json_for do_request_json )],
 
    do => sub {
-      my ( $http, $login_details ) = @_;
-      my ( $user_id, $password ) = @$login_details;
+      my ( $http, $user_id ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -67,11 +92,6 @@ test "POST /login can log in as a user",
 
          provide can_login => 1;
 
-         my $access_token = $body->{access_token};
-         my $refresh_token = $body->{refresh_token};
-
-         provide user => my $user = User( $http, $user_id, $access_token, $refresh_token, undef, [], undef );
-
          provide first_home_server => $body->{home_server};
 
          provide do_request_json_for => sub { die "Dead - see do_request_json_for() instead" };
@@ -83,12 +103,11 @@ test "POST /login can log in as a user",
    };
 
 test "POST /login wrong password is rejected",
-   requires => [qw( first_api_client login_details
-                    can_login_password_flow )],
+   requires => [qw( first_api_client ), $registered_user_preparer,
+                qw( can_login_password_flow )],
 
    do => sub {
-      my ( $http, $login_details ) = @_;
-      my ( $user_id, $password ) = @$login_details;
+      my ( $http, $user_id ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -116,41 +135,50 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [qw( first_api_client user )],
+   requires => [qw( first_api_client ), $registered_user_preparer ],
 
    do => sub {
-      my ( $http, $old_user ) = @_;
+      my ( $http, $user_id ) = @_;
+
+      my $first_body;
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/v2_alpha/tokenrefresh",
+         uri    => "/api/v1/login",
 
          content => {
-            refresh_token => $old_user->refresh_token,
+            type     => "m.login.password",
+            user     => $user_id,
+            password => $password,
          },
-      )->then(
+      )->then( sub {
+         ( $first_body ) = @_;
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/v2_alpha/tokenrefresh",
+
+            content => {
+               refresh_token => $first_body->{refresh_token},
+            },
+         )
+      })->then(
          sub {
-            my ( $body ) = @_;
+            my ( $second_body ) = @_;
 
-            require_json_keys( $body, qw( access_token refresh_token ));
+            require_json_keys( $second_body, qw( access_token refresh_token ));
 
-            my $new_access_token = $body->{access_token};
-            my $new_refresh_token = $body->{refresh_token};
-
-            $new_access_token ne $old_user->access_token or
-               die "Expected new access token";
-
-            $new_refresh_token ne $old_user->refresh_token or
-               die "Expected new refresh token";
+            $second_body->{$_} ne $first_body->{$_} or
+               die "Expected new '$_'" for qw( access_token refresh_token );
 
             $http->do_request_json(
                method => "POST",
                uri    => "/v2_alpha/tokenrefresh",
 
                content => {
-                  refresh_token => $old_user->refresh_token,
+                  refresh_token => $first_body->{refresh_token},
                },
-            )
+            )->main::expect_http_403;
          }
-      )->main::expect_http_403;
+      );
    };

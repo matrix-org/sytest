@@ -1,7 +1,7 @@
 my $content_id;
 
 test "Can upload with ASCII file name",
-   requires => [qw( first_api_client user )],
+   requires => [qw( first_api_client ), local_user_preparer() ],
 
    do => sub {
       my ( $http, $user ) = @_;

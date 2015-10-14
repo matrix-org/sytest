@@ -37,13 +37,8 @@ test "GET /register yields a set of flows",
       });
    };
 
-# Doesn't matter what this is, but later tests will use it.
-my $password = "s3kr1t";
-
 test "POST /register can create a user",
    requires => [qw( first_api_client can_register_password_flow )],
-
-   provides => [qw( login_details )],
 
    critical => 1,
 
@@ -57,14 +52,12 @@ test "POST /register can create a user",
          content => {
             type     => "m.login.password",
             user     => "01register-user",
-            password => $password,
+            password => "s3kr1t",
          },
       )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( user_id access_token ));
-
-         provide login_details => [ $body->{user_id}, $password ];
 
          Future->done( 1 );
       });
@@ -118,31 +111,96 @@ sub matrix_register_user
    });
 }
 
-push @EXPORT, qw( prepare_local_user prepare_local_users );
+push @EXPORT, qw( local_user_preparer local_user_preparers );
 
-sub prepare_local_user
+sub local_user_preparer
 {
-   return ( prepare_local_users( 1 ) )[0];
-}
+   my %args = @_;
 
-sub prepare_local_users
-{
-   my ( $count ) = @_;
-
-   my @users;
-   prepare "Creating test " . ( $count == 1 ? "user" : "users" ),
+   preparer(
       requires => [qw( first_api_client )],
 
       do => sub {
          my ( $api_client ) = @_;
 
-         Future->needs_all( map {
-            my $idx = $_;
+         matrix_register_user( $api_client )
+         ->then_with_f( sub {
+            my $f = shift;
+            return $f unless defined( my $displayname = $args{displayname} );
 
-            matrix_register_user( $api_client )
-               ->on_done( sub { ( $users[$idx] ) = @_; } )
-         } 0 .. ($count-1) )
-      };
+            my $user = $f->get;
+            do_request_json_for( $user,
+               method => "PUT",
+               uri    => "/api/v1/profile/:user_id/displayname",
 
-   return @users;
+               content => { displayname => $displayname },
+            )->then_done( $user );
+         })->then_with_f( sub {
+            my $f = shift;
+            return $f unless defined( my $presence = $args{presence} );
+
+            my $user = $f->get;
+            do_request_json_for( $user,
+               method => "PUT",
+               uri    => "/api/v1/presence/:user_id/status",
+
+               content => {
+                  presence   => $presence,
+                  status_msg => ucfirst $presence,
+               }
+            )->then_done( $user );
+         });
+      },
+   );
 }
+
+sub local_user_preparers
+{
+   my ( $count ) = @_;
+
+   return map { local_user_preparer() } 1 .. $count;
+}
+
+push @EXPORT, qw( remote_user_preparer );
+
+sub remote_user_preparer
+{
+   preparer(
+      requires => [qw( api_clients )],
+
+      do => sub {
+         my ( $clients ) = @_;
+         my $http = $clients->[1];
+
+         matrix_register_user( $http )
+      }
+   );
+}
+
+push @EXPORT, qw( SPYGLASS_USER );
+
+# A special user which we'll allow to be shared among tests, because we only
+# allow it to perform HEAD and GET requests. This user is useful for tests that
+# don't mutate server-side state, so it's fairly safe to reüse this user among
+# different tests.
+our $SPYGLASS_USER = preparer(
+   requires => [qw( first_api_client )],
+
+   do => sub {
+      my ( $api_client ) = @_;
+
+      matrix_register_user( $api_client )
+      ->on_done( sub {
+         my ( $user ) = @_;
+
+         $user->http = SyTest::HTTPClient->new(
+            max_connections_per_host => 3,
+            uri_base                 => $user->http->{uri_base}, # cheating
+
+            restrict_methods => [qw( HEAD GET )],
+         );
+
+         $loop->add( $user->http );
+      });
+   },
+);
