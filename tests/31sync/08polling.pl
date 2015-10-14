@@ -1,4 +1,4 @@
-test "That sync can be polled for updates",
+test "Sync can be polled for updates",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {

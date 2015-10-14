@@ -101,7 +101,7 @@ test "Changes to state are included in an incremental sync",
     };
 
 
-test "That changes to state are included in an gapped incremental sync",
+test "Changes to state are included in an gapped incremental sync",
     requires => [qw( first_api_client can_sync )],
 
     check => sub {
