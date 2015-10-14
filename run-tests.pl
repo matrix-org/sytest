@@ -47,13 +47,16 @@ my %SYNAPSE_ARGS = (
 my $WANT_TLS = 1;
 my %FIXED_BUGS;
 
+my $STOP_ON_FAIL;
+
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \$SYNAPSE_ARGS{log},
    'server-grep=s' => \$SYNAPSE_ARGS{log_filter},
    'd|synapse-directory=s' => \$SYNAPSE_ARGS{directory},
 
-   's|stop-on-fail+' => \my $STOP_ON_FAIL,
+   's|stop-on-fail' => sub { $STOP_ON_FAIL = 1 },
+   'a|all'          => sub { $STOP_ON_FAIL = 0 },
 
    'O|output-format=s' => \(my $OUTPUT_FORMAT = "term"),
 
@@ -106,6 +109,9 @@ Options:
 
    -s, --stop-on-fail           - stop after the first failed test
 
+   -a, --all                    - don't stop after the first failed test;
+                                  attempt as many as possible
+
    -O, --output-format FORMAT   - set the style of test output report
 
    -w, --wait-at-end            - pause for input before shutting down testing
@@ -114,14 +120,19 @@ Options:
    -v, --verbose                - increase the verbosity of output and
                                   synapse's logging level
 
+   -n, --no-tls                 - prefer plaintext client connections where
+                                  possible
+
        --python PATH            - path to the 'python' binary
+
+       --coverage               - generate code coverage stats for synapse
+
+   -p, --port-base NUMBER       - initial port number to run server under test
 
    -F, --fixed BUGS             - bug names that are expected to be fixed
                                   (ignores 'bug' declarations with these names)
 
    -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
-
-       --coverage               - generate code coverage stats for synapse
 
 EOF
 
@@ -143,11 +154,15 @@ if( $CLIENT_LOG ) {
          my $request = $args{request};
 
          my $request_uri = $request->uri;
+
+         my $request_user = $args{request_user};
+
          if( $request_uri->path =~ m{/events$} ) {
             my %params = $request_uri->query_form;
+            my $request_for = defined $request_user ? "user=$request_user" : "token=$params{access_token}";
+
             print STDERR "\e[1;32mPolling events\e[m",
-               ( defined $params{from} ? " since $params{from}" : "" ),
-               " for token=$params{access_token}\n";
+               ( defined $params{from} ? " since $params{from}" : "" ) . " for $request_for\n";
 
             return $orig->( $self, %args )
                ->on_done( sub {
@@ -157,7 +172,7 @@ if( $CLIENT_LOG ) {
                      my $content_decoded = JSON::decode_json( $response->content );
                      my $events = $content_decoded->{chunk};
                      foreach my $event ( @$events ) {
-                        print STDERR "\e[1;33mReceived event\e[m for token=$params{access_token}:\n";
+                        print STDERR "\e[1;33mReceived event\e[m for ${request_for}:\n";
                         print STDERR "  $_\n" for split m/\n/, pp( $event );
                         print STDERR "-- \n";
                      }
@@ -171,7 +186,9 @@ if( $CLIENT_LOG ) {
             );
          }
          else {
-            print STDERR "\e[1;32mRequesting\e[m:\n";
+            my $request_for = defined $request_user ? " for user=$request_user" : "";
+
+            print STDERR "\e[1;32mRequesting\e[m${request_for}:\n";
             print STDERR "  $_\n" for split m/\n/, $request->as_string;
             print STDERR "-- \n";
 
@@ -179,7 +196,7 @@ if( $CLIENT_LOG ) {
                ->on_done( sub {
                   my ( $response ) = @_;
 
-                  print STDERR "\e[1;33mResponse\e[m from $request_uri:\n";
+                  print STDERR "\e[1;33mResponse\e[m from ${ \$request->method } ${ \$request->uri->path }${request_for}:\n";
                   print STDERR "  $_\n" for split m/\n/, $response->as_string;
                   print STDERR "-- \n";
                }
@@ -272,6 +289,50 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
+struct Preparer => [qw( requires start result )], predicate => "is_Preparer";
+
+sub preparer
+{
+   my %args = @_;
+
+   my $do = $args{do} or croak "preparer needs a 'do' block";
+   ref( $do ) eq "CODE" or croak "Expected preparer 'do' block to be CODE";
+
+   my @req_futures;
+   my $f_start = Future->new;
+
+   my @requires;
+   foreach my $req ( @{ $args{requires} // [] } ) {
+      if( is_Preparer( $req ) ) {
+         push @requires, @{ $req->requires };
+         push @req_futures, $f_start->then( sub {
+            my ( $env ) = @_;
+
+            $req->start->( $env );
+            $req->result;
+         });
+      }
+      else {
+         push @requires, $req;
+         push @req_futures, $f_start->then( sub {
+            my ( $env ) = @_;
+
+            exists $env->{$req} or die "TODO: Missing preparer dependency $req\n";
+            Future->done( $env->{$req} );
+         });
+      }
+   }
+
+   return Preparer(
+      \@requires,
+
+      sub { $f_start->done( @_ ) unless $f_start->is_ready },
+
+      Future->needs_all( @req_futures )
+         ->then( $do )
+   );
+}
+
 my $failed;
 my $expected_fail;
 my $skipped_count = 0;
@@ -296,50 +357,83 @@ sub _run_test
       return;
    }
 
-   my @reqs;
-   foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
+   my $f_start = Future->new;
+   my @req_futures;
 
-      $t->skip( "lack of $req" );
-      return;
+   foreach my $req ( @{ $params{requires} || [] } ) {
+      if( is_Preparer( $req ) ) {
+         my $preparer = $req;
+
+         exists $test_environment{$_} or die "TODO: Missing preparer dependency $_"
+            for @{ $preparer->requires };
+
+         push @req_futures, $f_start->then( sub {
+            $preparer->start->( \%test_environment );
+            $preparer->result;
+         });
+      }
+      else {
+         if( !exists $test_environment{$req} ) {
+            $t->skip( "lack of $req" );
+            return;
+         }
+
+         # Fetch its value immediately
+         push @req_futures, Future->done( $test_environment{$req} );
+      }
    }
 
    $t->start;
+   $f_start->done;
 
    my $success = eval {
+      my @reqs;
+      my $f_test = Future->needs_all( @req_futures )
+         ->on_done( sub { @reqs = @_ } )
+         ->on_fail( sub { die "preparer failed - $_[0]\n" } );
+
       my $check = $params{check};
       if( my $do = $params{do} ) {
          if( $check ) {
-            eval { Future->wrap( $check->( @reqs ) )->get } and
-               warn "Warning: ${\$t->name} was already passing before we did anything\n";
+            $f_test = $f_test->then( sub {
+               Future->wrap( $check->( @reqs ) )
+            })->followed_by( sub {
+               my ( $f ) = @_;
+
+               $f->failure or
+                  warn "Warning: ${\$t->name} was already passing before we did anything\n";
+
+               Future->done;
+            });
          }
 
-         Future->wrap( $do->( @reqs ) )->get;
+         $f_test = $f_test->then( sub {
+            Future->wrap( $do->( @reqs ) )
+         });
       }
 
       if( $check ) {
-         Future->wrap( $check->( @reqs ) )->get or
-            die "Test check function failed to return a true value"
+         $f_test = $f_test->then( sub {
+            Future->wrap( $check->( @reqs ) )
+         })->then( sub {
+            my ( $result ) = @_;
+            $result or
+               die "Test check function failed to return a true value";
+
+            Future->done;
+         });
       }
 
       if( my $await = $params{await} ) {
-         Future->wait_any(
-            Future->wrap( $await->( @reqs ) )->then( sub {
-               my ( $success ) = @_;
-               $success or die "'await' check did not return a true value";
-               Future->done
-            }),
-
-            $loop->delay_future( after => 2 )
-               ->then( sub {
-                  $output->start_waiting;
-                  $loop->new_future->on_cancel( sub { $output->stop_waiting });
-               }),
-
-            $loop->delay_future( after => $params{timeout} // 10 )
-               ->then_fail( "Timed out waiting for 'await'" )
-         )->get;
+         die "TODO: 'await' now dead";
       }
+
+      Future->wait_any(
+         $f_test,
+
+         $loop->delay_future( after => $params{timeout} // 10 )
+            ->then_fail( "Timed out waiting for test" )
+      )->get;
 
       1;
    };
@@ -375,10 +469,13 @@ sub test
       $skipped_count++;
    }
 
-   no warnings 'exiting';
-   last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
+   if( $t->failed ) {
+      no warnings 'exiting';
 
-   die "This CRITICAL test has failed - bailing out\n" if $t->failed and $params{critical};
+      last TEST if $STOP_ON_FAIL and not $params{expect_fail};
+
+      warn( "This CRITICAL test has failed - bailing out\n" ), last TEST if $params{critical};
+   }
 }
 
 {
@@ -469,8 +566,12 @@ sub prepare
       $failed++;
    }
 
-    no warnings 'exiting';
-    last TEST if $STOP_ON_FAIL and not $success;
+   if( not $success ) {
+      no warnings 'exiting';
+      last TEST if $STOP_ON_FAIL;
+
+      die "prepare failed\n";
+   }
 
    exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
       for @PROVIDES;
@@ -584,7 +685,25 @@ TEST: {
 
          # Tell eval what the filename is so we get nicer warnings/errors that
          # give the filename instead of (eval 123)
-         eval( "#line 1 $filename\n" . $code . "; 1" ) or die $@;
+         my $died_during_compile;
+
+         my $success = do {
+            local $SIG{__DIE__} = sub {
+               return if $^S;
+               $died_during_compile = 1 if !defined $^S;
+               die @_;
+            };
+
+            eval( "#line 1 $filename\n" . $code . "; 1" );
+         };
+
+         if( !$success ) {
+            die $@ if $died_during_compile;
+
+            chomp( my $e = $@ );
+            $output->abort_file( $filename, $e );
+            $failed++;
+         }
 
          {
             no strict 'refs';

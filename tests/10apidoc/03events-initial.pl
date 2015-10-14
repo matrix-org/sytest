@@ -2,7 +2,7 @@ use List::UtilsBy qw( extract_by );
 use Future::Utils qw( repeat );
 
 test "GET /events initially",
-   requires => [qw( user first_api_client )],
+   requires => [ our $SPYGLASS_USER, qw( first_api_client )],
 
    critical => 1,
 
@@ -30,7 +30,7 @@ test "GET /events initially",
    };
 
 test "GET /initialSync initially",
-   requires => [qw( user )],
+   requires => [ $SPYGLASS_USER ],
 
    provides => [qw( can_initial_sync )],
 
@@ -66,13 +66,12 @@ sub GET_new_events_for
    my ( $user ) = @_;
 
    return $user->pending_get_events //=
-      $user->http->do_request_json(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
          params => {
-            access_token => $user->access_token,
-            from         => $user->eventstream_token,
-            timeout      => 500,
+            from    => $user->eventstream_token,
+            timeout => 500,
          }
       )->on_ready( sub {
          undef $user->pending_get_events;
@@ -95,12 +94,11 @@ sub flush_events_for
 {
    my ( $user ) = @_;
 
-   $user->http->do_request_json(
+   do_request_json_for( $user,
       method => "GET",
       uri    => "/api/v1/events",
       params => {
-         access_token => $user->access_token,
-         timeout      => 0,
+         timeout => 0,
       }
    )->then( sub {
       my ( $body ) = @_;

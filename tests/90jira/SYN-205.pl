@@ -1,10 +1,9 @@
 multi_test "Rooms can be created with an initial invite list (SYN-205)",
-   requires => [qw( user more_users
-                    can_create_private_room_with_invite )],
+   requires => [ local_user_preparers( 2 ),
+                qw( can_create_private_room_with_invite )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
-      my $invitee = $more_users->[0];
+      my ( $user, $invitee ) = @_;
 
       matrix_create_room( $user,
          invite => [ $invitee->user_id ],

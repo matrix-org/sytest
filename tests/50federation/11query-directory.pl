@@ -13,11 +13,11 @@ local *SyTest::Federation::Server::on_request_federation_v1_query_directory = su
 };
 
 test "Outbound federation can query room alias directory",
-   requires => [qw( user local_server_name
-                    can_lookup_room_alias )],
+   requires => [qw( local_server_name ), our $SPYGLASS_USER,
+                qw( can_lookup_room_alias )],
 
    check => sub {
-      my ( $user, $local_server_name ) = @_;
+      my ( $local_server_name, $user ) = @_;
       my $room_alias = "#test:$local_server_name";
 
       do_request_json_for( $user,
@@ -41,23 +41,32 @@ test "Outbound federation can query room alias directory",
    };
 
 test "Inbound federation can query room alias directory",
-   requires => [qw( outbound_client user first_home_server room_id
-                    can_create_room_alias)],
+   # TODO(paul): technically this doesn't need local_user_preparer(), if we had
+   #   some user we could assert can perform media/directory/etc... operations
+   #   but doesn't mutate any of its own state, or join rooms, etc...
+   requires => [qw( outbound_client first_home_server ), local_user_preparer(),
+                qw( can_create_room_alias)],
 
    do => sub {
-      my ( $outbound_client, $user, $first_home_server, $room_id ) = @_;
+      my ( $outbound_client, $first_home_server, $user ) = @_;
 
+      my $room_id;
       my $room_alias = "#50federation-11query-directory:$first_home_server";
 
-      do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/directory/room/$room_alias",
+      matrix_create_room( $user )
+      ->then( sub {
+         ( $room_id ) = @_;
 
-         content => {
-            room_id => $room_id,
-            servers => [ "example.org" ],  # TODO: Am I really allowed to do this?
-         },
-      )->then( sub {
+         do_request_json_for( $user,
+            method => "PUT",
+            uri    => "/api/v1/directory/room/$room_alias",
+
+            content => {
+               room_id => $room_id,
+               servers => [ "example.org" ],  # TODO: Am I really allowed to do this?
+            },
+         )
+      })->then( sub {
          $outbound_client->do_request_json(
             method => "GET",
             uri    => "/query/directory",

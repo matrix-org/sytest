@@ -2,14 +2,163 @@ use List::UtilsBy qw( partition_by );
 
 my $name = "room name here";
 
+my $user_preparer = local_user_preparer();
+
+# This provides $room_id *AND* $room_alias
+my $room_preparer = preparer(
+   requires => [ $user_preparer ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room( $user,
+         room_alias_name => "31room-state",
+      );
+   },
+);
+
+test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
+   requires => [ $user_preparer, $room_preparer ],
+
+   provides => [qw( can_get_room_membership )],
+
+   check => sub {
+      my ( $user, $room_id, undef ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( membership ));
+
+         $body->{membership} eq "join" or
+            die "Expected membership as 'join'";
+
+         provide can_get_room_membership => 1;
+
+         Future->done(1);
+      });
+   };
+
+test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
+   requires => [ $user_preparer, $room_preparer ],
+
+   provides => [qw( can_get_room_powerlevels )],
+
+   check => sub {
+      my ( $user, $room_id, undef ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( ban kick redact users_default
+            state_default events_default users events ));
+
+         require_json_object( $body->{users} );
+         require_json_object( $body->{events} );
+
+         provide can_get_room_powerlevels => 1;
+
+         Future->done(1);
+      });
+   };
+
+test "GET /rooms/:room_id/initialSync fetches initial sync state",
+   requires => [ $user_preparer, $room_preparer ],
+
+   provides => [qw( can_room_initial_sync )],
+
+   check => sub {
+      my ( $user, $room_id, undef ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/api/v1/rooms/$room_id/initialSync",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( room_id membership state messages presence ));
+         require_json_keys( $body->{messages}, qw( chunk start end ));
+         require_json_list( $body->{messages}{chunk} );
+         require_json_list( $body->{state} );
+         require_json_list( $body->{presence} );
+
+         $body->{room_id} eq $room_id or
+            die "Expected 'room_id' as $room_id";
+         $body->{membership} eq "join" or
+            die "Expected 'membership' as 'join'";
+
+         provide can_room_initial_sync => 1;
+
+         Future->done(1);
+      });
+   };
+
+test "GET /publicRooms lists newly-created room",
+   requires => [qw( first_api_client ), $room_preparer ],
+
+   check => sub {
+      my ( $http, $room_id, undef ) = @_;
+
+      $http->do_request_json(
+         method => "GET",
+         uri    => "/api/v1/publicRooms",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( start end chunk ));
+         require_json_list( $body->{chunk} );
+
+         my $found;
+
+         foreach my $event ( @{ $body->{chunk} } ) {
+            require_json_keys( $event, qw( room_id ));
+            next unless $event->{room_id} eq $room_id;
+
+            $found = 1;
+         }
+
+         $found or
+            die "Failed to find our newly-created room";
+
+         Future->done(1);
+      })
+   };
+
+test "GET /directory/room/:room_alias yields room ID",
+   requires => [ our $SPYGLASS_USER, $room_preparer ],
+
+   check => sub {
+      my ( $user, $room_id, $room_alias ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/api/v1/directory/room/$room_alias",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( room_id servers ));
+         require_json_list( $body->{servers} );
+
+         $body->{room_id} eq $room_id or die "Expected room_id";
+
+         Future->done(1);
+      });
+   };
+
 test "POST /rooms/:room_id/state/m.room.name sets name",
-   requires => [qw( user room_id
-                    can_room_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_room_initial_sync )],
 
    provides => [qw( can_set_room_name )],
 
    do => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -20,7 +169,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    },
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -43,13 +192,13 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    };
 
 test "GET /rooms/:room_id/state/m.room.name gets name",
-   requires => [qw( user room_id
-                    can_set_room_name )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_set_room_name )],
 
    provides => [qw( can_get_room_name )],
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -71,13 +220,13 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
 my $topic = "A new topic for the room";
 
 test "POST /rooms/:room_id/state/m.room.topic sets topic",
-   requires => [qw( user room_id
-                    can_room_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_room_initial_sync )],
 
    provides => [qw( can_set_room_topic )],
 
    do => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -88,7 +237,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    },
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -111,13 +260,13 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    };
 
 test "GET /rooms/:room_id/state/m.room.topic gets topic",
-   requires => [qw( user room_id
-                    can_set_room_topic )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_set_room_topic )],
 
    provides => [qw( can_get_room_topic )],
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -137,12 +286,12 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
    };
 
 test "GET /rooms/:room_id/state fetches entire room state",
-   requires => [qw( user room_id )],
+   requires => [ $user_preparer, $room_preparer ],
 
    provides => [qw( can_get_room_all_state )],
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, undef ) = @_;
 
       do_request_json_for( $user,
          method => "GET",

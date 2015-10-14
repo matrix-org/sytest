@@ -1,32 +1,19 @@
 use Future::Utils qw( repeat );
 
 multi_test "New federated private chats get full presence information (SYN-115)",
-   requires => [qw(
-      api_clients
-      can_create_private_room
-   )],
+   requires => [ local_user_preparer(), remote_user_preparer(),
+                 qw( can_create_private_room )],
 
    do => sub {
-      my ( $clients ) = @_;
-      my ( $http1, $http2 ) = @$clients;
+      my ( $alice, $bob ) = @_;
 
-      my ( $alice, $bob );
       my $room_id;
 
-      # Register two users
+      # Flush event streams for both; as a side-effect will mark presence 'online'
       Future->needs_all(
-         matrix_register_user( $http1, "90jira-SYN-115_alice" ),
-         matrix_register_user( $http2, "90jira-SYN-115_bob" ),
-      )->SyTest::pass_on_done( "Registered users" )
-      ->then( sub {
-         ( $alice, $bob ) = @_;
-
-         # Flush event streams for both; as a side-effect will mark presence 'online'
-         Future->needs_all(
-            flush_events_for( $alice ),
-            flush_events_for( $bob   ),
-         )
-      })->then( sub {
+         flush_events_for( $alice ),
+         flush_events_for( $bob   ),
+      )->then( sub {
 
          # Have Alice create a new private room
          matrix_create_room( $alice,

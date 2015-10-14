@@ -1,7 +1,9 @@
+my $user_preparer = local_user_preparer();
+
 my $avatar_url = "http://somewhere/my-pic.jpg";
 
 test "PUT /profile/:user_id/avatar_url sets my avatar",
-   requires => [qw( user )],
+   requires => [ $user_preparer ],
 
    provides => [qw( can_set_avatar_url )],
 
@@ -39,7 +41,8 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
    };
 
 test "GET /profile/:user_id/avatar_url publicly accessible",
-   requires => [qw( first_api_client user can_set_avatar_url )],
+   requires => [qw( first_api_client ), $user_preparer,
+                qw( can_set_avatar_url )],
 
    check => sub {
       my ( $http, $user ) = @_;

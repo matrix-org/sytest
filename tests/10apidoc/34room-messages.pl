@@ -1,8 +1,5 @@
-my $msgtype = "m.message";
-my $body = "Here is the message content";
-
 test "POST /rooms/:room_id/send/:event_type sends a message",
-   requires => [qw( user room_id )],
+   requires => [ local_user_and_room_preparers() ],
 
    provides => [qw( can_send_message )],
 
@@ -13,7 +10,7 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
          method => "POST",
          uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 
-         content => { msgtype => $msgtype, body => $body },
+         content => { msgtype => "m.message", body => "Here is the message content" },
       )->then( sub {
          my ( $body ) = @_;
 
@@ -70,20 +67,25 @@ sub matrix_send_room_text_message
 }
 
 test "GET /rooms/:room_id/messages returns a message",
-   requires => [qw( user room_id can_send_message )],
+   requires => [ local_user_and_room_preparers(),
+                 qw( can_send_message )],
 
    provides => [qw( can_get_messages )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/messages",
-
-         # With no params this does "forwards from END"; i.e. nothing useful
-         params => { dir => "b" },
+      matrix_send_room_text_message( $user, $room_id,
+         body => "Here is the message content",
       )->then( sub {
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/messages",
+
+            # With no params this does "forwards from END"; i.e. nothing useful
+            params => { dir => "b" },
+         )
+      })->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( start end chunk ));

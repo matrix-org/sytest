@@ -1,31 +1,26 @@
 use List::UtilsBy qw( partition_by );
 
-prepare "Creating a room",
-   requires => [qw( user )],
+my $user_preparer = local_user_preparer(
+   presence => "online",
+);
 
-   provides => [qw( room_id room_alias )],
+my $room_preparer = preparer(
+   requires => [ $user_preparer ],
 
    do => sub {
       my ( $user ) = @_;
 
       matrix_create_room( $user,
-         visibility      => "public",
-         room_alias_name => "30room-state",
-      )->then( sub {
-         my ( $room_id, $room_alias ) = @_;
-
-         provide room_id    => $room_id;
-         provide room_alias => $room_alias;
-
-         Future->done(1);
-      });
-   };
+         visibility => "public",
+      );
+   },
+);
 
 test "Room creation reports m.room.create to myself",
-   requires => [qw( room_id user )],
+   requires => [ $user_preparer, $room_preparer ],
 
-   await => sub {
-      my ( $room_id, $user ) = @_;
+   do => sub {
+      my ( $user, $room_id ) = @_;
 
       await_event_for( $user, sub {
          my ( $event ) = @_;
@@ -45,10 +40,10 @@ test "Room creation reports m.room.create to myself",
    };
 
 test "Room creation reports m.room.member to myself",
-   requires => [qw( room_id user )],
+   requires => [ $user_preparer, $room_preparer ],
 
-   await => sub {
-      my ( $room_id, $user ) = @_;
+   do => sub {
+      my ( $user, $room_id ) = @_;
 
       await_event_for( $user, sub {
          my ( $event ) = @_;
@@ -69,8 +64,8 @@ test "Room creation reports m.room.member to myself",
 my $topic = "Testing topic for the new room";
 
 test "Setting room topic reports m.room.topic to myself",
-   requires => [qw( user room_id
-                    can_set_room_topic )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_set_room_topic )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -78,32 +73,28 @@ test "Setting room topic reports m.room.topic to myself",
       matrix_put_room_state( $user, $room_id,
          type    => "m.room.topic",
          content => { topic => $topic },
-      );
-   },
+      )->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.topic";
+            require_json_keys( $event, qw( room_id user_id content ));
+            return unless $event->{room_id} eq $room_id;
 
-   await => sub {
-      my ( $user, $room_id ) = @_;
+            $event->{user_id} eq $user->user_id or
+               die "Expected user_id to be ${\$user->user_id}";
 
-      await_event_for( $user, sub {
-         my ( $event ) = @_;
-         return unless $event->{type} eq "m.room.topic";
-         require_json_keys( $event, qw( room_id user_id content ));
-         return unless $event->{room_id} eq $room_id;
+            require_json_keys( my $content = $event->{content}, qw( topic ));
+            $content->{topic} eq $topic or
+               die "Expected topic to be '$topic'";
 
-         $event->{user_id} eq $user->user_id or
-            die "Expected user_id to be ${\$user->user_id}";
-
-         require_json_keys( my $content = $event->{content}, qw( topic ));
-         $content->{topic} eq $topic or
-            die "Expected topic to be '$topic'";
-
-         return 1;
+            return 1;
+         });
       });
    };
 
 multi_test "Global initialSync",
-   requires => [qw( user room_id
-                    can_initial_sync can_set_room_topic )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_initial_sync can_set_room_topic )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -159,7 +150,8 @@ multi_test "Global initialSync",
    };
 
 test "Global initialSync with limit=0 gives no messages",
-   requires => [qw( user room_id can_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_initial_sync )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -187,7 +179,8 @@ test "Global initialSync with limit=0 gives no messages",
    };
 
 multi_test "Room initialSync",
-   requires => [qw( user room_id can_room_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_room_initial_sync )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -236,7 +229,8 @@ multi_test "Room initialSync",
    };
 
 test "Room initialSync with limit=0 gives no messages",
-   requires => [qw( user room_id can_initial_sync )],
+   requires => [ $user_preparer, $room_preparer,
+                qw( can_initial_sync )],
 
    check => sub {
       my ( $user, $room_id ) = @_;

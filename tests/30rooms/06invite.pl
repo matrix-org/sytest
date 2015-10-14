@@ -1,9 +1,9 @@
 use List::Util qw( first );
 
-test "A room can be created set to invite-only",
-   requires => [qw( user )],
+my $creator_preparer = local_user_preparer();
 
-   provides => [qw( inviteonly_room_id )],
+my $inviteonly_room_preparer = preparer(
+   requires => [ $creator_preparer ],
 
    do => sub {
       my ( $user ) = @_;
@@ -30,42 +30,40 @@ test "A room can be created set to invite-only",
             $join_rules_event->{content}{join_rule} eq "invite" or
                die "Expected join rule to be 'invite'";
 
-            provide inviteonly_room_id => $room_id;
-
-            Future->done(1);
+            Future->done( $room_id );
          });
       });
-   };
+   },
+);
 
 test "Uninvited users cannot join the room",
-   requires => [qw( more_users inviteonly_room_id )],
+   requires => [ local_user_preparer(), $inviteonly_room_preparer ],
 
    check => sub {
-      my ( $more_users, $room_id ) = @_;
-      my $uninvited = $more_users->[0];
+      my ( $uninvited, $room_id ) = @_;
 
       matrix_join_room( $uninvited, $room_id )
          ->main::expect_http_403;
    };
 
+my $invited_user_preparer = local_user_preparer();
+
 test "Can invite users to invite-only rooms",
-   requires => [qw( user more_users inviteonly_room_id
-                    can_invite_room )],
+   requires => [ $creator_preparer, $invited_user_preparer, $inviteonly_room_preparer,
+                qw( can_invite_room )],
 
    do => sub {
-      my ( $user, $more_users, $room_id ) = @_;
-      my $invitee = $more_users->[1];
+      my ( $creator, $invitee, $room_id ) = @_;
 
-      matrix_invite_user_to_room( $user, $invitee, $room_id )
+      matrix_invite_user_to_room( $creator, $invitee, $room_id )
    };
 
 test "Invited user receives invite",
-   requires => [qw( more_users inviteonly_room_id
-                    can_invite_room )],
+   requires => [ $invited_user_preparer, $inviteonly_room_preparer,
+                 qw( can_invite_room )],
 
-   await => sub {
-      my ( $more_users, $room_id ) = @_;
-      my $invitee = $more_users->[1];
+   do => sub {
+      my ( $invitee, $room_id ) = @_;
 
       await_event_for( $invitee, sub {
          my ( $event ) = @_;
@@ -87,12 +85,11 @@ test "Invited user receives invite",
    };
 
 test "Invited user can join the room",
-   requires => [qw( more_users inviteonly_room_id
-                    can_invite_room )],
+   requires => [ $invited_user_preparer, $inviteonly_room_preparer,
+                 qw( can_invite_room )],
 
    do => sub {
-      my ( $more_users, $room_id ) = @_;
-      my $invitee = $more_users->[1];
+      my ( $invitee, $room_id ) = @_;
 
       matrix_join_room( $invitee, $room_id )
       ->then( sub {
@@ -108,41 +105,4 @@ test "Invited user can join the room",
 
          Future->done(1);
       });
-   };
-
-test "Banned user is kicked and may not rejoin",
-   requires => [qw( user more_users room_id
-                    can_ban_room )],
-
-   do => sub {
-      my ( $user, $more_users, $room_id ) = @_;
-      my $banned_user = $more_users->[0];
-
-      # Pre-test assertion that the user we want to ban is present
-      matrix_get_room_state( $banned_user, $room_id,
-         type      => "m.room.member",
-         state_key => $banned_user->user_id,
-      )->then( sub {
-         my ( $body ) = @_;
-         $body->{membership} eq "join" or
-            die "Pretest assertion failed: expected user to be in 'join' state";
-
-         do_request_json_for( $user,
-            method => "POST",
-            uri    => "/api/v1/rooms/$room_id/ban",
-
-            content => { user_id => $banned_user->user_id, reason => "testing" },
-         );
-      })->then( sub {
-         matrix_get_room_state( $user, $room_id,
-            type      => "m.room.member",
-            state_key => $banned_user->user_id,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
-         $body->{membership} eq "ban" or
-            die "Expected banned user membership to be 'ban'";
-
-         matrix_join_room( $banned_user, $room_id )
-      })->main::expect_http_403;
    };

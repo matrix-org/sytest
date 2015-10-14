@@ -6,13 +6,18 @@ use warnings;
 # A subclass of NaHTTP that stores a URI base, and has convenient JSON
 # encoding/decoding wrapper methods
 
+use Carp;
+
 use base qw( Net::Async::HTTP );
 Net::Async::HTTP->VERSION( '0.36' ); # PUT content bugfix
 
 use JSON;
 my $json = JSON->new->convert_blessed;
 
+use Future 0.33; # ->catch
+use List::Util qw( any );
 use Net::SSLeay 1.59; # TLSv1.2
+use Scalar::Util qw( blessed );
 
 use constant MIME_TYPE_JSON => "application/json";
 
@@ -21,7 +26,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( uri_base )) {
+   foreach (qw( uri_base restrict_methods )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -66,6 +71,11 @@ sub do_request
 
    $params{SSL_cipher_list} = "HIGH";
 
+   if( $self->{restrict_methods} ) {
+      any { $params{method} eq $_ } @{ $self->{restrict_methods} } or
+         croak "This HTTP client is not allowed to perform $params{method} requests";
+   }
+
    $self->SUPER::do_request(
       %params,
       uri => $uri,
@@ -87,16 +97,18 @@ sub do_request
       }
 
       Future->done( $content, $response );
-   })->else_with_f( sub {
+   })->catch_with_f( http => sub {
       my ( $f, $message, $name, @args ) = @_;
-      return $f unless defined $name and
-                       $name eq "http" and
-                       my $response = $args[0];
+      return $f unless my $response = $args[0];
       return $f unless $response->content_type eq MIME_TYPE_JSON;
 
       # Most HTTP failures from synapse contain more detailed information in a
       # JSON-encoded response body.
-      return Future->fail( "$message\n" . $response->decoded_content, $name => @args );
+
+      # Full URI is going to be long and messy because of query params; trim them
+      my $uri_without_query = join "", $uri->scheme, "://", $uri->authority, $uri->path, "?...";
+
+      return Future->fail( "$message from $params{method} $uri_without_query\n" . $response->decoded_content, $name => @args );
    });
 }
 
@@ -106,6 +118,9 @@ sub do_request_json
    my %params = @_;
 
    if( defined( my $content = $params{content} ) ) {
+      !blessed $content and ( ref $content eq "HASH" or ref $content eq "ARRAY" ) or
+         croak "->do_request_json content must be a plain HASH or ARRAY reference";
+
       $params{content} = $json->encode( $content );
       $params{content_type} //= MIME_TYPE_JSON;
    }

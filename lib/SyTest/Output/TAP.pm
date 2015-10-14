@@ -10,6 +10,8 @@ STDOUT->autoflush(1);
 # File status
 sub run_file {}
 
+sub abort_file {}
+
 my $test_num;
 
 # General test status
@@ -66,15 +68,6 @@ sub fail_prepare
    print "not ok $test_num prepared $running\n";
 
    print "# $_\n" for split m/\n/, $failure;
-}
-
-# Wait status on longrunning tests
-sub start_waiting
-{
-}
-
-sub stop_waiting
-{
 }
 
 # Overall summary

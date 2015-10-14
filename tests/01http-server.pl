@@ -1,9 +1,6 @@
 use File::Basename qw( dirname );
-use List::UtilsBy 0.10 qw( extract_first_by );
 use Net::Async::HTTP::Server 0.09;  # request_class with bugfix
 use IO::Async::SSL;
-use JSON qw( decode_json );
-use URI::Escape qw( uri_unescape );
 
 use SyTest::HTTPClient;
 use SyTest::HTTPServer::Request;
@@ -15,74 +12,15 @@ struct Awaiter => [qw( pathmatch filter future )];
 prepare "Environment closures for receiving HTTP pokes",
    requires => [qw( )],
 
-   provides => [qw( test_http_server_uri_base await_http_request )],
+   provides => [qw( test_http_server_uri_base )],
 
    do => sub {
       my $listen_host = "localhost";
 
-      # List of Awaiter structs
-      my @pending_awaiters;
-
-      my $http_server = Net::Async::HTTP::Server->new(
-         request_class => "SyTest::HTTPServer::Request",
-
-         on_request => sub {
-            my ( $self, $request ) = @_;
-
-            my $method = $request->method;
-            my $path = uri_unescape $request->path;
-
-            if( $CLIENT_LOG ) {
-               print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
-               #TODO log the HTTP Request headers
-               print STDERR "  $_\n" for split m/\n/, $request->body;
-               print STDERR "-- \n";
-            }
-
-            my $awaiter = extract_first_by {
-               my $pathmatch = $_->pathmatch;
-               return 0 unless ( !ref $pathmatch and $path eq $pathmatch ) or
-                               ( ref $pathmatch  and $path =~ $pathmatch );
-
-               return 0 if $_->filter and not $_->filter->( $request );
-
-               return 1;
-            } @pending_awaiters;
-
-            if( $awaiter ) {
-               $awaiter->future->done( $request );
-               return;
-            }
-            else {
-               warn "Received spurious HTTP request to $path\n";
-            }
-         }
-      );
+      my $http_server = SyTest::HTTPServer->new;
       $loop->add( $http_server );
 
-      my $await_http_request = sub {
-         my ( $pathmatch, $filter, %args ) = @_;
-         my $failmsg = SyTest::CarpByFile::shortmess(
-            "Timed out waiting for an HTTP request matching $pathmatch"
-         );
-
-         my $f = $loop->new_future;
-
-         push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
-
-         my $timeout = $args{timeout} // 10;
-
-         return $f if !$timeout;
-
-         return Future->wait_any(
-            $f,
-
-            delay( $timeout )
-               ->then_fail( $failmsg ),
-         );
-      };
-
-      provide await_http_request => $await_http_request;
+      push our @EXPORT, qw( await_http_request );
 
       my $http_client;
 
@@ -110,7 +48,7 @@ prepare "Environment closures for receiving HTTP pokes",
 
          Future->needs_all(
             Future->wait_any(
-               $await_http_request->( "/http_server_self_test", sub {1} ),
+               await_http_request( "/http_server_self_test", sub {1} ),
 
                delay( 10 )
                   ->then_fail( "Timed out waiting for request" ),
@@ -135,7 +73,7 @@ prepare "Environment closures for receiving HTTP pokes",
       })->then( sub {
          Future->needs_all(
             Future->wait_any(
-               $await_http_request->( "/http_server_self_test", sub {1} ),
+               await_http_request( "/http_server_self_test", sub {1} ),
 
                delay( 10 )
                   ->then_fail( "Timed out waiting for request" ),
@@ -163,3 +101,80 @@ prepare "Environment closures for receiving HTTP pokes",
          )
       })
    };
+
+# List of Awaiter structs
+my @pending_awaiters;
+
+package SyTest::HTTPServer {
+   use base qw( Net::Async::HTTP::Server );
+
+   use List::UtilsBy 0.10 qw( extract_first_by );
+   use URI::Escape qw( uri_unescape );
+
+   sub _init
+   {
+      my $self = shift;
+      my ( $params ) = @_;
+
+      $params->{request_class} ||= "SyTest::HTTPServer::Request";
+      $self->SUPER::_init( $params );
+   }
+
+   sub on_request
+   {
+      my ( $self, $request ) = @_;
+
+      my $method = $request->method;
+      my $path = uri_unescape $request->path;
+
+      if( $CLIENT_LOG ) {
+         my $green = -t STDOUT ? "\e[1;32m" : "";
+         my $reset = -t STDOUT ? "\e[m" : "";
+         print "${green}Received Request${reset} for $method $path:\n";
+         #TODO log the HTTP Request headers
+         print "  $_\n" for split m/\n/, $request->body;
+         print "-- \n";
+      }
+
+      my $awaiter = extract_first_by {
+         my $pathmatch = $_->pathmatch;
+         return 0 unless ( !ref $pathmatch and $path eq $pathmatch ) or
+                         ( ref $pathmatch  and $path =~ $pathmatch );
+
+         return 0 if $_->filter and not $_->filter->( $request );
+
+         return 1;
+      } @pending_awaiters;
+
+      if( $awaiter ) {
+         $awaiter->future->done( $request );
+         return;
+      }
+      else {
+         warn "Received spurious HTTP request to $path\n";
+      }
+   }
+}
+
+sub await_http_request
+{
+   my ( $pathmatch, $filter, %args ) = @_;
+   my $failmsg = SyTest::CarpByFile::shortmess(
+      "Timed out waiting for an HTTP request matching $pathmatch"
+   );
+
+   my $f = $loop->new_future;
+
+   push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
+
+   my $timeout = $args{timeout} // 10;
+
+   return $f if !$timeout;
+
+   return Future->wait_any(
+      $f,
+
+      delay( $timeout )
+         ->then_fail( $failmsg ),
+   );
+};

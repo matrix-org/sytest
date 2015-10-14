@@ -15,12 +15,12 @@ prepare "Creating special AS user",
    };
 
 prepare "Creating test helper functions",
-   requires => [qw( await_http_request hs2as_token )],
+   requires => [qw( hs2as_token )],
 
    provides => [qw( await_as_event )],
 
    do => sub {
-      my ( $await_http_request, $hs2as_token ) = @_;
+      my ( $hs2as_token ) = @_;
 
       # Map event types to ARRAYs of Futures
       my %futures_by_type;
@@ -42,7 +42,7 @@ prepare "Creating test helper functions",
       };
 
       my $f = repeat {
-         $await_http_request->( qr{^/appserv/transactions/\d+$}, sub { 1 },
+         await_http_request( qr{^/appserv/transactions/\d+$}, sub { 1 },
             timeout => 0,
          )->then( sub {
             my ( $request ) = @_;
@@ -69,7 +69,7 @@ prepare "Creating test helper functions",
                   $f->done( $event );
                }
                else {
-                  print STDERR "Ignoring incoming AS event of type $type\n";
+                  print "Ignoring incoming AS event of type $type\n";
                }
             }
 

@@ -1,5 +1,7 @@
+my ( $user_preparer, $room_preparer ) = local_user_and_room_preparers();
+
 test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
-   requires => [qw( user room_id )],
+   requires => [ $user_preparer, $room_preparer ],
 
    provides => [qw( can_get_power_levels )],
 
@@ -35,13 +37,13 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
    };
 
 test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
-   requires => [qw( user more_users room_id
-                    can_get_power_levels )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_get_power_levels )],
 
    provides => [qw( can_set_power_levels )],
 
    do => sub {
-      my ( $user, $more_users, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
       matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
       ->then( sub {
@@ -67,12 +69,14 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
       });
    };
 
-prepare "Creating power_level change helper",
+test "Both GET and PUT work",
    requires => [qw( can_get_power_levels can_set_power_levels )],
 
    provides => [qw( can_change_power_levels )],
 
-   do => sub {
+   check => sub {
+      # Nothing to be done
+
       push our @EXPORT, qw( matrix_change_room_powerlevels );
 
       provide can_change_power_levels => 1;

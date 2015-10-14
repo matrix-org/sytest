@@ -3,11 +3,12 @@ Here is the content I am uploading
 EOF
 
 my $content_type = "text/plain";
+my $content_id;
 
 test "POST /media/v1/upload can create an upload",
-   requires => [qw( first_api_client user )],
+   requires => [qw( first_api_client ), local_user_preparer() ],
 
-   provides => [qw( can_upload_media content_id )],
+   provides => [qw( can_upload_media )],
 
    do => sub {
       my ( $http, $user ) = @_;
@@ -30,20 +31,20 @@ test "POST /media/v1/upload can create an upload",
          provide can_upload_media => 1;
 
          my $content_uri = URI->new( $body->{content_uri} );
-         provide content_id => [ $content_uri->authority, $content_uri->path ];
+         $content_id = [ $content_uri->authority, $content_uri->path ];
 
          Future->done(1);
       });
    };
 
 test "GET /media/v1/download can fetch the value again",
-   requires => [qw( first_api_client content_id
+   requires => [qw( first_api_client
                     can_upload_media )],
 
    provides => [qw( can_download_media )],
 
    check => sub {
-      my ( $http, $content_id ) = @_;
+      my ( $http ) = @_;
 
       $http->do_request(
          method   => "GET",
