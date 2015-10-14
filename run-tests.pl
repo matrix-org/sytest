@@ -47,13 +47,16 @@ my %SYNAPSE_ARGS = (
 my $WANT_TLS = 1;
 my %FIXED_BUGS;
 
+my $STOP_ON_FAIL;
+
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \$SYNAPSE_ARGS{log},
    'server-grep=s' => \$SYNAPSE_ARGS{log_filter},
    'd|synapse-directory=s' => \$SYNAPSE_ARGS{directory},
 
-   's|stop-on-fail+' => \my $STOP_ON_FAIL,
+   's|stop-on-fail' => sub { $STOP_ON_FAIL = 1 },
+   'a|all'          => sub { $STOP_ON_FAIL = 0 },
 
    'O|output-format=s' => \(my $OUTPUT_FORMAT = "term"),
 
@@ -103,6 +106,9 @@ Options:
    -d, --synapse-directory DIR  - path to the checkout directory of synapse
 
    -s, --stop-on-fail           - stop after the first failed test
+
+   -a, --all                    - don't stop after the first failed test;
+                                  attempt as many as possible
 
    -O, --output-format FORMAT   - set the style of test output report
 
