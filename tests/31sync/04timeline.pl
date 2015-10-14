@@ -45,7 +45,7 @@ test "Can sync a room with a message with a transaction id",
             },
             presence => { types => [] },
         };
-        matrix_register_user_with_filter( $http, $filter )->then(sub {
+        matrix_register_user_with_filter( $http, $filter )->then( sub {
             ( $user, $filter_id ) = @_;
             matrix_create_room( $user )
         })->then( sub {

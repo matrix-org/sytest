@@ -15,7 +15,7 @@ sub matrix_sync {
         method  => "GET",
         uri     => "/v2_alpha/sync",
         params  => \%params,
-    )->on_done(sub {
+    )->on_done( sub {
         my ( $body ) = @_;
         require_json_keys( $body, qw( rooms presence next_batch ) );
         require_json_keys( $body->{presence}, qw( events ));
