@@ -40,7 +40,7 @@ sub matrix_send_room_message
    my $method = "POST";
    my $uri = "/api/v1/rooms/$room_id/send/$type";
 
-   if (defined $opts{txn_id}) {
+   if( defined $opts{txn_id} ) {
       $method = "PUT";
       $uri = "$uri/$opts{txn_id}";
    }
