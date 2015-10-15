@@ -398,7 +398,7 @@ sub stub_is_lookup {
 sub stub_is_token_generation {
    my ( $token, $encoded_public_key, $inviter, $invitee_email ) = @_;
 
-   await_http_request( "/_matrix/identity/api/v1/nonce-it-up", sub {
+   await_http_request( "/_matrix/identity/api/v1/store-invite", sub {
       my ( $req ) = @_;
 
       my $body = $req->body_from_form;
