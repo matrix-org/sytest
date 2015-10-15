@@ -1,5 +1,132 @@
 use List::UtilsBy qw( partition_by );
 
+local *SyTest::Federation::Server::on_request_federation_v1_query_directory = sub {
+   my $self = shift;
+   my ( $req ) = @_;
+
+   my $server_name = $self->server_name;
+
+   my $room_alias = $req->query_param( "room_alias" );
+   # Just give any room alias a room ID of the same string
+   ( my $room_id = $room_alias ) =~ s/^#/!/;
+
+   Future->done( json => $self->signed_data( {
+      room_id => $room_id,
+      servers => [
+         $server_name,
+      ]
+   } ) );
+};
+
+sub make_auth_events
+{
+   [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
+}
+
+local *SyTest::Federation::Server::on_request_federation_v1_make_join = sub {
+   my $self = shift;
+   my ( $req, $room_id, $user_id ) = @_;
+
+   my $creator = '@50fed:' . $self->server_name;
+
+   my $create_event = $self->create_event(
+      type => "m.room.create",
+
+      auth_events => [],
+      prev_events => [],
+      prev_state  => [],
+      content     => { creator => $creator },
+      depth       => 1,
+      room_id     => $room_id,
+      sender      => $creator,
+      state_key   => "",
+   );
+
+   my $joinrules_event = $self->create_event(
+      type => "m.room.join_rules",
+
+      auth_events => make_auth_events( $create_event ),
+      prev_events => make_auth_events( $create_event ),
+      prev_state  => [],
+      content     => { join_rule => "public" },
+      depth       => 2,
+      room_id     => $room_id,
+      sender      => $creator,
+      state_key   => "",
+   );
+
+   my %event = (
+      auth_events      => make_auth_events( $create_event, $joinrules_event ),
+      content          => { membership => "join" },
+      depth            => 1,
+      event_id         => $self->next_event_id,
+      origin           => $self->server_name,
+      origin_server_ts => $self->time_ms,
+      prev_events      => [],
+      prev_state       => [],
+      room_id          => $room_id,
+      sender           => $user_id,
+      state_key        => $user_id,
+      type             => "m.room.member",
+   );
+
+   Future->done( json => {
+      event => \%event,
+   } );
+};
+
+local *SyTest::Federation::Server::on_request_federation_v1_send_join = sub {
+   my $self = shift;
+   my ( $req, $room_id, $event_id ) = @_;
+
+   $req->method eq "PUT" or
+      die "Expected send_join method to be PUT";
+
+   my $event = $req->body_from_json;
+   log_if_fail "send_join event", $event;
+
+   my @auth_chain = map { $self->get_event( $_->[0] ) } @{ $event->{auth_events} };
+   my %state = ();
+
+   return Future->done( json =>
+      # TODO(paul): This workaround is for SYN-490
+      [ 200, {
+         auth_chain => \@auth_chain,
+         state      => \%state,
+      } ]
+   );
+};
+
+multi_test "Outbound federation can send room-join requests",
+   requires => [ local_user_preparer(), qw( local_server_name inbound_server outbound_client )],
+
+   do => sub {
+      my ( $user, $local_server_name, $inbound_server, $outbound_client ) = @_;
+
+      # We'll have to jump through the extra hoop of using the directory
+      # service first, because we can't join a remote room by room ID alone
+
+      my $room_alias = "#50fed-room-alias:$local_server_name";
+
+      Future->needs_all(
+         # Await PDU?
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/api/v1/join/$room_alias",
+
+            content => {},
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Join response", $body;
+
+            require_json_keys( $body, qw( room_id ));
+
+            Future->done(1);
+         }),
+      )
+   };
+
 multi_test "Inbound federation can receive room-join requests",
    requires => [qw( outbound_client inbound_server first_home_server ),
                  room_preparer( requires_users => [ local_user_preparer() ] ) ],
@@ -128,6 +255,10 @@ multi_test "Inbound federation can receive room-join requests",
          }
 
          # TODO: Perform some linkage checking between the auth events
+         #
+         # Require:
+         #   m.room.create
+         #   m.room.join_rules
 
          require_json_nonempty_list( $response->{state} );
          my %state = partition_by { $_->{type} } @{ $response->{state} };
