@@ -51,6 +51,43 @@ sub next_event_id
    return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
 }
 
+sub create_event
+{
+   my $self = shift;
+   my %fields = @_;
+
+   defined $fields{$_} or croak "Every event needs a '$_' field"
+      for qw( type auth_events content depth prev_events room_id sender );
+
+   if( defined $fields{state_key} ) {
+      defined $fields{$_} or croak "Every state event needs a '$_' field"
+         for qw( prev_state );
+   }
+
+   my $event = {
+      %fields,
+
+      event_id         => $self->next_event_id,
+      origin           => $self->server_name,
+      origin_server_ts => $self->time_ms,
+   };
+
+   $self->sign_event( $event );
+
+   return $self->{events_by_id}{ $event->{event_id} } = $event;
+}
+
+sub get_event
+{
+   my $self = shift;
+   my ( $id ) = @_;
+
+   my $event = $self->{events_by_id}{$id} or
+      croak "$self has no event id '$id'";
+
+   return $event;
+}
+
 sub _fetch_key
 {
    my $self = shift;
