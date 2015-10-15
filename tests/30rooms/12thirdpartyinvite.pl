@@ -1,16 +1,19 @@
 use Crypt::NaCl::Sodium;
 use Protocol::Matrix qw( encode_json_for_signing encode_base64_unpadded );
 
+my @user_preparers = local_user_preparers( 2 );
+
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 test "Can invite existing 3pid",
-   requires => [qw( user more_users test_http_server_hostandport )],
+   requires => [ @user_preparers, qw( test_http_server_hostandport )],
 
    do => sub {
-      my ( $inviter, $more_users, $id_server ) = @_;
+      my ( $inviter, $invitee, $id_server ) = @_;
 
       my $invitee_email = 'marmosets@monkeyworld.org';
-      my $invitee_mxid = $more_users->[0]->user_id;
+      my $invitee_mxid = $invitee->user_id;
+
       my $room_id;
 
       Future->needs_all(
@@ -46,17 +49,16 @@ test "Can invite existing 3pid",
    };
 
 test "Can invite unbound 3pid",
-   requires => [qw( user more_users test_http_server_hostandport first_home_server )],
+   requires => [ @user_preparers, qw( test_http_server_hostandport first_home_server )],
    do => \&can_invite_unbound_3pid;
 
 test "Can invite unbound 3pid over federation",
-   requires => [qw( user remote_users test_http_server_hostandport first_home_server )],
+   requires => [ @user_preparers, qw( test_http_server_hostandport first_home_server )],
    do => \&can_invite_unbound_3pid;
 
 sub can_invite_unbound_3pid
 {
-   my ( $inviter, $other_users, $id_server, $user_agent ) = @_;
-   my $invitee = $other_users->[0];
+   my ( $inviter, $invitee, $id_server, $user_agent ) = @_;
 
    make_3pid_invite(
       inviter             => $inviter,
@@ -84,11 +86,10 @@ sub can_invite_unbound_3pid
 };
 
 test "3pid invite join with wrong signature are rejected",
-   requires => [qw( user more_users test_http_server_hostandport )],
+   requires => [ @user_preparers, qw( test_http_server_hostandport )],
 
    do => sub {
-      my ( $user, $other_users, $id_server ) = @_;
-      my $invitee = $other_users->[0];
+      my ( $user, $invitee, $id_server ) = @_;
 
       make_3pid_invite(
          inviter             => $user,
@@ -114,11 +115,10 @@ test "3pid invite join with wrong signature are rejected",
    };
 
 test "3pid invite join with missing signature are rejected",
-   requires => [qw( user more_users test_http_server_hostandport )],
+   requires => [ @user_preparers, qw( test_http_server_hostandport )],
 
    do => sub {
-      my ( $user, $other_users, $id_server ) = @_;
-      my $invitee = $other_users->[0];
+      my ( $user, $invitee, $id_server ) = @_;
 
       make_3pid_invite(
          inviter             => $user,
@@ -142,11 +142,10 @@ test "3pid invite join with missing signature are rejected",
    };
 
 test "3pid invite join with wrong key_validity_url are rejected",
-   requires => [qw( user more_users test_http_server_hostandport )],
+   requires => [ @user_preparers, qw( test_http_server_hostandport )],
 
    do => sub {
-      my ( $user, $other_users, $id_server ) = @_;
-      my $invitee = $other_users->[0];
+      my ( $user, $invitee, $id_server ) = @_;
 
       make_3pid_invite(
          inviter             => $user,
@@ -171,11 +170,10 @@ test "3pid invite join with wrong key_validity_url are rejected",
    };
 
 test "3pid invite join with missing key_validity_url are rejected",
-   requires => [qw( user more_users test_http_server_hostandport )],
+   requires => [ @user_preparers, qw( test_http_server_hostandport )],
 
    do => sub {
-      my ( $user, $other_users, $id_server ) = @_;
-      my $invitee = $other_users->[0];
+      my ( $user, $invitee, $id_server ) = @_;
 
       make_3pid_invite(
          inviter             => $user,
@@ -199,11 +197,10 @@ test "3pid invite join with missing key_validity_url are rejected",
    };
 
 test "3pid invite join with wrong signature are rejected",
-   requires => [qw( user more_users test_http_server_hostandport )],
+   requires => [ @user_preparers, qw( test_http_server_hostandport )],
 
    do => sub {
-      my ( $user, $other_users, $id_server ) = @_;
-      my $invitee = $other_users->[0];
+      my ( $user, $invitee, $id_server ) = @_;
 
       make_3pid_invite(
          inviter             => $user,
@@ -230,11 +227,10 @@ test "3pid invite join with wrong signature are rejected",
    };
 
 test "3pid invite join fails if key revoked",
-   requires => [qw( user more_users test_http_server_hostandport )],
+   requires => [ @user_preparers, qw( test_http_server_hostandport )],
 
    do => sub {
-      my ( $inviter, $other_users, $id_server ) = @_;
-      my $invitee = $other_users->[0];
+      my ( $inviter, $invitee, $id_server ) = @_;
 
       make_3pid_invite(
          inviter             => $inviter,
