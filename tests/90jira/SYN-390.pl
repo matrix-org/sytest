@@ -1,7 +1,9 @@
-my $user = prepare_local_user;
-
 multi_test "Getting push rules doesn't corrupt the cache SYN-390",
+   requires => [ local_user_preparer() ],
+
    do => sub {
+      my ( $user ) = @_;
+
       do_request_json_for( $user,
          method  => "PUT",
          uri     => "/api/v1/pushrules/global/sender/%40a_user%3Amatrix.org",

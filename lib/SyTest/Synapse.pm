@@ -138,6 +138,9 @@ sub start
 
         "perspectives" => {servers => {}},
 
+        # Stack traces are useful
+        "full_twisted_stacktraces" => "true",
+
         %{ $self->{config} },
    } );
 

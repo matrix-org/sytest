@@ -1,21 +1,18 @@
+my $user_preparer = local_user_preparer();
+
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [qw( make_as_user await_as_event user as_user
-                    can_receive_room_message_locally )],
+   requires => [qw( make_as_user await_as_event as_user ), $user_preparer,
+                     room_preparer( requires_users => [ $user_preparer ] ),
+                qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_as_user, $await_as_event, $user, $as_user ) = @_;
+      my ( $make_as_user, $await_as_event, $as_user, $creator, $room_id ) = @_;
 
-      my $room_id;
       my $ghost;
 
-      matrix_create_room( $user )
-         ->SyTest::pass_on_done( "Created test room" )
+      $make_as_user->( "02ghost-1" )
+         ->SyTest::pass_on_done( "Created AS ghost" )
       ->then( sub {
-         ( $room_id ) = @_;
-
-         $make_as_user->( "02ghost-1" )
-            ->SyTest::pass_on_done( "Created AS ghost" )
-      })->then( sub {
          ( $ghost ) = @_;
 
          Future->needs_all(
@@ -79,7 +76,7 @@ multi_test "AS-ghosted users can use rooms via AS",
          )
       })->SyTest::pass_on_done( "User posted message via AS" )
       ->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $creator, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{room_id} eq $room_id;
@@ -99,23 +96,18 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [qw( make_as_user await_as_event user
-                    can_receive_room_message_locally can_send_message )],
+   requires => [qw( make_as_user await_as_event ), $user_preparer,
+                     room_preparer( requires_users => [ $user_preparer ] ),
+                qw( can_receive_room_message_locally can_send_message )],
 
    do => sub {
-      my ( $make_as_user, $await_as_event, $user ) = @_;
+      my ( $make_as_user, $await_as_event, $creator, $room_id ) = @_;
 
-      my $room_id;
       my $ghost;
 
-      matrix_create_room( $user )
-         ->SyTest::pass_on_done( "Created test room" )
+      $make_as_user->( "02ghost-2" )
+         ->SyTest::pass_on_done( "Created AS ghost" )
       ->then( sub {
-         ( $room_id ) = @_;
-
-         $make_as_user->( "02ghost-2" )
-            ->SyTest::pass_on_done( "Created AS ghost" )
-      })->then( sub {
          ( $ghost ) = @_;
 
          Future->needs_all(
@@ -163,7 +155,7 @@ multi_test "AS-ghosted users can use rooms themselves",
          )
       })->SyTest::pass_on_done( "Ghost posted message themselves" )
       ->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $creator, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{room_id} eq $room_id;

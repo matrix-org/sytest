@@ -6,8 +6,8 @@ my $FILENAME_ENCODED = uc uri_escape( $FILENAME );
 my $content_id;
 
 test "Can upload with Unicode file name",
-   requires => [qw( first_api_client user
-                    can_upload_media )],
+   requires => [qw( first_api_client ), local_user_preparer(),
+                qw( can_upload_media )],
 
    provides => [qw( can_upload_media_unicode )],
 

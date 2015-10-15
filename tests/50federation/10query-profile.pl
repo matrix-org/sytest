@@ -11,11 +11,11 @@ local *SyTest::Federation::Server::on_request_federation_v1_query_profile = sub 
 };
 
 test "Outbound federation can query profile data",
-   requires => [qw( user local_server_name
-                    can_get_displayname )],
+   requires => [qw( local_server_name ), our $SPYGLASS_USER,
+                qw( can_get_displayname )],
 
    check => sub {
-      my ( $user, $local_server_name ) = @_;
+      my ( $local_server_name, $user ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -36,8 +36,8 @@ test "Outbound federation can query profile data",
 my $dname = "Displayname Set For Federation Test";
 
 test "Inbound federation can query profile data",
-   requires => [qw( outbound_client user
-                    can_set_displayname )],
+   requires => [qw( outbound_client ), local_user_preparer(),
+                qw( can_set_displayname )],
 
    do => sub {
       my ( $outbound_client, $user ) = @_;

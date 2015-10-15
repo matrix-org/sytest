@@ -70,15 +70,6 @@ sub fail_prepare
    print "# $_\n" for split m/\n/, $failure;
 }
 
-# Wait status on longrunning tests
-sub start_waiting
-{
-}
-
-sub stop_waiting
-{
-}
-
 # Overall summary
 sub final_pass
 {

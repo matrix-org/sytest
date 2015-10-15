@@ -1,20 +1,17 @@
+my ( $user_preparer, $room_preparer ) = local_user_and_room_preparers();
+
 test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
-   requires => [qw( user )],
+   requires => [ $user_preparer, $room_preparer ],
 
    provides => [qw( can_get_power_levels )],
 
    check => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      matrix_create_room( $user )
-      ->then( sub {
-         my ( $room_id ) = @_;
-
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
-         )
-      })->then( sub {
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
+      )->then( sub {
          my ( $body ) = @_;
 
          # Simple level keys
@@ -40,22 +37,16 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
    };
 
 test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
-   requires => [qw( user more_users
-                    can_get_power_levels )],
+   requires => [ $user_preparer, $room_preparer,
+                 qw( can_get_power_levels )],
 
    provides => [qw( can_set_power_levels )],
 
    do => sub {
-      my ( $user, $more_users ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      my $room_id;
-
-      matrix_create_room( $user )
+      matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
       ->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
-      })->then( sub {
          my ( $levels ) = @_;
 
          $levels->{users}{'@random-other-user:their.home'} = 20;

@@ -6,7 +6,7 @@ my $content_type = "text/plain";
 my $content_id;
 
 test "POST /media/v1/upload can create an upload",
-   requires => [qw( first_api_client user )],
+   requires => [qw( first_api_client ), local_user_preparer() ],
 
    provides => [qw( can_upload_media )],
 
