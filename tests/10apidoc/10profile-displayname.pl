@@ -1,7 +1,9 @@
+my $user_preparer = local_user_preparer();
+
 my $displayname = "Testing Displayname";
 
 test "PUT /profile/:user_id/displayname sets my name",
-   requires => [qw( user )],
+   requires => [ $user_preparer ],
 
    provides => [qw( can_set_displayname )],
 
@@ -39,7 +41,8 @@ test "PUT /profile/:user_id/displayname sets my name",
    };
 
 test "GET /profile/:user_id/displayname publicly accessible",
-   requires => [qw( first_api_client user can_set_displayname )],
+   requires => [ qw( first_api_client ), $user_preparer,
+                 qw( can_set_displayname )],
 
    provides => [qw( can_get_displayname )],
 

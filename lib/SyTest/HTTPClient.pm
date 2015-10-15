@@ -15,6 +15,7 @@ use JSON;
 my $json = JSON->new->convert_blessed;
 
 use Future 0.33; # ->catch
+use List::Util qw( any );
 use Net::SSLeay 1.59; # TLSv1.2
 use Scalar::Util qw( blessed );
 
@@ -25,7 +26,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( uri_base )) {
+   foreach (qw( uri_base restrict_methods )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -66,6 +67,11 @@ sub do_request
    $params{SSL_verify_mode} = 0;
 
    $params{SSL_cipher_list} = "HIGH";
+
+   if( $self->{restrict_methods} ) {
+      any { $params{method} eq $_ } @{ $self->{restrict_methods} } or
+         croak "This HTTP client is not allowed to perform $params{method} requests";
+   }
 
    $self->SUPER::do_request(
       %params,

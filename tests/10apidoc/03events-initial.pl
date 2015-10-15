@@ -2,7 +2,7 @@ use List::UtilsBy qw( extract_by );
 use Future::Utils qw( repeat );
 
 test "GET /events initially",
-   requires => [qw( user first_api_client )],
+   requires => [ our $SPYGLASS_USER, qw( first_api_client )],
 
    critical => 1,
 
@@ -30,7 +30,7 @@ test "GET /events initially",
    };
 
 test "GET /initialSync initially",
-   requires => [qw( user )],
+   requires => [ $SPYGLASS_USER ],
 
    provides => [qw( can_initial_sync )],
 

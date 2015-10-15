@@ -1,13 +1,9 @@
 multi_test "Test that we can be reinvited to a room we created",
-   requires => [qw(
-      local_users remote_users
-      can_change_power_levels
-   )],
+   requires => [ local_user_preparer(), remote_user_preparer(),
+                 qw( can_change_power_levels )],
 
    check => sub {
-      my ( $local_users, $remote_users ) = @_;
-      my ( $user_1 ) = @$local_users;
-      my ( $user_2 ) = @$remote_users;
+      my ( $user_1, $user_2 ) = @_;
 
       my $room_id;
 

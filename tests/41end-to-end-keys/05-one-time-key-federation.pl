@@ -1,27 +1,20 @@
 multi_test "Can claim remote one time key using POST",
-   requires => [qw( first_api_client remote_users
-                    can_upload_e2e_keys )],
+   requires => [ local_user_preparer(), remote_user_preparer(),
+                 qw( can_upload_e2e_keys )],
 
    check => sub {
-      my ( $api_client, $remote_users ) = @_;
+      my ( $user, $remote_user ) = @_;
 
-      my $user;
-
-      matrix_register_user( $api_client )
-         ->SyTest::pass_on_done( "Created test user" )
-      ->then( sub {
-         ( $user ) = @_;
-
-         do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/v2_alpha/keys/upload/alices_first_device",
-            content => {
-               one_time_keys => {
-                  "test_algorithm:test_id", "test+base64+key"
-               }
+      do_request_json_for( $user,
+         method  => "POST",
+         uri     => "/v2_alpha/keys/upload/alices_first_device",
+         content => {
+            one_time_keys => {
+               "test_algorithm:test_id", "test+base64+key"
             }
-         )->SyTest::pass_on_done( "Uploaded one-time keys" )
-      })->then( sub {
+         }
+      )->SyTest::pass_on_done( "Uploaded one-time keys" )
+      ->then( sub {
          do_request_json_for( $user,
             method => "GET",
             uri    => "/v2_alpha/keys/upload/alices_first_device"
@@ -38,7 +31,7 @@ multi_test "Can claim remote one time key using POST",
 
          pass "Counted one time keys";
 
-         do_request_json_for( $remote_users->[0],
+         do_request_json_for( $remote_user,
             method  => "POST",
             uri     => "/v2_alpha/keys/claim",
             content => {

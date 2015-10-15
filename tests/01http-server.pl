@@ -128,10 +128,12 @@ package SyTest::HTTPServer {
       my $path = uri_unescape $request->path;
 
       if( $CLIENT_LOG ) {
-         print STDERR "\e[1;32mReceived Request\e[m for $method $path:\n";
+         my $green = -t STDOUT ? "\e[1;32m" : "";
+         my $reset = -t STDOUT ? "\e[m" : "";
+         print "${green}Received Request${reset} for $method $path:\n";
          #TODO log the HTTP Request headers
-         print STDERR "  $_\n" for split m/\n/, $request->body;
-         print STDERR "-- \n";
+         print "  $_\n" for split m/\n/, $request->body;
+         print "-- \n";
       }
 
       foreach my $idx ( 0 .. $#pending_awaiters ) {
