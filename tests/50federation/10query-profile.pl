@@ -4,7 +4,7 @@ local *SyTest::Federation::Server::on_request_federation_v1_query_profile = sub 
 
    my $user_id = $req->query_param( "user_id" );
 
-   Future->done( {
+   Future->done( json => {
       displayname => "The displayname of $user_id",
       avatar_url  => "",
    } );

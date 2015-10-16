@@ -12,7 +12,7 @@ requires 'IO::Socket::IP', '>= 0.04';
 requires 'IO::Socket::SSL';
 requires 'JSON';
 requires 'List::Util', '>= 1.33';
-requires 'List::UtilsBy';
+requires 'List::UtilsBy', '>= 0.10';
 requires 'MIME::Base64';
 requires 'Module::Pluggable';
 requires 'Net::Async::HTTP', '>= 0.39';

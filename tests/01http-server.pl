@@ -108,6 +108,7 @@ my @pending_awaiters;
 package SyTest::HTTPServer {
    use base qw( Net::Async::HTTP::Server );
 
+   use List::UtilsBy 0.10 qw( extract_first_by );
    use URI::Escape qw( uri_unescape );
 
    sub _init
@@ -135,21 +136,23 @@ package SyTest::HTTPServer {
          print "-- \n";
       }
 
-      foreach my $idx ( 0 .. $#pending_awaiters ) {
-         my $awaiter = $pending_awaiters[$idx];
+      my $awaiter = extract_first_by {
+         my $pathmatch = $_->pathmatch;
+         return 0 unless ( !ref $pathmatch and $path eq $pathmatch ) or
+                         ( ref $pathmatch  and $path =~ $pathmatch );
 
-         my $pathmatch = $awaiter->pathmatch;
-         next unless ( !ref $pathmatch and $path eq $pathmatch ) or
-                     ( ref $pathmatch  and $path =~ $pathmatch );
+         return 0 if $_->filter and not $_->filter->( $request );
 
-         next if $awaiter->filter and not $awaiter->filter->( $request );
+         return 1;
+      } @pending_awaiters;
 
-         splice @pending_awaiters, $idx, 1, ();
+      if( $awaiter ) {
          $awaiter->future->done( $request );
          return;
       }
-
-      warn "Received spurious HTTP request to $path\n";
+      else {
+         warn "Received spurious HTTP request to $path\n";
+      }
    }
 }
 

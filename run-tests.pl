@@ -96,7 +96,9 @@ sub usage
 run-tests.pl: [options...] [test-file]
 
 Options:
-   -C, --client-log             - enable logging of requests made by the client
+   -C, --client-log             - enable logging of requests made by the
+                                  internal HTTP client. Also logs the internal
+                                  HTTP server.
 
    -S, --server-log             - enable pass-through of server logs
 
@@ -142,6 +144,7 @@ my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } outpu
 
 if( $CLIENT_LOG ) {
    require Net::Async::HTTP;
+   require Net::Async::HTTP::Server;
    require Class::Method::Modifiers;
    require JSON;
 
@@ -199,6 +202,36 @@ if( $CLIENT_LOG ) {
                }
             );
          }
+      }
+   );
+
+   Class::Method::Modifiers::install_modifier( "Net::Async::HTTP::Server",
+      around => configure => sub {
+         my ( $orig, $self, %args ) = @_;
+
+         if( defined( my $on_request = $args{on_request} ) ) {
+            $args{on_request} = sub {
+               my ( undef, $request ) = @_;
+
+               print STDERR "\e[1;32mReceived request\e[m:\n";
+               print STDERR "  $_\n" for split m/\n/, $request->as_http_request->as_string;
+               print STDERR "-- \n";
+
+               return $on_request->( @_ );
+            };
+         }
+
+         return $orig->( $self, %args );
+      }
+   );
+   Class::Method::Modifiers::install_modifier( "Net::Async::HTTP::Server::Request",
+      before => respond => sub {
+         my ( $self, $response ) = @_;
+         my $request_path = $self->path;
+
+         print STDERR "\e[1;33mSending response\e[m to $request_path:\n";
+         print STDERR "  $_\n" for split m/\n/, $response->as_string;
+         print STDERR "-- \n";
       }
    );
 }

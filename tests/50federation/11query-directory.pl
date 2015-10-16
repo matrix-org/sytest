@@ -2,9 +2,9 @@ local *SyTest::Federation::Server::on_request_federation_v1_query_directory = su
    my $self = shift;
    my ( $req ) = @_;
 
-   my $server_name = $self->{federation_params}->server_name;
+   my $server_name = $self->server_name;
 
-   Future->done( {
+   Future->done( json => {
       room_id => "!the-room-id:$server_name",
       servers => [
          $server_name,

@@ -41,11 +41,14 @@ sub full_uri_for
    my $uri;
    if( defined $self->{uri_base} ) {
       $uri = URI->new( $self->{uri_base} );
-      if( defined $params{full_uri} ) {
-         $uri->path( $params{full_uri} );
+      if( !defined $params{full_uri} ) {
+         $uri->path( $uri->path . $params{uri} ); # In case of '#room' fragments
+      }
+      elsif( $params{full_uri} =~ m/^http/ ) {
+         $uri = URI->new( $params{full_uri} );
       }
       else {
-         $uri->path( $uri->path . $params{uri} ); # In case of '#room' fragments
+         $uri->path( $params{full_uri} );
       }
    }
    else {
@@ -134,6 +137,9 @@ package JSON::number {
       return bless \$value, $class;
    }
 
+   # By this even more terrible hack we can be both a function name and a package
+   sub JSON::number { JSON::number::->new( $_[0] ) }
+
    sub TO_JSON { 0 + ${ $_[0] } }
 
    Data::Dump::Filtered::add_dump_filter( sub {
@@ -144,13 +150,13 @@ package JSON::number {
 }
 
 # A terrible internals hack that relies on the dualvar nature of the ^ operator
-sub SvPOK { ( $_[0] ^ $_[0] ) =~ m/\0/ }
+sub SvPOK { ( $_[0] ^ $_[0] ) ne "0" }
 
 sub wrap_numbers
 {
    my ( $d ) = @_;
    if( defined $d and !ref $d and !SvPOK $d ) {
-      return JSON::number->new( $d );
+      return JSON::number( $d );
    }
    elsif( ref $d eq "ARRAY" ) {
       return [ map wrap_numbers($_), @$d ];
