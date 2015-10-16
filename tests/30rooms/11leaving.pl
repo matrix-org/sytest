@@ -78,7 +78,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
 
             require_json_keys( $body, qw( rooms ) );
 
-            my $room = first { $_->{room_id} eq $room_id } @{$body->{rooms}}
+            my $room = first { $_->{room_id} eq $room_id } @{ $body->{rooms} }
                 or die "Departed room not in /initialSync";
 
             require_json_keys( $room, qw( state messages membership) );
@@ -86,7 +86,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
             $room->{membership} eq "leave" or die "Membership is not leave";
 
             my $madeup_test_state =
-                first { $_->{type} eq "madeup.test.state" } @{$room->{state}};
+                first { $_->{type} eq "madeup.test.state" } @{ $room->{state} };
 
             $madeup_test_state->{content}{body}
                 eq "S1. B's state before A left"
@@ -118,7 +118,7 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
             $room->{membership} eq "leave" or die "Membership is not leave";
 
             my $madeup_test_state =
-                first { $_->{type} eq "madeup.test.state" } @{$room->{state}};
+                first { $_->{type} eq "madeup.test.state" } @{ $room->{state} };
 
             $madeup_test_state->{content}{body} eq "S1. B's state before A left"
                 or die "Received state that happened after leaving the room";
@@ -127,10 +127,10 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
                 eq "M2. B's message before A left"
                 or die "Received message that happened after leaving the room";
 
-            not @{$room->{presence}}
+            not @{ $room->{presence} }
                 or die "Received presence information after leaving the room";
 
-            not @{$room->{receipts}}
+            not @{ $room->{receipts} }
                 or die "Received receipts after leaving the room";
 
             Future->done(1);
@@ -148,7 +148,7 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
             my ( $state ) = @_;
 
             my $madeup_test_state =
-                first { $_->{type} eq "madeup.test.state" } @{$state};
+                first { $_->{type} eq "madeup.test.state" } @$state;
 
             $madeup_test_state->{content}{body}
                 eq "S1. B's state before A left"
@@ -173,7 +173,7 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
             require_json_keys( $body, qw( chunk ) );
 
             my $membership =
-                first { $_->{state_key} eq $user->user_id } @{$body->{chunk}}
+                first { $_->{state_key} eq $user->user_id } @{ $body->{chunk} }
                 or die "Couldn't find own membership event";
 
             $membership->{content}{membership} eq "leave"
@@ -245,7 +245,7 @@ test "Getting messages going forward is limited for a departed room (SPEC-216)",
 
             require_json_keys( $body, qw( chunk ) );
 
-            not @{$body->{chunk}}
+            not @{ $body->{chunk} }
                 or die "Received message that happened after leaving the room";
 
             Future->done(1);
