@@ -33,4 +33,4 @@ our @EXPORT = qw(
 
 *expect_http_404 = gen_expect_failure( '404' => qr/^404/ );
 
-*expect_http_error = gen_expect_failure( '[^45]xx' => qr/^[45]/ );
+*expect_http_error = gen_expect_failure( '4xx or 5xx' => qr/^[45]/ );

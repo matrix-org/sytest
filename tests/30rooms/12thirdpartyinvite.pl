@@ -1,5 +1,6 @@
 use Crypt::NaCl::Sodium;
 use File::Basename qw( dirname );
+use IO::Async::SSL;
 use Protocol::Matrix qw( encode_base64_unpadded sign_json );
 use SyTest::Identity::Server;
 
@@ -23,7 +24,6 @@ test "Can invite existing 3pid",
       my $stub_id_server = SyTest::Identity::Server->new;
       $stub_id_server->{bindings}{$invitee_email} = $invitee_mxid;
       $loop->add( $stub_id_server );
-      require IO::Async::SSL;
       $stub_id_server->listen(
          host    => "localhost",
          service => "",
@@ -35,6 +35,7 @@ test "Can invite existing 3pid",
          SSL_key_file => "$DIR/../../keys/tls-selfsigned.key",
       )->then( sub {
          my ( $listener ) = @_;
+
          my $sock = $listener->read_handle;
          my $id_server = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
          Future->needs_all(
@@ -57,12 +58,12 @@ test "Can invite existing 3pid",
                   type      => "m.room.member",
                   state_key => $invitee_mxid,
                )->on_done( sub {
-                     my ( $body ) = @_;
+                  my ( $body ) = @_;
 
-                     log_if_fail "Body", $body;
-                     $body->{membership} eq "invite" or
+                  log_if_fail "Body", $body;
+                  $body->{membership} eq "invite" or
                      die "Expected invited user membership to be 'invite'";
-                  });
+               });
             }),
          );
       });
@@ -309,7 +310,8 @@ test "3pid invite join fails if keyserver unreachable",
 #  3. Calls join_sub with the following args: token (str), public_key (base64 str), $signature (base64 str), room_id (str)
 #  4. Asserts that invitee did/didn't join the room, depending on truthiness of expect_join_success
 #  5. Awaits on all passed futures, so that you can stub/mock things as you wish
-sub make_3pid_invite {
+sub make_3pid_invite
+{
    my %args = @_;
    my $inviter = $args{inviter};
    my $invitee = $args{invitee};
@@ -322,7 +324,6 @@ sub make_3pid_invite {
 
    my $response_verifier = $expect_join_success
       ? sub { $_[0] } : \&main::expect_http_4xx;
-
 
    my $stub_id_server = SyTest::Identity::Server->new;
    $loop->add( $stub_id_server );
@@ -343,36 +344,33 @@ sub make_3pid_invite {
          $stub_id_server->{isvalid_needs_useragent} = $is_user_agent;
       }
 
-      my @is_valid_stubs;
       my $room_id;
 
-      Future->needs_all(
-         matrix_create_room( $inviter, visibility => "private" )
-         ->then(sub {
-            ( $room_id ) = @_;
-            $stub_id_server->stub_token( $token, "email", $invitee_email, $inviter->user_id, $room_id );
-            do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
-         })->then( sub {
-            my $signature = encode_base64_unpadded( $crypto_sign->mac( $token, $stub_id_server->{private_key} ) );
-            my $signed = {
-               mxid       => $invitee->user_id,
-               token      => $token,
-               signatures => { $id_server => { "ed25519:0" => $signature } }
-            };
-            sign_json( $signed,
-               secret_key => $stub_id_server->{private_key},
-               origin     => $id_server,
-               key_id     => "ed25519:0",
-            );
-            $join_sub->( $token, $stub_id_server->{keys}{"ed25519:0"}, $signed, $room_id, $id_server, $stub_id_server )
-         })->followed_by($response_verifier)
-         ->then( sub {
-            matrix_get_room_state( $inviter, $room_id,
-               type      => "m.room.member",
-               state_key => $invitee->user_id,
-            )
-         })->followed_by(assert_membership( $inviter, $expect_join_success ? "join" : undef ) ),
-      );
+      matrix_create_room( $inviter, visibility => "private" )
+      ->then(sub {
+         ( $room_id ) = @_;
+         $stub_id_server->stub_token( $token, "email", $invitee_email, $inviter->user_id, $room_id );
+         do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
+      })->then( sub {
+         my $signature = encode_base64_unpadded( $crypto_sign->mac( $token, $stub_id_server->{private_key} ) );
+         my $signed = {
+            mxid       => $invitee->user_id,
+            token      => $token,
+            signatures => { $id_server => { "ed25519:0" => $signature } }
+         };
+         sign_json( $signed,
+            secret_key => $stub_id_server->{private_key},
+            origin     => $id_server,
+            key_id     => "ed25519:0",
+         );
+         $join_sub->( $token, $stub_id_server->{keys}{"ed25519:0"}, $signed, $room_id, $id_server, $stub_id_server )
+      })->followed_by($response_verifier)
+      ->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )
+      })->followed_by(assert_membership( $inviter, $expect_join_success ? "join" : undef ) );
    });
 }
 

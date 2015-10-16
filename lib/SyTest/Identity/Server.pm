@@ -54,27 +54,29 @@ sub on_request
 
    if( $path eq "/_matrix/identity/api/v1/pubkey/isvalid" ) {
       my $user_agent = $req->header( "User-Agent" );
-      if( defined $self->{isvalid_needs_useragent} and !$user_agent =~ m/\Q$self->{isvalid_needs_useragent}/ ) {
+      if( defined $self->{isvalid_needs_useragent} and $user_agent !~ m/\Q$self->{isvalid_needs_useragent}/ ) {
          die "Wrong useragent made /isvalid request";
       }
       $resp{valid} = (any { $_ eq $req->query_param("public_key") } values $self->{keys}) ?
          JSON::true : JSON::false;
       $req->respond_json( \%resp );
-   } elsif( my ( $key_name ) = $path =~ m#^/_matrix/identity/api/v1/pubkey/([^/]*)$# ) {
+   }
+   elsif( my ( $key_name ) = $path =~ m#^/_matrix/identity/api/v1/pubkey/([^/]*)$# ) {
       if( defined $self->{keys}->{$key_name} ) {
          $resp{public_key} = $self->{keys}{$key_name};
       }
       $req->respond_json( \%resp );
-   } elsif( $path eq "/_matrix/identity/api/v1/lookup" ) {
+   }
+   elsif( $path eq "/_matrix/identity/api/v1/lookup" ) {
       my ( $req ) = @_;
       my $medium = $req->query_param( "medium" );
       my $address = $req->query_param( "address" );
-      if ( !defined $medium || !defined $address ) {
+      if ( !defined $medium or !defined $address ) {
          $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
-         return
+         return;
       }
       my $mxid = $self->{bindings}{$address};
-      if ( "email" eq $medium && defined $mxid ) {
+      if ( "email" eq $medium and defined $mxid ) {
          $resp{medium} = $medium;
          $resp{address} = $address;
          $resp{mxid} = $mxid;
@@ -88,25 +90,27 @@ sub on_request
          );
       }
       $req->respond_json( \%resp );
-   } elsif( $path eq "/_matrix/identity/api/v1/store-invite" ) {
+   }
+   elsif( $path eq "/_matrix/identity/api/v1/store-invite" ) {
       my $body = $req->body_from_form;
       my $medium = $body->{medium};
       my $address = $body->{address};
       my $sender = $body->{sender};
       my $room_id = $body->{room_id};
-      if( !( defined $body->{medium} and defined $address and defined $sender and defined $room_id ) ) {
+      unless( ( defined $body->{medium} and defined $address and defined $sender and defined $room_id ) ) {
          $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
-         return
+         return;
       }
-      my $token = $self->{expected_tokens}{$medium.$address.$sender.$room_id};
-      if( !defined $token ) {
+      my $token = $self->{expected_tokens}{ join "\0", $medium, $address, $sender, $room_id };
+      unless( defined $token ) {
          $req->respond( HTTP::Response->new( 500, "Internal Server Error", [ Content_Length => 0 ] ) );
-         return
+         return;
       }
       $resp{token} = $token;
       $resp{public_key} = $self->{keys}{"ed25519:0"};
       $req->respond_json( \%resp );
-   } else {
+   }
+   else {
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
    }
 }
@@ -115,7 +119,7 @@ sub stub_token {
    my $self = shift;
    my ( $token, $medium, $invitee_email, $inviter_mxid, $room_id ) = @_;
 
-   $self->{expected_tokens}{$medium.$invitee_email.$inviter_mxid.$room_id} = $token;
+   $self->{expected_tokens}{ join "\0", $medium, $invitee_email, $inviter_mxid, $room_id } = $token;
 }
 
 1;
