@@ -86,7 +86,7 @@ sub can_invite_unbound_3pid
       expect_join_success => 1,
       is_user_agent       => $user_agent,
       join_sub            => sub {
-         my ( $token, $public_key, $signature, $room_id, $id_server ) = @_;
+         my ( $token, $public_key, $signatures, $room_id, $id_server ) = @_;
 
          do_request_json_for( $invitee,
             method  => "POST",
@@ -94,7 +94,7 @@ sub can_invite_unbound_3pid
             content => {
                token            => $token,
                public_key       => $public_key,
-               signature        => $signature,
+               signatures       => $signatures,
                key_validity_url => "https://$id_server/_matrix/identity/api/v1/pubkey/isvalid",
                sender           => $inviter->user_id,
             }
@@ -114,7 +114,7 @@ test "3pid invite join with wrong signature are rejected",
          invitee             => $invitee,
          expect_join_success => 0,
          join_sub            => sub {
-            my ( $token, $public_key, $signature, $room_id, $id_server ) = @_;
+            my ( $token, $public_key, undef, $room_id, $id_server ) = @_;
 
             do_request_json_for( $invitee,
                method  => "POST",
@@ -122,7 +122,7 @@ test "3pid invite join with wrong signature are rejected",
                content => {
                   token            => $token,
                   public_key       => $public_key,
-                  signature        => "abc",
+                  signatures       => { $id_server => { "ed25519:0" => "abc" } },
                   key_validity_url => "https://$id_server/_matrix/identity/api/v1/pubkey/isvalid",
                   sender           => $user->user_id,
                }
@@ -130,7 +130,7 @@ test "3pid invite join with wrong signature are rejected",
          });
    };
 
-test "3pid invite join with missing signature are rejected",
+test "3pid invite join with missing signatures are rejected",
    requires => [ @user_preparers, qw( test_http_server_hostandport )],
 
    do => sub {
@@ -141,7 +141,7 @@ test "3pid invite join with missing signature are rejected",
          invitee             => $invitee,
          expect_join_success => 0,
          join_sub            => sub {
-            my ( $token, $public_key, $signature, $room_id, $id_server ) = @_;
+            my ( $token, $public_key, undef, $room_id, $id_server ) = @_;
 
             do_request_json_for( $invitee,
                method  => "POST",
@@ -167,7 +167,7 @@ test "3pid invite join with wrong key_validity_url are rejected",
          invitee             => $invitee,
          expect_join_success => 0,
          join_sub            => sub {
-            my ( $token, $public_key, $signature, $room_id, $id_server ) = @_;
+            my ( $token, $public_key, $signatures, $room_id, $id_server ) = @_;
 
             do_request_json_for( $invitee,
                method  => "POST",
@@ -175,7 +175,7 @@ test "3pid invite join with wrong key_validity_url are rejected",
                content => {
                   token            => $token,
                   public_key       => $public_key,
-                  signature        => $signature,
+                  signatures       => $signatures,
                   key_validity_url => "https://wrongdoesnotexist$id_server/_matrix/identity/api/v1/pubkey/isvalid",
                   sender           => $user->user_id,
                }
@@ -194,7 +194,7 @@ test "3pid invite join with missing key_validity_url are rejected",
          invitee             => $invitee,
          expect_join_success => 0,
          join_sub            => sub {
-            my ( $token, $public_key, $signature, $room_id ) = @_;
+            my ( $token, $public_key, $signatures, $room_id ) = @_;
 
             do_request_json_for( $invitee,
                method  => "POST",
@@ -202,7 +202,7 @@ test "3pid invite join with missing key_validity_url are rejected",
                content => {
                   token      => $token,
                   public_key => $public_key,
-                  signature  => $signature,
+                  signatures  => $signatures,
                   sender     => $user->user_id,
                }
             );
@@ -220,7 +220,7 @@ test "3pid invite join with wrong signature are rejected",
          invitee             => $invitee,
          expect_join_success => 0,
          join_sub            => sub {
-            my ( $token, $public_key, $signature, $room_id, $id_server ) = @_;
+            my ( $token, $public_key, undef, $room_id, $id_server ) = @_;
 
             my ( $wrong_public_key, $wrong_private_key ) = $crypto_sign->keypair;
 
@@ -230,7 +230,7 @@ test "3pid invite join with wrong signature are rejected",
                content => {
                   token            => $token,
                   public_key       => encode_base64_unpadded( $wrong_public_key ),
-                  signature        => encode_base64_unpadded( $crypto_sign->mac( $token, $wrong_private_key ) ),
+                  signatures       => { $id_server => { "ed25519:0" => encode_base64_unpadded( $crypto_sign->mac( $token, $wrong_private_key ) ) } },
                   key_validity_url => "https://$id_server/_matrix/identity/api/v1/pubkey/isvalid",
                   sender           => $user->user_id,
                }
@@ -249,7 +249,7 @@ test "3pid invite join fails if key revoked",
          invitee             => $invitee,
          expect_join_success => 0,
          join_sub            => sub {
-            my ( $token, $public_key, $signature, $room_id, $id_server, $stub_id_server ) = @_;
+            my ( $token, $public_key, $signatures, $room_id, $id_server, $stub_id_server ) = @_;
             $stub_id_server->rotate_keys;
 
             do_request_json_for( $invitee,
@@ -258,7 +258,7 @@ test "3pid invite join fails if key revoked",
                content => {
                   token            => $token,
                   public_key       => $public_key,
-                  signature        => $signature,
+                  signatures       => $signatures,
                   key_validity_url => "https://$id_server/_matrix/identity/api/v1/pubkey/isvalid",
                   sender           => $inviter->user_id,
                }
@@ -277,7 +277,7 @@ test "3pid invite join fails if keyserver unreachable",
          invitee             => $invitee,
          expect_join_success => 0,
          join_sub            => sub {
-            my ( $token, $public_key, $signature, $room_id, $id_server, $stub_id_server ) = @_;
+            my ( $token, $public_key, $signatures, $room_id, $id_server, $stub_id_server ) = @_;
             $loop->remove( $stub_id_server );
             $stub_id_server->read_handle->close;
 
@@ -287,7 +287,7 @@ test "3pid invite join fails if keyserver unreachable",
                content => {
                   token            => $token,
                   public_key       => $public_key,
-                  signature        => $signature,
+                  signatures       => $signatures,
                   key_validity_url => "https://$id_server/_matrix/identity/api/v1/pubkey/isvalid",
                   sender           => $inviter->user_id,
                }
@@ -346,7 +346,8 @@ sub make_3pid_invite {
             do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
          })->then( sub {
             my $signature = encode_base64_unpadded( $crypto_sign->mac( $token, $stub_id_server->{private_key} ) );
-            $join_sub->( $token, $stub_id_server->{keys}{"ed25519:0"}, $signature, $room_id, $id_server, $stub_id_server )
+            my $signatures = { $id_server => { "ed25519:0" => $signature } };
+            $join_sub->( $token, $stub_id_server->{keys}{"ed25519:0"}, $signatures, $room_id, $id_server, $stub_id_server )
          })->followed_by($response_verifier)
          ->then( sub {
             matrix_get_room_state( $inviter, $room_id,
