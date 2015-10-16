@@ -141,6 +141,8 @@ sub start
         # Stack traces are useful
         "full_twisted_stacktraces" => "true",
 
+        "bcrypt_rounds" => 0,
+
         %{ $self->{config} },
    } );
 
