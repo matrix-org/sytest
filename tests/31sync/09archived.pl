@@ -6,7 +6,7 @@ test "Left rooms appear in the archived section of sync",
 
       my ( $user, $filter_id, $room_id );
 
-      matrix_register_user_with_filter( $http, {} )->then(sub {
+      matrix_register_user_with_filter( $http, {} )->then( sub {
          ( $user, $filter_id ) = @_;
 
          matrix_create_room( $user );
@@ -35,7 +35,7 @@ test "Newly left rooms appear in the archived section of incremental sync",
 
       my ( $user, $filter_id, $room_id, $next );
 
-     matrix_register_user_with_filter( $http, {} )->then(sub {
+     matrix_register_user_with_filter( $http, {} )->then( sub {
          ( $user, $filter_id ) = @_;
 
          matrix_create_room( $user );
@@ -69,7 +69,7 @@ test "Newly left rooms appear in the archived section of gapped sync",
 
       my ( $user, $filter_id, $room_id_1, $room_id_2, $next );
 
-      matrix_register_user_with_filter( $http, {} )->then(sub {
+      matrix_register_user_with_filter( $http, {} )->then( sub {
          ( $user, $filter_id ) = @_;
 
          Future->needs_all(
@@ -122,7 +122,7 @@ test "Archived rooms only contain history from before the user left",
       Future->needs_all(
          matrix_register_user_with_filter( $http, $filter ),
          matrix_register_user_with_filter( $http, $filter ),
-      )->then(sub {
+      )->then( sub {
          ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
 
          matrix_create_room( $user_a );
