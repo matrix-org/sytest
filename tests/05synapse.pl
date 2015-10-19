@@ -77,6 +77,7 @@ prepare "Starting synapse",
 
                use_insecure_ssl_client_just_for_testing_do_not_use => 1,
                report_stats => "False",
+               user_agent_suffix => $locations[$idx],
             },
          );
          $loop->add( $synapse );
