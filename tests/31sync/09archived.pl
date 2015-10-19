@@ -61,6 +61,7 @@ test "Newly left rooms appear in the archived section of incremental sync",
       });
    };
 
+
 test "Newly left rooms appear in the archived section of gapped sync",
    requires => [qw( first_api_client can_sync )],
 
