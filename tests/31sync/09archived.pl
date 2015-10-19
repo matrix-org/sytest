@@ -114,8 +114,8 @@ test "Archived rooms only contain history from before the user left",
 
       my $filter = {
          room => {
-            timeline => { types => ["m.room.message"] },
-            state => { types => ["a.madeup.test.state"] },
+            timeline => { types => [ "m.room.message" ] },
+            state => { types => [ "a.madeup.test.state" ] },
          },
       };
 
