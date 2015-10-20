@@ -117,16 +117,24 @@ test "Invited user can join the room",
 my $other_local_user_preparer = local_user_preparer();
 
 test "Invited user can reject invite",
-   requires => [ do { my $creator = local_user_preparer(); $creator, local_user_preparer(), inviteonly_room_preparer( creator => $creator ) } ],
+   requires => [ local_user_preparer(),
+      do {
+         my $creator = local_user_preparer();
+         return $creator, inviteonly_room_preparer( creator => $creator );
+   } ],
    do => \&invited_user_can_reject_invite;
 
 test "Invited user can reject invite over federation",
-   requires => [ do { my $creator = local_user_preparer(); $creator, remote_user_preparer(), inviteonly_room_preparer( creator => $creator ) } ],
+   requires => [ remote_user_preparer(),
+      do {
+         my $creator = local_user_preparer();
+         return $creator, inviteonly_room_preparer( creator => $creator );
+   } ],
    do => \&invited_user_can_reject_invite;
 
 sub invited_user_can_reject_invite
 {
-   my ( $creator, $invitee, $room_id ) = @_;
+   my ( $invitee, $creator, $room_id ) = @_;
 
    matrix_invite_user_to_room( $creator, $invitee, $room_id )
    ->then( sub {
