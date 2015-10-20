@@ -1,5 +1,27 @@
 use Time::HiRes qw( time );
 
+push our @EXPORT, qw( matrix_typing );
+
+=head1 matrix_typing
+
+   matrix_typing($user, $room_id, typing => 1, timeout => 30000)->get;
+
+Mark the user as typing.
+
+=cut
+
+sub matrix_typing
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   do_request_json_for( $user,
+      method => "PUT",
+      uri    => "/api/v1/rooms/$room_id/typing/:user_id",
+      content => \%params,
+   );
+}
+
+
 my $typing_user_preparer = local_user_preparer();
 
 my $local_user_preparer = local_user_preparer();
@@ -19,11 +41,9 @@ test "Typing notification sent to local room members",
    do => sub {
       my ( $typinguser, $local_user, $room_id ) = @_;
 
-      do_request_json_for( $typinguser,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/typing/:user_id",
-
-         content => { typing => 1, timeout => 30000 }, # msec
+      matrix_typing( $typinguser, $room_id,
+         typing => 1,
+         timeout => 30000, # msec
       )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
@@ -84,12 +104,7 @@ test "Typing can be explicitly stopped",
    do => sub {
       my ( $typinguser, $local_user, $room_id ) = @_;
 
-      do_request_json_for( $typinguser,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/typing/:user_id",
-
-         content => { typing => 0 },
-      )->then( sub {
+      matrix_typing( $typinguser, $room_id, typing => 0 )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
 
@@ -124,11 +139,9 @@ multi_test "Typing notifications timeout and can be resent",
 
       flush_events_for( $user )
       ->then( sub {
-         do_request_json_for( $user,
-            method => "PUT",
-            uri    => "/api/v1/rooms/$room_id/typing/:user_id",
-
-            content => { typing => 1, timeout => 100 }, # msec; i.e. very short
+         matrix_typing( $user, $room_id,
+            typing => 1,
+            timeout => 100, # msec; i.e. very short
          )
       })->then( sub {
          pass( "Sent typing notification" );
@@ -160,11 +173,9 @@ multi_test "Typing notifications timeout and can be resent",
             return 1;
          })
       })->then( sub {
-         do_request_json_for( $user,
-            method => "PUT",
-            uri    => "/api/v1/rooms/$room_id/typing/:user_id",
-
-            content => { typing => 1, timeout => 10000 },
+         matrix_typing( $user, $room_id,
+            typing => 1,
+            timeout => 10000,
          )
       })->then( sub {
          pass( "Sent second notification" );
