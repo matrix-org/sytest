@@ -44,7 +44,7 @@ test "Newly left rooms appear in the archived section of incremental sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ($body ) = @_;
+         my ( $body ) = @_;
 
          $next = $body->{next_batch};
 
@@ -80,7 +80,7 @@ test "Newly left rooms appear in the archived section of gapped sync",
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ($body ) = @_;
+         my ( $body ) = @_;
 
          $next = $body->{next_batch};
 
@@ -183,9 +183,13 @@ test "Archived rooms only contain history from before the user left",
             or die "Expected a single state event";
          @{ $room->{timeline}{events} } == 1
             or die "Expected a single timeline event";
-         $room->{event_map}{$room->{state}{events}[0]}{content}{my_key}
+
+         my $state_event_id = $room->{state}{events}[0];
+         $room->{event_map}{ $state_event_id }{content}{my_key}
             eq "before" or die "Expected only events from before leaving";
-         $room->{event_map}{$room->{timeline}{events}[0]}{content}{body}
+
+         my $timeline_event_id = $room->{timeline}{events}[0];
+         $room->{event_map}{ $timeline_event_id }{content}{body}
             eq "before" or die "Expected only events from before leaving";
 
          Future->done(1);
