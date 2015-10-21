@@ -19,7 +19,7 @@ requires 'Module::Pluggable';
 requires 'Net::Async::HTTP', '>= 0.39';
 requires 'Net::Async::HTTP::Server', '>= 0.09';
 requires 'Net::SSLeay', '>= 1.59';
-requires 'Protocol::Matrix';
+requires 'Protocol::Matrix', '>= 0.02';
 requires 'Struct::Dumb', '>= 0.04';
 requires 'URI::Escape';
 requires 'YAML';

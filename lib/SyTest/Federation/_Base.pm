@@ -4,8 +4,7 @@ use strict;
 use warnings;
 
 use mro 'c3';
-use Protocol::Matrix qw( sign_json encode_json_for_signing encode_base64_unpadded );
-use Digest::SHA qw( sha256 );
+use Protocol::Matrix qw( sign_json sign_event_json encode_base64_unpadded );
 
 use Time::HiRes qw( time );
 
@@ -64,14 +63,13 @@ sub sign_event
    my $self = shift;
    my ( $event ) = @_;
 
-   # 'hashes' records the original unredacted version
-   my $bytes_to_hash = encode_json_for_signing( $event );
+   my $fedparams = $self->{federation_params};
 
-   $event->{hashes}{sha256} = encode_base64_unpadded( sha256( $bytes_to_hash ) );
-
-   # TODO: REDACT THE EVENT BEFORE SIGNING IT
-
-   $self->sign_data( $event );
+   sign_event_json( $event,
+      secret_key => $fedparams->secret_key,
+      origin     => $fedparams->server_name,
+      key_id     => $fedparams->key_id,
+   );
 }
 
 sub get_key
