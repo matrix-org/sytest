@@ -70,6 +70,10 @@ test "Newly left rooms appear in the archived section of gapped sync",
 
       my ( $user, $filter_id, $room_id_1, $room_id_2, $next );
 
+      my $filter = {
+         room => { timeline => { limit => 1 } },
+      };
+
       matrix_register_user_with_filter( $http, {} )->then( sub {
          ( $user, $filter_id ) = @_;
 
@@ -86,6 +90,11 @@ test "Newly left rooms appear in the archived section of gapped sync",
 
          matrix_leave_room( $user, $room_id_1 );
       })->then( sub {
+         # Pad out the timeline with filler messages to create a "gap" between
+         # this sync and the next. It's useful to test this since
+         # implementations of matrix are likely to take different code paths
+         # if there were many messages between a since that if there were only
+         # a few.
          Future->needs_all( map {
             matrix_send_room_message( $user, $room_id_2,
                content => { "filler" => $_ },
