@@ -1,5 +1,27 @@
 use Time::HiRes qw( time );
 
+push our @EXPORT, qw( matrix_typing );
+
+=head1 matrix_typing
+
+   matrix_typing($user, $room_id, typing => 1, timeout => 30000)->get;
+
+Mark the user as typing.
+
+=cut
+
+sub matrix_typing
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   do_request_json_for( $user,
+      method => "PUT",
+      uri    => "/api/v1/rooms/$room_id/typing/:user_id",
+      content => \%params,
+   );
+}
+
+
 my $typing_user_preparer = local_user_preparer();
 
 my $local_user_preparer = local_user_preparer();
@@ -12,6 +34,7 @@ my $room_preparer = room_preparer(
    ],
 );
 
+
 test "Typing notification sent to local room members",
    requires => [ $typing_user_preparer, $local_user_preparer, $room_preparer,
                 qw( can_set_room_typing )],
@@ -19,17 +42,16 @@ test "Typing notification sent to local room members",
    do => sub {
       my ( $typinguser, $local_user, $room_id ) = @_;
 
-      do_request_json_for( $typinguser,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/typing/:user_id",
-
-         content => { typing => 1, timeout => 30000 }, # msec
+      matrix_typing( $typinguser, $room_id,
+         typing => 1,
+         timeout => 30000, # msec
       )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
 
             await_event_for( $recvuser, sub {
                my ( $event ) = @_;
+
                return unless $event->{type} eq "m.typing";
 
                require_json_keys( $event, qw( type room_id content ));
@@ -42,13 +64,14 @@ test "Typing notification sent to local room members",
                scalar @$users == 1 or
                   die "Expected 1 member to be typing";
                $users->[0] eq $typinguser->user_id or
-                  die "Expected ${\$typinguser->user_id} to be typing";
+                  die "Expected ${\ $typinguser->user_id } to be typing";
 
                return 1;
             })
          } $typinguser, $local_user );
       });
    };
+
 
 test "Typing notifications also sent to remote room members",
    requires => [ $typing_user_preparer, $remote_user_preparer, $room_preparer,
@@ -59,6 +82,7 @@ test "Typing notifications also sent to remote room members",
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
+
          return unless $event->{type} eq "m.typing";
 
          require_json_keys( $event, qw( type room_id content ));
@@ -71,11 +95,12 @@ test "Typing notifications also sent to remote room members",
          scalar @$users == 1 or
             die "Expected 1 member to be typing";
          $users->[0] eq $typinguser->user_id or
-            die "Expected ${\$typinguser->user_id} to be typing";
+            die "Expected ${\ $typinguser->user_id } to be typing";
 
          return 1;
       })
    };
+
 
 test "Typing can be explicitly stopped",
    requires => [ $typing_user_preparer, $local_user_preparer, $room_preparer,
@@ -84,17 +109,13 @@ test "Typing can be explicitly stopped",
    do => sub {
       my ( $typinguser, $local_user, $room_id ) = @_;
 
-      do_request_json_for( $typinguser,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/typing/:user_id",
-
-         content => { typing => 0 },
-      )->then( sub {
+      matrix_typing( $typinguser, $room_id, typing => 0 )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
 
             await_event_for( $recvuser, sub {
                my ( $event ) = @_;
+
                return unless $event->{type} eq "m.typing";
 
                require_json_keys( $event, qw( type room_id content ));
@@ -113,6 +134,7 @@ test "Typing can be explicitly stopped",
       });
    };
 
+
 multi_test "Typing notifications timeout and can be resent",
    requires => [ $typing_user_preparer, $room_preparer,
                 qw( can_set_room_typing )],
@@ -122,14 +144,11 @@ multi_test "Typing notifications timeout and can be resent",
 
       my $start_time = time();
 
-      flush_events_for( $user )
-      ->then( sub {
-         do_request_json_for( $user,
-            method => "PUT",
-            uri    => "/api/v1/rooms/$room_id/typing/:user_id",
-
-            content => { typing => 1, timeout => 100 }, # msec; i.e. very short
-         )
+      flush_events_for( $user )->then( sub {
+         matrix_typing( $user, $room_id,
+            typing => 1,
+            timeout => 100, # msec; i.e. very short
+         );
       })->then( sub {
          pass( "Sent typing notification" );
 
@@ -143,7 +162,7 @@ multi_test "Typing notifications timeout and can be resent",
 
             pass( "Received start notification" );
             return 1;
-         })
+         });
       })->then( sub {
          # stop typing
          await_event_for( $user, sub {
@@ -158,14 +177,12 @@ multi_test "Typing notifications timeout and can be resent",
 
             pass( "Received stop notification" );
             return 1;
-         })
+         });
       })->then( sub {
-         do_request_json_for( $user,
-            method => "PUT",
-            uri    => "/api/v1/rooms/$room_id/typing/:user_id",
-
-            content => { typing => 1, timeout => 10000 },
-         )
+         matrix_typing( $user, $room_id,
+            typing => 1,
+            timeout => 10000,
+         );
       })->then( sub {
          pass( "Sent second notification" );
 
