@@ -168,9 +168,13 @@ test "Archived rooms only contain history from before the user left",
             or die "Expected a single state event";
          @{ $room->{timeline}{events} } == 1
             or die "Expected a single timeline event";
-         $room->{event_map}{$room->{state}{events}[0]}{content}{my_key}
+
+         my $state_event_id = $room->{state}{events}[0];
+         $room->{event_map}{ $state_event_id }{content}{my_key}
             eq "before" or die "Expected only events from before leaving";
-         $room->{event_map}{$room->{timeline}{events}[0]}{content}{body}
+
+         my $timeline_event_id = $room->{timeline}{events}[0];
+         $room->{event_map}{ $timeline_event_id }{content}{body}
             eq "before" or die "Expected only events from before leaving";
 
          matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
