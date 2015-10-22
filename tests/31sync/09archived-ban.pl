@@ -16,8 +16,6 @@ test "Banned rooms appear in the archived section of sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id );
-      })->then( sub {
          matrix_join_room( $user_b, $room_id);
       })->then( sub {
 
@@ -57,8 +55,6 @@ test "Newly banned rooms appear in the archived section of incremental sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id );
-      })->then( sub {
          matrix_join_room( $user_b, $room_id);
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
@@ -103,8 +99,6 @@ test "Newly banned rooms appear in the archived section of incremental sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id );
-      })->then( sub {
          matrix_join_room( $user_b, $room_id);
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
