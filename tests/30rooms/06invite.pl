@@ -120,7 +120,7 @@ test "Invited user can reject invite",
    requires => [ local_user_preparer(),
       do {
          my $creator = local_user_preparer();
-         return $creator, inviteonly_room_preparer( creator => $creator );
+         $creator, inviteonly_room_preparer( creator => $creator );
    } ],
    do => \&invited_user_can_reject_invite;
 
@@ -128,7 +128,7 @@ test "Invited user can reject invite over federation",
    requires => [ remote_user_preparer(),
       do {
          my $creator = local_user_preparer();
-         return $creator, inviteonly_room_preparer( creator => $creator );
+         $creator, inviteonly_room_preparer( creator => $creator );
    } ],
    do => \&invited_user_can_reject_invite;
 
