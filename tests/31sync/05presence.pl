@@ -8,7 +8,9 @@ test "User sees their own presence in a sync",
 
       my ( $user, $filter_id );
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
+      my $filter = { presence => { types => [ "m.presence" ] } };
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
          ( $user, $filter_id ) = @_;
 
          matrix_sync( $user, filter => $filter_id );
@@ -36,7 +38,9 @@ test "User is offline if they set_presence=offline in their sync",
 
       my ( $user, $filter_id );
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
+      my $filter = { presence => { types => [ "m.presence" ] } };
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
          ( $user, $filter_id ) = @_;
 
          matrix_sync( $user, filter => $filter_id, set_presence => "offline" );
@@ -64,9 +68,11 @@ test "User sees updates to presence from other users in the incremental sync.",
 
       my ( $user_a, $user_b, $filter_id_a, $filter_id_b, $next_a );
 
+      my $filter = { presence => { types => [ "m.presence" ] } };
+
       Future->needs_all(
-         matrix_register_user_with_filter( $http, {} ),
-         matrix_register_user_with_filter( $http, {} ),
+         matrix_register_user_with_filter( $http, $filter ),
+         matrix_register_user_with_filter( $http, $filter ),
       )->then( sub {
          ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
 
