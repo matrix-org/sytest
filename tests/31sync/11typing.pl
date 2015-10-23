@@ -8,8 +8,8 @@ test "Typing events appear in initial sync",
 
       my $filter = {
          room => {
-            timeline => { types => [] },
-            state => { types => [] },
+            timeline  => { types => [] },
+            state     => { types => [] },
             ephemeral => { types => [ "m.typing" ] },
          },
          presence => { types => [] },
@@ -53,12 +53,12 @@ test "Typing events appear in incremental sync",
    check => sub {
       my ( $http ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next);
+      my ( $user, $filter_id, $room_id, $next );
 
       my $filter = {
          room => {
-            timeline => { types => [] },
-            state => { types => [] },
+            timeline  => { types => [] },
+            state     => { types => [] },
             ephemeral => { types => [ "m.typing" ] },
          },
          presence => { types => [] },
@@ -71,7 +71,7 @@ test "Typing events appear in incremental sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_sync( $user, filter => $filter_id);
+         matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -79,7 +79,7 @@ test "Typing events appear in incremental sync",
 
          matrix_typing( $user, $room_id, typing => 1, timeout => 30000 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next);
+         matrix_sync( $user, filter => $filter_id, since => $next );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -108,12 +108,12 @@ test "Typing events appear in gapped sync",
    check => sub {
       my ( $http ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next);
+      my ( $user, $filter_id, $room_id, $next );
 
       my $filter = {
          room => {
-            timeline => { types => [] },
-            state => { types => [] },
+            timeline  => { types => [] },
+            state     => { types => [] },
             ephemeral => { types => [ "m.typing" ] },
          },
          presence => { types => [] },
@@ -126,7 +126,7 @@ test "Typing events appear in gapped sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_sync( $user, filter => $filter_id);
+         matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -141,7 +141,7 @@ test "Typing events appear in gapped sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next);
+         matrix_sync( $user, filter => $filter_id, since => $next );
       })->then( sub {
          my ( $body ) = @_;
 
