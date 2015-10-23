@@ -57,8 +57,8 @@ sub on_request
       if( defined $self->{isvalid_needs_useragent} and $user_agent !~ m/\Q$self->{isvalid_needs_useragent}/ ) {
          die "Wrong useragent made /isvalid request";
       }
-      $resp{valid} = (any { $_ eq $req->query_param("public_key") } values $self->{keys}) ?
-         JSON::true : JSON::false;
+      my $is_valid = any { $_ eq $req->query_param("public_key") } values %{ $self->{keys} };
+      $resp{valid} = $is_valid ? JSON::true : JSON::false;
       $req->respond_json( \%resp );
    }
    elsif( my ( $key_name ) = $path =~ m#^/_matrix/identity/api/v1/pubkey/([^/]*)$# ) {
