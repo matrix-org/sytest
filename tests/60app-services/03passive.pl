@@ -103,6 +103,25 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
             );
          }),
 
+         $await_as_event->( "m.room.member" )->then( sub {
+            my ( $event ) = @_;
+
+            log_if_fail "Event", $event;
+
+            require_json_keys( $event, qw( room_id user_id membership state_key ));
+
+            $event->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+            $event->{user_id} eq $local_user->user_id or
+               die "Expected user_id to be ${\ $local_user->user_id }";
+            $event->{membership} eq "join" or
+               die "Expected membership to be 'join'";
+            $event->{state_key} eq $local_user->user_id or
+               die "Expected state_key to be ${\ $local_user->user_id }";
+
+            Future->done;
+         }),
+
          do_request_json_for( $local_user,
             method => "POST",
             uri    => "/api/v1/join/$room_alias",
