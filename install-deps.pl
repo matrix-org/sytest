@@ -37,13 +37,13 @@ sub requires
    # somehow in PERL_{MB,MM}_OPT
 
    if( !$DRYRUN ) {
-      system( "cpan", $mod ) == 0 and return;
+      system( $^X, "-MCPAN", "-e", qq(install "$mod") ) == 0 and return;
 
       print STDERR "Failed to install $mod\n";
       exit $? >> 8;
    }
    else {
-      print "cpan $mod\n";
+      print qq($^X -MCPAN -e 'install "$mod"'\n);
    }
 
 }
