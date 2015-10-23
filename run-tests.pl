@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use 5.014; # package NAME { BLOCK }
 
+use if $] >= 5.020, warnings => FATAL => "experimental";
+
 use lib 'lib';
 
 use SyTest::CarpByFile;
