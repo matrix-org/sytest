@@ -141,7 +141,7 @@ test "Archived rooms only contain history from before the user left",
 
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
-         matrix_sync( $user_b, $filter_id_b );
+         matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 
