@@ -191,6 +191,89 @@ test "Changes to state are included in an gapped incremental sync",
    };
 
 
+test "A full_state incremental update returns all state",
+   requires => [qw( first_api_client can_sync )],
+
+   check => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $filter_id, $room_id, $next_batch );
+
+      my $filter = { room => {
+          timeline => { limit => 1 },
+          state     => { types => [ "a.madeup.test.state" ] },
+      } };
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
+         ( $user, $filter_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_put_room_state( $user, $room_id,
+            type      => "a.madeup.test.state",
+            content   => { "my_key" => 1 },
+            state_key => "this_state_changes"
+         );
+      })->then( sub {
+         matrix_put_room_state( $user, $room_id,
+            type      => "a.madeup.test.state",
+            content   => { "my_key" => 1 },
+            state_key => "this_state_does_not_change"
+         );
+      })->then( sub {
+         matrix_sync( $user, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         $next_batch = $body->{next_batch};
+         @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 2
+            or die "Expected two state events";
+
+         matrix_put_room_state( $user, $room_id,
+            type      => "a.madeup.test.state",
+            content   => { "my_key" => 2 },
+            state_key => "this_state_changes",
+         );
+      })->then( sub {
+         Future->needs_all( map {
+            matrix_send_room_message( $user, $room_id,
+               content => { "filler" => $_ },
+               type    => "a.made.up.filler.type",
+            )
+         } 0 .. 10 );
+      })->then( sub {
+         matrix_sync( $user, filter => $filter_id, since => $next_batch,
+             full_state => 'true');
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{joined}{$room_id};
+         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+
+         @{ $room->{state}{events} } == 2
+            or die "Expected only two state events";
+
+         my $event_id = $room->{state}{events}[1];
+         my $event = $room->{event_map}{$event_id};
+         $event->{type} eq "a.madeup.test.state"
+            or die "Unexpected state event type";
+         $event->{state_key} eq 'this_state_changes'
+            or die "Unexpected event state_key";
+         $event->{content}{my_key} == 2
+            or die "Unexpected event content";
+
+         @{ $room->{timeline}{events} } == 1
+             or die "Expected only one timeline event";
+
+         Future->done(1);
+      })
+   };
+
+
+
+
 test "When user joins a room the state is included in the next sync",
    requires => [qw( first_api_client can_sync )],
 

@@ -34,6 +34,21 @@ test "Can sync a joined room",
          my $room = $body->{rooms}{joined}{$room_id};
          (!defined $room) or die "Unchanged rooms shouldn't be in the sync response";
 
+         # do another sync, with full_state
+         matrix_sync( $user, filter => $filter_id, since => $body->{next_batch},
+                      full_state => 'true' );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{joined}{$room_id};
+
+         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         require_json_keys( $room->{state}, qw( events ));
+         require_json_keys( $room->{ephemeral}, qw( events ));
+         require_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
+         require_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
+
          Future->done(1)
       })
    };
