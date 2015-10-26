@@ -16,36 +16,32 @@ multi_test "Inviting an AS-hosted user asks the AS server",
       my $localpart = "astest-03passive-1";
       my $user_id = "\@$localpart:$home_server";
 
-      Future->needs_all(
-         await_http_request( "/appserv/users/$user_id", sub { 1 } )->then( sub {
+      require_stub await_http_request( "/appserv/users/$user_id", sub { 1 } )
+         ->then( sub {
             my ( $request ) = @_;
 
-            $make_as_user->( $localpart )->then( sub {
+            $make_as_user->( $localpart )->on_done( sub {
                $request->respond_json( {} );
-
-               Future->done( $request );
             });
-         }),
-
-         matrix_invite_user_to_room( $creator, $user_id, $room_id )
-            ->SyTest::pass_on_done( "Sent invite" )
-      )->then( sub {
-         my ( $appserv_request ) = @_;
-
-         $await_as_event->( "m.room.member" )->then( sub {
-            my ( $event ) = @_;
-
-            log_if_fail "Event", $event;
-
-            require_json_keys( $event, qw( content room_id user_id ));
-
-            $event->{room_id} eq $room_id or
-               die "Expected room_id to be $room_id";
-            $event->{state_key} eq $user_id or
-               die "Expected user_id to be $user_id";
-
-            Future->done;
          });
+
+      matrix_invite_user_to_room( $creator, $user_id, $room_id )
+         ->SyTest::pass_on_done( "Sent invite" )
+      ->then( sub {
+         $await_as_event->( "m.room.member" )
+      })->then( sub {
+         my ( $event ) = @_;
+
+         log_if_fail "Event", $event;
+
+         require_json_keys( $event, qw( content room_id user_id ));
+
+         $event->{room_id} eq $room_id or
+            die "Expected room_id to be $room_id";
+         $event->{state_key} eq $user_id or
+            die "Expected user_id to be $user_id";
+
+         Future->done;
       });
    };
 
@@ -60,8 +56,8 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
            $local_user, $room_id ) = @_;
       my $room_alias = "#astest-03passive-1:$first_home_server";
 
-      Future->needs_all(
-         await_http_request( "/appserv/rooms/$room_alias", sub { 1 } )->then( sub {
+      require_stub await_http_request( "/appserv/rooms/$room_alias", sub { 1 } )
+         ->then( sub {
             my ( $request ) = @_;
 
             pass "Received AS request";
@@ -74,12 +70,12 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
                   room_id => $room_id,
                },
             )->SyTest::pass_on_done( "Created room alias mapping" )
-            ->then( sub {
+            ->on_done( sub {
                $request->respond_json( {} );
-               Future->done;
             });
-         }),
+         });
 
+      Future->needs_all(
          $await_as_event->( "m.room.member" )->then( sub {
             my ( $event ) = @_;
 

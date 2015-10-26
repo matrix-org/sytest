@@ -1,21 +1,21 @@
-local *SyTest::Federation::Server::on_request_federation_v1_query_profile = sub {
-   my $self = shift;
-   my ( $req ) = @_;
-
-   my $user_id = $req->query_param( "user_id" );
-
-   Future->done( json => {
-      displayname => "The displayname of $user_id",
-      avatar_url  => "",
-   } );
-};
-
 test "Outbound federation can query profile data",
-   requires => [qw( local_server_name ), our $SPYGLASS_USER,
+   requires => [qw( inbound_server ), our $SPYGLASS_USER,
                 qw( can_get_displayname )],
 
    check => sub {
-      my ( $local_server_name, $user ) = @_;
+      my ( $inbound_server, $user ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+
+      require_stub $inbound_server->await_query_profile( "\@user:$local_server_name" )
+         ->on_done( sub {
+            my ( $req ) = @_;
+
+            $req->respond_json( {
+               displayname => "The displayname of \@user:$local_server_name",
+               avatar_url  => "",
+            } );
+         });
 
       do_request_json_for( $user,
          method => "GET",
