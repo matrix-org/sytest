@@ -1,43 +1,44 @@
-local *SyTest::Federation::Server::on_request_federation_v1_query_directory = sub {
-   my $self = shift;
-   my ( $req ) = @_;
-
-   my $server_name = $self->server_name;
-
-   Future->done( json => {
-      room_id => "!the-room-id:$server_name",
-      servers => [
-         $server_name,
-      ]
-   } );
-};
-
 test "Outbound federation can query room alias directory",
-   requires => [qw( local_server_name ), our $SPYGLASS_USER,
+   requires => [qw( inbound_server ), our $SPYGLASS_USER,
                 qw( can_lookup_room_alias )],
 
    check => sub {
-      my ( $local_server_name, $user ) = @_;
+      my ( $inbound_server, $user ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
       my $room_alias = "#test:$local_server_name";
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/directory/room/$room_alias",
-      )->then( sub {
-         my ( $body ) = @_;
-         log_if_fail "Query response", $body;
+      Future->needs_all(
+         $inbound_server->await_query_directory( $room_alias )->on_done( sub {
+            my ( $req ) = @_;
 
-         require_json_keys( $body, qw( room_id servers ));
+            $req->respond_json( {
+               room_id => "!the-room-id:$local_server_name",
+               servers => [
+                  $local_server_name,
+               ]
+            } );
+         }),
 
-         $body->{room_id} eq "!the-room-id:$local_server_name" or
-            die "Expected room_id to be '!the-room-id:$local_server_name'";
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/api/v1/directory/room/$room_alias",
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Query response", $body;
 
-         require_json_nonempty_list( $body->{servers} );
+            require_json_keys( $body, qw( room_id servers ));
 
-         require_json_string( $_ ) for @{ $body->{servers} };
+            $body->{room_id} eq "!the-room-id:$local_server_name" or
+               die "Expected room_id to be '!the-room-id:$local_server_name'";
 
-         Future->done(1);
-      });
+            require_json_nonempty_list( $body->{servers} );
+
+            require_json_string( $_ ) for @{ $body->{servers} };
+
+            Future->done(1);
+         }),
+      );
    };
 
 test "Inbound federation can query room alias directory",
