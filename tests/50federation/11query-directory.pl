@@ -1,24 +1,24 @@
-local *SyTest::Federation::Server::on_request_federation_v1_query_directory = sub {
-   my $self = shift;
-   my ( $req ) = @_;
-
-   my $server_name = $self->server_name;
-
-   Future->done( json => {
-      room_id => "!the-room-id:$server_name",
-      servers => [
-         $server_name,
-      ]
-   } );
-};
-
 test "Outbound federation can query room alias directory",
-   requires => [qw( local_server_name ), our $SPYGLASS_USER,
+   requires => [qw( inbound_server ), our $SPYGLASS_USER,
                 qw( can_lookup_room_alias )],
 
    check => sub {
-      my ( $local_server_name, $user ) = @_;
+      my ( $inbound_server, $user ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
       my $room_alias = "#test:$local_server_name";
+
+      require_stub $inbound_server->await_query_directory( $room_alias )
+         ->on_done( sub {
+            my ( $req ) = @_;
+
+            $req->respond_json( {
+               room_id => "!the-room-id:$local_server_name",
+               servers => [
+                  $local_server_name,
+               ]
+            } );
+         });
 
       do_request_json_for( $user,
          method => "GET",

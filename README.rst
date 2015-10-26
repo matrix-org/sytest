@@ -96,6 +96,11 @@ Synapse server's standard error stream::
 
     ./run-tests.pl -S
 
+To run only a subset of tests in certain files, name the files as additional
+arguments::
+
+    ./run-tests.pl tests/20profile-events.pl
+
 Developing
 ----------
 

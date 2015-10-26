@@ -2,39 +2,46 @@ use List::Util qw( first );
 
 my $creator_preparer = local_user_preparer();
 
-my $inviteonly_room_preparer = preparer(
-   requires => [ $creator_preparer ],
+sub inviteonly_room_preparer
+{
+   my %args = @_;
 
-   do => sub {
-      my ( $user ) = @_;
+   preparer(
+      requires => [ $args{creator} ],
 
-      matrix_create_room( $user,
-         # visibility: "private" actually means join_rule: "invite"
-         # See SPEC-74
-         visibility => "private",
-      )->then( sub {
-         my ( $room_id ) = @_;
+      do => sub {
+         my ( $creator ) = @_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync",
+         matrix_create_room( $creator,
+            # visibility: "private" actually means join_rule: "invite"
+            # See SPEC-74
+            visibility => "private",
          )->then( sub {
-            my ( $body ) = @_;
+            my ( $room_id ) = @_;
 
-            require_json_keys( $body, qw( state ));
+            do_request_json_for( $creator,
+               method => "GET",
+               uri    => "/api/v1/rooms/$room_id/initialSync",
+            )->then( sub {
+               my ( $body ) = @_;
 
-            my ( $join_rules_event ) = first { $_->{type} eq "m.room.join_rules" } @{ $body->{state} };
-            $join_rules_event or
-               die "Failed to find an m.room.join_rules event";
+               require_json_keys( $body, qw( state ));
 
-            $join_rules_event->{content}{join_rule} eq "invite" or
-               die "Expected join rule to be 'invite'";
+               my ( $join_rules_event ) = first { $_->{type} eq "m.room.join_rules" } @{ $body->{state} };
+               $join_rules_event or
+                  die "Failed to find an m.room.join_rules event";
 
-            Future->done( $room_id );
+               $join_rules_event->{content}{join_rule} eq "invite" or
+                  die "Expected join rule to be 'invite'";
+
+               Future->done( $room_id );
+            });
          });
-      });
-   },
-);
+      }
+   )
+};
+
+my $inviteonly_room_preparer = inviteonly_room_preparer( creator => $creator_preparer );
 
 test "Uninvited users cannot join the room",
    requires => [ local_user_preparer(), $inviteonly_room_preparer ],
@@ -106,3 +113,44 @@ test "Invited user can join the room",
          Future->done(1);
       });
    };
+
+my $other_local_user_preparer = local_user_preparer();
+
+test "Invited user can reject invite",
+   requires => [ local_user_preparer(),
+      do {
+         my $creator = local_user_preparer();
+         $creator, inviteonly_room_preparer( creator => $creator );
+   } ],
+   do => \&invited_user_can_reject_invite;
+
+test "Invited user can reject invite over federation",
+   requires => [ remote_user_preparer(),
+      do {
+         my $creator = local_user_preparer();
+         $creator, inviteonly_room_preparer( creator => $creator );
+   } ],
+   do => \&invited_user_can_reject_invite;
+
+sub invited_user_can_reject_invite
+{
+   my ( $invitee, $creator, $room_id ) = @_;
+
+   matrix_invite_user_to_room( $creator, $invitee, $room_id )
+   ->then( sub {
+      matrix_leave_room( $invitee, $room_id )
+   })->then( sub {
+      matrix_get_room_state( $creator, $room_id,
+         type      => "m.room.member",
+         state_key => $invitee->user_id,
+      );
+   })->then( sub {
+      my ( $body ) = @_;
+
+      log_if_fail "Membership body", $body;
+      $body->{membership} eq "leave" or
+         die "Expected membership to be 'leave'";
+
+      Future->done(1);
+   });
+}
