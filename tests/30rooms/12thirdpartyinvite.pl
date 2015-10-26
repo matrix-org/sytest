@@ -38,34 +38,33 @@ test "Can invite existing 3pid",
 
          my $sock = $listener->read_handle;
          my $id_server = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
-         Future->needs_all(
-            matrix_create_and_join_room( [ $inviter ], visibility => "private" )
-            ->then( sub {
-               ( $room_id ) = @_;
-               do_request_json_for( $inviter,
-                  method => "POST",
-                  uri    => "/api/v1/rooms/$room_id/invite",
 
-                  content => {
-                     id_server    => $id_server,
-                     medium       => "email",
-                     address      => $invitee_email,
-                     display_name => "Cute things",
-                  },
-               );
-            })->then( sub {
-               matrix_get_room_state( $inviter, $room_id,
-                  type      => "m.room.member",
-                  state_key => $invitee_mxid,
-               )->on_done( sub {
-                  my ( $body ) = @_;
+         matrix_create_and_join_room( [ $inviter ], visibility => "private" )
+         ->then( sub {
+            ( $room_id ) = @_;
+            do_request_json_for( $inviter,
+               method => "POST",
+               uri    => "/api/v1/rooms/$room_id/invite",
 
-                  log_if_fail "Body", $body;
-                  $body->{membership} eq "invite" or
-                     die "Expected invited user membership to be 'invite'";
-               });
-            }),
-         );
+               content => {
+                  id_server    => $id_server,
+                  medium       => "email",
+                  address      => $invitee_email,
+                  display_name => "Cute things",
+               },
+            );
+         })->then( sub {
+            matrix_get_room_state( $inviter, $room_id,
+               type      => "m.room.member",
+               state_key => $invitee_mxid,
+            )->on_done( sub {
+               my ( $body ) = @_;
+
+               log_if_fail "Body", $body;
+               $body->{membership} eq "invite" or
+                  die "Expected invited user membership to be 'invite'";
+            });
+         });
       });
    };
 
