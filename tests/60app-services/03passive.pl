@@ -66,41 +66,18 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
             pass "Received AS request";
 
-            Future->needs_all(
-               $await_as_event->( "m.room.aliases" )->then( sub {
-                  my ( $event ) = @_;
+            do_request_json_for( $as_user,
+               method => "PUT",
+               uri    => "/api/v1/directory/room/$room_alias",
 
-                  log_if_fail "Event", $event;
-
-                  require_json_keys( $event, qw( content room_id user_id ));
-
-                  $event->{room_id} eq $room_id or
-                     die "Expected room_id to be $room_id";
-                  $event->{user_id} eq $as_user->user_id or
-                     die "Expected user_id to be ${\$as_user->user_id}";
-
-                  require_json_keys( my $content = $event->{content}, qw( aliases ));
-                  require_json_list( my $aliases = $content->{aliases} );
-
-                  grep { $_ eq $room_alias } @$aliases or
-                     die "Expected to find our alias in the aliases list";
-
-                  Future->done;
-               }),
-
-               do_request_json_for( $as_user,
-                  method => "PUT",
-                  uri    => "/api/v1/directory/room/$room_alias",
-
-                  content => {
-                     room_id => $room_id,
-                  },
-               )->SyTest::pass_on_done( "Created room alias mapping" )
-               ->then( sub {
-                  $request->respond_json( {} );
-                  Future->done;
-               }),
-            );
+               content => {
+                  room_id => $room_id,
+               },
+            )->SyTest::pass_on_done( "Created room alias mapping" )
+            ->then( sub {
+               $request->respond_json( {} );
+               Future->done;
+            });
          }),
 
          $await_as_event->( "m.room.member" )->then( sub {
@@ -118,6 +95,27 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
                die "Expected membership to be 'join'";
             $event->{state_key} eq $local_user->user_id or
                die "Expected state_key to be ${\ $local_user->user_id }";
+
+            Future->done;
+         }),
+
+         $await_as_event->( "m.room.aliases" )->then( sub {
+            my ( $event ) = @_;
+
+            log_if_fail "Event", $event;
+
+            require_json_keys( $event, qw( content room_id user_id ));
+
+            $event->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+            $event->{user_id} eq $as_user->user_id or
+               die "Expected user_id to be ${\$as_user->user_id}";
+
+            require_json_keys( my $content = $event->{content}, qw( aliases ));
+            require_json_list( my $aliases = $content->{aliases} );
+
+            grep { $_ eq $room_alias } @$aliases or
+               die "Expected to find our alias in the aliases list";
 
             Future->done;
          }),
