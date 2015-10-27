@@ -227,71 +227,62 @@ sub on_request_key_v2_server
    } ) );
 }
 
-sub await_query_directory
+sub mk_await_request_pair
 {
-   my $self = shift;
-   my ( $room_alias ) = @_;
+   my $class = shift;
+   my ( $shortname, $paramnames ) = @_;
 
-   croak "Cannot await another directory query to $room_alias"
-      if $self->{awaiting_query_directory}{$room_alias};
+   my $n_params = scalar @$paramnames;
+   my $okey = "awaiting_$shortname";
 
-   return $self->{awaiting_query_directory}{$room_alias} = Future->new
-      ->on_cancel( sub {
-         print STDERR "Cancelling unused directory query await for $room_alias";
-         delete $self->{awaiting_query_directory}{$room_alias};
-      });
+   my $awaitfunc = sub {
+      my $self = shift;
+      my @paramvalues = splice @_, 0, $n_params;
+
+      my $ikey = join "\0", @paramvalues;
+
+      croak "Cannot await another $shortname to @paramvalues"
+         if $self->{$okey}{$ikey};
+
+      return $self->{$okey}{$ikey} = Future->new
+         ->on_cancel( sub {
+            print STDERR "Cancelling unused $shortname await for @paramvalues";
+            delete $self->{$okey}{$ikey};
+         });
+   };
+
+   my $on_requestfunc = sub {
+      my $self = shift;
+      my ( $req ) = @_;
+
+      my @paramvalues;
+      push @paramvalues, $req->query_param( $_ ) for @$paramnames;
+
+      my $ikey = join "\0", @paramvalues;
+
+      if( my $f = delete $self->{$okey}{$ikey} ) {
+         $f->done( $req, @paramvalues );
+         Future->done;
+      }
+      else {
+         Future->done( response => HTTP::Response->new(
+            404, "Not found", [ Content_length => 0 ], "",
+         ) );
+      }
+   };
+
+   no strict 'refs';
+   *{"${class}::await_$shortname"} = $awaitfunc;
+   *{"${class}::on_request_federation_v1_$shortname"} = $on_requestfunc;
 }
 
-sub on_request_federation_v1_query_directory
-{
-   my $self = shift;
-   my ( $req ) = @_;
+__PACKAGE__->mk_await_request_pair(
+   query_directory => [ 'room_alias' ],
+);
 
-   my $room_alias = $req->query_param( "room_alias" );
-
-   if( my $f = delete $self->{awaiting_query_directory}{$room_alias} ) {
-      $f->done( $req );
-      Future->done;
-   }
-   else {
-      Future->done( response => HTTP::Response->new(
-         404, "Not found", [ Content_length => 0 ], "",
-      ) );
-   }
-}
-
-sub await_query_profile
-{
-   my $self = shift;
-   my ( $user_id ) = @_;
-
-   croak "Cannot await another profile query to $user_id"
-      if $self->{awaiting_query_profile}{$user_id};
-
-   return $self->{awaiting_query_profile}{$user_id} = Future->new
-      ->on_cancel( sub {
-         print STDERR "Cancelling unused profile query await for $user_id";
-         delete $self->{awaiting_query_profile}{$user_id};
-      });
-}
-
-sub on_request_federation_v1_query_profile
-{
-   my $self = shift;
-   my ( $req ) = @_;
-
-   my $user_id = $req->query_param( "user_id" );
-
-   if( my $f = delete $self->{awaiting_query_profile}{$user_id} ) {
-      $f->done( $req );
-      Future->done;
-   }
-   else {
-      Future->done( response => HTTP::Response->new(
-         404, "Not found", [ Content_length => 0 ], "",
-      ) );
-   }
-}
+__PACKAGE__->mk_await_request_pair(
+   query_profile => [ 'user_id' ],
+);
 
 sub on_request_federation_v1_send
 {
