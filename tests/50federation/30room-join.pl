@@ -5,7 +5,7 @@ sub make_auth_events
    [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
 }
 
-multi_test "Outbound federation can send room-join requests",
+test "Outbound federation can send room-join requests",
    requires => [ local_user_preparer(), qw( inbound_server outbound_client )],
 
    do => sub {
@@ -131,7 +131,7 @@ multi_test "Outbound federation can send room-join requests",
       )
    };
 
-multi_test "Inbound federation can receive room-join requests",
+test "Inbound federation can receive room-join requests",
    requires => [qw( outbound_client inbound_server first_home_server ),
                  room_preparer( requires_users => [ local_user_preparer() ] ) ],
 
