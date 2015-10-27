@@ -69,6 +69,8 @@ multi_test "Outbound federation can send room-join requests",
          prev_events      => [],
          prev_state       => [],
          room_id          => $room_id,
+         sender           => $user->user_id,
+         state_key        => $user->user_id,
       );
 
       Future->needs_all(
@@ -78,11 +80,7 @@ multi_test "Outbound federation can send room-join requests",
             my ( $req, $room_id, $user_id ) = @_;
 
             $req->respond_json( {
-               event => {
-                  %join_protoevent,
-                  sender    => $user_id,
-                  state_key => $user_id,
-               },
+               event => \%join_protoevent,
             } );
 
             Future->done;
