@@ -1,23 +1,5 @@
 use List::UtilsBy qw( partition_by );
 
-local *SyTest::Federation::Server::on_request_federation_v1_query_directory = sub {
-   my $self = shift;
-   my ( $req ) = @_;
-
-   my $server_name = $self->server_name;
-
-   my $room_alias = $req->query_param( "room_alias" );
-   # Just give any room alias a room ID of the same string
-   ( my $room_id = $room_alias ) =~ s/^#/!/;
-
-   Future->done( json => $self->signed_data( {
-      room_id => $room_id,
-      servers => [
-         $server_name,
-      ]
-   } ) );
-};
-
 sub make_auth_events
 {
    [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
@@ -98,15 +80,31 @@ local *SyTest::Federation::Server::on_request_federation_v1_send_join = sub {
 };
 
 multi_test "Outbound federation can send room-join requests",
-   requires => [ local_user_preparer(), qw( local_server_name inbound_server outbound_client )],
+   requires => [ local_user_preparer(), qw( inbound_server outbound_client )],
 
    do => sub {
-      my ( $user, $local_server_name, $inbound_server, $outbound_client ) = @_;
+      my ( $user, $inbound_server, $outbound_client ) = @_;
+      my $local_server_name = $inbound_server->server_name;
 
       # We'll have to jump through the extra hoop of using the directory
       # service first, because we can't join a remote room by room ID alone
 
       my $room_alias = "#50fed-room-alias:$local_server_name";
+
+      require_stub $inbound_server->await_query_directory( $room_alias )
+         ->on_done( sub {
+            my ( $req ) = @_;
+
+            # Just give any room alias a room ID of the same string
+            ( my $room_id = $room_alias ) =~ s/^#/!/;
+
+            $req->respond_json( {
+               room_id => $room_id,
+               servers => [
+                  $local_server_name,
+               ]
+            } );
+         });
 
       Future->needs_all(
          # Await PDU?
