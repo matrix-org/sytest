@@ -268,13 +268,13 @@ sub mk_await_request_pair
 {
    my $class = shift;
    my ( $shortname, $paramnames ) = @_;
+   my @paramnames = @$paramnames;
 
-   my $n_params = scalar @$paramnames;
    my $okey = "awaiting_$shortname";
 
    my $awaitfunc = sub {
       my $self = shift;
-      my @paramvalues = splice @_, 0, $n_params;
+      my @paramvalues = splice @_, 0, scalar @paramnames;
 
       my $ikey = join "\0", @paramvalues;
 
@@ -290,10 +290,23 @@ sub mk_await_request_pair
 
    my $on_requestfunc = sub {
       my $self = shift;
-      my ( $req ) = @_;
+      my ( $req, @pathvalues ) = @_;
 
       my @paramvalues;
-      push @paramvalues, $req->query_param( $_ ) for @$paramnames;
+      # :name is the next path component, ?name is a request param
+      foreach my $name ( @paramnames ) {
+         if( $name =~ m/^:/ ) {
+            push @paramvalues, shift @pathvalues;
+            next;
+         }
+
+         if( $name =~ m/^\?(.*)$/ ) {
+            push @paramvalues, $req->query_param( $1 );
+            next;
+         }
+
+         die "Unsure what to do with paramname $name\n";
+      }
 
       my $ikey = join "\0", @paramvalues;
 
@@ -314,11 +327,11 @@ sub mk_await_request_pair
 }
 
 __PACKAGE__->mk_await_request_pair(
-   query_directory => [ 'room_alias' ],
+   query_directory => [qw( ?room_alias )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   query_profile => [ 'user_id' ],
+   query_profile => [qw( ?user_id )],
 );
 
 sub on_request_federation_v1_send
