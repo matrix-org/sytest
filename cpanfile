@@ -1,5 +1,6 @@
 # vim:ft=perl
 
+requires 'Class::Method::Modifiers'
 requires 'Data::Dump';
 requires 'Digest::SHA';
 requires 'File::Basename';

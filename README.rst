@@ -84,6 +84,12 @@ with ``--synapse-directory``::
 
     ./run-tests.pl --synapse-directory /home/synapse/synapse
 
+If it is necessary to run the synapse server with a particular python
+interpreter (for example, to run it within a virtualenv), this can be done
+using ``--python``::
+
+    ./run-tests.pl --python ../synapse/env/bin/python
+
 To obtain greater visibility on why a particular test is failing, two
 additional options can be passed to print extra information. The
 ``--client-log`` flag (shortened to ``-C``) will print HTTP requests made and
