@@ -34,9 +34,34 @@ test "Can sync a joined room",
          my $room = $body->{rooms}{joined}{$room_id};
          (!defined $room) or die "Unchanged rooms shouldn't be in the sync response";
 
-         # do another sync, with full_state
+         Future->done(1)
+      })
+   };
+
+
+test "Full state sync includes joined rooms",
+   requires => [qw( first_api_client can_sync )],
+
+   check => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $filter_id, $room_id );
+
+      my $filter = { room => { timeline => { limit => 10 } } };
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
+         ( $user, $filter ) = @_;
+
+         matrix_create_room( $user )
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user, filter => $filter_id )
+      })->then( sub {
+         my ( $body ) = @_;
+
          matrix_sync( $user, filter => $filter_id, since => $body->{next_batch},
-                      full_state => 'true' );
+             full_state => 'true');
       })->then( sub {
          my ( $body ) = @_;
 
