@@ -90,13 +90,11 @@ multi_test "Outbound federation can send room-join requests",
       # service first, because we can't join a remote room by room ID alone
 
       my $room_alias = "#50fed-room-alias:$local_server_name";
+      my $room_id    = "!50fed-room-alias:$local_server_name";
 
       require_stub $inbound_server->await_query_directory( $room_alias )
          ->on_done( sub {
             my ( $req ) = @_;
-
-            # Just give any room alias a room ID of the same string
-            ( my $room_id = $room_alias ) =~ s/^#/!/;
 
             $req->respond_json( {
                room_id => $room_id,
@@ -119,6 +117,9 @@ multi_test "Outbound federation can send room-join requests",
             log_if_fail "Join response", $body;
 
             require_json_keys( $body, qw( room_id ));
+
+            $body->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
 
             Future->done(1);
          }),
