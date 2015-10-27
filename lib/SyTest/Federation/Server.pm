@@ -334,6 +334,14 @@ __PACKAGE__->mk_await_request_pair(
    query_profile => [qw( ?user_id )],
 );
 
+__PACKAGE__->mk_await_request_pair(
+   make_join => [qw( :room_id :user_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   send_join => [qw( :room_id )],
+);
+
 sub on_request_federation_v1_send
 {
    my $self = shift;

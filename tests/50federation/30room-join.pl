@@ -5,80 +5,6 @@ sub make_auth_events
    [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
 }
 
-local *SyTest::Federation::Server::on_request_federation_v1_make_join = sub {
-   my $self = shift;
-   my ( $req, $room_id, $user_id ) = @_;
-
-   my $creator = '@50fed:' . $self->server_name;
-
-   my $create_event = $self->create_event(
-      type => "m.room.create",
-
-      auth_events => [],
-      prev_events => [],
-      prev_state  => [],
-      content     => { creator => $creator },
-      depth       => 1,
-      room_id     => $room_id,
-      sender      => $creator,
-      state_key   => "",
-   );
-
-   my $joinrules_event = $self->create_event(
-      type => "m.room.join_rules",
-
-      auth_events => make_auth_events( $create_event ),
-      prev_events => make_auth_events( $create_event ),
-      prev_state  => [],
-      content     => { join_rule => "public" },
-      depth       => 2,
-      room_id     => $room_id,
-      sender      => $creator,
-      state_key   => "",
-   );
-
-   my %event = (
-      auth_events      => make_auth_events( $create_event, $joinrules_event ),
-      content          => { membership => "join" },
-      depth            => 1,
-      event_id         => $self->next_event_id,
-      origin           => $self->server_name,
-      origin_server_ts => $self->time_ms,
-      prev_events      => [],
-      prev_state       => [],
-      room_id          => $room_id,
-      sender           => $user_id,
-      state_key        => $user_id,
-      type             => "m.room.member",
-   );
-
-   Future->done( json => {
-      event => \%event,
-   } );
-};
-
-local *SyTest::Federation::Server::on_request_federation_v1_send_join = sub {
-   my $self = shift;
-   my ( $req, $room_id, $event_id ) = @_;
-
-   $req->method eq "PUT" or
-      die "Expected send_join method to be PUT";
-
-   my $event = $req->body_from_json;
-   log_if_fail "send_join event", $event;
-
-   my @auth_chain = map { $self->get_event( $_->[0] ) } @{ $event->{auth_events} };
-   my %state = ();
-
-   return Future->done( json =>
-      # TODO(paul): This workaround is for SYN-490
-      [ 200, {
-         auth_chain => \@auth_chain,
-         state      => \%state,
-      } ]
-   );
-};
-
 multi_test "Outbound federation can send room-join requests",
    requires => [ local_user_preparer(), qw( inbound_server outbound_client )],
 
@@ -91,6 +17,7 @@ multi_test "Outbound federation can send room-join requests",
 
       my $room_alias = "#50fed-room-alias:$local_server_name";
       my $room_id    = "!50fed-room-alias:$local_server_name";
+      my $creator    = '@50fed:' . $local_server_name;
 
       require_stub $inbound_server->await_query_directory( $room_alias )
          ->on_done( sub {
@@ -104,8 +31,88 @@ multi_test "Outbound federation can send room-join requests",
             } );
          });
 
+      my $create_event = $inbound_server->create_event(
+         type => "m.room.create",
+
+         auth_events => [],
+         prev_events => [],
+         prev_state  => [],
+         content     => { creator => $creator },
+         depth       => 1,
+         room_id     => $room_id,
+         sender      => $creator,
+         state_key   => "",
+      );
+
+      my $joinrules_event = $inbound_server->create_event(
+         type => "m.room.join_rules",
+
+         auth_events => make_auth_events( $create_event ),
+         prev_events => make_auth_events( $create_event ),
+         prev_state  => [],
+         content     => { join_rule => "public" },
+         depth       => 2,
+         room_id     => $room_id,
+         sender      => $creator,
+         state_key   => "",
+      );
+
+      my %join_protoevent = (
+         type => "m.room.member",
+
+         auth_events      => make_auth_events( $create_event, $joinrules_event ),
+         content          => { membership => "join" },
+         depth            => 1,
+         event_id         => my $join_event_id = $inbound_server->next_event_id,
+         origin           => $inbound_server->server_name,
+         origin_server_ts => $inbound_server->time_ms,
+         prev_events      => [],
+         prev_state       => [],
+         room_id          => $room_id,
+      );
+
       Future->needs_all(
          # Await PDU?
+
+         $inbound_server->await_make_join( $room_id, $user->user_id )->then( sub {
+            my ( $req, $room_id, $user_id ) = @_;
+
+            $req->respond_json( {
+               event => {
+                  %join_protoevent,
+                  sender    => $user_id,
+                  state_key => $user_id,
+               },
+            } );
+
+            Future->done;
+         }),
+
+         $inbound_server->await_send_join( $room_id, $join_event_id )->then( sub {
+            my ( $req, $room_id, $event_id ) = @_;
+
+            $req->method eq "PUT" or
+               die "Expected send_join method to be PUT";
+
+            my $event = $req->body_from_json;
+            log_if_fail "send_join event", $event;
+
+            my @auth_chain = map {
+               $inbound_server->get_event( $_->[0] )
+            } @{ $event->{auth_events} };
+
+            my %state = ();
+
+            $req->respond_json(
+               # TODO(paul): This workaround is for SYN-490
+               [ 200, {
+                  auth_chain => \@auth_chain,
+                  state      => \%state,
+               } ]
+            );
+
+            Future->done;
+         }),
 
          do_request_json_for( $user,
             method => "POST",
