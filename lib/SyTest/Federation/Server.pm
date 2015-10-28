@@ -3,7 +3,9 @@ package SyTest::Federation::Server;
 use strict;
 use warnings;
 
-use base qw( SyTest::Federation::_Base Net::Async::HTTP::Server );
+use base qw( SyTest::Federation::_Base Net::Async::HTTP::Server
+   SyTest::Federation::AuthChecks
+);
 
 no if $] >= 5.017011, warnings => 'experimental::smartmatch';
 use feature qw( switch );

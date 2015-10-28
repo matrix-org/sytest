@@ -1,4 +1,4 @@
-use List::UtilsBy qw( partition_by );
+use List::UtilsBy qw( partition_by extract_by );
 
 sub make_auth_events
 {
@@ -254,11 +254,23 @@ test "Inbound federation can receive room-join requests",
             # TODO: Check signatures of every auth event
          }
 
-         # TODO: Perform some linkage checking between the auth events
-         #
-         # Require:
-         #   m.room.create
-         #   m.room.join_rules
+         # Annoyingly, the "auth chain" isn't specified to arrive in any
+         # particular order. We'll have to keep walking it incrementally.
+
+         my %accepted_authevents;
+         while( @auth_chain ) {
+            my @accepted = extract_by {
+               $inbound_server->auth_check_event( $_, \%accepted_authevents )
+            } @auth_chain;
+
+            unless( @accepted ) {
+               log_if_fail "Unacceptable auth chain", \@auth_chain;
+
+               die "Unable to find any more acceptable auth_chain events";
+            }
+
+            $accepted_authevents{$_->{event_id}} = $_ for @accepted;
+         }
 
          require_json_nonempty_list( $response->{state} );
          my %state = partition_by { $_->{type} } @{ $response->{state} };
