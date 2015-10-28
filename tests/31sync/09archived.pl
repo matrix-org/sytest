@@ -114,6 +114,42 @@ test "Newly left rooms appear in the archived section of gapped sync",
    };
 
 
+test "Left rooms appear in the archived section of full state sync",
+   requires => [qw( first_api_client can_sync )],
+
+   check => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $filter_id, $room_id, $next );
+
+      matrix_register_user_with_filter( $http, {} )->then( sub {
+         ( $user, $filter_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         $next = $body->{next_batch};
+
+         matrix_leave_room( $user, $room_id );
+      })->then( sub {
+         matrix_sync( $user, filter => $filter_id,
+             since => $next, full_state => 'true');
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{archived}{$room_id};
+         require_json_keys( $room, qw( event_map timeline state ));
+
+         Future->done(1);
+      });
+   };
+
+
 test "Archived rooms only contain history from before the user left",
    requires => [qw( first_api_client can_sync )],
 

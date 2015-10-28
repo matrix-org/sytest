@@ -39,6 +39,46 @@ test "Can sync a joined room",
    };
 
 
+test "Full state sync includes joined rooms",
+   requires => [qw( first_api_client can_sync )],
+
+   check => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $filter_id, $room_id );
+
+      my $filter = { room => { timeline => { limit => 10 } } };
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
+         ( $user, $filter ) = @_;
+
+         matrix_create_room( $user )
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user, filter => $filter_id )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         matrix_sync( $user, filter => $filter_id, since => $body->{next_batch},
+             full_state => 'true');
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{joined}{$room_id};
+
+         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         require_json_keys( $room->{state}, qw( events ));
+         require_json_keys( $room->{ephemeral}, qw( events ));
+         require_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
+         require_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
+
+         Future->done(1)
+      })
+   };
+
+
 test "Newly joined room is included in an incremental sync",
    requires => [qw( first_api_client can_sync )],
 
