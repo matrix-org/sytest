@@ -199,10 +199,6 @@ test "Inbound federation can receive room-join requests",
             origin_server_ts => $inbound_server->time_ms,
          );
 
-         # TODO: hashes
-
-         # TODO: should now sign the event
-
          $outbound_client->do_request_json(
             method => "PUT",
             uri    => "/send_join/$room_id/$event{event_id}",
