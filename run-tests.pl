@@ -341,6 +341,32 @@ my $skipped_count = 0;
 
 our $SKIPPING;
 
+our $MORE_STUBS;
+
+sub maybe_stub
+{
+   my ( $f ) = @_;
+   my $failmsg = SyTest::CarpByFile::shortmess( "Stub" );
+
+   $MORE_STUBS or
+      croak "Cannot declare a stub outside of a test";
+
+   push @$MORE_STUBS, $f->on_fail( sub {
+      my ( $failure ) = @_;
+      die "$failmsg $failure";
+   });
+}
+
+sub require_stub
+{
+   my ( $f ) = @_;
+   my $failmsg = SyTest::CarpByFile::shortmess( "Required stub never happened" );
+
+   maybe_stub $f->on_cancel( sub {
+      die $failmsg;
+   });
+}
+
 sub _run_test
 {
    my ( $t, %params ) = @_;
@@ -352,6 +378,7 @@ sub _run_test
    undef @log_if_fail_lines;
 
    local @PROVIDES = @{ $params{provides} || [] };
+   local $MORE_STUBS = [];
 
    # If the test doesn't provide anything, and we're in skipping mode, just stop right now
    if( $SKIPPING and !@PROVIDES ) {
@@ -436,6 +463,10 @@ sub _run_test
          $loop->delay_future( after => $params{timeout} // 10 )
             ->then_fail( "Timed out waiting for test" )
       )->get;
+
+      foreach my $stub_f ( @$MORE_STUBS ) {
+         $stub_f->cancel;
+      }
 
       1;
    };

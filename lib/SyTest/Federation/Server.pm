@@ -99,6 +99,8 @@ sub on_request
             ], $body
          ) );
       })->on_done( sub {
+         return unless @_;
+
          for ( shift ) {
             when( "response" ) {
                my ( $response ) = @_;
@@ -224,6 +226,63 @@ sub on_request_key_v2_server
       old_verify_keys => {},
    } ) );
 }
+
+sub mk_await_request_pair
+{
+   my $class = shift;
+   my ( $shortname, $paramnames ) = @_;
+
+   my $n_params = scalar @$paramnames;
+   my $okey = "awaiting_$shortname";
+
+   my $awaitfunc = sub {
+      my $self = shift;
+      my @paramvalues = splice @_, 0, $n_params;
+
+      my $ikey = join "\0", @paramvalues;
+
+      croak "Cannot await another $shortname to @paramvalues"
+         if $self->{$okey}{$ikey};
+
+      return $self->{$okey}{$ikey} = Future->new
+         ->on_cancel( sub {
+            print STDERR "Cancelling unused $shortname await for @paramvalues";
+            delete $self->{$okey}{$ikey};
+         });
+   };
+
+   my $on_requestfunc = sub {
+      my $self = shift;
+      my ( $req ) = @_;
+
+      my @paramvalues;
+      push @paramvalues, $req->query_param( $_ ) for @$paramnames;
+
+      my $ikey = join "\0", @paramvalues;
+
+      if( my $f = delete $self->{$okey}{$ikey} ) {
+         $f->done( $req, @paramvalues );
+         Future->done;
+      }
+      else {
+         Future->done( response => HTTP::Response->new(
+            404, "Not found", [ Content_length => 0 ], "",
+         ) );
+      }
+   };
+
+   no strict 'refs';
+   *{"${class}::await_$shortname"} = $awaitfunc;
+   *{"${class}::on_request_federation_v1_$shortname"} = $on_requestfunc;
+}
+
+__PACKAGE__->mk_await_request_pair(
+   query_directory => [ 'room_alias' ],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   query_profile => [ 'user_id' ],
+);
 
 sub on_request_federation_v1_send
 {

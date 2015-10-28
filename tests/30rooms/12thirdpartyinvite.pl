@@ -23,9 +23,7 @@ test "Can invite existing 3pid",
       start_id_server()->then(sub {
          my ( $id_server ) = @_;
 
-         $id_server->bind_identity( undef, "email", $invitee_email, $invitee );
-
-         Future->needs_all(
+         $id_server->bind_identity( undef, "email", $invitee_email, $invitee )->then(sub {
             matrix_create_and_join_room( [ $inviter ], visibility => "private" )
             ->then( sub {
                ( $room_id ) = @_;
@@ -51,8 +49,8 @@ test "Can invite existing 3pid",
                   $body->{membership} eq "invite" or
                      die "Expected invited user membership to be 'invite'";
                });
-            }),
-         );
+            });
+         });
       });
    };
 
