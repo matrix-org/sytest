@@ -300,7 +300,6 @@ test "A full_state incremental update returns only recent timeline",
    };
 
 
-
 test "A prev_batch token can be used in the v1 messages API",
    requires => [qw( first_api_client can_sync )],
 

@@ -272,8 +272,6 @@ test "A full_state incremental update returns all state",
    };
 
 
-
-
 test "When user joins a room the state is included in the next sync",
    requires => [qw( first_api_client can_sync )],
 
