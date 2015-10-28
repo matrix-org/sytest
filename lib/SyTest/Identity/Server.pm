@@ -6,6 +6,7 @@ use warnings;
 use base qw( Net::Async::HTTP::Server );
 
 use Crypt::NaCl::Sodium;
+use Data::GUID;
 use List::Util qw( any );
 use Protocol::Matrix qw( encode_base64_unpadded sign_json );
 use SyTest::HTTPServer::Request;
@@ -20,8 +21,11 @@ sub _init
 
    $self->rotate_keys;
 
+   $self->{http_client} = SyTest::HTTPClient->new;
+   $self->add_child( $self->{http_client} );
+
    $self->{bindings} = {};
-   $self->{expected_tokens} = {};
+   $self->{invites} = {};
 
    # Use 'on_request' as a configured parameter rather than a subclass method
    # so that the '$CLIENT_LOG' logic in run-tests.pl can properly put
@@ -41,7 +45,6 @@ sub rotate_keys
    $self->{keys} = {
       "ed25519:0" => encode_base64_unpadded( $self->{public_key} ),
    };
-
 }
 
 sub on_request
@@ -53,10 +56,6 @@ sub on_request
    my %resp;
 
    if( $path eq "/_matrix/identity/api/v1/pubkey/isvalid" ) {
-      my $user_agent = $req->header( "User-Agent" );
-      if( defined $self->{isvalid_needs_useragent} and $user_agent !~ m/\Q$self->{isvalid_needs_useragent}/ ) {
-         die "Wrong useragent made /isvalid request";
-      }
       my $is_valid = any { $_ eq $req->query_param("public_key") } values %{ $self->{keys} };
       $resp{valid} = $is_valid ? JSON::true : JSON::false;
       $req->respond_json( \%resp );
@@ -75,17 +74,15 @@ sub on_request
          $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
          return;
       }
-      my $mxid = $self->{bindings}{$address};
+      my $mxid = $self->{bindings}{ join "\0", $medium, $address };
       if ( "email" eq $medium and defined $mxid ) {
          $resp{medium} = $medium;
          $resp{address} = $address;
          $resp{mxid} = $mxid;
 
-         my $sock = $self->read_handle;
-         my $name = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
          sign_json( \%resp,
             secret_key => $self->{private_key},
-            origin => $name,
+            origin => $self->name,
             key_id => "ed25519:0",
          );
       }
@@ -101,11 +98,15 @@ sub on_request
          $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
          return;
       }
-      my $token = $self->{expected_tokens}{ join "\0", $medium, $address, $sender, $room_id };
-      unless( defined $token ) {
-         $req->respond( HTTP::Response->new( 500, "Internal Server Error", [ Content_Length => 0 ] ) );
-         return;
-      }
+      my $token = Data::GUID->new->as_string;
+      my $key = join "\0", $medium, $address;
+      push @{ $self->{invites}->{$key} }, {
+         address => $address,
+         medium => $medium,
+         room_id => $room_id,
+         sender => $sender,
+         token => $token,
+      };
       $resp{token} = $token;
       $resp{public_key} = $self->{keys}{"ed25519:0"};
       $req->respond_json( \%resp );
@@ -115,11 +116,57 @@ sub on_request
    }
 }
 
-sub stub_token {
+sub bind_identity {
    my $self = shift;
-   my ( $token, $medium, $invitee_email, $inviter_mxid, $room_id ) = @_;
+   my ( $hs_uribase, $medium, $address, $user, $before_resp ) = @_;
 
-   $self->{expected_tokens}{ join "\0", $medium, $invitee_email, $inviter_mxid, $room_id } = $token;
+   $self->{bindings}{ join "\0", $medium, $address } = $user->user_id;
+
+   if( !defined $hs_uribase ) {
+      return Future->done( 1 );
+   }
+
+   my %resp;
+   $resp{address} = $address;
+   $resp{medium} = $medium;
+   $resp{mxid} = $user->user_id;
+
+   my $invites = $self->{invites}->{ join "\0", $medium, $address };
+   if( defined $invites ) {
+      foreach my $invite ( @$invites ) {
+         $invite->{mxid} = $user->user_id;
+         $invite->{signed} = {
+            mxid => $user->user_id,
+            token => $invite->{token},
+         };
+         sign_json( $invite->{signed},
+            secret_key => $self->{private_key},
+            origin => $self->name,
+            key_id => "ed25519:0",
+         );
+      }
+      $resp{invites} = $invites;
+   }
+
+   sign_json( \%resp,
+      secret_key => $self->{private_key},
+      origin => $self->name,
+      key_id => "ed25519:0",
+   );
+
+   $before_resp->() if defined $before_resp;
+
+   $self->{http_client}->do_request_json(
+      uri => URI->new( "${hs_uribase}/_matrix/federation/v1/3pid/onbind" ),
+      method => "POST",
+      content => \%resp,
+   );
+}
+
+sub name {
+   my $self = shift;
+   my $sock = $self->read_handle;
+   sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
 }
 
 1;
