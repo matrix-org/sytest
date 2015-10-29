@@ -198,6 +198,8 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
 
             require_json_keys( $body, qw( chunk ) );
 
+            log_if_fail "Chunk", $body->{chunk};
+
             $body->{chunk}[1]{content}{body} eq "M2. B's message before A left"
                 or die "Received message that happened after leaving the room";
 
