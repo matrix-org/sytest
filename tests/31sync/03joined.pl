@@ -135,10 +135,8 @@ test "Newly joined room has correct timeline in incremental sync",
 
       my $filter = {
          room => {
-            timeline => {
-               types => ["m.room.message"],
-               limit => 10,
-            }
+            timeline => { types => [ "m.room.message" ], limit => 10 },
+            state => { types => [] },
          }
       };
 
@@ -168,15 +166,17 @@ test "Newly joined room has correct timeline in incremental sync",
       })->then( sub {
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b );
+         matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
       })->then( sub {
          my ( $body ) = @_;
          my $room = $body->{rooms}{joined}{$room_id};
          my $timeline = $room->{timeline};
 
          if( @{ $timeline->{events} } == 6 ) {
-            $timeline->{limited} == JSON::false
-               or die "Timeline has all the events so shouldn't be limited";
+            # We could assert that the timeline wasn't limited in this case
+            # But clients will still eventually get the correct timeline
+            # since they will simply make a request for scrollback that returns
+            # no data.
          }
          else {
             $timeline->{limited} == JSON::true
