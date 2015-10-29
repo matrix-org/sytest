@@ -445,11 +445,12 @@ test "Timeline state include the previous content",
          my $event_id = $room->{timeline}{events}[0];
          my $event = $room->{event_map}{$event_id};
 
-         require_json_keys( $event, qw( type content prev_content ) );
+         require_json_keys( $event, qw( type content unsigned ) );
 
          $event->{type} eq "a.madeup.test.state" or die "Unexpected type";
          $event->{content}{my_key} == 2 or die "Unexpected content";
-         $event->{prev_content}{my_key} == 1 or die "Unexpected prev_content";
+         $event->{unsigned}{prev_content}{my_key} == 1
+            or die "Unexpected prev_content";
 
          Future->done(1);
       });
