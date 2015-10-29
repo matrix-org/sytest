@@ -9,6 +9,9 @@ sub gen_expect_failure
 
       $f->then_with_f(
          sub {  # done
+            my ( undef, $response ) = @_;
+
+            log_if_fail "Response", $response;
             Future->fail( "Expected to receive an HTTP $name failure but it succeeded" )
          },
          http => sub {  # catch http
