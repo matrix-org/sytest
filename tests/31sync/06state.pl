@@ -399,3 +399,58 @@ test "When user joins a room the state is included in a gapped sync",
          Future->done(1);
       })
    };
+
+
+
+test "Timeline state include the previous content",
+   requires => [qw( first_api_client can_sync )],
+
+   check => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $filter_id, $room_id, $next_b );
+
+      my $filter = {
+         room => {
+            timeline  => { types => [ "a.madeup.test.state" ], limit => 1 },
+            state     => { types => [ "a.madeup.test.state" ] },
+            ephemeral => { types => [] },
+         },
+         presence => { types => [] },
+      };
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
+         ( $user, $filter_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_put_room_state( $user, $room_id,
+            type      => "a.madeup.test.state",
+            content   => { "my_key" => 1 },
+            state_key => "",
+         );
+      })->then( sub {
+         matrix_put_room_state( $user, $room_id,
+            type      => "a.madeup.test.state",
+            content   => { "my_key" => 2 },
+            state_key => "",
+         );
+      })->then( sub {
+         matrix_sync( $user, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         my $room = $body->{rooms}{joined}{$room_id};
+         my $event_id = $room->{timeline}{events}[0];
+         my $event = $room->{event_map}{$event_id};
+
+         require_json_keys( $event, qw( type content prev_content ) );
+
+         $event->{type} eq "a.madeup.test.state" or die "Unexpected type";
+         $event->{content}{my_key} == 2 or die "Unexpected content";
+         $event->{prev_content}{my_key} == 1 or die "Unexpected prev_content";
+
+         Future->done(1);
+      });
+   };
