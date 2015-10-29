@@ -117,7 +117,6 @@ test "Can remove tag",
 test "Can list tags for a room",
    requires => [qw( first_api_client can_add_tag can_remove_tag )],
 
-
    do => sub {
       my ( $http ) = @_;
 
@@ -148,5 +147,33 @@ test "Can list tags for a room",
          @{ $tags } == 0 or die "Expected no tags for the room";
 
          Future->done(1);
+      });
+   };
+
+
+test "Tags appear in the v1 /events stream",
+   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $room_id );
+
+      matrix_register_user( $http, undef )->then( sub {
+         ( $user ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_add_tag( $user, $room_id, "test_tag");
+      })->then( sub {
+         await_event_for( $user, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.tag"
+               and $event->{room_id} eq $room_id
+               and $event->{content}{tags}[0] eq "test_tag";
+            return 1;
+         });
       });
    };
