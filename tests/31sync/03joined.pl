@@ -136,7 +136,7 @@ test "Newly joined room has correct timeline in incremental sync",
       my $filter = {
          room => {
             timeline => { types => [ "m.room.message" ], limit => 10 },
-            state => { types => [] },
+            state    => { types => [] },
          }
       };
 
