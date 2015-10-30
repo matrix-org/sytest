@@ -125,6 +125,7 @@ test "Newly joined room is included in an incremental sync",
       })
    };
 
+
 test "Newly joined room has correct timeline in incremental sync",
    requires => [qw( first_api_client can_sync )],
 
@@ -141,25 +142,23 @@ test "Newly joined room has correct timeline in incremental sync",
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_register_user_with_filter( $http, $filter )
+            ->on_done( sub { ( $user_a, $filter_id_a ) = @_ } ),
+         matrix_register_user_with_filter( $http, $filter )
+            ->on_done( sub { ( $user_b, $filter_id_b ) = @_ } ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
-
-         matrix_create_room( $user_a );
+         matrix_create_room( $user_a )->on_done( sub { ( $room_id ) = @_ } );
       })->then( sub {
-         ( $room_id ) = @_;
-
          Future->needs_all( map {
             matrix_send_room_text_message( $user_a, $room_id, body => "test" );
          } 0 .. 3 );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b );
+         matrix_sync( $user_b, filter => $filter_id_b )->on_done( sub {
+            my ( $body ) = @_;
+
+            $next_b = $body->{next_batch};
+         });
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_b = $body->{next_batch};
-
          Future->needs_all( map {
             matrix_send_room_text_message( $user_a, $room_id, body => "test" );
          } 0 .. 3 );
