@@ -177,3 +177,41 @@ test "Tags appear in the v1 /events stream",
          });
       });
    };
+
+
+test "Tags appear in the v1 /initalSync",
+   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $room_id );
+
+      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
+         ( $user ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_add_tag( $user, $room_id, "test_tag");
+      })->then( sub {
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/api/v1/initialSync"
+        );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}[0];
+         require_json_keys( $room, qw( private_user_data ) );
+
+         my $tags = $room->{private_user_data}->[0];
+
+         $tags->{type} eq "m.tag" or die "Expected a m.tag event";
+         $tags->{content}{tags}[0] eq "test_tag" or die "Unexpected tag";
+         $tags->{room_id} eq "Expected to get a room_id in v1";
+
+         Future->done(1);
+      });
+   };
