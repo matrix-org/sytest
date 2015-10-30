@@ -171,11 +171,14 @@ test "Newly joined room has correct timeline in incremental sync",
          my $room = $body->{rooms}{joined}{$room_id};
          my $timeline = $room->{timeline};
 
+         map {
+            $room->{event_map}{$_}{type} eq "m.room.message"
+               or die "Only expected 'm.room.message' events";
+         } @{ $timeline->{events} };
+
          if( @{ $timeline->{events} } == 6 ) {
-            # We could assert that the timeline wasn't limited in this case
-            # But clients will still eventually get the correct timeline
-            # since they will simply make a request for scrollback that returns
-            # no data.
+            $timeline->{limited} == JSON::false
+               or die "Timeline doesn't have all the events so should be limited";
          }
          else {
             $timeline->{limited} == JSON::true
