@@ -225,7 +225,7 @@ test "Remote users may not join unfederated rooms",
       my ( $creator, $remote_user ) = @_;
 
       matrix_create_room( $creator,
-         room_alias_name => "unfederated",
+         room_alias_name  => "unfederated",
          creation_content => {
             "m.federate" => JSON::false,
          },
