@@ -216,3 +216,22 @@ test "New room members see first user's profile information in per-room initialS
          Future->done(1);
       });
    };
+
+test "Remote users may not join unfederated rooms",
+   requires => [ local_user_preparer(), remote_user_preparer(),
+                 qw( can_create_room_with_creation_content )],
+
+   check => sub {
+      my ( $creator, $remote_user ) = @_;
+
+      matrix_create_room( $creator,
+         room_alias_name => "unfederated",
+         creation_content => {
+            "m.federate" => JSON::false,
+         },
+      )->then( sub {
+         my ( undef, $room_alias ) = @_;
+
+         matrix_join_room( $remote_user, $room_alias )
+      })->main::expect_http_403;
+   };
