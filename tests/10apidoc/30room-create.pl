@@ -120,6 +120,8 @@ sub matrix_create_room
             ( room_alias_name => $opts{room_alias_name} ) : () ),
          ( defined $opts{invite} ?
             ( invite => $opts{invite} ) : () ),
+         ( defined $opts{creation_content} ?
+            ( creation_content => $opts{creation_content} ) : () ),
       }
    )->then( sub {
       my ( $body ) = @_;
