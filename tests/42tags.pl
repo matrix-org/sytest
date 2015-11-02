@@ -165,7 +165,7 @@ test "Tags appear in the v1 /events stream",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 });
+         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
          await_event_for( $user, sub {
             my ( $event ) = @_;
@@ -198,7 +198,7 @@ test "Tags appear in the v1 /initalSync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 });
+         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
          do_request_json_for( $user,
             method => "GET",
@@ -210,7 +210,7 @@ test "Tags appear in the v1 /initalSync",
          my $room = $body->{rooms}[0];
          require_json_keys( $room, qw( private_user_data ) );
 
-         my $tag_event = $room->{private_user_data}->[0];
+         my $tag_event = $room->{private_user_data}[0];
          log_if_fail "Tag Event:", $tag_event;
          $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
          not defined $tag_event->{room_id} or die "Unxpected room_id";
@@ -240,7 +240,7 @@ test "Tags appear in the v1 room initial sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 });
+         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
          do_request_json_for( $user,
             method => "GET",
@@ -252,7 +252,95 @@ test "Tags appear in the v1 room initial sync",
          my $room = $body;
          require_json_keys( $room, qw( private_user_data ) );
 
-         my $tag_event = $room->{private_user_data}->[0];
+         my $tag_event = $room->{private_user_data}[0];
+         log_if_fail "Tag Event:", $tag_event;
+         $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
+         not defined $tag_event->{room_id} or die "Unexpected room_id";
+
+         my %tags = %{ $tag_event->{content}{tags} };
+         keys %tags == 1 or die "Expected exactly one tag";
+         defined $tags{test_tag} or die "Unexpected tag";
+         $tags{test_tag}{order} == 1 or die "Expected order == 1";
+
+         Future->done(1);
+      });
+   };
+
+
+test "Tags appear in an initial v2 /sync",
+   requires => [qw( first_api_client can_add_tag can_remove_tag can_sync )],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $room_id, $filter_id );
+
+      my $filter = {};
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
+         ( $user, $filter_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
+      })->then( sub {
+         matrix_sync( $user, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{joined}{$room_id};
+         require_json_keys( $room, qw( private_user_data ) );
+
+         my $tag_event = $room->{private_user_data}{events}[0];
+         log_if_fail "Tag Event:", $tag_event;
+         $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
+         not defined $tag_event->{room_id} or die "Unexpected room_id";
+
+         my %tags = %{ $tag_event->{content}{tags} };
+         keys %tags == 1 or die "Expected exactly one tag";
+         defined $tags{test_tag} or die "Unexpected tag";
+         $tags{test_tag}{order} == 1 or die "Expected order == 1";
+
+         Future->done(1);
+      });
+   };
+
+
+test "Newly updated tags appear in an incremental v2 /sync",
+   requires => [qw( first_api_client can_add_tag can_remove_tag can_sync )],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $room_id, $filter_id, $next_batch );
+
+      my $filter = {};
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
+         ( $user, $filter_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user, $filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         $next_batch = $body->{next_batch};
+
+         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
+      })->then( sub {
+         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{joined}{$room_id};
+         require_json_keys( $room, qw( private_user_data ) );
+
+         my $tag_event = $room->{private_user_data}{events}[0];
          log_if_fail "Tag Event:", $tag_event;
          $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
          not defined $tag_event->{room_id} or die "Unexpected room_id";
