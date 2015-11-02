@@ -10,12 +10,12 @@ Add a tag to the room for the user.
 
 sub matrix_add_tag
 {
-   my ( $user, $room_id, $tag ) = @_;
+   my ( $user, $room_id, $tag, $content ) = @_;
 
    do_request_json_for( $user,
       method  => "PUT",
       uri     => "/v2_alpha/user/:user_id/rooms/$room_id/tags/$tag",
-      content => {}
+      content => $content
    );
 }
 
@@ -50,12 +50,11 @@ List the tags on the room for the user.
 
 sub matrix_list_tags
 {
-   my ( $user, $room_id ) = @_;
+   my ( $user, $room_id, $content) = @_;
 
    do_request_json_for( $user,
       method  => "GET",
       uri     => "/v2_alpha/user/:user_id/rooms/$room_id/tags",
-      content => {}
    )->then( sub {
       my ( $body ) = @_;
 
@@ -83,7 +82,7 @@ test "Can add tag",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_add_tag( $user, $room_id, "test_tag" );
+         matrix_add_tag( $user, $room_id, "test_tag", {} );
       })->on_done( sub {
          provide can_add_tag => 1
       });
@@ -129,14 +128,14 @@ test "Can list tags for a room",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_add_tag( $user, $room_id, "test_tag" );
+         matrix_add_tag( $user, $room_id, "test_tag", {} );
       })->then( sub {
          matrix_list_tags( $user, $room_id );
       })->then( sub {
          my ( $tags ) = @_;
 
-         @{ $tags } == 1 or die "Expected one tag for the room";
-         $tags->[0] eq "test_tag" or die "Unexpected tag";
+         keys %{ $tags } == 1 or die "Expected one tag for the room";
+         defined $tags->{test_tag} or die "Unexpected tag";
 
          matrix_remove_tag( $user, $room_id, "test_tag" );
       })->then( sub {
@@ -144,7 +143,7 @@ test "Can list tags for a room",
       })->then( sub {
          my ( $tags ) = @_;
 
-         @{ $tags } == 0 or die "Expected no tags for the room";
+         keys %{ $tags } == 0 or die "Expected no tags for the room";
 
          Future->done(1);
       });
@@ -166,13 +165,18 @@ test "Tags appear in the v1 /events stream",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_add_tag( $user, $room_id, "test_tag");
+         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 });
       })->then( sub {
          await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.tag"
-               and $event->{room_id} eq $room_id
-               and $event->{content}{tags}[0] eq "test_tag";
+               and $event->{room_id} eq $room_id;
+
+            my %tags = %{ $event->{content}{tags} };
+            keys %tags == 1 or die "Expected exactly one tag";
+            defined $tags{test_tag} or die "Unexpected tag";
+            $tags{test_tag}{order} == 1 or die "Expected order == 1";
+
             return 1;
          });
       });
@@ -194,7 +198,7 @@ test "Tags appear in the v1 /initalSync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_add_tag( $user, $room_id, "test_tag");
+         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 });
       })->then( sub {
          do_request_json_for( $user,
             method => "GET",
@@ -206,15 +210,20 @@ test "Tags appear in the v1 /initalSync",
          my $room = $body->{rooms}[0];
          require_json_keys( $room, qw( private_user_data ) );
 
-         my $tags = $room->{private_user_data}->[0];
+         my $tag_event = $room->{private_user_data}->[0];
+         log_if_fail "Tag Event:", $tag_event;
+         $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
+         not defined $tag_event->{room_id} or die "Unxpected room_id";
 
-         $tags->{type} eq "m.tag" or die "Expected a m.tag event";
-         $tags->{content}{tags}[0] eq "test_tag" or die "Unexpected tag";
-         $tags->{room_id} eq "Expected to get a room_id in v1";
+         my %tags = %{ $tag_event->{content}{tags} };
+         keys %tags == 1 or die "Expected exactly one tag";
+         defined $tags{test_tag} or die "Unexpected tag";
+         $tags{test_tag}{order} == 1 or die "Expected order == 1";
 
          Future->done(1);
       });
    };
+
 
 test "Tags appear in the v1 room initial sync",
    requires => [qw( first_api_client can_add_tag can_remove_tag )],
@@ -231,7 +240,7 @@ test "Tags appear in the v1 room initial sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_add_tag( $user, $room_id, "test_tag");
+         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 });
       })->then( sub {
          do_request_json_for( $user,
             method => "GET",
@@ -243,11 +252,15 @@ test "Tags appear in the v1 room initial sync",
          my $room = $body;
          require_json_keys( $room, qw( private_user_data ) );
 
-         my $tags = $room->{private_user_data}->[0];
+         my $tag_event = $room->{private_user_data}->[0];
+         log_if_fail "Tag Event:", $tag_event;
+         $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
+         not defined $tag_event->{room_id} or die "Unexpected room_id";
 
-         $tags->{type} eq "m.tag" or die "Expected a m.tag event";
-         $tags->{content}{tags}[0] eq "test_tag" or die "Unexpected tag";
-         $tags->{room_id} eq "Expected to get a room_id in v1";
+         my %tags = %{ $tag_event->{content}{tags} };
+         keys %tags == 1 or die "Expected exactly one tag";
+         defined $tags{test_tag} or die "Unexpected tag";
+         $tags{test_tag}{order} == 1 or die "Expected order == 1";
 
          Future->done(1);
       });
