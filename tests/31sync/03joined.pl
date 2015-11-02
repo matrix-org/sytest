@@ -171,6 +171,8 @@ test "Newly joined room has correct timeline in incremental sync",
          my $room = $body->{rooms}{joined}{$room_id};
          my $timeline = $room->{timeline};
 
+         log_if_fail "Timeline", $timeline;
+
          map {
             $room->{event_map}{$_}{type} eq "m.room.message"
                or die "Only expected 'm.room.message' events";
