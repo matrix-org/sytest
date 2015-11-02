@@ -82,8 +82,11 @@ sub register_anonymous_user
 
    $http->do_request_json(
       method  => "POST",
-      uri     => "/v2_alpha/register-guest",
+      uri     => "/v2_alpha/register?kind=guest",
       content => {},
+      params => {
+         kind => "guest",
+      },
    )->then( sub {
       my ( $body ) = @_;
       my $access_token = $body->{access_token};
