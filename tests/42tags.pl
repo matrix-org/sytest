@@ -176,6 +176,8 @@ test "Tags appear in the v1 /events stream",
             return unless $event->{type} eq "m.tag"
                and $event->{room_id} eq $room_id;
 
+            log_if_fail "Tag event", $event;
+
             my %tags = %{ $event->{content}{tags} };
             keys %tags == 1 or die "Expected exactly one tag";
             defined $tags{test_tag} or die "Unexpected tag";
