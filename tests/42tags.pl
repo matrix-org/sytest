@@ -224,7 +224,7 @@ test "Tags appear in the v1 /initalSync",
          defined $tags{test_tag} or die "Unexpected tag";
          $tags{test_tag}{order} == 1 or die "Expected order == 1";
 
-         Future->done(1);
+         Future->done( 1 );
       });
    };
 
@@ -266,7 +266,7 @@ test "Tags appear in the v1 room initial sync",
          defined $tags{test_tag} or die "Unexpected tag";
          $tags{test_tag}{order} == 1 or die "Expected order == 1";
 
-         Future->done(1);
+         Future->done( 1 );
       });
    };
 
@@ -307,7 +307,7 @@ test "Tags appear in an initial v2 /sync",
          defined $tags{test_tag} or die "Unexpected tag";
          $tags{test_tag}{order} == 1 or die "Expected order == 1";
 
-         Future->done(1);
+         Future->done( 1 );
       });
    };
 
@@ -354,6 +354,6 @@ test "Newly updated tags appear in an incremental v2 /sync",
          defined $tags{test_tag} or die "Unexpected tag";
          $tags{test_tag}{order} == 1 or die "Expected order == 1";
 
-         Future->done(1);
+         Future->done( 1 );
       });
    };
