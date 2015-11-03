@@ -154,6 +154,36 @@ test "Can list tags for a room",
    };
 
 
+=head2 register_user_and_create_room_and_add_tag
+
+   my ( $user, $room_id ) = register_user_and_create_room_and_add_tag( $http,
+      with_events => 0
+   )->get;
+
+Register a new user, create a room and add a tag called "test_tag" for that
+user to the room with a tag content of {"order": 1}.
+
+=cut
+
+sub register_user_and_create_room_and_add_tag
+{
+   my ( $http, %params ) = @_;
+
+   my ( $user, $room_id );
+
+   matrix_register_user( $http, undef, %params )->then( sub {
+      ( $user ) = @_;
+         matrix_create_room( $user );
+   })->then( sub {
+      ( $room_id ) = @_;
+
+      matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
+   })->then( sub {
+      Future->done( $user, $room_id );
+   });
+}
+
+
 =head2 check_tag_event
 
    check_tag_event( $event );
@@ -182,15 +212,11 @@ test "Tags appear in the v1 /events stream",
 
       my ( $user, $room_id );
 
-      matrix_register_user( $http, undef )->then( sub {
-         ( $user ) = @_;
+      register_user_and_create_room_and_add_tag( $http,
+         with_events => 1
+      )->then( sub {
+         ( $user, $room_id ) = @_;
 
-         matrix_create_room( $user );
-      })->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
-      })->then( sub {
          await_event_for( $user, sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.tag"
@@ -234,15 +260,11 @@ test "Tags appear in the v1 /initalSync",
 
       my ( $user, $room_id );
 
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
+      register_user_and_create_room_and_add_tag( $http,
+         with_events => 0
+      )->then( sub {
+         ( $user, $room_id ) = @_;
 
-         matrix_create_room( $user );
-      })->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
-      })->then( sub {
          do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/initialSync"
@@ -267,16 +289,11 @@ test "Tags appear in the v1 room initial sync",
       my ( $http ) = @_;
 
       my ( $user, $room_id );
+      register_user_and_create_room_and_add_tag( $http,
+         with_events => 0
+      )->then( sub {
+         ( $user, $room_id ) = @_;
 
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
-
-         matrix_create_room( $user );
-      })->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
-      })->then( sub {
          do_request_json_for( $user,
             method => "GET",
             uri    => "/api/v1/rooms/$room_id/initialSync"
