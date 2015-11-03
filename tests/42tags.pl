@@ -134,6 +134,8 @@ test "Can list tags for a room",
       })->then( sub {
          my ( $tags ) = @_;
 
+         log_if_fail "Tags after add", $tags;
+
          keys %{ $tags } == 1 or die "Expected one tag for the room";
          defined $tags->{test_tag} or die "Unexpected tag";
 
@@ -142,6 +144,8 @@ test "Can list tags for a room",
          matrix_list_tags( $user, $room_id );
       })->then( sub {
          my ( $tags ) = @_;
+
+         log_if_fail "Tags after delete", $tags;
 
          keys %{ $tags } == 0 or die "Expected no tags for the room";
 
