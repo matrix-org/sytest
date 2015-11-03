@@ -154,6 +154,26 @@ test "Can list tags for a room",
    };
 
 
+=head2 check_tag_event
+
+   check_tag_event( $event );
+
+Checks that a room tag event has the correct content.
+
+=cut
+
+sub check_tag_event {
+   my ( $event, $expect_room_id ) = @_;
+
+   log_if_fail "Tag event", $event;
+
+   my %tags = %{ $event->{content}{tags} };
+   keys %tags == 1 or die "Expected exactly one tag";
+   defined $tags{test_tag} or die "Unexpected tag";
+   $tags{test_tag}{order} == 1 or die "Expected order == 1";
+}
+
+
 test "Tags appear in the v1 /events stream",
    requires => [qw( first_api_client can_add_tag can_remove_tag )],
 
@@ -176,17 +196,34 @@ test "Tags appear in the v1 /events stream",
             return unless $event->{type} eq "m.tag"
                and $event->{room_id} eq $room_id;
 
-            log_if_fail "Tag event", $event;
-
-            my %tags = %{ $event->{content}{tags} };
-            keys %tags == 1 or die "Expected exactly one tag";
-            defined $tags{test_tag} or die "Unexpected tag";
-            $tags{test_tag}{order} == 1 or die "Expected order == 1";
+            check_tag_event( $event );
 
             return 1;
          });
       });
    };
+
+
+=head2 check_private_user_data
+
+   check_private_user_data( $event );
+
+Checks that the private_user_data section has a tag event
+and that the tag event has the correct content.
+
+=cut
+
+sub check_private_user_data {
+   my ( $private_user_data ) = @_;
+
+   log_if_fail "Private User Data:", $private_user_data;
+
+   my $tag_event = $private_user_data->[0];
+   $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
+   not defined $tag_event->{room_id} or die "Unxpected room_id";
+
+   check_tag_event( $tag_event );
+}
 
 
 test "Tags appear in the v1 /initalSync",
@@ -216,15 +253,7 @@ test "Tags appear in the v1 /initalSync",
          my $room = $body->{rooms}[0];
          require_json_keys( $room, qw( private_user_data ) );
 
-         my $tag_event = $room->{private_user_data}[0];
-         log_if_fail "Tag Event:", $tag_event;
-         $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
-         not defined $tag_event->{room_id} or die "Unxpected room_id";
-
-         my %tags = %{ $tag_event->{content}{tags} };
-         keys %tags == 1 or die "Expected exactly one tag";
-         defined $tags{test_tag} or die "Unexpected tag";
-         $tags{test_tag}{order} == 1 or die "Expected order == 1";
+         check_private_user_data( $room->{private_user_data} );
 
          Future->done( 1 );
       });
@@ -258,15 +287,7 @@ test "Tags appear in the v1 room initial sync",
          my $room = $body;
          require_json_keys( $room, qw( private_user_data ) );
 
-         my $tag_event = $room->{private_user_data}[0];
-         log_if_fail "Tag Event:", $tag_event;
-         $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
-         not defined $tag_event->{room_id} or die "Unexpected room_id";
-
-         my %tags = %{ $tag_event->{content}{tags} };
-         keys %tags == 1 or die "Expected exactly one tag";
-         defined $tags{test_tag} or die "Unexpected tag";
-         $tags{test_tag}{order} == 1 or die "Expected order == 1";
+         check_private_user_data( $room->{private_user_data} );
 
          Future->done( 1 );
       });
@@ -299,15 +320,7 @@ test "Tags appear in an initial v2 /sync",
          my $room = $body->{rooms}{joined}{$room_id};
          require_json_keys( $room, qw( private_user_data ) );
 
-         my $tag_event = $room->{private_user_data}{events}[0];
-         log_if_fail "Tag Event:", $tag_event;
-         $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
-         not defined $tag_event->{room_id} or die "Unexpected room_id";
-
-         my %tags = %{ $tag_event->{content}{tags} };
-         keys %tags == 1 or die "Expected exactly one tag";
-         defined $tags{test_tag} or die "Unexpected tag";
-         $tags{test_tag}{order} == 1 or die "Expected order == 1";
+         check_private_user_data( $room->{private_user_data}{events} );
 
          Future->done( 1 );
       });
@@ -346,15 +359,7 @@ test "Newly updated tags appear in an incremental v2 /sync",
          my $room = $body->{rooms}{joined}{$room_id};
          require_json_keys( $room, qw( private_user_data ) );
 
-         my $tag_event = $room->{private_user_data}{events}[0];
-         log_if_fail "Tag Event:", $tag_event;
-         $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
-         not defined $tag_event->{room_id} or die "Unexpected room_id";
-
-         my %tags = %{ $tag_event->{content}{tags} };
-         keys %tags == 1 or die "Expected exactly one tag";
-         defined $tags{test_tag} or die "Unexpected tag";
-         $tags{test_tag}{order} == 1 or die "Expected order == 1";
+         check_private_user_data( $room->{private_user_data}{events} );
 
          Future->done( 1 );
       });
