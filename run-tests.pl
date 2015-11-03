@@ -17,6 +17,7 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
+use JSON;
 use List::Util 1.33 qw( first all any maxstr );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
@@ -657,6 +658,14 @@ sub require_json_nonempty_string
 {
    my ( $str ) = @_;
    !ref $str and length $str or croak "Expected a non-empty JSON string";
+}
+
+use constant JSON_BOOLEAN_CLASS => ref( JSON::true );
+
+sub require_json_boolean
+{
+   my ( $obj ) = @_;
+   ref $obj eq JSON_BOOLEAN_CLASS or croak "Expected a JSON boolean";
 }
 
 sub require_base64_unpadded
