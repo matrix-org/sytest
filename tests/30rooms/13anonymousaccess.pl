@@ -214,6 +214,65 @@ test "Anonymous user doesn't get events before room made world_readable",
       });
    };
 
+test "Anonymous users can get state for non-world_readable rooms",
+   requires => [ local_user_and_room_preparers(), qw( first_api_client ) ],
+
+   check => sub {
+      my ( $user, $room_id, $api_client ) = @_;
+
+      register_anonymous_user( $api_client )->then( sub {
+         my ( $anonymous_user ) = @_;
+
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri => "/api/v1/rooms/$room_id/state",
+         )
+      })
+   },
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      do_request_json_for( $user,
+         method => "PUT",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
+
+         content => {
+            history_visibility => "world_readable",
+         },
+      );
+   };
+
+test "Anonymous users can get individual state for world_readable rooms",
+   requires => [ local_user_and_room_preparers(), qw( first_api_client ) ],
+
+   check => sub {
+      my ( $user, $room_id, $api_client ) = @_;
+
+      register_anonymous_user( $api_client )->then( sub {
+         my ( $anonymous_user ) = @_;
+
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
+         )
+      })
+   },
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      do_request_json_for( $user,
+         method => "PUT",
+         uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
+
+         content => {
+            history_visibility => "world_readable",
+         },
+      );
+   };
+
+
 sub check_events
 {
    my ( $user, $room_id ) = @_;
