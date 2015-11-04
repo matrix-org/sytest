@@ -68,10 +68,7 @@ multi_test "Global /initialSync reports my own profile",
    check => sub {
       my ( $user) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( presence ));

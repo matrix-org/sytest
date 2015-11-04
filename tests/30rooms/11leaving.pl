@@ -69,11 +69,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     check => sub {
         my ( $user, $room_id ) = @_;
 
-        do_request_json_for( $user,
-            method => "GET",
-            uri => "/api/v1/initialSync",
-            params => { limit => 2, archived => "true" },
-        )->then( sub {
+        matrix_initialsync( $user, limit => 2, archived => "true" )->then( sub {
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( rooms ) );

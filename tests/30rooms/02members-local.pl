@@ -131,10 +131,7 @@ test "All room members see all room members' presence in global initialSync",
       Future->needs_all( map {
          my $user = $_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/initialSync",
-         )->then( sub {
+         matrix_initialsync( $user )->then( sub {
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( presence ));
@@ -169,10 +166,7 @@ test "New room members see first user's profile information in global initialSyn
    check => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
 
-      do_request_json_for( $local_user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $local_user )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( presence ));
