@@ -161,10 +161,7 @@ test "New room members see first user's profile information in global initialSyn
    check => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( presence ));
