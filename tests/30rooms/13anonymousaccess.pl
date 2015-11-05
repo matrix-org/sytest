@@ -96,13 +96,13 @@ test "Anonymous user cannot call /events on non-world_readable room",
          })->then( sub {
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri => "/api/v1/rooms/${room_id}/messages",
+               uri    => "/api/v1/rooms/${room_id}/messages",
                params => {
                   limit => "2",
-                  dir => "b",
+                  dir   => "b",
                },
             )
-         })->followed_by( \&main::expect_http_403 );
+         })->main::expect_http_403;
       });
    };
 
@@ -123,9 +123,8 @@ test "Anonymous user can call /events on world_readable room",
             ( $room_id ) = @_;
 
             do_request_json_for( $user,
-               method => "PUT",
-               uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-
+               method  => "PUT",
+               uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
                content => {
                   history_visibility => "world_readable",
                },
@@ -138,18 +137,18 @@ test "Anonymous user can call /events on world_readable room",
 
                do_request_json_for( $anonymous_user,
                   method => "GET",
-                  uri => "/api/v1/events",
+                  uri    => "/api/v1/events",
                   params => {
                      limit => "2",
-                     dir => "b",
+                     dir   => "b",
                   },
-               )->followed_by( \&main::expect_http_400 )->then( sub {
+               )->main::expect_http_400->then( sub {
                   do_request_json_for( $anonymous_user,
                      method => "GET",
-                     uri => "/api/v1/events",
+                     uri    => "/api/v1/events",
                      params => {
-                        limit => "2",
-                        dir => "b",
+                        limit   => "2",
+                        dir     => "b",
                         room_id => $room_id,
                      },
                   )
@@ -191,9 +190,8 @@ test "Anonymous user doesn't get events before room made world_readable",
                delay( 0.05 )->then( sub {
                   matrix_send_room_text_message( $user, $room_id, body => "private" )->then(sub {
                      do_request_json_for( $user,
-                        method => "PUT",
-                        uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-
+                        method  => "PUT",
+                        uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
                         content => {
                            history_visibility => "world_readable",
                         },
@@ -220,10 +218,10 @@ sub check_events
 
    do_request_json_for( $user,
       method => "GET",
-      uri => "/api/v1/events",
+      uri    => "/api/v1/events",
       params => {
-         limit => "3",
-         dir => "b",
+         limit   => "3",
+         dir     => "b",
          room_id => $room_id,
       },
    )->then( sub {
