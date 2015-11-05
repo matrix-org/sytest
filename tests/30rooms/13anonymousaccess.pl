@@ -14,20 +14,13 @@ test "Anonymous user cannot view non-world-readable rooms",
          ->then( sub {
             ( $room_id ) = @_;
 
-            do_request_json_for( $user,
-               method  => "PUT",
-               uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-
-               content => {
-                  history_visibility => "shared",
-               },
-            );
+            set_room_history_visibility( $user, $room_id, "shared" );
          })->then( sub {
             matrix_send_room_text_message( $user, $room_id, body => "mice" )
          })->then( sub {
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri    => "/api/v1/rooms/${room_id}/messages",
+               uri    => "/api/v1/rooms/$room_id/messages",
                params => {
                   limit => "1",
                   dir   => "b",
@@ -53,20 +46,13 @@ test "Anonymous user can view world-readable rooms",
          ->then( sub {
             ( $room_id ) = @_;
 
-            do_request_json_for( $user,
-               method  => "PUT",
-               uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-
-               content => {
-                  history_visibility => "world_readable",
-               },
-            );
+            set_room_history_visibility( $user, $room_id, "world_readable" );
          })->then( sub {
             matrix_send_room_text_message( $user, $room_id, body => "mice" )
          })->then( sub {
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri    => "/api/v1/rooms/${room_id}/messages",
+               uri    => "/api/v1/rooms/$room_id/messages",
                params => {
                   limit => "2",
                   dir   => "b",
@@ -262,4 +248,14 @@ sub register_anonymous_user
 
       Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, [], undef ) );
    });
+}
+
+sub set_room_history_visibility
+{
+   my ( $user, $room_id, $history_visibility ) = @_;
+
+   matrix_put_room_state( $user, $room_id,
+      type    => "m.room.history_visibility",
+      content => { history_visibility => $history_visibility }
+   );
 }
