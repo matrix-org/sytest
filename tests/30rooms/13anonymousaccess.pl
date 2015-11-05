@@ -33,7 +33,7 @@ test "Anonymous user cannot view non-world-readable rooms",
                   dir => "b",
                },
             )
-         })->followed_by(\&main::expect_http_403);
+         })->main::expect_http_403;
       });
    };
 
