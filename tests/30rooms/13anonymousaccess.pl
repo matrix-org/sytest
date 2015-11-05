@@ -156,7 +156,7 @@ test "Anonymous user can call /events on world_readable room",
                   my ( $body ) = @_;
 
                   require_json_keys( $body, qw( chunk ) );
-                  $body->{chunk} >= 1 or die "Want at least one chunk";
+                  $body->{chunk} >= 1 or die "Want at least one event";
                   my $chunk = $body->{chunk}[0];
                   require_json_keys( $chunk, qw( content ) );
                   my $content = $chunk->{content};
@@ -230,8 +230,8 @@ sub check_events
       log_if_fail "Body", $body;
 
       require_json_keys( $body, qw( chunk ) );
-      @{$body->{chunk}} >= 1 or die "Want at least one chunk";
-      @{$body->{chunk}} < 3 or die "Want at most two chunks";
+      @{$body->{chunk}} >= 1 or die "Want at least one event";
+      @{$body->{chunk}} < 3 or die "Want at most two events";
 
       my $found = 0;
       foreach my $chunk ($body->{chunk}) {
