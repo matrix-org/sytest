@@ -82,7 +82,7 @@ sub register_anonymous_user
 
    $http->do_request_json(
       method  => "POST",
-      uri     => "/v2_alpha/register?kind=guest",
+      uri     => "/v2_alpha/register",
       content => {},
       params => {
          kind => "guest",
