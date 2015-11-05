@@ -1,5 +1,28 @@
 use List::Util qw( first );
 
+sub find_receipt
+{
+   my ( $body, %args ) = @_;
+
+   my $room_id  = $args{room_id};
+   my $user_id  = $args{user_id};
+   my $type     = $args{type};
+   my $event_id = $args{event_id};
+
+   my $receipts = $body->{receipts};
+
+   my ( $receipt ) = first {
+      $_->{room_id} eq $room_id and $_->{type} eq "m.receipt"
+   } @$receipts;
+
+   my $content = $receipt->{content};
+
+   exists $content->{$event_id} or return;
+   exists $content->{$event_id}{$type} or return;
+
+   return $content->{$event_id}{$type}{$user_id};
+}
+
 multi_test "Read receipts are visible to /initialSync",
    requires => [ local_user_and_room_preparers(),
                  qw( can_post_room_receipts )],
@@ -33,20 +56,12 @@ multi_test "Read receipts are visible to /initialSync",
 
          log_if_fail "initialSync receipts", $receipts;
 
-         my ( $receipt ) = first {
-            require_json_keys( $_, qw( room_id type ));
-            $_->{room_id} eq $room_id and $_->{type} eq "m.receipt"
-         } @$receipts;
-
-         require_json_keys( $receipt, qw( content ));
-         my $content = $receipt->{content};
-
-         exists $content->{$member_event_id} or
-            die "Expected to find an acknolwedgement of $member_event_id";
-         exists $content->{$member_event_id}{"m.read"} or
-            die "Expected an 'm.read' type receipt for this event";
-         my $user_read_receipt = $content->{$member_event_id}{"m.read"}{ $user->user_id } or
-            die "Expected an 'm.read' receipt from ${\ $user->user_id }";
+         my $user_read_receipt = find_receipt( $body,
+            room_id  => $room_id,
+            user_id  => $user->user_id,
+            type     => "m.read",
+            event_id => $member_event_id,
+         ) or die "Expected to find an m.read in $room_id for $member_event_id";
 
          require_json_keys( $user_read_receipt, qw( ts ));
          require_json_number( $user_read_receipt->{ts} );
@@ -64,20 +79,12 @@ multi_test "Read receipts are visible to /initialSync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $receipts = $body->{receipts};
-         my ( $receipt ) = first {
-            require_json_keys( $_, qw( room_id type ));
-            $_->{room_id} eq $room_id and $_->{type} eq "m.receipt"
-         } @$receipts;
-
-         my $content = $receipt->{content};
-
-         exists $content->{$message_event_id} or
-            die "Expected to find an acknolwedgement of $message_event_id";
-         exists $content->{$message_event_id}{"m.read"} or
-            die "Expected an 'm.read' type receipt for this event";
-         my $user_read_receipt = $content->{$message_event_id}{"m.read"}{ $user->user_id } or
-            die "Expected an 'm.read' receipt from ${\ $user->user_id }";
+         my $user_read_receipt = find_receipt( $body,
+            room_id  => $room_id,
+            user_id  => $user->user_id,
+            type     => "m.read",
+            event_id => $message_event_id,
+         ) or die "Expected to find an m.read in $room_id for $message_event_id";
 
          pass "Updated m.read receipt is available";
 
