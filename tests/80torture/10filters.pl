@@ -22,10 +22,14 @@ test "Check creating invalid filters returns 4xx",
    check => sub {
       my ( $user ) = @_;
 
-      Future->needs_all( map {
+      Future->wait_all( map {
          my $filter = $_;
          matrix_create_filter( $user, $_ )
             ->main::expect_http_4xx
             ->on_fail( sub { log_if_fail "Filter:", $filter; });
-      } @{ $INVALID_FILTERS } );
+      } @{ $INVALID_FILTERS } )->then( sub {
+         # Wait for all the requests to finish, then check that all of them
+         # succeeded.
+         Future->needs_all( @_ );
+      });
    };
