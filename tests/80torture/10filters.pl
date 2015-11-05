@@ -17,18 +17,15 @@ my $INVALID_FILTERS = [
 
 
 test "Check creating invalid filters returns 4xx",
-   requires => [qw( first_api_client )],
+   requires => [local_user_preparer( with_events => 0 )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         my ( $user ) = @_;
-         Future->needs_all( map {
-            my $filter = $_;
-            matrix_create_filter( $user, $_ )
-               ->main::expect_http_4xx
-               ->on_fail( sub { log_if_fail "Filter:", $filter; });
-         } @{ $INVALID_FILTERS } );
-      });
+      Future->needs_all( map {
+         my $filter = $_;
+         matrix_create_filter( $user, $_ )
+            ->main::expect_http_4xx
+            ->on_fail( sub { log_if_fail "Filter:", $filter; });
+      } @{ $INVALID_FILTERS } );
    };
