@@ -17,7 +17,6 @@ test "Anonymous user cannot view non-world-readable rooms",
             do_request_json_for( $user,
                method  => "PUT",
                uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-
                content => {
                   history_visibility => "shared",
                },
@@ -27,7 +26,7 @@ test "Anonymous user cannot view non-world-readable rooms",
          })->then( sub {
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri    => "/api/v1/rooms/${room_id}/messages",
+               uri    => "/api/v1/rooms/$room_id/messages",
                params => {
                   limit => "1",
                   dir   => "b",
@@ -56,7 +55,6 @@ test "Anonymous user can view world-readable rooms",
             do_request_json_for( $user,
                method  => "PUT",
                uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-
                content => {
                   history_visibility => "world_readable",
                },
@@ -66,7 +64,7 @@ test "Anonymous user can view world-readable rooms",
          })->then( sub {
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri    => "/api/v1/rooms/${room_id}/messages",
+               uri    => "/api/v1/rooms/$room_id/messages",
                params => {
                   limit => "2",
                   dir   => "b",
