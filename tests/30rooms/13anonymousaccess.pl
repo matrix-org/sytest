@@ -14,7 +14,7 @@ test "Anonymous user cannot view non-world-readable rooms",
          ->then( sub {
             ( $room_id ) = @_;
 
-            set_room_history_visibility( $user, $room_id, "shared" );
+            matrix_set_room_history_visibility( $user, $room_id, "shared" );
          })->then( sub {
             matrix_send_room_text_message( $user, $room_id, body => "mice" )
          })->then( sub {
@@ -46,7 +46,7 @@ test "Anonymous user can view world-readable rooms",
          ->then( sub {
             ( $room_id ) = @_;
 
-            set_room_history_visibility( $user, $room_id, "world_readable" );
+            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
          })->then( sub {
             matrix_send_room_text_message( $user, $room_id, body => "mice" )
          })->then( sub {
@@ -108,7 +108,7 @@ test "Anonymous user can call /events on world_readable room",
          ->then( sub {
             ( $room_id ) = @_;
 
-            set_room_history_visibility( $user, $room_id, "world_readable" );
+            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
          })->then( sub {
             Future->needs_all(
                delay( 0.05 )->then( sub {
@@ -137,9 +137,9 @@ test "Anonymous user can call /events on world_readable room",
 
                   require_json_keys( $body, qw( chunk ) );
                   $body->{chunk} >= 1 or die "Want at least one event";
-                  my $chunk = $body->{chunk}[0];
-                  require_json_keys( $chunk, qw( content ) );
-                  my $content = $chunk->{content};
+                  my $event = $body->{chunk}[0];
+                  require_json_keys( $event, qw( content ) );
+                  my $content = $event->{content};
                   require_json_keys( $content, qw( body ) );
                   $content->{body} eq "mice" or die "Want content body to be mice";
 
@@ -169,12 +169,16 @@ test "Anonymous user doesn't get events before room made world_readable",
             Future->needs_all(
                delay( 0.05 )->then( sub {
                   matrix_send_room_text_message( $user, $room_id, body => "private" )->then(sub {
-                     set_room_history_visibility( $user, $room_id, "world_readable" );
+                     matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
                   })->then( sub {
                      matrix_send_room_text_message( $user, $room_id, body => "public" );
                   });
                }),
 
+               # The client is allowed to see exactly two events, the
+               # m.room.history_visibility event and the public message.
+               # The server is free to return these in separate calls to
+               # /events, so we try at most two times to get the events we expect.
                check_events( $anonymous_user, $room_id )
                ->then(sub {
                   Future->done( 1 );
@@ -260,11 +264,11 @@ sub check_events
       @{$body->{chunk}} < 3 or die "Want at most two events";
 
       my $found = 0;
-      foreach my $chunk ($body->{chunk}) {
-         next if all { $_ ne "content" } keys $chunk;
-         next if all { $_ ne "body" } keys $chunk->{content};
-         $found = 1 if $chunk->{content}->{body} eq "public";
-         die "Should not have found private" if $chunk->{content}->{body} eq "private";
+      foreach my $event ($body->{chunk}) {
+         next if all { $_ ne "content" } keys $event;
+         next if all { $_ ne "body" } keys $event->{content};
+         $found = 1 if $event->{content}->{body} eq "public";
+         die "Should not have found private" if $event->{content}->{body} eq "private";
       }
 
       Future->done( $found );
@@ -290,7 +294,9 @@ sub register_anonymous_user
    });
 }
 
-sub set_room_history_visibility
+push our @EXPORT, qw( matrix_set_room_history_visibility );
+
+sub matrix_set_room_history_visibility
 {
    my ( $user, $room_id, $history_visibility ) = @_;
 
