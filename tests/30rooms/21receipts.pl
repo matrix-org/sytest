@@ -1,6 +1,6 @@
 use List::Util qw( first );
 
-test "Read receipts are visible to /initialSync",
+multi_test "Read receipts are visible to /initialSync",
    requires => [ local_user_and_room_preparers(),
                  qw( can_post_room_receipts )],
 
@@ -9,7 +9,8 @@ test "Read receipts are visible to /initialSync",
 
       # We need an event ID in the room. The ID of our own member event seems
       # reasonable. Lets fetch it.
-      my $event_id;
+      my $member_event_id;
+      my $message_event_id;
 
       # TODO: currently have to go the long way around finding it; see SPEC-264
       matrix_get_room_state( $user, $room_id )->then( sub {
@@ -19,9 +20,9 @@ test "Read receipts are visible to /initialSync",
             $_->{type} eq "m.room.member" and $_->{state_key} eq $user->user_id
          } @$state;
 
-         $event_id = $member_event->{event_id};
+         $member_event_id = $member_event->{event_id};
 
-         matrix_advance_room_receipt( $user, $room_id, "m.read" => $event_id )
+         matrix_advance_room_receipt( $user, $room_id, "m.read" => $member_event_id )
       })->then( sub {
          matrix_initialsync( $user )
       })->then( sub {
@@ -40,15 +41,45 @@ test "Read receipts are visible to /initialSync",
          require_json_keys( $receipt, qw( content ));
          my $content = $receipt->{content};
 
-         exists $content->{$event_id} or
-            die "Expected to find an acknolwedgement of $event_id";
-         exists $content->{$event_id}{"m.read"} or
+         exists $content->{$member_event_id} or
+            die "Expected to find an acknolwedgement of $member_event_id";
+         exists $content->{$member_event_id}{"m.read"} or
             die "Expected an 'm.read' type receipt for this event";
-         my $user_read_receipt = $content->{$event_id}{"m.read"}{ $user->user_id } or
+         my $user_read_receipt = $content->{$member_event_id}{"m.read"}{ $user->user_id } or
             die "Expected an 'm.read' receipt from ${\ $user->user_id }";
 
          require_json_keys( $user_read_receipt, qw( ts ));
          require_json_number( $user_read_receipt->{ts} );
+
+         pass "First m.read receipt is available";
+
+         # Now try advancing the receipt by posting a message
+         matrix_send_room_text_message( $user, $room_id, body => "a message" );
+      })->then( sub {
+         ( $message_event_id ) = @_;
+
+         matrix_advance_room_receipt( $user, $room_id, "m.read" => $message_event_id );
+      })->then( sub {
+         matrix_initialsync( $user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $receipts = $body->{receipts};
+         my ( $receipt ) = first {
+            require_json_keys( $_, qw( room_id type ));
+            $_->{room_id} eq $room_id and $_->{type} eq "m.receipt"
+         } @$receipts;
+
+         my $content = $receipt->{content};
+
+         exists $content->{$message_event_id} or
+            die "Expected to find an acknolwedgement of $message_event_id";
+         exists $content->{$message_event_id}{"m.read"} or
+            die "Expected an 'm.read' type receipt for this event";
+         my $user_read_receipt = $content->{$message_event_id}{"m.read"}{ $user->user_id } or
+            die "Expected an 'm.read' receipt from ${\ $user->user_id }";
+
+         pass "Updated m.read receipt is available";
 
          Future->done(1);
       });
