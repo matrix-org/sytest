@@ -209,7 +209,7 @@ test "Anonymous users can get state for non-world_readable rooms",
    do => sub {
       my ( $user, $room_id ) = @_;
 
-      set_room_history_visibility( $user, $room_id, "world_readable" );
+      matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
    };
 
 test "Anonymous users can get individual state for world_readable rooms",
