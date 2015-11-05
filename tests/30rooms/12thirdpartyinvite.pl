@@ -20,13 +20,15 @@ test "Can invite existing 3pid",
 
       my $room_id;
 
-      start_id_server()->then(sub {
+      start_id_server()->then( sub {
          my ( $id_server ) = @_;
 
-         $id_server->bind_identity( undef, "email", $invitee_email, $invitee )->then(sub {
+         $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
+         ->then( sub {
             matrix_create_and_join_room( [ $inviter ], visibility => "private" )
             ->then( sub {
                ( $room_id ) = @_;
+
                do_request_json_for( $inviter,
                   method => "POST",
                   uri    => "/api/v1/rooms/$room_id/invite",
@@ -58,6 +60,7 @@ test "Can invite unbound 3pid",
    requires => [ local_user_preparers( 2 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
+
       can_invite_unbound_3pid( $inviter, $invitee, $locations->[0] );
    };
 
@@ -65,6 +68,7 @@ test "Can invite unbound 3pid over federation",
    requires => [ local_user_preparer(), remote_user_preparer(), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
+
       can_invite_unbound_3pid( $inviter, $invitee, $locations->[1] );
    };
 
@@ -78,7 +82,7 @@ sub can_invite_unbound_3pid
       my $room_id;
 
       matrix_create_room( $inviter, visibility => "private" )
-      ->then(sub {
+      ->then( sub {
          ( $room_id ) = @_;
 
          do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
@@ -93,12 +97,13 @@ sub can_invite_unbound_3pid
          )
       })->followed_by(assert_membership( "join" ) );
    });
-};
+}
 
 test "Can accept unbound 3pid invite after inviter leaves",
    requires => [ local_user_preparers( 3 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $other_member, $invitee, $locations ) = @_;
+
       my $hs_uribase = $locations->[0];
 
       start_id_server()->then( sub {
@@ -107,13 +112,13 @@ test "Can accept unbound 3pid invite after inviter leaves",
          my $room_id;
 
          matrix_create_room( $inviter, visibility => "private" )
-         ->then(sub {
+         ->then( sub {
             ( $room_id ) = @_;
 
              matrix_invite_user_to_room( $inviter, $other_member, $room_id );
-         })->then(sub {
+         })->then( sub {
              matrix_join_room( $other_member, $room_id );
-         })->then(sub {
+         })->then( sub {
             do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
          })->then( sub {
             matrix_leave_room( $inviter, $room_id );
@@ -134,9 +139,11 @@ test "3pid invite join with wrong but valid signature are rejected",
    requires => [ local_user_preparers( 2 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
+
       my $hs_uribase = $locations->[0];
       invite_should_fail( $inviter, $invitee, $hs_uribase, sub {
          my ( $id_server ) = @_;
+
          $id_server->rotate_keys;
          $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
       });
@@ -146,10 +153,13 @@ test "3pid invite join valid signature but revoked keys are rejected",
    requires => [ local_user_preparers( 2 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
+
       my $hs_uribase = $locations->[0];
       invite_should_fail( $inviter, $invitee, $hs_uribase, sub {
          my ( $id_server ) = @_;
-         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee, sub { $id_server->rotate_keys } );
+
+         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee,
+            sub { $id_server->rotate_keys } );
       });
    };
 
@@ -157,12 +167,14 @@ test "3pid invite join valid signature but unreachable ID server are rejected",
    requires => [ local_user_preparers( 2 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
+
       my $hs_uribase = $locations->[0];
       invite_should_fail( $inviter, $invitee, $hs_uribase, sub {
          my ( $id_server ) = @_;
+
          $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee, sub {
             $id_server->read_handle->close;
-         })->then(sub {
+         })->then( sub {
             $loop->remove( $id_server );
             Future->done( 1 );
          });
@@ -178,7 +190,7 @@ sub invite_should_fail {
       my ( $id_server ) = @_;
 
       matrix_create_room( $inviter, visibility => "private" )
-      ->then(sub {
+      ->then( sub {
          ( $room_id ) = @_;
 
          do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
@@ -193,7 +205,7 @@ sub invite_should_fail {
          )
       })->followed_by(assert_membership( undef ) );
    });
-};
+}
 
 sub assert_membership {
    my ( $expected_membership ) = @_;
@@ -213,7 +225,7 @@ sub assert_membership {
          } )
       }
       : \&main::expect_http_error;
-};
+}
 
 sub do_3pid_invite {
    my ( $inviter, $room_id, $id_server, $invitee_email ) = @_;
@@ -228,7 +240,7 @@ sub do_3pid_invite {
          display_name => "Cool tails",
       }
    )
-};
+}
 
 sub start_id_server
 {
@@ -245,6 +257,7 @@ sub start_id_server
       SSL_key_file => "$DIR/../../keys/tls-selfsigned.key",
    )->then( sub {
       my ( $listener ) = @_;
+
       my $sock = $listener->read_handle;
       my $id_server_hostandport = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
       Future->done( $id_server );

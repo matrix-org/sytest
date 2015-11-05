@@ -6,13 +6,14 @@ use warnings;
 use base qw( Net::Async::HTTP::Server );
 
 use Crypt::NaCl::Sodium;
-use Data::GUID;
 use List::Util qw( any );
 use Protocol::Matrix qw( encode_base64_unpadded sign_json );
 use SyTest::HTTPServer::Request;
 use HTTP::Response;
 
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
+
+my $next_token = 0;
 
 sub _init
 {
@@ -82,8 +83,8 @@ sub on_request
 
          sign_json( \%resp,
             secret_key => $self->{private_key},
-            origin => $self->name,
-            key_id => "ed25519:0",
+            origin     => $self->name,
+            key_id     => "ed25519:0",
          );
       }
       $req->respond_json( \%resp );
@@ -98,14 +99,14 @@ sub on_request
          $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
          return;
       }
-      my $token = Data::GUID->new->as_string;
+      my $token = "".$next_token++;
       my $key = join "\0", $medium, $address;
       push @{ $self->{invites}->{$key} }, {
          address => $address,
-         medium => $medium,
+         medium  => $medium,
          room_id => $room_id,
-         sender => $sender,
-         token => $token,
+         sender  => $sender,
+         token   => $token,
       };
       $resp{token} = $token;
       $resp{public_key} = $self->{keys}{"ed25519:0"};
@@ -116,7 +117,8 @@ sub on_request
    }
 }
 
-sub bind_identity {
+sub bind_identity
+{
    my $self = shift;
    my ( $hs_uribase, $medium, $address, $user, $before_resp ) = @_;
 
@@ -126,23 +128,24 @@ sub bind_identity {
       return Future->done( 1 );
    }
 
-   my %resp;
-   $resp{address} = $address;
-   $resp{medium} = $medium;
-   $resp{mxid} = $user->user_id;
+   my %resp = (
+      address => $address,
+      medium  => $medium,
+      mxid    => $user->user_id,
+   );
 
    my $invites = $self->{invites}->{ join "\0", $medium, $address };
    if( defined $invites ) {
       foreach my $invite ( @$invites ) {
          $invite->{mxid} = $user->user_id;
          $invite->{signed} = {
-            mxid => $user->user_id,
+            mxid  => $user->user_id,
             token => $invite->{token},
          };
          sign_json( $invite->{signed},
             secret_key => $self->{private_key},
-            origin => $self->name,
-            key_id => "ed25519:0",
+            origin     => $self->name,
+            key_id     => "ed25519:0",
          );
       }
       $resp{invites} = $invites;
@@ -150,20 +153,21 @@ sub bind_identity {
 
    sign_json( \%resp,
       secret_key => $self->{private_key},
-      origin => $self->name,
-      key_id => "ed25519:0",
+      origin     => $self->name,
+      key_id     => "ed25519:0",
    );
 
    $before_resp->() if defined $before_resp;
 
    $self->{http_client}->do_request_json(
-      uri => URI->new( "${hs_uribase}/_matrix/federation/v1/3pid/onbind" ),
-      method => "POST",
+      uri     => URI->new( "$hs_uribase/_matrix/federation/v1/3pid/onbind" ),
+      method  => "POST",
       content => \%resp,
    );
 }
 
-sub name {
+sub name
+{
    my $self = shift;
    my $sock = $self->read_handle;
    sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
