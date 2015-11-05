@@ -137,9 +137,9 @@ test "Anonymous user can call /events on world_readable room",
 
                   require_json_keys( $body, qw( chunk ) );
                   $body->{chunk} >= 1 or die "Want at least one event";
-                  my $chunk = $body->{chunk}[0];
-                  require_json_keys( $chunk, qw( content ) );
-                  my $content = $chunk->{content};
+                  my $event = $body->{chunk}[0];
+                  require_json_keys( $event, qw( content ) );
+                  my $content = $event->{content};
                   require_json_keys( $content, qw( body ) );
                   $content->{body} eq "mice" or die "Want content body to be mice";
 
@@ -212,11 +212,11 @@ sub check_events
       @{$body->{chunk}} < 3 or die "Want at most two events";
 
       my $found = 0;
-      foreach my $chunk ($body->{chunk}) {
-         next if all { $_ ne "content" } keys $chunk;
-         next if all { $_ ne "body" } keys $chunk->{content};
-         $found = 1 if $chunk->{content}->{body} eq "public";
-         die "Should not have found private" if $chunk->{content}->{body} eq "private";
+      foreach my $event ($body->{chunk}) {
+         next if all { $_ ne "content" } keys $event;
+         next if all { $_ ne "body" } keys $event->{content};
+         $found = 1 if $event->{content}->{body} eq "public";
+         die "Should not have found private" if $event->{content}->{body} eq "private";
       }
 
       Future->done( $found );
