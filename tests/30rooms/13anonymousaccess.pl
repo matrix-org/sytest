@@ -223,7 +223,7 @@ test "Anonymous users can get state for non-world_readable rooms",
 
          do_request_json_for( $anonymous_user,
             method => "GET",
-            uri => "/api/v1/rooms/$room_id/state",
+            uri    => "/api/v1/rooms/$room_id/state",
          )
       })
    },
@@ -232,8 +232,8 @@ test "Anonymous users can get state for non-world_readable rooms",
       my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
+         method  => "PUT",
+         uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
 
          content => {
             history_visibility => "world_readable",
@@ -252,7 +252,7 @@ test "Anonymous users can get individual state for world_readable rooms",
 
          do_request_json_for( $anonymous_user,
             method => "GET",
-            uri => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
+            uri    => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
          )
       })
    },
@@ -261,8 +261,8 @@ test "Anonymous users can get individual state for world_readable rooms",
       my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
+         method  => "PUT",
+         uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
 
          content => {
             history_visibility => "world_readable",
