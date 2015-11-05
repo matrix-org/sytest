@@ -108,13 +108,7 @@ test "Anonymous user can call /events on world_readable room",
          ->then( sub {
             ( $room_id ) = @_;
 
-            do_request_json_for( $user,
-               method  => "PUT",
-               uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-               content => {
-                  history_visibility => "world_readable",
-               },
-            );
+            set_room_history_visibility( $user, $room_id, "world_readable" );
          })->then( sub {
             Future->needs_all(
                delay( 0.05 )->then( sub {
@@ -175,13 +169,7 @@ test "Anonymous user doesn't get events before room made world_readable",
             Future->needs_all(
                delay( 0.05 )->then( sub {
                   matrix_send_room_text_message( $user, $room_id, body => "private" )->then(sub {
-                     do_request_json_for( $user,
-                        method  => "PUT",
-                        uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-                        content => {
-                           history_visibility => "world_readable",
-                        },
-                     );
+                     set_room_history_visibility( $user, $room_id, "world_readable" );
                   })->then( sub {
                      matrix_send_room_text_message( $user, $room_id, body => "public" );
                   });
