@@ -175,6 +175,10 @@ test "Anonymous user doesn't get events before room made world_readable",
                   });
                }),
 
+               # The client is allowed to see exactly two events, the
+               # m.room.history_visibility event and the public message.
+               # The server is free to return these in separate calls to
+               # /events, so we try at most two times to get the events we expect.
                check_events( $anonymous_user, $room_id )
                ->then(sub {
                   Future->done( 1 );
