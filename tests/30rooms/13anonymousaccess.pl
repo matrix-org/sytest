@@ -14,12 +14,9 @@ test "Anonymous user cannot view non-world-readable rooms",
          ->then( sub {
             ( $room_id ) = @_;
 
-            do_request_json_for( $user,
-               method  => "PUT",
-               uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-               content => {
-                  history_visibility => "shared",
-               },
+            matrix_put_room_state( $user, $room_id,
+               type    => "m.room.history_visibility",
+               content => { history_visibility => "shared" }
             );
          })->then( sub {
             matrix_send_room_text_message( $user, $room_id, body => "mice" )
@@ -52,12 +49,9 @@ test "Anonymous user can view world-readable rooms",
          ->then( sub {
             ( $room_id ) = @_;
 
-            do_request_json_for( $user,
-               method  => "PUT",
-               uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-               content => {
-                  history_visibility => "world_readable",
-               },
+            matrix_put_room_state( $user, $room_id,
+               type    => "m.room.history_visibility",
+               content => { history_visibility => "world_readable" }
             );
          })->then( sub {
             matrix_send_room_text_message( $user, $room_id, body => "mice" )
