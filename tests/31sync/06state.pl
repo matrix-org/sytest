@@ -255,14 +255,18 @@ test "A full_state incremental update returns all state",
          @{ $room->{state}{events} } == 2
             or die "Expected only two state events";
 
-         my $event_id = $room->{state}{events}[1];
-         my $event = $room->{event_map}{$event_id};
-         $event->{type} eq "a.madeup.test.state"
-            or die "Unexpected state event type";
-         $event->{state_key} eq 'this_state_changes'
-            or die "Unexpected event state_key";
-         $event->{content}{my_key} == 2
-            or die "Unexpected event content";
+         my $found_state_event = 0;
+         foreach my $event_id (@{ $room->{state}{events} }) {
+            my $event = $room->{event_map}{$event_id};
+            $event->{type} eq "a.madeup.test.state"
+               or die "Unexpected type";
+            $event->{state_key} eq 'this_state_changes' or next;
+            $event->{content}{my_key} == 2
+               or die "Unexpected event content";
+            $found_state_event = 1;
+         }
+
+         $found_state_event or die "Didn't find event with state_key this_state_changes state event";
 
          @{ $room->{timeline}{events} } == 1
              or die "Expected only one timeline event";
