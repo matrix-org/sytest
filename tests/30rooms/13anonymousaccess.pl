@@ -15,8 +15,8 @@ test "Anonymous user cannot view non-world-readable rooms",
             ( $room_id ) = @_;
 
             do_request_json_for( $user,
-               method => "PUT",
-               uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
+               method  => "PUT",
+               uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
 
                content => {
                   history_visibility => "shared",
@@ -27,13 +27,13 @@ test "Anonymous user cannot view non-world-readable rooms",
          })->then( sub {
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri => "/api/v1/rooms/${room_id}/messages",
+               uri    => "/api/v1/rooms/${room_id}/messages",
                params => {
                   limit => "1",
-                  dir => "b",
+                  dir   => "b",
                },
             )
-         })->followed_by(\&main::expect_http_403);
+         })->main::expect_http_403;
       });
    };
 
@@ -54,8 +54,8 @@ test "Anonymous user can view world-readable rooms",
             ( $room_id ) = @_;
 
             do_request_json_for( $user,
-               method => "PUT",
-               uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
+               method  => "PUT",
+               uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
 
                content => {
                   history_visibility => "world_readable",
@@ -66,10 +66,10 @@ test "Anonymous user can view world-readable rooms",
          })->then( sub {
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri => "/api/v1/rooms/${room_id}/messages",
+               uri    => "/api/v1/rooms/${room_id}/messages",
                params => {
                   limit => "2",
-                  dir => "b",
+                  dir   => "b",
                },
             )
          });
@@ -96,13 +96,13 @@ test "Anonymous user cannot call /events on non-world_readable room",
          })->then( sub {
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri => "/api/v1/rooms/${room_id}/messages",
+               uri    => "/api/v1/rooms/${room_id}/messages",
                params => {
                   limit => "2",
-                  dir => "b",
+                  dir   => "b",
                },
             )
-         })->followed_by( \&main::expect_http_403 );
+         })->main::expect_http_403;
       });
    };
 
@@ -123,9 +123,8 @@ test "Anonymous user can call /events on world_readable room",
             ( $room_id ) = @_;
 
             do_request_json_for( $user,
-               method => "PUT",
-               uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-
+               method  => "PUT",
+               uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
                content => {
                   history_visibility => "world_readable",
                },
@@ -138,18 +137,18 @@ test "Anonymous user can call /events on world_readable room",
 
                do_request_json_for( $anonymous_user,
                   method => "GET",
-                  uri => "/api/v1/events",
+                  uri    => "/api/v1/events",
                   params => {
                      limit => "2",
-                     dir => "b",
+                     dir   => "b",
                   },
-               )->followed_by( \&main::expect_http_400 )->then( sub {
+               )->main::expect_http_400->then( sub {
                   do_request_json_for( $anonymous_user,
                      method => "GET",
-                     uri => "/api/v1/events",
+                     uri    => "/api/v1/events",
                      params => {
-                        limit => "2",
-                        dir => "b",
+                        limit   => "2",
+                        dir     => "b",
                         room_id => $room_id,
                      },
                   )
@@ -157,7 +156,7 @@ test "Anonymous user can call /events on world_readable room",
                   my ( $body ) = @_;
 
                   require_json_keys( $body, qw( chunk ) );
-                  $body->{chunk} >= 1 or die "Want at least one chunk";
+                  $body->{chunk} >= 1 or die "Want at least one event";
                   my $chunk = $body->{chunk}[0];
                   require_json_keys( $chunk, qw( content ) );
                   my $content = $chunk->{content};
@@ -191,9 +190,8 @@ test "Anonymous user doesn't get events before room made world_readable",
                delay( 0.05 )->then( sub {
                   matrix_send_room_text_message( $user, $room_id, body => "private" )->then(sub {
                      do_request_json_for( $user,
-                        method => "PUT",
-                        uri    => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
-
+                        method  => "PUT",
+                        uri     => "/api/v1/rooms/$room_id/state/m.room.history_visibility/",
                         content => {
                            history_visibility => "world_readable",
                         },
@@ -279,10 +277,10 @@ sub check_events
 
    do_request_json_for( $user,
       method => "GET",
-      uri => "/api/v1/events",
+      uri    => "/api/v1/events",
       params => {
-         limit => "3",
-         dir => "b",
+         limit   => "3",
+         dir     => "b",
          room_id => $room_id,
       },
    )->then( sub {
@@ -291,8 +289,8 @@ sub check_events
       log_if_fail "Body", $body;
 
       require_json_keys( $body, qw( chunk ) );
-      @{$body->{chunk}} >= 1 or die "Want at least one chunk";
-      @{$body->{chunk}} < 3 or die "Want at most two chunks";
+      @{$body->{chunk}} >= 1 or die "Want at least one event";
+      @{$body->{chunk}} < 3 or die "Want at most two events";
 
       my $found = 0;
       foreach my $chunk ($body->{chunk}) {
@@ -312,9 +310,9 @@ sub register_anonymous_user
 
    $http->do_request_json(
       method  => "POST",
-      uri     => "/v2_alpha/register?kind=guest",
+      uri     => "/v2_alpha/register",
       content => {},
-      params => {
+      params  => {
          kind => "guest",
       },
    )->then( sub {
