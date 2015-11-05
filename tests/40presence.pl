@@ -138,10 +138,7 @@ test "Newly created users see their own presence in /initialSync (SYT-34)",
    do => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          log_if_fail "initialSync response", $body;

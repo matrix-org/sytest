@@ -54,12 +54,12 @@ push our @EXPORT, qw( matrix_join_room );
 
 sub matrix_join_room
 {
-   my ( $user, $room_id ) = @_;
+   my ( $user, $room ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/api/v1/rooms/$room_id/join",
+      uri    => "/api/v1/join/$room",
 
       content => {},
    )->then_done(1);

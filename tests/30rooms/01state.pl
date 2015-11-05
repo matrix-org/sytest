@@ -99,10 +99,7 @@ multi_test "Global initialSync",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          my $room;
@@ -156,11 +153,7 @@ test "Global initialSync with limit=0 gives no messages",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-         params => { limit => 0 },
-      )->then( sub {
+      matrix_initialsync( $user, limit => 0 )->then( sub {
          my ( $body ) = @_;
 
          my $found;

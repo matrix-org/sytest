@@ -241,7 +241,6 @@ test "Anonymous users can get individual state for world_readable rooms",
       );
    };
 
-
 sub check_events
 {
    my ( $user, $room_id ) = @_;
