@@ -14,7 +14,7 @@ test "Anonymous user cannot view non-world-readable rooms",
          ->then( sub {
             ( $room_id ) = @_;
 
-            set_room_history_visibility( $user, $room_id, "shared" );
+            matrix_set_room_history_visibility( $user, $room_id, "shared" );
          })->then( sub {
             matrix_send_room_text_message( $user, $room_id, body => "mice" )
          })->then( sub {
@@ -46,7 +46,7 @@ test "Anonymous user can view world-readable rooms",
          ->then( sub {
             ( $room_id ) = @_;
 
-            set_room_history_visibility( $user, $room_id, "world_readable" );
+            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
          })->then( sub {
             matrix_send_room_text_message( $user, $room_id, body => "mice" )
          })->then( sub {
@@ -242,7 +242,9 @@ sub register_anonymous_user
    });
 }
 
-sub set_room_history_visibility
+push our @EXPORT, qw( matrix_set_room_history_visibility );
+
+sub matrix_set_room_history_visibility
 {
    my ( $user, $room_id, $history_visibility ) = @_;
 
