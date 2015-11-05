@@ -312,6 +312,48 @@ test "GET /rooms/:room_id/state fetches entire room state",
       });
    };
 
+# This test is best deferred to here, so we can fetch the state
+
+test "POST /createRoom with creation content",
+   requires => [ $user_preparer ],
+
+   provides => [qw( can_create_room_with_creation_content )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for( $user,
+         method => "POST",
+         uri    => "/api/v1/createRoom",
+
+         content => {
+            creation_content => {
+               "m.federate" => JSON::true,
+            },
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( room_id ));
+         require_json_nonempty_string( my $room_id = $body->{room_id} );
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.create",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "state", $state;
+
+         require_json_keys( $state, qw( m.federate ));
+
+         provide can_create_room_with_creation_content => 1;
+
+         Future->done(1);
+      });
+   };
+
 push our @EXPORT, qw( matrix_get_room_state matrix_put_room_state );
 
 sub matrix_get_room_state

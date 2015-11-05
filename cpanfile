@@ -1,6 +1,6 @@
 # vim:ft=perl
 
-requires 'Class::Method::Modifiers'
+requires 'Class::Method::Modifiers';
 requires 'Data::Dump';
 requires 'Data::GUID';
 requires 'File::Basename';

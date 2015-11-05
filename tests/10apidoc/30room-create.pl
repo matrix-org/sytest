@@ -32,10 +32,7 @@ test "POST /createRoom makes a public room",
    check => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          require_json_list( $body->{rooms} );
@@ -120,6 +117,8 @@ sub matrix_create_room
             ( room_alias_name => $opts{room_alias_name} ) : () ),
          ( defined $opts{invite} ?
             ( invite => $opts{invite} ) : () ),
+         ( defined $opts{creation_content} ?
+            ( creation_content => $opts{creation_content} ) : () ),
       }
    )->then( sub {
       my ( $body ) = @_;

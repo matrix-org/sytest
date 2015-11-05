@@ -69,11 +69,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     check => sub {
         my ( $user, $room_id ) = @_;
 
-        do_request_json_for( $user,
-            method => "GET",
-            uri => "/api/v1/initialSync",
-            params => { limit => 2, archived => "true" },
-        )->then( sub {
+        matrix_initialsync( $user, limit => 2, archived => "true" )->then( sub {
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( rooms ) );
@@ -197,6 +193,8 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( chunk ) );
+
+            log_if_fail "Chunk", $body->{chunk};
 
             $body->{chunk}[1]{content}{body} eq "M2. B's message before A left"
                 or die "Received message that happened after leaving the room";

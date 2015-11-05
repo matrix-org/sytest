@@ -55,9 +55,26 @@ test "GET /initialSync initially",
 
          provide can_initial_sync => 1;
 
+         push our @EXPORT, qw( matrix_initialsync );
+
          Future->done(1);
       });
    };
+
+sub matrix_initialsync
+{
+   my ( $user, %args ) = @_;
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/api/v1/initialSync",
+
+      params => {
+         ( map { defined $args{$_} ? ( $_ => $args{$_} ) : () }
+            qw( limit archived ) ),
+      },
+   );
+}
 
 # A useful function which keeps track of the current eventstream token and
 #   fetches new events since it

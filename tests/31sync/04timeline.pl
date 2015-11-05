@@ -247,6 +247,59 @@ test "Syncing a new room with a large timeline limit isn't limited",
    };
 
 
+test "A full_state incremental update returns only recent timeline",
+   requires => [qw( first_api_client can_sync )],
+
+   check => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $filter_id, $room_id, $next_batch );
+
+      my $filter = { room => { timeline => { limit => 1 } } };
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
+         ( $user, $filter_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         $next_batch = $body->{next_batch};
+         Future->needs_all( map {
+            matrix_send_room_message( $user, $room_id,
+               content => { "filler" => $_ },
+               type    => "a.made.up.filler.type",
+            )
+         } 0 .. 10 );
+      })->then( sub {
+         matrix_send_room_message( $user, $room_id,
+               content => { "filler" => $_ },
+               type    => "another.filler.type",
+             );
+      })->then( sub {
+         matrix_sync( $user, filter => $filter_id, since => $next_batch,
+             full_state => 'true');
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{joined}{$room_id};
+         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+
+         @{ $room->{timeline}{events} } == 1
+             or die "Expected only one timeline event";
+         my $event_id = $room->{timeline}{events}[0];
+         $room->{event_map}{$event_id}{type} eq "another.filler.type"
+            or die "Unexpected timeline event type";
+
+         Future->done(1);
+      })
+   };
+
+
 test "A prev_batch token can be used in the v1 messages API",
    requires => [qw( first_api_client can_sync )],
 
