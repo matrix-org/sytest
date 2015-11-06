@@ -1,4 +1,4 @@
-use 5.014;  # s///r
+use 5.014;  # So we can use the /r flag to s///
 use utf8;
 
 # [U+2615] - HOT BEVERAGE
