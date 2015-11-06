@@ -95,7 +95,7 @@ sub can_invite_unbound_3pid
             type      => "m.room.member",
             state_key => $invitee->user_id,
          )
-      })->followed_by(assert_membership( "join" ) );
+      })->followed_by( assert_membership( "join" ) );
    });
 }
 
@@ -131,7 +131,7 @@ test "Can accept unbound 3pid invite after inviter leaves",
                type      => "m.room.member",
                state_key => $invitee->user_id,
             )
-         })->followed_by(assert_membership( "join" ) );
+         })->followed_by( assert_membership( "join" ) );
       });
    };
 
