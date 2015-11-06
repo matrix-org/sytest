@@ -4,10 +4,9 @@ sub find_receipt
 {
    my ( $body, %args ) = @_;
 
-   my $room_id  = $args{room_id};
-   my $user_id  = $args{user_id};
-   my $type     = $args{type};
-   my $event_id = $args{event_id};
+   my $room_id  = $args{room_id} or croak "Need room_id";
+   my $user_id  = $args{user_id} or croak "Need user_id";
+   my $type     = $args{type}    or croak "Need type";
 
    my $receipts = $body->{receipts};
 
@@ -17,10 +16,16 @@ sub find_receipt
 
    my $content = $receipt->{content};
 
-   exists $content->{$event_id} or return;
-   exists $content->{$event_id}{$type} or return;
+   # Try to find an event ID for that user
+   foreach my $event_id ( keys %$content ) {
+      exists $content->{$event_id} or next;
+      exists $content->{$event_id}{$type} or next;
 
-   return $content->{$event_id}{$type}{$user_id};
+      exists $content->{$event_id}{$type}{$user_id} and
+         return $event_id => $content->{$event_id}{$type}{$user_id};
+   }
+
+   return ();
 }
 
 multi_test "Read receipts are visible to /initialSync",
@@ -29,6 +34,8 @@ multi_test "Read receipts are visible to /initialSync",
 
    do => sub {
       my ( $user, $room_id ) = @_;
+
+      my $user_id = $user->user_id;
 
       # We need an event ID in the room. The ID of our own member event seems
       # reasonable. Lets fetch it.
@@ -56,12 +63,14 @@ multi_test "Read receipts are visible to /initialSync",
 
          log_if_fail "initialSync receipts", $receipts;
 
-         my $user_read_receipt = find_receipt( $body,
+         my ( $event_id, $user_read_receipt ) = find_receipt( $body,
             room_id  => $room_id,
-            user_id  => $user->user_id,
+            user_id  => $user_id,
             type     => "m.read",
-            event_id => $member_event_id,
-         ) or die "Expected to find an m.read in $room_id for $member_event_id";
+         ) or die "Expected to find an m.read in $room_id from $user_id";
+
+         $event_id eq $member_event_id or
+            die "Expected user's read recept to acknowledge up to $member_event_id";
 
          require_json_keys( $user_read_receipt, qw( ts ));
          require_json_number( $user_read_receipt->{ts} );
@@ -79,12 +88,14 @@ multi_test "Read receipts are visible to /initialSync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $user_read_receipt = find_receipt( $body,
+         my ( $event_id, $user_read_receipt ) = find_receipt( $body,
             room_id  => $room_id,
-            user_id  => $user->user_id,
+            user_id  => $user_id,
             type     => "m.read",
-            event_id => $message_event_id,
-         ) or die "Expected to find an m.read in $room_id for $message_event_id";
+         ) or die "Expected to find an m.read in $room_id from $user_id";
+
+         $event_id eq $message_event_id or
+            die "Expected user's read receipt to have advanced to $message_event_id";
 
          pass "Updated m.read receipt is available";
 
