@@ -99,6 +99,22 @@ multi_test "Read receipts are visible to /initialSync",
 
          pass "Updated m.read receipt is available";
 
+         # Now lets check that they are monotonically racheted
+         matrix_advance_room_receipt( $user, $room_id, "m.read" => $member_event_id );
+      })->then( sub {
+         matrix_initialsync( $user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my ( $event_id ) = find_receipt( $body,
+            room_id  => $room_id,
+            user_id  => $user_id,
+            type     => "m.read",
+         ) or die "Expected to find an m.read in $room_id from $user_id";
+
+         $event_id eq $message_event_id or
+            die "Expected user's read receipt to still be at $message_event_id";
+
          Future->done(1);
       });
    };
