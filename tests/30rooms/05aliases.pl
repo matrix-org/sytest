@@ -1,3 +1,4 @@
+use 5.014;  # So we can use the /r flag to s///
 use utf8;
 
 # [U+2615] - HOT BEVERAGE
@@ -68,5 +69,37 @@ test "Remote room alias queries can handle Unicode",
          provide can_federate_room_alias_unicode => 1;
 
          Future->done(1);
+      });
+   };
+
+multi_test "Canonical alias can be set",
+   requires => [ local_user_preparer() ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      my ( $room_id, $room_alias );
+
+      matrix_create_room( $user,
+         room_alias_name => "is-this-canonical",
+      )->then( sub {
+         ( $room_id, $room_alias ) = @_;
+
+         matrix_put_room_state( $user, $room_id,
+            type    => "m.room.canonical_alias",
+            content => {
+               alias => $room_alias,
+            }
+         )->SyTest::pass_on_done( "m.room.canonical_alias accepts present aliases" );
+      })->then( sub {
+         my $bad_alias = $room_alias =~ s/^#/#NOT-/r;
+
+         matrix_put_room_state( $user, $room_id,
+            type    => "m.room.canonical_alias",
+            content => {
+               alias => $bad_alias,
+            }
+         )->main::expect_http_4xx
+            ->SyTest::pass_on_done( "m.room.canonical_alias rejects missing aliases" );
       });
    };

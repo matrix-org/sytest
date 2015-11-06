@@ -183,8 +183,9 @@ test "Newly joined room has correct timeline in incremental sync",
                or die "Timeline doesn't have all the events so should be limited";
          }
          else {
-            $timeline->{limited} == JSON::true
-               or die "Timeline doesn't have all the events so should be limited";
+            require_json_boolean( $timeline->{limited} );
+            $timeline->{limited} or
+               die "Timeline doesn't have all the events so should be limited";
          }
 
          Future->done(1);
