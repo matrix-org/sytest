@@ -1,26 +1,3 @@
-push our @EXPORT, qw( matrix_advance_receipt );
-
-=head2 matrix_advance_receipt
-
-   matrix_advance_receipt( $user, $room_id, $receipt_type, $event_id )->get;
-
-Update the postion of the up-to-here receipt marker for a room.
-
-=cut
-
-#TODO This should go with the acuatal receipt tests when they exists.
-sub matrix_advance_receipt
-{
-   my ( $user, $room_id, $receipt_type, $event_id ) = @_;
-
-   do_request_json_for( $user,
-      method  => "POST",
-      uri     => "/v2_alpha/rooms/$room_id/receipt/$receipt_type/$event_id",
-      content => {}
-   );
-}
-
-
 test "Read receipts appear in initial v2 /sync",
    requires => [qw( first_api_client can_sync )],
 
@@ -49,7 +26,7 @@ test "Read receipts appear in initial v2 /sync",
       })->then( sub {
          ( $event_id ) = @_;
 
-         matrix_advance_receipt( $user, $room_id, "m.read", $event_id );
+         matrix_advance_room_receipt( $user, $room_id, "m.read", $event_id );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
@@ -108,7 +85,7 @@ test "New read receipts appear in incremental v2 /sync",
 
          $next_batch = $body->{next_batch};
 
-         matrix_advance_receipt( $user, $room_id, "m.read", $event_id );
+         matrix_advance_room_receipt( $user, $room_id, "m.read", $event_id );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id, since => $next_batch );
       })->then( sub {
