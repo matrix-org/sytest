@@ -64,9 +64,9 @@ multi_test "Read receipts are visible to /initialSync",
          log_if_fail "initialSync receipts", $receipts;
 
          my ( $event_id, $user_read_receipt ) = find_receipt( $body,
-            room_id  => $room_id,
-            user_id  => $user_id,
-            type     => "m.read",
+            room_id => $room_id,
+            user_id => $user_id,
+            type    => "m.read",
          ) or die "Expected to find an m.read in $room_id from $user_id";
 
          $event_id eq $member_event_id or
@@ -89,9 +89,9 @@ multi_test "Read receipts are visible to /initialSync",
          my ( $body ) = @_;
 
          my ( $event_id, $user_read_receipt ) = find_receipt( $body,
-            room_id  => $room_id,
-            user_id  => $user_id,
-            type     => "m.read",
+            room_id => $room_id,
+            user_id => $user_id,
+            type    => "m.read",
          ) or die "Expected to find an m.read in $room_id from $user_id";
 
          $event_id eq $message_event_id or
@@ -107,9 +107,9 @@ multi_test "Read receipts are visible to /initialSync",
          my ( $body ) = @_;
 
          my ( $event_id ) = find_receipt( $body,
-            room_id  => $room_id,
-            user_id  => $user_id,
-            type     => "m.read",
+            room_id => $room_id,
+            user_id => $user_id,
+            type    => "m.read",
          ) or die "Expected to find an m.read in $room_id from $user_id";
 
          $event_id eq $message_event_id or
