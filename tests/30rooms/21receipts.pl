@@ -145,16 +145,17 @@ test "Read receipts are sent as events",
          await_event_for( $user, sub {
             my ( $event ) = @_;
 
-            return unless $event->{type} eq "m.receipt";
+            $event->{type} eq "m.receipt" or return;
 
             require_json_keys( $event, qw( type room_id content ));
-            return unless $event->{room_id} eq $room_id;
+            $event->{room_id} eq $room_id or return;
 
             log_if_fail "Event", $event;
 
             my $content = $event->{content};
             exists $content->{$event_id} or return;
             exists $content->{$event_id}{"m.read"} or return;
+
             my $user_read_receipt = $content->{$event_id}{"m.read"}{ $user->user_id } or
                return;
 
