@@ -372,10 +372,6 @@ sub _run_test
 {
    my ( $t, %params ) = @_;
 
-   # We expect this test to fail if it's declared to be dependent on a bug that
-   # is not yet fixed
-   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
-
    undef @log_if_fail_lines;
 
    local @PROVIDES = @{ $params{provides} || [] };
@@ -492,6 +488,10 @@ sub test
 {
    my ( $name, %params ) = @_;
 
+   # We expect this test to fail if it's declared to be dependent on a bug that
+   # is not yet fixed
+   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
+
    my $t = $output->enter_test( $name, $params{expect_fail} );
    _run_test( $t, %params );
    $t->leave;
@@ -552,6 +552,10 @@ sub test
    sub multi_test
    {
       my ( $name, %params ) = @_;
+
+      # We expect this test to fail if it's declared to be dependent on a bug that
+      # is not yet fixed
+      $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
       local $RUNNING_TEST = my $t = $output->enter_multi_test( $name );
       _run_test( $t, %params );
