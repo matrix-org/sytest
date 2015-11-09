@@ -7,12 +7,12 @@ test "Read receipts appear in initial v2 /sync",
       my ( $user, $filter_id, $room_id, $event_id );
 
       my $filter = {
-         room => {
-            state => { types => [] },
-            timeline => { types => [] },
+         presence => { types => [] },
+         room     => {
+            state     => { types => [] },
+            timeline  => { types => [] },
             ephemeral => { types => ["m.receipt"] },
          },
-         presence => { types => [] },
       };
 
       matrix_register_user_with_filter( $http, $filter )->then( sub {
@@ -60,12 +60,12 @@ test "New read receipts appear in incremental v2 /sync",
       my ( $user, $filter_id, $room_id, $event_id, $next_batch );
 
       my $filter = {
-         room => {
-            state => { types => [] },
-            timeline => { types => [] },
+         presence => { types => [] },
+         room     => {
+            state     => { types => [] },
+            timeline  => { types => [] },
             ephemeral => { types => ["m.receipt"] },
          },
-         presence => { types => [] },
       };
 
       matrix_register_user_with_filter( $http, $filter )->then( sub {
