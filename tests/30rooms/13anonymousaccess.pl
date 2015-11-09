@@ -190,6 +190,50 @@ test "Anonymous user doesn't get events before room made world_readable",
       });
    };
 
+test "Anonymous users can get state for non-world_readable rooms",
+   requires => [ local_user_and_room_preparers(), qw( first_api_client ) ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+   },
+
+   check => sub {
+      my ( $user, $room_id, $api_client ) = @_;
+
+      register_anonymous_user( $api_client )->then( sub {
+         my ( $anonymous_user ) = @_;
+
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/state",
+         )
+      })
+   };
+
+test "Anonymous users can get individual state for world_readable rooms",
+   requires => [ local_user_and_room_preparers(), qw( first_api_client ) ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+   },
+
+   check => sub {
+      my ( $user, $room_id, $api_client ) = @_;
+
+      register_anonymous_user( $api_client )->then( sub {
+         my ( $anonymous_user ) = @_;
+
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
+         )
+      })
+   };
+
 sub check_events
 {
    my ( $user, $room_id ) = @_;
@@ -208,13 +252,13 @@ sub check_events
       log_if_fail "Body", $body;
 
       require_json_keys( $body, qw( chunk ) );
-      @{$body->{chunk}} >= 1 or die "Want at least one event";
-      @{$body->{chunk}} < 3 or die "Want at most two events";
+      @{ $body->{chunk} } >= 1 or die "Want at least one event";
+      @{ $body->{chunk} } < 3 or die "Want at most two events";
 
       my $found = 0;
-      foreach my $event ($body->{chunk}) {
-         next if all { $_ ne "content" } keys $event;
-         next if all { $_ ne "body" } keys $event->{content};
+      foreach my $event ( @{ $body->{chunk} } ) {
+         next if all { $_ ne "content" } keys %{ $event };
+         next if all { $_ ne "body" } keys %{ $event->{content} };
          $found = 1 if $event->{content}->{body} eq "public";
          die "Should not have found private" if $event->{content}->{body} eq "private";
       }
