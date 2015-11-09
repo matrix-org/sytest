@@ -10,6 +10,8 @@ use lib 'lib';
 
 use SyTest::CarpByFile;
 
+use SyTest::JSONSensible;
+
 use Future;
 use IO::Async::Loop;
 
