@@ -1,9 +1,9 @@
 my $alias_localpart = "#another-alias";
 
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
-my $room_preparer = preparer(
-   requires => [ $user_preparer ],
+my $room_fixture = fixture(
+   requires => [ $user_fixture ],
 
    setup => sub {
       my ( $user ) = @_;
@@ -13,7 +13,7 @@ my $room_preparer = preparer(
 );
 
 test "PUT /directory/room/:room_alias creates alias",
-   requires => [qw( first_home_server ), $user_preparer, $room_preparer ],
+   requires => [qw( first_home_server ), $user_fixture, $room_fixture ],
 
    provides => [qw( can_create_room_alias can_lookup_room_alias )],
 

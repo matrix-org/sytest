@@ -1,5 +1,5 @@
 test "Anonymous user cannot view non-world-readable rooms",
-   requires => [ qw( first_api_client ), local_user_preparer() ],
+   requires => [ qw( first_api_client ), local_user_fixture() ],
 
    do => sub {
       my ( $api_client, $user ) = @_;
@@ -31,7 +31,7 @@ test "Anonymous user cannot view non-world-readable rooms",
    };
 
 test "Anonymous user can view world-readable rooms",
-   requires => [ qw( first_api_client ), local_user_preparer() ],
+   requires => [ qw( first_api_client ), local_user_fixture() ],
 
    do => sub {
       my ( $api_client, $user ) = @_;
@@ -63,7 +63,7 @@ test "Anonymous user can view world-readable rooms",
    };
 
 test "Anonymous user cannot call /events on non-world_readable room",
-   requires => [ qw( first_api_client ), local_user_preparer() ],
+   requires => [ qw( first_api_client ), local_user_fixture() ],
 
    do => sub {
       my ( $api_client, $user ) = @_;
@@ -93,7 +93,7 @@ test "Anonymous user cannot call /events on non-world_readable room",
    };
 
 test "Anonymous user can call /events on world_readable room",
-   requires => [ qw( first_api_client ), local_user_preparer() ],
+   requires => [ qw( first_api_client ), local_user_fixture() ],
 
    do => sub {
       my ( $api_client, $user ) = @_;
@@ -151,7 +151,7 @@ test "Anonymous user can call /events on world_readable room",
    };
 
 test "Anonymous user doesn't get events before room made world_readable",
-   requires => [ qw( first_api_client ), local_user_preparer() ],
+   requires => [ qw( first_api_client ), local_user_fixture() ],
 
    do => sub {
       my ( $api_client, $user ) = @_;
@@ -191,7 +191,7 @@ test "Anonymous user doesn't get events before room made world_readable",
    };
 
 test "Anonymous users can get state for non-world_readable rooms",
-   requires => [ local_user_and_room_preparers(), qw( first_api_client ) ],
+   requires => [ local_user_and_room_fixtures(), qw( first_api_client ) ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -213,7 +213,7 @@ test "Anonymous users can get state for non-world_readable rooms",
    };
 
 test "Anonymous users can get individual state for world_readable rooms",
-   requires => [ local_user_and_room_preparers(), qw( first_api_client ) ],
+   requires => [ local_user_and_room_fixtures(), qw( first_api_client ) ],
 
    do => sub {
       my ( $user, $room_id ) = @_;

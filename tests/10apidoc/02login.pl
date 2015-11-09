@@ -3,7 +3,7 @@ use JSON qw( decode_json );
 # Doesn't matter what this is, but later tests will use it.
 my $password = "s3kr1t";
 
-my $registered_user_preparer = preparer(
+my $registered_user_fixture = fixture(
    requires => [qw( first_api_client )],
 
    setup => sub {
@@ -68,7 +68,7 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [qw( first_api_client ), $registered_user_preparer,
+   requires => [qw( first_api_client ), $registered_user_fixture,
                 qw( can_login_password_flow )],
 
    provides => [qw( can_login first_home_server do_request_json_for do_request_json )],
@@ -103,7 +103,7 @@ test "POST /login can log in as a user",
    };
 
 test "POST /login wrong password is rejected",
-   requires => [qw( first_api_client ), $registered_user_preparer,
+   requires => [qw( first_api_client ), $registered_user_fixture,
                 qw( can_login_password_flow )],
 
    do => sub {
@@ -135,7 +135,7 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [qw( first_api_client ), $registered_user_preparer ],
+   requires => [qw( first_api_client ), $registered_user_fixture ],
 
    do => sub {
       my ( $http, $user_id ) = @_;

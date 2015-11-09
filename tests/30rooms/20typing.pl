@@ -22,21 +22,21 @@ sub matrix_typing
 }
 
 
-my $typing_user_preparer = local_user_preparer();
+my $typing_user_fixture = local_user_fixture();
 
-my $local_user_preparer = local_user_preparer();
+my $local_user_fixture = local_user_fixture();
 
-my $remote_user_preparer = remote_user_preparer();
+my $remote_user_fixture = remote_user_fixture();
 
-my $room_preparer = room_preparer(
+my $room_fixture = room_fixture(
    requires_users => [
-      $typing_user_preparer, $local_user_preparer, $remote_user_preparer
+      $typing_user_fixture, $local_user_fixture, $remote_user_fixture
    ],
 );
 
 
 test "Typing notification sent to local room members",
-   requires => [ $typing_user_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $typing_user_fixture, $local_user_fixture, $room_fixture,
                 qw( can_set_room_typing )],
 
    do => sub {
@@ -74,7 +74,7 @@ test "Typing notification sent to local room members",
 
 
 test "Typing notifications also sent to remote room members",
-   requires => [ $typing_user_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $typing_user_fixture, $remote_user_fixture, $room_fixture,
                 qw( can_set_room_typing can_join_remote_room_by_alias )],
 
    do => sub {
@@ -103,7 +103,7 @@ test "Typing notifications also sent to remote room members",
 
 
 test "Typing can be explicitly stopped",
-   requires => [ $typing_user_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $typing_user_fixture, $local_user_fixture, $room_fixture,
                 qw( can_set_room_typing )],
 
    do => sub {
@@ -136,7 +136,7 @@ test "Typing can be explicitly stopped",
 
 
 multi_test "Typing notifications timeout and can be resent",
-   requires => [ $typing_user_preparer, $room_preparer,
+   requires => [ $typing_user_fixture, $room_fixture,
                 qw( can_set_room_typing )],
 
    do => sub {

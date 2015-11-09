@@ -292,21 +292,21 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
-struct Preparer => [qw( requires start result )], predicate => "is_Preparer";
+struct Fixture => [qw( requires start result )], predicate => "is_Fixture";
 
-sub preparer
+sub fixture
 {
    my %args = @_;
 
-   my $setup = $args{setup} or croak "preparer needs a 'setup' block";
-   ref( $setup ) eq "CODE" or croak "Expected preparer 'setup' block to be CODE";
+   my $setup = $args{setup} or croak "fixture needs a 'setup' block";
+   ref( $setup ) eq "CODE" or croak "Expected fixture 'setup' block to be CODE";
 
    my @req_futures;
    my $f_start = Future->new;
 
    my @requires;
    foreach my $req ( @{ $args{requires} // [] } ) {
-      if( is_Preparer( $req ) ) {
+      if( is_Fixture( $req ) ) {
          push @requires, @{ $req->requires };
          push @req_futures, $f_start->then( sub {
             my ( $env ) = @_;
@@ -320,13 +320,13 @@ sub preparer
          push @req_futures, $f_start->then( sub {
             my ( $env ) = @_;
 
-            exists $env->{$req} or die "TODO: Missing preparer dependency $req\n";
+            exists $env->{$req} or die "TODO: Missing fixture dependency $req\n";
             Future->done( $env->{$req} );
          });
       }
    }
 
-   return Preparer(
+   return Fixture(
       \@requires,
 
       sub { $f_start->done( @_ ) unless $f_start->is_ready },
@@ -391,15 +391,15 @@ sub _run_test
    my @req_futures;
 
    foreach my $req ( @{ $params{requires} || [] } ) {
-      if( is_Preparer( $req ) ) {
-         my $preparer = $req;
+      if( is_Fixture( $req ) ) {
+         my $fixture = $req;
 
-         exists $test_environment{$_} or die "TODO: Missing preparer dependency $_"
-            for @{ $preparer->requires };
+         exists $test_environment{$_} or die "TODO: Missing fixture dependency $_"
+            for @{ $fixture->requires };
 
          push @req_futures, $f_start->then( sub {
-            $preparer->start->( \%test_environment );
-            $preparer->result;
+            $fixture->start->( \%test_environment );
+            $fixture->result;
          });
       }
       else {
@@ -420,7 +420,7 @@ sub _run_test
       my @reqs;
       my $f_test = Future->needs_all( @req_futures )
          ->on_done( sub { @reqs = @_ } )
-         ->on_fail( sub { die "preparer failed - $_[0]\n" } );
+         ->on_fail( sub { die "fixture failed - $_[0]\n" } );
 
       my $check = $params{check};
       if( my $do = $params{do} ) {

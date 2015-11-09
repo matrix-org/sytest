@@ -1,9 +1,9 @@
 use List::Util qw( first );
 
-my $left_user_preparer = local_user_preparer();
+my $left_user_fixture = local_user_fixture();
 
-my $room_preparer = preparer(
-    requires => [ $left_user_preparer, local_user_preparer(),
+my $room_fixture = fixture(
+    requires => [ $left_user_fixture, local_user_fixture(),
                  qw( can_send_message )],
 
     setup => sub {
@@ -64,7 +64,7 @@ my $room_preparer = preparer(
 );
 
 test "A departed room is still included in /initialSync (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -97,7 +97,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -134,7 +134,7 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -155,7 +155,7 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -180,7 +180,7 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -204,7 +204,7 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
     };
 
 test "Can get 'm.room.name' state for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -224,7 +224,7 @@ test "Can get 'm.room.name' state for a departed room (SPEC-216)",
     };
 
 test "Getting messages going forward is limited for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;

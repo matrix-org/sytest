@@ -1,12 +1,12 @@
 use List::Util qw( first );
 
-my $creator_preparer = local_user_preparer();
+my $creator_fixture = local_user_fixture();
 
-sub inviteonly_room_preparer
+sub inviteonly_room_fixture
 {
    my %args = @_;
 
-   preparer(
+   fixture(
       requires => [ $args{creator} ],
 
       setup => sub {
@@ -41,10 +41,10 @@ sub inviteonly_room_preparer
    )
 };
 
-my $inviteonly_room_preparer = inviteonly_room_preparer( creator => $creator_preparer );
+my $inviteonly_room_fixture = inviteonly_room_fixture( creator => $creator_fixture );
 
 test "Uninvited users cannot join the room",
-   requires => [ local_user_preparer(), $inviteonly_room_preparer ],
+   requires => [ local_user_fixture(), $inviteonly_room_fixture ],
 
    check => sub {
       my ( $uninvited, $room_id ) = @_;
@@ -53,10 +53,10 @@ test "Uninvited users cannot join the room",
          ->main::expect_http_403;
    };
 
-my $invited_user_preparer = local_user_preparer();
+my $invited_user_fixture = local_user_fixture();
 
 test "Can invite users to invite-only rooms",
-   requires => [ $creator_preparer, $invited_user_preparer, $inviteonly_room_preparer,
+   requires => [ $creator_fixture, $invited_user_fixture, $inviteonly_room_fixture,
                 qw( can_invite_room )],
 
    do => sub {
@@ -66,7 +66,7 @@ test "Can invite users to invite-only rooms",
    };
 
 test "Invited user receives invite",
-   requires => [ $invited_user_preparer, $inviteonly_room_preparer,
+   requires => [ $invited_user_fixture, $inviteonly_room_fixture,
                  qw( can_invite_room )],
 
    do => sub {
@@ -92,7 +92,7 @@ test "Invited user receives invite",
    };
 
 test "Invited user can join the room",
-   requires => [ $invited_user_preparer, $inviteonly_room_preparer,
+   requires => [ $invited_user_fixture, $inviteonly_room_fixture,
                  qw( can_invite_room )],
 
    do => sub {
@@ -114,21 +114,21 @@ test "Invited user can join the room",
       });
    };
 
-my $other_local_user_preparer = local_user_preparer();
+my $other_local_user_fixture = local_user_fixture();
 
 test "Invited user can reject invite",
-   requires => [ local_user_preparer(),
+   requires => [ local_user_fixture(),
       do {
-         my $creator = local_user_preparer();
-         $creator, inviteonly_room_preparer( creator => $creator );
+         my $creator = local_user_fixture();
+         $creator, inviteonly_room_fixture( creator => $creator );
    } ],
    do => \&invited_user_can_reject_invite;
 
 test "Invited user can reject invite over federation",
-   requires => [ remote_user_preparer(),
+   requires => [ remote_user_fixture(),
       do {
-         my $creator = local_user_preparer();
-         $creator, inviteonly_room_preparer( creator => $creator );
+         my $creator = local_user_fixture();
+         $creator, inviteonly_room_fixture( creator => $creator );
    } ],
    do => \&invited_user_can_reject_invite;
 

@@ -1,9 +1,9 @@
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
 my $displayname = "Testing Displayname";
 
 test "PUT /profile/:user_id/displayname sets my name",
-   requires => [ $user_preparer ],
+   requires => [ $user_fixture ],
 
    provides => [qw( can_set_displayname )],
 
@@ -41,7 +41,7 @@ test "PUT /profile/:user_id/displayname sets my name",
    };
 
 test "GET /profile/:user_id/displayname publicly accessible",
-   requires => [ qw( first_api_client ), $user_preparer,
+   requires => [ qw( first_api_client ), $user_fixture,
                  qw( can_set_displayname )],
 
    provides => [qw( can_get_displayname )],

@@ -11,7 +11,7 @@ my $DIR = dirname( __FILE__ );
 my $invitee_email = 'lemurs@monkeyworld.org';
 
 test "Can invite existing 3pid",
-   requires => [ local_user_preparers( 2 ) ],
+   requires => [ local_user_fixtures( 2 ) ],
 
    do => sub {
       my ( $inviter, $invitee ) = @_;
@@ -57,7 +57,7 @@ test "Can invite existing 3pid",
    };
 
 test "Can invite unbound 3pid",
-   requires => [ local_user_preparers( 2 ), qw( synapse_client_locations )],
+   requires => [ local_user_fixtures( 2 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
 
@@ -65,7 +65,7 @@ test "Can invite unbound 3pid",
    };
 
 test "Can invite unbound 3pid over federation",
-   requires => [ local_user_preparer(), remote_user_preparer(), qw( synapse_client_locations )],
+   requires => [ local_user_fixture(), remote_user_fixture(), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
 
@@ -100,7 +100,7 @@ sub can_invite_unbound_3pid
 }
 
 test "Can accept unbound 3pid invite after inviter leaves",
-   requires => [ local_user_preparers( 3 ), qw( synapse_client_locations )],
+   requires => [ local_user_fixtures( 3 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $other_member, $invitee, $locations ) = @_;
 
@@ -136,7 +136,7 @@ test "Can accept unbound 3pid invite after inviter leaves",
    };
 
 test "3pid invite join with wrong but valid signature are rejected",
-   requires => [ local_user_preparers( 2 ), qw( synapse_client_locations )],
+   requires => [ local_user_fixtures( 2 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
 
@@ -150,7 +150,7 @@ test "3pid invite join with wrong but valid signature are rejected",
    };
 
 test "3pid invite join valid signature but revoked keys are rejected",
-   requires => [ local_user_preparers( 2 ), qw( synapse_client_locations )],
+   requires => [ local_user_fixtures( 2 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
 
@@ -164,7 +164,7 @@ test "3pid invite join valid signature but revoked keys are rejected",
    };
 
 test "3pid invite join valid signature but unreachable ID server are rejected",
-   requires => [ local_user_preparers( 2 ), qw( synapse_client_locations )],
+   requires => [ local_user_fixtures( 2 ), qw( synapse_client_locations )],
    do => sub {
       my ( $inviter, $invitee, $locations ) = @_;
 

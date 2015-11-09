@@ -1,5 +1,5 @@
 test "PUT /rooms/:room_id/typing/:user_id sets typing notification",
-   requires => [ local_user_and_room_preparers() ],
+   requires => [ local_user_and_room_fixtures() ],
 
    provides => [qw( can_set_room_typing )],
 

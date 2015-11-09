@@ -2,11 +2,11 @@ use Future 0.33; # then catch semantics
 use Future::Utils qw( fmap );
 use List::UtilsBy qw( partition_by );
 
-my $creator_preparer = local_user_preparer();
+my $creator_fixture = local_user_fixture();
 
 # This provides $room_id *AND* $room_alias
-my $room_preparer = preparer(
-   requires => [ $creator_preparer ],
+my $room_fixture = fixture(
+   requires => [ $creator_fixture ],
 
    setup => sub {
       my ( $user ) = @_;
@@ -18,7 +18,7 @@ my $room_preparer = preparer(
 );
 
 test "POST /rooms/:room_id/join can join a room",
-   requires => [ local_user_preparer(), $room_preparer,
+   requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
    critical => 1,
@@ -66,7 +66,7 @@ sub matrix_join_room
 }
 
 test "POST /join/:room_alias can join a room",
-   requires => [ local_user_preparer(), $room_preparer,
+   requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
    provides => [qw( can_join_room_by_alias )],
@@ -108,7 +108,7 @@ test "POST /join/:room_alias can join a room",
    };
 
 test "POST /join/:room_id can join a room",
-   requires => [ local_user_preparer(), $room_preparer,
+   requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
    do => sub {
@@ -147,7 +147,7 @@ test "POST /join/:room_id can join a room",
    };
 
 test "POST /rooms/:room_id/leave can leave a room",
-   requires => [ local_user_preparer(), $room_preparer,
+   requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
    critical => 1,
@@ -204,7 +204,7 @@ sub matrix_leave_room
 }
 
 test "POST /rooms/:room_id/invite can send an invite",
-   requires => [ $creator_preparer, local_user_preparer(), $room_preparer,
+   requires => [ $creator_fixture, local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
    provides => [qw( can_invite_room )],
@@ -265,7 +265,7 @@ sub matrix_invite_user_to_room
 }
 
 test "POST /rooms/:room_id/ban can ban a user",
-   requires => [ $creator_preparer, local_user_preparer(), $room_preparer,
+   requires => [ $creator_fixture, local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
    provides => [qw( can_ban_room )],
@@ -385,13 +385,13 @@ sub matrix_create_and_join_room
    })
 }
 
-push @EXPORT, qw( room_preparer );
+push @EXPORT, qw( room_fixture );
 
-sub room_preparer
+sub room_fixture
 {
    my %args = @_;
 
-   preparer(
+   fixture(
       requires => $args{requires_users},
 
       setup => sub {
@@ -402,14 +402,14 @@ sub room_preparer
    );
 }
 
-push @EXPORT, qw( local_user_and_room_preparers );
+push @EXPORT, qw( local_user_and_room_fixtures );
 
-sub local_user_and_room_preparers
+sub local_user_and_room_fixtures
 {
-   my $user_preparer = local_user_preparer();
+   my $user_fixture = local_user_fixture();
 
    return (
-      $user_preparer,
-      room_preparer( requires_users => [ $user_preparer ] ),
+      $user_fixture,
+      room_fixture( requires_users => [ $user_fixture ] ),
    );
 }
