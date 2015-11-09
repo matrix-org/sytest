@@ -1,5 +1,6 @@
 package SyTest::JSONSensible;
 
+use JSON;
 use Data::Dump::Filtered;
 
 ## TERRIBLY RUDE but it seems to work
@@ -22,5 +23,13 @@ package JSON::number {
          : undef;
    });
 }
+
+use constant JSON_BOOLEAN_CLASS => ref( JSON::true );
+
+Data::Dump::Filtered::add_dump_filter( sub {
+   ( ref($_[1]) // '' ) eq JSON_BOOLEAN_CLASS
+      ? { dump => $_[1] ? "JSON::true" : "JSON::false" }
+      : undef;
+   });
 
 1;
