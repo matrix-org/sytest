@@ -199,11 +199,14 @@ sub check_tag_event {
 
    my %tags = %{ $event->{content}{tags} };
 
-   die "Expected empty tag" if ($empty && keys %tags);
-
-   keys %tags == 1 or die "Expected exactly one tag";
-   defined $tags{test_tag} or die "Unexpected tag";
-   $tags{test_tag}{order} == 1 or die "Expected order == 1";
+   if( $empty ) {
+      keys %tags == 0 or die "Expected empty tag"
+   }
+   else {
+      keys %tags == 1 or die "Expected exactly one tag";
+      defined $tags{test_tag} or die "Unexpected tag";
+      $tags{test_tag}{order} == 1 or die "Expected order == 1";
+   }
 }
 
 
