@@ -11,7 +11,7 @@ test "Read receipts appear in initial v2 /sync",
          room     => {
             state     => { types => [] },
             timeline  => { types => [] },
-            ephemeral => { types => ["m.receipt"] },
+            ephemeral => { types => [ "m.receipt" ] },
          },
       };
 
@@ -64,7 +64,7 @@ test "New read receipts appear in incremental v2 /sync",
          room     => {
             state     => { types => [] },
             timeline  => { types => [] },
-            ephemeral => { types => ["m.receipt"] },
+            ephemeral => { types => [ "m.receipt" ] },
          },
       };
 
