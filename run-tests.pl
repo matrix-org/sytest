@@ -559,7 +559,8 @@ sub test
       # is not yet fixed
       $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
-      local $RUNNING_TEST = my $t = $output->enter_multi_test( $name );
+      local $RUNNING_TEST = my $t = $output->enter_multi_test(
+          $name, $params{expect_fail} );
       _run_test( $t, %params );
       $t->leave;
 
