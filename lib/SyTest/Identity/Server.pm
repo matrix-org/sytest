@@ -109,6 +109,7 @@ sub on_request
          token   => $token,
       };
       $resp{token} = $token;
+      $resp{display_name} = "Bob";
       $resp{public_key} = $self->{keys}{"ed25519:0"};
       $req->respond_json( \%resp );
    }

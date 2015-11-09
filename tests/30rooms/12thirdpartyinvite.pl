@@ -37,7 +37,6 @@ test "Can invite existing 3pid",
                      id_server    => $id_server->name,
                      medium       => "email",
                      address      => $invitee_email,
-                     display_name => "Cute things",
                   },
                );
             })->then( sub {
@@ -237,7 +236,6 @@ sub do_3pid_invite {
          id_server    => $id_server,
          medium       => "email",
          address      => $invitee_email,
-         display_name => "Cool tails",
       }
    )
 }
