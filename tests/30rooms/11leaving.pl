@@ -6,7 +6,7 @@ my $room_preparer = preparer(
     requires => [ $left_user_preparer, local_user_preparer(),
                  qw( can_send_message )],
 
-    do => sub {
+    setup => sub {
         my ( $leaving_user, $other_user ) = @_;
 
         my $room_id;

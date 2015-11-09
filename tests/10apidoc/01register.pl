@@ -120,7 +120,7 @@ sub local_user_preparer
    preparer(
       requires => [qw( first_api_client )],
 
-      do => sub {
+      setup => sub {
          my ( $api_client ) = @_;
 
          matrix_register_user( $api_client )
@@ -168,7 +168,7 @@ sub remote_user_preparer
    preparer(
       requires => [qw( api_clients )],
 
-      do => sub {
+      setup => sub {
          my ( $clients ) = @_;
          my $http = $clients->[1];
 
@@ -186,7 +186,7 @@ push @EXPORT, qw( SPYGLASS_USER );
 our $SPYGLASS_USER = preparer(
    requires => [qw( first_api_client )],
 
-   do => sub {
+   setup => sub {
       my ( $api_client ) = @_;
 
       matrix_register_user( $api_client )

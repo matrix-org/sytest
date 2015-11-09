@@ -12,7 +12,7 @@ my $remote_user_preparer = remote_user_preparer();
 my $room_preparer = preparer(
    requires => [ $creator_preparer ],
 
-   do => sub {
+   setup => sub {
       my ( $user ) = @_;
 
       matrix_create_room( $user,

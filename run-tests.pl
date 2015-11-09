@@ -298,8 +298,8 @@ sub preparer
 {
    my %args = @_;
 
-   my $do = $args{do} or croak "preparer needs a 'do' block";
-   ref( $do ) eq "CODE" or croak "Expected preparer 'do' block to be CODE";
+   my $setup = $args{setup} or croak "preparer needs a 'setup' block";
+   ref( $setup ) eq "CODE" or croak "Expected preparer 'setup' block to be CODE";
 
    my @req_futures;
    my $f_start = Future->new;
@@ -332,7 +332,7 @@ sub preparer
       sub { $f_start->done( @_ ) unless $f_start->is_ready },
 
       Future->needs_all( @req_futures )
-         ->then( $do )
+         ->then( $setup )
    );
 }
 

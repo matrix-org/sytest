@@ -11,7 +11,7 @@ sub lockeddown_room_preparer
       requires => [ $creator_preparer, $user_preparer,
                     qw( can_change_power_levels ) ],
 
-      do => sub {
+      setup => sub {
          my ( $creator, $test_user ) = @_;
 
          matrix_create_and_join_room( [ $creator, $test_user ] )

@@ -9,7 +9,7 @@ sub inviteonly_room_preparer
    preparer(
       requires => [ $args{creator} ],
 
-      do => sub {
+      setup => sub {
          my ( $creator ) = @_;
 
          matrix_create_room( $creator,

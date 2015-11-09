@@ -8,7 +8,7 @@ my $user_preparer = local_user_preparer();
 my $room_preparer = preparer(
    requires => [ $user_preparer ],
 
-   do => sub {
+   setup => sub {
       my ( $user ) = @_;
 
       matrix_create_room( $user,

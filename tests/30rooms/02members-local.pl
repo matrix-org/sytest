@@ -10,7 +10,7 @@ my $local_user_preparer = local_user_preparer();
 my $room_preparer = preparer(
    requires => [ $creator_preparer, $local_user_preparer ],
 
-   do => sub {
+   setup => sub {
       my ( $creator, $local_user ) = @_;
 
       # Don't use matrix_create_and_join_room here because we explicitly do

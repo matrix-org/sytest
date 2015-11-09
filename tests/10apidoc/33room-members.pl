@@ -8,7 +8,7 @@ my $creator_preparer = local_user_preparer();
 my $room_preparer = preparer(
    requires => [ $creator_preparer ],
 
-   do => sub {
+   setup => sub {
       my ( $user ) = @_;
 
       matrix_create_room( $user,
@@ -394,7 +394,7 @@ sub room_preparer
    preparer(
       requires => $args{requires_users},
 
-      do => sub {
+      setup => sub {
          my @members = @_;
 
          matrix_create_and_join_room( \@members )

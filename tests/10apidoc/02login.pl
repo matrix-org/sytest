@@ -6,7 +6,7 @@ my $password = "s3kr1t";
 my $registered_user_preparer = preparer(
    requires => [qw( first_api_client )],
 
-   do => sub {
+   setup => sub {
       my ( $api_client ) = @_;
 
       $api_client->do_request_json(
