@@ -292,7 +292,7 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
-struct Fixture => [qw( requires start result )], predicate => "is_Fixture";
+struct Fixture => [qw( requires start result teardown )], predicate => "is_Fixture";
 
 sub fixture
 {
@@ -300,6 +300,9 @@ sub fixture
 
    my $setup = $args{setup} or croak "fixture needs a 'setup' block";
    ref( $setup ) eq "CODE" or croak "Expected fixture 'setup' block to be CODE";
+
+   my $teardown = $args{teardown};
+   !$teardown || ref( $teardown ) eq "CODE" or croak "Expected fixture 'teardown' to be CODE";
 
    my @req_futures;
    my $f_start = Future->new;
@@ -332,7 +335,19 @@ sub fixture
       sub { $f_start->done( @_ ) unless $f_start->is_ready },
 
       Future->needs_all( @req_futures )
-         ->then( $setup )
+         ->then( $setup ),
+
+      $teardown ? sub {
+         my ( $self ) = @_;
+
+         if( $self->result->is_ready ) {
+            return $teardown->( $self->result->get );
+         }
+         else {
+            $self->result->cancel;
+            Future->done;
+         }
+      } : undef,
    );
 }
 
@@ -387,10 +402,12 @@ sub _run_test
       return;
    }
 
+   my @requires = @{ $params{requires} || [] };
+
    my $f_start = Future->new;
    my @req_futures;
 
-   foreach my $req ( @{ $params{requires} || [] } ) {
+   foreach my $req ( @requires ) {
       if( is_Fixture( $req ) ) {
          my $fixture = $req;
 
@@ -471,6 +488,15 @@ sub _run_test
 
       1;
    };
+
+   Future->needs_all( map {
+      if( is_Fixture( $_ ) and $_->teardown ) {
+         $_->teardown->( $_ );
+      }
+      else {
+         ();
+      }
+   } @requires )->get;
 
    if( $success ) {
       exists $test_environment{$_} or warn "Test step ${\$t->name} did not provide a value for $_\n"
