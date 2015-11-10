@@ -170,7 +170,7 @@ multi_test "Typing notifications timeout and can be resent",
             return unless $event->{type} eq "m.typing";
             return unless $event->{room_id} eq $room_id;
 
-            return if scalar @{ $event->{content}{user_ids} };
+            @{ $event->{content}{user_ids} } == 0 or return;
 
             ( time() - $start_time ) < 0.5 or
                die "Took too long to time out";

@@ -375,7 +375,9 @@ sub matrix_create_and_join_room
 
             $joined_members{ $event->{state_key} }++;
 
-            return 1 if keys( %joined_members ) == $n_joiners;
+            keys( %joined_members ) == $n_joiners
+               and return 1;
+
             return 0;
          }),
 

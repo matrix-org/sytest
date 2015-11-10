@@ -139,10 +139,16 @@ package SyTest::HTTPServer {
 
       my $awaiter = extract_first_by {
          my $pathmatch = $_->pathmatch;
-         return 0 unless ( !ref $pathmatch and $path eq $pathmatch ) or
-                         ( ref $pathmatch  and $path =~ $pathmatch );
+         if( ref $pathmatch ) {
+            $path =~ $pathmatch or return 0;
+         }
+         else {
+            $path eq $pathmatch or return 0;
+         }
 
-         return 0 if $_->filter and not $_->filter->( $request );
+         if( $_->filter ) {
+            $_->filter->( $request ) or return 0;
+         }
 
          return 1;
       } @pending_awaiters;
