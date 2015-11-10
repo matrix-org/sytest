@@ -179,8 +179,9 @@ test "Newly joined room has correct timeline in incremental sync",
          } @{ $timeline->{events} };
 
          if( @{ $timeline->{events} } == 6 ) {
-            $timeline->{limited} == JSON::false
-               or die "Timeline doesn't have all the events so should be limited";
+            require_json_boolean( $timeline->{limited} );
+            !$timeline->{limited} or
+               die "Timeline doesn't have all the events so should be limited";
          }
          else {
             require_json_boolean( $timeline->{limited} );
