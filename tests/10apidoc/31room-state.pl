@@ -2,13 +2,13 @@ use List::UtilsBy qw( partition_by );
 
 my $name = "room name here";
 
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
 # This provides $room_id *AND* $room_alias
-my $room_preparer = preparer(
-   requires => [ $user_preparer ],
+my $room_fixture = fixture(
+   requires => [ $user_fixture ],
 
-   do => sub {
+   setup => sub {
       my ( $user ) = @_;
 
       matrix_create_room( $user,
@@ -18,7 +18,7 @@ my $room_preparer = preparer(
 );
 
 test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
-   requires => [ $user_preparer, $room_preparer ],
+   requires => [ $user_fixture, $room_fixture ],
 
    provides => [qw( can_get_room_membership )],
 
@@ -43,7 +43,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
    };
 
 test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
-   requires => [ $user_preparer, $room_preparer ],
+   requires => [ $user_fixture, $room_fixture ],
 
    provides => [qw( can_get_room_powerlevels )],
 
@@ -69,7 +69,7 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
    };
 
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
-   requires => [ $user_preparer, $room_preparer ],
+   requires => [ $user_fixture, $room_fixture ],
 
    provides => [qw( can_room_initial_sync )],
 
@@ -100,7 +100,7 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_api_client ), $room_preparer ],
+   requires => [qw( first_api_client ), $room_fixture ],
 
    check => sub {
       my ( $http, $room_id, undef ) = @_;
@@ -131,7 +131,7 @@ test "GET /publicRooms lists newly-created room",
    };
 
 test "GET /directory/room/:room_alias yields room ID",
-   requires => [ our $SPYGLASS_USER, $room_preparer ],
+   requires => [ our $SPYGLASS_USER, $room_fixture ],
 
    check => sub {
       my ( $user, $room_id, $room_alias ) = @_;
@@ -152,7 +152,7 @@ test "GET /directory/room/:room_alias yields room ID",
    };
 
 test "POST /rooms/:room_id/state/m.room.name sets name",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                  qw( can_room_initial_sync )],
 
    provides => [qw( can_set_room_name )],
@@ -192,7 +192,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    };
 
 test "GET /rooms/:room_id/state/m.room.name gets name",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                  qw( can_set_room_name )],
 
    provides => [qw( can_get_room_name )],
@@ -220,7 +220,7 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
 my $topic = "A new topic for the room";
 
 test "POST /rooms/:room_id/state/m.room.topic sets topic",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                  qw( can_room_initial_sync )],
 
    provides => [qw( can_set_room_topic )],
@@ -260,7 +260,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    };
 
 test "GET /rooms/:room_id/state/m.room.topic gets topic",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                  qw( can_set_room_topic )],
 
    provides => [qw( can_get_room_topic )],
@@ -286,7 +286,7 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
    };
 
 test "GET /rooms/:room_id/state fetches entire room state",
-   requires => [ $user_preparer, $room_preparer ],
+   requires => [ $user_fixture, $room_fixture ],
 
    provides => [qw( can_get_room_all_state )],
 
@@ -307,6 +307,48 @@ test "GET /rooms/:room_id/state fetches entire room state",
             qw( m.room.create m.room.join_rules m.room.name m.room.power_levels );
 
          provide can_get_room_all_state => 1;
+
+         Future->done(1);
+      });
+   };
+
+# This test is best deferred to here, so we can fetch the state
+
+test "POST /createRoom with creation content",
+   requires => [ $user_fixture ],
+
+   provides => [qw( can_create_room_with_creation_content )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for( $user,
+         method => "POST",
+         uri    => "/api/v1/createRoom",
+
+         content => {
+            creation_content => {
+               "m.federate" => JSON::true,
+            },
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( room_id ));
+         require_json_nonempty_string( my $room_id = $body->{room_id} );
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.create",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "state", $state;
+
+         require_json_keys( $state, qw( m.federate ));
+
+         provide can_create_room_with_creation_content => 1;
 
          Future->done(1);
       });

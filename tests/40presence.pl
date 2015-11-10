@@ -1,21 +1,21 @@
-my $senduser_preparer = local_user_preparer();
+my $senduser_fixture = local_user_fixture();
 
-my $local_user_preparer = local_user_preparer();
+my $local_user_fixture = local_user_fixture();
 
-my $remote_user_preparer = remote_user_preparer();
+my $remote_user_fixture = remote_user_fixture();
 
 # Ensure all the users are members of a shared room, so that we know presence
 # messages can be shared between them all
-my $room_preparer = room_preparer(
+my $room_fixture = room_fixture(
    requires_users => [
-      $senduser_preparer, $local_user_preparer, $remote_user_preparer
+      $senduser_fixture, $local_user_fixture, $remote_user_fixture
    ],
 );
 
 my $status_msg = "Update for room members";
 
 test "Presence changes are reported to local room members",
-   requires => [ $senduser_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $senduser_fixture, $local_user_fixture, $room_fixture,
                  qw( can_set_presence )],
 
    do => sub {
@@ -53,7 +53,7 @@ test "Presence changes are reported to local room members",
    };
 
 test "Presence changes are also reported to remote room members",
-   requires => [ $senduser_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $senduser_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_set_presence can_join_remote_room_by_alias )],
 
    do => sub {
@@ -80,7 +80,7 @@ test "Presence changes are also reported to remote room members",
    };
 
 test "Presence changes to OFFLINE are reported to local room members",
-   requires => [ $senduser_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $senduser_fixture, $local_user_fixture, $room_fixture,
                  qw( can_set_presence )],
 
    do => sub {
@@ -111,7 +111,7 @@ test "Presence changes to OFFLINE are reported to local room members",
    };
 
 test "Presence changes to OFFLINE are reported to remote room members",
-   requires => [ $senduser_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $senduser_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_set_presence can_join_remote_room_by_alias )],
 
    do => sub {
@@ -132,16 +132,13 @@ test "Presence changes to OFFLINE are reported to remote room members",
    };
 
 test "Newly created users see their own presence in /initialSync (SYT-34)",
-   requires => [ local_user_preparer(),
+   requires => [ local_user_fixture(),
                  qw( can_initial_sync )],
 
    do => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          log_if_fail "initialSync response", $body;

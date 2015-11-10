@@ -1,7 +1,7 @@
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
 test "POST /createRoom makes a public room",
-   requires => [ $user_preparer,
+   requires => [ $user_fixture,
                  qw( can_initial_sync )],
 
    critical => 1,
@@ -32,10 +32,7 @@ test "POST /createRoom makes a public room",
    check => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          require_json_list( $body->{rooms} );
@@ -47,7 +44,7 @@ test "POST /createRoom makes a public room",
    };
 
 test "POST /createRoom makes a private room",
-   requires => [ $user_preparer ],
+   requires => [ $user_fixture ],
 
    provides => [qw( can_create_private_room )],
 
@@ -74,7 +71,7 @@ test "POST /createRoom makes a private room",
    };
 
 test "POST /createRoom makes a private room with invites",
-   requires => [ $user_preparer, local_user_preparer(),
+   requires => [ $user_fixture, local_user_fixture(),
                  qw( can_create_private_room )],
 
    provides => [qw( can_create_private_room_with_invite )],
@@ -120,6 +117,8 @@ sub matrix_create_room
             ( room_alias_name => $opts{room_alias_name} ) : () ),
          ( defined $opts{invite} ?
             ( invite => $opts{invite} ) : () ),
+         ( defined $opts{creation_content} ?
+            ( creation_content => $opts{creation_content} ) : () ),
       }
    )->then( sub {
       my ( $body ) = @_;

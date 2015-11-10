@@ -1,12 +1,12 @@
 use List::Util qw( first );
 
-my $left_user_preparer = local_user_preparer();
+my $left_user_fixture = local_user_fixture();
 
-my $room_preparer = preparer(
-    requires => [ $left_user_preparer, local_user_preparer(),
+my $room_fixture = fixture(
+    requires => [ $left_user_fixture, local_user_fixture(),
                  qw( can_send_message )],
 
-    do => sub {
+    setup => sub {
         my ( $leaving_user, $other_user ) = @_;
 
         my $room_id;
@@ -64,16 +64,12 @@ my $room_preparer = preparer(
 );
 
 test "A departed room is still included in /initialSync (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
 
-        do_request_json_for( $user,
-            method => "GET",
-            uri => "/api/v1/initialSync",
-            params => { limit => 2, archived => "true" },
-        )->then( sub {
+        matrix_initialsync( $user, limit => 2, archived => "true" )->then( sub {
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( rooms ) );
@@ -101,7 +97,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -138,7 +134,7 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -159,7 +155,7 @@ test "Can get rooms/{roomId}/state for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -184,7 +180,7 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -198,6 +194,8 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
 
             require_json_keys( $body, qw( chunk ) );
 
+            log_if_fail "Chunk", $body->{chunk};
+
             $body->{chunk}[1]{content}{body} eq "M2. B's message before A left"
                 or die "Received message that happened after leaving the room";
 
@@ -206,7 +204,7 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
     };
 
 test "Can get 'm.room.name' state for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -226,7 +224,7 @@ test "Can get 'm.room.name' state for a departed room (SPEC-216)",
     };
 
 test "Getting messages going forward is limited for a departed room (SPEC-216)",
-    requires => [ $left_user_preparer, $room_preparer ],
+    requires => [ $left_user_fixture, $room_fixture ],
 
     check => sub {
         my ( $user, $room_id ) = @_;

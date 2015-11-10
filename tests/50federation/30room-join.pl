@@ -6,7 +6,7 @@ sub make_auth_events
 }
 
 test "Outbound federation can send room-join requests",
-   requires => [ local_user_preparer(), qw( inbound_server outbound_client )],
+   requires => [ local_user_fixture(), qw( inbound_server outbound_client )],
 
    do => sub {
       my ( $user, $inbound_server, $outbound_client ) = @_;
@@ -131,7 +131,7 @@ test "Outbound federation can send room-join requests",
 
 test "Inbound federation can receive room-join requests",
    requires => [qw( outbound_client inbound_server first_home_server ),
-                 room_preparer( requires_users => [ local_user_preparer() ] ) ],
+                 room_fixture( requires_users => [ local_user_fixture() ] ) ],
 
    do => sub {
       my ( $outbound_client, $inbound_server, $first_home_server, $room_id ) = @_;

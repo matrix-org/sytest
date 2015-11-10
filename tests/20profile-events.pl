@@ -1,9 +1,9 @@
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
 my $displayname = "New displayname for 20profile-events.pl";
 
 test "Displayname change reports an event to myself",
-   requires => [ $user_preparer,
+   requires => [ $user_fixture,
                  qw( can_set_displayname )],
 
    do => sub {
@@ -35,7 +35,7 @@ test "Displayname change reports an event to myself",
 my $avatar_url = "http://a.new.url/for/20profile-events.pl";
 
 test "Avatar URL change reports an event to myself",
-   requires => [ $user_preparer,
+   requires => [ $user_fixture,
                  qw( can_set_avatar_url )],
 
    do => sub {
@@ -62,16 +62,13 @@ test "Avatar URL change reports an event to myself",
    };
 
 multi_test "Global /initialSync reports my own profile",
-   requires => [ $user_preparer,
+   requires => [ $user_fixture,
                  qw( can_set_displayname can_set_avatar_url can_initial_sync )],
 
    check => sub {
       my ( $user) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( presence ));

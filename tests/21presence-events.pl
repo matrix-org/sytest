@@ -1,19 +1,16 @@
 # Eventually this will be changed; see SPEC-53
 my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
 
-my $preparer = local_user_preparer();
+my $fixture = local_user_fixture();
 
 test "initialSync sees my presence status",
-   requires => [ $preparer,
+   requires => [ $fixture,
                  qw( can_initial_sync )],
 
    check => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( presence ));
@@ -39,7 +36,7 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   requires => [ $preparer,
+   requires => [ $fixture,
                  qw( can_set_presence )],
 
    do => sub {
@@ -68,7 +65,7 @@ test "Presence change reports an event to myself",
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
-   requires => [ $preparer, local_user_preparer(),
+   requires => [ $fixture, local_user_fixture(),
                  qw( can_set_presence can_invite_presence )],
 
    do => sub {

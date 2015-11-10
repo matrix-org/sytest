@@ -2,17 +2,17 @@ use Future::Utils 0.18 qw( try_repeat );
 use List::Util qw( first );
 use List::UtilsBy qw( partition_by );
 
-my $creator_preparer = local_user_preparer(
+my $creator_fixture = local_user_fixture(
    # Some of these tests depend on the user having a displayname
    displayname => "My name here",
 );
 
-my $remote_user_preparer = remote_user_preparer();
+my $remote_user_fixture = remote_user_fixture();
 
-my $room_preparer = preparer(
-   requires => [ $creator_preparer ],
+my $room_fixture = fixture(
+   requires => [ $creator_fixture ],
 
-   do => sub {
+   setup => sub {
       my ( $user ) = @_;
 
       matrix_create_room( $user,
@@ -22,7 +22,7 @@ my $room_preparer = preparer(
 );
 
 test "Remote users can join room by alias",
-   requires => [ $remote_user_preparer, $room_preparer,
+   requires => [ $remote_user_fixture, $room_fixture,
                  qw( can_join_room_by_alias can_get_room_membership )],
 
    provides => [qw( can_join_remote_room_by_alias )],
@@ -59,7 +59,7 @@ test "Remote users can join room by alias",
    };
 
 test "New room members see their own join event",
-   requires => [ $remote_user_preparer, $room_preparer,
+   requires => [ $remote_user_fixture, $room_fixture,
                  qw( can_join_remote_room_by_alias )],
 
    do => sub {
@@ -83,7 +83,7 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing members' presence in room initialSync",
-   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $creator_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_join_remote_room_by_alias can_room_initial_sync )],
 
    do => sub {
@@ -114,7 +114,7 @@ test "New room members see existing members' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $creator_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_join_remote_room_by_alias )],
 
    do => sub {
@@ -137,7 +137,7 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new member's presence",
-   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $creator_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_join_remote_room_by_alias )],
 
    do => sub {
@@ -155,16 +155,13 @@ test "Existing members see new member's presence",
    };
 
 test "New room members see first user's profile information in global initialSync",
-   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $creator_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_join_remote_room_by_alias can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( presence ));
@@ -184,7 +181,7 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [ $creator_preparer, $remote_user_preparer, $room_preparer,
+   requires => [ $creator_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
@@ -215,4 +212,23 @@ test "New room members see first user's profile information in per-room initialS
 
          Future->done(1);
       });
+   };
+
+test "Remote users may not join unfederated rooms",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_create_room_with_creation_content )],
+
+   check => sub {
+      my ( $creator, $remote_user ) = @_;
+
+      matrix_create_room( $creator,
+         room_alias_name  => "unfederated",
+         creation_content => {
+            "m.federate" => JSON::false,
+         },
+      )->then( sub {
+         my ( undef, $room_alias ) = @_;
+
+         matrix_join_room( $remote_user, $room_alias )
+      })->main::expect_http_403;
    };

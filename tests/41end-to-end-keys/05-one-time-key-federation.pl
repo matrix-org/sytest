@@ -1,5 +1,5 @@
 multi_test "Can claim remote one time key using POST",
-   requires => [ local_user_preparer(), remote_user_preparer(),
+   requires => [ local_user_fixture(), remote_user_fixture(),
                  qw( can_upload_e2e_keys )],
 
    check => sub {

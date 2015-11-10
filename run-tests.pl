@@ -10,6 +10,8 @@ use lib 'lib';
 
 use SyTest::CarpByFile;
 
+use SyTest::JSONSensible;
+
 use Future;
 use IO::Async::Loop;
 
@@ -17,6 +19,7 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
+use JSON;
 use List::Util 1.33 qw( first all any maxstr );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
@@ -291,21 +294,24 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
-struct Preparer => [qw( requires start result )], predicate => "is_Preparer";
+struct Fixture => [qw( requires start result teardown )], predicate => "is_Fixture";
 
-sub preparer
+sub fixture
 {
    my %args = @_;
 
-   my $do = $args{do} or croak "preparer needs a 'do' block";
-   ref( $do ) eq "CODE" or croak "Expected preparer 'do' block to be CODE";
+   my $setup = $args{setup} or croak "fixture needs a 'setup' block";
+   ref( $setup ) eq "CODE" or croak "Expected fixture 'setup' block to be CODE";
+
+   my $teardown = $args{teardown};
+   !$teardown || ref( $teardown ) eq "CODE" or croak "Expected fixture 'teardown' to be CODE";
 
    my @req_futures;
    my $f_start = Future->new;
 
    my @requires;
    foreach my $req ( @{ $args{requires} // [] } ) {
-      if( is_Preparer( $req ) ) {
+      if( is_Fixture( $req ) ) {
          push @requires, @{ $req->requires };
          push @req_futures, $f_start->then( sub {
             my ( $env ) = @_;
@@ -319,19 +325,35 @@ sub preparer
          push @req_futures, $f_start->then( sub {
             my ( $env ) = @_;
 
-            exists $env->{$req} or die "TODO: Missing preparer dependency $req\n";
+            exists $env->{$req} or die "TODO: Missing fixture dependency $req\n";
             Future->done( $env->{$req} );
          });
       }
    }
 
-   return Preparer(
+   return Fixture(
       \@requires,
 
       sub { $f_start->done( @_ ) unless $f_start->is_ready },
 
       Future->needs_all( @req_futures )
-         ->then( $do )
+         ->then( $setup ),
+
+      $teardown ? sub {
+         my ( $self ) = @_;
+         my $result_f = $self->result;
+         $self->result = Future->fail(
+            "This Fixture has been torn down and cannot be used again"
+         );
+
+         if( $self->result->is_ready ) {
+            return $teardown->( $result_f->get );
+         }
+         else {
+            $result_f->cancel;
+            Future->done;
+         }
+      } : undef,
    );
 }
 
@@ -371,10 +393,6 @@ sub _run_test
 {
    my ( $t, %params ) = @_;
 
-   # We expect this test to fail if it's declared to be dependent on a bug that
-   # is not yet fixed
-   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
-
    undef @log_if_fail_lines;
 
    local @PROVIDES = @{ $params{provides} || [] };
@@ -386,19 +404,21 @@ sub _run_test
       return;
    }
 
+   my @requires = @{ $params{requires} || [] };
+
    my $f_start = Future->new;
    my @req_futures;
 
-   foreach my $req ( @{ $params{requires} || [] } ) {
-      if( is_Preparer( $req ) ) {
-         my $preparer = $req;
+   foreach my $req ( @requires ) {
+      if( is_Fixture( $req ) ) {
+         my $fixture = $req;
 
-         exists $test_environment{$_} or die "TODO: Missing preparer dependency $_"
-            for @{ $preparer->requires };
+         exists $test_environment{$_} or die "TODO: Missing fixture dependency $_"
+            for @{ $fixture->requires };
 
          push @req_futures, $f_start->then( sub {
-            $preparer->start->( \%test_environment );
-            $preparer->result;
+            $fixture->start->( \%test_environment );
+            $fixture->result;
          });
       }
       else {
@@ -419,7 +439,7 @@ sub _run_test
       my @reqs;
       my $f_test = Future->needs_all( @req_futures )
          ->on_done( sub { @reqs = @_ } )
-         ->on_fail( sub { die "preparer failed - $_[0]\n" } );
+         ->on_fail( sub { die "fixture failed - $_[0]\n" } );
 
       my $check = $params{check};
       if( my $do = $params{do} ) {
@@ -471,6 +491,15 @@ sub _run_test
       1;
    };
 
+   Future->needs_all( map {
+      if( is_Fixture( $_ ) and $_->teardown ) {
+         $_->teardown->( $_ );
+      }
+      else {
+         ();
+      }
+   } @requires )->get;
+
    if( $success ) {
       exists $test_environment{$_} or warn "Test step ${\$t->name} did not provide a value for $_\n"
          for @PROVIDES;
@@ -490,6 +519,10 @@ sub _run_test
 sub test
 {
    my ( $name, %params ) = @_;
+
+   # We expect this test to fail if it's declared to be dependent on a bug that
+   # is not yet fixed
+   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
    my $t = $output->enter_test( $name, $params{expect_fail} );
    _run_test( $t, %params );
@@ -552,7 +585,12 @@ sub test
    {
       my ( $name, %params ) = @_;
 
-      local $RUNNING_TEST = my $t = $output->enter_multi_test( $name );
+      # We expect this test to fail if it's declared to be dependent on a bug that
+      # is not yet fixed
+      $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
+
+      local $RUNNING_TEST = my $t = $output->enter_multi_test(
+          $name, $params{expect_fail} );
       _run_test( $t, %params );
       $t->leave;
 
@@ -657,6 +695,14 @@ sub require_json_nonempty_string
 {
    my ( $str ) = @_;
    !ref $str and length $str or croak "Expected a non-empty JSON string";
+}
+
+use constant JSON_BOOLEAN_CLASS => ref( JSON::true );
+
+sub require_json_boolean
+{
+   my ( $obj ) = @_;
+   ref $obj eq JSON_BOOLEAN_CLASS or croak "Expected a JSON boolean";
 }
 
 sub require_base64_unpadded

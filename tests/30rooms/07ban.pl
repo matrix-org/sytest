@@ -1,10 +1,10 @@
-my $creator_preparer = local_user_preparer();
+my $creator_fixture = local_user_fixture();
 
-my $banned_user_preparer = local_user_preparer();
+my $banned_user_fixture = local_user_fixture();
 
 test "Banned user is kicked and may not rejoin",
-   requires => [ $creator_preparer, $banned_user_preparer,
-                     room_preparer( requires_users => [ $creator_preparer, $banned_user_preparer ] ),
+   requires => [ $creator_fixture, $banned_user_fixture,
+                     room_fixture( requires_users => [ $creator_fixture, $banned_user_fixture ] ),
                 qw( can_ban_room )],
 
    do => sub {

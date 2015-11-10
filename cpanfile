@@ -1,6 +1,6 @@
 # vim:ft=perl
 
-requires 'Class::Method::Modifiers'
+requires 'Class::Method::Modifiers';
 requires 'Data::Dump';
 requires 'Digest::SHA';
 requires 'File::Basename';
@@ -8,7 +8,7 @@ requires 'File::Path';
 requires 'File::Slurper';
 requires 'Future', '>= 0.33';
 requires 'Getopt::Long';
-requires 'IO::Async::Loop';
+requires 'IO::Async', '>= 0.69';
 requires 'IO::Async::SSL';
 requires 'IO::Socket::IP', '>= 0.04';
 requires 'IO::Socket::SSL';

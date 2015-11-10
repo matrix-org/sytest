@@ -1,13 +1,13 @@
 use List::UtilsBy qw( partition_by );
 
-my $user_preparer = local_user_preparer(
+my $user_fixture = local_user_fixture(
    presence => "online",
 );
 
-my $room_preparer = preparer(
-   requires => [ $user_preparer ],
+my $room_fixture = fixture(
+   requires => [ $user_fixture ],
 
-   do => sub {
+   setup => sub {
       my ( $user ) = @_;
 
       matrix_create_room( $user,
@@ -17,7 +17,7 @@ my $room_preparer = preparer(
 );
 
 test "Room creation reports m.room.create to myself",
-   requires => [ $user_preparer, $room_preparer ],
+   requires => [ $user_fixture, $room_fixture ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -40,7 +40,7 @@ test "Room creation reports m.room.create to myself",
    };
 
 test "Room creation reports m.room.member to myself",
-   requires => [ $user_preparer, $room_preparer ],
+   requires => [ $user_fixture, $room_fixture ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -64,7 +64,7 @@ test "Room creation reports m.room.member to myself",
 my $topic = "Testing topic for the new room";
 
 test "Setting room topic reports m.room.topic to myself",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                 qw( can_set_room_topic )],
 
    do => sub {
@@ -93,16 +93,13 @@ test "Setting room topic reports m.room.topic to myself",
    };
 
 multi_test "Global initialSync",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                 qw( can_initial_sync can_set_room_topic )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-      )->then( sub {
+      matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
          my $room;
@@ -150,17 +147,13 @@ multi_test "Global initialSync",
    };
 
 test "Global initialSync with limit=0 gives no messages",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                 qw( can_initial_sync )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/initialSync",
-         params => { limit => 0 },
-      )->then( sub {
+      matrix_initialsync( $user, limit => 0 )->then( sub {
          my ( $body ) = @_;
 
          my $found;
@@ -179,7 +172,7 @@ test "Global initialSync with limit=0 gives no messages",
    };
 
 multi_test "Room initialSync",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                 qw( can_room_initial_sync )],
 
    check => sub {
@@ -229,7 +222,7 @@ multi_test "Room initialSync",
    };
 
 test "Room initialSync with limit=0 gives no messages",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                 qw( can_initial_sync )],
 
    check => sub {

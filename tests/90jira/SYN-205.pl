@@ -1,5 +1,5 @@
 multi_test "Rooms can be created with an initial invite list (SYN-205)",
-   requires => [ local_user_preparers( 2 ),
+   requires => [ local_user_fixtures( 2 ),
                 qw( can_create_private_room_with_invite )],
 
    do => sub {

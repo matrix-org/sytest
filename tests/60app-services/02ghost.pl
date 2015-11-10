@@ -1,8 +1,8 @@
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [qw( make_as_user await_as_event as_user ), $user_preparer,
-                     room_preparer( requires_users => [ $user_preparer ] ),
+   requires => [qw( make_as_user await_as_event as_user ), $user_fixture,
+                     room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally )],
 
    do => sub {
@@ -96,8 +96,8 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [qw( make_as_user await_as_event ), $user_preparer,
-                     room_preparer( requires_users => [ $user_preparer ] ),
+   requires => [qw( make_as_user await_as_event ), $user_fixture,
+                     room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally can_send_message )],
 
    do => sub {
