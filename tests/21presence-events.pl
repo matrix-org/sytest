@@ -88,12 +88,15 @@ test "Friends presence changes reports events",
       })->then( sub {
          await_event_for( $user, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.presence";
+
+            $event->{type} eq "m.presence" or
+               return 0;
 
             my $content = $event->{content};
             require_json_keys( $content, qw( user_id ));
 
-            return unless $content->{user_id} eq $friend->user_id;
+            $content->{user_id} eq $friend->user_id or
+               return 0;
 
             require_json_keys( $content, qw( presence status_msg ));
             $content->{presence} eq "online" or

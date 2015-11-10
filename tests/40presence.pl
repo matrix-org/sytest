@@ -32,7 +32,9 @@ test "Presence changes are reported to local room members",
 
             await_event_for( $recvuser, sub {
                my ( $event ) = @_;
-               return unless $event->{type} eq "m.presence";
+
+               $event->{type} eq "m.presence" or
+                  return 0;
 
                require_json_keys( $event, qw( type content ));
                require_json_keys( my $content = $event->{content},
@@ -61,7 +63,9 @@ test "Presence changes are also reported to remote room members",
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
-         return unless $event->{type} eq "m.presence";
+
+         $event->{type} eq "m.presence" or
+            return 0;
 
          require_json_keys( $event, qw( type content ));
          require_json_keys( my $content = $event->{content},
@@ -97,12 +101,16 @@ test "Presence changes to OFFLINE are reported to local room members",
 
             await_event_for( $recvuser, sub {
                my ( $event ) = @_;
-               return unless $event->{type} eq "m.presence";
+
+               $event->{type} eq "m.presence" or
+                  return 0;
 
                my $content = $event->{content};
-               return unless $content->{user_id} eq $senduser->user_id;
+               $content->{user_id} eq $senduser->user_id or
+                  return 0;
 
-               return unless $content->{presence} eq "offline";
+               $content->{presence} eq "offline" or
+                  return 0;
 
                return 1;
             })
@@ -120,12 +128,15 @@ test "Presence changes to OFFLINE are reported to remote room members",
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
 
-         return unless $event->{type} eq "m.presence";
+         $event->{type} eq "m.presence" or
+            return 0;
 
          my $content = $event->{content};
-         return unless $content->{user_id} eq $senduser->user_id;
+         $content->{user_id} eq $senduser->user_id or
+            return 0;
 
-         return unless $content->{presence} eq "offline";
+         $content->{presence} eq "offline" or
+            return 0;
 
          return 1;
       });

@@ -39,9 +39,11 @@ multi_test "Check that event streams started after a client joined a room work (
          # Wait for the message we just sent.
          await_event_for( $alice, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.message";
-            return unless $event->{event_id} eq $event_id;
-            return 1;
+
+            $event->{type} eq "m.room.message" or
+               return 0;
+
+            return $event->{event_id} eq $event_id;
          })->SyTest::pass_on_done( "Alice saw her message" )
       })->then_done(1);
    };

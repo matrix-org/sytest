@@ -43,11 +43,10 @@ multi_test "Test that a message is pushed",
          Future->needs_all(
             await_event_for( $bob, sub {
                my ( $event ) = @_;
-               return unless $event->{type} eq "m.room.member" and
-                  $event->{room_id} eq $room_id and
-                  $event->{state_key} eq $bob->user_id and
-                  $event->{content}{membership} eq "invite";
-               return 1;
+               return $event->{type} eq "m.room.member" &&
+                      $event->{room_id} eq $room_id &&
+                      $event->{state_key} eq $bob->user_id &&
+                      $event->{content}{membership} eq "invite";
             })->SyTest::pass_on_done( "Bob received invite" ),
 
             matrix_invite_user_to_room( $alice, $bob, $room_id ),
@@ -86,8 +85,11 @@ multi_test "Test that a message is pushed",
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
-               return unless $body->{notification}{type};
-               return unless $body->{notification}{type} eq "m.room.message";
+               $body->{notification}{type} or
+                  return 0;
+               $body->{notification}{type} eq "m.room.message" or
+                  return 0;
+
                return 1;
             })->then( sub {
                my ( $request ) = @_;

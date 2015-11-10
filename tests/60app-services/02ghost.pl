@@ -78,8 +78,11 @@ multi_test "AS-ghosted users can use rooms via AS",
       ->then( sub {
          await_event_for( $creator, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.message";
-            return unless $event->{room_id} eq $room_id;
+
+            $event->{type} eq "m.room.message" or
+               return 0;
+            $event->{room_id} eq $room_id or
+               return 0;
 
             log_if_fail "Event", $event;
 
@@ -157,8 +160,11 @@ multi_test "AS-ghosted users can use rooms themselves",
       ->then( sub {
          await_event_for( $creator, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.message";
-            return unless $event->{room_id} eq $room_id;
+
+            $event->{type} eq "m.room.message" or
+               return 0;
+            $event->{room_id} eq $room_id or
+               return 0;
 
             log_if_fail "Event", $event;
 

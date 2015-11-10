@@ -24,10 +24,9 @@ multi_test "Typing notifications don't leak",
 
             await_event_for( $recvuser, sub {
                my ( $event ) = @_;
-               return unless $event->{type} eq "m.typing";
-               return unless $event->{room_id} eq $room_id;
 
-               return 1;
+               return $event->{type} eq "m.typing" &&
+                      $event->{room_id} eq $room_id;
             })
          } $creator, $member )
             ->SyTest::pass_on_done( "Members received notification" )
@@ -38,10 +37,9 @@ multi_test "Typing notifications don't leak",
 
             await_event_for( $nonmember, sub {
                my ( $event ) = @_;
-               return unless $event->{type} eq "m.typing";
-               return unless $event->{room_id} eq $room_id;
 
-               return 1;
+               return $event->{type} eq "m.typing" &&
+                      $event->{room_id} eq $room_id;
             })->then_fail( "Received unexpected typing notification" ),
          )->SyTest::pass_on_done( "Non-member did not receive it up to timeout" )
       })->then_done(1);

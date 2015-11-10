@@ -370,8 +370,10 @@ sub matrix_create_and_join_room
          await_event_for( $creator, sub {
             my ( $event ) = @_;
 
-            return unless $event->{type} eq "m.room.member";
-            return unless $event->{room_id} eq $room_id;
+            $event->{type} eq "m.room.member" or
+               return 0;
+            $event->{room_id} eq $room_id or
+               return 0;
 
             $joined_members{ $event->{state_key} }++;
 

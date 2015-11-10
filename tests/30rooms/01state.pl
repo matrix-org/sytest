@@ -24,9 +24,13 @@ test "Room creation reports m.room.create to myself",
 
       await_event_for( $user, sub {
          my ( $event ) = @_;
-         return unless $event->{type} eq "m.room.create";
+
+         $event->{type} eq "m.room.create" or
+            return 0;
+
          require_json_keys( $event, qw( room_id user_id content ));
-         return unless $event->{room_id} eq $room_id;
+         $event->{room_id} eq $room_id or
+            return 0;
 
          $event->{user_id} eq $user->user_id or
             die "Expected user_id to be ${\$user->user_id}";
@@ -47,10 +51,15 @@ test "Room creation reports m.room.member to myself",
 
       await_event_for( $user, sub {
          my ( $event ) = @_;
-         return unless $event->{type} eq "m.room.member";
+
+         $event->{type} eq "m.room.member" or
+            return 0;
+
          require_json_keys( $event, qw( room_id user_id state_key content ));
-         return unless $event->{room_id} eq $room_id;
-         return unless $event->{state_key} eq $user->user_id;
+         $event->{room_id} eq $room_id or
+            return 0;
+         $event->{state_key} eq $user->user_id or
+            return 0;
 
          require_json_keys( my $content = $event->{content}, qw( membership ));
 
@@ -76,9 +85,13 @@ test "Setting room topic reports m.room.topic to myself",
       )->then( sub {
          await_event_for( $user, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.topic";
+
+            $event->{type} eq "m.room.topic" or
+               return 0;
+
             require_json_keys( $event, qw( room_id user_id content ));
-            return unless $event->{room_id} eq $room_id;
+            $event->{room_id} eq $room_id or
+               return 0;
 
             $event->{user_id} eq $user->user_id or
                die "Expected user_id to be ${\$user->user_id}";

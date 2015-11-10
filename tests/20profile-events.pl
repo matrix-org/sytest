@@ -20,9 +20,13 @@ test "Displayname change reports an event to myself",
       })->then( sub {
          await_event_for( $user, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.presence";
+
+            $event->{type} eq "m.presence" or
+               return 0;
+
             my $content = $event->{content};
-            return unless $content->{user_id} eq $user->user_id;
+            $content->{user_id} eq $user->user_id or
+               return 0;
 
             $content->{displayname} eq $displayname or
                die "Expected displayname to be '$displayname'";
@@ -49,9 +53,13 @@ test "Avatar URL change reports an event to myself",
       )->then( sub {
          await_event_for( $user, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.presence";
+
+            $event->{type} eq "m.presence" or
+               return 0;
+
             my $content = $event->{content};
-            return unless $content->{user_id} eq $user->user_id;
+            $content->{user_id} eq $user->user_id or
+               return 0;
 
             $content->{avatar_url} eq $avatar_url or
                die "Expected avatar_url to be '$avatar_url'";

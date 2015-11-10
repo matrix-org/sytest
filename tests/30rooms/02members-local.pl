@@ -38,11 +38,15 @@ test "New room members see their own join event",
 
       await_event_for( $local_user, sub {
          my ( $event ) = @_;
-         return unless $event->{type} eq "m.room.member";
+
+         $event->{type} eq "m.room.member" or
+            return 0;
 
          require_json_keys( $event, qw( type room_id user_id ));
-         return unless $event->{room_id} eq $room_id;
-         return unless $event->{user_id} eq $local_user->user_id;
+         $event->{room_id} eq $room_id or
+            return 0;
+         $event->{user_id} eq $local_user->user_id or
+            return 0;
 
          require_json_keys( my $content = $event->{content}, qw( membership ));
 
@@ -89,10 +93,15 @@ test "Existing members see new members' join events",
 
       await_event_for( $first_user, sub {
          my ( $event ) = @_;
-         return unless $event->{type} eq "m.room.member";
+
+         $event->{type} eq "m.room.member" or
+            return 0;
+
          require_json_keys( $event, qw( type room_id user_id ));
-         return unless $event->{room_id} eq $room_id;
-         return unless $event->{user_id} eq $local_user->user_id;
+         $event->{room_id} eq $room_id or
+            return 0;
+         $event->{user_id} eq $local_user->user_id or
+            return 0;
 
          require_json_keys( my $content = $event->{content}, qw( membership ));
 
@@ -111,10 +120,14 @@ test "Existing members see new members' presence",
 
       await_event_for( $first_user, sub {
          my ( $event ) = @_;
-         return unless $event->{type} eq "m.presence";
+
+         $event->{type} eq "m.presence" or
+            return 0;
+
          require_json_keys( $event, qw( type content ));
          require_json_keys( my $content = $event->{content}, qw( user_id presence ));
-         return unless $content->{user_id} eq $local_user->user_id;
+         $content->{user_id} eq $local_user->user_id or
+            return 0;
 
          return 1;
       });

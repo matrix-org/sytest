@@ -219,8 +219,12 @@ test "Tags appear in the v1 /events stream",
 
          await_event_for( $user, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.tag"
-               and $event->{room_id} eq $room_id;
+
+            $event->{type} eq "m.tag" or
+               return 0;
+
+            $event->{room_id} eq $room_id or
+               return 0;
 
             check_tag_event( $event );
 
