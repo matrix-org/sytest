@@ -29,7 +29,7 @@ sub find_receipt
 }
 
 multi_test "Read receipts are visible to /initialSync",
-   requires => [ local_user_and_room_preparers(),
+   requires => [ local_user_and_room_fixtures(),
                  qw( can_post_room_receipts )],
 
    do => sub {
@@ -120,7 +120,7 @@ multi_test "Read receipts are visible to /initialSync",
    };
 
 test "Read receipts are sent as events",
-   requires => [ local_user_and_room_preparers(),
+   requires => [ local_user_and_room_fixtures(),
                  qw( can_post_room_receipts )],
 
    do => sub {

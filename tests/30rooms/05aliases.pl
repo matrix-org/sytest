@@ -5,14 +5,14 @@ use utf8;
 my $alias_localpart = "#☕";
 my $room_alias;
 
-my $creator_preparer = local_user_preparer();
+my $creator_fixture = local_user_fixture();
 
-my $room_preparer = room_preparer(
-   requires_users => [ $creator_preparer ],
+my $room_fixture = room_fixture(
+   requires_users => [ $creator_fixture ],
 );
 
 test "Room aliases can contain Unicode",
-   requires => [qw( first_home_server ), $creator_preparer, $room_preparer,
+   requires => [qw( first_home_server ), $creator_fixture, $room_fixture,
                 qw( can_create_room_alias )],
 
    provides => [qw( can_create_room_alias_unicode )],
@@ -50,7 +50,7 @@ test "Room aliases can contain Unicode",
    };
 
 test "Remote room alias queries can handle Unicode",
-   requires => [ remote_user_preparer(), $room_preparer,
+   requires => [ remote_user_fixture(), $room_fixture,
                  qw( can_create_room_alias_unicode )],
 
    provides => [qw( can_federate_room_alias_unicode )],
@@ -73,7 +73,7 @@ test "Remote room alias queries can handle Unicode",
    };
 
 multi_test "Canonical alias can be set",
-   requires => [ local_user_preparer() ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;

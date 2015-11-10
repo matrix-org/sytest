@@ -1,5 +1,5 @@
 test "POST /rooms/:room_id/receipt can create receipts",
-   requires => [ local_user_and_room_preparers() ],
+   requires => [ local_user_and_room_fixtures() ],
 
    provides => [qw( can_post_room_receipts )],
 

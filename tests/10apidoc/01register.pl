@@ -111,16 +111,16 @@ sub matrix_register_user
    });
 }
 
-push @EXPORT, qw( local_user_preparer local_user_preparers );
+push @EXPORT, qw( local_user_fixture local_user_fixtures );
 
-sub local_user_preparer
+sub local_user_fixture
 {
    my %args = @_;
 
-   preparer(
+   fixture(
       requires => [qw( first_api_client )],
 
-      do => sub {
+      setup => sub {
          my ( $api_client ) = @_;
 
          matrix_register_user( $api_client )
@@ -154,21 +154,21 @@ sub local_user_preparer
    );
 }
 
-sub local_user_preparers
+sub local_user_fixtures
 {
    my ( $count ) = @_;
 
-   return map { local_user_preparer() } 1 .. $count;
+   return map { local_user_fixture() } 1 .. $count;
 }
 
-push @EXPORT, qw( remote_user_preparer );
+push @EXPORT, qw( remote_user_fixture );
 
-sub remote_user_preparer
+sub remote_user_fixture
 {
-   preparer(
+   fixture(
       requires => [qw( api_clients )],
 
-      do => sub {
+      setup => sub {
          my ( $clients ) = @_;
          my $http = $clients->[1];
 
@@ -183,10 +183,10 @@ push @EXPORT, qw( SPYGLASS_USER );
 # allow it to perform HEAD and GET requests. This user is useful for tests that
 # don't mutate server-side state, so it's fairly safe to reüse this user among
 # different tests.
-our $SPYGLASS_USER = preparer(
+our $SPYGLASS_USER = fixture(
    requires => [qw( first_api_client )],
 
-   do => sub {
+   setup => sub {
       my ( $api_client ) = @_;
 
       matrix_register_user( $api_client )

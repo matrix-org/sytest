@@ -1,18 +1,18 @@
-my $senduser_preparer = local_user_preparer();
+my $senduser_fixture = local_user_fixture();
 
-my $local_user_preparer = local_user_preparer();
+my $local_user_fixture = local_user_fixture();
 
-my $remote_preparer = remote_user_preparer();
+my $remote_fixture = remote_user_fixture();
 
-my $room_preparer = room_preparer(
-   requires_users => [ $senduser_preparer, $local_user_preparer, $remote_preparer ],
+my $room_fixture = room_fixture(
+   requires_users => [ $senduser_fixture, $local_user_fixture, $remote_fixture ],
 );
 
 my $msgtype = "m.message";
 my $msgbody = "Room message for 33room-messages";
 
 test "Local room members see posted message events",
-   requires => [ $senduser_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $senduser_fixture, $local_user_fixture, $room_fixture,
                  qw( can_send_message )],
 
    provides => [qw( can_receive_room_message_locally )],
@@ -51,7 +51,7 @@ test "Local room members see posted message events",
    };
 
 test "Fetching eventstream a second time doesn't yield the message again",
-   requires => [ $senduser_preparer, $local_user_preparer,
+   requires => [ $senduser_fixture, $local_user_fixture,
                  qw( can_receive_room_message_locally )],
 
    check => sub {
@@ -84,7 +84,7 @@ test "Fetching eventstream a second time doesn't yield the message again",
    };
 
 test "Local non-members don't see posted message events",
-   requires => [ local_user_preparer(), $room_preparer, ],
+   requires => [ local_user_fixture(), $room_fixture, ],
 
    do => sub {
       my ( $nonmember, $room_id ) = @_;
@@ -108,7 +108,7 @@ test "Local non-members don't see posted message events",
    };
 
 test "Local room members can get room messages",
-   requires => [ $senduser_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $senduser_fixture, $local_user_fixture, $room_fixture,
                  qw( can_send_message can_get_messages )],
 
    check => sub {
@@ -145,7 +145,7 @@ test "Local room members can get room messages",
    };
 
 test "Remote room members also see posted message events",
-   requires => [ $senduser_preparer, $remote_preparer, $room_preparer,
+   requires => [ $senduser_fixture, $remote_fixture, $room_fixture,
                 qw( can_receive_room_message_locally )],
 
    do => sub {
@@ -172,7 +172,7 @@ test "Remote room members also see posted message events",
    };
 
 test "Remote room members can get room messages",
-   requires => [ $remote_preparer, $room_preparer,
+   requires => [ $remote_fixture, $room_fixture,
                  qw( can_send_message can_get_messages )],
 
    check => sub {

@@ -1,16 +1,16 @@
 use List::Util qw( first );
 
-my $creator_preparer = local_user_preparer(
+my $creator_fixture = local_user_fixture(
    # Some of these tests depend on the user having a displayname
    displayname => "My name here",
 );
 
-my $local_user_preparer = local_user_preparer();
+my $local_user_fixture = local_user_fixture();
 
-my $room_preparer = preparer(
-   requires => [ $creator_preparer, $local_user_preparer ],
+my $room_fixture = fixture(
+   requires => [ $creator_fixture, $local_user_fixture ],
 
-   do => sub {
+   setup => sub {
       my ( $creator, $local_user ) = @_;
 
       # Don't use matrix_create_and_join_room here because we explicitly do
@@ -31,7 +31,7 @@ my $room_preparer = preparer(
 );
 
 test "New room members see their own join event",
-   requires => [ $local_user_preparer, $room_preparer ],
+   requires => [ $local_user_fixture, $room_fixture ],
 
    do => sub {
       my ( $local_user, $room_id ) = @_;
@@ -54,7 +54,7 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing users' presence in room initialSync",
-   requires => [ $creator_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
                  qw( can_room_initial_sync )],
 
    check => sub {
@@ -82,7 +82,7 @@ test "New room members see existing users' presence in room initialSync",
    };
 
 test "Existing members see new members' join events",
-   requires => [ $creator_preparer, $local_user_preparer, $room_preparer ],
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture ],
 
    do => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
@@ -104,7 +104,7 @@ test "Existing members see new members' join events",
    };
 
 test "Existing members see new members' presence",
-   requires => [ $creator_preparer, $local_user_preparer, $room_preparer ],
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture ],
 
    do => sub {
       my ( $first_user, $local_user ) = @_;
@@ -121,7 +121,7 @@ test "Existing members see new members' presence",
    };
 
 test "All room members see all room members' presence in global initialSync",
-   requires => [ $creator_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
                  qw( can_initial_sync )],
 
    check => sub {
@@ -160,7 +160,7 @@ test "All room members see all room members' presence in global initialSync",
    };
 
 test "New room members see first user's profile information in global initialSync",
-   requires => [ $creator_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
                  qw( can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
@@ -186,7 +186,7 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [ $creator_preparer, $local_user_preparer, $room_preparer,
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
                  qw( can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {

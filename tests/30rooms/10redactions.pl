@@ -17,7 +17,7 @@ sub make_room_and_message
 }
 
 test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
-   requires => [ local_user_preparers( 2 ),
+   requires => [ local_user_fixtures( 2 ),
                  qw( can_send_message )],
 
    do => sub {
@@ -36,7 +36,7 @@ test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
    };
 
 test "POST /rooms/:room_id/redact/:event_id as original message sender redacts message",
-   requires => [ local_user_preparers( 2 ),
+   requires => [ local_user_fixtures( 2 ),
                  qw( can_send_message )],
 
    do => sub {
@@ -55,7 +55,7 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
    };
 
 test "POST /rooms/:room_id/redact/:event_id as random user does not redact message",
-   requires => [ local_user_preparers( 3 ),
+   requires => [ local_user_fixtures( 3 ),
                  qw( can_send_message )],
 
    do => sub {
