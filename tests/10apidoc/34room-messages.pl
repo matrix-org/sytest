@@ -1,5 +1,5 @@
 test "POST /rooms/:room_id/send/:event_type sends a message",
-   requires => [ local_user_and_room_preparers() ],
+   requires => [ local_user_and_room_fixtures() ],
 
    provides => [qw( can_send_message )],
 
@@ -75,7 +75,7 @@ sub matrix_send_room_text_message
 }
 
 test "GET /rooms/:room_id/messages returns a message",
-   requires => [ local_user_and_room_preparers(),
+   requires => [ local_user_and_room_fixtures(),
                  qw( can_send_message )],
 
    provides => [qw( can_get_messages )],

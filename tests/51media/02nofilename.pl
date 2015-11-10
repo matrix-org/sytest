@@ -1,7 +1,7 @@
 my $content_id;
 
 test "Can upload without a file name",
-   requires => [qw( first_api_client ), local_user_preparer() ],
+   requires => [qw( first_api_client ), local_user_fixture() ],
 
    do => sub {
       my ( $http, $user ) = @_;

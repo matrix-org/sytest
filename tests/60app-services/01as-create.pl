@@ -1,11 +1,11 @@
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
-my $room_preparer = room_preparer(
-   requires_users => [ $user_preparer ],
+my $room_fixture = room_fixture(
+   requires_users => [ $user_fixture ],
 );
 
 test "AS can create a user",
-   requires => [qw( as_user ), $room_preparer ],
+   requires => [qw( as_user ), $room_fixture ],
 
    provides => [qw( make_as_user )],
 
@@ -80,7 +80,7 @@ test "Regular users cannot register within the AS namespace",
    };
 
 test "AS can make room aliases",
-   requires => [qw( await_as_event as_user first_home_server ), $room_preparer,
+   requires => [qw( await_as_event as_user first_home_server ), $room_fixture,
                 qw( can_create_room_alias )],
 
    do => sub {
@@ -139,7 +139,7 @@ test "AS can make room aliases",
    };
 
 test "Regular users cannot create room aliases within the AS namespace",
-   requires => [qw( first_home_server ), $user_preparer, $room_preparer,
+   requires => [qw( first_home_server ), $user_fixture, $room_fixture,
                 qw( can_create_room_alias )],
 
    do => sub {

@@ -2,7 +2,7 @@ use List::UtilsBy qw( partition_by );
 
 multi_test "Inbound federation can receive room-join requests",
    requires => [qw( outbound_client inbound_server first_home_server ),
-                 room_preparer( requires_users => [ local_user_preparer() ] ) ],
+                 room_fixture( requires_users => [ local_user_fixture() ] ) ],
 
    do => sub {
       my ( $outbound_client, $inbound_server, $first_home_server, $room_id ) = @_;

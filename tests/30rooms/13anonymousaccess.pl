@@ -1,7 +1,7 @@
 use Future::Utils qw( try_repeat_until_success );
 
 test "Anonymous user cannot view non-world-readable rooms",
-   requires => [ anonymous_user_preparer(), local_user_preparer() ],
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
 
    do => sub {
       my ( $anonymous_user, $user ) = @_;
@@ -28,7 +28,7 @@ test "Anonymous user cannot view non-world-readable rooms",
    };
 
 test "Anonymous user can view world-readable rooms",
-   requires => [ anonymous_user_preparer(), local_user_preparer() ],
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
 
    do => sub {
       my ( $anonymous_user, $user ) = @_;
@@ -55,7 +55,7 @@ test "Anonymous user can view world-readable rooms",
    };
 
 test "Anonymous user cannot call /events on non-world_readable room",
-   requires => [ anonymous_user_preparer(), local_user_preparer() ],
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
 
    do => sub {
       my ( $anonymous_user, $user ) = @_;
@@ -80,7 +80,7 @@ test "Anonymous user cannot call /events on non-world_readable room",
    };
 
 test "Anonymous user can call /events on world_readable room",
-   requires => [ anonymous_user_preparer(), local_user_preparer() ],
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
 
    do => sub {
       my ( $anonymous_user, $user ) = @_;
@@ -133,7 +133,7 @@ test "Anonymous user can call /events on world_readable room",
    };
 
 test "Anonymous user doesn't get events before room made world_readable",
-   requires => [ anonymous_user_preparer(), local_user_preparer() ],
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
 
    do => sub {
       my ( $anonymous_user, $user ) = @_;
@@ -168,7 +168,7 @@ test "Anonymous user doesn't get events before room made world_readable",
    };
 
 test "Anonymous users can get state for non-world_readable rooms",
-   requires => [ local_user_and_room_preparers(), anonymous_user_preparer() ],
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -186,7 +186,7 @@ test "Anonymous users can get state for non-world_readable rooms",
    };
 
 test "Anonymous users can get individual state for world_readable rooms",
-   requires => [ local_user_and_room_preparers(), anonymous_user_preparer() ],
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -204,7 +204,7 @@ test "Anonymous users can get individual state for world_readable rooms",
    };
 
 test "Anonymous users can join guest_access rooms",
-   requires => [ local_user_and_room_preparers(), anonymous_user_preparer() ],
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -219,7 +219,7 @@ test "Anonymous users can join guest_access rooms",
    };
 
 test "Anonymous users can send messages to guest_access rooms if joined",
-   requires => [ local_user_and_room_preparers(), anonymous_user_preparer() ],
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
 
    do => sub {
       my ( $user, $room_id, $anonymous_user ) = @_;
@@ -261,7 +261,7 @@ test "Anonymous users can send messages to guest_access rooms if joined",
    };
 
 test "Anonymous users cannot send messages to guest_access rooms if not joined",
-   requires => [ local_user_and_room_preparers(), anonymous_user_preparer() ],
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
 
    do => sub {
       my ( $user, $room_id, $anonymous_user ) = @_;
@@ -306,7 +306,7 @@ sub check_events
 }
 
 test "Anonymous users are kicked from guest_access rooms on revocation of guest_access",
-   requires => [ local_user_and_room_preparers(), anonymous_user_preparer() ],
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
 
    do => sub {
       my ( $user, $room_id, $anonymous_user ) = @_;
@@ -334,7 +334,7 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
    };
 
 test "Anonymous users are kicked from guest_access rooms on revocation of guest_access over federation",
-   requires => [ local_user_preparer(), remote_user_preparer(), anonymous_user_preparer() ],
+   requires => [ local_user_fixture(), remote_user_fixture(), anonymous_user_fixture() ],
 
    do => sub {
       my ( $local_user, $remote_user, $anonymous_user ) = @_;
@@ -385,12 +385,12 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
       })
    };
 
-sub anonymous_user_preparer
+sub anonymous_user_fixture
 {
-   preparer(
+   fixture(
       requires => [qw( first_api_client )],
 
-      do => sub {
+      setup => sub {
          my ( $http ) = @_;
 
          $http->do_request_json(

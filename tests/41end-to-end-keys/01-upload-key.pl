@@ -1,7 +1,7 @@
-my $preparer = local_user_preparer();
+my $fixture = local_user_fixture();
 
 test "Can upload device keys",
-   requires => [ $preparer ],
+   requires => [ $fixture ],
 
    provides => [qw( can_upload_e2e_keys )],
 
@@ -38,7 +38,7 @@ test "Can upload device keys",
    };
 
 test "Can query device keys using POST",
-   requires => [ $preparer,
+   requires => [ $fixture,
                  qw( can_upload_e2e_keys )],
 
    check => sub {
@@ -68,7 +68,7 @@ test "Can query device keys using POST",
    };
 
 test "Can query specific device keys using POST",
-   requires => [ $preparer,
+   requires => [ $fixture,
                  qw( can_upload_e2e_keys )],
 
    check => sub {
@@ -98,7 +98,7 @@ test "Can query specific device keys using POST",
    };
 
 test "Can query device keys using GET",
-   requires => [ $preparer,
+   requires => [ $fixture,
                  qw( can_upload_e2e_keys )],
 
    check => sub {

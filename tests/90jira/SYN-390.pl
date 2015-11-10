@@ -1,5 +1,5 @@
 multi_test "Getting push rules doesn't corrupt the cache SYN-390",
-   requires => [ local_user_preparer() ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;

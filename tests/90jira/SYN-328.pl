@@ -1,5 +1,5 @@
 multi_test "Typing notifications don't leak",
-   requires => [ local_user_preparers( 3 ),
+   requires => [ local_user_fixtures( 3 ),
                  qw( can_set_room_typing )],
 
    do => sub {

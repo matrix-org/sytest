@@ -17,7 +17,7 @@ my $INVALID_FILTERS = [
 
 
 test "Check creating invalid filters returns 4xx",
-   requires => [local_user_preparer( with_events => 0 )],
+   requires => [ local_user_fixture( with_events => 0 ) ],
 
    check => sub {
       my ( $user ) = @_;
