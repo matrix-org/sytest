@@ -247,6 +247,13 @@ sub id_server_fixture
             SSL_cert_file => "$DIR/../../keys/tls-selfsigned.crt",
             SSL_key_file => "$DIR/../../keys/tls-selfsigned.key",
          )->then_done( $id_server );
-      }
+      },
+
+      teardown => sub {
+         my ( $id_server ) = @_;
+         $loop->remove( $id_server );
+
+         Future->done;
+      },
    );
 }
