@@ -357,7 +357,7 @@ sub matrix_create_and_join_room
             )
          } @local_members )
    })->then( sub {
-      return Future->done( $room_id ) unless $n_joiners;
+      $n_joiners or return Future->done( $room_id );
 
       # Now wait for the creator to see every join event, so we're sure
       # the remote joins have happened

@@ -126,7 +126,8 @@ sub local_user_fixture
          matrix_register_user( $api_client )
          ->then_with_f( sub {
             my $f = shift;
-            return $f unless defined( my $displayname = $args{displayname} );
+            defined( my $displayname = $args{displayname} ) or
+               return $f;
 
             my $user = $f->get;
             do_request_json_for( $user,
@@ -137,7 +138,8 @@ sub local_user_fixture
             )->then_done( $user );
          })->then_with_f( sub {
             my $f = shift;
-            return $f unless defined( my $presence = $args{presence} );
+            defined( my $presence = $args{presence} ) or
+               return $f;
 
             my $user = $f->get;
             do_request_json_for( $user,
