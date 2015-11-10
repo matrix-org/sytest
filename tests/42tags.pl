@@ -186,20 +186,21 @@ sub register_user_and_create_room_and_add_tag
 
 =head2 check_tag_event
 
-   check_tag_event( $event, $empty );
+   check_tag_event( $event, %args );
 
-Checks that a room tag event has the correct content (or is empty, if $empty true)
+Checks that a room tag event has the correct content (or is empty, if the
+C<expect_empty> named arg true)
 
 =cut
 
 sub check_tag_event {
-   my ( $event, $empty ) = @_;
+   my ( $event, %args ) = @_;
 
    log_if_fail "Tag event", $event;
 
    my %tags = %{ $event->{content}{tags} };
 
-   if( $empty ) {
+   if( $args{expect_empty} ) {
       keys %tags == 0 or die "Expected empty tag"
    }
    else {
@@ -238,16 +239,16 @@ test "Tags appear in the v1 /events stream",
 
 =head2 check_private_user_data
 
-   check_private_user_data( $event, $empty );
+   check_private_user_data( $event, %args );
 
 Checks that the private_user_data section has a tag event
-and that the tag event has the correct content.  If $empty
-is set then the 'correct' content is an empty tag.
+and that the tag event has the correct content.  If the C<expect_empty>
+named argument is set then the 'correct' content is an empty tag.
 
 =cut
 
 sub check_private_user_data {
-   my ( $private_user_data, $empty ) = @_;
+   my ( $private_user_data, %args ) = @_;
 
    log_if_fail "Private User Data:", $private_user_data;
 
@@ -255,7 +256,7 @@ sub check_private_user_data {
    $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
    not defined $tag_event->{room_id} or die "Unxpected room_id";
 
-   check_tag_event( $tag_event, $empty );
+   check_tag_event( $tag_event, %args );
 }
 
 
@@ -426,7 +427,9 @@ test "Deleted tags appear in an incremental v2 /sync",
          my $room = $body->{rooms}{joined}{$room_id};
          require_json_keys( $room, qw( private_user_data ) );
 
-         check_private_user_data( $room->{private_user_data}{events}, 1 );
+         check_private_user_data( $room->{private_user_data}{events},
+            expect_empty => 1,
+         );
 
          Future->done( 1 );
       });
