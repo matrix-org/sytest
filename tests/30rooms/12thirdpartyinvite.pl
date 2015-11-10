@@ -4,6 +4,8 @@ use IO::Async::SSL;
 use Protocol::Matrix qw( encode_base64_unpadded sign_json );
 use SyTest::Identity::Server;
 
+use IO::Async::Listener 0.69;  # for ->configure( handle => undef )
+
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 my $DIR = dirname( __FILE__ );
@@ -37,7 +39,6 @@ test "Can invite existing 3pid",
                      id_server    => $id_server->name,
                      medium       => "email",
                      address      => $invitee_email,
-                     display_name => "Cute things",
                   },
                );
             })->then( sub {
@@ -173,10 +174,8 @@ test "3pid invite join valid signature but unreachable ID server are rejected",
          my ( $id_server ) = @_;
 
          $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee, sub {
-            $id_server->read_handle->close;
-         })->then( sub {
-            $loop->remove( $id_server );
-            Future->done( 1 );
+            # Stop the server listening by taking its handle away
+            $id_server->configure( handle => undef );
          });
       });
    };
@@ -237,7 +236,6 @@ sub do_3pid_invite {
          id_server    => $id_server,
          medium       => "email",
          address      => $invitee_email,
-         display_name => "Cool tails",
       }
    )
 }

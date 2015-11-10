@@ -7,7 +7,7 @@ requires 'File::Path';
 requires 'File::Slurper';
 requires 'Future', '>= 0.33';
 requires 'Getopt::Long';
-requires 'IO::Async::Loop';
+requires 'IO::Async', '>= 0.69';
 requires 'IO::Async::SSL';
 requires 'IO::Socket::IP', '>= 0.04';
 requires 'IO::Socket::SSL';
