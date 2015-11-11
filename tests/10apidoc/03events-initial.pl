@@ -142,7 +142,7 @@ sub await_event_for
          my $found;
          foreach my $event ( @_ ) {
             not $found and $filter->( $event ) and
-               $found = 1, next;
+               $found = $event, next;
 
             # Save it for later
             push @{ $user->saved_events }, $event;
