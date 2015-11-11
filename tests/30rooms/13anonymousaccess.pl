@@ -385,6 +385,108 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
       })
    };
 
+test "GET /publicRooms lists rooms",
+   requires => [qw( first_api_client ), local_user_fixture() ],
+
+   check => sub {
+      my ( $http, $user ) = @_;
+
+      Future->needs_all(
+         matrix_create_room( $user,
+            visibility => "public",
+            room_alias_name => "listingtest0",
+         ),
+
+         matrix_create_room( $user,
+            visibility => "public",
+            room_alias_name => "listingtest1",
+         )->then( sub {
+            my ( $room_id ) = @_;
+
+            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+         }),
+
+         matrix_create_room( $user,
+            visibility => "public",
+            room_alias_name => "listingtest2",
+         )->then( sub {
+            my ( $room_id ) = @_;
+
+            matrix_set_room_history_visibility( $user, $room_id, "invited" );
+         }),
+
+         matrix_create_room( $user,
+            visibility => "public",
+            room_alias_name => "listingtest3",
+         )->then( sub {
+            my ( $room_id ) = @_;
+
+            matrix_set_room_guest_access( $user, $room_id, "can_join" );
+         }),
+
+         matrix_create_room( $user,
+            visibility => "public",
+            room_alias_name => "listingtest4",
+         )->then( sub {
+            my ( $room_id ) = @_;
+
+            Future->needs_all(
+               matrix_set_room_guest_access( $user, $room_id, "can_join" ),
+               matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
+            );
+         }),
+      )->then( sub {
+         $http->do_request_json(
+            method => "GET",
+            uri    => "/api/v1/publicRooms",
+      )})->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "publicRooms", $body;
+
+         require_json_keys( $body, qw( start end chunk ));
+         require_json_list( $body->{chunk} );
+
+         my %seen = (
+            listingtest0 => 0,
+            listingtest1 => 0,
+            listingtest2 => 0,
+            listingtest3 => 0,
+            listingtest4 => 0,
+         );
+
+         foreach my $room ( @{ $body->{chunk} } ) {
+            my $aliases = $room->{aliases};
+            require_json_boolean( my $world_readable = $room->{world_readable} );
+            require_json_boolean( my $guest_can_join = $room->{guest_can_join} );
+
+            foreach my $alias ( @{$aliases} ) {
+               if( $alias =~ m/^\Q#listingtest0:/ ) {
+                  $seen{listingtest0} = !$world_readable && !$guest_can_join;
+               }
+               elsif( $alias =~ m/^\Q#listingtest1:/ ) {
+                  $seen{listingtest1} = $world_readable && !$guest_can_join;
+               }
+               elsif( $alias =~ m/^\Q#listingtest2:/ ) {
+                  $seen{listingtest2} = !$world_readable && !$guest_can_join;
+               }
+               elsif( $alias =~ m/^\Q#listingtest3:/ ) {
+                  $seen{listingtest3} = !$world_readable && $guest_can_join;
+               }
+               elsif( $alias =~ m/^\Q#listingtest4:/ ) {
+                  $seen{listingtest4} = $world_readable && $guest_can_join;
+               }
+            }
+         }
+
+         foreach my $key (keys %seen ) {
+            $seen{$key} or die "Wrong for $key";
+         }
+
+         Future->done(1);
+      });
+   };
+
 sub anonymous_user_fixture
 {
    fixture(
