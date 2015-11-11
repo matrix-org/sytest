@@ -12,7 +12,7 @@ use IO::Async::FileStream;
 
 use Cwd qw( getcwd abs_path );
 use File::Basename qw( dirname );
-use File::Path qw( make_path remove_tree );
+use File::Path qw( make_path );
 use List::Util qw( any );
 use POSIX qw( strftime );
 
@@ -115,12 +115,6 @@ sub start
 
    if( defined $db_type ) {
       $self->${\"clear_db_$db_type"}( %db_args );
-   }
-
-   # Clean up the media_store directory each time, or else it fills up with
-   # thousands of automatically-generated avatar images
-   if( -d "media_store" ) {
-      remove_tree( "media_store" );
    }
 
    my $cwd = getcwd;
