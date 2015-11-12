@@ -20,7 +20,7 @@ test "Left rooms appear in the leave section of sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         require_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
@@ -55,7 +55,7 @@ test "Newly left rooms appear in the leave section of incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         require_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
@@ -107,7 +107,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id_1};
-         require_json_keys( $room, qw( event_map timeline state ));
+         require_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
@@ -143,7 +143,7 @@ test "Left rooms appear in the leave section of full state sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         require_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
@@ -206,38 +206,38 @@ test "Archived rooms only contain history from before the user left",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         require_json_keys( $room, qw( timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event";
          @{ $room->{timeline}{events} } == 1
             or die "Expected a single timeline event";
 
-         my $state_event_id = $room->{state}{events}[0];
-         $room->{event_map}{ $state_event_id }{content}{my_key}
-            eq "before" or die "Expected only events from before leaving";
+         my $state_event = $room->{state}{events}[0];
+         $state_event->{content}{my_key} eq "before"
+            or die "Expected only events from before leaving";
 
-         my $timeline_event_id = $room->{timeline}{events}[0];
-         $room->{event_map}{ $timeline_event_id }{content}{body}
-            eq "before" or die "Expected only events from before leaving";
+         my $timeline_event = $room->{timeline}{events}[0];
+         $timeline_event->{content}{body} eq "before"
+            or die "Expected only events from before leaving";
 
          matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
       })->then( sub {
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         require_json_keys( $room, qw( timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event";
          @{ $room->{timeline}{events} } == 1
             or die "Expected a single timeline event";
 
-         my $state_event_id = $room->{state}{events}[0];
-         $room->{event_map}{ $state_event_id }{content}{my_key}
-            eq "before" or die "Expected only events from before leaving";
+         my $state_event = $room->{state}{events}[0];
+         $state_event->{content}{my_key} eq "before"
+            or die "Expected only events from before leaving";
 
-         my $timeline_event_id = $room->{timeline}{events}[0];
-         $room->{event_map}{ $timeline_event_id }{content}{body}
-            eq "before" or die "Expected only events from before leaving";
+         my $timeline_event = $room->{timeline}{events}[0];
+         $timeline_event->{content}{body} eq "before"
+            or die "Expected only events from before leaving";
 
          Future->done(1);
       });

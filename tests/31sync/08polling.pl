@@ -36,7 +36,7 @@ test "Sync can be polled for updates",
          @{ $room->{timeline}{events} } eq 1
              or die "Expected one timeline event";
 
-         $room->{timeline}{events}[0] eq $event_id
+         $room->{timeline}{events}[0]{event_id} eq $event_id
             or die "Unexpected timeline event";
 
          Future->done(1)

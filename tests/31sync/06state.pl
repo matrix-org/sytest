@@ -59,7 +59,7 @@ test "State is included in the timeline in the initial sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         require_json_keys( $room, qw( timeline state ephemeral ));
 
          # state from the timeline should *not* appear in the state dictionary
          @{ $room->{state}{events} } == 0
@@ -68,10 +68,10 @@ test "State is included in the timeline in the initial sync",
          @{ $room->{timeline}{events} } == 1
             or die "Expected one timeline event";
 
-         my $event_id = $room->{timeline}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{timeline}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 1
+         $event->{content}{my_key} == 1
             or die "Unexpected event content";
 
          Future->done(1);
@@ -117,7 +117,7 @@ test "State from remote users is included in the state in the initial sync",
             my ( $body ) = @_;
 
             my $room = $body->{rooms}{join}{$room_id};
-            require_json_keys( $room, qw( event_map timeline state ephemeral ));
+            require_json_keys( $room, qw( timeline state ephemeral ));
 
             @{ $room->{state}{events} } == 1
                 or die "Expected one state event";
@@ -125,10 +125,10 @@ test "State from remote users is included in the state in the initial sync",
             @{ $room->{timeline}{events} } == 0
                 or die "Expected no timeline events";
 
-            my $event_id = $room->{state}{events}[0];
-            $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+            my $event = $room->{state}{events}[0];
+            $event->{type} eq "a.madeup.test.state"
                 or die "Unexpected state event type";
-            $room->{event_map}{$event_id}{content}{my_key} == 1
+            $event->{content}{my_key} == 1
                 or die "Unexpected event content";
 
             Future->done(1);
@@ -188,14 +188,14 @@ test "Changes to state are included in an incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
-         @{ $room->{state}{events} } == 1
+         require_json_keys( $room, qw( timeline state ephemeral ));
+         @{ $room->{state}{events}} == 1
             or die "Expected only one state event";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 2
+         $event->{content}{my_key} == 2
             or die "Unexpected event content";
 
          Future->done(1);
@@ -265,14 +265,14 @@ test "Changes to state are included in an gapped incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         require_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 2
+         $event->{content}{my_key} == 2
             or die "Unexpected event content";
 
          Future->done(1);
@@ -324,7 +324,7 @@ test "State from remote users is included in the timeline in an incremental sync
             my ( $body ) = @_;
 
             my $room = $body->{rooms}{join}{$room_id};
-            require_json_keys( $room, qw( event_map timeline state ephemeral ));
+            require_json_keys( $room, qw( timeline state ephemeral ));
 
             @{ $room->{state}{events} } == 0
                 or die "Expected no state events";
@@ -332,10 +332,10 @@ test "State from remote users is included in the timeline in an incremental sync
             @{ $room->{timeline}{events} } == 1
                 or die "Expected one timeline event";
 
-            my $event_id = $room->{timeline}{events}[0];
-            $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+            my $event = $room->{timeline}{events}[0];
+            $event->{type} eq "a.madeup.test.state"
                 or die "Unexpected state event type";
-            $room->{event_map}{$event_id}{content}{my_key} == 1
+            $event->{content}{my_key} == 1
                 or die "Unexpected event content";
 
             Future->done(1);
@@ -404,14 +404,13 @@ test "A full_state incremental update returns all state",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         require_json_keys( $room, qw(timeline state ephemeral ));
 
          @{ $room->{state}{events} } == 2
             or die "Expected two state events";
          my $got_key_1 = 0;
          my $got_key_2 = 0;
-         foreach my $event_id (@{ $room->{state}{events} }) {
-             my $event = $room->{event_map}{$event_id};
+         foreach my $event (@{ $room->{state}{events} }) {
              $event->{type} eq "a.madeup.test.state"
                  or die "Unexpected type";
              my $my_key = $event->{content}{my_key};
@@ -433,7 +432,7 @@ test "A full_state incremental update returns all state",
          @{ $room->{timeline}{events} } == 2
              or die "Expected two timeline event";
          foreach my $i (0..1) {
-             my $event = $room->{event_map}{$room->{timeline}{events}[$i]};
+             my $event = $room->{timeline}{events}[$i];
              $event->{type} eq "a.made.up.filler.type"
                  or die "Unexpected type ".$event->{type};
          }
@@ -490,14 +489,14 @@ test "When user joins a room the state is included in the next sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         require_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 1
+         $event->{content}{my_key} == 1
             or die "Unexpected event content";
 
          Future->done(1);
@@ -618,14 +617,14 @@ test "When user joins a room the state is included in a gapped sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         require_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 1
+         $event->{content}{my_key} == 1
             or die "Unexpected event content";
 
          Future->done(1);
@@ -683,15 +682,15 @@ test "When user joins and leaves a room in the same batch, the full state is sti
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         require_json_keys( $room, qw( timeline state ephemeral ));
          my $eventcount = scalar @{ $room->{state}{events} };
          $eventcount == 1 or
              die "Expected one state event, got $eventcount";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 1
+         $event->{content}{my_key} == 1
             or die "Unexpected event content";
 
          Future->done(1);
