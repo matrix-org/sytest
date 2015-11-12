@@ -167,7 +167,7 @@ test "Anonymous user doesn't get events before room made world_readable",
       });
    };
 
-test "Anonymous users can get state for non-world_readable rooms",
+test "Anonymous users can get state for world_readable rooms",
    requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
 
    do => sub {
@@ -201,6 +201,70 @@ test "Anonymous users can get individual state for world_readable rooms",
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
       );
+   };
+
+test "Anonymous user cannot room initalSync for non-world_readable rooms",
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user, $user ) = @_;
+
+      my $room_id;
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_send_room_text_message( $user, $room_id, body => "private" )
+      })->then( sub {
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/initialSync",
+      )})->main::expect_http_403;
+   };
+
+
+test "Anonymous user can room initialSync for world_readable rooms",
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user, $user ) = @_;
+
+      my $room_id;
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_send_room_text_message( $user, $room_id, body => "private" )
+      })->then(sub {
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+      })->then( sub {
+         matrix_send_room_text_message( $user, $room_id, body => "public" );
+      })->then( sub {
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/initialSync",
+      )})->then( sub {
+         my ( $body ) = @_;
+
+         require_json_keys( $body, qw( room_id state messages presence ));
+         require_json_keys( $body->{messages}, qw( chunk start end ));
+         require_json_list( $body->{messages}{chunk} );
+         require_json_list( $body->{state} );
+
+         log_if_fail "room initialSync body", $body;
+
+         my $chunk = $body->{messages}{chunk};
+
+         @{ $chunk } == 2 or die "Wrong number of chunks";
+         $chunk->[0]->{type} eq "m.room.history_visibility" or die "Want m.room.history_visibility";
+         $chunk->[0]->{content}->{history_visibility} eq "world_readable" or die "Wrong history_visibility value";
+         $chunk->[1]->{type} eq "m.room.message" or die "Want m.room.message";
+         $chunk->[1]->{content}->{body} eq "public" or die "Wrong message body";
+
+         Future->done( 1 );
+      });
    };
 
 test "Anonymous users can join guest_access rooms",
@@ -330,6 +394,53 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
          $membership eq "leave" or die("want membership to be leave but is $membership");
 
          Future->done( 1 );
+      });
+   };
+
+test "Anonymous user can set display names",
+   requires => [ anonymous_user_fixture(), local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $anonymous_user, $user, $room_id ) = @_;
+
+      my $displayname_uri = "/api/v1/profile/:user_id/displayname";
+
+      matrix_set_room_guest_access( $user, $room_id, "can_join" )->then( sub {
+         matrix_join_room( $anonymous_user, $room_id );
+      })->then( sub {
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => $displayname_uri,
+      )})->then( sub {
+         my ( $body ) = @_;
+
+         defined $body->{displayname} and die "Didn't expect displayname";
+
+         do_request_json_for( $anonymous_user,
+            method  => "PUT",
+            uri     => $displayname_uri,
+            content => {
+               displayname => "creeper",
+            },
+      )})->then( sub {
+         Future->needs_all(
+            do_request_json_for( $anonymous_user,
+               method => "GET",
+               uri    => $displayname_uri,
+            )->then( sub {
+               my ( $body ) = @_;
+               $body->{displayname} eq "creeper" or die "Wrong displayname";
+               Future->done( 1 );
+            }),
+            do_request_json_for( $anonymous_user,
+               method => "GET",
+               uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+            )->then( sub {
+               my ( $body ) = @_;
+               $body->{displayname} eq "creeper" or die "Wrong displayname";
+               Future->done( 1 );
+            }),
+         );
       });
    };
 
