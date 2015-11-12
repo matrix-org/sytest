@@ -41,13 +41,10 @@ sub inviteonly_room_fixture
    )
 };
 
-my $inviteonly_room_fixture = inviteonly_room_fixture( creator => $creator_fixture );
-
-my $invited_user_fixture = local_user_fixture();
-
 multi_test "Can invite users to invite-only rooms",
-   requires => [ $creator_fixture, $invited_user_fixture, $inviteonly_room_fixture,
-                qw( can_invite_room )],
+   requires => [ $creator_fixture, local_user_fixture(),
+                 inviteonly_room_fixture( creator => $creator_fixture ),
+                 qw( can_invite_room )],
 
    do => sub {
       my ( $creator, $invitee, $room_id ) = @_;
