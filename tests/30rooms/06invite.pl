@@ -43,16 +43,6 @@ sub inviteonly_room_fixture
 
 my $inviteonly_room_fixture = inviteonly_room_fixture( creator => $creator_fixture );
 
-test "Uninvited users cannot join the room",
-   requires => [ local_user_fixture(), $inviteonly_room_fixture ],
-
-   check => sub {
-      my ( $uninvited, $room_id ) = @_;
-
-      matrix_join_room( $uninvited, $room_id )
-         ->main::expect_http_403;
-   };
-
 my $invited_user_fixture = local_user_fixture();
 
 test "Can invite users to invite-only rooms",
@@ -112,6 +102,17 @@ test "Invited user can join the room",
 
          Future->done(1);
       });
+   };
+
+test "Uninvited users cannot join the room",
+   requires => [ local_user_fixture(),
+                 inviteonly_room_fixture( creator => $creator_fixture ) ],
+
+   check => sub {
+      my ( $uninvited, $room_id ) = @_;
+
+      matrix_join_room( $uninvited, $room_id )
+         ->main::expect_http_403;
    };
 
 my $other_local_user_fixture = local_user_fixture();
