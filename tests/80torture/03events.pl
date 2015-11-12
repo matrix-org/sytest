@@ -56,7 +56,7 @@ test "GET /events with non-numeric 'timeout'",
    };
 
 test "Event size limits",
-   requires => [ local_user_and_room_preparers() ],
+   requires => [ local_user_and_room_fixtures() ],
 
    do => sub {
       my ( $user, $room_id ) = @_;

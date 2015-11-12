@@ -1,5 +1,5 @@
 multi_test "Left room members do not cause problems for presence",
-   requires => [ local_user_preparers( 2 ),
+   requires => [ local_user_fixtures( 2 ),
                  qw( can_room_initial_sync )],
 
    do => sub {

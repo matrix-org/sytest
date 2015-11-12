@@ -1,5 +1,5 @@
 multi_test "Test that we can be reinvited to a room we created",
-   requires => [ local_user_preparer(), remote_user_preparer(),
+   requires => [ local_user_fixture(), remote_user_fixture(),
                  qw( can_change_power_levels )],
 
    check => sub {

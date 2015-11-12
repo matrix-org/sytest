@@ -1,7 +1,7 @@
-my ( $user_preparer, $room_preparer ) = local_user_and_room_preparers();
+my ( $user_fixture, $room_fixture ) = local_user_and_room_fixtures();
 
 test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
-   requires => [ $user_preparer, $room_preparer ],
+   requires => [ $user_fixture, $room_fixture ],
 
    provides => [qw( can_get_power_levels )],
 
@@ -37,7 +37,7 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
    };
 
 test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
-   requires => [ $user_preparer, $room_preparer,
+   requires => [ $user_fixture, $room_fixture,
                  qw( can_get_power_levels )],
 
    provides => [qw( can_set_power_levels )],

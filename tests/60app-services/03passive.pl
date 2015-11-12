@@ -1,12 +1,12 @@
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
-my $room_preparer = room_preparer(
-   requires_users => [ $user_preparer ],
+my $room_fixture = room_fixture(
+   requires_users => [ $user_fixture ],
 );
 
 multi_test "Inviting an AS-hosted user asks the AS server",
    requires => [qw( await_as_event make_as_user first_home_server ),
-                     $user_preparer, $room_preparer,
+                     $user_fixture, $room_fixture,
                 qw( can_invite_room )],
 
    do => sub {
@@ -47,7 +47,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
    requires => [qw( await_as_event as_user first_home_server ),
-                  local_user_preparer(), $room_preparer,
+                  local_user_fixture(), $room_fixture,
 
                 qw( can_join_room_by_alias )],
 
@@ -126,7 +126,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
    };
 
 test "Events in rooms with AS-hosted room aliases are sent to AS server",
-   requires => [qw( await_as_event ), $user_preparer, $room_preparer,
+   requires => [qw( await_as_event ), $user_fixture, $room_fixture,
                 qw( can_join_room_by_alias can_send_message )],
 
    do => sub {

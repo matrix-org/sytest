@@ -1,9 +1,9 @@
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
 my $avatar_url = "http://somewhere/my-pic.jpg";
 
 test "PUT /profile/:user_id/avatar_url sets my avatar",
-   requires => [ $user_preparer ],
+   requires => [ $user_fixture ],
 
    provides => [qw( can_set_avatar_url )],
 
@@ -41,7 +41,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
    };
 
 test "GET /profile/:user_id/avatar_url publicly accessible",
-   requires => [qw( first_api_client ), $user_preparer,
+   requires => [qw( first_api_client ), $user_fixture,
                 qw( can_set_avatar_url )],
 
    check => sub {

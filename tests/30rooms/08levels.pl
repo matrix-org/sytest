@@ -1,17 +1,17 @@
 use List::Util qw( first );
 
 # No harm in sharing the users as every test runs in its own room
-my $creator_preparer = local_user_preparer();
+my $creator_fixture = local_user_fixture();
 
-my $user_preparer = local_user_preparer();
+my $user_fixture = local_user_fixture();
 
-sub lockeddown_room_preparer
+sub lockeddown_room_fixture
 {
-   preparer(
-      requires => [ $creator_preparer, $user_preparer,
+   fixture(
+      requires => [ $creator_fixture, $user_fixture,
                     qw( can_change_power_levels ) ],
 
-      do => sub {
+      setup => sub {
          my ( $creator, $test_user ) = @_;
 
          matrix_create_and_join_room( [ $creator, $test_user ] )
@@ -37,7 +37,7 @@ sub test_powerlevel
    my @requires = @{ $args{requires} };
 
    multi_test $name,
-      requires => [ $creator_preparer, $user_preparer, lockeddown_room_preparer(),
+      requires => [ $creator_fixture, $user_fixture, lockeddown_room_fixture(),
                     qw( can_change_power_levels ),
                     @requires ],
 
@@ -117,7 +117,7 @@ test_powerlevel "setting 'm.room.power_levels' respects room powerlevel",
    };
 
 test "Unprivileged users can set m.room.topic if it only needs level 0",
-   requires => [ $creator_preparer, $user_preparer, lockeddown_room_preparer(),
+   requires => [ $creator_fixture, $user_fixture, lockeddown_room_fixture(),
                  qw( can_change_power_levels )],
 
    do => sub {
@@ -137,7 +137,7 @@ test "Unprivileged users can set m.room.topic if it only needs level 0",
 
 foreach my $levelname (qw( ban kick redact )) {
    multi_test "Users cannot set $levelname powerlevel higher than their own",
-      requires => [ $creator_preparer, $user_preparer, lockeddown_room_preparer(),
+      requires => [ $creator_fixture, $user_fixture, lockeddown_room_fixture(),
                     qw( can_change_power_levels )],
 
       do => sub {

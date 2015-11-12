@@ -48,7 +48,8 @@ is described in more detail in the following sections.
     contains "immediate" checking code for the test.
 
 ``requires``
-    Provides an ``ARRAY`` reference giving a list of named requirements.
+    Provides an ``ARRAY`` reference giving a list of named requirements and
+    fixture objects.
 
 ``critical``
     If true and the test fails, the entire test run will bail out at this
@@ -116,6 +117,13 @@ beginning with ``can_``, and take the value ``1``. They are requested at the
 end of the ``requires`` list, after all of the significant values, so as not to
 cause "holes" when unpacking the argument list.
 
+Note that while it was the original intention for the test environment to
+accumulate shared state that later tests can use, it leads to more fragile
+tests simply because of that shared state. Where possible, fixtures should be
+used instead, especially when the state would only nominally be shared in order
+to reduce the amount of setup boilerplate code required to implement a test.
+See the Fixtures section below.
+
 Initial Environment
 -------------------
 
@@ -130,6 +138,79 @@ itself:
 ``first_http_client``
     The first value from ``http_clients``, pointing at the first home server,
     for convenience where most of the tests run there.
+
+Fixtures
+--------
+
+As an alternative to accumulating state as named values within the test
+environment, fixtures are another feature provided to reduce the amount of test
+setup and teardown code in individual test cases. A fixture is an object that
+encapsulates the dual processes of creating some values or state for a test to
+use, and of destroying or resetting that state afterwards. The fixture object
+also stores the value it created once that has been set up, allowing the value
+to be reused by multiple tests if they all share the same fixture object.
+
+A fixture object is created by the ``fixture`` function, which takes the
+following named arguments:
+
+``setup``
+    A required ``CODE`` reference to a block of code used to lazily create the
+    actual value for the fixture; that is, the value that will be passed to the
+    running test code that uses the fixture. This block yields its return value
+    via a future.
+
+``teardown``
+    An optional ``CODE`` reference to a code block that will be invoked at the
+    end of the test using the fixture. This can be used to perform any final
+    tidying up that is required after the fixture value has been used. This
+    block returns a future but the actual final value yielded from that is
+    ignored.
+
+``requires``
+    An ``ARRAY`` reference giving named requirements and other fixture objects.
+
+Once a fixture object is constructed, it has not yet actually invoked the
+``setup`` code; that is deferred until the first time the fixture object is
+actually needed by a test. By using fixtures to provide initial context or
+values to a test is therefore lazy, and avoids performing any work if the test
+is skipped.
+
+Each fixture can declare named requirements or other fixture objects in its own
+dependencies. In this way a recursive tree of abilities can be constructed.
+The values of the named requirements and dependent fixtures are passed in to
+the ``setup`` block.
+
+If the fixture does not have a ``teardown`` block then it may be shared by
+multiple tests; each subsequent test that uses the same fixture object will
+receive the same value. The ``setup`` code will not be re-run; simply the value
+that it returned the first time will be reused by the second.
+
+If the fixture provides a ``teardown`` block, then it is invoked at the end of
+the test, once the eventual pass or failure has been determined. This is passed
+the fixture value, and is expected to return a future to provide a way to know
+when it has finished executing; the final return value yielded by this future
+is not important. After the ``teardown`` block is invoked, the fixture object
+can no longer be reused by other tests; it should therefore be constructed
+uniquely for just one test.
+
+Because of the optional nature of the ``teardown`` block, there are then two
+main kinds of fixtures:
+
+- Fixtures that provide access to some (possibly-shared) resource that is
+  lazily provisioned the first time a test requires it. These are fixtures
+  that lack a ``teardown`` block.
+
+- Fixtures that provide access to some resource that is created and destroyed
+  over the lifetime of the test. These are fixtures that have a ``teardown``
+  block.
+
+The intented use for fixtures is that test files will provide wrapper functions
+that create a new fixture object to encapsulate some common setup pattern that
+later tests may require. Later tests can then simply invoke that function as
+part of their ``requires`` list to have the setup for that fixture value
+effectively folded into to the start of the test, so that the main body of the
+``check`` or ``do`` block of that test is invoked with the value or context
+already provisioned.
 
 Test Assertions
 ---------------

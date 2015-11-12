@@ -186,21 +186,28 @@ sub register_user_and_create_room_and_add_tag
 
 =head2 check_tag_event
 
-   check_tag_event( $event );
+   check_tag_event( $event, %args );
 
-Checks that a room tag event has the correct content.
+Checks that a room tag event has the correct content (or is empty, if the
+C<expect_empty> named arg true)
 
 =cut
 
 sub check_tag_event {
-   my ( $event, $expect_room_id ) = @_;
+   my ( $event, %args ) = @_;
 
    log_if_fail "Tag event", $event;
 
    my %tags = %{ $event->{content}{tags} };
-   keys %tags == 1 or die "Expected exactly one tag";
-   defined $tags{test_tag} or die "Unexpected tag";
-   $tags{test_tag}{order} == 1 or die "Expected order == 1";
+
+   if( $args{expect_empty} ) {
+      keys %tags == 0 or die "Expected empty tag"
+   }
+   else {
+      keys %tags == 1 or die "Expected exactly one tag";
+      defined $tags{test_tag} or die "Unexpected tag";
+      $tags{test_tag}{order} == 1 or die "Expected order == 1";
+   }
 }
 
 
@@ -232,15 +239,16 @@ test "Tags appear in the v1 /events stream",
 
 =head2 check_private_user_data
 
-   check_private_user_data( $event );
+   check_private_user_data( $event, %args );
 
 Checks that the private_user_data section has a tag event
-and that the tag event has the correct content.
+and that the tag event has the correct content.  If the C<expect_empty>
+named argument is set then the 'correct' content is an empty tag.
 
 =cut
 
 sub check_private_user_data {
-   my ( $private_user_data ) = @_;
+   my ( $private_user_data, %args ) = @_;
 
    log_if_fail "Private User Data:", $private_user_data;
 
@@ -248,7 +256,7 @@ sub check_private_user_data {
    $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
    not defined $tag_event->{room_id} or die "Unxpected room_id";
 
-   check_tag_event( $tag_event );
+   check_tag_event( $tag_event, %args );
 }
 
 
@@ -374,6 +382,54 @@ test "Newly updated tags appear in an incremental v2 /sync",
          require_json_keys( $room, qw( private_user_data ) );
 
          check_private_user_data( $room->{private_user_data}{events} );
+
+         Future->done( 1 );
+      });
+   };
+
+test "Deleted tags appear in an incremental v2 /sync",
+   requires => [qw( first_api_client can_add_tag can_remove_tag can_sync )],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      my ( $user, $room_id, $filter_id, $next_batch );
+
+      my $filter = {};
+
+      matrix_register_user_with_filter( $http, $filter )->then( sub {
+         ( $user, $filter_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user, $filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         $next_batch = $body->{next_batch};
+
+         matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
+      })->then( sub {
+         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         $next_batch = $body->{next_batch};
+
+         matrix_remove_tag( $user, $room_id, "test_tag" );
+      })->then( sub {
+         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{joined}{$room_id};
+         require_json_keys( $room, qw( private_user_data ) );
+
+         check_private_user_data( $room->{private_user_data}{events},
+            expect_empty => 1,
+         );
 
          Future->done( 1 );
       });
