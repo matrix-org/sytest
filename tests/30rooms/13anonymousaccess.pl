@@ -333,6 +333,53 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
       });
    };
 
+test "Anonymous user can set display names",
+   requires => [ anonymous_user_fixture(), local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $anonymous_user, $user, $room_id ) = @_;
+
+      my $displayname_uri = "/api/v1/profile/:user_id/displayname";
+
+      matrix_set_room_guest_access( $user, $room_id, "can_join" )->then( sub {
+         matrix_join_room( $anonymous_user, $room_id );
+      })->then( sub {
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => $displayname_uri,
+      )})->then( sub {
+         my ( $body ) = @_;
+
+         defined $body->{displayname} and die "Didn't expect displayname";
+
+         do_request_json_for( $anonymous_user,
+            method  => "PUT",
+            uri     => $displayname_uri,
+            content => {
+               displayname => "creeper",
+            },
+      )})->then( sub {
+         Future->needs_all(
+            do_request_json_for( $anonymous_user,
+               method => "GET",
+               uri    => $displayname_uri,
+            )->then( sub {
+               my ( $body ) = @_;
+               $body->{displayname} eq "creeper" or die "Wrong displayname";
+               Future->done( 1 );
+            }),
+            do_request_json_for( $anonymous_user,
+               method => "GET",
+               uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+            )->then( sub {
+               my ( $body ) = @_;
+               $body->{displayname} eq "creeper" or die "Wrong displayname";
+               Future->done( 1 );
+            }),
+         );
+      });
+   };
+
 test "Anonymous users are kicked from guest_access rooms on revocation of guest_access over federation",
    requires => [ local_user_fixture(), remote_user_fixture(), anonymous_user_fixture() ],
 
