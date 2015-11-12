@@ -297,8 +297,11 @@ sub check_events
       foreach my $event ( @{ $body->{chunk} } ) {
          next if all { $_ ne "content" } keys %{ $event };
          next if all { $_ ne "body" } keys %{ $event->{content} };
+
          $found = 1 if $event->{content}->{body} eq "public";
-         die "Should not have found private" if $event->{content}->{body} eq "private";
+
+         $event->{content}->{body} eq "private" and
+            die "Should not have found private";
       }
 
       Future->done( $found );

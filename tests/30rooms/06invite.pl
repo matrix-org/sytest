@@ -76,11 +76,15 @@ test "Invited user receives invite",
          my ( $event ) = @_;
 
          require_json_keys( $event, qw( type ));
-         return 0 unless $event->{type} eq "m.room.member";
+         $event->{type} eq "m.room.member" or
+            return 0;
 
          require_json_keys( $event, qw( room_id state_key ));
-         return 0 unless $event->{room_id} eq $room_id;
-         return 0 unless $event->{state_key} eq $invitee->user_id;
+
+         $event->{room_id} eq $room_id or
+            return 0;
+         $event->{state_key} eq $invitee->user_id or
+            return 0;
 
          require_json_keys( my $content = $event->{content}, qw( membership ));
 

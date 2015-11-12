@@ -30,12 +30,11 @@ multi_test "New federated private chats get full presence information (SYN-115)"
          # Bob should receive the invite
          await_event_for( $bob, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.member" and
-                          $event->{room_id} eq $room_id and
-                          $event->{state_key} eq $bob->user_id and
-                          $event->{content}{membership} eq "invite";
 
-            return 1;
+            return $event->{type} eq "m.room.member" &&
+                   $event->{room_id} eq $room_id &&
+                   $event->{state_key} eq $bob->user_id &&
+                   $event->{content}{membership} eq "invite";
          })->SyTest::pass_on_done( "Received invite" )
       })->then( sub {
 

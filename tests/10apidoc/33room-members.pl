@@ -357,7 +357,7 @@ sub matrix_create_and_join_room
             )
          } @local_members )
    })->then( sub {
-      return Future->done( $room_id ) unless $n_joiners;
+      $n_joiners or return Future->done( $room_id );
 
       # Now wait for the creator to see every join event, so we're sure
       # the remote joins have happened
@@ -370,12 +370,16 @@ sub matrix_create_and_join_room
          await_event_for( $creator, sub {
             my ( $event ) = @_;
 
-            return unless $event->{type} eq "m.room.member";
-            return unless $event->{room_id} eq $room_id;
+            $event->{type} eq "m.room.member" or
+               return 0;
+            $event->{room_id} eq $room_id or
+               return 0;
 
             $joined_members{ $event->{state_key} }++;
 
-            return 1 if keys( %joined_members ) == $n_joiners;
+            keys( %joined_members ) == $n_joiners
+               and return 1;
+
             return 0;
          }),
 

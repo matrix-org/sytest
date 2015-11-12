@@ -24,9 +24,14 @@ multi_test "Test that we can be reinvited to a room we created",
 
          await_event_for( $user_2, sub {
             my ( $event ) = @_;
-            return 0 unless $event->{type} eq "m.room.member";
-            return 0 unless $event->{content}->{membership} eq "invite";
-            return 0 unless $event->{room_id} eq $room_id;
+
+            $event->{type} eq "m.room.member" or
+               return 0;
+            $event->{content}->{membership} eq "invite" or
+               return 0;
+            $event->{room_id} eq $room_id or
+               return 0;
+
             return 1;
          })->SyTest::pass_on_done( "User B received the invite from A" )
       })->then( sub {
@@ -48,9 +53,14 @@ multi_test "Test that we can be reinvited to a room we created",
 
          await_event_for( $user_2, sub {
             my ( $event ) = @_;
-            return 0 unless $event->{type} eq "m.room.member";
-            return 0 unless $event->{content}->{membership} eq "leave";
-            return 0 unless $event->{room_id} eq $room_id;
+
+            $event->{type} eq "m.room.member" or
+               return 0;
+            $event->{content}->{membership} eq "leave" or
+               return 0;
+            $event->{room_id} eq $room_id or
+               return 0;
+
             return 1;
          })->SyTest::pass_on_done( "User B received the leave event" )
       })->then( sub {
@@ -61,9 +71,14 @@ multi_test "Test that we can be reinvited to a room we created",
 
          await_event_for( $user_1, sub {
             my ( $event ) = @_;
-            return 0 unless $event->{type} eq "m.room.member";
-            return 0 unless $event->{content}->{membership} eq "invite";
-            return 0 unless $event->{room_id} eq $room_id;
+
+            $event->{type} eq "m.room.member" or
+               return 0;
+            $event->{content}->{membership} eq "invite" or
+               return 0;
+            $event->{room_id} eq $room_id or
+               return 0;
+
             return 1;
          })->SyTest::pass_on_done( "User A received the invite from user B" )
       })->then( sub {

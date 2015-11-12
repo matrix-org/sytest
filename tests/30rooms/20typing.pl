@@ -52,12 +52,14 @@ test "Typing notification sent to local room members",
             await_event_for( $recvuser, sub {
                my ( $event ) = @_;
 
-               return unless $event->{type} eq "m.typing";
+               $event->{type} eq "m.typing" or
+                  return 0;
 
                require_json_keys( $event, qw( type room_id content ));
                require_json_keys( my $content = $event->{content}, qw( user_ids ));
 
-               return unless $event->{room_id} eq $room_id;
+               $event->{room_id} eq $room_id or
+                  return 0;
 
                require_json_list( my $users = $content->{user_ids} );
 
@@ -83,12 +85,14 @@ test "Typing notifications also sent to remote room members",
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
 
-         return unless $event->{type} eq "m.typing";
+         $event->{type} eq "m.typing" or
+            return 0;
 
          require_json_keys( $event, qw( type room_id content ));
          require_json_keys( my $content = $event->{content}, qw( user_ids ));
 
-         return unless $event->{room_id} eq $room_id;
+         $event->{room_id} eq $room_id or
+            return 0;
 
          require_json_list( my $users = $content->{user_ids} );
 
@@ -116,12 +120,14 @@ test "Typing can be explicitly stopped",
             await_event_for( $recvuser, sub {
                my ( $event ) = @_;
 
-               return unless $event->{type} eq "m.typing";
+               $event->{type} eq "m.typing" or
+                  return 0;
 
                require_json_keys( $event, qw( type room_id content ));
                require_json_keys( my $content = $event->{content}, qw( user_ids ));
 
-               return unless $event->{room_id} eq $room_id;
+               $event->{room_id} eq $room_id or
+                  return 0;
 
                require_json_list( my $users = $content->{user_ids} );
 
@@ -155,10 +161,14 @@ multi_test "Typing notifications timeout and can be resent",
          # start typing
          await_event_for( $user, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.typing";
-            return unless $event->{room_id} eq $room_id;
 
-            return unless scalar @{ $event->{content}{user_ids} };
+            $event->{type} eq "m.typing" or
+               return 0;
+            $event->{room_id} eq $room_id or
+               return 0;
+
+            scalar @{ $event->{content}{user_ids} } or
+               return 0;
 
             pass( "Received start notification" );
             return 1;
@@ -167,10 +177,13 @@ multi_test "Typing notifications timeout and can be resent",
          # stop typing
          await_event_for( $user, sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.typing";
-            return unless $event->{room_id} eq $room_id;
 
-            return if scalar @{ $event->{content}{user_ids} };
+            $event->{type} eq "m.typing" or
+               return 0;
+            $event->{room_id} eq $room_id or
+               return 0;
+
+            @{ $event->{content}{user_ids} } == 0 or return;
 
             ( time() - $start_time ) < 0.5 or
                die "Took too long to time out";

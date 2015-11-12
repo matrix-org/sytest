@@ -28,12 +28,15 @@ test "Local room members see posted message events",
 
             await_event_for( $recvuser, sub {
                my ( $event ) = @_;
-               return unless $event->{type} eq "m.room.message";
+
+               $event->{type} eq "m.room.message" or
+                  return 0;
 
                require_json_keys( $event, qw( type content room_id user_id ));
                require_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
-               return unless $event->{room_id} eq $room_id;
+               $event->{room_id} eq $room_id or
+                  return 0;
 
                $content->{msgtype} eq $msgtype or
                   die "Expected msgtype as $msgtype";
@@ -94,10 +97,12 @@ test "Local non-members don't see posted message events",
             my ( $event ) = @_;
             log_if_fail "Received event:", $event;
 
-            return unless $event->{type} eq "m.room.message";
+            $event->{type} eq "m.room.message" or
+               return 0;
 
             require_json_keys( $event, qw( type content room_id user_id ));
-            return unless $event->{room_id} eq $room_id;
+            $event->{room_id} eq $room_id or
+               return 0;
 
             die "Nonmember received event about a room they're not a member of";
          }),
@@ -153,12 +158,15 @@ test "Remote room members also see posted message events",
 
       await_event_for( $remote_user, sub {
          my ( $event ) = @_;
-         return unless $event->{type} eq "m.room.message";
+
+         $event->{type} eq "m.room.message" or
+            return 0;
 
          require_json_keys( $event, qw( type content room_id user_id ));
          require_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
-         return unless $event->{room_id} eq $room_id;
+         $event->{room_id} eq $room_id or
+            return 0;
 
          $content->{msgtype} eq $msgtype or
             die "Expected msgtype as $msgtype";
