@@ -1,6 +1,5 @@
 use List::Util qw( first );
 
-my $creator_fixture = local_user_fixture();
 
 sub inviteonly_room_fixture
 {
@@ -42,9 +41,16 @@ sub inviteonly_room_fixture
 };
 
 multi_test "Can invite users to invite-only rooms",
-   requires => [ $creator_fixture, local_user_fixture(),
-                 inviteonly_room_fixture( creator => $creator_fixture ),
-                 qw( can_invite_room )],
+   requires => do {
+      my $creator_fixture = local_user_fixture();
+
+      return [
+         $creator_fixture,
+         local_user_fixture(),
+         inviteonly_room_fixture( creator => $creator_fixture ),
+         qw( can_invite_room ),
+      ];
+   },
 
    do => sub {
       my ( $creator, $invitee, $room_id ) = @_;
@@ -93,7 +99,7 @@ multi_test "Can invite users to invite-only rooms",
 
 test "Uninvited users cannot join the room",
    requires => [ local_user_fixture(),
-                 inviteonly_room_fixture( creator => $creator_fixture ) ],
+                 inviteonly_room_fixture( creator => local_user_fixture() ) ],
 
    check => sub {
       my ( $uninvited, $room_id ) = @_;
