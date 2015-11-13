@@ -97,17 +97,11 @@ test "Anonymous user can call /events on world_readable room",
             do_request_json_for( $anonymous_user,
                method => "GET",
                uri    => "/api/v1/events",
-               params => {
-                  limit => "2",
-                  dir   => "b",
-               },
             )->main::expect_http_400->then( sub {
                do_request_json_for( $anonymous_user,
                   method => "GET",
                   uri    => "/api/v1/events",
                   params => {
-                     limit   => "2",
-                     dir     => "b",
                      room_id => $room_id,
                   },
                )
@@ -116,7 +110,7 @@ test "Anonymous user can call /events on world_readable room",
 
                require_json_keys( $body, qw( chunk ) );
                $body->{chunk} >= 1 or die "Want at least one event";
-               my $event = $body->{chunk}[0];
+               my $event = $body->{chunk}->[0];
                require_json_keys( $event, qw( content ) );
                my $content = $event->{content};
                require_json_keys( $content, qw( body ) );
@@ -125,11 +119,9 @@ test "Anonymous user can call /events on world_readable room",
                Future->done( $body->{end} );
             }),
 
-            delay( 0.05 )->then( sub {
-               matrix_send_room_text_message( $user, $room_id, body => "mice" )
-               ->on_done( sub {
-                  ( $sent_event_id ) = @_;
-               });
+            matrix_send_room_text_message( $user, $room_id, body => "mice" )
+            ->on_done( sub {
+               ( $sent_event_id ) = @_;
             }),
          )->then( sub {
             my ( $stream_token ) = @_;
@@ -139,17 +131,17 @@ test "Anonymous user can call /events on world_readable room",
                   method => "GET",
                   uri    => "/api/v1/events",
                   params => {
-                     limit   => "1",
-                     dir     => "b",
                      room_id => $room_id,
-                     start   => $stream_token,
+                     from    => $stream_token,
                   },
                )->then( sub {
                   my ( $body ) = @_;
 
-                  log_if_fail "chunk", $body->{chunk};
-                  @{ $body->{chunk} } == 1 or die "Want exactly one event";
-                  my $event = $body->{chunk}[0];
+                  my $chunk = ignore_presence_for( [ $anonymous_user ], @{ $body->{chunk} } );
+                  log_if_fail "chunk", $chunk;
+                  @{ $chunk } == 1 or die "Want exactly one event";
+                  my $event = $chunk->[0];
+                  log_if_fail "event", $event;
                   $event->{type} eq "m.presence" or die "Wrong event type";
                   $event->{content}->{user_id} eq $user->user_id or die "Wrong user";
 
@@ -176,17 +168,16 @@ test "Anonymous user can call /events on world_readable room",
                   method => "GET",
                   uri    => "/api/v1/events",
                   params => {
-                     limit   => "1",
-                     dir     => "b",
                      room_id => $room_id,
-                     start   => $stream_token,
+                     from    => $stream_token,
                   },
                )->then( sub {
                   my ( $body ) = @_;
 
-                  log_if_fail "chunk", $body->{chunk};
-                  @{ $body->{chunk} } == 1 or die "Want exactly one event";
-                  my $event = $body->{chunk}[0];
+                  my $chunk = ignore_presence_for( [ $user, $anonymous_user ], @{ $body->{chunk} } );
+                  log_if_fail "chunk", $chunk;
+                  @{ $chunk } == 1 or die "Want exactly one event";
+                  my $event = $chunk->[0];
                   $event->{type} eq "m.receipt" or die "Wrong event type";
                   defined $event->{content}->{$sent_event_id}->{"m.read"}->{$user->user_id}
                      or die "Wrong receipt";
@@ -217,17 +208,16 @@ test "Anonymous user can call /events on world_readable room",
                   method => "GET",
                   uri    => "/api/v1/events",
                   params => {
-                     limit   => "1",
-                     dir     => "b",
                      room_id => $room_id,
-                     start   => $stream_token,
+                     from    => $stream_token,
                   },
                )->then( sub {
                   my ( $body ) = @_;
 
-                  log_if_fail "chunk", $body->{chunk};
-                  @{ $body->{chunk} } == 1 or die "Want exactly one event";
-                  my $event = $body->{chunk}[0];
+                  my $chunk = ignore_presence_for( [ $user, $anonymous_user ], @{ $body->{chunk} } );
+                  log_if_fail "chunk", $chunk;
+                  @{ $chunk } == 1 or die "Want exactly one event";
+                  my $event = $chunk->[0];
                   $event->{type} eq "m.typing" or die "Wrong event type";
                   $event->{room_id} eq $room_id or die "Wrong room ID";
                   $event->{content}->{user_ids}->[0] eq $user->user_id or die "Wrong receipt";
@@ -768,4 +758,19 @@ sub matrix_get_room_membership
          Future->done( "leave" );
       }
    );
+}
+
+sub ignore_presence_for
+{
+   my ( $users, @raw ) = @_;
+
+   my @filtered;
+   foreach my $event (@raw) {
+      my $include = 1;
+      foreach my $user (@$users) {
+         $include = 0 if $event->{type} eq "m.presence" and $event->{content}->{user_id} eq $user->user_id;
+      }
+      push @filtered, $event if $include;
+   }
+   \@filtered
 }
