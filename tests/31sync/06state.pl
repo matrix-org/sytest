@@ -2,6 +2,7 @@ use Future::Utils qw( repeat );
 
 # call /sync repeatedly until it returns a result
 # with an event in the given room
+# TODO: it might be good to combine this with await_event_for() at some point.
 sub wait_for_event_in_room {
     my ($user, $room_id, %params) = @_;
 
@@ -18,7 +19,7 @@ sub wait_for_event_in_room {
                           scalar @{ $room->{state}{events}})) {
                 Future->done($body);
             } else {
-                delay(0.1) -> then_done(undef);
+                delay(0.1)->then_done(undef);
             }
         });
     }, while => sub {!$_[0]->failure and !$_[0]->get});
