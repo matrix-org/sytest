@@ -185,6 +185,24 @@ test "Anonymous users can get state for world_readable rooms",
       );
    };
 
+test "Real users can get state for world_readable rooms",
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+   },
+
+   check => sub {
+      my ( $user, $room_id, $non_joined_user ) = @_;
+
+      do_request_json_for( $non_joined_user,
+         method => "GET",
+         uri    => "/api/v1/rooms/$room_id/state",
+      );
+   };
+
 test "Anonymous users can get individual state for world_readable rooms",
    requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
 
@@ -334,6 +352,27 @@ test "Anonymous users cannot send messages to guest_access rooms if not joined",
       ->then( sub {
          matrix_send_room_text_message( $anonymous_user, $room_id, body => "sup" );
       })->main::expect_http_403;
+   };
+
+test "Anonymous users can get individual state for world_readable rooms after leaving",
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
+
+   do => sub {
+      my ( $user, $room_id, $anonymous_user ) = @_;
+
+      Future->needs_all(
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
+         matrix_set_room_guest_access( $user, $room_id, "can_join" ),
+      )->then( sub {
+         matrix_join_room( $anonymous_user, $room_id );
+      })->then( sub {
+         matrix_leave_room( $anonymous_user, $room_id );
+      })->then( sub {
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
+         );
+      });
    };
 
 sub check_events
