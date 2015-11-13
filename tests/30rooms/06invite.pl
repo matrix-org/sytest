@@ -1,6 +1,5 @@
 use List::Util qw( first );
 
-my $creator_fixture = local_user_fixture();
 
 sub inviteonly_room_fixture
 {
@@ -41,65 +40,49 @@ sub inviteonly_room_fixture
    )
 };
 
-my $inviteonly_room_fixture = inviteonly_room_fixture( creator => $creator_fixture );
+multi_test "Can invite users to invite-only rooms",
+   requires => do {
+      my $creator_fixture = local_user_fixture();
 
-test "Uninvited users cannot join the room",
-   requires => [ local_user_fixture(), $inviteonly_room_fixture ],
-
-   check => sub {
-      my ( $uninvited, $room_id ) = @_;
-
-      matrix_join_room( $uninvited, $room_id )
-         ->main::expect_http_403;
-   };
-
-my $invited_user_fixture = local_user_fixture();
-
-test "Can invite users to invite-only rooms",
-   requires => [ $creator_fixture, $invited_user_fixture, $inviteonly_room_fixture,
-                qw( can_invite_room )],
+      return [
+         $creator_fixture,
+         local_user_fixture(),
+         inviteonly_room_fixture( creator => $creator_fixture ),
+         qw( can_invite_room ),
+      ];
+   },
 
    do => sub {
       my ( $creator, $invitee, $room_id ) = @_;
 
       matrix_invite_user_to_room( $creator, $invitee, $room_id )
-   };
+         ->SyTest::pass_on_done( "Sent invite" )
+      ->then( sub {
+         await_event_for( $invitee, sub {
+            my ( $event ) = @_;
 
-test "Invited user receives invite",
-   requires => [ $invited_user_fixture, $inviteonly_room_fixture,
-                 qw( can_invite_room )],
+            require_json_keys( $event, qw( type ));
+            return 0 unless $event->{type} eq "m.room.member";
 
-   do => sub {
-      my ( $invitee, $room_id ) = @_;
+            require_json_keys( $event, qw( room_id state_key ));
+            return 0 unless $event->{room_id} eq $room_id;
+            return 0 unless $event->{state_key} eq $invitee->user_id;
 
-      await_event_for( $invitee, sub {
+            return 1;
+         })
+      })->then( sub {
          my ( $event ) = @_;
-
-         require_json_keys( $event, qw( type ));
-         return 0 unless $event->{type} eq "m.room.member";
-
-         require_json_keys( $event, qw( room_id state_key ));
-         return 0 unless $event->{room_id} eq $room_id;
-         return 0 unless $event->{state_key} eq $invitee->user_id;
 
          require_json_keys( my $content = $event->{content}, qw( membership ));
 
          $content->{membership} eq "invite" or
             die "Expected membership to be 'invite'";
 
-         return 1;
-      });
-   };
+         pass "Received invite";
 
-test "Invited user can join the room",
-   requires => [ $invited_user_fixture, $inviteonly_room_fixture,
-                 qw( can_invite_room )],
-
-   do => sub {
-      my ( $invitee, $room_id ) = @_;
-
-      matrix_join_room( $invitee, $room_id )
-      ->then( sub {
+         matrix_join_room( $invitee, $room_id )
+            ->SyTest::pass_on_done( "Joined room" )
+      })->then( sub {
          matrix_get_room_state( $invitee, $room_id,
             type      => "m.room.member",
             state_key => $invitee->user_id,
@@ -112,6 +95,17 @@ test "Invited user can join the room",
 
          Future->done(1);
       });
+   };
+
+test "Uninvited users cannot join the room",
+   requires => [ local_user_fixture(),
+                 inviteonly_room_fixture( creator => local_user_fixture() ) ],
+
+   check => sub {
+      my ( $uninvited, $room_id ) = @_;
+
+      matrix_join_room( $uninvited, $room_id )
+         ->main::expect_http_403;
    };
 
 my $other_local_user_fixture = local_user_fixture();
