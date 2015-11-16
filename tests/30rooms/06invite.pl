@@ -78,9 +78,6 @@ multi_test "Can invite users to invite-only rooms",
          $content->{membership} eq "invite" or
             die "Expected membership to be 'invite'";
 
-         require_json_keys( $event, qw( invite_room_state ));
-         require_json_list( $event->{invite_room_state} );
-
          matrix_join_room( $invitee, $room_id )
             ->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
@@ -178,7 +175,13 @@ test "Invited user can see room metadata",
       })->then( sub {
          my ( $event ) = @_;
 
-         require_json_keys( $event, qw( invite_room_state ));
+         # invite_room_state is optional
+         if( !$event->{invite_room_state} ) {
+            return Future->done();
+         }
+
+         require_json_list( $event->{invite_room_state} );
+
          my %state_by_type = map {
             $_->{type} => $_
          } @{ $event->{invite_room_state} };
