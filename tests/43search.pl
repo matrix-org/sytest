@@ -1,5 +1,5 @@
 test "Can search for an event by body",
-   requires => [local_user_and_room_fixtures()],
+   requires => [ local_user_and_room_fixtures() ],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -41,6 +41,7 @@ test "Can search for an event by body",
          require_json_keys( $result->{result}, qw(
             event_id room_id user_id content type
          ));
+
          $result->{result}{content}{body} eq "hello, world"
             or die "Unexpected event content in search result";
 
