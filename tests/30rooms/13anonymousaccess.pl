@@ -80,12 +80,12 @@ test "Anonymous user cannot call /events on non-world_readable room",
    };
 
 test "Anonymous user can call /events on world_readable room",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+   requires => [ anonymous_user_fixture(), local_user_fixture(), local_user_fixture() ],
 
    do => sub {
-      my ( $anonymous_user, $user ) = @_;
+      my ( $anonymous_user, $user, $user_not_in_room ) = @_;
 
-      my $room_id;
+      my ( $room_id, $sent_event_id );
 
       matrix_create_and_join_room( [ $user ] )
       ->then( sub {
@@ -94,24 +94,14 @@ test "Anonymous user can call /events on world_readable room",
          matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
       })->then( sub {
          Future->needs_all(
-            delay( 0.05 )->then( sub {
-               matrix_send_room_text_message( $user, $room_id, body => "mice" );
-            }),
-
             do_request_json_for( $anonymous_user,
                method => "GET",
                uri    => "/api/v1/events",
-               params => {
-                  limit => "2",
-                  dir   => "b",
-               },
             )->main::expect_http_400->then( sub {
                do_request_json_for( $anonymous_user,
                   method => "GET",
                   uri    => "/api/v1/events",
                   params => {
-                     limit   => "2",
-                     dir     => "b",
                      room_id => $room_id,
                   },
                )
@@ -120,15 +110,120 @@ test "Anonymous user can call /events on world_readable room",
 
                require_json_keys( $body, qw( chunk ) );
                $body->{chunk} >= 1 or die "Want at least one event";
-               my $event = $body->{chunk}[0];
+               my $event = $body->{chunk}->[0];
                require_json_keys( $event, qw( content ) );
                my $content = $event->{content};
                require_json_keys( $content, qw( body ) );
                $content->{body} eq "mice" or die "Want content body to be mice";
 
-               Future->done( 1 );
+               Future->done( $body->{end} );
             }),
-         );
+
+            matrix_send_room_text_message( $user, $room_id, body => "mice" )
+            ->on_done( sub {
+               ( $sent_event_id ) = @_;
+            }),
+         )->then( sub {
+            my ( $stream_token ) = @_;
+
+            Future->needs_all(
+               do_request_json_for( $anonymous_user,
+                  method => "GET",
+                  uri    => "/api/v1/events",
+                  params => {
+                     room_id => $room_id,
+                     from    => $stream_token,
+                  },
+               )->then( sub {
+                  my ( $body ) = @_;
+
+                  my $chunk = ignore_presence_for( [ $anonymous_user ], @{ $body->{chunk} } );
+                  log_if_fail "chunk", $chunk;
+                  @{ $chunk } == 1 or die "Want exactly one event";
+                  my $event = $chunk->[0];
+                  $event->{type} eq "m.presence" or die "Wrong event type";
+                  $event->{content}->{user_id} eq $user->user_id or die "Wrong user";
+
+                  Future->done( $body->{end} );
+               }),
+
+               do_request_json_for( $user_not_in_room,
+                  method  => "PUT",
+                  uri     => "/api/v1/presence/:user_id/status",
+                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
+               ),
+               do_request_json_for( $user,
+                  method  => "PUT",
+                  uri     => "/api/v1/presence/:user_id/status",
+                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
+               ),
+            ),
+         })->then( sub {
+            my ( $stream_token ) = @_;
+
+            Future->needs_all(
+               do_request_json_for( $anonymous_user,
+                  method => "GET",
+                  uri    => "/api/v1/events",
+                  params => {
+                     room_id => $room_id,
+                     from    => $stream_token,
+                  },
+               )->then( sub {
+                  my ( $body ) = @_;
+
+                  my $chunk = ignore_presence_for( [ $user, $anonymous_user ], @{ $body->{chunk} } );
+                  log_if_fail "chunk", $chunk;
+                  @{ $chunk } == 1 or die "Want exactly one event";
+                  my $event = $chunk->[0];
+                  $event->{type} eq "m.receipt" or die "Wrong event type";
+                  defined $event->{content}->{$sent_event_id}->{"m.read"}->{$user->user_id}
+                     or die "Wrong receipt";
+
+                  Future->done( $body->{end} );
+               }),
+
+               do_request_json_for( $user,
+                  method  => "POST",
+                  uri     => "/v2_alpha/rooms/$room_id/receipt/m.read/$sent_event_id",
+                  content => {},
+               ),
+            );
+         })->then( sub {
+            my ( $stream_token ) = @_;
+
+            Future->needs_all(
+               do_request_json_for( $user,
+                  method  => "PUT",
+                  uri     => "/api/v1/rooms/$room_id/typing/:user_id",
+                  content => {
+                     typing => JSON::true,
+                     timeout => 5000,
+                  },
+               ),
+
+               do_request_json_for( $anonymous_user,
+                  method => "GET",
+                  uri    => "/api/v1/events",
+                  params => {
+                     room_id => $room_id,
+                     from    => $stream_token,
+                  },
+               )->then( sub {
+                  my ( $body ) = @_;
+
+                  my $chunk = ignore_presence_for( [ $user, $anonymous_user ], @{ $body->{chunk} } );
+                  log_if_fail "chunk", $chunk;
+                  @{ $chunk } == 1 or die "Want exactly one event";
+                  my $event = $chunk->[0];
+                  $event->{type} eq "m.typing" or die "Wrong event type";
+                  $event->{room_id} eq $room_id or die "Wrong room ID";
+                  $event->{content}->{user_ids}->[0] eq $user->user_id or die "Wrong receipt";
+
+                  Future->done( 1 );
+               }),
+            );
+         });
       });
    };
 
@@ -180,6 +275,24 @@ test "Anonymous users can get state for world_readable rooms",
       my ( $user, $room_id, $anonymous_user ) = @_;
 
       do_request_json_for( $anonymous_user,
+         method => "GET",
+         uri    => "/api/v1/rooms/$room_id/state",
+      );
+   };
+
+test "Real users can get state for world_readable rooms",
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+   },
+
+   check => sub {
+      my ( $user, $room_id, $non_joined_user ) = @_;
+
+      do_request_json_for( $non_joined_user,
          method => "GET",
          uri    => "/api/v1/rooms/$room_id/state",
       );
@@ -334,6 +447,27 @@ test "Anonymous users cannot send messages to guest_access rooms if not joined",
       ->then( sub {
          matrix_send_room_text_message( $anonymous_user, $room_id, body => "sup" );
       })->main::expect_http_403;
+   };
+
+test "Anonymous users can get individual state for world_readable rooms after leaving",
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
+
+   do => sub {
+      my ( $user, $room_id, $anonymous_user ) = @_;
+
+      Future->needs_all(
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
+         matrix_set_room_guest_access( $user, $room_id, "can_join" ),
+      )->then( sub {
+         matrix_join_room( $anonymous_user, $room_id );
+      })->then( sub {
+         matrix_leave_room( $anonymous_user, $room_id );
+      })->then( sub {
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
+         );
+      });
    };
 
 sub check_events
@@ -661,4 +795,17 @@ sub matrix_get_room_membership
          Future->done( "leave" );
       }
    );
+}
+
+sub ignore_presence_for
+{
+   my ( $ignored_users, @events ) = @_;
+
+   return [ grep {
+      my $event = $_;
+      not(
+         $event->{type} eq "m.presence" and
+            any { $event->{content}{user_id} eq $_->user_id } @$ignored_users
+      )
+   } @events ];
 }
