@@ -1,4 +1,4 @@
-use List::UtilsBy qw( extract_by );
+use List::UtilsBy qw( extract_first_by );
 use Future::Utils qw( repeat );
 
 test "GET /events initially",
@@ -139,14 +139,12 @@ sub await_event_for
          ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
          : GET_new_events_for( $user )
       )->then( sub {
-         my $found;
-         foreach my $event ( @_ ) {
-            not $found and $filter->( $event ) and
-               $found = 1, next;
+         my @events = @_;
 
-            # Save it for later
-            push @{ $user->saved_events }, $event;
-         }
+         my $found = extract_first_by { $filter->( $_ ) } @events;
+
+         # Save the rest for next time
+         push @{ $user->saved_events }, @events;
 
          Future->done( $found );
       });
