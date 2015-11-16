@@ -188,39 +188,27 @@ test "Invited user can see room metadata",
          $state_by_type{$_} or die "Did not receive $_ state"
             for qw( m.room.join_rules m.room.name m.room.canonical_alias m.room.avatar );
 
-         # Save just the 'content' keys
-         $state_in_invite = { map {
-            $_ => $state_by_type{$_}{content}
-         } keys %state_by_type };
+         my @futures = ();
 
-         log_if_fail "State content in invite", $state_in_invite;
+         foreach my $event_type ( keys %state_by_type ) {
+            push @futures, matrix_get_room_state( $creator, $room_id,
+               type => $event_type
+            )->then( sub {
+               my ( $room_content ) = @_;
 
-         # Now compare it to the actual room state
+               my $invite_content = $state_by_type{$event_type}{content};
 
-         Future->needs_all(
-            map {
-               my $type = $_;
-               matrix_get_room_state( $creator, $room_id, type => $type )
-                  ->then( sub {
-                     my ( $content ) = @_;
-                     Future->done( $type => $content );
-                  });
-            } keys %state_by_type
-         )
-      })->then( sub {
-         my %got_state = @_;
+               # TODO: This would be a lot neater with is_deeply()
+               all {
+                  $room_content->{$_} eq $invite_content->{$_}
+               } keys %$room_content, keys %$invite_content or
+                  die "Content does not match for event type $event_type";
 
-         log_if_fail "State by direct room query", \%got_state;
-
-         # TODO: This would be a lot neater with is_deeply()
-         foreach my $type ( keys %got_state ) {
-            my $got       = $got_state{$type};
-            my $in_invite = $state_in_invite->{$type};
-
-            all { $got->{$_} eq $in_invite->{$_} } keys %$got, keys %$in_invite or
-               die "Content does not match for type $type";
+               Future->done();
+            });
          }
 
-         Future->done(1);
+         Future->needs_all( @futures )
+            ->then_done(1);
       });
    };
