@@ -186,7 +186,8 @@ test "Invited user can see room metadata",
          } @{ $event->{invite_room_state} };
 
          $state_by_type{$_} or die "Did not receive $_ state"
-            for qw( m.room.join_rules m.room.name m.room.canonical_alias m.room.avatar );
+            for qw( m.room.join_rules m.room.name
+                    m.room.canonical_alias m.room.avatar );
 
          my @futures = ();
 
