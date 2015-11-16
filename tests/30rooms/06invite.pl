@@ -1,6 +1,5 @@
 use List::Util qw( first );
 
-
 sub inviteonly_room_fixture
 {
    my %args = @_;
@@ -38,13 +37,13 @@ sub inviteonly_room_fixture
          });
       }
    )
-};
+}
 
 multi_test "Can invite users to invite-only rooms",
    requires => do {
       my $creator_fixture = local_user_fixture();
 
-      return [
+      [
          $creator_fixture,
          local_user_fixture(),
          inviteonly_room_fixture( creator => $creator_fixture ),
