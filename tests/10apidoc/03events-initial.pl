@@ -80,7 +80,7 @@ sub matrix_initialsync
 #   fetches new events since it
 sub GET_new_events_for
 {
-   my ( $user ) = @_;
+   my ( $user, $room_id ) = @_;
 
    return $user->pending_get_events //=
       do_request_json_for( $user,
@@ -89,6 +89,7 @@ sub GET_new_events_for
          params => {
             from    => $user->eventstream_token,
             timeout => 500,
+            room_id => $room_id
          }
       )->on_ready( sub {
          undef $user->pending_get_events;
@@ -126,9 +127,13 @@ sub flush_events_for
    });
 }
 
+# Note that semantics are undefined if calls are interleaved with differing
+# $room_ids for the same user.
+#
+# if $room_id is undefined, all joined rooms will be listened to.
 sub await_event_for
 {
-   my ( $user, $filter ) = @_;
+   my ( $user, $filter, $room_id ) = @_;
    my $failmsg = SyTest::CarpByFile::shortmess( "Timed out waiting for an event" );
 
    my $f = repeat {
@@ -137,7 +142,7 @@ sub await_event_for
 
       ( $replay_saved
          ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
-         : GET_new_events_for( $user )
+         : GET_new_events_for( $user, $room_id )
       )->then( sub {
          my @events = @_;
 
