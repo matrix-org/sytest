@@ -119,5 +119,3 @@ sub matrix_forget_room
       content => {},
    )->then_done(1);
 }
-
-
