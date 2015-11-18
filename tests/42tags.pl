@@ -224,7 +224,7 @@ test "Tags appear in the v1 /events stream",
       )->then( sub {
          ( $user, $room_id ) = @_;
 
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.tag"
                and $event->{room_id} eq $room_id;

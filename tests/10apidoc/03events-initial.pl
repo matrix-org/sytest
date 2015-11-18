@@ -129,11 +129,13 @@ sub flush_events_for
 
 # Note that semantics are undefined if calls are interleaved with differing
 # $room_ids for the same user.
-#
-# if $room_id is undefined, all joined rooms will be listened to.
 sub await_event_for
 {
-   my ( $user, $filter, $room_id ) = @_;
+   my ( $user, %params ) = @_;
+
+   my $filter = defined $params{filter} ? $params{filter} : sub { 1 };
+   my $room_id = $params{room_id};  # May be undefined, in which case we listen to all joined rooms.
+
    my $failmsg = SyTest::CarpByFile::shortmess( "Timed out waiting for an event" );
 
    my $f = repeat {

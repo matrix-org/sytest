@@ -368,7 +368,7 @@ sub matrix_create_and_join_room
       #   timeout smaller than the default overall test timeout so if this
       #   fails to happen we'll fail sooner, and get a better message
       Future->wait_any(
-         await_event_for( $creator, sub {
+         await_event_for( $creator, filter => sub {
             my ( $event ) = @_;
 
             return unless $event->{type} eq "m.room.member";

@@ -57,7 +57,7 @@ multi_test "Can invite users to invite-only rooms",
       matrix_invite_user_to_room( $creator, $invitee, $room_id )
          ->SyTest::pass_on_done( "Sent invite" )
       ->then( sub {
-         await_event_for( $invitee, sub {
+         await_event_for( $invitee, filter => sub {
             my ( $event ) = @_;
 
             require_json_keys( $event, qw( type ));
@@ -166,7 +166,7 @@ test "Invited user can see room metadata",
       )->then( sub {
          matrix_invite_user_to_room( $creator, $invitee, $room_id );
       })->then( sub {
-         await_event_for( $invitee, sub {
+         await_event_for( $invitee, filter => sub {
             my ( $event ) = @_;
             return $event->{type} eq "m.room.member" &&
                    $event->{room_id} eq $room_id;

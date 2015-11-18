@@ -82,11 +82,14 @@ test "Anonymous user cannot call /events on non-world_readable room",
 sub await_event_not_presence_for
 {
    my ( $user, $room_id, $ignored_users ) = @_;
-   await_event_for( $user, sub {
-      my ( $event ) = @_;
-      return not( $event->{type} eq "m.presence" and
-         any { $event->{content}{user_id} eq $_->user_id } @$ignored_users );
-   }, $room_id)->on_done( sub {
+   await_event_for( $user,
+      filter  => sub {
+         my ( $event ) = @_;
+         return not( $event->{type} eq "m.presence" and
+            any { $event->{content}{user_id} eq $_->user_id } @$ignored_users );
+      },
+      room_id => $room_id,
+   )->on_done( sub {
       my ( $event ) = @_;
       log_if_fail "event", $event
    });
@@ -579,7 +582,7 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
             $membership eq "join" or die("want membership to be join but is $membership");
 
             Future->needs_all(
-               await_event_for( $local_user, sub {
+               await_event_for( $local_user, filter => sub {
                   my ( $event ) = @_;
                   return $event->{type} eq "m.room.guest_access" && $event->{content}->{guest_access} eq "forbidden";
                }),
