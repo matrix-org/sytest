@@ -13,7 +13,7 @@ sub wait_for_event_in_room {
         matrix_sync( $user, %{ $sync_params } )->then( sub {
             my ( $body ) = @_;
 
-            my $room = $body->{rooms}{joined}{$room_id};
+            my $room = $body->{rooms}{join}{$room_id};
 
             if( $room && (scalar @{ $room->{timeline}{events}} ||
                           scalar @{ $room->{state}{events}})) {
@@ -58,7 +58,7 @@ test "State is included in the timeline in the initial sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
 
          # state from the timeline should *not* appear in the state dictionary
@@ -116,7 +116,7 @@ test "State from remote users is included in the state in the initial sync",
         })->then( sub {
             my ( $body ) = @_;
 
-            my $room = $body->{rooms}{joined}{$room_id};
+            my $room = $body->{rooms}{join}{$room_id};
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
 
             @{ $room->{state}{events} } == 1
@@ -187,7 +187,7 @@ test "Changes to state are included in an incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
@@ -244,7 +244,7 @@ test "Changes to state are included in an gapped incremental sync",
          my ( $body ) = @_;
 
          $next_batch = $body->{next_batch};
-         @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 2
+         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 2
             or die "Expected two state events";
 
          matrix_put_room_state( $user, $room_id,
@@ -264,7 +264,7 @@ test "Changes to state are included in an gapped incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
@@ -323,7 +323,7 @@ test "State from remote users is included in the timeline in an incremental sync
         })->then( sub {
             my ( $body ) = @_;
 
-            my $room = $body->{rooms}{joined}{$room_id};
+            my $room = $body->{rooms}{join}{$room_id};
             require_json_keys( $room, qw( event_map timeline state ephemeral ));
 
             @{ $room->{state}{events} } == 0
@@ -380,9 +380,9 @@ test "A full_state incremental update returns all state",
          my ( $body ) = @_;
 
          $next_batch = $body->{next_batch};
-         @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 0
+         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 0
              or die "Expected zero state events";
-         @{ $body->{rooms}{joined}{$room_id}{timeline}{events} } == 2
+         @{ $body->{rooms}{join}{$room_id}{timeline}{events} } == 2
              or die "Expected two timeline events";
 
          matrix_put_room_state( $user, $room_id,
@@ -403,7 +403,7 @@ test "A full_state incremental update returns all state",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
 
          @{ $room->{state}{events} } == 2
@@ -489,7 +489,7 @@ test "When user joins a room the state is included in the next sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
@@ -541,7 +541,7 @@ test "A change to displayname should not result in a full state sync",
          my ( $body ) = @_;
 
          $next_batch = $body->{next_batch};
-         @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 1
+         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 1
             or die "Expected one state event";
 
          matrix_put_room_state( $user, $room_id,
@@ -558,7 +558,7 @@ test "A change to displayname should not result in a full state sync",
          # The m.room.member event is filtered out; the only thing which could
          # come back is therefore the madeup.test.state event, which shouldn't,
          # as this is an incremental sync.
-         @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 0
+         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 0
             or die "Expected no state events";
 
          Future->done(1);
@@ -617,7 +617,7 @@ test "When user joins a room the state is included in a gapped sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
@@ -682,7 +682,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
+         my $room = $body->{rooms}{leave}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          my $eventcount = scalar @{ $room->{state}{events} };
          $eventcount == 1 or

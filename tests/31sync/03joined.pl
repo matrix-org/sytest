@@ -19,7 +19,7 @@ test "Can sync a joined room",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          require_json_keys( $room->{state}, qw( events ));
@@ -31,7 +31,7 @@ test "Can sync a joined room",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          (!defined $room) or die "Unchanged rooms shouldn't be in the sync response";
 
          Future->done(1)
@@ -65,7 +65,7 @@ test "Full state sync includes joined rooms",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
 
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
@@ -106,7 +106,7 @@ test "Newly joined room is included in an incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          require_json_keys( $room->{state}, qw( events ));
@@ -118,7 +118,7 @@ test "Newly joined room is included in an incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          (!defined $room) or die "Unchanged rooms shouldn't be in the sync response";
 
          Future->done(1)
@@ -168,7 +168,7 @@ test "Newly joined room has correct timeline in incremental sync",
          matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
       })->then( sub {
          my ( $body ) = @_;
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          my $timeline = $room->{timeline};
 
          log_if_fail "Timeline", $timeline;

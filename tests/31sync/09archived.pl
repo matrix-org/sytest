@@ -1,4 +1,4 @@
-test "Left rooms appear in the archived section of sync",
+test "Left rooms appear in the leave section of sync",
    requires => [qw( first_api_client can_sync )],
 
    check => sub {
@@ -19,7 +19,7 @@ test "Left rooms appear in the archived section of sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
+         my $room = $body->{rooms}{leave}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
@@ -27,7 +27,7 @@ test "Left rooms appear in the archived section of sync",
    };
 
 
-test "Newly left rooms appear in the archived section of incremental sync",
+test "Newly left rooms appear in the leave section of incremental sync",
    requires => [qw( first_api_client can_sync )],
 
    check => sub {
@@ -54,7 +54,7 @@ test "Newly left rooms appear in the archived section of incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
+         my $room = $body->{rooms}{leave}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
@@ -62,7 +62,7 @@ test "Newly left rooms appear in the archived section of incremental sync",
    };
 
 
-test "Newly left rooms appear in the archived section of gapped sync",
+test "Newly left rooms appear in the leave section of gapped sync",
    requires => [qw( first_api_client can_sync )],
 
    check => sub {
@@ -106,7 +106,7 @@ test "Newly left rooms appear in the archived section of gapped sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id_1};
+         my $room = $body->{rooms}{leave}{$room_id_1};
          require_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
@@ -114,7 +114,7 @@ test "Newly left rooms appear in the archived section of gapped sync",
    };
 
 
-test "Left rooms appear in the archived section of full state sync",
+test "Left rooms appear in the leave section of full state sync",
    requires => [qw( first_api_client can_sync )],
 
    check => sub {
@@ -142,7 +142,7 @@ test "Left rooms appear in the archived section of full state sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
+         my $room = $body->{rooms}{leave}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
@@ -205,7 +205,7 @@ test "Archived rooms only contain history from before the user left",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
+         my $room = $body->{rooms}{leave}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event";
@@ -224,7 +224,7 @@ test "Archived rooms only contain history from before the user left",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
+         my $room = $body->{rooms}{leave}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event";

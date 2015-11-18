@@ -339,7 +339,7 @@ test "Tags appear in an initial v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( private_user_data ) );
 
          check_private_user_data( $room->{private_user_data}{events} );
@@ -378,7 +378,7 @@ test "Newly updated tags appear in an incremental v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( private_user_data ) );
 
          check_private_user_data( $room->{private_user_data}{events} );
@@ -424,7 +424,7 @@ test "Deleted tags appear in an incremental v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( private_user_data ) );
 
          check_private_user_data( $room->{private_user_data}{events},

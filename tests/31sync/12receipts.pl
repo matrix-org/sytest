@@ -32,7 +32,7 @@ test "Read receipts appear in initial v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
 
          my $ephemeral = $room->{ephemeral}{events};
 
@@ -91,7 +91,7 @@ test "New read receipts appear in incremental v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
 
          my $ephemeral = $room->{ephemeral}{events};
 

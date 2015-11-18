@@ -25,7 +25,7 @@ test "Can sync a room with a single message",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          @{ $room->{timeline}{events} } == 1
@@ -75,7 +75,7 @@ test "Can sync a room with a message with a transaction id",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          @{ $room->{timeline}{events} } == 1
@@ -132,7 +132,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          require_json_keys( $room->{state}, qw( events ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
@@ -194,7 +194,7 @@ test "A filtered timeline reaches its limit",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          require_json_keys( $room->{state}, qw( events ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
@@ -235,7 +235,7 @@ test "Syncing a new room with a large timeline limit isn't limited",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          require_json_keys( $room->{state}, qw( events ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
@@ -286,7 +286,7 @@ test "A full_state incremental update returns only recent timeline",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
 
          @{ $room->{timeline}{events} } == 1
@@ -329,7 +329,7 @@ test "A prev_batch token can be used in the v1 messages API",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( event_map timeline state ephemeral ));
          require_json_keys( $room->{state}, qw( events ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));

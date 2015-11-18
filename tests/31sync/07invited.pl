@@ -24,7 +24,7 @@ test "Rooms a user is invited to appear in an initial sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{invited}{$room_id};
+         my $room = $body->{rooms}{invite}{$room_id};
          require_json_keys( $room, qw( invite_state ) );
          require_json_keys( $room->{invite_state}, qw( events ) );
 
@@ -72,7 +72,7 @@ test "Rooms a user is invited to appear in an incremental sync",
          matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
       })->then( sub {
          my ( $body ) = @_;
-         my $room = $body->{rooms}{invited}{$room_id};
+         my $room = $body->{rooms}{invite}{$room_id};
          require_json_keys( $room, qw( invite_state ) );
          require_json_keys( $room->{invite_state}, qw( events ) );
 
