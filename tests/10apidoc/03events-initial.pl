@@ -78,6 +78,7 @@ sub matrix_initialsync
 
 # A useful function which keeps track of the current eventstream token and
 #   fetches new events since it
+# $room_id may be undefined, in which case it gets events for all joined rooms.
 sub GET_new_events_for
 {
    my ( $user, $room_id ) = @_;
@@ -133,7 +134,7 @@ sub await_event_for
 {
    my ( $user, %params ) = @_;
 
-   my $filter = defined $params{filter} ? $params{filter} : sub { 1 };
+   my $filter = $params{filter} || sub { 1 };
    my $room_id = $params{room_id};  # May be undefined, in which case we listen to all joined rooms.
 
    my $failmsg = SyTest::CarpByFile::shortmess( "Timed out waiting for an event" );
