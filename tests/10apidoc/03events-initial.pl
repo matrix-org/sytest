@@ -81,17 +81,18 @@ sub matrix_initialsync
 # $room_id may be undefined, in which case it gets events for all joined rooms.
 sub GET_new_events_for
 {
-   my ( $user, $room_id ) = @_;
+   my ( $user, %params ) = @_;
+
+   my %params_to_pass = ( %params,
+      from => $user->eventstream_token,
+      timeout => 500,
+   );
 
    return $user->pending_get_events //=
       do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
-         params => {
-            from    => $user->eventstream_token,
-            timeout => 500,
-            room_id => $room_id
-         }
+         params => \%params_to_pass,
       )->on_ready( sub {
          undef $user->pending_get_events;
       })->then( sub {
@@ -143,9 +144,12 @@ sub await_event_for
       # Just replay saved ones the first time around, if there are any
       my $replay_saved = !shift && scalar @{ $user->saved_events };
 
+      my %params_to_pass = %params;
+      delete $params_to_pass{filter};
+
       ( $replay_saved
          ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
-         : GET_new_events_for( $user, $room_id )
+         : GET_new_events_for( $user, %params_to_pass )
       )->then( sub {
          my @events = @_;
 
