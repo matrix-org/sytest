@@ -55,7 +55,8 @@ test "Forgotten room messages cannot be paginated",
                limit => 1,
                dir   => 'b'
             },
-      )})->main::expect_http_403;
+         )->main::expect_http_403;
+      });
    };
 
 test "Forgetting room leaves room",
@@ -102,7 +103,8 @@ test "Forgetting room leaves room",
                limit => 1,
                dir   => 'b'
             },
-      )})->main::expect_http_403;
+         )->main::expect_http_403;
+      })
    };
 
 test "Can re-join room if re-invited - history_visibility = shared",
@@ -141,8 +143,8 @@ test "Can re-join room if re-invited - history_visibility = shared",
       })->then( sub {
          matrix_forget_room( $user, $room_id );
       })->then( sub {
-         matrix_join_room( $user, $room_id );
-      })->followed_by(\&main::expect_http_403)->then( sub {
+         matrix_join_room( $user, $room_id )->main::expect_http_403;
+      })->then( sub {
          matrix_invite_user_to_room( $creator, $user, $room_id );
       })->then( sub {
          matrix_join_room( $user, $room_id );
@@ -217,8 +219,8 @@ test "Can re-join room if re-invited - history_visibility joined",
       })->then( sub {
          matrix_forget_room( $user, $room_id );
       })->then( sub {
-         matrix_join_room( $user, $room_id );
-      })->main::expect_http_403->then( sub {
+         matrix_join_room( $user, $room_id )->main::expect_http_403;
+      })->then( sub {
          matrix_invite_user_to_room( $creator, $user, $room_id );
       })->then( sub {
          matrix_join_room( $user, $room_id );
