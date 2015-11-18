@@ -83,12 +83,12 @@ sub await_event_not_presence_for
 {
    my ( $user, $room_id, $ignored_users ) = @_;
    await_event_for( $user,
+      room_id => $room_id,
       filter  => sub {
          my ( $event ) = @_;
          return not( $event->{type} eq "m.presence" and
             any { $event->{content}{user_id} eq $_->user_id } @$ignored_users );
       },
-      room_id => $room_id,
    )->on_done( sub {
       my ( $event ) = @_;
       log_if_fail "event", $event
