@@ -10,14 +10,8 @@ test "Forgotten room messages cannot be paginated",
       ->then( sub {
          matrix_send_room_text_message( $creator, $room_id, body => "sup" )
       })->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-            params => {
-               limit => 1,
-               dir   => 'b'
-            },
-      )})->then( sub {
+         matrix_get_room_messages( $user, $room_id, limit => 1 );
+      })->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( chunk ) );
@@ -48,14 +42,8 @@ test "Forgotten room messages cannot be paginated",
          log_if_fail "member event", $event;
          $event->{membership} eq "leave" or die "Wrong membership state";
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-            params => {
-               limit => 1,
-               dir   => 'b'
-            },
-         )->main::expect_http_403;
+         matrix_get_room_messages( $user, $room_id, limit => 1 )
+            ->main::expect_http_403;
       });
    };
 
@@ -69,14 +57,8 @@ test "Forgetting room leaves room",
       ->then( sub {
          matrix_send_room_text_message( $creator, $room_id, body => "sup" )
       })->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-            params => {
-               limit => 1,
-               dir   => 'b'
-            },
-      )})->then( sub {
+         matrix_get_room_messages( $user, $room_id, limit => 1 );
+      })->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( chunk ) );
@@ -96,14 +78,8 @@ test "Forgetting room leaves room",
 
          $event->{membership} eq "leave" or die "Wrong membership state";
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-            params => {
-               limit => 1,
-               dir   => 'b'
-            },
-         )->main::expect_http_403;
+         matrix_get_room_messages( $user, $room_id, limit => 1 )
+            ->main::expect_http_403;
       })
    };
 
@@ -158,14 +134,7 @@ test "Can re-join room if re-invited - history_visibility = shared",
       })->then( sub {
          matrix_send_room_text_message( $creator, $room_id, body => "before leave" );
       })->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-            params => {
-               limit => 100,
-               dir   => 'b'
-            },
-         );
+         matrix_get_room_messages( $user, $room_id, limit => 100 );
       })->then( sub {
          matrix_forget_room( $user, $room_id );
       })->then( sub {
@@ -175,14 +144,7 @@ test "Can re-join room if re-invited - history_visibility = shared",
       })->then( sub {
          matrix_join_room( $user, $room_id );
       })->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-            params => {
-               limit => 100,
-               dir   => 'b'
-            },
-         );
+         matrix_get_room_messages( $user, $room_id, limit => 100 );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -191,14 +153,8 @@ test "Can re-join room if re-invited - history_visibility = shared",
 
          matrix_send_room_text_message( $creator, $room_id, body => "after rejoin" );
       })->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-            params => {
-               limit => 1,
-               dir   => 'b'
-            },
-      )})->then( sub {
+         matrix_get_room_messages( $user, $room_id, limit => 1 );
+      })->then( sub {
          my ( $body ) = @_;
 
          log_if_fail "body", $body;
@@ -246,14 +202,7 @@ test "Can re-join room if re-invited - history_visibility joined",
       })->then( sub {
          matrix_join_room( $user, $room_id );
       })->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-            params => {
-               limit => 100,
-               dir   => 'b'
-            },
-         );
+         matrix_get_room_messages( $user, $room_id, limit => 100 );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -262,14 +211,8 @@ test "Can re-join room if re-invited - history_visibility joined",
 
          matrix_send_room_text_message( $creator, $room_id, body => "after rejoin" );
       })->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-            params => {
-               limit => 1,
-               dir   => 'b'
-            },
-      )})->then( sub {
+         matrix_get_room_messages( $user, $room_id, limit => 1 );
+      })->then( sub {
          my ( $body ) = @_;
 
          log_if_fail "body", $body;
