@@ -17,10 +17,7 @@ sub inviteonly_room_fixture
          )->then( sub {
             my ( $room_id ) = @_;
 
-            do_request_json_for( $creator,
-               method => "GET",
-               uri    => "/api/v1/rooms/$room_id/initialSync",
-            )->then( sub {
+            matrix_initialsync_room( $creator, $room_id )->then( sub {
                my ( $body ) = @_;
 
                require_json_keys( $body, qw( state ));
@@ -57,7 +54,7 @@ multi_test "Can invite users to invite-only rooms",
       matrix_invite_user_to_room( $creator, $invitee, $room_id )
          ->SyTest::pass_on_done( "Sent invite" )
       ->then( sub {
-         await_event_for( $invitee, sub {
+         await_event_for( $invitee, filter => sub {
             my ( $event ) = @_;
 
             require_json_keys( $event, qw( type ));
@@ -166,7 +163,7 @@ test "Invited user can see room metadata",
       )->then( sub {
          matrix_invite_user_to_room( $creator, $invitee, $room_id );
       })->then( sub {
-         await_event_for( $invitee, sub {
+         await_event_for( $invitee, filter => sub {
             my ( $event ) = @_;
             return $event->{type} eq "m.room.member" &&
                    $event->{room_id} eq $room_id;

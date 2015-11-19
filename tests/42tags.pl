@@ -224,7 +224,7 @@ test "Tags appear in the v1 /events stream",
       )->then( sub {
          ( $user, $room_id ) = @_;
 
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.tag"
                and $event->{room_id} eq $room_id;
@@ -237,22 +237,22 @@ test "Tags appear in the v1 /events stream",
    };
 
 
-=head2 check_private_user_data
+=head2 check_account_data
 
-   check_private_user_data( $event, %args );
+   check_account_data( $event, %args );
 
-Checks that the private_user_data section has a tag event
+Checks that the account_data section has a tag event
 and that the tag event has the correct content.  If the C<expect_empty>
 named argument is set then the 'correct' content is an empty tag.
 
 =cut
 
-sub check_private_user_data {
-   my ( $private_user_data, %args ) = @_;
+sub check_account_data {
+   my ( $account_data, %args ) = @_;
 
-   log_if_fail "Private User Data:", $private_user_data;
+   log_if_fail "Private User Data:", $account_data;
 
-   my $tag_event = $private_user_data->[0];
+   my $tag_event = $account_data->[0];
    $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
    not defined $tag_event->{room_id} or die "Unxpected room_id";
 
@@ -278,9 +278,9 @@ test "Tags appear in the v1 /initalSync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}[0];
-         require_json_keys( $room, qw( private_user_data ) );
+         require_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data} );
+         check_account_data( $room->{account_data} );
 
          Future->done( 1 );
       });
@@ -299,17 +299,14 @@ test "Tags appear in the v1 room initial sync",
       )->then( sub {
          ( $user, $room_id ) = @_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync"
-        );
+         matrix_initialsync_room( $user, $room_id );
       })->then( sub {
          my ( $body ) = @_;
 
          my $room = $body;
-         require_json_keys( $room, qw( private_user_data ) );
+         require_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data} );
+         check_account_data( $room->{account_data} );
 
          Future->done( 1 );
       });
@@ -340,9 +337,9 @@ test "Tags appear in an initial v2 /sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( private_user_data ) );
+         require_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data}{events} );
+         check_account_data( $room->{account_data}{events} );
 
          Future->done( 1 );
       });
@@ -379,9 +376,9 @@ test "Newly updated tags appear in an incremental v2 /sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( private_user_data ) );
+         require_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data}{events} );
+         check_account_data( $room->{account_data}{events} );
 
          Future->done( 1 );
       });
@@ -425,9 +422,9 @@ test "Deleted tags appear in an incremental v2 /sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( private_user_data ) );
+         require_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data}{events},
+         check_account_data( $room->{account_data}{events},
             expect_empty => 1,
          );
 

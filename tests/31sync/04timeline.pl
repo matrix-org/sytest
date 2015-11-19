@@ -4,9 +4,9 @@ test "Can sync a room with a single message",
    check => sub {
       my ( $http ) = @_;
 
-      my ( $user, $filter_id, $room_id, $event_id );
+      my ( $user, $filter_id, $room_id, $event_id_1, $event_id_2 );
 
-      my $filter = { room => { timeline => { limit => 1 } } };
+      my $filter = { room => { timeline => { limit => 2 } } };
 
       matrix_register_user_with_filter( $http, $filter)->then( sub {
          ( $user , $filter_id ) = @_;
@@ -16,10 +16,16 @@ test "Can sync a room with a single message",
          ( $room_id ) = @_;
 
          matrix_send_room_text_message( $user, $room_id,
-            body => "A test message",
+            body => "Test message 1",
          );
       })->then( sub {
-         ( $event_id ) = @_;
+         ( $event_id_1 ) = @_;
+
+         matrix_send_room_text_message( $user, $room_id,
+            body => "Test message 2",
+         );
+      })->then( sub {
+         ( $event_id_2 ) = @_;
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
@@ -28,11 +34,15 @@ test "Can sync a room with a single message",
          my $room = $body->{rooms}{join}{$room_id};
          require_json_keys( $room, qw( timeline state ephemeral ));
          require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         @{ $room->{timeline}{events} } == 1
-            or die "Expected only one timeline event";
-         $room->{timeline}{events}[0]{event_id} eq $event_id
+         @{ $room->{timeline}{events} } == 2
+            or die "Expected two timeline events";
+         $room->{timeline}{events}[0]{event_id} eq $event_id_1
             or die "Unexpected timeline event";
-         $room->{timeline}{events}[0]{content}{body} eq "A test message"
+         $room->{timeline}{events}[0]{content}{body} eq "Test message 1"
+            or die "Unexpected message body.";
+         $room->{timeline}{events}[1]{event_id} eq $event_id_2
+            or die "Unexpected timeline event";
+         $room->{timeline}{events}[1]{content}{body} eq "Test message 2"
             or die "Unexpected message body.";
          $room->{timeline}{limited}
             or die "Expected timeline to be limited";

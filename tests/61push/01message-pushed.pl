@@ -41,7 +41,7 @@ multi_test "Test that a message is pushed",
          # We also wait for the push notification for it
 
          Future->needs_all(
-            await_event_for( $bob, sub {
+            await_event_for( $bob, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.room.member" and
                   $event->{room_id} eq $room_id and

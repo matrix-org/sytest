@@ -22,7 +22,7 @@ test "Room creation reports m.room.create to myself",
    do => sub {
       my ( $user, $room_id ) = @_;
 
-      await_event_for( $user, sub {
+      await_event_for( $user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.create";
          require_json_keys( $event, qw( room_id user_id content ));
@@ -45,7 +45,7 @@ test "Room creation reports m.room.member to myself",
    do => sub {
       my ( $user, $room_id ) = @_;
 
-      await_event_for( $user, sub {
+      await_event_for( $user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
          require_json_keys( $event, qw( room_id user_id state_key content ));
@@ -74,7 +74,7 @@ test "Setting room topic reports m.room.topic to myself",
          type    => "m.room.topic",
          content => { topic => $topic },
       )->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.topic";
             require_json_keys( $event, qw( room_id user_id content ));
@@ -178,10 +178,8 @@ multi_test "Room initialSync",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id )
+      ->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( state messages presence ));
@@ -228,11 +226,8 @@ test "Room initialSync with limit=0 gives no messages",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-         params => { limit => 0 },
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id, limit => 0 )
+      ->then( sub {
          my ( $body ) = @_;
 
          my $chunk = $body->{messages}{chunk};
