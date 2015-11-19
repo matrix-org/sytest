@@ -9,6 +9,7 @@ use if $] >= 5.020, warnings => FATAL => "experimental";
 use lib 'lib';
 
 use SyTest::CarpByFile;
+use SyTest::Assertions qw( :all );
 
 use SyTest::JSONSensible;
 
@@ -19,7 +20,6 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
-use JSON;
 use List::Util 1.33 qw( first all any maxstr );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
@@ -646,74 +646,6 @@ sub prepare
 
    exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
       for @PROVIDES;
-}
-
-## Some assertion functions useful by test scripts
-
-sub require_json_object
-{
-   my ( $obj ) = @_;
-   ref $obj eq "HASH" or croak "Expected a JSON object";
-}
-
-sub require_json_keys
-{
-   my ( $obj, @keys ) = @_;
-   require_json_object( $obj );
-   foreach ( @keys ) {
-      defined $obj->{$_} or croak "Expected a '$_' key";
-   }
-}
-
-sub require_json_list
-{
-   my ( $list ) = @_;
-   ref $list eq "ARRAY" or croak "Expected a JSON list";
-}
-
-sub require_json_nonempty_list
-{
-   my ( $list ) = @_;
-   require_json_list( $list );
-   @$list or croak "Expected a non-empty JSON list";
-}
-
-sub require_json_number
-{
-   my ( $num ) = @_;
-   # Our hacked-up JSON decoder represents numbers as JSON::number instances
-   ref $num eq "JSON::number" or croak "Expected a JSON number";
-}
-
-sub require_json_string
-{
-   my ( $str ) = @_;
-   !ref $str or croak "Expected a JSON string";
-}
-
-sub require_json_nonempty_string
-{
-   my ( $str ) = @_;
-   !ref $str and length $str or croak "Expected a non-empty JSON string";
-}
-
-use constant JSON_BOOLEAN_CLASS => ref( JSON::true );
-
-sub require_json_boolean
-{
-   my ( $obj ) = @_;
-   ref $obj eq JSON_BOOLEAN_CLASS or croak "Expected a JSON boolean";
-}
-
-sub require_base64_unpadded
-{
-   my ( $str ) = @_;
-   !ref $str or croak "Expected a plain string";
-
-   $str =~ m([^A-Za-z0-9+/=]) and
-      die "String contains invalid base64 characters";
-   $str =~ m(=) and
-      die "String contains trailing padding";
 }
 
 sub require_base64_unpadded_and_decode
