@@ -17,10 +17,7 @@ sub inviteonly_room_fixture
          )->then( sub {
             my ( $room_id ) = @_;
 
-            do_request_json_for( $creator,
-               method => "GET",
-               uri    => "/api/v1/rooms/$room_id/initialSync",
-            )->then( sub {
+            matrix_initialsync_room( $creator, $room_id )->then( sub {
                my ( $body ) = @_;
 
                require_json_keys( $body, qw( state ));
