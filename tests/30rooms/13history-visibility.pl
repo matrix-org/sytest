@@ -10,7 +10,7 @@ sub matrix_set_room_history_visibility
    );
 }
 
-use constant { YES => 1, NO => 0 };
+use constant { YES => 1, NO => !1 };
 
 my %PERMITTED_ACTIONS = (
    # Map from the m.room.history_visibility state to a list of booleans,
@@ -59,13 +59,13 @@ sub test_history_visibility
             my ( $body ) = @_;
             my %visible_events = map { $_->{event_id} => $_ } @{ $body->{chunk} };
 
-            log_if_fail "Visible", [ keys %visible_events ];
+            assert_eq( exists $visible_events{$before_join_event_id},
+               $permitted->{see_before_join},
+               "visibility of 'before_join'" );
 
-            # TODO: this wants to use is()
-            exists $visible_events{$before_join_event_id} == $permitted->{see_before_join} or
-               die "Visibility of 'before_join' is unexpected";
-            exists $visible_events{$after_invite_event_id} == $permitted->{see_after_invite} or
-               die "Visibility of 'after_invite' is unexpected";
+            assert_eq( exists $visible_events{$after_invite_event_id},
+               $permitted->{see_after_invite},
+               "visibility of 'after_invite'" );
 
             Future->done(1);
          });
