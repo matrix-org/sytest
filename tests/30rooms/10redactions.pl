@@ -69,6 +69,6 @@ test "POST /rooms/:room_id/redact/:event_id as random user does not redact messa
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
                content => {},
-         )
-      })->main::expect_http_403;
+         )->main::expect_http_403;
+      });
    };
