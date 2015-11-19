@@ -701,7 +701,7 @@ sub anonymous_user_fixture
    })
 }
 
-push our @EXPORT, qw( matrix_set_room_guest_access matrix_set_room_history_visibility matrix_get_room_membership );
+push our @EXPORT, qw( matrix_set_room_guest_access matrix_get_room_membership );
 
 sub matrix_set_room_guest_access
 {
@@ -710,16 +710,6 @@ sub matrix_set_room_guest_access
    matrix_put_room_state( $user, $room_id,
       type    => "m.room.guest_access",
       content => { guest_access => $guest_access }
-   );
-}
-
-sub matrix_set_room_history_visibility
-{
-   my ( $user, $room_id, $history_visibility ) = @_;
-
-   matrix_put_room_state( $user, $room_id,
-      type    => "m.room.history_visibility",
-      content => { history_visibility => $history_visibility }
    );
 }
 
