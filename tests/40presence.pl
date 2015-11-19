@@ -30,7 +30,7 @@ test "Presence changes are reported to local room members",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.presence";
 
@@ -59,7 +59,7 @@ test "Presence changes are also reported to remote room members",
    do => sub {
       my ( $senduser, $remote_user, undef ) = @_;
 
-      await_event_for( $remote_user, sub {
+      await_event_for( $remote_user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
 
@@ -95,7 +95,7 @@ test "Presence changes to OFFLINE are reported to local room members",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.presence";
 
@@ -117,7 +117,7 @@ test "Presence changes to OFFLINE are reported to remote room members",
    do => sub {
       my ( $senduser, $remote_user, undef ) = @_;
 
-      await_event_for( $remote_user, sub {
+      await_event_for( $remote_user, filter => sub {
          my ( $event ) = @_;
 
          return unless $event->{type} eq "m.presence";

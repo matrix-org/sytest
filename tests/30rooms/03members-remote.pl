@@ -65,7 +65,7 @@ test "New room members see their own join event",
    do => sub {
       my ( $user, $room_id, $room_alias ) = @_;
 
-      await_event_for( $user, sub {
+      await_event_for( $user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
 
@@ -120,7 +120,7 @@ test "Existing members see new members' join events",
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
-      await_event_for( $first_user, sub {
+      await_event_for( $first_user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
          require_json_keys( $event, qw( type room_id user_id ));
@@ -143,7 +143,7 @@ test "Existing members see new member's presence",
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
-      await_event_for( $first_user, sub {
+      await_event_for( $first_user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
          require_json_keys( $event, qw( type content ));

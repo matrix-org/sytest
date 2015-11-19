@@ -76,7 +76,7 @@ multi_test "AS-ghosted users can use rooms via AS",
          )
       })->SyTest::pass_on_done( "User posted message via AS" )
       ->then( sub {
-         await_event_for( $creator, sub {
+         await_event_for( $creator, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{room_id} eq $room_id;
@@ -155,7 +155,7 @@ multi_test "AS-ghosted users can use rooms themselves",
          )
       })->SyTest::pass_on_done( "Ghost posted message themselves" )
       ->then( sub {
-         await_event_for( $creator, sub {
+         await_event_for( $creator, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{room_id} eq $room_id;

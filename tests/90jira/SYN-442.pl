@@ -22,7 +22,7 @@ multi_test "Test that we can be reinvited to a room we created",
             ->SyTest::pass_on_done( "User A invited user B" )
       })->then( sub {
 
-         await_event_for( $user_2, sub {
+         await_event_for( $user_2, filter => sub {
             my ( $event ) = @_;
             return 0 unless $event->{type} eq "m.room.member";
             return 0 unless $event->{content}->{membership} eq "invite";
@@ -46,7 +46,7 @@ multi_test "Test that we can be reinvited to a room we created",
             ->SyTest::pass_on_done( "User A left the room" )
       })->then( sub {
 
-         await_event_for( $user_2, sub {
+         await_event_for( $user_2, filter => sub {
             my ( $event ) = @_;
             return 0 unless $event->{type} eq "m.room.member";
             return 0 unless $event->{content}->{membership} eq "leave";
@@ -59,7 +59,7 @@ multi_test "Test that we can be reinvited to a room we created",
             ->SyTest::pass_on_done( "User B invited user A back to the room" )
       })->then( sub {
 
-         await_event_for( $user_1, sub {
+         await_event_for( $user_1, filter => sub {
             my ( $event ) = @_;
             return 0 unless $event->{type} eq "m.room.member";
             return 0 unless $event->{content}->{membership} eq "invite";

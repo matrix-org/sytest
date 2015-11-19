@@ -18,7 +18,7 @@ test "Displayname change reports an event to myself",
             content => { displayname => $displayname },
          )
       })->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
             my $content = $event->{content};
@@ -47,7 +47,7 @@ test "Avatar URL change reports an event to myself",
 
          content => { avatar_url => $avatar_url },
       )->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
             my $content = $event->{content};

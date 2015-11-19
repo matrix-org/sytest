@@ -37,7 +37,7 @@ multi_test "Check that event streams started after a client joined a room work (
          my ( $event_id ) = @_;
 
          # Wait for the message we just sent.
-         await_event_for( $alice, sub {
+         await_event_for( $alice, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{event_id} eq $event_id;
