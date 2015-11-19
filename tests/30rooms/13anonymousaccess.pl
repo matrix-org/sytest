@@ -124,9 +124,9 @@ test "Anonymous user can call /events on world_readable room",
             })->then( sub {
                my ( $event ) = @_;
 
-               require_json_keys( $event, qw( content ) );
+               assert_json_keys( $event, qw( content ) );
                my $content = $event->{content};
-               require_json_keys( $content, qw( body ) );
+               assert_json_keys( $content, qw( body ) );
                $content->{body} eq "mice" or die "Want content body to be mice";
 
                Future->done( 1 );
@@ -333,10 +333,10 @@ test "Anonymous user can room initialSync for world_readable rooms",
       })->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( room_id state messages presence ));
-         require_json_keys( $body->{messages}, qw( chunk start end ));
-         require_json_list( $body->{messages}{chunk} );
-         require_json_list( $body->{state} );
+         assert_json_keys( $body, qw( room_id state messages presence ));
+         assert_json_keys( $body->{messages}, qw( chunk start end ));
+         assert_json_list( $body->{messages}{chunk} );
+         assert_json_list( $body->{state} );
 
          log_if_fail "room initialSync body", $body;
 
@@ -388,15 +388,15 @@ test "Anonymous users can send messages to guest_access rooms if joined",
             my ( $body ) = @_;
             log_if_fail "Body:", $body;
 
-            require_json_keys( $body, qw( start end chunk ));
-            require_json_list( my $chunk = $body->{chunk} );
+            assert_json_keys( $body, qw( start end chunk ));
+            assert_json_list( my $chunk = $body->{chunk} );
 
             scalar @$chunk == 1 or
                die "Expected one message";
 
             my ( $event ) = @$chunk;
 
-            require_json_keys( $event, qw( type room_id user_id content ));
+            assert_json_keys( $event, qw( type room_id user_id content ));
 
             $event->{user_id} eq $anonymous_user->user_id or
                die "expected user_id to be ".$anonymous_user->user_id;
@@ -460,7 +460,7 @@ sub check_events
 
       log_if_fail "Body", $body;
 
-      require_json_keys( $body, qw( chunk ) );
+      assert_json_keys( $body, qw( chunk ) );
       @{ $body->{chunk} } >= 1 or die "Want at least one event";
       @{ $body->{chunk} } < 3 or die "Want at most two events";
 
@@ -662,8 +662,8 @@ test "GET /publicRooms lists rooms",
 
          log_if_fail "publicRooms", $body;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( $body->{chunk} );
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
 
          my %seen = (
             listingtest0 => 0,
@@ -675,8 +675,8 @@ test "GET /publicRooms lists rooms",
 
          foreach my $room ( @{ $body->{chunk} } ) {
             my $aliases = $room->{aliases};
-            require_json_boolean( my $world_readable = $room->{world_readable} );
-            require_json_boolean( my $guest_can_join = $room->{guest_can_join} );
+            assert_json_boolean( my $world_readable = $room->{world_readable} );
+            assert_json_boolean( my $guest_can_join = $room->{guest_can_join} );
 
             foreach my $alias ( @{$aliases} ) {
                if( $alias =~ m/^\Q#listingtest0:/ ) {

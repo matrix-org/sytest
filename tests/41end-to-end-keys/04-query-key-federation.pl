@@ -20,13 +20,13 @@ multi_test "Can query remote device keys using POST",
       })->then( sub {
          my ( $content ) = @_;
 
-         require_json_keys( $content, "device_keys" );
+         assert_json_keys( $content, "device_keys" );
 
          my $device_keys = $content->{device_keys};
-         require_json_keys( $device_keys, $user->user_id );
+         assert_json_keys( $device_keys, $user->user_id );
 
          my $alice_keys = $device_keys->{ $user->user_id };
-         require_json_keys( $alice_keys, "alices_first_device" );
+         assert_json_keys( $alice_keys, "alices_first_device" );
          # TODO: Check that the content matches what we uploaded.
          Future->done(1)
       });
