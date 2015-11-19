@@ -11,7 +11,7 @@ test "GET /register yields a set of flows",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( flows ));
+         assert_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
 
          my $has_register_flow;
@@ -57,7 +57,7 @@ test "POST /register can create a user",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( user_id access_token ));
+         assert_json_keys( $body, qw( user_id access_token ));
 
          Future->done( 1 );
       });

@@ -20,7 +20,7 @@ test "Forgotten room messages cannot be paginated",
       )})->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( chunk ) );
+         assert_json_keys( $body, qw( chunk ) );
          log_if_fail "Chunk", $body->{chunk};
          $body->{chunk}[0]{content}{body} eq "sup" or die "Wrong message";
 
@@ -79,7 +79,7 @@ test "Forgetting room leaves room",
       )})->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( chunk ) );
+         assert_json_keys( $body, qw( chunk ) );
          log_if_fail "Chunk", $body->{chunk};
          $body->{chunk}[0]{content}{body} eq "sup" or die "Wrong message";
 

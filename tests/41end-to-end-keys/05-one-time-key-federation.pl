@@ -23,8 +23,8 @@ multi_test "Can claim remote one time key using POST",
          my ( $content ) = @_;
          log_if_fail "First device content", $content;
 
-         require_json_keys( $content, "one_time_key_counts" );
-         require_json_keys( $content->{one_time_key_counts}, "test_algorithm" );
+         assert_json_keys( $content, "one_time_key_counts" );
+         assert_json_keys( $content->{one_time_key_counts}, "test_algorithm" );
 
          $content->{one_time_key_counts}{test_algorithm} eq "1" or
             die "Expected 1 one time key";
@@ -46,16 +46,16 @@ multi_test "Can claim remote one time key using POST",
          my ( $content ) = @_;
          log_if_fail "POST response", $content;
 
-         require_json_keys( $content, "one_time_keys" );
+         assert_json_keys( $content, "one_time_keys" );
 
          my $one_time_keys = $content->{one_time_keys};
-         require_json_keys( $one_time_keys, $user->user_id );
+         assert_json_keys( $one_time_keys, $user->user_id );
 
          my $alice_keys = $one_time_keys->{ $user->user_id };
-         require_json_keys( $alice_keys, "alices_first_device" );
+         assert_json_keys( $alice_keys, "alices_first_device" );
 
          my $alice_device_keys = $alice_keys->{alices_first_device};
-         require_json_keys( $alice_device_keys, "test_algorithm:test_id" );
+         assert_json_keys( $alice_device_keys, "test_algorithm:test_id" );
 
          "test+base64+key" eq $alice_device_keys->{"test_algorithm:test_id"} or
             die "Unexpected key base64";
@@ -70,7 +70,7 @@ multi_test "Can claim remote one time key using POST",
          my ( $content ) = @_;
          log_if_fail "First device content", $content;
 
-         require_json_keys( $content, "one_time_key_counts" );
+         assert_json_keys( $content, "one_time_key_counts" );
 
          exists $content->{one_time_key_counts}{test_algorithm} and
             die "Expected that the key would be removed from the counts";

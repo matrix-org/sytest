@@ -54,12 +54,12 @@ test "Typing notification sent to local room members",
 
                return unless $event->{type} eq "m.typing";
 
-               require_json_keys( $event, qw( type room_id content ));
-               require_json_keys( my $content = $event->{content}, qw( user_ids ));
+               assert_json_keys( $event, qw( type room_id content ));
+               assert_json_keys( my $content = $event->{content}, qw( user_ids ));
 
                return unless $event->{room_id} eq $room_id;
 
-               require_json_list( my $users = $content->{user_ids} );
+               assert_json_list( my $users = $content->{user_ids} );
 
                scalar @$users == 1 or
                   die "Expected 1 member to be typing";
@@ -85,12 +85,12 @@ test "Typing notifications also sent to remote room members",
 
          return unless $event->{type} eq "m.typing";
 
-         require_json_keys( $event, qw( type room_id content ));
-         require_json_keys( my $content = $event->{content}, qw( user_ids ));
+         assert_json_keys( $event, qw( type room_id content ));
+         assert_json_keys( my $content = $event->{content}, qw( user_ids ));
 
          return unless $event->{room_id} eq $room_id;
 
-         require_json_list( my $users = $content->{user_ids} );
+         assert_json_list( my $users = $content->{user_ids} );
 
          scalar @$users == 1 or
             die "Expected 1 member to be typing";
@@ -118,12 +118,12 @@ test "Typing can be explicitly stopped",
 
                return unless $event->{type} eq "m.typing";
 
-               require_json_keys( $event, qw( type room_id content ));
-               require_json_keys( my $content = $event->{content}, qw( user_ids ));
+               assert_json_keys( $event, qw( type room_id content ));
+               assert_json_keys( my $content = $event->{content}, qw( user_ids ));
 
                return unless $event->{room_id} eq $room_id;
 
-               require_json_list( my $users = $content->{user_ids} );
+               assert_json_list( my $users = $content->{user_ids} );
 
                scalar @$users and
                   die "Expected 0 members to be typing";

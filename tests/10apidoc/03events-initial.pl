@@ -16,8 +16,8 @@ test "GET /events initially",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( $body->{chunk} );
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
 
          # We can't be absolutely sure that there won't be any events yet, so
          # don't check that.
@@ -43,14 +43,14 @@ test "GET /initialSync initially",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( end ));
+         assert_json_keys( $body, qw( end ));
 
          # Spec says these are optional
          if( exists $body->{rooms} ) {
-            require_json_list( $body->{rooms} );
+            assert_json_list( $body->{rooms} );
          }
          if( exists $body->{presence} ) {
-            require_json_list( $body->{presence} );
+            assert_json_list( $body->{presence} );
          }
 
          provide can_initial_sync => 1;
@@ -184,8 +184,8 @@ sub matrix_sync
    )->on_done( sub {
       my ( $body ) = @_;
 
-      require_json_keys( $body, qw( rooms presence next_batch ) );
-      require_json_keys( $body->{presence}, qw( events ));
-      require_json_keys( $body->{rooms}, qw( joined invited archived ) );
+      assert_json_keys( $body, qw( rooms presence next_batch ) );
+      assert_json_keys( $body->{presence}, qw( events ));
+      assert_json_keys( $body->{rooms}, qw( joined invited archived ) );
    });
 }

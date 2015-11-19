@@ -24,7 +24,7 @@ test "Outbound federation can query profile data",
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
 
-         require_json_keys( $body, qw( displayname ));
+         assert_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq "The displayname of \@user:$local_server_name" or
             die "Displayname not as expected";
@@ -63,7 +63,7 @@ test "Inbound federation can query profile data",
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
 
-         require_json_keys( $body, qw( displayname ));
+         assert_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq $dname or
             die "Expected displayname to be '$dname'";
