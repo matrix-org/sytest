@@ -103,7 +103,23 @@ test "GET /rooms/:room_id/messages returns a message",
             die "Expected some messages but got none at all\n";
 
          provide can_get_messages => 1;
+         push our @EXPORT, qw( matrix_get_room_messages );
 
          Future->done(1);
       });
    };
+
+sub matrix_get_room_messages
+{
+   my ( $user, $room_id, %params ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
+
+   $params{dir} ||= "b";
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/api/v1/rooms/$room_id/messages",
+
+      params => \%params,
+   );
+}
