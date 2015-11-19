@@ -389,6 +389,21 @@ sub require_stub
    });
 }
 
+sub ok
+{
+   my ( $ok, $name ) = @_;
+   $ok or
+      croak "Failed $name";
+}
+
+sub is_eq
+{
+   my ( $got, $want, $name ) = @_;
+   # TODO: stringify got/want to something sensible
+   $got eq $want or
+      croak "Got $got, expected $want for $name";
+}
+
 sub _run_test
 {
    my ( $t, %params ) = @_;
@@ -560,25 +575,6 @@ sub test
       my $self = shift;
       my ( $message ) = @_;
       $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
-   }
-
-   sub ok
-   {
-      my ( $ok, $stepname ) = @_;
-      if( !$ok ) {
-         $output->diag( "Failed $stepname" );
-      }
-   }
-
-   sub is_eq
-   {
-      my ( $got, $want, $stepname ) = @_;
-
-      my $ok = $got eq $want;
-      if( !$ok ) {
-         # TODO: stringify got/want to something sensible
-         $output->diag( "Got $got, expected $want for $stepname" );
-      }
    }
 
    sub multi_test
