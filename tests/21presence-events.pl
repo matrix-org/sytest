@@ -48,7 +48,7 @@ test "Presence change reports an event to myself",
 
          content => { presence => "online", status_msg => $status_msg },
       )->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             next unless $event->{type} eq "m.presence";
             my $content = $event->{content};
@@ -86,7 +86,7 @@ test "Friends presence changes reports events",
             content => { presence => "online", status_msg => $friend_status },
          );
       })->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
 

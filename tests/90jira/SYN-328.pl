@@ -22,7 +22,7 @@ multi_test "Typing notifications don't leak",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.typing";
                return unless $event->{room_id} eq $room_id;
@@ -36,7 +36,7 @@ multi_test "Typing notifications don't leak",
          Future->wait_any(
             delay( 2 ),
 
-            await_event_for( $nonmember, sub {
+            await_event_for( $nonmember, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.typing";
                return unless $event->{room_id} eq $room_id;

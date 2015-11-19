@@ -16,10 +16,7 @@ multi_test "Left room members do not cause problems for presence",
             ->SyTest::pass_on_done( "Left room" )
       })->then( sub {
 
-         do_request_json_for( $user1,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync",
-         )
+         matrix_initialsync_room( $user1, $room_id );
       })->then( sub {
          my ( $body ) = @_;
 
