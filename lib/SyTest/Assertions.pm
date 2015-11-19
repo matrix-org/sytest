@@ -18,7 +18,7 @@ our @EXPORT_OK = qw(
    require_json_nonempty_string
    require_json_boolean
 
-   require_base64_unpadded
+   assert_base64_unpadded
 );
 
 our %EXPORT_TAGS = (
@@ -80,7 +80,7 @@ sub require_json_boolean
    ref $obj eq JSON_BOOLEAN_CLASS or croak "Expected a JSON boolean";
 }
 
-sub require_base64_unpadded
+sub assert_base64_unpadded
 {
    my ( $str ) = @_;
    !ref $str or croak "Expected a plain string";

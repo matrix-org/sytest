@@ -104,7 +104,7 @@ test "Checking local federation server",
 
          require_json_keys( my $key = $body->{verify_keys}{$key_id}, qw( key ));
 
-         require_base64_unpadded( $key->{key} );
+         assert_base64_unpadded( $key->{key} );
 
          keys %{ $body->{signatures} } or
             die "Expected some signatures";
@@ -115,7 +115,7 @@ test "Checking local federation server",
          my $signature = $body->{signatures}{$local_server_name}{$key_id} or
             die "Expected a signature from $local_server_name using $key_id";
 
-         require_base64_unpadded( $signature );
+         assert_base64_unpadded( $signature );
 
          # TODO: verify it?
 
