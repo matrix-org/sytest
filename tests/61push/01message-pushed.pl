@@ -41,7 +41,7 @@ multi_test "Test that a message is pushed",
          # We also wait for the push notification for it
 
          Future->needs_all(
-            await_event_for( $bob, sub {
+            await_event_for( $bob, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.room.member" and
                   $event->{room_id} eq $room_id and
@@ -106,16 +106,16 @@ multi_test "Test that a message is pushed",
 
          log_if_fail "Request body", $body;
 
-         require_json_keys( my $notification = $body->{notification}, qw(
+         assert_json_keys( my $notification = $body->{notification}, qw(
             id room_id type sender content devices counts
          ));
-         require_json_keys( $notification->{counts}, qw(
+         assert_json_keys( $notification->{counts}, qw(
             unread
          ));
-         require_json_keys( $notification->{devices}[0], qw(
+         assert_json_keys( $notification->{devices}[0], qw(
             app_id pushkey pushkey_ts data tweaks
          ));
-         require_json_keys( my $content = $notification->{content}, qw(
+         assert_json_keys( my $content = $notification->{content}, qw(
             msgtype body
          ));
 

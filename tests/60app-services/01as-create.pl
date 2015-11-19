@@ -25,7 +25,7 @@ test "AS can create a user",
 
          log_if_fail "Body", $body;
 
-         require_json_keys( $body, qw( user_id home_server ));
+         assert_json_keys( $body, qw( user_id home_server ));
 
          provide make_as_user => sub {
             my ( $user_id_fragment ) = @_;
@@ -93,15 +93,15 @@ test "AS can make room aliases",
 
             log_if_fail "Event", $event;
 
-            require_json_keys( $event, qw( content room_id user_id ));
+            assert_json_keys( $event, qw( content room_id user_id ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
             $event->{user_id} eq $as_user->user_id or
                die "Expected user_id to be ${\$as_user->user_id}";
 
-            require_json_keys( my $content = $event->{content}, qw( aliases ));
-            require_json_list( my $aliases = $content->{aliases} );
+            assert_json_keys( my $content = $event->{content}, qw( aliases ));
+            assert_json_list( my $aliases = $content->{aliases} );
 
             grep { $_ eq $room_alias } @$aliases or
                die "EXpected to find our alias in the aliases list";
@@ -129,7 +129,7 @@ test "AS can make room aliases",
 
          log_if_fail "Body", $body;
 
-         require_json_keys( $body, qw( room_id ));
+         assert_json_keys( $body, qw( room_id ));
 
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id'";

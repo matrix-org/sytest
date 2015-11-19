@@ -15,15 +15,15 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
          my ( $body ) = @_;
 
          # Simple level keys
-         require_json_keys( $body, qw( ban kick redact state_default events_default users_default ));
-         require_json_number( $body->{$_} ) for qw( ban kick redact state_default events_default users_default );
+         assert_json_keys( $body, qw( ban kick redact state_default events_default users_default ));
+         assert_json_number( $body->{$_} ) for qw( ban kick redact state_default events_default users_default );
 
-         require_json_object( $body->{events} );
+         assert_json_object( $body->{events} );
 
          # Don't care what they keys are
-         require_json_number( $_ ) for values %{ $body->{events} };
+         assert_json_number( $_ ) for values %{ $body->{events} };
 
-         require_json_number( $_ ) for values %{ $body->{users} };
+         assert_json_number( $_ ) for values %{ $body->{users} };
 
          exists $body->{users}{ $user->user_id } or
             die "Expected room creator to exist in user powerlevel list";

@@ -118,7 +118,7 @@ test "Outbound federation can send room-join requests",
             my ( $body ) = @_;
             log_if_fail "Join response", $body;
 
-            require_json_keys( $body, qw( room_id ));
+            assert_json_keys( $body, qw( room_id ));
 
             $body->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
@@ -150,28 +150,28 @@ test "Inbound federation can receive room-join requests",
          #   observing what Synapse actually does, because the entire make_join
          #   API is entirely undocumented. See SPEC-241
 
-         require_json_keys( $body, qw( event ));
+         assert_json_keys( $body, qw( event ));
 
          my $protoevent = $body->{event};
 
-         require_json_keys( $protoevent, qw(
+         assert_json_keys( $protoevent, qw(
             auth_events content depth event_id prev_state room_id sender state_key type
          ));
 
-         require_json_nonempty_list( my $auth_events = $protoevent->{auth_events} );
+         assert_json_nonempty_list( my $auth_events = $protoevent->{auth_events} );
          foreach my $auth_event ( @$auth_events ) {
-            require_json_list( $auth_event );
+            assert_json_list( $auth_event );
             @$auth_event == 2 or
                die "Expected auth_event list element to have 2 members";
 
-            require_json_string( $auth_event->[0] );  # id
-            require_json_object( $auth_event->[1] );  # hashes
+            assert_json_string( $auth_event->[0] );  # id
+            assert_json_object( $auth_event->[1] );  # hashes
          }
 
-         require_json_nonempty_list( $protoevent->{prev_events} );
+         assert_json_nonempty_list( $protoevent->{prev_events} );
 
-         require_json_number( $protoevent->{depth} );
-         require_json_string( $protoevent->{event_id} );
+         assert_json_number( $protoevent->{depth} );
+         assert_json_string( $protoevent->{event_id} );
 
          $protoevent->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
@@ -182,7 +182,7 @@ test "Inbound federation can receive room-join requests",
          $protoevent->{type} eq "m.room.member" or
             die "Expected 'type' to be 'm.room.member'";
 
-         require_json_keys( my $content = $protoevent->{content}, qw( membership ) );
+         assert_json_keys( my $content = $protoevent->{content}, qw( membership ) );
          $content->{membership} eq "join" or
             die "Expected 'membership' to be 'join'";
 
@@ -215,38 +215,38 @@ test "Inbound federation can receive room-join requests",
             $response = $response->[1];
          }
 
-         require_json_keys( $response, qw( auth_chain state ));
+         assert_json_keys( $response, qw( auth_chain state ));
 
-         require_json_nonempty_list( $response->{auth_chain} );
+         assert_json_nonempty_list( $response->{auth_chain} );
          my @auth_chain = @{ $response->{auth_chain} };
 
          log_if_fail "Auth chain", \@auth_chain;
 
          foreach my $event ( @auth_chain ) {
-            require_json_keys( $event, qw(
+            assert_json_keys( $event, qw(
                auth_events content depth event_id hashes origin origin_server_ts
                prev_events prev_state room_id sender signatures state_key type
             ));
 
-            require_json_list( $event->{auth_events} );
-            require_json_number( $event->{depth} );
-            require_json_string( $event->{event_id} );
-            require_json_object( $event->{hashes} );
+            assert_json_list( $event->{auth_events} );
+            assert_json_number( $event->{depth} );
+            assert_json_string( $event->{event_id} );
+            assert_json_object( $event->{hashes} );
 
-            require_json_string( $event->{origin} );
+            assert_json_string( $event->{origin} );
 
-            require_json_number( $event->{origin_server_ts} );
-            require_json_list( $event->{prev_events} );
-            require_json_list( $event->{prev_state} );
+            assert_json_number( $event->{origin_server_ts} );
+            assert_json_list( $event->{prev_events} );
+            assert_json_list( $event->{prev_state} );
 
-            require_json_string( $event->{room_id} );
+            assert_json_string( $event->{room_id} );
             $event->{room_id} eq $room_id or
                die "Expected auth_event room_id to be $room_id";
 
-            require_json_string( $event->{sender} );
-            require_json_object( $event->{signatures} );
-            require_json_string( $event->{state_key} );
-            require_json_string( $event->{type} );
+            assert_json_string( $event->{sender} );
+            assert_json_object( $event->{signatures} );
+            assert_json_string( $event->{state_key} );
+            assert_json_string( $event->{type} );
 
             # TODO: Check signatures of every auth event
          }
@@ -269,7 +269,7 @@ test "Inbound federation can receive room-join requests",
             $accepted_authevents{$_->{event_id}} = $_ for @accepted;
          }
 
-         require_json_nonempty_list( $response->{state} );
+         assert_json_nonempty_list( $response->{state} );
          my %state = partition_by { $_->{type} } @{ $response->{state} };
 
          log_if_fail "State", \%state;

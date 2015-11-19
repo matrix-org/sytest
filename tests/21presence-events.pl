@@ -13,7 +13,7 @@ test "initialSync sees my presence status",
       matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( presence ));
+         assert_json_keys( $body, qw( presence ));
 
          log_if_fail "Initial sync presence", $body->{presence};
 
@@ -22,12 +22,12 @@ test "initialSync sees my presence status",
          } @{ $body->{presence} } or
             die "Did not find an initial presence message about myself";
 
-         require_json_object( $event, qw( type content ));
+         assert_json_object( $event, qw( type content ));
          $event->{type} eq "m.presence" or
             die "Expected type of event to be m.presence";
 
          my $content = $event->{content};
-         require_json_object( $content, qw( user_id presence last_active_ago ));
+         assert_json_object( $content, qw( user_id presence last_active_ago ));
 
          Future->done(1);
       });
@@ -48,7 +48,7 @@ test "Presence change reports an event to myself",
 
          content => { presence => "online", status_msg => $status_msg },
       )->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             next unless $event->{type} eq "m.presence";
             my $content = $event->{content};
@@ -86,16 +86,16 @@ test "Friends presence changes reports events",
             content => { presence => "online", status_msg => $friend_status },
          );
       })->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.presence";
 
             my $content = $event->{content};
-            require_json_keys( $content, qw( user_id ));
+            assert_json_keys( $content, qw( user_id ));
 
             return unless $content->{user_id} eq $friend->user_id;
 
-            require_json_keys( $content, qw( presence status_msg ));
+            assert_json_keys( $content, qw( presence status_msg ));
             $content->{presence} eq "online" or
                die "Expected presence to be 'online'";
             $content->{status_msg} eq $friend_status or

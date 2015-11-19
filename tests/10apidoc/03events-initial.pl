@@ -16,8 +16,8 @@ test "GET /events initially",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( $body->{chunk} );
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
 
          # We can't be absolutely sure that there won't be any events yet, so
          # don't check that.
@@ -43,14 +43,14 @@ test "GET /initialSync initially",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( end ));
+         assert_json_keys( $body, qw( end ));
 
          # Spec says these are optional
          if( exists $body->{rooms} ) {
-            require_json_list( $body->{rooms} );
+            assert_json_list( $body->{rooms} );
          }
          if( exists $body->{presence} ) {
-            require_json_list( $body->{presence} );
+            assert_json_list( $body->{presence} );
          }
 
          provide can_initial_sync => 1;
@@ -78,18 +78,20 @@ sub matrix_initialsync
 
 # A useful function which keeps track of the current eventstream token and
 #   fetches new events since it
+# $room_id may be undefined, in which case it gets events for all joined rooms.
 sub GET_new_events_for
 {
-   my ( $user ) = @_;
+   my ( $user, %params ) = @_;
 
    return $user->pending_get_events //=
       do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
          params => {
+            %params,
             from    => $user->eventstream_token,
             timeout => 500,
-         }
+         },
       )->on_ready( sub {
          undef $user->pending_get_events;
       })->then( sub {
@@ -126,9 +128,15 @@ sub flush_events_for
    });
 }
 
+# Note that semantics are undefined if calls are interleaved with differing
+# $room_ids for the same user.
 sub await_event_for
 {
-   my ( $user, $filter ) = @_;
+   my ( $user, %params ) = @_;
+
+   my $filter = delete $params{filter} || sub { 1 };
+   my $room_id = $params{room_id};  # May be undefined, in which case we listen to all joined rooms.
+
    my $failmsg = SyTest::CarpByFile::shortmess( "Timed out waiting for an event" );
 
    my $f = repeat {
@@ -137,7 +145,7 @@ sub await_event_for
 
       ( $replay_saved
          ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
-         : GET_new_events_for( $user )
+         : GET_new_events_for( $user, %params )
       )->then( sub {
          my @events = @_;
 

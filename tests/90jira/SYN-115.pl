@@ -28,7 +28,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       })->then( sub {
 
          # Bob should receive the invite
-         await_event_for( $bob, sub {
+         await_event_for( $bob, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member" and
                           $event->{room_id} eq $room_id and

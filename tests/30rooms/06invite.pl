@@ -1,5 +1,4 @@
-use List::Util qw( first );
-
+use List::Util qw( all first );
 
 sub inviteonly_room_fixture
 {
@@ -18,13 +17,10 @@ sub inviteonly_room_fixture
          )->then( sub {
             my ( $room_id ) = @_;
 
-            do_request_json_for( $creator,
-               method => "GET",
-               uri    => "/api/v1/rooms/$room_id/initialSync",
-            )->then( sub {
+            matrix_initialsync_room( $creator, $room_id )->then( sub {
                my ( $body ) = @_;
 
-               require_json_keys( $body, qw( state ));
+               assert_json_keys( $body, qw( state ));
 
                my ( $join_rules_event ) = first { $_->{type} eq "m.room.join_rules" } @{ $body->{state} };
                $join_rules_event or
@@ -38,13 +34,13 @@ sub inviteonly_room_fixture
          });
       }
    )
-};
+}
 
 multi_test "Can invite users to invite-only rooms",
    requires => do {
       my $creator_fixture = local_user_fixture();
 
-      return [
+      [
          $creator_fixture,
          local_user_fixture(),
          inviteonly_room_fixture( creator => $creator_fixture ),
@@ -58,13 +54,13 @@ multi_test "Can invite users to invite-only rooms",
       matrix_invite_user_to_room( $creator, $invitee, $room_id )
          ->SyTest::pass_on_done( "Sent invite" )
       ->then( sub {
-         await_event_for( $invitee, sub {
+         await_event_for( $invitee, filter => sub {
             my ( $event ) = @_;
 
-            require_json_keys( $event, qw( type ));
+            assert_json_keys( $event, qw( type ));
             return 0 unless $event->{type} eq "m.room.member";
 
-            require_json_keys( $event, qw( room_id state_key ));
+            assert_json_keys( $event, qw( room_id state_key ));
             return 0 unless $event->{room_id} eq $room_id;
             return 0 unless $event->{state_key} eq $invitee->user_id;
 
@@ -73,12 +69,10 @@ multi_test "Can invite users to invite-only rooms",
       })->then( sub {
          my ( $event ) = @_;
 
-         require_json_keys( my $content = $event->{content}, qw( membership ));
+         assert_json_keys( my $content = $event->{content}, qw( membership ));
 
          $content->{membership} eq "invite" or
             die "Expected membership to be 'invite'";
-
-         pass "Received invite";
 
          matrix_join_room( $invitee, $room_id )
             ->SyTest::pass_on_done( "Joined room" )
@@ -148,3 +142,71 @@ sub invited_user_can_reject_invite
       Future->done(1);
    });
 }
+
+test "Invited user can see room metadata",
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+
+   do => sub {
+      my ( $creator, $room_id, $invitee ) = @_;
+
+      my $state_in_invite;
+
+      Future->needs_all(
+         matrix_put_room_state( $creator, $room_id,
+            type => "m.room.name",
+            content => { name => "The room name" },
+         ),
+         matrix_put_room_state( $creator, $room_id,
+            type => "m.room.avatar",
+            content => { url => "http://something" },
+         ),
+      )->then( sub {
+         matrix_invite_user_to_room( $creator, $invitee, $room_id );
+      })->then( sub {
+         await_event_for( $invitee, filter => sub {
+            my ( $event ) = @_;
+            return $event->{type} eq "m.room.member" &&
+                   $event->{room_id} eq $room_id;
+         });
+      })->then( sub {
+         my ( $event ) = @_;
+
+         # invite_room_state is optional
+         if( !$event->{invite_room_state} ) {
+            return Future->done();
+         }
+
+         assert_json_list( $event->{invite_room_state} );
+
+         my %state_by_type = map {
+            $_->{type} => $_
+         } @{ $event->{invite_room_state} };
+
+         $state_by_type{$_} or die "Did not receive $_ state"
+            for qw( m.room.join_rules m.room.name
+                    m.room.canonical_alias m.room.avatar );
+
+         my @futures = ();
+
+         foreach my $event_type ( keys %state_by_type ) {
+            push @futures, matrix_get_room_state( $creator, $room_id,
+               type => $event_type
+            )->then( sub {
+               my ( $room_content ) = @_;
+
+               my $invite_content = $state_by_type{$event_type}{content};
+
+               # TODO: This would be a lot neater with is_deeply()
+               all {
+                  $room_content->{$_} eq $invite_content->{$_}
+               } keys %$room_content, keys %$invite_content or
+                  die "Content does not match for event type $event_type";
+
+               Future->done();
+            });
+         }
+
+         Future->needs_all( @futures )
+            ->then_done(1);
+      });
+   };

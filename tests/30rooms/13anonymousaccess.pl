@@ -23,8 +23,8 @@ test "Anonymous user cannot view non-world-readable rooms",
                limit => "1",
                dir   => "b",
             },
-         )
-      })->main::expect_http_403;
+         )->main::expect_http_403;
+      });
    };
 
 test "Anonymous user can view world-readable rooms",
@@ -75,9 +75,26 @@ test "Anonymous user cannot call /events on non-world_readable room",
                limit => "2",
                dir   => "b",
             },
-         )
-      })->main::expect_http_403;
+         )->main::expect_http_403;
+      });
    };
+
+sub await_event_not_presence_for
+{
+   my ( $user, $room_id, $ignored_users ) = @_;
+   await_event_for( $user,
+      room_id => $room_id,
+      filter  => sub {
+         my ( $event ) = @_;
+         return not( $event->{type} eq "m.presence" and
+            any { $event->{content}{user_id} eq $_->user_id } @$ignored_users );
+      },
+   )->on_done( sub {
+      my ( $event ) = @_;
+      log_if_fail "event", $event
+   });
+}
+
 
 test "Anonymous user can call /events on world_readable room",
    requires => [ anonymous_user_fixture(), local_user_fixture(), local_user_fixture() ],
@@ -94,59 +111,30 @@ test "Anonymous user can call /events on world_readable room",
          matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
       })->then( sub {
          Future->needs_all(
+            matrix_send_room_text_message( $user, $room_id, body => "mice" )
+            ->on_done( sub {
+               ( $sent_event_id ) = @_;
+            }),
+
             do_request_json_for( $anonymous_user,
                method => "GET",
                uri    => "/api/v1/events",
             )->main::expect_http_400->then( sub {
-               do_request_json_for( $anonymous_user,
-                  method => "GET",
-                  uri    => "/api/v1/events",
-                  params => {
-                     room_id => $room_id,
-                  },
-               )
+               await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user, $user ] )
             })->then( sub {
-               my ( $body ) = @_;
+               my ( $event ) = @_;
 
-               require_json_keys( $body, qw( chunk ) );
-               $body->{chunk} >= 1 or die "Want at least one event";
-               my $event = $body->{chunk}->[0];
-               require_json_keys( $event, qw( content ) );
+               assert_json_keys( $event, qw( content ) );
                my $content = $event->{content};
-               require_json_keys( $content, qw( body ) );
+               assert_json_keys( $content, qw( body ) );
                $content->{body} eq "mice" or die "Want content body to be mice";
 
-               Future->done( $body->{end} );
-            }),
-
-            matrix_send_room_text_message( $user, $room_id, body => "mice" )
-            ->on_done( sub {
-               ( $sent_event_id ) = @_;
+               Future->done( 1 );
             }),
          )->then( sub {
             my ( $stream_token ) = @_;
 
             Future->needs_all(
-               do_request_json_for( $anonymous_user,
-                  method => "GET",
-                  uri    => "/api/v1/events",
-                  params => {
-                     room_id => $room_id,
-                     from    => $stream_token,
-                  },
-               )->then( sub {
-                  my ( $body ) = @_;
-
-                  my $chunk = ignore_presence_for( [ $anonymous_user ], @{ $body->{chunk} } );
-                  log_if_fail "chunk", $chunk;
-                  @{ $chunk } == 1 or die "Want exactly one event";
-                  my $event = $chunk->[0];
-                  $event->{type} eq "m.presence" or die "Wrong event type";
-                  $event->{content}->{user_id} eq $user->user_id or die "Wrong user";
-
-                  Future->done( $body->{end} );
-               }),
-
                do_request_json_for( $user_not_in_room,
                   method  => "PUT",
                   uri     => "/api/v1/presence/:user_id/status",
@@ -157,37 +145,35 @@ test "Anonymous user can call /events on world_readable room",
                   uri     => "/api/v1/presence/:user_id/status",
                   content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
                ),
+
+               await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user ] )->then( sub {
+                  my ( $event ) = @_;
+
+                  $event->{type} eq "m.presence" or die "Wrong event type";
+                  $event->{content}->{user_id} eq $user->user_id or die "Wrong user";
+
+                  Future->done( 1 );
+               }),
             ),
          })->then( sub {
             my ( $stream_token ) = @_;
 
             Future->needs_all(
-               do_request_json_for( $anonymous_user,
-                  method => "GET",
-                  uri    => "/api/v1/events",
-                  params => {
-                     room_id => $room_id,
-                     from    => $stream_token,
-                  },
-               )->then( sub {
-                  my ( $body ) = @_;
-
-                  my $chunk = ignore_presence_for( [ $user, $anonymous_user ], @{ $body->{chunk} } );
-                  log_if_fail "chunk", $chunk;
-                  @{ $chunk } == 1 or die "Want exactly one event";
-                  my $event = $chunk->[0];
-                  $event->{type} eq "m.receipt" or die "Wrong event type";
-                  defined $event->{content}->{$sent_event_id}->{"m.read"}->{$user->user_id}
-                     or die "Wrong receipt";
-
-                  Future->done( $body->{end} );
-               }),
-
                do_request_json_for( $user,
                   method  => "POST",
                   uri     => "/v2_alpha/rooms/$room_id/receipt/m.read/$sent_event_id",
                   content => {},
                ),
+
+               await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user, $user ] )->then( sub {
+                  my ( $event ) = @_;
+
+                  $event->{type} eq "m.receipt" or die "Wrong event type";
+                  defined $event->{content}->{$sent_event_id}->{"m.read"}->{$user->user_id}
+                     or die "Wrong receipt";
+
+                  Future->done( 1 );
+               }),
             );
          })->then( sub {
             my ( $stream_token ) = @_;
@@ -202,20 +188,9 @@ test "Anonymous user can call /events on world_readable room",
                   },
                ),
 
-               do_request_json_for( $anonymous_user,
-                  method => "GET",
-                  uri    => "/api/v1/events",
-                  params => {
-                     room_id => $room_id,
-                     from    => $stream_token,
-                  },
-               )->then( sub {
-                  my ( $body ) = @_;
+               await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user, $user ] )->then( sub {
+                  my ( $event ) = @_;
 
-                  my $chunk = ignore_presence_for( [ $user, $anonymous_user ], @{ $body->{chunk} } );
-                  log_if_fail "chunk", $chunk;
-                  @{ $chunk } == 1 or die "Want exactly one event";
-                  my $event = $chunk->[0];
                   $event->{type} eq "m.typing" or die "Wrong event type";
                   $event->{room_id} eq $room_id or die "Wrong room ID";
                   $event->{content}->{user_ids}->[0] eq $user->user_id or die "Wrong receipt";
@@ -330,10 +305,9 @@ test "Anonymous user cannot room initalSync for non-world_readable rooms",
 
          matrix_send_room_text_message( $user, $room_id, body => "private" )
       })->then( sub {
-         do_request_json_for( $anonymous_user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync",
-      )})->main::expect_http_403;
+         matrix_initialsync_room( $anonymous_user, $room_id )
+            ->main::expect_http_403;
+      });
    };
 
 
@@ -355,16 +329,14 @@ test "Anonymous user can room initialSync for world_readable rooms",
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "public" );
       })->then( sub {
-         do_request_json_for( $anonymous_user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync",
-      )})->then( sub {
+         matrix_initialsync_room( $anonymous_user, $room_id );
+      })->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( room_id state messages presence ));
-         require_json_keys( $body->{messages}, qw( chunk start end ));
-         require_json_list( $body->{messages}{chunk} );
-         require_json_list( $body->{state} );
+         assert_json_keys( $body, qw( room_id state messages presence ));
+         assert_json_keys( $body->{messages}, qw( chunk start end ));
+         assert_json_list( $body->{messages}{chunk} );
+         assert_json_list( $body->{state} );
 
          log_if_fail "room initialSync body", $body;
 
@@ -416,15 +388,15 @@ test "Anonymous users can send messages to guest_access rooms if joined",
             my ( $body ) = @_;
             log_if_fail "Body:", $body;
 
-            require_json_keys( $body, qw( start end chunk ));
-            require_json_list( my $chunk = $body->{chunk} );
+            assert_json_keys( $body, qw( start end chunk ));
+            assert_json_list( my $chunk = $body->{chunk} );
 
             scalar @$chunk == 1 or
                die "Expected one message";
 
             my ( $event ) = @$chunk;
 
-            require_json_keys( $event, qw( type room_id user_id content ));
+            assert_json_keys( $event, qw( type room_id user_id content ));
 
             $event->{user_id} eq $anonymous_user->user_id or
                die "expected user_id to be ".$anonymous_user->user_id;
@@ -445,8 +417,9 @@ test "Anonymous users cannot send messages to guest_access rooms if not joined",
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )
       ->then( sub {
-         matrix_send_room_text_message( $anonymous_user, $room_id, body => "sup" );
-      })->main::expect_http_403;
+         matrix_send_room_text_message( $anonymous_user, $room_id, body => "sup" )
+            ->main::expect_http_403;
+      });
    };
 
 test "Anonymous users can get individual state for world_readable rooms after leaving",
@@ -487,7 +460,7 @@ sub check_events
 
       log_if_fail "Body", $body;
 
-      require_json_keys( $body, qw( chunk ) );
+      assert_json_keys( $body, qw( chunk ) );
       @{ $body->{chunk} } >= 1 or die "Want at least one event";
       @{ $body->{chunk} } < 3 or die "Want at most two events";
 
@@ -607,7 +580,7 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
             $membership eq "join" or die("want membership to be join but is $membership");
 
             Future->needs_all(
-               await_event_for( $local_user, sub {
+               await_event_for( $local_user, filter => sub {
                   my ( $event ) = @_;
                   return $event->{type} eq "m.room.guest_access" && $event->{content}->{guest_access} eq "forbidden";
                }),
@@ -689,8 +662,8 @@ test "GET /publicRooms lists rooms",
 
          log_if_fail "publicRooms", $body;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( $body->{chunk} );
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
 
          my %seen = (
             listingtest0 => 0,
@@ -702,8 +675,8 @@ test "GET /publicRooms lists rooms",
 
          foreach my $room ( @{ $body->{chunk} } ) {
             my $aliases = $room->{aliases};
-            require_json_boolean( my $world_readable = $room->{world_readable} );
-            require_json_boolean( my $guest_can_join = $room->{guest_can_join} );
+            assert_json_boolean( my $world_readable = $room->{world_readable} );
+            assert_json_boolean( my $guest_can_join = $room->{guest_can_join} );
 
             foreach my $alias ( @{$aliases} ) {
                if( $alias =~ m/^\Q#listingtest0:/ ) {

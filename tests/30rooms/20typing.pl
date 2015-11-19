@@ -49,17 +49,17 @@ test "Typing notification sent to local room members",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
 
                return unless $event->{type} eq "m.typing";
 
-               require_json_keys( $event, qw( type room_id content ));
-               require_json_keys( my $content = $event->{content}, qw( user_ids ));
+               assert_json_keys( $event, qw( type room_id content ));
+               assert_json_keys( my $content = $event->{content}, qw( user_ids ));
 
                return unless $event->{room_id} eq $room_id;
 
-               require_json_list( my $users = $content->{user_ids} );
+               assert_json_list( my $users = $content->{user_ids} );
 
                scalar @$users == 1 or
                   die "Expected 1 member to be typing";
@@ -80,17 +80,17 @@ test "Typing notifications also sent to remote room members",
    do => sub {
       my ( $typinguser, $remote_user, $room_id ) = @_;
 
-      await_event_for( $remote_user, sub {
+      await_event_for( $remote_user, filter => sub {
          my ( $event ) = @_;
 
          return unless $event->{type} eq "m.typing";
 
-         require_json_keys( $event, qw( type room_id content ));
-         require_json_keys( my $content = $event->{content}, qw( user_ids ));
+         assert_json_keys( $event, qw( type room_id content ));
+         assert_json_keys( my $content = $event->{content}, qw( user_ids ));
 
          return unless $event->{room_id} eq $room_id;
 
-         require_json_list( my $users = $content->{user_ids} );
+         assert_json_list( my $users = $content->{user_ids} );
 
          scalar @$users == 1 or
             die "Expected 1 member to be typing";
@@ -113,17 +113,17 @@ test "Typing can be explicitly stopped",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
 
                return unless $event->{type} eq "m.typing";
 
-               require_json_keys( $event, qw( type room_id content ));
-               require_json_keys( my $content = $event->{content}, qw( user_ids ));
+               assert_json_keys( $event, qw( type room_id content ));
+               assert_json_keys( my $content = $event->{content}, qw( user_ids ));
 
                return unless $event->{room_id} eq $room_id;
 
-               require_json_list( my $users = $content->{user_ids} );
+               assert_json_list( my $users = $content->{user_ids} );
 
                scalar @$users and
                   die "Expected 0 members to be typing";
@@ -153,7 +153,7 @@ multi_test "Typing notifications timeout and can be resent",
          pass( "Sent typing notification" );
 
          # start typing
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
             return unless $event->{room_id} eq $room_id;
@@ -165,7 +165,7 @@ multi_test "Typing notifications timeout and can be resent",
          });
       })->then( sub {
          # stop typing
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
             return unless $event->{room_id} eq $room_id;
