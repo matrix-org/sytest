@@ -49,7 +49,7 @@ test "Typing notification sent to local room members",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
 
                return unless $event->{type} eq "m.typing";
@@ -80,7 +80,7 @@ test "Typing notifications also sent to remote room members",
    do => sub {
       my ( $typinguser, $remote_user, $room_id ) = @_;
 
-      await_event_for( $remote_user, sub {
+      await_event_for( $remote_user, filter => sub {
          my ( $event ) = @_;
 
          return unless $event->{type} eq "m.typing";
@@ -113,7 +113,7 @@ test "Typing can be explicitly stopped",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
 
                return unless $event->{type} eq "m.typing";
@@ -153,7 +153,7 @@ multi_test "Typing notifications timeout and can be resent",
          pass( "Sent typing notification" );
 
          # start typing
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
             return unless $event->{room_id} eq $room_id;
@@ -165,7 +165,7 @@ multi_test "Typing notifications timeout and can be resent",
          });
       })->then( sub {
          # stop typing
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.typing";
             return unless $event->{room_id} eq $room_id;

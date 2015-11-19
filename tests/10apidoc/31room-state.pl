@@ -76,10 +76,7 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( room_id membership state messages presence ));
@@ -171,10 +168,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( state ));
@@ -239,10 +233,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id )->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( state ));
@@ -354,7 +345,9 @@ test "POST /createRoom with creation content",
       });
    };
 
-push our @EXPORT, qw( matrix_get_room_state matrix_put_room_state );
+push our @EXPORT, qw(
+   matrix_get_room_state matrix_put_room_state matrix_initialsync_room
+);
 
 sub matrix_get_room_state
 {
@@ -392,3 +385,16 @@ sub matrix_put_room_state
       content => $opts{content},
    );
 }
+
+
+sub matrix_initialsync_room
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/api/v1/rooms/$room_id/initialSync",
+      params => \%params,
+   );
+}
+

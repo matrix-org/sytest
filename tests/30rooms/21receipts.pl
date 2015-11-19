@@ -142,7 +142,7 @@ test "Read receipts are sent as events",
 
          matrix_advance_room_receipt( $user, $room_id, "m.read" => $event_id )
       })->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
 
             $event->{type} eq "m.receipt" or return;

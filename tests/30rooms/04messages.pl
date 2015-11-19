@@ -26,7 +26,7 @@ test "Local room members see posted message events",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.room.message";
 
@@ -90,7 +90,7 @@ test "Local non-members don't see posted message events",
       my ( $nonmember, $room_id ) = @_;
 
       Future->wait_any(
-         await_event_for( $nonmember, sub {
+         await_event_for( $nonmember, filter => sub {
             my ( $event ) = @_;
             log_if_fail "Received event:", $event;
 
@@ -151,7 +151,7 @@ test "Remote room members also see posted message events",
    do => sub {
       my ( $senduser, $remote_user, $room_id ) = @_;
 
-      await_event_for( $remote_user, sub {
+      await_event_for( $remote_user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.message";
 
