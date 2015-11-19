@@ -22,7 +22,7 @@ test "Room creation reports m.room.create to myself",
    do => sub {
       my ( $user, $room_id ) = @_;
 
-      await_event_for( $user, sub {
+      await_event_for( $user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.create";
          require_json_keys( $event, qw( room_id user_id content ));
@@ -45,7 +45,7 @@ test "Room creation reports m.room.member to myself",
    do => sub {
       my ( $user, $room_id ) = @_;
 
-      await_event_for( $user, sub {
+      await_event_for( $user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
          require_json_keys( $event, qw( room_id user_id state_key content ));
@@ -74,7 +74,7 @@ test "Setting room topic reports m.room.topic to myself",
          type    => "m.room.topic",
          content => { topic => $topic },
       )->then( sub {
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.topic";
             require_json_keys( $event, qw( room_id user_id content ));
