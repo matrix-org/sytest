@@ -24,6 +24,8 @@ our @EXPORT_OK = qw(
    assert_base64_unpadded
 );
 
+use Data::Dump 'pp';
+
 our %EXPORT_TAGS = (
    all => \@EXPORT_OK,
 );
@@ -54,9 +56,9 @@ Fails the test of C<$got> is not stringily equal to C<$want>.
 sub assert_eq
 {
    my ( $got, $want, $name ) = @_;
-   # TODO: stringify got/want to something sensible
-   $got eq $want or
-      croak "Got $got, expected $want for $name";
+
+   defined $got && defined $want && $got eq $want or
+      croak "Got ${\ pp $got }, expected ${\ pp $want } for $name";
 }
 
 =head2 assert_json_object
