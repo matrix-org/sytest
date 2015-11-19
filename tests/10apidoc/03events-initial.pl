@@ -83,16 +83,15 @@ sub GET_new_events_for
 {
    my ( $user, %params ) = @_;
 
-   my %params_to_pass = ( %params,
-      from => $user->eventstream_token,
-      timeout => 500,
-   );
-
    return $user->pending_get_events //=
       do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
-         params => \%params_to_pass,
+         params => {
+            %params,
+            from    => $user->eventstream_token,
+            timeout => 500,
+         },
       )->on_ready( sub {
          undef $user->pending_get_events;
       })->then( sub {
@@ -135,7 +134,7 @@ sub await_event_for
 {
    my ( $user, %params ) = @_;
 
-   my $filter = $params{filter} || sub { 1 };
+   my $filter = delete $params{filter} || sub { 1 };
    my $room_id = $params{room_id};  # May be undefined, in which case we listen to all joined rooms.
 
    my $failmsg = SyTest::CarpByFile::shortmess( "Timed out waiting for an event" );
@@ -144,12 +143,9 @@ sub await_event_for
       # Just replay saved ones the first time around, if there are any
       my $replay_saved = !shift && scalar @{ $user->saved_events };
 
-      my %params_to_pass = %params;
-      delete $params_to_pass{filter};
-
       ( $replay_saved
          ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
-         : GET_new_events_for( $user, %params_to_pass )
+         : GET_new_events_for( $user, %params )
       )->then( sub {
          my @events = @_;
 
