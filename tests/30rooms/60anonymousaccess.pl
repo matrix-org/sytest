@@ -17,7 +17,8 @@ test "Anonymous user cannot view non-world-readable rooms",
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
          matrix_get_room_messages( $anonymous_user, $room_id, limit => "1" )
-      })->main::expect_http_403;
+            ->main::expect_http_403;
+      });
    };
 
 test "Anonymous user can view world-readable rooms",
@@ -55,7 +56,8 @@ test "Anonymous user cannot call /events on non-world_readable room",
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
          matrix_get_room_messages( $anonymous_user, $room_id, limit => "2" )
-      })->main::expect_http_403;
+            ->main::expect_http_403;
+      });
    };
 
 sub await_event_not_presence_for
@@ -284,8 +286,9 @@ test "Anonymous user cannot room initalSync for non-world_readable rooms",
 
          matrix_send_room_text_message( $user, $room_id, body => "private" )
       })->then( sub {
-         matrix_initialsync_room( $anonymous_user, $room_id );
-      })->main::expect_http_403;
+         matrix_initialsync_room( $anonymous_user, $room_id )
+            ->main::expect_http_403;
+      });
    };
 
 
@@ -390,8 +393,9 @@ test "Anonymous users cannot send messages to guest_access rooms if not joined",
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )
       ->then( sub {
-         matrix_send_room_text_message( $anonymous_user, $room_id, body => "sup" );
-      })->main::expect_http_403;
+         matrix_send_room_text_message( $anonymous_user, $room_id, body => "sup" )
+            ->main::expect_http_403;
+      });
    };
 
 test "Anonymous users can get individual state for world_readable rooms after leaving",
