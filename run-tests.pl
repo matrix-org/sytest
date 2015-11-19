@@ -550,7 +550,7 @@ sub test
    sub pass
    {
       my ( $testname ) = @_;
-      ok( 1, $testname );
+      $RUNNING_TEST->ok( 1, $testname );
    }
 
    # A convenience for the otherwise-common pattern of
@@ -559,25 +559,25 @@ sub test
    {
       my $self = shift;
       my ( $message ) = @_;
-      $self->on_done( sub { ok( 1, $message ) } );
+      $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
    }
 
    sub ok
    {
-      die "Cannot call ok() outside of a multi_test\n" unless $RUNNING_TEST;
-
       my ( $ok, $stepname ) = @_;
-      $RUNNING_TEST->ok( $ok, $stepname );
+      if( !$ok ) {
+         $output->diag( "Failed $stepname" );
+      }
    }
 
    sub is_eq
    {
-      die "Cannot call is_eq() outside of a multi_test\n" unless $RUNNING_TEST;
-
       my ( $got, $want, $stepname ) = @_;
-      $RUNNING_TEST->ok( my $ok = $got eq $want, $stepname );
+
+      my $ok = $got eq $want;
       if( !$ok ) {
-         $output->diag( "Got $got, expected $want" );
+         # TODO: stringify got/want to something sensible
+         $output->diag( "Got $got, expected $want for $stepname" );
       }
    }
 
