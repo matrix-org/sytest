@@ -60,10 +60,8 @@ test "New room members see existing users' presence in room initialSync",
    check => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
 
-      do_request_json_for( $local_user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room( $local_user, $room_id )
+      ->then( sub {
          my ( $body ) = @_;
 
          my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
@@ -192,10 +190,8 @@ test "New room members see first user's profile information in per-room initialS
    check => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
 
-      do_request_json_for( $local_user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room ( $local_user, $room_id )
+      ->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( state ));

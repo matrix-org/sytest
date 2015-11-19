@@ -178,10 +178,8 @@ multi_test "Room initialSync",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id )
+      ->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( state messages presence ));
@@ -228,11 +226,8 @@ test "Room initialSync with limit=0 gives no messages",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-         params => { limit => 0 },
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id, limit => 0 )
+      ->then( sub {
          my ( $body ) = @_;
 
          my $chunk = $body->{messages}{chunk};

@@ -305,10 +305,8 @@ test "Anonymous user cannot room initalSync for non-world_readable rooms",
 
          matrix_send_room_text_message( $user, $room_id, body => "private" )
       })->then( sub {
-         do_request_json_for( $anonymous_user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync",
-      )})->main::expect_http_403;
+         matrix_initialsync_room( $anonymous_user, $room_id );
+      })->main::expect_http_403;
    };
 
 
@@ -330,10 +328,8 @@ test "Anonymous user can room initialSync for world_readable rooms",
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "public" );
       })->then( sub {
-         do_request_json_for( $anonymous_user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync",
-      )})->then( sub {
+         matrix_initialsync_room( $anonymous_user, $room_id );
+      })->then( sub {
          my ( $body ) = @_;
 
          require_json_keys( $body, qw( room_id state messages presence ));

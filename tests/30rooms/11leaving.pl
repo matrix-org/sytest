@@ -102,11 +102,8 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     check => sub {
         my ( $user, $room_id ) = @_;
 
-        do_request_json_for( $user,
-            method => "GET",
-            uri => "/api/v1/rooms/$room_id/initialSync",
-            params => { limit => 2 },
-        )->then( sub {
+        matrix_initialsync_room( $user, $room_id, limit => 2 )
+        ->then( sub {
             my ( $room ) = @_;
 
             require_json_keys( $room, qw( state messages membership ) );

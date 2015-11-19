@@ -299,10 +299,7 @@ test "Tags appear in the v1 room initial sync",
       )->then( sub {
          ( $user, $room_id ) = @_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync"
-        );
+         matrix_initialsync_room( $user, $room_id );
       })->then( sub {
          my ( $body ) = @_;
 
