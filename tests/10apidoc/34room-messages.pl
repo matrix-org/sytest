@@ -14,8 +14,8 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( event_id ));
-         require_json_nonempty_string( $body->{event_id} );
+         assert_json_keys( $body, qw( event_id ));
+         assert_json_nonempty_string( $body->{event_id} );
 
          push our @EXPORT, qw(
             matrix_send_room_message matrix_send_room_text_message
@@ -96,8 +96,8 @@ test "GET /rooms/:room_id/messages returns a message",
       })->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( $body->{chunk} );
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
 
          scalar @{ $body->{chunk} } > 0 or
             die "Expected some messages but got none at all\n";

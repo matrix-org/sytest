@@ -20,7 +20,7 @@ sub inviteonly_room_fixture
             matrix_initialsync_room( $creator, $room_id )->then( sub {
                my ( $body ) = @_;
 
-               require_json_keys( $body, qw( state ));
+               assert_json_keys( $body, qw( state ));
 
                my ( $join_rules_event ) = first { $_->{type} eq "m.room.join_rules" } @{ $body->{state} };
                $join_rules_event or
@@ -57,10 +57,10 @@ multi_test "Can invite users to invite-only rooms",
          await_event_for( $invitee, filter => sub {
             my ( $event ) = @_;
 
-            require_json_keys( $event, qw( type ));
+            assert_json_keys( $event, qw( type ));
             return 0 unless $event->{type} eq "m.room.member";
 
-            require_json_keys( $event, qw( room_id state_key ));
+            assert_json_keys( $event, qw( room_id state_key ));
             return 0 unless $event->{room_id} eq $room_id;
             return 0 unless $event->{state_key} eq $invitee->user_id;
 
@@ -69,7 +69,7 @@ multi_test "Can invite users to invite-only rooms",
       })->then( sub {
          my ( $event ) = @_;
 
-         require_json_keys( my $content = $event->{content}, qw( membership ));
+         assert_json_keys( my $content = $event->{content}, qw( membership ));
 
          $content->{membership} eq "invite" or
             die "Expected membership to be 'invite'";
@@ -176,7 +176,7 @@ test "Invited user can see room metadata",
             return Future->done();
          }
 
-         require_json_list( $event->{invite_room_state} );
+         assert_json_list( $event->{invite_room_state} );
 
          my %state_by_type = map {
             $_->{type} => $_

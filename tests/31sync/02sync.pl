@@ -20,9 +20,9 @@ sub matrix_sync
    )->on_done( sub {
       my ( $body ) = @_;
 
-      require_json_keys( $body, qw( rooms presence next_batch ) );
-      require_json_keys( $body->{presence}, qw( events ));
-      require_json_keys( my $rooms = $body->{rooms}, qw( joined invited archived ) );
+      assert_json_keys( $body, qw( rooms presence next_batch ) );
+      assert_json_keys( $body->{presence}, qw( events ));
+      assert_json_keys( my $rooms = $body->{rooms}, qw( joined invited archived ) );
    });
 }
 

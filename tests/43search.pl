@@ -28,17 +28,17 @@ test "Can search for an event by body",
 
          log_if_fail "Search Result Body:", $body;
 
-         require_json_keys( $body, qw( search_categories ) );
-         require_json_keys( $body->{search_categories}, qw ( room_events ) );
+         assert_json_keys( $body, qw( search_categories ) );
+         assert_json_keys( $body->{search_categories}, qw ( room_events ) );
 
          my $room_events = $body->{search_categories}{room_events};
-         require_json_keys( $room_events, qw( count results ) );
+         assert_json_keys( $room_events, qw( count results ) );
 
          $room_events->{count} == 1 or die "Expected one search result";
 
          my $result = $room_events->{results}{ $event_id };
-         require_json_keys( $result, qw( rank result ) );
-         require_json_keys( $result->{result}, qw(
+         assert_json_keys( $result, qw( rank result ) );
+         assert_json_keys( $result->{result}, qw(
             event_id room_id user_id content type
          ));
 

@@ -30,8 +30,8 @@ test "Local room members see posted message events",
                my ( $event ) = @_;
                return unless $event->{type} eq "m.room.message";
 
-               require_json_keys( $event, qw( type content room_id user_id ));
-               require_json_keys( my $content = $event->{content}, qw( msgtype body ));
+               assert_json_keys( $event, qw( type content room_id user_id ));
+               assert_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
                return unless $event->{room_id} eq $room_id;
 
@@ -96,7 +96,7 @@ test "Local non-members don't see posted message events",
 
             return unless $event->{type} eq "m.room.message";
 
-            require_json_keys( $event, qw( type content room_id user_id ));
+            assert_json_keys( $event, qw( type content room_id user_id ));
             return unless $event->{room_id} eq $room_id;
 
             die "Nonmember received event about a room they're not a member of";
@@ -121,15 +121,15 @@ test "Local room members can get room messages",
             my ( $body ) = @_;
             log_if_fail "Body:", $body;
 
-            require_json_keys( $body, qw( start end chunk ));
-            require_json_list( my $chunk = $body->{chunk} );
+            assert_json_keys( $body, qw( start end chunk ));
+            assert_json_list( my $chunk = $body->{chunk} );
 
             scalar @$chunk == 1 or
                die "Expected one message";
 
             my ( $event ) = @$chunk;
 
-            require_json_keys( $event, qw( type room_id user_id content ));
+            assert_json_keys( $event, qw( type room_id user_id content ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
@@ -150,8 +150,8 @@ test "Remote room members also see posted message events",
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.message";
 
-         require_json_keys( $event, qw( type content room_id user_id ));
-         require_json_keys( my $content = $event->{content}, qw( msgtype body ));
+         assert_json_keys( $event, qw( type content room_id user_id ));
+         assert_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
          return unless $event->{room_id} eq $room_id;
 
@@ -176,15 +176,15 @@ test "Remote room members can get room messages",
       matrix_get_room_messages( $remote_user, $room_id, limit => 1 )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( my $chunk = $body->{chunk} );
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( my $chunk = $body->{chunk} );
 
          scalar @$chunk == 1 or
             die "Expected one message";
 
          my ( $event ) = @$chunk;
 
-         require_json_keys( $event, qw( type room_id user_id content ));
+         assert_json_keys( $event, qw( type room_id user_id content ));
 
          $event->{room_id} eq $room_id or
             die "Expected room_id to be $room_id";
