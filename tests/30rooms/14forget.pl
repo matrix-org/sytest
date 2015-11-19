@@ -258,7 +258,7 @@ test "Can re-join room if re-invited - history_visibility joined",
          my ( $body ) = @_;
 
          none { $_->{type} eq "m.room.message" } @{ $body->{chunk} }
-            or "Should not have seen any m.room.message events";
+            or die "Should not have seen any m.room.message events";
 
          matrix_send_room_text_message( $creator, $room_id, body => "after rejoin" );
       })->then( sub {
