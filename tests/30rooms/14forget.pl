@@ -65,8 +65,6 @@ test "Forgetting room leaves room",
          log_if_fail "Chunk", $body->{chunk};
          $body->{chunk}[0]{content}{body} eq "sup" or die "Wrong message";
 
-         Future->done(1);
-      })->then( sub {
          matrix_forget_room( $user, $room_id )
       })->then( sub {
          matrix_get_room_state( $creator, $room_id,
