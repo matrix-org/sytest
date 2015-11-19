@@ -65,8 +65,8 @@ sub assert_eq
 
    assert_json_object( $obj )
 
-Fails the test if C<$obj> does not represent a JSON object (i.e. is a plain
-HASH reference).
+Fails the test if C<$obj> does not represent a JSON object (i.e. is anything
+other than a plain HASH reference).
 
 =cut
 
@@ -98,8 +98,8 @@ sub assert_json_keys
 
    assert_json_list( $list )
 
-Fails the test if C<$list> does not represent a JSON list (i.e. is a plain
-ARRAY reference).
+Fails the test if C<$list> does not represent a JSON list (i.e. is anything
+other than a plain ARRAY reference).
 
 =cut
 
@@ -128,8 +128,8 @@ sub assert_json_nonempty_list
 
    assert_json_number( $num )
 
-Fails the test if C<$num> does not represent a JSON number (i.e. is an instance
-of C<JSON::number>).
+Fails the test if C<$num> does not represent a JSON number (i.e. is anything
+other than an instance of C<JSON::number>).
 
 =cut
 
@@ -144,8 +144,8 @@ sub assert_json_number
 
    assert_json_string( $str )
 
-Fails the test if C<$str> does not represent a JSON string (i.e. is a plain
-non-referential scalar).
+Fails the test if C<$str> does not represent a JSON string (i.e. is some kind
+of referential scalar).
 
 =cut
 
@@ -175,8 +175,9 @@ use constant JSON_BOOLEAN_CLASS => ref( JSON::true );
 
    assert_json_boolean( $bool )
 
-Fails the test if C<$bool> does not represent a JSON boolean (i.e. is an
-instance of the class the JSON parser uses to represent booleans).
+Fails the test if C<$bool> does not represent a JSON boolean (i.e. is anything
+other than an instance of the class the JSON parser uses to represent
+booleans).
 
 =cut
 
