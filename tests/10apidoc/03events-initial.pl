@@ -186,6 +186,6 @@ sub matrix_sync
 
       require_json_keys( $body, qw( rooms presence next_batch ) );
       require_json_keys( $body->{presence}, qw( events ));
-      require_json_keys( my $rooms = $body->{rooms}, qw( joined invited archived ) );
+      require_json_keys( $body->{rooms}, qw( joined invited archived ) );
    });
 }
