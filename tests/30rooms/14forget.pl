@@ -1,3 +1,5 @@
+use List::Util qw( any none );
+
 test "Forgotten room messages cannot be paginated",
    requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
 
@@ -22,8 +24,6 @@ test "Forgotten room messages cannot be paginated",
          log_if_fail "Chunk", $body->{chunk};
          $body->{chunk}[0]{content}{body} eq "sup" or die "Wrong message";
 
-         Future->done(1);
-      })->then( sub {
          matrix_leave_room( $user, $room_id )
       })->then( sub {
          matrix_get_room_state( $creator, $room_id,
@@ -186,13 +186,8 @@ test "Can re-join room if re-invited - history_visibility = shared",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $seen = 0;
-
-         foreach my $event (@{ $body->{chunk} }) {
-            $seen = 1 if $event->{type} eq "m.room.message" && $event->{content}->{body} eq "before leave";
-         }
-
-         die "Should have seen before leave message" unless $seen;
+         any { $_->{type} eq "m.room.message" && $_->{content}->{body} eq "before leave" } @{ $body->{chunk} }
+            or die "Should have seen before leave message";
 
          matrix_send_room_text_message( $creator, $room_id, body => "after rejoin" );
       })->then( sub {
@@ -262,9 +257,8 @@ test "Can re-join room if re-invited - history_visibility joined",
       })->then( sub {
          my ( $body ) = @_;
 
-         foreach my $event (@{ $body->{chunk} }) {
-            die "Should not have seen any m.room.message events" if $event->{type} eq "m.room.message";
-         }
+         none { $_->{type} eq "m.room.message" } @{ $body->{chunk} }
+            or "Should not have seen any m.room.message events";
 
          matrix_send_room_text_message( $creator, $room_id, body => "after rejoin" );
       })->then( sub {
