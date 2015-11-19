@@ -9,6 +9,9 @@ use JSON;
 
 use Exporter 'import';
 our @EXPORT_OK = qw(
+   assert_ok
+   assert_eq
+
    assert_json_object
    assert_json_keys
    assert_json_list
@@ -24,6 +27,21 @@ our @EXPORT_OK = qw(
 our %EXPORT_TAGS = (
    all => \@EXPORT_OK,
 );
+
+sub assert_ok
+{
+   my ( $ok, $name ) = @_;
+   $ok or
+      croak "Failed $name";
+}
+
+sub assert_eq
+{
+   my ( $got, $want, $name ) = @_;
+   # TODO: stringify got/want to something sensible
+   $got eq $want or
+      croak "Got $got, expected $want for $name";
+}
 
 sub assert_json_object
 {

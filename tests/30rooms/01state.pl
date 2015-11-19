@@ -92,7 +92,7 @@ test "Setting room topic reports m.room.topic to myself",
       });
    };
 
-multi_test "Global initialSync",
+test "Global initialSync",
    requires => [ $user_fixture, $room_fixture,
                 qw( can_initial_sync can_set_room_topic )],
 
@@ -113,10 +113,10 @@ multi_test "Global initialSync",
             last;
          }
 
-         ok( $room, "my membership in the room is reported" );
+         assert_ok( $room, "my membership in the room is reported" );
 
-         is_eq( $room->{membership}, "join", "room membership is 'join'" );
-         is_eq( $room->{visibility}, "public", "room visibility is 'public'" );
+         assert_eq( $room->{membership}, "join", "room membership is 'join'" );
+         assert_eq( $room->{visibility}, "public", "room visibility is 'public'" );
 
          my %state_by_type = partition_by { $_->{type} } @{ $room->{state} };
 
@@ -124,23 +124,23 @@ multi_test "Global initialSync",
             die "Expected m.room.topic state";
          assert_json_keys( my $topic_state = $state_by_type{"m.room.topic"}[0], qw( content ));
          assert_json_keys( $topic_state->{content}, qw( topic ));
-         is_eq( $topic_state->{content}{topic}, $topic, "m.room.topic content topic" );
+         assert_eq( $topic_state->{content}{topic}, $topic, "m.room.topic content topic" );
 
          $state_by_type{"m.room.power_levels"} or
             die "Expected m.room.power_levels";
          assert_json_keys( my $power_level_state = $state_by_type{"m.room.power_levels"}[0], qw( content ));
          assert_json_keys( my $levels = $power_level_state->{content}, qw( users ));
          my $user_levels = $levels->{users};
-         ok( exists $user_levels->{ $user->user_id },
+         assert_ok( exists $user_levels->{ $user->user_id },
             "user level exists for room creator" );
-         ok( $user_levels->{ $user->user_id } > 0,
+         assert_ok( $user_levels->{ $user->user_id } > 0,
             "room creator has nonzero power level" );
 
          my $messages = $room->{messages};
          assert_json_keys( $messages, qw( start end chunk ));
          assert_json_list( my $chunk = $messages->{chunk} );
 
-         ok( scalar @$chunk, "room messages chunk reports some messages" );
+         assert_ok( scalar @$chunk, "room messages chunk reports some messages" );
 
          Future->done(1);
       });
@@ -171,7 +171,7 @@ test "Global initialSync with limit=0 gives no messages",
       });
    };
 
-multi_test "Room initialSync",
+test "Room initialSync",
    requires => [ $user_fixture, $room_fixture,
                 qw( can_room_initial_sync )],
 
@@ -186,34 +186,34 @@ multi_test "Room initialSync",
 
          my %state_by_type = partition_by { $_->{type} } @{ $body->{state} };
 
-         ok( $state_by_type{$_}, "room has state $_" ) for
+         assert_ok( $state_by_type{$_}, "room has state $_" ) for
             qw( m.room.create m.room.join_rules m.room.member );
 
-         is_eq( $state_by_type{"m.room.join_rules"}[0]{content}{join_rule}, "public",
+         assert_eq( $state_by_type{"m.room.join_rules"}[0]{content}{join_rule}, "public",
             "join rule is public" );
 
-         is_eq( $state_by_type{"m.room.topic"}[0]{content}{topic}, $topic,
+         assert_eq( $state_by_type{"m.room.topic"}[0]{content}{topic}, $topic,
             "m.room.topic content topic" );
 
          my %members = map { $_->{user_id} => $_ } @{ $state_by_type{"m.room.member"} };
 
-         ok( $members{ $user->user_id }, "room members has my own membership" );
-         is_eq( $members{ $user->user_id }->{content}{membership}, "join",
+         assert_ok( $members{ $user->user_id }, "room members has my own membership" );
+         assert_eq( $members{ $user->user_id }->{content}{membership}, "join",
             "my own room membership is 'join'" );
 
          my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
-         ok( $presence{ $user->user_id }, "found my own presence" );
+         assert_ok( $presence{ $user->user_id }, "found my own presence" );
 
          assert_json_keys( $presence{ $user->user_id }, qw( type content ));
          assert_json_keys( my $content = $presence{ $user->user_id }{content},
             qw( presence status_msg last_active_ago ));
 
-         is_eq( $content->{presence}, "online", "my presence is 'online'" );
+         assert_eq( $content->{presence}, "online", "my presence is 'online'" );
 
          my $chunk = $body->{messages}{chunk};
 
-         ok( scalar @$chunk, "room messages chunk reports some messages" );
+         assert_ok( scalar @$chunk, "room messages chunk reports some messages" );
 
          Future->done(1);
       });

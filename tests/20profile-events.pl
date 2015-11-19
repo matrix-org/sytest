@@ -61,7 +61,7 @@ test "Avatar URL change reports an event to myself",
       });
    };
 
-multi_test "Global /initialSync reports my own profile",
+test "Global /initialSync reports my own profile",
    requires => [ $user_fixture,
                  qw( can_set_displayname can_set_avatar_url can_initial_sync )],
 
@@ -84,8 +84,8 @@ multi_test "Global /initialSync reports my own profile",
          assert_json_keys( my $content = $presence->{content},
             qw( user_id displayname avatar_url ));
 
-         is_eq( $content->{displayname}, $displayname, 'displayname in presence event is correct' );
-         is_eq( $content->{avatar_url}, $avatar_url, 'avatar_url in presence event is correct' );
+         assert_eq( $content->{displayname}, $displayname, 'displayname in presence event is correct' );
+         assert_eq( $content->{avatar_url}, $avatar_url, 'avatar_url in presence event is correct' );
 
          Future->done(1);
       });

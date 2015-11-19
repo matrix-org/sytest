@@ -389,21 +389,6 @@ sub require_stub
    });
 }
 
-sub ok
-{
-   my ( $ok, $name ) = @_;
-   $ok or
-      croak "Failed $name";
-}
-
-sub is_eq
-{
-   my ( $got, $want, $name ) = @_;
-   # TODO: stringify got/want to something sensible
-   $got eq $want or
-      croak "Got $got, expected $want for $name";
-}
-
 sub _run_test
 {
    my ( $t, %params ) = @_;
