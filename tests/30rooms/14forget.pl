@@ -107,6 +107,32 @@ test "Forgetting room leaves room",
       })
    };
 
+test "Forgetting room does not show up in v2 /sync",
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+
+   do => sub {
+      my ( $creator, $room_id, $user ) = @_;
+
+      matrix_join_room( $user, $room_id )
+      ->then( sub {
+         matrix_send_room_text_message( $creator, $room_id, body => "sup" )
+      })->then( sub {
+         matrix_forget_room( $user, $room_id )
+      })->then( sub {
+         matrix_sync( $user )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Sync response", $body;
+
+         die "Did not expect room in archived" if $body->{rooms}->{archived}->{$room_id};
+         die "Did not expect room in joined" if $body->{rooms}->{joined}->{$room_id};
+         die "Did not expect room in invited" if $body->{rooms}->{invited}->{$room_id};
+
+         Future->done( 1 );
+      });
+   };
+
 test "Can re-join room if re-invited - history_visibility = shared",
    requires => [ local_user_fixture(), local_user_fixture() ],
 

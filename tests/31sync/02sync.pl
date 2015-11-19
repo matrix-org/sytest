@@ -1,32 +1,3 @@
-push our @EXPORT, qw( matrix_sync );
-
-=head2 matrix_sync
-
-   my ( $sync_body ) = matrix_sync( $user, %query_params )->get;
-
-Make a v2_alpha/sync request for the user. Returns the response body as a
-reference to a hash.
-
-=cut
-
-sub matrix_sync
-{
-   my ( $user, %params ) = @_;
-
-   do_request_json_for( $user,
-      method  => "GET",
-      uri     => "/v2_alpha/sync",
-      params  => \%params,
-   )->on_done( sub {
-      my ( $body ) = @_;
-
-      require_json_keys( $body, qw( rooms presence next_batch ) );
-      require_json_keys( $body->{presence}, qw( events ));
-      require_json_keys( my $rooms = $body->{rooms}, qw( joined invited archived ) );
-   });
-}
-
-
 test "Can sync",
     requires => [qw( first_api_client can_create_filter )],
 
