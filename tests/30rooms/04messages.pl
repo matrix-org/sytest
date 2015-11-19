@@ -117,12 +117,7 @@ test "Local room members can get room messages",
       Future->needs_all( map {
          my $user = $_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-
-            params => { limit => 1, dir => "b" },
-         )->then( sub {
+         matrix_get_room_messages( $user, $room_id, limit => 1 )->then( sub {
             my ( $body ) = @_;
             log_if_fail "Body:", $body;
 
@@ -178,12 +173,7 @@ test "Remote room members can get room messages",
    check => sub {
       my ( $remote_user, $room_id ) = @_;
 
-      do_request_json_for( $remote_user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/messages",
-
-         params => { limit => 1, dir => "b" },
-      )->then( sub {
+      matrix_get_room_messages( $remote_user, $room_id, limit => 1 )->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( start end chunk ));

@@ -352,14 +352,9 @@ test "A prev_batch token can be used in the v1 messages API",
          $room->{timeline}{limited}
             or die "Expected timeline to be limited";
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri => "/api/v1/rooms/$room_id/messages",
-            params => {
-               dir   => "b",
-               from  => $room->{timeline}{prev_batch},
-               limit => 1,
-            }
+         matrix_get_room_messages( $user, $room_id,
+            from  => $room->{timeline}{prev_batch},
+            limit => 1,
          );
       })->then( sub {
          my ( $body ) = @_;
