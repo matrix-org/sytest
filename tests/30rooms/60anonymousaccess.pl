@@ -16,10 +16,7 @@ test "Anonymous user cannot view non-world-readable rooms",
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
-         matrix_get_room_messages( $anonymous_user, $room_id,
-            limit => "1",
-            dir   => "b",
-         )
+         matrix_get_room_messages( $anonymous_user, $room_id, limit => "1" )
       })->main::expect_http_403;
    };
 
@@ -39,10 +36,7 @@ test "Anonymous user can view world-readable rooms",
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
-         matrix_get_room_messages( $anonymous_user, $room_id,
-            limit => "2",
-            dir   => "b",
-         )
+         matrix_get_room_messages( $anonymous_user, $room_id, limit => "2" )
       });
    };
 
@@ -60,10 +54,7 @@ test "Anonymous user cannot call /events on non-world_readable room",
 
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
-         matrix_get_room_messages( $anonymous_user, $room_id,
-            limit => "2",
-            dir   => "b",
-         )
+         matrix_get_room_messages( $anonymous_user, $room_id, limit => "2" )
       })->main::expect_http_403;
    };
 
@@ -366,10 +357,7 @@ test "Anonymous users can send messages to guest_access rooms if joined",
       })->then( sub {
          matrix_send_room_text_message( $anonymous_user, $room_id, body => "sup" );
       })->then(sub {
-         matrix_get_room_messages( $user, $room_id,
-            limit => 1,
-            dir   => "b",
-         )->then( sub {
+         matrix_get_room_messages( $user, $room_id, limit => 1 )->then( sub {
             my ( $body ) = @_;
             log_if_fail "Body:", $body;
 

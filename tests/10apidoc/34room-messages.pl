@@ -114,6 +114,8 @@ sub matrix_get_room_messages
    my ( $user, $room_id, %params ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
 
+   $params{dir} ||= "b";
+
    do_request_json_for( $user,
       method => "GET",
       uri    => "/api/v1/rooms/$room_id/messages",

@@ -182,10 +182,7 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
     check => sub {
         my ( $user, $room_id ) = @_;
 
-        matrix_get_room_messages( $user, $room_id,
-            limit => 2,
-            dir   => 'b',
-        )->then( sub {
+        matrix_get_room_messages( $user, $room_id, limit => 2 )->then( sub {
             my ( $body ) = @_;
 
             require_json_keys( $body, qw( chunk ) );

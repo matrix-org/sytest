@@ -353,7 +353,6 @@ test "A prev_batch token can be used in the v1 messages API",
             or die "Expected timeline to be limited";
 
          matrix_get_room_messages( $user, $room_id,
-            dir   => "b",
             from  => $room->{timeline}{prev_batch},
             limit => 1,
          );
