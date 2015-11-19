@@ -26,5 +26,6 @@ test "Banned user is kicked and may not rejoin",
             die "Expected banned user membership to be 'ban'";
 
          matrix_join_room( $banned_user, $room_id )
-      })->main::expect_http_403;
+            ->main::expect_http_403;
+      });
    };
