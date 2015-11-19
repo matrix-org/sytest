@@ -648,13 +648,6 @@ sub prepare
       for @PROVIDES;
 }
 
-sub require_base64_unpadded_and_decode
-{
-   my ( $str ) = @_;
-   require_base64_unpadded $str;
-   return decode_base64 $str;
-}
-
 my %only_files;
 my $stop_after;
 if( @ARGV ) {

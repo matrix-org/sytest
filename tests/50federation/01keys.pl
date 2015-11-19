@@ -52,7 +52,8 @@ test "Federation key API allows unsigned requests for keys",
 
          log_if_fail "Key (base64)", $key;
 
-         $key = require_base64_unpadded_and_decode( $key );
+         require_base64_unpadded( $key );
+         $key = decode_base64 $key;
 
          exists $body->{signatures}{ $body->{server_name} }{$key_id} or
             die "Expected to find a signature by the server's own key";
@@ -60,7 +61,8 @@ test "Federation key API allows unsigned requests for keys",
 
          log_if_fail "Signature (base64)", $signature;
 
-         $signature = require_base64_unpadded_and_decode( $signature );
+         require_base64_unpadded( $signature );
+         $signature = decode_base64 $signature;
 
          my $signed_bytes = encode_json_for_signing( $body );
 
@@ -108,7 +110,9 @@ test "Federation key API can act as a notary server",
 
          # Just presume there's only one signature
          my ( $first_hs_sig ) = values %{ $key->{signatures}{$first_home_server} };
-         my $signature = require_base64_unpadded_and_decode( $first_hs_sig );
+
+         require_base64_unpadded( $first_hs_sig );
+         my $signature = decode_base64 $first_hs_sig;
 
          my $signed_bytes = encode_json_for_signing( $key );
 
