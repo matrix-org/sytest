@@ -27,7 +27,7 @@ test "Forgotten room messages cannot be paginated",
          matrix_leave_room( $user, $room_id )
       })->then( sub {
          matrix_get_room_state( $creator, $room_id,
-            type => "m.room.member",
+            type      => "m.room.member",
             state_key => $user->user_id
          )
       })->then( sub {
@@ -39,7 +39,7 @@ test "Forgotten room messages cannot be paginated",
          matrix_forget_room( $user, $room_id )
       })->then( sub {
          matrix_get_room_state( $creator, $room_id,
-            type => "m.room.member",
+            type      => "m.room.member",
             state_key => $user->user_id
          )
       })->then( sub {
@@ -88,8 +88,8 @@ test "Forgetting room leaves room",
          matrix_forget_room( $user, $room_id )
       })->then( sub {
          matrix_get_room_state( $creator, $room_id,
-            type => "m.room.member",
-            state_key => $user->user_id
+            type      => "m.room.member",
+            state_key => $user->user_id,
          )
       })->then( sub {
          my ( $event ) = @_;
@@ -147,9 +147,9 @@ test "Can re-join room if re-invited - history_visibility = shared",
          log_if_fail "room_id", $room_id;
 
          matrix_put_room_state( $creator, $room_id,
-            type => "m.room.join_rules",
+            type      => "m.room.join_rules",
             state_key => "",
-            content => {
+            content   => {
                join_rule => "invite",
             }
          )
@@ -225,9 +225,9 @@ test "Can re-join room if re-invited - history_visibility joined",
          log_if_fail "room_id", $room_id;
 
          matrix_put_room_state( $creator, $room_id,
-            type => "m.room.join_rules",
+            type      => "m.room.join_rules",
             state_key => "",
-            content => {
+            content   => {
                join_rule => "invite",
             }
          )
