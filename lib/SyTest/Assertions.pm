@@ -194,6 +194,9 @@ sub assert_json_boolean
 Fails the test if C<$str> is not a plain string, contains any characters
 invalid in a Base64 encoding, or contains the trailing C<=> padding characters.
 
+Permitted characters are lower- or uppercase US-ASCII letters, digits, or the
+symbols C<+> and C</>.
+
 =cut
 
 sub assert_base64_unpadded
