@@ -21,14 +21,14 @@ multi_test "AS-ghosted users can use rooms via AS",
 
                log_if_fail "AS event", $event;
 
-               require_json_keys( $event, qw( content room_id ));
+               assert_json_keys( $event, qw( content room_id ));
 
                $event->{room_id} eq $room_id or
                   die "Expected room_id to be $room_id";
                $event->{state_key} eq $ghost->user_id or
                   die "Expected state_key to be ${\$ghost->user_id}";
 
-               require_json_keys( my $content = $event->{content}, qw( membership ) );
+               assert_json_keys( my $content = $event->{content}, qw( membership ) );
 
                $content->{membership} eq "join" or
                   die "Expected membership to be 'join'";
@@ -54,7 +54,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
                log_if_fail "AS event", $event;
 
-               require_json_keys( $event, qw( room_id user_id ));
+               assert_json_keys( $event, qw( room_id user_id ));
 
                $event->{room_id} eq $room_id or
                   die "Expected room_id to be $room_id";
@@ -116,12 +116,12 @@ multi_test "AS-ghosted users can use rooms themselves",
 
                log_if_fail "AS event", $event;
 
-               require_json_keys( $event, qw( content room_id ));
+               assert_json_keys( $event, qw( content room_id ));
 
                $event->{room_id} eq $room_id or
                   die "Expected room_id to be $room_id";
 
-               require_json_keys( my $content = $event->{content}, qw( membership ) );
+               assert_json_keys( my $content = $event->{content}, qw( membership ) );
 
                $content->{membership} eq "join" or
                   die "Expected membership to be 'join'";
@@ -139,7 +139,7 @@ multi_test "AS-ghosted users can use rooms themselves",
 
                log_if_fail "AS event", $event;
 
-               require_json_keys( $event, qw( room_id user_id ));
+               assert_json_keys( $event, qw( room_id user_id ));
 
                $event->{room_id} eq $room_id or
                   die "Expected room_id to be $room_id";

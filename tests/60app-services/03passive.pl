@@ -34,7 +34,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
 
          log_if_fail "Event", $event;
 
-         require_json_keys( $event, qw( content room_id user_id ));
+         assert_json_keys( $event, qw( content room_id user_id ));
 
          $event->{room_id} eq $room_id or
             die "Expected room_id to be $room_id";
@@ -81,7 +81,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
             log_if_fail "Event", $event;
 
-            require_json_keys( $event, qw( room_id user_id membership state_key ));
+            assert_json_keys( $event, qw( room_id user_id membership state_key ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
@@ -100,15 +100,15 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
             log_if_fail "Event", $event;
 
-            require_json_keys( $event, qw( content room_id user_id ));
+            assert_json_keys( $event, qw( content room_id user_id ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
             $event->{user_id} eq $as_user->user_id or
                die "Expected user_id to be ${\$as_user->user_id}";
 
-            require_json_keys( my $content = $event->{content}, qw( aliases ));
-            require_json_list( my $aliases = $content->{aliases} );
+            assert_json_keys( my $content = $event->{content}, qw( aliases ));
+            assert_json_list( my $aliases = $content->{aliases} );
 
             grep { $_ eq $room_alias } @$aliases or
                die "Expected to find our alias in the aliases list";
@@ -138,7 +138,7 @@ test "Events in rooms with AS-hosted room aliases are sent to AS server",
 
             log_if_fail "Event", $event;
 
-            require_json_keys( $event, qw( content room_id user_id ));
+            assert_json_keys( $event, qw( content room_id user_id ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";

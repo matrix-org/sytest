@@ -24,9 +24,9 @@ test "Can upload device keys",
          my ( $content ) = @_;
          log_if_fail "Content", $content;
 
-         require_json_keys( $content, "one_time_key_counts" );
+         assert_json_keys( $content, "one_time_key_counts" );
 
-         require_json_keys( $content->{one_time_key_counts}, "my_algorithm" );
+         assert_json_keys( $content->{one_time_key_counts}, "my_algorithm" );
 
          $content->{one_time_key_counts}{my_algorithm} eq "1" or
             die "Expected 1 one time key";
@@ -55,13 +55,13 @@ test "Can query device keys using POST",
       )->then( sub {
          my ( $content ) = @_;
 
-         require_json_keys( $content, "device_keys" );
+         assert_json_keys( $content, "device_keys" );
 
          my $device_keys = $content->{device_keys};
-         require_json_keys( $device_keys, $user->user_id );
+         assert_json_keys( $device_keys, $user->user_id );
 
          my $alice_keys = $device_keys->{ $user->user_id };
-         require_json_keys( $alice_keys, "alices_first_device" );
+         assert_json_keys( $alice_keys, "alices_first_device" );
          # TODO: Check that the content matches what we uploaded.
          Future->done(1)
       })
@@ -85,13 +85,13 @@ test "Can query specific device keys using POST",
       )->then( sub {
          my ( $content ) = @_;
 
-         require_json_keys( $content, "device_keys" );
+         assert_json_keys( $content, "device_keys" );
 
          my $device_keys = $content->{device_keys};
-         require_json_keys( $device_keys, $user->user_id );
+         assert_json_keys( $device_keys, $user->user_id );
 
          my $alice_keys = $device_keys->{ $user->user_id };
-         require_json_keys( $alice_keys, "alices_first_device" );
+         assert_json_keys( $alice_keys, "alices_first_device" );
          # TODO: Check that the content matches what we uploaded.
          Future->done(1)
       })
@@ -110,13 +110,13 @@ test "Can query device keys using GET",
       )->then( sub {
          my ( $content ) = @_;
 
-         require_json_keys( $content, "device_keys" );
+         assert_json_keys( $content, "device_keys" );
 
          my $device_keys = $content->{device_keys};
-         require_json_keys( $device_keys, $user->user_id );
+         assert_json_keys( $device_keys, $user->user_id );
 
          my $alice_keys = $device_keys->{ $user->user_id };
-         require_json_keys( $alice_keys, "alices_first_device" );
+         assert_json_keys( $alice_keys, "alices_first_device" );
          # TODO: Check that the content matches what we uploaded.
          Future->done(1)
       })

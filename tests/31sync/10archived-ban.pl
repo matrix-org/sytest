@@ -30,7 +30,7 @@ test "Banned rooms appear in the archived section of sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         assert_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
       });
@@ -74,7 +74,7 @@ test "Newly banned rooms appear in the archived section of incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         assert_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
       });
@@ -125,7 +125,7 @@ test "Newly banned rooms appear in the archived section of incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         assert_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
       });
