@@ -25,15 +25,15 @@ test "Rooms a user is invited to appear in an initial sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{invite}{$room_id};
-         require_json_keys( $room, qw( invite_state ) );
-         require_json_keys( $room->{invite_state}, qw( events ) );
+         assert_json_keys( $room, qw( invite_state ) );
+         assert_json_keys( $room->{invite_state}, qw( events ) );
 
          my $invite = first {
             $_->{type} eq "m.room.member"
                and $_->{state_key} eq $user_b->user_id
          } @{ $room->{invite_state}{events} };
 
-         require_json_keys( $invite, qw( sender content state_key type ));
+         assert_json_keys( $invite, qw( sender content state_key type ));
          $invite->{content}{membership} eq "invite"
             or die "Expected an invite event";
          $invite->{sender} eq $user_a->user_id
@@ -73,15 +73,15 @@ test "Rooms a user is invited to appear in an incremental sync",
       })->then( sub {
          my ( $body ) = @_;
          my $room = $body->{rooms}{invite}{$room_id};
-         require_json_keys( $room, qw( invite_state ) );
-         require_json_keys( $room->{invite_state}, qw( events ) );
+         assert_json_keys( $room, qw( invite_state ) );
+         assert_json_keys( $room->{invite_state}, qw( events ) );
 
          my $invite = first {
             $_->{type} eq "m.room.member"
                and $_->{state_key} eq $user_b->user_id
          } @{ $room->{invite_state}{events} };
 
-         require_json_keys( $invite, qw( sender content state_key type ));
+         assert_json_keys( $invite, qw( sender content state_key type ));
          $invite->{content}{membership} eq "invite"
             or die "Expected an invite event";
          $invite->{sender} eq $user_a->user_id

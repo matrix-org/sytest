@@ -33,8 +33,11 @@ test "Sync can be polled for updates",
          my ( $body, $response, $event_id ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         @{ $room->{timeline}{events} } eq 1
-             or die "Expected one timeline event";
+
+         my $events = $room->{timeline}{events} or
+            die "Expected an event timeline";
+         @$events == 1 or
+            die "Expected one timeline event";
 
          $room->{timeline}{events}[0]{event_id} eq $event_id
             or die "Unexpected timeline event";

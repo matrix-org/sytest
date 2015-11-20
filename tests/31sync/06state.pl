@@ -59,7 +59,7 @@ test "State is included in the timeline in the initial sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline state ephemeral ));
 
          # state from the timeline should *not* appear in the state dictionary
          @{ $room->{state}{events} } == 0
@@ -117,7 +117,7 @@ test "State from remote users is included in the state in the initial sync",
             my ( $body ) = @_;
 
             my $room = $body->{rooms}{join}{$room_id};
-            require_json_keys( $room, qw( timeline state ephemeral ));
+            assert_json_keys( $room, qw( timeline state ephemeral ));
 
             @{ $room->{state}{events} } == 1
                 or die "Expected one state event";
@@ -188,8 +188,8 @@ test "Changes to state are included in an incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( timeline state ephemeral ));
-         @{ $room->{state}{events}} == 1
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
          my $event = $room->{state}{events}[0];
@@ -265,7 +265,7 @@ test "Changes to state are included in an gapped incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
@@ -324,7 +324,7 @@ test "State from remote users is included in the timeline in an incremental sync
             my ( $body ) = @_;
 
             my $room = $body->{rooms}{join}{$room_id};
-            require_json_keys( $room, qw( timeline state ephemeral ));
+            assert_json_keys( $room, qw( timeline state ephemeral ));
 
             @{ $room->{state}{events} } == 0
                 or die "Expected no state events";
@@ -404,7 +404,7 @@ test "A full_state incremental update returns all state",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw(timeline state ephemeral ));
+         assert_json_keys( $room, qw(timeline state ephemeral ));
 
          @{ $room->{state}{events} } == 2
             or die "Expected two state events";
@@ -489,7 +489,7 @@ test "When user joins a room the state is included in the next sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
@@ -617,7 +617,7 @@ test "When user joins a room the state is included in a gapped sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
@@ -682,7 +682,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         require_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          my $eventcount = scalar @{ $room->{state}{events} };
          $eventcount == 1 or
              die "Expected one state event, got $eventcount";

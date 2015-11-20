@@ -12,11 +12,11 @@ test "GET /presence/:user_id/status fetches initial status",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( presence ));
+         assert_json_keys( $body, qw( presence ));
 
          # TODO(paul): Newly-registered users might not yet have a
          #   last_active_ago
-         # require_json_number( $body->{last_active_ago} );
+         # assert_json_number( $body->{last_active_ago} );
          # $body->{last_active_ago} >= 0 or
          #    die "Expected last_active_ago non-negative";
 

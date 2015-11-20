@@ -20,10 +20,10 @@ test "Can sync a joined room",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( timeline state ephemeral ));
-         require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         require_json_keys( $room->{state}, qw( events ));
-         require_json_keys( $room->{ephemeral}, qw( events ));
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         assert_json_keys( $room->{state}, qw( events ));
+         assert_json_keys( $room->{ephemeral}, qw( events ));
 
          matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
       })->then( sub {
@@ -65,10 +65,10 @@ test "Full state sync includes joined rooms",
 
          my $room = $body->{rooms}{join}{$room_id};
 
-         require_json_keys( $room, qw( timeline state ephemeral ));
-         require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         require_json_keys( $room->{state}, qw( events ));
-         require_json_keys( $room->{ephemeral}, qw( events ));
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         assert_json_keys( $room->{state}, qw( events ));
+         assert_json_keys( $room->{ephemeral}, qw( events ));
 
          Future->done(1)
       })
@@ -103,10 +103,10 @@ test "Newly joined room is included in an incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( timeline state ephemeral ));
-         require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         require_json_keys( $room->{state}, qw( events ));
-         require_json_keys( $room->{ephemeral}, qw( events ));
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         assert_json_keys( $room->{state}, qw( events ));
+         assert_json_keys( $room->{ephemeral}, qw( events ));
 
          matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
       })->then( sub {
@@ -173,12 +173,12 @@ test "Newly joined room has correct timeline in incremental sync",
          } @{ $timeline->{events} };
 
          if( @{ $timeline->{events} } == 6 ) {
-            require_json_boolean( $timeline->{limited} );
+            assert_json_boolean( $timeline->{limited} );
             !$timeline->{limited} or
                die "Timeline has all the events so shouldn't be limited";
          }
          else {
-            require_json_boolean( $timeline->{limited} );
+            assert_json_boolean( $timeline->{limited} );
             $timeline->{limited} or
                die "Timeline doesn't have all the events so should be limited";
          }

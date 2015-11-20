@@ -58,7 +58,7 @@ sub matrix_list_tags
    )->then( sub {
       my ( $body ) = @_;
 
-      require_json_keys( $body, qw( tags ) );
+      assert_json_keys( $body, qw( tags ) );
 
       Future->done( $body->{tags} );
    });
@@ -278,7 +278,7 @@ test "Tags appear in the v1 /initalSync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}[0];
-         require_json_keys( $room, qw( account_data ) );
+         assert_json_keys( $room, qw( account_data ) );
 
          check_account_data( $room->{account_data} );
 
@@ -304,7 +304,7 @@ test "Tags appear in the v1 room initial sync",
          my ( $body ) = @_;
 
          my $room = $body;
-         require_json_keys( $room, qw( account_data ) );
+         assert_json_keys( $room, qw( account_data ) );
 
          check_account_data( $room->{account_data} );
 
@@ -337,7 +337,7 @@ test "Tags appear in an initial v2 /sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( account_data ) );
+         assert_json_keys( $room, qw( account_data ) );
 
          check_account_data( $room->{account_data}{events} );
 
@@ -376,7 +376,7 @@ test "Newly updated tags appear in an incremental v2 /sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( account_data ) );
+         assert_json_keys( $room, qw( account_data ) );
 
          check_account_data( $room->{account_data}{events} );
 
@@ -422,7 +422,7 @@ test "Deleted tags appear in an incremental v2 /sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         require_json_keys( $room, qw( account_data ) );
+         assert_json_keys( $room, qw( account_data ) );
 
          check_account_data( $room->{account_data}{events},
             expect_empty => 1,

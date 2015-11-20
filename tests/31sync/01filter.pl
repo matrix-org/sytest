@@ -19,7 +19,7 @@ sub matrix_create_filter
    )->then( sub {
       my ( $body ) = @_;
 
-      require_json_keys( $body, "filter_id" );
+      assert_json_keys( $body, "filter_id" );
 
       Future->done( $body->{filter_id} )
    })
@@ -97,9 +97,9 @@ test "Can download filter",
       })->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, "room" );
-         require_json_keys( my $room = $body->{room}, "timeline" );
-         require_json_keys( my $timeline = $room->{timeline}, "limit" );
+         assert_json_keys( $body, "room" );
+         assert_json_keys( my $room = $body->{room}, "timeline" );
+         assert_json_keys( my $timeline = $room->{timeline}, "limit" );
          $timeline->{limit} == 10 or die "Expected timeline limit to be 10";
 
          Future->done(1)

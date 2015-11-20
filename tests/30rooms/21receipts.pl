@@ -58,8 +58,8 @@ multi_test "Read receipts are visible to /initialSync",
       })->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( receipts ));
-         require_json_list( my $receipts = $body->{receipts} );
+         assert_json_keys( $body, qw( receipts ));
+         assert_json_list( my $receipts = $body->{receipts} );
 
          log_if_fail "initialSync receipts", $receipts;
 
@@ -72,8 +72,8 @@ multi_test "Read receipts are visible to /initialSync",
          $event_id eq $member_event_id or
             die "Expected user's read recept to acknowledge up to $member_event_id";
 
-         require_json_keys( $user_read_receipt, qw( ts ));
-         require_json_number( $user_read_receipt->{ts} );
+         assert_json_keys( $user_read_receipt, qw( ts ));
+         assert_json_number( $user_read_receipt->{ts} );
 
          pass "First m.read receipt is available";
 
@@ -147,7 +147,7 @@ test "Read receipts are sent as events",
 
             $event->{type} eq "m.receipt" or return;
 
-            require_json_keys( $event, qw( type room_id content ));
+            assert_json_keys( $event, qw( type room_id content ));
             $event->{room_id} eq $room_id or return;
 
             log_if_fail "Event", $event;
@@ -159,8 +159,8 @@ test "Read receipts are sent as events",
             my $user_read_receipt = $content->{$event_id}{"m.read"}{ $user->user_id } or
                return;
 
-            require_json_keys( $user_read_receipt, qw( ts ));
-            require_json_number( $user_read_receipt->{ts} );
+            assert_json_keys( $user_read_receipt, qw( ts ));
+            assert_json_number( $user_read_receipt->{ts} );
 
             return 1;
          })
