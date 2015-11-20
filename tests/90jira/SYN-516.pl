@@ -42,7 +42,7 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
         })->then( sub {
             my ( $body ) = @_;
 
-            my $room = $body->{rooms}{joined}{$room_id};
+            my $room = $body->{rooms}{join}{$room_id};
 
             @{ $room->{ephemeral}{events} } == 2
                 or die "Expected two ephemeral events";
@@ -55,7 +55,7 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
         })->then( sub {
             my ( $body ) = @_;
 
-            my $room = $body->{rooms}{joined}{$room_id};
+            my $room = $body->{rooms}{join}{$room_id};
 
             @{ $room->{ephemeral}{events} } == 2
                 or die "Expected two ephemeral events";

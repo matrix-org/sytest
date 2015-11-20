@@ -32,14 +32,14 @@ test "Sync can be polled for updates",
       })->then( sub {
          my ( $body, $response, $event_id ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
 
          my $events = $room->{timeline}{events} or
             die "Expected an event timeline";
          @$events == 1 or
             die "Expected one timeline event";
 
-         $room->{timeline}{events}[0] eq $event_id
+         $room->{timeline}{events}[0]{event_id} eq $event_id
             or die "Unexpected timeline event";
 
          Future->done(1)

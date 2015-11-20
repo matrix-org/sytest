@@ -336,7 +336,7 @@ test "Tags appear in an initial v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          assert_json_keys( $room, qw( account_data ) );
 
          check_account_data( $room->{account_data}{events} );
@@ -375,7 +375,7 @@ test "Newly updated tags appear in an incremental v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          assert_json_keys( $room, qw( account_data ) );
 
          check_account_data( $room->{account_data}{events} );
@@ -421,7 +421,7 @@ test "Deleted tags appear in an incremental v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          assert_json_keys( $room, qw( account_data ) );
 
          check_account_data( $room->{account_data}{events},

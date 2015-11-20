@@ -130,8 +130,10 @@ test "Anonymous user can call /events on world_readable room",
                await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user ] )->then( sub {
                   my ( $event ) = @_;
 
-                  $event->{type} eq "m.presence" or die "Wrong event type";
-                  $event->{content}->{user_id} eq $user->user_id or die "Wrong user";
+                  assert_eq( $event->{type}, "m.presence",
+                     "event type" );
+                  assert_eq( $event->{content}{user_id}, $user->user_id,
+                     "event content.user_id" );
 
                   Future->done( 1 );
                }),
@@ -149,9 +151,10 @@ test "Anonymous user can call /events on world_readable room",
                await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user, $user ] )->then( sub {
                   my ( $event ) = @_;
 
-                  $event->{type} eq "m.receipt" or die "Wrong event type";
-                  defined $event->{content}->{$sent_event_id}->{"m.read"}->{$user->user_id}
-                     or die "Wrong receipt";
+                  assert_eq( $event->{type}, "m.receipt",
+                     "event type" );
+                  assert_ok( $event->{content}{$sent_event_id}{"m.read"}{ $user->user_id },
+                     "receipt event ID for user" );
 
                   Future->done( 1 );
                }),
@@ -172,9 +175,12 @@ test "Anonymous user can call /events on world_readable room",
                await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user, $user ] )->then( sub {
                   my ( $event ) = @_;
 
-                  $event->{type} eq "m.typing" or die "Wrong event type";
-                  $event->{room_id} eq $room_id or die "Wrong room ID";
-                  $event->{content}->{user_ids}->[0] eq $user->user_id or die "Wrong receipt";
+                  assert_eq( $event->{type}, "m.typing",
+                     "event type" );
+                  assert_eq( $event->{room_id}, $room_id,
+                     "event room_id" );
+                  assert_eq( $event->{content}{user_ids}[0], $user->user_id,
+                     "event content user_ids[0]" );
 
                   Future->done( 1 );
                }),

@@ -28,7 +28,7 @@ test "Typing events appear in initial sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
 
          @{ $room->{ephemeral}{events} } == 1
             or die "Expected one typing event";
@@ -83,7 +83,7 @@ test "Typing events appear in incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
 
          @{ $room->{ephemeral}{events} } == 1
             or die "Expected one typing event";
@@ -145,7 +145,7 @@ test "Typing events appear in gapped sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
 
          @{ $room->{ephemeral}{events} } == 1
             or die "Expected one typing event";
