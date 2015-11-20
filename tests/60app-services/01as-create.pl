@@ -4,8 +4,10 @@ my $room_fixture = room_fixture(
    requires_users => [ $user_fixture ],
 );
 
+our $AS_USER;
+
 test "AS can create a user",
-   requires => [qw( as_user ), $room_fixture ],
+   requires => [ $AS_USER, $room_fixture ],
 
    do => sub {
       my ( $as_user, $room_id ) = @_;
@@ -30,7 +32,7 @@ test "AS can create a user",
    };
 
 test "AS cannot create users outside its own namespace",
-   requires => [qw( as_user )],
+   requires => [ $AS_USER ],
 
    do => sub {
       my ( $as_user ) = @_;
@@ -57,7 +59,7 @@ test "Regular users cannot register within the AS namespace",
    };
 
 test "AS can make room aliases",
-   requires => [qw( as_user hs2as_token first_home_server ), $room_fixture,
+   requires => [ $AS_USER, qw( hs2as_token first_home_server ), $room_fixture,
                 qw( can_create_room_alias )],
 
    do => sub {
@@ -172,7 +174,7 @@ my $next_as_user_id = 0;
 sub as_ghost_fixture
 {
    fixture(
-      requires => [qw( as_user )],
+      requires => [ $AS_USER ],
 
       setup => sub {
          my ( $as_user ) = @_;

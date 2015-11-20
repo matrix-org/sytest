@@ -1,20 +1,17 @@
 use Future::Utils qw( repeat );
 
-prepare "Creating special AS user",
+push our @EXPORT, qw( AS_USER await_as_event );
+
+our $AS_USER = fixture(
    requires => [qw( first_api_client as_credentials )],
 
-   provides => [qw( as_user )],
-
-   do => sub {
+   setup => sub {
       my ( $http, $as_credentials ) = @_;
       my ( $user_id, $token ) = @$as_credentials;
 
-      provide as_user => User( $http, $user_id, $token, undef, undef, [], undef );
-
-      Future->done(1);
-   };
-
-push our @EXPORT, qw( await_as_event );
+      Future->done( User( $http, $user_id, $token, undef, undef, [], undef ) );
+   },
+);
 
 # Map event types to ARRAYs of Futures
 my %futures_by_type;
