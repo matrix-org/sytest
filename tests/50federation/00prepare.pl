@@ -13,13 +13,9 @@ my $DIR = dirname( __FILE__ );
 struct FederationParams => [qw( server_name key_id public_key secret_key )];
 
 prepare "Creating inbound federation HTTP server and outbound federation client",
-   requires => [qw( first_home_server )],
-
    provides => [qw( inbound_server outbound_client )],
 
    do => sub {
-      my ( $first_home_server ) = @_;
-
       my $inbound_server = SyTest::Federation::Server->new;
       $loop->add( $inbound_server );
 
@@ -52,7 +48,7 @@ prepare "Creating inbound federation HTTP server and outbound federation client"
          my $outbound_client = SyTest::Federation::Client->new(
             federation_params => $fedparams,
             keystore          => $keystore,
-            uri_base          => "https://$first_home_server/_matrix/federation/v1",
+            uri_base          => "/_matrix/federation/v1",
          );
          $loop->add( $outbound_client );
 

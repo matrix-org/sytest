@@ -140,8 +140,9 @@ test "Inbound federation can receive room-join requests",
       my $user_id = "\@50fed-user:$local_server_name";
 
       $outbound_client->do_request_json(
-         method => "GET",
-         uri    => "/make_join/$room_id/$user_id",
+         method   => "GET",
+         hostname => $first_home_server,
+         uri      => "/make_join/$room_id/$user_id",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "make_join body", $body;
@@ -197,8 +198,9 @@ test "Inbound federation can receive room-join requests",
          );
 
          $outbound_client->do_request_json(
-            method => "PUT",
-            uri    => "/send_join/$room_id/$event{event_id}",
+            method   => "PUT",
+            hostname => $first_home_server,
+            uri      => "/send_join/$room_id/$event{event_id}",
 
             content => \%event,
          )

@@ -15,7 +15,8 @@ sub _fetch_key
 
    $self->do_request_json(
       method   => "GET",
-      full_uri => "https://$server_name/_matrix/key/v2/server/$key_id",
+      hostname => $server_name,
+      full_uri => "/_matrix/key/v2/server/$key_id",
    )->then( sub {
       my ( $body ) = @_;
 
@@ -39,6 +40,13 @@ sub do_request_json
    my %params = @_;
 
    my $uri = $self->full_uri_for( %params );
+   if( !$uri->scheme ) {
+      defined $params{hostname} or die "Need a 'hostname'";
+      $uri = URI->new( "https://$params{hostname}" . $uri );
+
+      delete $params{uri};
+      $params{full_uri} = $uri;
+   }
 
    my $fedparams = $self->{federation_params};
 
@@ -101,8 +109,9 @@ sub send_edu
    );
 
    $self->do_request_json(
-      method => "PUT",
-      uri    => "/send/$ts/",
+      method   => "PUT",
+      hostname => $params{destination},
+      uri      => "/send/$ts/",
 
       content => \%transaction,
    )->then_done(); # response body is empty

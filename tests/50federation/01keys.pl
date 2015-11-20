@@ -91,6 +91,7 @@ test "Federation key API can act as a notary server",
 
       $client->do_request_json(
          method   => "GET",
+         hostname => $first_home_server,
          full_uri => "/_matrix/key/v2/query/$local_server_name/$key_id",
       )->then( sub {
          my ( $body ) = @_;
