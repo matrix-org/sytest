@@ -1,4 +1,4 @@
-test "Banned rooms appear in the archived section of sync",
+test "Banned rooms appear in the leave section of sync",
    requires => [qw( first_api_client can_sync )],
 
    check => sub {
@@ -29,15 +29,15 @@ test "Banned rooms appear in the archived section of sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ));
+         my $room = $body->{rooms}{leave}{$room_id};
+         assert_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
    };
 
 
-test "Newly banned rooms appear in the archived section of incremental sync",
+test "Newly banned rooms appear in the leave section of incremental sync",
    requires => [qw( first_api_client can_sync )],
 
    check => sub {
@@ -73,15 +73,15 @@ test "Newly banned rooms appear in the archived section of incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ));
+         my $room = $body->{rooms}{leave}{$room_id};
+         assert_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
    };
 
 
-test "Newly banned rooms appear in the archived section of incremental sync",
+test "Newly banned rooms appear in the leave section of incremental sync",
    requires => [qw( first_api_client can_sync )],
 
    check => sub {
@@ -124,8 +124,8 @@ test "Newly banned rooms appear in the archived section of incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ));
+         my $room = $body->{rooms}{leave}{$room_id};
+         assert_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
