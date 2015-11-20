@@ -71,7 +71,7 @@ test "POST /login can log in as a user",
    requires => [qw( first_api_client ), $registered_user_fixture,
                 qw( can_login_password_flow )],
 
-   provides => [qw( can_login first_home_server do_request_json_for do_request_json )],
+   provides => [qw( can_login first_home_server )],
 
    do => sub {
       my ( $http, $user_id ) = @_;
@@ -93,10 +93,6 @@ test "POST /login can log in as a user",
          provide can_login => 1;
 
          provide first_home_server => $body->{home_server};
-
-         provide do_request_json_for => sub { die "Dead - see do_request_json_for() instead" };
-
-         provide do_request_json => sub { die "Dead - see do_request_json_for() on \$user instead" };
 
          Future->done(1);
       });
