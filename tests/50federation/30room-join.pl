@@ -1,6 +1,134 @@
-use List::UtilsBy qw( partition_by );
+use List::UtilsBy qw( partition_by extract_by );
 
-multi_test "Inbound federation can receive room-join requests",
+sub make_auth_events
+{
+   [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
+}
+
+test "Outbound federation can send room-join requests",
+   requires => [ local_user_fixture(), qw( inbound_server outbound_client )],
+
+   do => sub {
+      my ( $user, $inbound_server, $outbound_client ) = @_;
+      my $local_server_name = $inbound_server->server_name;
+
+      # We'll have to jump through the extra hoop of using the directory
+      # service first, because we can't join a remote room by room ID alone
+
+      my $room_alias = "#50fed-room-alias:$local_server_name";
+      my $room_id    = "!50fed-room-alias:$local_server_name";
+      my $creator    = '@50fed:' . $local_server_name;
+
+      require_stub $inbound_server->await_query_directory( $room_alias )
+         ->on_done( sub {
+            my ( $req ) = @_;
+
+            $req->respond_json( {
+               room_id => $room_id,
+               servers => [
+                  $local_server_name,
+               ]
+            } );
+         });
+
+      my $create_event = $inbound_server->create_event(
+         type => "m.room.create",
+
+         auth_events => [],
+         prev_events => [],
+         prev_state  => [],
+         content     => { creator => $creator },
+         depth       => 0,
+         room_id     => $room_id,
+         sender      => $creator,
+         state_key   => "",
+      );
+
+      my $joinrules_event = $inbound_server->create_event(
+         type => "m.room.join_rules",
+
+         auth_events => make_auth_events( $create_event ),
+         prev_events => make_auth_events( $create_event ),
+         prev_state  => [],
+         content     => { join_rule => "public" },
+         depth       => 0,
+         room_id     => $room_id,
+         sender      => $creator,
+         state_key   => "",
+      );
+
+      my %join_protoevent = (
+         type => "m.room.member",
+
+         auth_events      => make_auth_events( $create_event, $joinrules_event ),
+         content          => { membership => "join" },
+         depth            => 0,
+         event_id         => my $join_event_id = $inbound_server->next_event_id,
+         origin           => $inbound_server->server_name,
+         origin_server_ts => $inbound_server->time_ms,
+         prev_events      => [],
+         room_id          => $room_id,
+         sender           => $user->user_id,
+         state_key        => $user->user_id,
+      );
+
+      Future->needs_all(
+         # Await PDU?
+
+         $inbound_server->await_make_join( $room_id, $user->user_id )->then( sub {
+            my ( $req, $room_id, $user_id ) = @_;
+
+            $req->respond_json( {
+               event => \%join_protoevent,
+            } );
+
+            Future->done;
+         }),
+
+         $inbound_server->await_send_join( $room_id, $join_event_id )->then( sub {
+            my ( $req, $room_id, $event_id ) = @_;
+
+            $req->method eq "PUT" or
+               die "Expected send_join method to be PUT";
+
+            my $event = $req->body_from_json;
+            log_if_fail "send_join event", $event;
+
+            my @auth_chain = map {
+               $inbound_server->get_event( $_->[0] )
+            } @{ $event->{auth_events} };
+
+            $req->respond_json(
+               # TODO(paul): This workaround is for SYN-490
+               [ 200, {
+                  auth_chain => \@auth_chain,
+                  state      => [],
+               } ]
+            );
+
+            Future->done;
+         }),
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/api/v1/join/$room_alias",
+
+            content => {},
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Join response", $body;
+
+            assert_json_keys( $body, qw( room_id ));
+
+            $body->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+
+            Future->done(1);
+         }),
+      )
+   };
+
+test "Inbound federation can receive room-join requests",
    requires => [qw( outbound_client inbound_server first_home_server ),
                  room_fixture( requires_users => [ local_user_fixture() ] ) ],
 
@@ -68,10 +196,6 @@ multi_test "Inbound federation can receive room-join requests",
             origin_server_ts => $inbound_server->time_ms,
          );
 
-         # TODO: hashes
-
-         # TODO: should now sign the event
-
          $outbound_client->do_request_json(
             method => "PUT",
             uri    => "/send_join/$room_id/$event{event_id}",
@@ -127,7 +251,23 @@ multi_test "Inbound federation can receive room-join requests",
             # TODO: Check signatures of every auth event
          }
 
-         # TODO: Perform some linkage checking between the auth events
+         # Annoyingly, the "auth chain" isn't specified to arrive in any
+         # particular order. We'll have to keep walking it incrementally.
+
+         my %accepted_authevents;
+         while( @auth_chain ) {
+            my @accepted = extract_by {
+               $inbound_server->auth_check_event( $_, \%accepted_authevents )
+            } @auth_chain;
+
+            unless( @accepted ) {
+               log_if_fail "Unacceptable auth chain", \@auth_chain;
+
+               die "Unable to find any more acceptable auth_chain events";
+            }
+
+            $accepted_authevents{$_->{event_id}} = $_ for @accepted;
+         }
 
          assert_json_nonempty_list( $response->{state} );
          my %state = partition_by { $_->{type} } @{ $response->{state} };
