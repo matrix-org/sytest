@@ -6,10 +6,10 @@ sub make_auth_events
 }
 
 test "Outbound federation can send room-join requests",
-   requires => [ local_user_fixture(), qw( inbound_server outbound_client )],
+   requires => [ local_user_fixture(), qw( inbound_server )],
 
    do => sub {
-      my ( $user, $inbound_server, $outbound_client ) = @_;
+      my ( $user, $inbound_server ) = @_;
       my $local_server_name = $inbound_server->server_name;
 
       # We'll have to jump through the extra hoop of using the directory
