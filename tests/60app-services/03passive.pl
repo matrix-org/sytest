@@ -5,13 +5,11 @@ my $room_fixture = room_fixture(
 );
 
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [qw( await_as_event as_user first_home_server ),
-                     $user_fixture, $room_fixture,
+   requires => [qw( as_user first_home_server ), $user_fixture, $room_fixture,
                 qw( can_invite_room )],
 
    do => sub {
-      my ( $await_as_event, $as_user, $home_server,
-            $creator, $room_id ) = @_;
+      my ( $as_user, $home_server, $creator, $room_id ) = @_;
 
       my $localpart = "astest-03passive-1";
       my $user_id = "\@$localpart:$home_server";
@@ -28,7 +26,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
       matrix_invite_user_to_room( $creator, $user_id, $room_id )
          ->SyTest::pass_on_done( "Sent invite" )
       ->then( sub {
-         $await_as_event->( "m.room.member" )
+         await_as_event( "m.room.member" )
       })->then( sub {
          my ( $event ) = @_;
 
@@ -46,13 +44,13 @@ multi_test "Inviting an AS-hosted user asks the AS server",
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
-   requires => [qw( await_as_event as_user first_home_server ),
+   requires => [qw( as_user first_home_server ),
                   local_user_fixture(), $room_fixture,
 
                 qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $await_as_event, $as_user, $first_home_server,
+      my ( $as_user, $first_home_server,
            $local_user, $room_id ) = @_;
       my $room_alias = "#astest-03passive-1:$first_home_server";
 
@@ -76,7 +74,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
          });
 
       Future->needs_all(
-         $await_as_event->( "m.room.member" )->then( sub {
+         await_as_event( "m.room.member" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "Event", $event;
@@ -95,7 +93,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
             Future->done;
          }),
 
-         $await_as_event->( "m.room.aliases" )->then( sub {
+         await_as_event( "m.room.aliases" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "Event", $event;
@@ -126,14 +124,14 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
    };
 
 test "Events in rooms with AS-hosted room aliases are sent to AS server",
-   requires => [qw( await_as_event ), $user_fixture, $room_fixture,
-                qw( can_join_room_by_alias can_send_message )],
+   requires => [ $user_fixture, $room_fixture,
+                 qw( can_join_room_by_alias can_send_message )],
 
    do => sub {
-      my ( $await_as_event, $creator, $room_id ) = @_;
+      my ( $creator, $room_id ) = @_;
 
       Future->needs_all(
-         $await_as_event->( "m.room.message" )->then( sub {
+         await_as_event( "m.room.message" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "Event", $event;
