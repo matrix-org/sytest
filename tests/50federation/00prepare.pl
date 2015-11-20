@@ -12,14 +12,12 @@ my $DIR = dirname( __FILE__ );
 
 struct FederationParams => [qw( server_name key_id public_key secret_key )];
 
-prepare "Creating inbound federation HTTP server and outbound federation client",
-   provides => [qw( inbound_server outbound_client )],
+push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT );
 
-   do => sub {
+our $INBOUND_SERVER = fixture(
+   setup => sub {
       my $inbound_server = SyTest::Federation::Server->new;
       $loop->add( $inbound_server );
-
-      provide inbound_server => $inbound_server;
 
       require IO::Async::SSL;
 
@@ -33,8 +31,8 @@ prepare "Creating inbound federation HTTP server and outbound federation client"
          SSL_key_file => "$DIR/server.key",
          SSL_cert_file => "$DIR/server.crt",
       )->on_done( sub {
-         my ( $listener ) = @_;
-         my $sock = $listener->read_handle;
+         my ( $inbound_server ) = @_;
+         my $sock = $inbound_server->read_handle;
 
          my $server_name = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
 
@@ -52,21 +50,30 @@ prepare "Creating inbound federation HTTP server and outbound federation client"
          );
          $loop->add( $outbound_client );
 
-         $listener->configure(
+         $inbound_server->configure(
             federation_params => $fedparams,
             keystore          => $keystore,
             client            => $outbound_client,
          );
-
-         provide outbound_client => $outbound_client;
       });
-   };
+   },
+);
+
+our $OUTBOUND_CLIENT = fixture(
+   requires => [ $INBOUND_SERVER ],
+
+   setup => sub {
+      my ( $inbound_server ) = @_;
+
+      Future->done( $inbound_server->client );
+   },
+);
 
 # A small test to check that our own federation server simulation is working
 # correctly. If this test fails, it *ALWAYS* indicates a failure of SyTest
 # itself and not of the homeserver being tested.
 test "Checking local federation server",
-   requires => [qw( inbound_server http_client )],
+   requires => [ $INBOUND_SERVER, qw( http_client )],
 
    check => sub {
       my ( $inbound_server, $client ) = @_;

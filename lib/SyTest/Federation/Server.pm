@@ -47,6 +47,12 @@ sub configure
    return $self->SUPER::configure( %params );
 }
 
+sub client
+{
+   my $self = shift;
+   return $self->{client};
+}
+
 sub next_event_id
 {
    my $self = shift;
