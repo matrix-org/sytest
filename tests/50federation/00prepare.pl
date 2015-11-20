@@ -15,7 +15,7 @@ struct FederationParams => [qw( server_name key_id public_key secret_key )];
 prepare "Creating inbound federation HTTP server and outbound federation client",
    requires => [qw( first_home_server )],
 
-   provides => [qw( local_server_name inbound_server outbound_client )],
+   provides => [qw( inbound_server outbound_client )],
 
    do => sub {
       my ( $first_home_server ) = @_;
@@ -41,8 +41,6 @@ prepare "Creating inbound federation HTTP server and outbound federation client"
          my $sock = $listener->read_handle;
 
          my $server_name = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
-
-         provide local_server_name => $server_name;
 
          my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
 
@@ -72,12 +70,13 @@ prepare "Creating inbound federation HTTP server and outbound federation client"
 # correctly. If this test fails, it *ALWAYS* indicates a failure of SyTest
 # itself and not of the homeserver being tested.
 test "Checking local federation server",
-   requires => [qw( local_server_name inbound_server http_client )],
+   requires => [qw( inbound_server http_client )],
 
    check => sub {
-      my ( $local_server_name, $inbound_server, $client ) = @_;
+      my ( $inbound_server, $client ) = @_;
 
       my $key_id = $inbound_server->key_id;
+      my $local_server_name = $inbound_server->server_name;
 
       $client->do_request(
          method => "GET",

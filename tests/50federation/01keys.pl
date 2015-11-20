@@ -81,12 +81,13 @@ test "Federation key API allows unsigned requests for keys",
    };
 
 test "Federation key API can act as a notary server",
-   requires => [qw( first_home_server first_server_key local_server_name inbound_server outbound_client )],
+   requires => [qw( first_home_server first_server_key inbound_server outbound_client )],
 
    check => sub {
-      my ( $first_home_server, $server_key, $local_server_name, $inbound_server, $client ) = @_;
+      my ( $first_home_server, $server_key, $inbound_server, $client ) = @_;
 
       my $key_id = $inbound_server->key_id;
+      my $local_server_name = $inbound_server->server_name;
 
       $client->do_request_json(
          method   => "GET",
