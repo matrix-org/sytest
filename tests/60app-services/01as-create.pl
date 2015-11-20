@@ -57,16 +57,26 @@ test "Regular users cannot register within the AS namespace",
    };
 
 test "AS can make room aliases",
-   requires => [qw( await_as_event as_user first_home_server ), $room_fixture,
+   requires => [qw( await_as_event as_user hs2as_token first_home_server ), $room_fixture,
                 qw( can_create_room_alias )],
 
    do => sub {
-      my ( $await_as_event, $as_user, $first_home_server, $room_id ) = @_;
+      my ( $await_as_event, $as_user, $hs2as_token, $first_home_server, $room_id ) = @_;
       my $room_alias = "#astest-01create-1:$first_home_server";
 
       Future->needs_all(
          $await_as_event->( "m.room.aliases" )->then( sub {
-            my ( $event ) = @_;
+            my ( $event, $request ) = @_;
+
+            # As this is the first AS event we've received, lets check that the
+            # token matches, to give that coverage.
+
+            my $access_token = $request->query_param( "access_token" );
+
+            assert_ok( defined $access_token,
+               "HS provides an access_token" );
+            assert_eq( $access_token, $hs2as_token,
+               "HS provides the correct token" );
 
             log_if_fail "Event", $event;
 

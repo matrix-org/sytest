@@ -15,13 +15,9 @@ prepare "Creating special AS user",
    };
 
 prepare "Creating test helper functions",
-   requires => [qw( hs2as_token )],
-
    provides => [qw( await_as_event )],
 
    do => sub {
-      my ( $hs2as_token ) = @_;
-
       # Map event types to ARRAYs of Futures
       my %futures_by_type;
 
@@ -50,13 +46,6 @@ prepare "Creating test helper functions",
             # Respond immediately to AS
             $request->respond_json( {} );
 
-            my $access_token = $request->query_param( "access_token" );
-
-            defined $access_token or
-               die "Expected HS to provide an access_token";
-            $access_token eq $hs2as_token or
-               die "HS did not provide the correct token";
-
             foreach my $event ( @{ $request->body_from_json->{events} } ) {
                my $type = $event->{type};
 
@@ -66,7 +55,7 @@ prepare "Creating test helper functions",
                shift @$queue while $queue and @$queue and $queue->[0]->is_cancelled;
 
                if( $queue and my $f = shift @$queue ) {
-                  $f->done( $event );
+                  $f->done( $event, $request );
                }
                else {
                   print "Ignoring incoming AS event of type $type\n";
