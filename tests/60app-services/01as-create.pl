@@ -7,8 +7,6 @@ my $room_fixture = room_fixture(
 test "AS can create a user",
    requires => [qw( as_user ), $room_fixture ],
 
-   provides => [qw( make_as_user )],
-
    do => sub {
       my ( $as_user, $room_id ) = @_;
 
@@ -26,27 +24,6 @@ test "AS can create a user",
          log_if_fail "Body", $body;
 
          assert_json_keys( $body, qw( user_id home_server ));
-
-         provide make_as_user => sub {
-            my ( $user_id_fragment ) = @_;
-
-            do_request_json_for( $as_user,
-               method => "POST",
-               uri    => "/api/v1/register",
-
-               content => {
-                  type => "m.login.application_service",
-                  user => "astest-$user_id_fragment"
-               },
-            )->then( sub {
-               my ( $body ) = @_;
-
-               # TODO: user has no event stream yet. Should they?
-               Future->done(
-                  User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, undef, [], undef )
-               );
-            });
-         };
 
          Future->done(1);
       });
@@ -155,3 +132,45 @@ test "Regular users cannot create room aliases within the AS namespace",
          }
       )->main::expect_http_4xx;
    };
+
+push our @EXPORT, qw( matrix_register_as_ghost as_ghost_fixture );
+
+sub matrix_register_as_ghost
+{
+   my ( $as_user, $user_id ) = @_;
+   is_User( $as_user ) or croak "Expected a User, got $as_user";
+
+   do_request_json_for( $as_user,
+      method => "POST",
+      uri    => "/api/v1/register",
+
+      content => {
+         type => "m.login.application_service",
+         user => $user_id,
+      }
+   )->then( sub {
+      my ( $body ) = @_;
+
+      # TODO: user has no event stream yet. Should they?
+      Future->done(
+         User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, undef, [], undef )
+      );
+   });
+}
+
+my $next_as_user_id = 0;
+sub as_ghost_fixture
+{
+   fixture(
+      requires => [qw( as_user )],
+
+      setup => sub {
+         my ( $as_user ) = @_;
+
+         my $user_id = "astest-$next_as_user_id";
+         $next_as_user_id++;
+
+         matrix_register_as_ghost( $as_user, $user_id );
+      },
+   );
+}

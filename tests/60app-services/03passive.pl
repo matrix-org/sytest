@@ -5,12 +5,12 @@ my $room_fixture = room_fixture(
 );
 
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [qw( await_as_event make_as_user first_home_server ),
+   requires => [qw( await_as_event as_user first_home_server ),
                      $user_fixture, $room_fixture,
                 qw( can_invite_room )],
 
    do => sub {
-      my ( $await_as_event, $make_as_user, $home_server,
+      my ( $await_as_event, $as_user, $home_server,
             $creator, $room_id ) = @_;
 
       my $localpart = "astest-03passive-1";
@@ -20,7 +20,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
          ->then( sub {
             my ( $request ) = @_;
 
-            $make_as_user->( $localpart )->on_done( sub {
+            matrix_register_as_ghost( $as_user, $localpart )->on_done( sub {
                $request->respond_json( {} );
             });
          });

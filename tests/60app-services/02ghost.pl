@@ -1,52 +1,44 @@
 my $user_fixture = local_user_fixture();
 
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [qw( make_as_user await_as_event as_user ), $user_fixture,
+   requires => [ as_ghost_fixture(), qw( await_as_event as_user ), $user_fixture,
                      room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $make_as_user, $await_as_event, $as_user, $creator, $room_id ) = @_;
+      my ( $ghost, $await_as_event, $as_user, $creator, $room_id ) = @_;
 
-      my $ghost;
+      Future->needs_all(
+         $await_as_event->( "m.room.member" )->then( sub {
+            my ( $event ) = @_;
 
-      $make_as_user->( "02ghost-1" )
-         ->SyTest::pass_on_done( "Created AS ghost" )
-      ->then( sub {
-         ( $ghost ) = @_;
+            log_if_fail "AS event", $event;
 
-         Future->needs_all(
-            $await_as_event->( "m.room.member" )->then( sub {
-               my ( $event ) = @_;
+            assert_json_keys( $event, qw( content room_id ));
 
-               log_if_fail "AS event", $event;
+            $event->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+            $event->{state_key} eq $ghost->user_id or
+               die "Expected state_key to be ${\$ghost->user_id}";
 
-               assert_json_keys( $event, qw( content room_id ));
+            assert_json_keys( my $content = $event->{content}, qw( membership ) );
 
-               $event->{room_id} eq $room_id or
-                  die "Expected room_id to be $room_id";
-               $event->{state_key} eq $ghost->user_id or
-                  die "Expected state_key to be ${\$ghost->user_id}";
+            $content->{membership} eq "join" or
+               die "Expected membership to be 'join'";
 
-               assert_json_keys( my $content = $event->{content}, qw( membership ) );
+            Future->done;
+         }),
 
-               $content->{membership} eq "join" or
-                  die "Expected membership to be 'join'";
+         do_request_json_for( $as_user,
+            method => "POST",
+            uri    => "/api/v1/rooms/$room_id/join",
+            params => {
+               user_id => $ghost->user_id,
+            },
 
-               Future->done;
-            }),
-
-            do_request_json_for( $as_user,
-               method => "POST",
-               uri    => "/api/v1/rooms/$room_id/join",
-               params => {
-                  user_id => $ghost->user_id,
-               },
-
-               content => {},
-            )
+            content => {},
          )
-      })->SyTest::pass_on_done( "User joined room via AS" )
+      )->SyTest::pass_on_done( "User joined room via AS" )
       ->then( sub {
          Future->needs_all(
             $await_as_event->( "m.room.message" )->then( sub {
@@ -96,42 +88,34 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [qw( make_as_user await_as_event ), $user_fixture,
+   requires => [ as_ghost_fixture(), qw( await_as_event ), $user_fixture,
                      room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally can_send_message )],
 
    do => sub {
-      my ( $make_as_user, $await_as_event, $creator, $room_id ) = @_;
+      my ( $ghost, $await_as_event, $creator, $room_id ) = @_;
 
-      my $ghost;
+      Future->needs_all(
+         $await_as_event->( "m.room.member" )->then( sub {
+            my ( $event ) = @_;
 
-      $make_as_user->( "02ghost-2" )
-         ->SyTest::pass_on_done( "Created AS ghost" )
-      ->then( sub {
-         ( $ghost ) = @_;
+            log_if_fail "AS event", $event;
 
-         Future->needs_all(
-            $await_as_event->( "m.room.member" )->then( sub {
-               my ( $event ) = @_;
+            assert_json_keys( $event, qw( content room_id ));
 
-               log_if_fail "AS event", $event;
+            $event->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
 
-               assert_json_keys( $event, qw( content room_id ));
+            assert_json_keys( my $content = $event->{content}, qw( membership ) );
 
-               $event->{room_id} eq $room_id or
-                  die "Expected room_id to be $room_id";
+            $content->{membership} eq "join" or
+               die "Expected membership to be 'join'";
 
-               assert_json_keys( my $content = $event->{content}, qw( membership ) );
+            Future->done;
+         }),
 
-               $content->{membership} eq "join" or
-                  die "Expected membership to be 'join'";
-
-               Future->done;
-            }),
-
-            matrix_join_room( $ghost, $room_id )
-         )
-      })->SyTest::pass_on_done( "Ghost joined room themselves" )
+         matrix_join_room( $ghost, $room_id )
+      )->SyTest::pass_on_done( "Ghost joined room themselves" )
       ->then( sub {
          Future->needs_all(
             $await_as_event->( "m.room.message" )->then( sub {
