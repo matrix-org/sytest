@@ -19,19 +19,17 @@ test "Can sync a joined room",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{ephemeral}, qw( events ));
-         assert_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
-         assert_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
 
          matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          (!defined $room) or die "Unchanged rooms shouldn't be in the sync response";
 
          Future->done(1)
@@ -65,14 +63,12 @@ test "Full state sync includes joined rooms",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
 
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{ephemeral}, qw( events ));
-         assert_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
-         assert_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
 
          Future->done(1)
       })
@@ -106,19 +102,17 @@ test "Newly joined room is included in an incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{ephemeral}, qw( events ));
-         assert_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
-         assert_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
 
          matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          (!defined $room) or die "Unchanged rooms shouldn't be in the sync response";
 
          Future->done(1)
@@ -168,20 +162,20 @@ test "Newly joined room has correct timeline in incremental sync",
          matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
       })->then( sub {
          my ( $body ) = @_;
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          my $timeline = $room->{timeline};
 
          log_if_fail "Timeline", $timeline;
 
          map {
-            $room->{event_map}{$_}{type} eq "m.room.message"
+            $_->{type} eq "m.room.message"
                or die "Only expected 'm.room.message' events";
          } @{ $timeline->{events} };
 
          if( @{ $timeline->{events} } == 6 ) {
             assert_json_boolean( $timeline->{limited} );
             !$timeline->{limited} or
-               die "Timeline doesn't have all the events so should be limited";
+               die "Timeline has all the events so shouldn't be limited";
          }
          else {
             assert_json_boolean( $timeline->{limited} );

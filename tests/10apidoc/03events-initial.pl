@@ -186,6 +186,6 @@ sub matrix_sync
 
       assert_json_keys( $body, qw( rooms presence next_batch ) );
       assert_json_keys( $body->{presence}, qw( events ));
-      assert_json_keys( $body->{rooms}, qw( joined invited archived ) );
+      assert_json_keys( $body->{rooms}, qw( join invite leave ) );
    });
 }

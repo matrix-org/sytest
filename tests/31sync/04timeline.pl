@@ -31,18 +31,18 @@ test "Can sync a room with a single message",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          @{ $room->{timeline}{events} } == 2
             or die "Expected two timeline events";
-         $room->{timeline}{events}[0] eq $event_id_1
+         $room->{timeline}{events}[0]{event_id} eq $event_id_1
             or die "Unexpected timeline event";
-         $room->{event_map}{$event_id_1}{content}{body} eq "Test message 1"
+         $room->{timeline}{events}[0]{content}{body} eq "Test message 1"
             or die "Unexpected message body.";
-         $room->{timeline}{events}[1] eq $event_id_2
+         $room->{timeline}{events}[1]{event_id} eq $event_id_2
             or die "Unexpected timeline event";
-         $room->{event_map}{$event_id_2}{content}{body} eq "Test message 2"
+         $room->{timeline}{events}[1]{content}{body} eq "Test message 2"
             or die "Unexpected message body.";
          $room->{timeline}{limited}
             or die "Expected timeline to be limited";
@@ -85,16 +85,16 @@ test "Can sync a room with a message with a transaction id",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one timeline event";
-         $room->{timeline}{events}[0] eq $event_id
+         $room->{timeline}{events}[0]{event_id} eq $event_id
             or die "Unexpected timeline event";
-         $room->{event_map}{$event_id}{content}{body} eq "A test message"
+         $room->{timeline}{events}[0]{content}{body} eq "A test message"
             or die "Unexpected message body.";
-         $room->{event_map}{$event_id}{unsigned}{transaction_id} eq "my_transaction_id"
+         $room->{timeline}{events}[0]{unsigned}{transaction_id} eq "my_transaction_id"
             or die "Unexpected transaction id";
          $room->{timeline}{limited}
             or die "Expected timeline to be limited";
@@ -142,19 +142,19 @@ test "A message sent after an initial sync appears in the timeline of an increme
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          @{ $room->{state}{events} } == 0
             or die "Did not expect a state event";
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one timeline event";
-         $room->{timeline}{events}[0] eq $event_id
+         $room->{timeline}{events}[0]{event_id} eq $event_id
             or die "Unexpected timeline event";
-         $room->{event_map}{$event_id}{content}{body} eq "A test message"
+         $room->{timeline}{events}[0]{content}{body} eq "A test message"
             or die "Unexpected message body.";
-         $room->{event_map}{$event_id}{unsigned}{transaction_id} eq "my_transaction_id"
+         $room->{timeline}{events}[0]{unsigned}{transaction_id} eq "my_transaction_id"
             or die "Unexpected transaction id";
          (not $room->{timeline}{limited})
             or die "Did not expect timeline to be limited";
@@ -204,17 +204,17 @@ test "A filtered timeline reaches its limit",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          @{ $room->{state}{events} } == 0
             or die "Did not expect a state event";
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one timeline event";
-         $room->{timeline}{events}[0] eq $event_id
+         $room->{timeline}{events}[0]{event_id} eq $event_id
             or die "Unexpected timeline event";
-         $room->{event_map}{$event_id}{content}{body} eq "My message"
+         $room->{timeline}{events}[0]{content}{body} eq "My message"
             or die "Unexpected message body.";
          (not $room->{timeline}{limited})
             or die "Did not expect timeline to be limited";
@@ -245,8 +245,8 @@ test "Syncing a new room with a large timeline limit isn't limited",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          (not $room->{timeline}{limited})
@@ -296,13 +296,13 @@ test "A full_state incremental update returns only recent timeline",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
 
          @{ $room->{timeline}{events} } == 1
              or die "Expected only one timeline event";
-         my $event_id = $room->{timeline}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "another.filler.type"
+         my $event = $room->{timeline}{events}[0];
+         $event->{type} eq "another.filler.type"
             or die "Unexpected timeline event type";
 
          Future->done(1);
@@ -339,15 +339,15 @@ test "A prev_batch token can be used in the v1 messages API",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         assert_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one timeline event";
-         $room->{timeline}{events}[0] eq $event_id_2
+         $room->{timeline}{events}[0]{event_id} eq $event_id_2
             or die "Unexpected timeline event";
-         $room->{event_map}{$event_id_2}{content}{body} eq "2"
+         $room->{timeline}{events}[0]{content}{body} eq "2"
             or die "Unexpected message body.";
          $room->{timeline}{limited}
             or die "Expected timeline to be limited";

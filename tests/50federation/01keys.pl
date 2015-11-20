@@ -6,10 +6,11 @@ use Protocol::Matrix qw( encode_json_for_signing );
 
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
+our $INBOUND_SERVER;
+our $OUTBOUND_CLIENT;
+
 test "Federation key API allows unsigned requests for keys",
    requires => [qw( first_home_server http_client )],
-
-   provides => [qw( first_server_key )],
 
    check => sub {
       my ( $first_home_server, $client ) = @_;
@@ -74,22 +75,22 @@ test "Federation key API allows unsigned requests for keys",
          # old_verify_keys is mandatory, even if it's empty
          assert_json_object( $body->{old_verify_keys} );
 
-         provide first_server_key => $key;
-
          Future->done(1);
       });
    };
 
 test "Federation key API can act as a notary server",
-   requires => [qw( first_home_server first_server_key local_server_name inbound_server outbound_client )],
+   requires => [qw( first_home_server ), $INBOUND_SERVER, $OUTBOUND_CLIENT ],
 
    check => sub {
-      my ( $first_home_server, $server_key, $local_server_name, $inbound_server, $client ) = @_;
+      my ( $first_home_server, $inbound_server, $client ) = @_;
 
       my $key_id = $inbound_server->key_id;
+      my $local_server_name = $inbound_server->server_name;
 
       $client->do_request_json(
          method   => "GET",
+         hostname => $first_home_server,
          full_uri => "/_matrix/key/v2/query/$local_server_name/$key_id",
       )->then( sub {
          my ( $body ) = @_;
@@ -105,20 +106,29 @@ test "Federation key API can act as a notary server",
          $key or
             die "Expected to find a response about $key_id from $local_server_name";
 
-         exists $key->{signatures}{$first_home_server} or
+         my $first_hs_sig = $key->{signatures}{$first_home_server} or
             die "Expected the key to be signed by the first homeserver";
 
-         # Just presume there's only one signature
-         my ( $first_hs_sig ) = values %{ $key->{signatures}{$first_home_server} };
+         keys %$first_hs_sig == 1 or
+            die "Expected the first homeserver to apply one signature";
 
-         assert_base64_unpadded( $first_hs_sig );
-         my $signature = decode_base64 $first_hs_sig;
+         my ( $key_id, $signature_base64 ) = %$first_hs_sig;
+
+         assert_base64_unpadded( $signature_base64 );
+         my $signature = decode_base64 $signature_base64;
 
          my $signed_bytes = encode_json_for_signing( $key );
 
-         $crypto_sign->verify( $signature, $signed_bytes, $server_key ) or
-            die "Signature verification failed";
+         $client->get_key(
+            server_name => $first_home_server,
+            key_id      => $key_id,
+         )->then( sub {
+            my ( $server_key ) = @_;
 
-         Future->done(1);
+            $crypto_sign->verify( $signature, $signed_bytes, $server_key ) or
+               die "Signature verification failed";
+
+            Future->done(1);
+         });
       });
    };

@@ -1,86 +1,68 @@
 use Future::Utils qw( repeat );
 
-prepare "Creating special AS user",
+push our @EXPORT, qw( AS_USER await_as_event );
+
+our $AS_USER = fixture(
    requires => [qw( first_api_client as_credentials )],
 
-   provides => [qw( as_user )],
-
-   do => sub {
+   setup => sub {
       my ( $http, $as_credentials ) = @_;
       my ( $user_id, $token ) = @$as_credentials;
 
-      provide as_user => User( $http, $user_id, $token, undef, undef, [], undef );
+      Future->done( User( $http, $user_id, $token, undef, undef, [], undef ) );
+   },
+);
 
-      Future->done(1);
-   };
+# Map event types to ARRAYs of Futures
+my %futures_by_type;
 
-prepare "Creating test helper functions",
-   requires => [qw( hs2as_token )],
+sub await_as_event
+{
+   my ( $type ) = @_;
+   my $failmsg = SyTest::CarpByFile::shortmess(
+      "Timed out waiting for an AS event of type $type"
+   );
 
-   provides => [qw( await_as_event )],
+   push @{ $futures_by_type{$type} }, my $f = $loop->new_future;
 
-   do => sub {
-      my ( $hs2as_token ) = @_;
+   return Future->wait_any(
+      $f,
 
-      # Map event types to ARRAYs of Futures
-      my %futures_by_type;
+      delay( 10 )
+         ->then_fail( $failmsg ),
+   );
+}
 
-      provide await_as_event => sub {
-         my ( $type ) = @_;
-         my $failmsg = SyTest::CarpByFile::shortmess(
-            "Timed out waiting for an AS event of type $type"
-         );
+my $f = repeat {
+   await_http_request( qr{^/appserv/transactions/\d+$}, sub { 1 },
+      timeout => 0,
+   )->then( sub {
+      my ( $request ) = @_;
 
-         push @{ $futures_by_type{$type} }, my $f = $loop->new_future;
+      # Respond immediately to AS
+      $request->respond_json( {} );
 
-         return Future->wait_any(
-            $f,
+      foreach my $event ( @{ $request->body_from_json->{events} } ) {
+         my $type = $event->{type};
 
-            delay( 10 )
-               ->then_fail( $failmsg ),
-         );
-      };
+         my $queue = $futures_by_type{$type};
 
-      my $f = repeat {
-         await_http_request( qr{^/appserv/transactions/\d+$}, sub { 1 },
-            timeout => 0,
-         )->then( sub {
-            my ( $request ) = @_;
+         # Ignore any cancelled ones
+         shift @$queue while $queue and @$queue and $queue->[0]->is_cancelled;
 
-            # Respond immediately to AS
-            $request->respond_json( {} );
+         if( $queue and my $f = shift @$queue ) {
+            $f->done( $event, $request );
+         }
+         else {
+            print "Ignoring incoming AS event of type $type\n";
+         }
+      }
 
-            my $access_token = $request->query_param( "access_token" );
+      Future->done;
+   })
+} while => sub { not $_[0]->failure };
 
-            defined $access_token or
-               die "Expected HS to provide an access_token";
-            $access_token eq $hs2as_token or
-               die "HS did not provide the correct token";
+$f->on_fail( sub { die $_[0] } );
 
-            foreach my $event ( @{ $request->body_from_json->{events} } ) {
-               my $type = $event->{type};
-
-               my $queue = $futures_by_type{$type};
-
-               # Ignore any cancelled ones
-               shift @$queue while $queue and @$queue and $queue->[0]->is_cancelled;
-
-               if( $queue and my $f = shift @$queue ) {
-                  $f->done( $event );
-               }
-               else {
-                  print "Ignoring incoming AS event of type $type\n";
-               }
-            }
-
-            Future->done;
-         })
-      } while => sub { not $_[0]->failure };
-
-      $f->on_fail( sub { die $_[0] } );
-
-      # lifecycle it
-      $f->on_cancel( sub { undef $f } );
-
-      Future->done(1);
-   };
+# lifecycle it
+$f->on_cancel( sub { undef $f } );
