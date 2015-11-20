@@ -73,7 +73,7 @@ our $OUTBOUND_CLIENT = fixture(
 # correctly. If this test fails, it *ALWAYS* indicates a failure of SyTest
 # itself and not of the homeserver being tested.
 test "Checking local federation server",
-   requires => [ $INBOUND_SERVER, qw( http_client )],
+   requires => [ $INBOUND_SERVER, our $HTTP_CLIENT ],
 
    check => sub {
       my ( $inbound_server, $client ) = @_;
