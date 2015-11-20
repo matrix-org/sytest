@@ -39,7 +39,7 @@ test "GET /login yields a set of flows",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( flows ));
+         assert_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
 
          my $has_login_flow;
@@ -71,7 +71,7 @@ test "POST /login can log in as a user",
    requires => [qw( first_api_client ), $registered_user_fixture,
                 qw( can_login_password_flow )],
 
-   provides => [qw( can_login first_home_server do_request_json_for do_request_json )],
+   provides => [qw( can_login first_home_server )],
 
    do => sub {
       my ( $http, $user_id ) = @_;
@@ -88,15 +88,11 @@ test "POST /login can log in as a user",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( access_token home_server ));
+         assert_json_keys( $body, qw( access_token home_server ));
 
          provide can_login => 1;
 
          provide first_home_server => $body->{home_server};
-
-         provide do_request_json_for => sub { die "Dead - see do_request_json_for() instead" };
-
-         provide do_request_json => sub { die "Dead - see do_request_json_for() on \$user instead" };
 
          Future->done(1);
       });
@@ -123,7 +119,7 @@ test "POST /login wrong password is rejected",
 
          my $body = decode_json $resp->content;
 
-         require_json_keys( $body, qw( errcode ));
+         assert_json_keys( $body, qw( errcode ));
 
          my $errcode = $body->{errcode};
 
@@ -166,7 +162,7 @@ test "POST /tokenrefresh invalidates old refresh token",
          sub {
             my ( $second_body ) = @_;
 
-            require_json_keys( $second_body, qw( access_token refresh_token ));
+            assert_json_keys( $second_body, qw( access_token refresh_token ));
 
             $second_body->{$_} ne $first_body->{$_} or
                die "Expected new '$_'" for qw( access_token refresh_token );

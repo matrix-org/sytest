@@ -26,7 +26,7 @@ test "POST /media/v1/upload can create an upload",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( content_uri ));
+         assert_json_keys( $body, qw( content_uri ));
 
          provide can_upload_media => 1;
 

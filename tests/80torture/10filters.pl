@@ -3,7 +3,7 @@ my $INVALID_FILTERS = [
    { room => { timeline => "not_an_object" } },
    { room => { state => "not_an_object" } },
    { room => { ephemeral => "not_an_object" } },
-   { room => { private_user_data => "not_an_object" } },
+   { room => { account_data => "not_an_object" } },
    { room => { timeline => { "rooms" => "not_a_list" } } },
    { room => { timeline => { "not_rooms" => "not_a_list" } } },
    { room => { timeline => { "senders" => "not_a_list" } } },

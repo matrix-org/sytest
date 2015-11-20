@@ -72,12 +72,12 @@ test "A departed room is still included in /initialSync (SPEC-216)",
         matrix_initialsync( $user, limit => 2, archived => "true" )->then( sub {
             my ( $body ) = @_;
 
-            require_json_keys( $body, qw( rooms ) );
+            assert_json_keys( $body, qw( rooms ) );
 
             my $room = first { $_->{room_id} eq $room_id } @{ $body->{rooms} }
                 or die "Departed room not in /initialSync";
 
-            require_json_keys( $room, qw( state messages membership) );
+            assert_json_keys( $room, qw( state messages membership) );
 
             $room->{membership} eq "leave" or die "Membership is not leave";
 
@@ -102,14 +102,11 @@ test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
     check => sub {
         my ( $user, $room_id ) = @_;
 
-        do_request_json_for( $user,
-            method => "GET",
-            uri => "/api/v1/rooms/$room_id/initialSync",
-            params => { limit => 2 },
-        )->then( sub {
+        matrix_initialsync_room( $user, $room_id, limit => 2 )
+        ->then( sub {
             my ( $room ) = @_;
 
-            require_json_keys( $room, qw( state messages membership ) );
+            assert_json_keys( $room, qw( state messages membership ) );
 
             $room->{membership} eq "leave" or die "Membership is not leave";
 
@@ -166,7 +163,7 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
         )->then( sub {
             my ( $body ) = @_;
 
-            require_json_keys( $body, qw( chunk ) );
+            assert_json_keys( $body, qw( chunk ) );
 
             my $membership =
                 first { $_->{state_key} eq $user->user_id } @{ $body->{chunk} }
@@ -185,14 +182,10 @@ test "Can get rooms/{roomId}/messages for a departed room (SPEC-216)",
     check => sub {
         my ( $user, $room_id ) = @_;
 
-        do_request_json_for( $user,
-            method => "GET",
-            uri => "/api/v1/rooms/$room_id/messages",
-            params => {limit => 2, dir => 'b'},
-        )->then( sub {
+        matrix_get_room_messages( $user, $room_id, limit => 2 )->then( sub {
             my ( $body ) = @_;
 
-            require_json_keys( $body, qw( chunk ) );
+            assert_json_keys( $body, qw( chunk ) );
 
             log_if_fail "Chunk", $body->{chunk};
 
@@ -214,7 +207,7 @@ test "Can get 'm.room.name' state for a departed room (SPEC-216)",
         )->then( sub {
             my ( $body ) = @_;
 
-            require_json_keys( $body, qw( name ) );
+            assert_json_keys( $body, qw( name ) );
 
             $body->{name} eq "N1. B's room name before A left"
                 or die "Received message that happened after leaving the room";
@@ -234,14 +227,13 @@ test "Getting messages going forward is limited for a departed room (SPEC-216)",
         #  latest token for a room that you aren't in. It may be necessary
         #  to add some extra APIs to matrix for learning this sort of thing for
         #  testing security.
-        do_request_json_for( $user,
-            method => "GET",
-            uri => "/api/v1/rooms/$room_id/messages",
-            params => {limit => 2, to => "t10000-0_0_0_0"},
+        matrix_get_room_messages( $user, $room_id,
+            limit => 2,
+            to    => "t10000-0_0_0_0",
         )->then( sub {
             my ( $body ) = @_;
 
-            require_json_keys( $body, qw( chunk ) );
+            assert_json_keys( $body, qw( chunk ) );
 
             not @{ $body->{chunk} }
                 or die "Received message that happened after leaving the room";

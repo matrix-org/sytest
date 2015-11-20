@@ -86,13 +86,13 @@ test "Checking local federation server",
          my ( $body ) = @_;
          log_if_fail "Keyserver response", $body;
 
-         require_json_keys( $body, qw( server_name valid_until_ts verify_keys signatures tls_fingerprints ));
+         assert_json_keys( $body, qw( server_name valid_until_ts verify_keys signatures tls_fingerprints ));
 
-         require_json_string( $body->{server_name} );
+         assert_json_string( $body->{server_name} );
          $body->{server_name} eq $local_server_name or
             die "Expected server_name to be $local_server_name";
 
-         require_json_number( $body->{valid_until_ts} );
+         assert_json_number( $body->{valid_until_ts} );
          $body->{valid_until_ts} / 1000 > time or
             die "Key valid_until_ts is in the past";
 
@@ -102,9 +102,9 @@ test "Checking local federation server",
          exists $body->{verify_keys}{$key_id} or
             die "Expected to find the '$key_id' key in verify_keys";
 
-         require_json_keys( my $key = $body->{verify_keys}{$key_id}, qw( key ));
+         assert_json_keys( my $key = $body->{verify_keys}{$key_id}, qw( key ));
 
-         require_base64_unpadded( $key->{key} );
+         assert_base64_unpadded( $key->{key} );
 
          keys %{ $body->{signatures} } or
             die "Expected some signatures";
@@ -115,16 +115,16 @@ test "Checking local federation server",
          my $signature = $body->{signatures}{$local_server_name}{$key_id} or
             die "Expected a signature from $local_server_name using $key_id";
 
-         require_base64_unpadded( $signature );
+         assert_base64_unpadded( $signature );
 
          # TODO: verify it?
 
-         require_json_list( $body->{tls_fingerprints} );
+         assert_json_list( $body->{tls_fingerprints} );
          @{ $body->{tls_fingerprints} } > 0 or
             die "Expected some tls_fingerprints";
 
          foreach ( @{ $body->{tls_fingerprints} } ) {
-            require_json_object( $_ );
+            assert_json_object( $_ );
 
             # TODO: Check it has keys named by the algorithms
          }

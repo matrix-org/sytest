@@ -19,7 +19,7 @@ test "Can upload with ASCII file name",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( content_uri ));
+         assert_json_keys( $body, qw( content_uri ));
 
          my $content_uri = URI->new( $body->{content_uri} );
          my $server = $content_uri->authority;

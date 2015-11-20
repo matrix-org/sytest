@@ -188,7 +188,8 @@ sub invite_should_fail {
       $bind_sub->( $id_server );
    })->then( sub {
       matrix_join_room( $invitee, $room_id )
-   })->followed_by(\&main::expect_http_4xx)->then( sub {
+         ->main::expect_http_4xx
+   })->then( sub {
       matrix_get_room_state( $inviter, $room_id,
          type      => "m.room.member",
          state_key => $invitee->user_id,

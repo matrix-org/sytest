@@ -30,18 +30,18 @@ test "Presence changes are reported to local room members",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.presence";
 
-               require_json_keys( $event, qw( type content ));
-               require_json_keys( my $content = $event->{content},
+               assert_json_keys( $event, qw( type content ));
+               assert_json_keys( my $content = $event->{content},
                   qw( user_id presence ));
 
                $content->{user_id} eq $senduser->user_id or return;
 
                # Disabled for now; see SYT-34
-               # require_json_keys( $content, qw( status_msg ));
+               # assert_json_keys( $content, qw( status_msg ));
                #
                # $content->{status_msg} eq $status_msg or
                #    die "Expected content status_msg to '$status_msg'";
@@ -59,12 +59,12 @@ test "Presence changes are also reported to remote room members",
    do => sub {
       my ( $senduser, $remote_user, undef ) = @_;
 
-      await_event_for( $remote_user, sub {
+      await_event_for( $remote_user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
 
-         require_json_keys( $event, qw( type content ));
-         require_json_keys( my $content = $event->{content},
+         assert_json_keys( $event, qw( type content ));
+         assert_json_keys( my $content = $event->{content},
             qw( user_id presence ));
 
          # The next presence message we get might not necessarily be the
@@ -95,7 +95,7 @@ test "Presence changes to OFFLINE are reported to local room members",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.presence";
 
@@ -117,7 +117,7 @@ test "Presence changes to OFFLINE are reported to remote room members",
    do => sub {
       my ( $senduser, $remote_user, undef ) = @_;
 
-      await_event_for( $remote_user, sub {
+      await_event_for( $remote_user, filter => sub {
          my ( $event ) = @_;
 
          return unless $event->{type} eq "m.presence";
@@ -143,16 +143,16 @@ test "Newly created users see their own presence in /initialSync (SYT-34)",
 
          log_if_fail "initialSync response", $body;
 
-         require_json_keys( $body, qw( presence ));
-         require_json_list( my $presence = $body->{presence} );
+         assert_json_keys( $body, qw( presence ));
+         assert_json_list( my $presence = $body->{presence} );
 
          my $user_presence = first {
             $_->{content}{user_id} eq $user->user_id
          } @$presence or die "Expected to find my own presence";
 
          # Doesn't necessarily have a status_msg yet
-         require_json_keys( $user_presence, qw( type content ));
-         require_json_keys( $user_presence->{content},
+         assert_json_keys( $user_presence, qw( type content ));
+         assert_json_keys( $user_presence->{content},
             qw( presence last_active_ago ));
 
          Future->done(1);

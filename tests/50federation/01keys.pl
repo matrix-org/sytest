@@ -25,13 +25,13 @@ test "Federation key API allows unsigned requests for keys",
          my ( $body ) = @_;
          log_if_fail "Key response", $body;
 
-         require_json_keys( $body, qw( server_name valid_until_ts signatures verify_keys old_verify_keys tls_fingerprints ));
+         assert_json_keys( $body, qw( server_name valid_until_ts signatures verify_keys old_verify_keys tls_fingerprints ));
 
-         require_json_string( $body->{server_name} );
+         assert_json_string( $body->{server_name} );
          $body->{server_name} eq $first_home_server or
             die "Expected server_name to be $first_home_server";
 
-         require_json_number( $body->{valid_until_ts} );
+         assert_json_number( $body->{valid_until_ts} );
          $body->{valid_until_ts} / 1000 > time or
             die "Key valid_until_ts is in the past";
 
@@ -47,12 +47,13 @@ test "Federation key API allows unsigned requests for keys",
          $key_id =~ m/^ed25519:/ or
             die "TODO - this test cannot cope with verification key algorithms that are not ed25519";
 
-         require_json_keys( $key, qw( key ));
+         assert_json_keys( $key, qw( key ));
          $key = $key->{key};
 
          log_if_fail "Key (base64)", $key;
 
-         $key = require_base64_unpadded_and_decode( $key );
+         assert_base64_unpadded( $key );
+         $key = decode_base64 $key;
 
          exists $body->{signatures}{ $body->{server_name} }{$key_id} or
             die "Expected to find a signature by the server's own key";
@@ -60,7 +61,8 @@ test "Federation key API allows unsigned requests for keys",
 
          log_if_fail "Signature (base64)", $signature;
 
-         $signature = require_base64_unpadded_and_decode( $signature );
+         assert_base64_unpadded( $signature );
+         $signature = decode_base64 $signature;
 
          my $signed_bytes = encode_json_for_signing( $body );
 
@@ -70,7 +72,7 @@ test "Federation key API allows unsigned requests for keys",
             die "Signature verification failed";
 
          # old_verify_keys is mandatory, even if it's empty
-         require_json_object( $body->{old_verify_keys} );
+         assert_json_object( $body->{old_verify_keys} );
 
          provide first_server_key => $key;
 
@@ -93,8 +95,8 @@ test "Federation key API can act as a notary server",
          my ( $body ) = @_;
          log_if_fail "Response", $body;
 
-         require_json_keys( $body, qw( server_keys ));
-         require_json_list( $body->{server_keys} );
+         assert_json_keys( $body, qw( server_keys ));
+         assert_json_list( $body->{server_keys} );
 
          my $key = first {
             $_->{server_name} eq $local_server_name and exists $_->{verify_keys}{$key_id}
@@ -108,7 +110,9 @@ test "Federation key API can act as a notary server",
 
          # Just presume there's only one signature
          my ( $first_hs_sig ) = values %{ $key->{signatures}{$first_home_server} };
-         my $signature = require_base64_unpadded_and_decode( $first_hs_sig );
+
+         assert_base64_unpadded( $first_hs_sig );
+         my $signature = decode_base64 $first_hs_sig;
 
          my $signed_bytes = encode_json_for_signing( $key );
 

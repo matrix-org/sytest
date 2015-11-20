@@ -47,8 +47,8 @@ multi_test "Register with a recaptcha",
 
             log_if_fail "Body:", $body;
 
-            require_json_keys( $body, qw(completed) );
-            require_json_list( my $completed = $body->{completed} );
+            assert_json_keys( $body, qw(completed) );
+            assert_json_list( my $completed = $body->{completed} );
 
             @$completed == 1 or
                die "Expected one completed stage";

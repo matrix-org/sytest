@@ -20,7 +20,7 @@ test "Left rooms appear in the archived section of sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         assert_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
       });
@@ -55,7 +55,7 @@ test "Newly left rooms appear in the archived section of incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         assert_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
       });
@@ -107,7 +107,7 @@ test "Newly left rooms appear in the archived section of gapped sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{archived}{$room_id_1};
-         require_json_keys( $room, qw( event_map timeline state ));
+         assert_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
       });
@@ -143,7 +143,7 @@ test "Left rooms appear in the archived section of full state sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         assert_json_keys( $room, qw( event_map timeline state ));
 
          Future->done(1);
       });
@@ -206,7 +206,7 @@ test "Archived rooms only contain history from before the user left",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         assert_json_keys( $room, qw( event_map timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event";
          @{ $room->{timeline}{events} } == 1
@@ -225,7 +225,7 @@ test "Archived rooms only contain history from before the user left",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         assert_json_keys( $room, qw( event_map timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event";
          @{ $room->{timeline}{events} } == 1
