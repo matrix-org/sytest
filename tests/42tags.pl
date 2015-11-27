@@ -139,32 +139,24 @@ test "Can list tags for a room",
    };
 
 
-=head2 register_user_and_create_room_and_add_tag
+=head2 create_room_and_add_tag
 
-   my ( $user, $room_id ) = register_user_and_create_room_and_add_tag( $http,
-      with_events => 0
-   )->get;
+   my ( $room_id ) = create_room_and_add_tag( $user )->get;
 
-Register a new user, create a room and add a tag called "test_tag" for that
-user to the room with a tag content of {"order": 1}.
+Creates a room and add a tag called "test_tag" for that user to the room with
+a tag content of {"order": 1}.
 
 =cut
 
-sub register_user_and_create_room_and_add_tag
+sub create_room_and_add_tag
 {
-   my ( $http, %params ) = @_;
+   my ( $user ) = @_;
 
-   my ( $user, $room_id );
+   matrix_create_room( $user )->then( sub {
+      my ( $room_id ) = @_;
 
-   matrix_register_user( $http, undef, %params )->then( sub {
-      ( $user ) = @_;
-         matrix_create_room( $user );
-   })->then( sub {
-      ( $room_id ) = @_;
-
-      matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
-   })->then( sub {
-      Future->done( $user, $room_id );
+      matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } )
+         ->then_done( $room_id );
    });
 }
 
@@ -197,17 +189,14 @@ sub check_tag_event {
 
 
 test "Tags appear in the v1 /events stream",
-   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+   requires => [ local_user_fixture( with_events => 1 ),
+                 qw( can_add_tag can_remove_tag ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
-
-      register_user_and_create_room_and_add_tag( $http,
-         with_events => 1
-      )->then( sub {
-         ( $user, $room_id ) = @_;
+      create_room_and_add_tag( $user )->then( sub {
+         my ( $room_id ) = @_;
 
          await_event_for( $user, filter => sub {
             my ( $event ) = @_;
@@ -246,17 +235,16 @@ sub check_account_data {
 
 
 test "Tags appear in the v1 /initalSync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
+      my $room_id;
 
-      register_user_and_create_room_and_add_tag( $http,
-         with_events => 0
-      )->then( sub {
-         ( $user, $room_id ) = @_;
+      create_room_and_add_tag( $user )->then( sub {
+         ( $room_id ) = @_;
 
          matrix_initialsync( $user );
       })->then( sub {
@@ -264,6 +252,8 @@ test "Tags appear in the v1 /initalSync",
 
          my $room = $body->{rooms}[0];
          assert_json_keys( $room, qw( account_data ) );
+
+         # TODO(paul): Surely assert that the $room found is indeed $room_id ?
 
          check_account_data( $room->{account_data} );
 
@@ -273,16 +263,16 @@ test "Tags appear in the v1 /initalSync",
 
 
 test "Tags appear in the v1 room initial sync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
-      register_user_and_create_room_and_add_tag( $http,
-         with_events => 0
-      )->then( sub {
-         ( $user, $room_id ) = @_;
+      my $room_id;
+
+      create_room_and_add_tag( $user )->then( sub {
+         ( $room_id ) = @_;
 
          matrix_initialsync_room( $user, $room_id );
       })->then( sub {
@@ -290,6 +280,8 @@ test "Tags appear in the v1 room initial sync",
 
          my $room = $body;
          assert_json_keys( $room, qw( account_data ) );
+
+         # TODO(paul): Surely assert that the $room found is indeed $room_id ?
 
          check_account_data( $room->{account_data} );
 
