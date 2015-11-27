@@ -1,17 +1,18 @@
 use List::Util qw( first );
 
 test "User sees their own presence in a sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id );
+      my $filter_id;
 
       my $filter = { presence => { types => [ "m.presence" ] } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
@@ -31,17 +32,18 @@ test "User sees their own presence in a sync",
 
 
 test "User is offline if they set_presence=offline in their sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id );
+      my $filter_id;
 
       my $filter = { presence => { types => [ "m.presence" ] } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_sync( $user, filter => $filter_id, set_presence => "offline" );
       })->then( sub {
@@ -61,20 +63,21 @@ test "User is offline if they set_presence=offline in their sync",
 
 
 test "User sees updates to presence from other users in the incremental sync.",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $user_b, $filter_id_a, $filter_id_b, $next_a );
+      my ( $filter_id_a, $filter_id_b, $next_a );
 
       my $filter = { presence => { types => [ "m.presence" ] } };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          # We can't use matrix_create_and_join since that polls the event
          # stream to check that the user has joined.

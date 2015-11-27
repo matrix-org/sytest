@@ -1,15 +1,16 @@
 test "Can sync a room with a single message",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $event_id_1, $event_id_2 );
+      my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
 
       my $filter = { room => { timeline => { limit => 2 } } };
 
-      matrix_register_user_with_filter( $http, $filter)->then( sub {
-         ( $user , $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -53,12 +54,13 @@ test "Can sync a room with a single message",
 
 
 test "Can sync a room with a message with a transaction id",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $event_id );
+      my ( $filter_id, $room_id, $event_id );
 
       my $filter = {
          room => {
@@ -68,8 +70,8 @@ test "Can sync a room with a message with a transaction id",
          presence => { types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -105,12 +107,13 @@ test "Can sync a room with a message with a transaction id",
 
 
 test "A message sent after an initial sync appears in the timeline of an incremental sync.",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $event_id, $next_batch );
+      my ( $filter_id, $room_id, $event_id, $next_batch );
 
       my $filter = {
          room => {
@@ -120,8 +123,8 @@ test "A message sent after an initial sync appears in the timeline of an increme
          presence => { types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -165,12 +168,13 @@ test "A message sent after an initial sync appears in the timeline of an increme
 
 
 test "A filtered timeline reaches its limit",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $event_id );
+      my ( $filter_id, $room_id, $event_id );
 
       my $filter = {
          room => {
@@ -180,8 +184,8 @@ test "A filtered timeline reaches its limit",
          presence => { types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -225,17 +229,18 @@ test "A filtered timeline reaches its limit",
 
 
 test "Syncing a new room with a large timeline limit isn't limited",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $event_id );
+      my ( $filter_id, $room_id, $event_id );
 
       my $filter = { room => { timeline => { limit => 100 } } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -258,17 +263,18 @@ test "Syncing a new room with a large timeline limit isn't limited",
 
 
 test "A full_state incremental update returns only recent timeline",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = { room => { timeline => { limit => 1 } } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -311,17 +317,18 @@ test "A full_state incremental update returns only recent timeline",
 
 
 test "A prev_batch token can be used in the v1 messages API",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $event_id_1, $event_id_2 );
+      my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
 
       my $filter = { room => { timeline => { limit => 1 } } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {

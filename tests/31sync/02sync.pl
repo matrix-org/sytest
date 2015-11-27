@@ -28,17 +28,18 @@ sub matrix_sync
 
 
 test "Can sync",
-    requires => [qw( first_api_client can_create_filter )],
+    requires => [ local_user_fixture( with_events => 0 ),
+                  qw( can_create_filter )],
 
     provides => [qw( can_sync )],
 
     do => sub {
-       my ( $http ) = @_;
+       my ( $user ) = @_;
 
-       my ( $user, $filter_id );
+       my $filter_id;
 
-       matrix_register_user_with_filter( $http, {} )->then( sub {
-          ( $user, $filter_id ) = @_;
+       matrix_create_filter( $user, {} )->then( sub {
+          ( $filter_id ) = @_;
 
           matrix_sync( $user, filter => $filter_id )
        })->then( sub {

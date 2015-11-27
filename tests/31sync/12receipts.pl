@@ -1,10 +1,11 @@
 test "Read receipts appear in initial v2 /sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $event_id );
+      my ( $filter_id, $room_id, $event_id );
 
       my $filter = {
          presence => { types => [] },
@@ -15,8 +16,8 @@ test "Read receipts appear in initial v2 /sync",
          },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -52,12 +53,13 @@ test "Read receipts appear in initial v2 /sync",
 
 
 test "New read receipts appear in incremental v2 /sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $event_id, $next_batch );
+      my ( $filter_id, $room_id, $event_id, $next_batch );
 
       my $filter = {
          presence => { types => [] },
@@ -68,8 +70,8 @@ test "New read receipts appear in incremental v2 /sync",
          },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {

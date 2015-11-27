@@ -1,18 +1,19 @@
 use List::Util qw( first );
 
 test "Rooms a user is invited to appear in an initial sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id );
+      my ( $filter_id_a, $filter_id_b, $room_id );
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, {} ),
-         matrix_register_user_with_filter( $http, {} ),
+         matrix_create_filter( $user_a, {} ),
+         matrix_create_filter( $user_b, {} ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_create_room( $user_a );
       })->then( sub {
@@ -45,18 +46,19 @@ test "Rooms a user is invited to appear in an initial sync",
 
 
 test "Rooms a user is invited to appear in an incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, {} ),
-         matrix_register_user_with_filter( $http, {} ),
+         matrix_create_filter( $user_a, {} ),
+         matrix_create_filter( $user_b, {} ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {

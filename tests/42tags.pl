@@ -299,17 +299,18 @@ test "Tags appear in the v1 room initial sync",
 
 
 test "Tags appear in an initial v2 /sync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag can_sync ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id, $filter_id );
+      my ( $room_id, $filter_id );
 
       my $filter = {};
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -332,17 +333,18 @@ test "Tags appear in an initial v2 /sync",
 
 
 test "Newly updated tags appear in an incremental v2 /sync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag can_sync ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id, $filter_id, $next_batch );
+      my ( $room_id, $filter_id, $next_batch );
 
       my $filter = {};
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -370,17 +372,18 @@ test "Newly updated tags appear in an incremental v2 /sync",
    };
 
 test "Deleted tags appear in an incremental v2 /sync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag can_sync ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id, $filter_id, $next_batch );
+      my ( $room_id, $filter_id, $next_batch );
 
       my $filter = {};
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
