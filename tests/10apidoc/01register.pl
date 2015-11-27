@@ -157,9 +157,9 @@ sub local_user_fixture
 
 sub local_user_fixtures
 {
-   my ( $count ) = @_;
+   my ( $count, %args ) = @_;
 
-   return map { local_user_fixture() } 1 .. $count;
+   return map { local_user_fixture( %args ) } 1 .. $count;
 }
 
 push @EXPORT, qw( remote_user_fixture );

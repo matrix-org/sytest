@@ -124,7 +124,7 @@ test "Newly joined room is included in an incremental sync",
 
 
 test "Newly joined room has correct timeline in incremental sync",
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync )],
 
    check => sub {

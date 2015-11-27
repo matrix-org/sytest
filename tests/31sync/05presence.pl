@@ -63,7 +63,7 @@ test "User is offline if they set_presence=offline in their sync",
 
 
 test "User sees updates to presence from other users in the incremental sync.",
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
 
    check => sub {

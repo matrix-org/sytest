@@ -1,7 +1,7 @@
 use List::Util qw( first );
 
 test "Rooms a user is invited to appear in an initial sync",
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
 
    check => sub {
@@ -46,7 +46,7 @@ test "Rooms a user is invited to appear in an initial sync",
 
 
 test "Rooms a user is invited to appear in an incremental sync",
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
 
    check => sub {

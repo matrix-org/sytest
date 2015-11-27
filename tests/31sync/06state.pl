@@ -449,7 +449,7 @@ test "A full_state incremental update returns all state",
 
 
 test "When user joins a room the state is included in the next sync",
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
 
    check => sub {
@@ -574,7 +574,7 @@ test "A change to displayname should not result in a full state sync",
 
 
 test "When user joins a room the state is included in a gapped sync",
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync )],
 
    check => sub {
@@ -644,7 +644,7 @@ test "When user joins a room the state is included in a gapped sync",
 
 test "When user joins and leaves a room in the same batch, the full state is still included in the next sync",
    bug => 'SYN-514',
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
 
    check => sub {

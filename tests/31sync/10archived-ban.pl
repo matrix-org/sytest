@@ -1,5 +1,5 @@
 test "Banned rooms appear in the leave section of sync",
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
 
    check => sub {
@@ -39,7 +39,7 @@ test "Banned rooms appear in the leave section of sync",
 
 
 test "Newly banned rooms appear in the leave section of incremental sync",
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
 
    check => sub {
@@ -84,7 +84,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
 
 
 test "Newly banned rooms appear in the leave section of incremental sync",
-   requires => [ ( map { local_user_fixture( with_events => 0 ) } 1 .. 2 ),
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
 
    check => sub {
