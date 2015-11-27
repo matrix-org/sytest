@@ -1,26 +1,18 @@
 multi_test "Check that event streams started after a client joined a room work (SYT-1)",
-   requires => [qw(
-      first_api_client
-      can_create_private_room can_send_message
-   )],
+   requires => [ local_user_fixture( with_events => 0 ),
+      qw( can_create_private_room can_send_message )
+   ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $alice ) = @_;
 
-      my $alice;
       my $room_id;
 
-      matrix_register_user( $http, undef,
-         with_events => 0
-      )->SyTest::pass_on_done( "Registered user" )
+      # Have Alice create a new private room
+      matrix_create_room( $alice,
+         visibility => "private",
+      )->SyTest::pass_on_done( "Created a room" )
       ->then( sub {
-         ( $alice ) = @_;
-
-         # Have Alice create a new private room
-         matrix_create_room( $alice,
-            visibility => "private",
-         )->SyTest::pass_on_done( "Created a room" )
-      })->then( sub {
          ( $room_id ) = @_;
          # Now that we've joined a room, flush the event stream to get
          # a stream token from before we send a message.

@@ -66,21 +66,15 @@ sub matrix_list_tags
 
 
 test "Can add tag",
-   requires => [qw( first_api_client )],
+   requires => [ local_user_fixture( with_events => 0 ) ],
 
    provides => [qw( can_add_tag )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
-
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
-
-         matrix_create_room( $user );
-      })->then( sub {
-         ( $room_id ) = @_;
+      matrix_create_room( $user )->then( sub {
+         my ( $room_id ) = @_;
 
          matrix_add_tag( $user, $room_id, "test_tag", {} );
       })->on_done( sub {
@@ -90,21 +84,15 @@ test "Can add tag",
 
 
 test "Can remove tag",
-   requires => [qw( first_api_client )],
+   requires => [ local_user_fixture( with_events => 0 ) ],
 
    provides => [qw( can_remove_tag )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
-
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
-
-         matrix_create_room( $user );
-      })->then( sub {
-         ( $room_id ) = @_;
+      matrix_create_room( $user )->then( sub {
+         my ( $room_id ) = @_;
 
          matrix_remove_tag( $user, $room_id, "test_tag" );
       })->on_done( sub {
@@ -114,18 +102,15 @@ test "Can remove tag",
 
 
 test "Can list tags for a room",
-   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
+      my $room_id;
 
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
-
-         matrix_create_room( $user );
-      })->then( sub {
+      matrix_create_room( $user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_add_tag( $user, $room_id, "test_tag", {} );

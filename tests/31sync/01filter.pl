@@ -54,19 +54,15 @@ sub matrix_register_user_with_filter
 
 
 test "Can create filter",
-   requires => [qw( first_api_client )],
+   requires => [ local_user_fixture( with_events => 0 ) ],
 
    provides => [qw( can_create_filter )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         my ( $user ) = @_;
-
-         matrix_create_filter( $user, {
-            room => { timeline => { limit => 10 } },
-         })
+      matrix_create_filter( $user, {
+         room => { timeline => { limit => 10 } },
       })->on_done( sub {
          provide can_create_filter => 1
       })
@@ -74,19 +70,16 @@ test "Can create filter",
 
 
 test "Can download filter",
-   requires => [qw ( first_api_client can_create_filter )],
+   requires => [
+      local_user_fixture( with_events => 0 ),
+      qw( can_create_filter )
+   ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my $user;
-
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
-
-         matrix_create_filter( $user, {
-            room => { timeline => { limit => 10 } }
-         })
+      matrix_create_filter( $user, {
+         room => { timeline => { limit => 10 } }
       })->then( sub {
          my ( $filter_id ) = @_;
 
