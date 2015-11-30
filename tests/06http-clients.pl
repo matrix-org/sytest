@@ -18,13 +18,13 @@ our $HTTP_CLIENT = fixture(
 # TODO: This ought to be an array, one per homeserver; though that's hard to
 #   arrange currently
 our $API_CLIENTS = fixture(
-   requires => [qw( synapse_client_locations )],
+   requires => [qw( homeserver_info )],
 
    setup => sub {
-      my ( $locations ) = @_;
+      my ( $info ) = @_;
 
       my @clients = map {
-         my $location = $_;
+         my $location = $_->client_location;
 
          my $client = SyTest::HTTPClient->new(
             max_connections_per_host => 3,
@@ -33,7 +33,7 @@ our $API_CLIENTS = fixture(
          $loop->add( $client );
 
          $client;
-      } @$locations;
+      } @$info;
 
       Future->done( \@clients );
    },

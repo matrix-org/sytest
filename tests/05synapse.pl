@@ -32,17 +32,19 @@ sub gen_token
    return join "", map { chr 64 + rand 63 } 1 .. $length;
 }
 
+struct HomeserverInfo => [qw( server_name client_location )];
+
 prepare "Starting synapse",
    requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls )],
 
    provides => [qw(
-      synapse_client_locations as_credentials hs2as_token
+      homeserver_info as_credentials hs2as_token
    )],
 
    do => sub {
       my ( $ports, $args, $test_http_server_uri_base, $want_tls ) = @_;
 
-      my @locations;
+      my @info;
 
       Future->needs_all( map {
          my $idx = $_;
@@ -52,9 +54,11 @@ prepare "Starting synapse",
 
          my @extra_args = extract_extra_args( $idx, $args->{extra_args} );
 
-         $locations[$idx] = $want_tls ?
+         my $location = $want_tls ?
             "https://localhost:$secure_port" :
             "http://localhost:$unsecure_port";
+
+         $info[$idx] = HomeserverInfo( "localhost:$secure_port", $location );
 
          my $synapse = SyTest::Synapse->new(
             synapse_dir   => $args->{directory},
@@ -77,7 +81,7 @@ prepare "Starting synapse",
 
                use_insecure_ssl_client_just_for_testing_do_not_use => 1,
                report_stats => "False",
-               user_agent_suffix => $locations[$idx],
+               user_agent_suffix => $location,
                allow_guest_access => "True",
             },
          );
@@ -121,6 +125,6 @@ prepare "Starting synapse",
          );
       } 0 .. $#$ports )
       ->on_done( sub {
-         provide synapse_client_locations => \@locations;
+         provide homeserver_info => \@info;
       });
    };
