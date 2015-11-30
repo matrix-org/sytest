@@ -123,8 +123,9 @@ sub local_user_fixture
       setup => sub {
          my ( $api_client ) = @_;
 
-         matrix_register_user( $api_client )
-         ->then_with_f( sub {
+         matrix_register_user( $api_client, undef,
+            with_events => $args{with_events} // 1,
+         )->then_with_f( sub {
             my $f = shift;
             return $f unless defined( my $displayname = $args{displayname} );
 
@@ -156,9 +157,9 @@ sub local_user_fixture
 
 sub local_user_fixtures
 {
-   my ( $count ) = @_;
+   my ( $count, %args ) = @_;
 
-   return map { local_user_fixture() } 1 .. $count;
+   return map { local_user_fixture( %args ) } 1 .. $count;
 }
 
 push @EXPORT, qw( remote_user_fixture );

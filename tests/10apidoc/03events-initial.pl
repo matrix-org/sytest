@@ -2,12 +2,12 @@ use List::UtilsBy qw( extract_first_by );
 use Future::Utils qw( repeat );
 
 test "GET /events initially",
-   requires => [ our $SPYGLASS_USER, qw( first_api_client )],
+   requires => [ our $SPYGLASS_USER ],
 
    critical => 1,
 
    check => sub {
-      my ( $user, $http ) = @_;
+      my ( $user ) = @_;
 
       do_request_json_for( $user,
          method => "GET",

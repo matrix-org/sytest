@@ -10,7 +10,7 @@ our $INBOUND_SERVER;
 our $OUTBOUND_CLIENT;
 
 test "Federation key API allows unsigned requests for keys",
-   requires => [qw( first_home_server http_client )],
+   requires => [qw( first_home_server ), our $HTTP_CLIENT ],
 
    check => sub {
       my ( $first_home_server, $client ) = @_;

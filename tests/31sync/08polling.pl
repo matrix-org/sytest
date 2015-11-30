@@ -1,13 +1,14 @@
 test "Sync can be polled for updates",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id, $next );
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {

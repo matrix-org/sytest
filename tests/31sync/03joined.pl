@@ -1,15 +1,16 @@
 test "Can sync a joined room",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id );
+      my ( $filter_id, $room_id );
 
       my $filter = { room => { timeline => { limit => 10 } } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
@@ -38,17 +39,18 @@ test "Can sync a joined room",
 
 
 test "Full state sync includes joined rooms",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id );
+      my ( $filter_id, $room_id );
 
       my $filter = { room => { timeline => { limit => 10 } } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
@@ -76,17 +78,18 @@ test "Full state sync includes joined rooms",
 
 
 test "Newly joined room is included in an incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = { room => { timeline => { limit => 10 } } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
@@ -121,12 +124,13 @@ test "Newly joined room is included in an incremental sync",
 
 
 test "Newly joined room has correct timeline in incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -136,10 +140,10 @@ test "Newly joined room has correct timeline in incremental sync",
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter )
-            ->on_done( sub { ( $user_a, $filter_id_a ) = @_ } ),
-         matrix_register_user_with_filter( $http, $filter )
-            ->on_done( sub { ( $user_b, $filter_id_b ) = @_ } ),
+         matrix_create_filter( $user_a, $filter )
+            ->on_done( sub { ( $filter_id_a ) = @_ } ),
+         matrix_create_filter( $user_b, $filter )
+            ->on_done( sub { ( $filter_id_b ) = @_ } ),
       )->then( sub {
          matrix_create_room( $user_a )->on_done( sub { ( $room_id ) = @_ } );
       })->then( sub {

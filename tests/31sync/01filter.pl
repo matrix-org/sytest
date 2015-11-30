@@ -1,4 +1,4 @@
-push our @EXPORT, qw( matrix_create_filter matrix_register_user_with_filter );
+push our @EXPORT, qw( matrix_create_filter );
 
 =head2 matrix_create_filter
 
@@ -25,48 +25,17 @@ sub matrix_create_filter
    })
 }
 
-=head2 matrix_register_user_with_filter
-
-   my ( $user, $filter_id ) =
-      matrix_register_user_with_filter( $http, \%filter )->get;
-
-Creates a user without an event stream and creates a filter for that user.
-Returns the created C<User> object and the filter id of the new filter.
-
-=cut
-
-sub matrix_register_user_with_filter
-{
-   my ( $http, $filter ) = @_;
-
-   my $user;
-
-   matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-      ( $user ) = @_;
-
-      matrix_create_filter( $user, $filter );
-   })->then( sub {
-      my ( $filter_id ) = @_;
-
-      Future->done( $user, $filter_id )
-   })
-}
-
 
 test "Can create filter",
-   requires => [qw( first_api_client )],
+   requires => [ local_user_fixture( with_events => 0 ) ],
 
    provides => [qw( can_create_filter )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         my ( $user ) = @_;
-
-         matrix_create_filter( $user, {
-            room => { timeline => { limit => 10 } },
-         })
+      matrix_create_filter( $user, {
+         room => { timeline => { limit => 10 } },
       })->on_done( sub {
          provide can_create_filter => 1
       })
@@ -74,19 +43,16 @@ test "Can create filter",
 
 
 test "Can download filter",
-   requires => [qw ( first_api_client can_create_filter )],
+   requires => [
+      local_user_fixture( with_events => 0 ),
+      qw( can_create_filter )
+   ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my $user;
-
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
-
-         matrix_create_filter( $user, {
-            room => { timeline => { limit => 10 } }
-         })
+      matrix_create_filter( $user, {
+         room => { timeline => { limit => 10 } }
       })->then( sub {
          my ( $filter_id ) = @_;
 

@@ -1,13 +1,14 @@
 test "Left rooms appear in the leave section of sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id );
+      my ( $filter_id, $room_id );
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -28,15 +29,16 @@ test "Left rooms appear in the leave section of sync",
 
 
 test "Newly left rooms appear in the leave section of incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id, $next );
 
-     matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+     matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -63,19 +65,20 @@ test "Newly left rooms appear in the leave section of incremental sync",
 
 
 test "Newly left rooms appear in the leave section of gapped sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id_1, $room_id_2, $next );
+      my ( $filter_id, $room_id_1, $room_id_2, $next );
 
       my $filter = {
          room => { timeline => { limit => 1 } },
       };
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          Future->needs_all(
             matrix_create_room( $user )->on_done( sub { ( $room_id_1 ) = @_; } ),
@@ -115,15 +118,16 @@ test "Newly left rooms appear in the leave section of gapped sync",
 
 
 test "Left rooms appear in the leave section of full state sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id, $next );
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -151,12 +155,13 @@ test "Left rooms appear in the leave section of full state sync",
 
 
 test "Archived rooms only contain history from before the user left",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -166,10 +171,10 @@ test "Archived rooms only contain history from before the user left",
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_create_room( $user_a );
       })->then( sub {
