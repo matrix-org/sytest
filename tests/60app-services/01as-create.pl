@@ -58,11 +58,11 @@ test "Regular users cannot register within the AS namespace",
    };
 
 test "AS can make room aliases",
-   requires => [ $main::AS_USER, qw( hs2as_token first_home_server ), $room_fixture,
+   requires => [ $main::AS_USER, qw( as_user_info first_home_server ), $room_fixture,
                 qw( can_create_room_alias )],
 
    do => sub {
-      my ( $as_user, $hs2as_token, $first_home_server, $room_id ) = @_;
+      my ( $as_user, $as_user_info, $first_home_server, $room_id ) = @_;
       my $room_alias = "#astest-01create-1:$first_home_server";
 
       Future->needs_all(
@@ -76,7 +76,7 @@ test "AS can make room aliases",
 
             assert_ok( defined $access_token,
                "HS provides an access_token" );
-            assert_eq( $access_token, $hs2as_token,
+            assert_eq( $access_token, $as_user_info->hs2as_token,
                "HS provides the correct token" );
 
             log_if_fail "Event", $event;

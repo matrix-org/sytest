@@ -32,17 +32,42 @@ sub gen_token
    return join "", map { chr 64 + rand 63 } 1 .. $length;
 }
 
+struct ASUserInfo => [qw( localpart user_id as2hs_token hs2as_token )];
+
+prepare "Generating AS credentials",
+   requires => [qw( synapse_ports )],
+
+   provides => [qw( as_user_info )],
+
+   do => sub {
+      my ( $ports ) = @_;
+      my $port = $ports->[0];
+
+      my $localpart = "as-user";
+
+      provide as_user_info => ASUserInfo(
+         $localpart,
+         "\@${localpart}:localhost:${port}",
+         gen_token( 32 ),
+         gen_token( 32 ),
+      );
+
+      Future->done;
+   };
+
 struct HomeserverInfo => [qw( server_name client_location )];
 
 prepare "Starting synapse",
-   requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls )],
+   requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls
+                    as_user_info )],
 
    provides => [qw(
-      homeserver_info first_home_server as_credentials hs2as_token
+      homeserver_info first_home_server
    )],
 
    do => sub {
-      my ( $ports, $args, $test_http_server_uri_base, $want_tls ) = @_;
+      my ( $ports, $args, $test_http_server_uri_base, $want_tls,
+           $as_user_info ) = @_;
 
       my @info;
 
@@ -91,9 +116,9 @@ prepare "Starting synapse",
             # Configure application services on first instance only
             my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
                url      => "$test_http_server_uri_base/appserv",
-               as_token => ( my $as2hs_token = gen_token( 32 ) ),
-               hs_token => ( my $hs2as_token = gen_token( 32 ) ),
-               sender_localpart => ( my $as_user = "as-user" ),
+               as_token => $as_user_info->as2hs_token,
+               hs_token => $as_user_info->hs2as_token,
+               sender_localpart => $as_user_info->localpart,
                namespaces => {
                   users => [
                      { regex => '@astest-.*', exclusive => "true" },
@@ -108,9 +133,6 @@ prepare "Starting synapse",
             $synapse->append_config(
                app_service_config_files => [ $appserv_conf ],
             );
-
-            provide as_credentials => [ "\@$as_user:localhost:$secure_port", $as2hs_token ];
-            provide hs2as_token => $hs2as_token;
          }
 
          $synapse->start;
