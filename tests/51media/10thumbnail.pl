@@ -3,12 +3,15 @@ use File::Slurper qw( read_binary );
 
 my $dir = dirname __FILE__;
 
+our $API_CLIENTS;
+
 test "POSTed media can be thumbnailed",
-   requires => [qw( first_api_client ), local_user_fixture(),
-                qw( can_upload_media can_download_media )],
+   requires => [ $API_CLIENTS, local_user_fixture(),
+                 qw( can_upload_media can_download_media )],
 
    do => sub {
-      my ( $http, $user ) = @_;
+      my ( $clients, $user ) = @_;
+      my $http = $clients->[0];
 
       my $pngdata = read_binary( "$dir/test.png" );
 

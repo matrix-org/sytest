@@ -1,10 +1,13 @@
+our $API_CLIENTS;
+
 test "GET /register yields a set of flows",
-   requires => [qw( first_api_client )],
+   requires => [ $API_CLIENTS ],
 
    provides => [qw( can_register_password_flow )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request_json(
          uri => "/api/v1/register",
@@ -38,12 +41,14 @@ test "GET /register yields a set of flows",
    };
 
 test "POST /register can create a user",
-   requires => [qw( first_api_client can_register_password_flow )],
+   requires => [ $API_CLIENTS,
+                 qw( can_register_password_flow ) ],
 
    critical => 1,
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request_json(
          method => "POST",
@@ -118,12 +123,13 @@ sub local_user_fixture
    my %args = @_;
 
    fixture(
-      requires => [qw( first_api_client )],
+      requires => [ $API_CLIENTS ],
 
       setup => sub {
-         my ( $api_client ) = @_;
+         my ( $clients ) = @_;
+         my $http = $clients->[0];
 
-         matrix_register_user( $api_client, undef,
+         matrix_register_user( $http, undef,
             with_events => $args{with_events} // 1,
          )->then_with_f( sub {
             my $f = shift;
@@ -167,7 +173,7 @@ push @EXPORT, qw( remote_user_fixture );
 sub remote_user_fixture
 {
    fixture(
-      requires => [qw( api_clients )],
+      requires => [ $API_CLIENTS ],
 
       setup => sub {
          my ( $clients ) = @_;
@@ -185,12 +191,13 @@ push @EXPORT, qw( SPYGLASS_USER );
 # don't mutate server-side state, so it's fairly safe to reüse this user among
 # different tests.
 our $SPYGLASS_USER = fixture(
-   requires => [qw( first_api_client )],
+   requires => [ $API_CLIENTS ],
 
    setup => sub {
-      my ( $api_client ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
-      matrix_register_user( $api_client )
+      matrix_register_user( $http )
       ->on_done( sub {
          my ( $user ) = @_;
 

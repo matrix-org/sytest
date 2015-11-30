@@ -2,6 +2,8 @@ use List::UtilsBy qw( partition_by );
 
 my $name = "room name here";
 
+our $API_CLIENTS;
+
 my $user_fixture = local_user_fixture();
 
 # This provides $room_id *AND* $room_alias
@@ -97,10 +99,11 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_api_client ), $room_fixture ],
+   requires => [ $API_CLIENTS, $room_fixture ],
 
    check => sub {
-      my ( $http, $room_id, undef ) = @_;
+      my ( $clients, $room_id, undef ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request_json(
          method => "GET",

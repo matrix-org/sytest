@@ -2,6 +2,8 @@ my $user_fixture = local_user_fixture();
 
 my $displayname = "Testing Displayname";
 
+our $API_CLIENTS;
+
 test "PUT /profile/:user_id/displayname sets my name",
    requires => [ $user_fixture ],
 
@@ -41,13 +43,14 @@ test "PUT /profile/:user_id/displayname sets my name",
    };
 
 test "GET /profile/:user_id/displayname publicly accessible",
-   requires => [ qw( first_api_client ), $user_fixture,
+   requires => [ $API_CLIENTS, $user_fixture,
                  qw( can_set_displayname )],
 
    provides => [qw( can_get_displayname )],
 
    check => sub {
-      my ( $http, $user ) = @_;
+      my ( $clients, $user ) = @_;
+      my $http = $clients->[0];
       my $user_id = $user->user_id;
 
       $http->do_request_json(
