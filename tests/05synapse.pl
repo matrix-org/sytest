@@ -153,3 +153,15 @@ prepare "Starting synapse",
          provide first_home_server => $info[0]->server_name;
       });
    };
+
+push our @EXPORT, qw( HOMESERVER_INFO );
+
+# TODO: this should be an array
+our $HOMESERVER_INFO = fixture(
+   requires => [qw( homeserver_info )],
+
+   setup => sub {
+      my ( $info ) = @_;
+      Future->done( $info );
+   },
+);
