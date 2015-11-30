@@ -38,7 +38,7 @@ prepare "Starting synapse",
    requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls )],
 
    provides => [qw(
-      homeserver_info as_credentials hs2as_token
+      homeserver_info first_home_server as_credentials hs2as_token
    )],
 
    do => sub {
@@ -126,5 +126,8 @@ prepare "Starting synapse",
       } 0 .. $#$ports )
       ->on_done( sub {
          provide homeserver_info => \@info;
+
+         # Legacy
+         provide first_home_server => $info[0]->server_name;
       });
    };

@@ -70,13 +70,13 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [ $main::API_CLIENTS, $registered_user_fixture,
+   requires => [ $main::API_CLIENTS, $registered_user_fixture, qw( first_home_server ),
                  qw( can_login_password_flow )],
 
-   provides => [qw( can_login first_home_server )],
+   provides => [qw( can_login )],
 
    do => sub {
-      my ( $clients, $user_id ) = @_;
+      my ( $clients, $user_id, $home_server ) = @_;
       my $http = $clients->[0];
 
       $http->do_request_json(
@@ -93,9 +93,10 @@ test "POST /login can log in as a user",
 
          assert_json_keys( $body, qw( access_token home_server ));
 
-         provide can_login => 1;
+         assert_eq( $body->{home_server}, $home_server,
+            'Response home_server' );
 
-         provide first_home_server => $body->{home_server};
+         provide can_login => 1;
 
          Future->done(1);
       });
