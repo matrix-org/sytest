@@ -58,12 +58,13 @@ test "Regular users cannot register within the AS namespace",
    };
 
 test "AS can make room aliases",
-   requires => [ $main::AS_USER, qw( as_user_info first_home_server ), $room_fixture,
+   requires => [ $main::AS_USER, qw( as_user_info ), $room_fixture,
                 qw( can_create_room_alias )],
 
    do => sub {
-      my ( $as_user, $as_user_info, $first_home_server, $room_id ) = @_;
-      my $room_alias = "#astest-01create-1:$first_home_server";
+      my ( $as_user, $as_user_info, $room_id ) = @_;
+      my $server_name = $as_user->http->server_name;
+      my $room_alias = "#astest-01create-1:$server_name";
 
       Future->needs_all(
          await_as_event( "m.room.aliases" )->then( sub {
@@ -127,12 +128,13 @@ test "AS can make room aliases",
    };
 
 test "Regular users cannot create room aliases within the AS namespace",
-   requires => [qw( first_home_server ), $user_fixture, $room_fixture,
-                qw( can_create_room_alias )],
+   requires => [ $user_fixture, $room_fixture,
+                 qw( can_create_room_alias )],
 
    do => sub {
-      my ( $first_home_server, $user, $room_id ) = @_;
-      my $room_alias = "#astest-01create-2:$first_home_server";
+      my ( $user, $room_id ) = @_;
+      my $server_name = $user->http->server_name;
+      my $room_alias = "#astest-01create-2:$server_name";
 
       do_request_json_for( $user,
          method => "PUT",

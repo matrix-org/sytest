@@ -31,6 +31,7 @@ our $API_CLIENTS = fixture(
          my $client = SyTest::HTTPClient->new(
             max_connections_per_host => 3,
             uri_base => "$location/_matrix/client",
+            server_name => $_->server_name,
          );
          $loop->add( $client );
 
