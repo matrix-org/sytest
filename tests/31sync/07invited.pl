@@ -1,18 +1,19 @@
 use List::Util qw( first );
 
 test "Rooms a user is invited to appear in an initial sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id );
+      my ( $filter_id_a, $filter_id_b, $room_id );
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, {} ),
-         matrix_register_user_with_filter( $http, {} ),
+         matrix_create_filter( $user_a, {} ),
+         matrix_create_filter( $user_b, {} ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_create_room( $user_a );
       })->then( sub {
@@ -24,16 +25,16 @@ test "Rooms a user is invited to appear in an initial sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{invited}{$room_id};
-         require_json_keys( $room, qw( invite_state ) );
-         require_json_keys( $room->{invite_state}, qw( events ) );
+         my $room = $body->{rooms}{invite}{$room_id};
+         assert_json_keys( $room, qw( invite_state ) );
+         assert_json_keys( $room->{invite_state}, qw( events ) );
 
          my $invite = first {
             $_->{type} eq "m.room.member"
                and $_->{state_key} eq $user_b->user_id
          } @{ $room->{invite_state}{events} };
 
-         require_json_keys( $invite, qw( sender content state_key type ));
+         assert_json_keys( $invite, qw( sender content state_key type ));
          $invite->{content}{membership} eq "invite"
             or die "Expected an invite event";
          $invite->{sender} eq $user_a->user_id
@@ -45,18 +46,19 @@ test "Rooms a user is invited to appear in an initial sync",
 
 
 test "Rooms a user is invited to appear in an incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, {} ),
-         matrix_register_user_with_filter( $http, {} ),
+         matrix_create_filter( $user_a, {} ),
+         matrix_create_filter( $user_b, {} ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -72,16 +74,16 @@ test "Rooms a user is invited to appear in an incremental sync",
          matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
       })->then( sub {
          my ( $body ) = @_;
-         my $room = $body->{rooms}{invited}{$room_id};
-         require_json_keys( $room, qw( invite_state ) );
-         require_json_keys( $room->{invite_state}, qw( events ) );
+         my $room = $body->{rooms}{invite}{$room_id};
+         assert_json_keys( $room, qw( invite_state ) );
+         assert_json_keys( $room->{invite_state}, qw( events ) );
 
          my $invite = first {
             $_->{type} eq "m.room.member"
                and $_->{state_key} eq $user_b->user_id
          } @{ $room->{invite_state}{events} };
 
-         require_json_keys( $invite, qw( sender content state_key type ));
+         assert_json_keys( $invite, qw( sender content state_key type ));
          $invite->{content}{membership} eq "invite"
             or die "Expected an invite event";
          $invite->{sender} eq $user_a->user_id

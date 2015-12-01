@@ -14,8 +14,8 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( event_id ));
-         require_json_nonempty_string( $body->{event_id} );
+         assert_json_keys( $body, qw( event_id ));
+         assert_json_nonempty_string( $body->{event_id} );
 
          push our @EXPORT, qw(
             matrix_send_room_message matrix_send_room_text_message
@@ -96,14 +96,30 @@ test "GET /rooms/:room_id/messages returns a message",
       })->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( $body->{chunk} );
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
 
          scalar @{ $body->{chunk} } > 0 or
             die "Expected some messages but got none at all\n";
 
          provide can_get_messages => 1;
+         push our @EXPORT, qw( matrix_get_room_messages );
 
          Future->done(1);
       });
    };
+
+sub matrix_get_room_messages
+{
+   my ( $user, $room_id, %params ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
+
+   $params{dir} ||= "b";
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/api/v1/rooms/$room_id/messages",
+
+      params => \%params,
+   );
+}

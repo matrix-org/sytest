@@ -1,13 +1,14 @@
 test "Sync can be polled for updates",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id, $next );
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -32,11 +33,14 @@ test "Sync can be polled for updates",
       })->then( sub {
          my ( $body, $response, $event_id ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         @{ $room->{timeline}{events} } eq 1
-             or die "Expected one timeline event";
+         my $room = $body->{rooms}{join}{$room_id};
 
-         $room->{timeline}{events}[0] eq $event_id
+         my $events = $room->{timeline}{events} or
+            die "Expected an event timeline";
+         @$events == 1 or
+            die "Expected one timeline event";
+
+         $room->{timeline}{events}[0]{event_id} eq $event_id
             or die "Unexpected timeline event";
 
          Future->done(1)

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use mro 'c3';
-use Protocol::Matrix qw( sign_json );
+use Protocol::Matrix qw( sign_json sign_event_json encode_base64_unpadded );
 
 use Time::HiRes qw( time );
 
@@ -56,6 +56,20 @@ sub signed_data
    $self->sign_data( my $copy = { %$orig } );
 
    return $copy;
+}
+
+sub sign_event
+{
+   my $self = shift;
+   my ( $event ) = @_;
+
+   my $fedparams = $self->{federation_params};
+
+   sign_event_json( $event,
+      secret_key => $fedparams->secret_key,
+      origin     => $fedparams->server_name,
+      key_id     => $fedparams->key_id,
+   );
 }
 
 sub get_key

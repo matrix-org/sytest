@@ -1,10 +1,10 @@
 multi_test "Multiple calls to /sync should not cause 500 errors",
-    requires => [qw(first_api_client can_sync can_send_message 
-                    can_post_room_receipts)],
+    requires => [ local_user_fixture( with_events => 0 ),
+                  qw( can_sync can_send_message can_post_room_receipts )],
     check => sub {
-        my ( $http ) = @_;
+        my ( $user ) = @_;
 
-        my ( $user, $filter_id, $room_id, $message_event_id );
+        my ( $filter_id, $room_id, $message_event_id );
 
         my $filter = {
            room => {
@@ -15,8 +15,8 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
            presence => { types => [] },
         };
 
-        matrix_register_user_with_filter( $http, $filter )->then( sub {
-            ( $user, $filter_id ) = @_;
+        matrix_create_filter( $user, $filter )->then( sub {
+            ( $filter_id ) = @_;
 
             matrix_create_room( $user )
                 ->SyTest::pass_on_done( "User A created a room" );
@@ -42,7 +42,7 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
         })->then( sub {
             my ( $body ) = @_;
 
-            my $room = $body->{rooms}{joined}{$room_id};
+            my $room = $body->{rooms}{join}{$room_id};
 
             @{ $room->{ephemeral}{events} } == 2
                 or die "Expected two ephemeral events";
@@ -55,7 +55,7 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
         })->then( sub {
             my ( $body ) = @_;
 
-            my $room = $body->{rooms}{joined}{$room_id};
+            my $room = $body->{rooms}{join}{$room_id};
 
             @{ $room->{ephemeral}{events} } == 2
                 or die "Expected two ephemeral events";

@@ -6,12 +6,13 @@ my $content_type = "text/plain";
 my $content_id;
 
 test "POST /media/v1/upload can create an upload",
-   requires => [qw( first_api_client ), local_user_fixture() ],
+   requires => [ $main::API_CLIENTS, local_user_fixture() ],
 
    provides => [qw( can_upload_media )],
 
    do => sub {
-      my ( $http, $user ) = @_;
+      my ( $clients, $user ) = @_;
+      my $http = $clients->[0];
 
       # Because we're POST'ing non-JSON
       $http->do_request(
@@ -26,7 +27,7 @@ test "POST /media/v1/upload can create an upload",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( content_uri ));
+         assert_json_keys( $body, qw( content_uri ));
 
          provide can_upload_media => 1;
 
@@ -38,13 +39,14 @@ test "POST /media/v1/upload can create an upload",
    };
 
 test "GET /media/v1/download can fetch the value again",
-   requires => [qw( first_api_client
-                    can_upload_media )],
+   requires => [ $main::API_CLIENTS,
+                 qw( can_upload_media )],
 
    provides => [qw( can_download_media )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request(
          method   => "GET",

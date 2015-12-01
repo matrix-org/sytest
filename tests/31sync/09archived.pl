@@ -1,13 +1,14 @@
-test "Left rooms appear in the archived section of sync",
-   requires => [qw( first_api_client can_sync )],
+test "Left rooms appear in the leave section of sync",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id );
+      my ( $filter_id, $room_id );
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -19,24 +20,25 @@ test "Left rooms appear in the archived section of sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         my $room = $body->{rooms}{leave}{$room_id};
+         assert_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
    };
 
 
-test "Newly left rooms appear in the archived section of incremental sync",
-   requires => [qw( first_api_client can_sync )],
+test "Newly left rooms appear in the leave section of incremental sync",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id, $next );
 
-     matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+     matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -54,28 +56,29 @@ test "Newly left rooms appear in the archived section of incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         my $room = $body->{rooms}{leave}{$room_id};
+         assert_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
    };
 
 
-test "Newly left rooms appear in the archived section of gapped sync",
-   requires => [qw( first_api_client can_sync )],
+test "Newly left rooms appear in the leave section of gapped sync",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id_1, $room_id_2, $next );
+      my ( $filter_id, $room_id_1, $room_id_2, $next );
 
       my $filter = {
          room => { timeline => { limit => 1 } },
       };
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          Future->needs_all(
             matrix_create_room( $user )->on_done( sub { ( $room_id_1 ) = @_; } ),
@@ -106,24 +109,25 @@ test "Newly left rooms appear in the archived section of gapped sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id_1};
-         require_json_keys( $room, qw( event_map timeline state ));
+         my $room = $body->{rooms}{leave}{$room_id_1};
+         assert_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
    };
 
 
-test "Left rooms appear in the archived section of full state sync",
-   requires => [qw( first_api_client can_sync )],
+test "Left rooms appear in the leave section of full state sync",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id, $next );
 
-      matrix_register_user_with_filter( $http, {} )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -142,8 +146,8 @@ test "Left rooms appear in the archived section of full state sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         my $room = $body->{rooms}{leave}{$room_id};
+         assert_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
       });
@@ -151,12 +155,13 @@ test "Left rooms appear in the archived section of full state sync",
 
 
 test "Archived rooms only contain history from before the user left",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -166,10 +171,10 @@ test "Archived rooms only contain history from before the user left",
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_create_room( $user_a );
       })->then( sub {
@@ -205,39 +210,39 @@ test "Archived rooms only contain history from before the user left",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         my $room = $body->{rooms}{leave}{$room_id};
+         assert_json_keys( $room, qw( timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event";
          @{ $room->{timeline}{events} } == 1
             or die "Expected a single timeline event";
 
-         my $state_event_id = $room->{state}{events}[0];
-         $room->{event_map}{ $state_event_id }{content}{my_key}
-            eq "before" or die "Expected only events from before leaving";
+         my $state_event = $room->{state}{events}[0];
+         $state_event->{content}{my_key} eq "before"
+            or die "Expected only events from before leaving";
 
-         my $timeline_event_id = $room->{timeline}{events}[0];
-         $room->{event_map}{ $timeline_event_id }{content}{body}
-            eq "before" or die "Expected only events from before leaving";
+         my $timeline_event = $room->{timeline}{events}[0];
+         $timeline_event->{content}{body} eq "before"
+            or die "Expected only events from before leaving";
 
          matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ));
+         my $room = $body->{rooms}{leave}{$room_id};
+         assert_json_keys( $room, qw( timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event";
          @{ $room->{timeline}{events} } == 1
             or die "Expected a single timeline event";
 
-         my $state_event_id = $room->{state}{events}[0];
-         $room->{event_map}{ $state_event_id }{content}{my_key}
-            eq "before" or die "Expected only events from before leaving";
+         my $state_event = $room->{state}{events}[0];
+         $state_event->{content}{my_key} eq "before"
+            or die "Expected only events from before leaving";
 
-         my $timeline_event_id = $room->{timeline}{events}[0];
-         $room->{event_map}{ $timeline_event_id }{content}{body}
-            eq "before" or die "Expected only events from before leaving";
+         my $timeline_event = $room->{timeline}{events}[0];
+         $timeline_event->{content}{body} eq "before"
+            or die "Expected only events from before leaving";
 
          Future->done(1);
       });

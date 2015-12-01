@@ -122,7 +122,7 @@ test "POST /join/:room_id can join a room",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( room_id ));
+         assert_json_keys( $body, qw( room_id ));
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
 
@@ -244,6 +244,7 @@ sub matrix_invite_user_to_room
 {
    my ( $user, $invitee, $room_id ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
+   ref $room_id and croak "Expected a room ID; got $room_id";
 
    my $invitee_id;
    if( is_User( $invitee ) ) {
@@ -367,7 +368,7 @@ sub matrix_create_and_join_room
       #   timeout smaller than the default overall test timeout so if this
       #   fails to happen we'll fail sooner, and get a better message
       Future->wait_any(
-         await_event_for( $creator, sub {
+         await_event_for( $creator, filter => sub {
             my ( $event ) = @_;
 
             return unless $event->{type} eq "m.room.member";

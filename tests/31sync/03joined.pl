@@ -1,15 +1,16 @@
 test "Can sync a joined room",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id );
+      my ( $filter_id, $room_id );
 
       my $filter = { room => { timeline => { limit => 10 } } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
@@ -19,19 +20,17 @@ test "Can sync a joined room",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
-         require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         require_json_keys( $room->{state}, qw( events ));
-         require_json_keys( $room->{ephemeral}, qw( events ));
-         require_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
-         require_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         assert_json_keys( $room->{state}, qw( events ));
+         assert_json_keys( $room->{ephemeral}, qw( events ));
 
          matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          (!defined $room) or die "Unchanged rooms shouldn't be in the sync response";
 
          Future->done(1)
@@ -40,17 +39,18 @@ test "Can sync a joined room",
 
 
 test "Full state sync includes joined rooms",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id );
+      my ( $filter_id, $room_id );
 
       my $filter = { room => { timeline => { limit => 10 } } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
@@ -65,14 +65,12 @@ test "Full state sync includes joined rooms",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
 
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
-         require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         require_json_keys( $room->{state}, qw( events ));
-         require_json_keys( $room->{ephemeral}, qw( events ));
-         require_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
-         require_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         assert_json_keys( $room->{state}, qw( events ));
+         assert_json_keys( $room->{ephemeral}, qw( events ));
 
          Future->done(1)
       })
@@ -80,17 +78,18 @@ test "Full state sync includes joined rooms",
 
 
 test "Newly joined room is included in an incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = { room => { timeline => { limit => 10 } } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
@@ -106,19 +105,17 @@ test "Newly joined room is included in an incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
-         require_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         require_json_keys( $room->{state}, qw( events ));
-         require_json_keys( $room->{ephemeral}, qw( events ));
-         require_json_keys( $room->{event_map}, @{ $room->{timeline}{events} } );
-         require_json_keys( $room->{event_map}, @{ $room->{state}{events} } );
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         assert_json_keys( $room->{state}, qw( events ));
+         assert_json_keys( $room->{ephemeral}, qw( events ));
 
          matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          (!defined $room) or die "Unchanged rooms shouldn't be in the sync response";
 
          Future->done(1)
@@ -127,12 +124,13 @@ test "Newly joined room is included in an incremental sync",
 
 
 test "Newly joined room has correct timeline in incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -142,10 +140,10 @@ test "Newly joined room has correct timeline in incremental sync",
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter )
-            ->on_done( sub { ( $user_a, $filter_id_a ) = @_ } ),
-         matrix_register_user_with_filter( $http, $filter )
-            ->on_done( sub { ( $user_b, $filter_id_b ) = @_ } ),
+         matrix_create_filter( $user_a, $filter )
+            ->on_done( sub { ( $filter_id_a ) = @_ } ),
+         matrix_create_filter( $user_b, $filter )
+            ->on_done( sub { ( $filter_id_b ) = @_ } ),
       )->then( sub {
          matrix_create_room( $user_a )->on_done( sub { ( $room_id ) = @_ } );
       })->then( sub {
@@ -168,23 +166,23 @@ test "Newly joined room has correct timeline in incremental sync",
          matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
       })->then( sub {
          my ( $body ) = @_;
-         my $room = $body->{rooms}{joined}{$room_id};
+         my $room = $body->{rooms}{join}{$room_id};
          my $timeline = $room->{timeline};
 
          log_if_fail "Timeline", $timeline;
 
          map {
-            $room->{event_map}{$_}{type} eq "m.room.message"
+            $_->{type} eq "m.room.message"
                or die "Only expected 'm.room.message' events";
          } @{ $timeline->{events} };
 
          if( @{ $timeline->{events} } == 6 ) {
-            require_json_boolean( $timeline->{limited} );
+            assert_json_boolean( $timeline->{limited} );
             !$timeline->{limited} or
-               die "Timeline doesn't have all the events so should be limited";
+               die "Timeline has all the events so shouldn't be limited";
          }
          else {
-            require_json_boolean( $timeline->{limited} );
+            assert_json_boolean( $timeline->{limited} );
             $timeline->{limited} or
                die "Timeline doesn't have all the events so should be limited";
          }

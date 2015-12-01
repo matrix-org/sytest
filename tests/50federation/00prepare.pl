@@ -12,18 +12,12 @@ my $DIR = dirname( __FILE__ );
 
 struct FederationParams => [qw( server_name key_id public_key secret_key )];
 
-prepare "Creating inbound federation HTTP server and outbound federation client",
-   requires => [qw( first_home_server )],
+push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT );
 
-   provides => [qw( local_server_name inbound_server outbound_client )],
-
-   do => sub {
-      my ( $first_home_server ) = @_;
-
+our $INBOUND_SERVER = fixture(
+   setup => sub {
       my $inbound_server = SyTest::Federation::Server->new;
       $loop->add( $inbound_server );
-
-      provide inbound_server => $inbound_server;
 
       require IO::Async::SSL;
 
@@ -37,12 +31,10 @@ prepare "Creating inbound federation HTTP server and outbound federation client"
          SSL_key_file => "$DIR/server.key",
          SSL_cert_file => "$DIR/server.crt",
       )->on_done( sub {
-         my ( $listener ) = @_;
-         my $sock = $listener->read_handle;
+         my ( $inbound_server ) = @_;
+         my $sock = $inbound_server->read_handle;
 
          my $server_name = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
-
-         provide local_server_name => $server_name;
 
          my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
 
@@ -54,30 +46,40 @@ prepare "Creating inbound federation HTTP server and outbound federation client"
          my $outbound_client = SyTest::Federation::Client->new(
             federation_params => $fedparams,
             keystore          => $keystore,
-            uri_base          => "https://$first_home_server/_matrix/federation/v1",
+            uri_base          => "/_matrix/federation/v1",
          );
          $loop->add( $outbound_client );
 
-         $listener->configure(
+         $inbound_server->configure(
             federation_params => $fedparams,
             keystore          => $keystore,
             client            => $outbound_client,
          );
-
-         provide outbound_client => $outbound_client;
       });
-   };
+   },
+);
+
+our $OUTBOUND_CLIENT = fixture(
+   requires => [ $INBOUND_SERVER ],
+
+   setup => sub {
+      my ( $inbound_server ) = @_;
+
+      Future->done( $inbound_server->client );
+   },
+);
 
 # A small test to check that our own federation server simulation is working
 # correctly. If this test fails, it *ALWAYS* indicates a failure of SyTest
 # itself and not of the homeserver being tested.
 test "Checking local federation server",
-   requires => [qw( local_server_name inbound_server http_client )],
+   requires => [ $INBOUND_SERVER, our $HTTP_CLIENT ],
 
    check => sub {
-      my ( $local_server_name, $inbound_server, $client ) = @_;
+      my ( $inbound_server, $client ) = @_;
 
       my $key_id = $inbound_server->key_id;
+      my $local_server_name = $inbound_server->server_name;
 
       $client->do_request(
          method => "GET",
@@ -86,13 +88,13 @@ test "Checking local federation server",
          my ( $body ) = @_;
          log_if_fail "Keyserver response", $body;
 
-         require_json_keys( $body, qw( server_name valid_until_ts verify_keys signatures tls_fingerprints ));
+         assert_json_keys( $body, qw( server_name valid_until_ts verify_keys signatures tls_fingerprints ));
 
-         require_json_string( $body->{server_name} );
+         assert_json_string( $body->{server_name} );
          $body->{server_name} eq $local_server_name or
             die "Expected server_name to be $local_server_name";
 
-         require_json_number( $body->{valid_until_ts} );
+         assert_json_number( $body->{valid_until_ts} );
          $body->{valid_until_ts} / 1000 > time or
             die "Key valid_until_ts is in the past";
 
@@ -102,9 +104,9 @@ test "Checking local federation server",
          exists $body->{verify_keys}{$key_id} or
             die "Expected to find the '$key_id' key in verify_keys";
 
-         require_json_keys( my $key = $body->{verify_keys}{$key_id}, qw( key ));
+         assert_json_keys( my $key = $body->{verify_keys}{$key_id}, qw( key ));
 
-         require_base64_unpadded( $key->{key} );
+         assert_base64_unpadded( $key->{key} );
 
          keys %{ $body->{signatures} } or
             die "Expected some signatures";
@@ -115,16 +117,16 @@ test "Checking local federation server",
          my $signature = $body->{signatures}{$local_server_name}{$key_id} or
             die "Expected a signature from $local_server_name using $key_id";
 
-         require_base64_unpadded( $signature );
+         assert_base64_unpadded( $signature );
 
          # TODO: verify it?
 
-         require_json_list( $body->{tls_fingerprints} );
+         assert_json_list( $body->{tls_fingerprints} );
          @{ $body->{tls_fingerprints} } > 0 or
             die "Expected some tls_fingerprints";
 
          foreach ( @{ $body->{tls_fingerprints} } ) {
-            require_json_object( $_ );
+            assert_json_object( $_ );
 
             # TODO: Check it has keys named by the algorithms
          }

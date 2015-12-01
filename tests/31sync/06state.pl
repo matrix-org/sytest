@@ -1,22 +1,50 @@
-test "State is included in the initial sync",
-   requires => [qw( first_api_client can_sync )],
+use Future::Utils qw( repeat );
+
+# call /sync repeatedly until it returns a result
+# with an event in the given room
+# TODO: it might be good to combine this with await_event_for() at some point.
+sub wait_for_event_in_room {
+    my ($user, $room_id, %params) = @_;
+
+    my $sync_params = $params{sync_params} || {};
+
+    repeat(sub {
+        # returns the sync body if the event happened, else undef
+        matrix_sync( $user, %{ $sync_params } )->then( sub {
+            my ( $body ) = @_;
+
+            my $room = $body->{rooms}{join}{$room_id};
+
+            if( $room && (scalar @{ $room->{timeline}{events}} ||
+                          scalar @{ $room->{state}{events}})) {
+                Future->done($body);
+            } else {
+                delay(0.1)->then_done(undef);
+            }
+        });
+    }, while => sub {!$_[0]->failure and !$_[0]->get});
+}
+
+test "State is included in the timeline in the initial sync",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id );
+      my ( $filter_id, $room_id );
 
       my $filter = {
          room => {
-            timeline  => { types => [] },
+            timeline  => { types => [ "a.madeup.test.state" ] },
             state     => { types => [ "a.madeup.test.state" ] },
             ephemeral => { types => [] },
          },
          presence => {types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -31,29 +59,93 @@ test "State is included in the initial sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
-         @{ $room->{state}{events} } == 1
-            or die "Expected only one state event";
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         # state from the timeline should *not* appear in the state dictionary
+         @{ $room->{state}{events} } == 0
+            or die "Expected no state events";
+
+         @{ $room->{timeline}{events} } == 1
+            or die "Expected one timeline event";
+
+         my $event = $room->{timeline}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 1
+         $event->{content}{my_key} == 1
             or die "Unexpected event content";
 
          Future->done(1);
       })
    };
 
+# state that has arrived over federation counts as an 'outlier', so should
+# only appear in the state dictionary, not the timeline.
+test "State from remote users is included in the state in the initial sync",
+    requires => [ local_user_fixture( with_events => 0 ), remote_user_fixture(),
+                  qw( can_sync ) ],
+
+    check => sub {
+        my ( $user, $remote_user) = @_;
+
+        my ( $filter_id, $room_id );
+
+        my $filter = {
+            room => {
+                timeline  => { types => [ "a.madeup.test.state" ] },
+                state     => { types => [ "a.madeup.test.state" ] },
+                ephemeral => { types => [] },
+            },
+            presence => {types => [] },
+        };
+
+        matrix_create_filter( $user, $filter )->then( sub {
+            ( $filter_id ) = @_;
+
+            matrix_create_room( $remote_user );
+        })->then( sub {
+            ( $room_id ) = @_;
+
+            matrix_put_room_state( $remote_user, $room_id,
+                                   type    => "a.madeup.test.state",
+                                   content => { "my_key" => 1 });
+        })->then( sub {
+            matrix_invite_user_to_room( $remote_user, $user, $room_id );
+        })->then( sub {
+            matrix_join_room( $user, $room_id );
+        })->then( sub {
+            matrix_sync( $user, filter => $filter_id );
+        })->then( sub {
+            my ( $body ) = @_;
+
+            my $room = $body->{rooms}{join}{$room_id};
+            assert_json_keys( $room, qw( timeline state ephemeral ));
+
+            @{ $room->{state}{events} } == 1
+                or die "Expected one state event";
+
+            @{ $room->{timeline}{events} } == 0
+                or die "Expected no timeline events";
+
+            my $event = $room->{state}{events}[0];
+            $event->{type} eq "a.madeup.test.state"
+                or die "Unexpected state event type";
+            $event->{content}{my_key} == 1
+                or die "Unexpected event content";
+
+            Future->done(1);
+         })
+   };
+
 
 test "Changes to state are included in an incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = {
          room => {
@@ -64,8 +156,8 @@ test "Changes to state are included in an incremental sync",
          presence => {types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -98,15 +190,15 @@ test "Changes to state are included in an incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 2
+         $event->{content}{my_key} == 2
             or die "Unexpected event content";
 
          Future->done(1);
@@ -115,12 +207,13 @@ test "Changes to state are included in an incremental sync",
 
 
 test "Changes to state are included in an gapped incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = {
          room => {
@@ -131,8 +224,8 @@ test "Changes to state are included in an gapped incremental sync",
          presence => {types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
@@ -155,7 +248,7 @@ test "Changes to state are included in an gapped incremental sync",
          my ( $body ) = @_;
 
          $next_batch = $body->{next_batch};
-         @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 2
+         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 2
             or die "Expected two state events";
 
          matrix_put_room_state( $user, $room_id,
@@ -175,15 +268,15 @@ test "Changes to state are included in an gapped incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 2
+         $event->{content}{my_key} == 2
             or die "Unexpected event content";
 
          Future->done(1);
@@ -191,21 +284,86 @@ test "Changes to state are included in an gapped incremental sync",
    };
 
 
+test "State from remote users is included in the timeline in an incremental sync",
+    requires => [ local_user_fixture( with_events => 0 ), remote_user_fixture(),
+                  qw( can_sync ) ],
+
+    check => sub {
+        my ( $user, $remote_user ) = @_;
+
+        my ( $filter_id, $room_id, $next_batch );
+
+        my $filter = {
+            room => {
+                timeline  => { types => [ "a.madeup.test.state" ] },
+                state     => { types => [ "a.madeup.test.state" ] },
+                ephemeral => { types => [] },
+            },
+            presence => {types => [] },
+        };
+
+        matrix_create_filter( $user, $filter )->then( sub {
+            ( $filter_id ) = @_;
+
+            matrix_create_room( $remote_user );
+        })->then( sub {
+            ( $room_id ) = @_;
+            matrix_invite_user_to_room( $remote_user, $user, $room_id );
+        })->then( sub {
+            matrix_join_room( $user, $room_id );
+        })->then( sub {
+            matrix_sync( $user, filter => $filter_id );
+        })->then( sub {
+            my ( $body ) = @_;
+            $next_batch = $body->{next_batch};
+
+            matrix_put_room_state( $remote_user, $room_id,
+                                   type    => "a.madeup.test.state",
+                                   content => { "my_key" => 1 });
+        })->then( sub {
+            # wait for the event to turn up on the other side
+            wait_for_event_in_room( $user, $room_id, 
+               sync_params => { filter => $filter_id, since => $next_batch },
+            );
+        })->then( sub {
+            my ( $body ) = @_;
+
+            my $room = $body->{rooms}{join}{$room_id};
+            assert_json_keys( $room, qw( timeline state ephemeral ));
+
+            @{ $room->{state}{events} } == 0
+                or die "Expected no state events";
+
+            @{ $room->{timeline}{events} } == 1
+                or die "Expected one timeline event";
+
+            my $event = $room->{timeline}{events}[0];
+            $event->{type} eq "a.madeup.test.state"
+                or die "Unexpected state event type";
+            $event->{content}{my_key} == 1
+                or die "Unexpected event content";
+
+            Future->done(1);
+         })
+   };
+
+
 test "A full_state incremental update returns all state",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = { room => {
-          timeline => { limit => 1 },
+          timeline => { limit => 2 },
           state     => { types => [ "a.madeup.test.state" ] },
       } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -228,8 +386,10 @@ test "A full_state incremental update returns all state",
          my ( $body ) = @_;
 
          $next_batch = $body->{next_batch};
-         @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 2
-            or die "Expected two state events";
+         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 0
+             or die "Expected zero state events";
+         @{ $body->{rooms}{join}{$room_id}{timeline}{events} } == 2
+             or die "Expected two timeline events";
 
          matrix_put_room_state( $user, $room_id,
             type      => "a.madeup.test.state",
@@ -249,27 +409,39 @@ test "A full_state incremental update returns all state",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw(timeline state ephemeral ));
 
          @{ $room->{state}{events} } == 2
-            or die "Expected only two state events";
-
-         my $found_state_event = 0;
-         foreach my $event_id (@{ $room->{state}{events} }) {
-            my $event = $room->{event_map}{$event_id};
-            $event->{type} eq "a.madeup.test.state"
-               or die "Unexpected type";
-            $event->{state_key} eq 'this_state_changes' or next;
-            $event->{content}{my_key} == 2
-               or die "Unexpected event content";
-            $found_state_event = 1;
+            or die "Expected two state events";
+         my $got_key_1 = 0;
+         my $got_key_2 = 0;
+         foreach my $event (@{ $room->{state}{events} }) {
+             $event->{type} eq "a.madeup.test.state"
+                 or die "Unexpected type";
+             my $my_key = $event->{content}{my_key};
+             if( $event->{state_key} eq 'this_state_does_not_change' ) {
+                 $got_key_1++;
+                 $my_key == 1
+                     or die "Unexpected event content ".$my_key;
+             } elsif( $event->{state_key} eq 'this_state_changes' ) {
+                 $got_key_2++;
+                 $my_key == 2
+                     or die "Unexpected event content ".$my_key;
+             } else {
+                 die "Unexpected state key ".$event->{state_key};
+             }
          }
+         $got_key_1 == 1 or die "missing this_state_does_not_change";
+         $got_key_2 == 1 or die "missing this_state_changes";
 
-         $found_state_event or die "Didn't find event with state_key this_state_changes state event";
-
-         @{ $room->{timeline}{events} } == 1
-             or die "Expected only one timeline event";
+         @{ $room->{timeline}{events} } == 2
+             or die "Expected two timeline event";
+         foreach my $i (0..1) {
+             my $event = $room->{timeline}{events}[$i];
+             $event->{type} eq "a.made.up.filler.type"
+                 or die "Unexpected type ".$event->{type};
+         }
 
          Future->done(1);
       })
@@ -277,12 +449,13 @@ test "A full_state incremental update returns all state",
 
 
 test "When user joins a room the state is included in the next sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -294,10 +467,10 @@ test "When user joins a room the state is included in the next sync",
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_create_room( $user_a );
       })->then( sub {
@@ -322,15 +495,15 @@ test "When user joins a room the state is included in the next sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 1
+         $event->{content}{my_key} == 1
             or die "Unexpected event content";
 
          Future->done(1);
@@ -339,13 +512,14 @@ test "When user joins a room the state is included in the next sync",
 
 
 test "A change to displayname should not result in a full state sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
    bug => 'SYN-515',
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = {
          room => {
@@ -356,8 +530,8 @@ test "A change to displayname should not result in a full state sync",
          presence => { types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -374,7 +548,7 @@ test "A change to displayname should not result in a full state sync",
          my ( $body ) = @_;
 
          $next_batch = $body->{next_batch};
-         @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 1
+         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 1
             or die "Expected one state event";
 
          matrix_put_room_state( $user, $room_id,
@@ -391,7 +565,7 @@ test "A change to displayname should not result in a full state sync",
          # The m.room.member event is filtered out; the only thing which could
          # come back is therefore the madeup.test.state event, which shouldn't,
          # as this is an incremental sync.
-         @{ $body->{rooms}{joined}{$room_id}{state}{events} } == 0
+         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 0
             or die "Expected no state events";
 
          Future->done(1);
@@ -400,12 +574,13 @@ test "A change to displayname should not result in a full state sync",
 
 
 test "When user joins a room the state is included in a gapped sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -417,10 +592,11 @@ test "When user joins a room the state is included in a gapped sync",
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
+
          matrix_create_room( $user_a )
       })->then( sub {
          ( $room_id ) = @_;
@@ -450,15 +626,15 @@ test "When user joins a room the state is included in a gapped sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 1
+         $event->{content}{my_key} == 1
             or die "Unexpected event content";
 
          Future->done(1);
@@ -468,12 +644,13 @@ test "When user joins a room the state is included in a gapped sync",
 
 test "When user joins and leaves a room in the same batch, the full state is still included in the next sync",
    bug => 'SYN-514',
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -485,10 +662,10 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_create_room( $user_a );
       })->then( sub {
@@ -515,16 +692,16 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{archived}{$room_id};
-         require_json_keys( $room, qw( event_map timeline state ephemeral ));
+         my $room = $body->{rooms}{leave}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
          my $eventcount = scalar @{ $room->{state}{events} };
          $eventcount == 1 or
              die "Expected one state event, got $eventcount";
 
-         my $event_id = $room->{state}{events}[0];
-         $room->{event_map}{$event_id}{type} eq "a.madeup.test.state"
+         my $event = $room->{state}{events}[0];
+         $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
-         $room->{event_map}{$event_id}{content}{my_key} == 1
+         $event->{content}{my_key} == 1
             or die "Unexpected event content";
 
          Future->done(1);

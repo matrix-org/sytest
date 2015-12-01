@@ -1,37 +1,26 @@
 multi_test "Test that a message is pushed",
-   requires => [qw(
-      api_clients test_http_server_uri_base
-
-      can_create_private_room
-   )],
-
-   do => sub {
-      my ( $clients, $test_http_server_uri_base ) = @_;
-
-      my $http = $clients->[0];
-
-      my $alice;
-      my $bob;
-      my $room_id;
-
+   requires => [
       # We use the version of register new user that doesn't start the event
       # stream for Alice. Starting an event stream will make presence
       # consider Alice to be online. If presence considers alice to be online
       # then Alice might stop receiving push messages.
       # We need to register two users because you are never pushed for
       # messages that you send yourself.
-      Future->needs_all(
-         matrix_register_user( $http, undef, with_events => 0 ),
-         matrix_register_user( $http, undef, with_events => 0 ),
-      )->SyTest::pass_on_done( "Registered users" )
-      ->then( sub {
-         ( $alice, $bob ) = @_;
+      local_user_fixtures( 2, with_events => 0 ),
+      qw( test_http_server_uri_base
 
-         # Have Alice create a new private room
-         matrix_create_room( $alice,
-            visibility => "private",
-         )
-      })->then( sub {
+      can_create_private_room
+   )],
+
+   do => sub {
+      my ( $alice, $bob, $test_http_server_uri_base ) = @_;
+
+      my $room_id;
+
+      # Have Alice create a new private room
+      matrix_create_room( $alice,
+         visibility => "private",
+      )->then( sub {
          ( $room_id ) = @_;
          # Flush Bob's event stream so that we get a token from before
          # Alice sending the invite request.
@@ -41,7 +30,7 @@ multi_test "Test that a message is pushed",
          # We also wait for the push notification for it
 
          Future->needs_all(
-            await_event_for( $bob, sub {
+            await_event_for( $bob, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.room.member" and
                   $event->{room_id} eq $room_id and
@@ -106,16 +95,16 @@ multi_test "Test that a message is pushed",
 
          log_if_fail "Request body", $body;
 
-         require_json_keys( my $notification = $body->{notification}, qw(
+         assert_json_keys( my $notification = $body->{notification}, qw(
             id room_id type sender content devices counts
          ));
-         require_json_keys( $notification->{counts}, qw(
+         assert_json_keys( $notification->{counts}, qw(
             unread
          ));
-         require_json_keys( $notification->{devices}[0], qw(
+         assert_json_keys( $notification->{devices}[0], qw(
             app_id pushkey pushkey_ts data tweaks
          ));
-         require_json_keys( my $content = $notification->{content}, qw(
+         assert_json_keys( my $content = $notification->{content}, qw(
             msgtype body
          ));
 

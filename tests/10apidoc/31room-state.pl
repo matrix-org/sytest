@@ -31,7 +31,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( membership ));
+         assert_json_keys( $body, qw( membership ));
 
          $body->{membership} eq "join" or
             die "Expected membership as 'join'";
@@ -56,11 +56,11 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( ban kick redact users_default
+         assert_json_keys( $body, qw( ban kick redact users_default
             state_default events_default users events ));
 
-         require_json_object( $body->{users} );
-         require_json_object( $body->{events} );
+         assert_json_object( $body->{users} );
+         assert_json_object( $body->{events} );
 
          provide can_get_room_powerlevels => 1;
 
@@ -76,17 +76,14 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( room_id membership state messages presence ));
-         require_json_keys( $body->{messages}, qw( chunk start end ));
-         require_json_list( $body->{messages}{chunk} );
-         require_json_list( $body->{state} );
-         require_json_list( $body->{presence} );
+         assert_json_keys( $body, qw( room_id membership state messages presence ));
+         assert_json_keys( $body->{messages}, qw( chunk start end ));
+         assert_json_list( $body->{messages}{chunk} );
+         assert_json_list( $body->{state} );
+         assert_json_list( $body->{presence} );
 
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' as $room_id";
@@ -100,10 +97,11 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_api_client ), $room_fixture ],
+   requires => [ $main::API_CLIENTS, $room_fixture ],
 
    check => sub {
-      my ( $http, $room_id, undef ) = @_;
+      my ( $clients, $room_id, undef ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request_json(
          method => "GET",
@@ -111,13 +109,13 @@ test "GET /publicRooms lists newly-created room",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( $body->{chunk} );
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
 
          my $found;
 
          foreach my $event ( @{ $body->{chunk} } ) {
-            require_json_keys( $event, qw( room_id ));
+            assert_json_keys( $event, qw( room_id ));
             next unless $event->{room_id} eq $room_id;
 
             $found = 1;
@@ -142,8 +140,8 @@ test "GET /directory/room/:room_alias yields room ID",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( room_id servers ));
-         require_json_list( $body->{servers} );
+         assert_json_keys( $body, qw( room_id servers ));
+         assert_json_list( $body->{servers} );
 
          $body->{room_id} eq $room_id or die "Expected room_id";
 
@@ -171,13 +169,10 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( state ));
+         assert_json_keys( $body, qw( state ));
          my $state = $body->{state};
 
          my %state_by_type = partition_by { $_->{type} } @$state;
@@ -206,7 +201,7 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( name ));
+         assert_json_keys( $body, qw( name ));
 
          $body->{name} eq $name or
             die "Expected name to be '$name'";
@@ -239,13 +234,10 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/initialSync",
-      )->then( sub {
+      matrix_initialsync_room( $user, $room_id )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( state ));
+         assert_json_keys( $body, qw( state ));
          my $state = $body->{state};
 
          my %state_by_type = partition_by { $_->{type} } @$state;
@@ -274,7 +266,7 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( topic ));
+         assert_json_keys( $body, qw( topic ));
 
          $body->{topic} eq $topic or
             die "Expected topic to be '$topic'";
@@ -299,7 +291,7 @@ test "GET /rooms/:room_id/state fetches entire room state",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_list( $body );
+         assert_json_list( $body );
 
          my %state_by_type = partition_by { $_->{type} } @$body;
 
@@ -334,8 +326,8 @@ test "POST /createRoom with creation content",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( room_id ));
-         require_json_nonempty_string( my $room_id = $body->{room_id} );
+         assert_json_keys( $body, qw( room_id ));
+         assert_json_nonempty_string( my $room_id = $body->{room_id} );
 
          do_request_json_for( $user,
             method => "GET",
@@ -346,7 +338,7 @@ test "POST /createRoom with creation content",
 
          log_if_fail "state", $state;
 
-         require_json_keys( $state, qw( m.federate ));
+         assert_json_keys( $state, qw( m.federate ));
 
          provide can_create_room_with_creation_content => 1;
 
@@ -354,7 +346,9 @@ test "POST /createRoom with creation content",
       });
    };
 
-push our @EXPORT, qw( matrix_get_room_state matrix_put_room_state );
+push our @EXPORT, qw(
+   matrix_get_room_state matrix_put_room_state matrix_initialsync_room
+);
 
 sub matrix_get_room_state
 {
@@ -392,3 +386,16 @@ sub matrix_put_room_state
       content => $opts{content},
    );
 }
+
+
+sub matrix_initialsync_room
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/api/v1/rooms/$room_id/initialSync",
+      params => \%params,
+   );
+}
+

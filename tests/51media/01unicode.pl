@@ -6,13 +6,14 @@ my $FILENAME_ENCODED = uc uri_escape( $FILENAME );
 my $content_id;
 
 test "Can upload with Unicode file name",
-   requires => [qw( first_api_client ), local_user_fixture(),
-                qw( can_upload_media )],
+   requires => [ $main::API_CLIENTS, local_user_fixture(),
+                 qw( can_upload_media )],
 
    provides => [qw( can_upload_media_unicode )],
 
    do => sub {
-      my ( $http, $user ) = @_;
+      my ( $clients, $user ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request(
          method       => "POST",
@@ -27,7 +28,7 @@ test "Can upload with Unicode file name",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( content_uri ));
+         assert_json_keys( $body, qw( content_uri ));
 
          my $content_uri = URI->new( $body->{content_uri} );
          my $server = $content_uri->authority;
@@ -62,15 +63,17 @@ sub test_using_client
 }
 
 test "Can download with Unicode file name locally",
-   requires => [qw( first_api_client can_upload_media_unicode )],
+   requires => [ $main::API_CLIENTS,
+                 qw( can_upload_media_unicode )],
 
    check => sub {
-      my ( $http ) = @_;
-      test_using_client( $http );
+      my ( $clients ) = @_;
+      test_using_client( $clients->[0] );
    };
 
 test "Can download with Unicode file name over federation",
-   requires => [qw( api_clients can_upload_media_unicode )],
+   requires => [ $main::API_CLIENTS,
+                 qw( can_upload_media_unicode ) ],
 
    check => sub {
       my ( $clients ) = @_;
@@ -78,10 +81,12 @@ test "Can download with Unicode file name over federation",
    };
 
 test "Can download specifying a different Unicode file name",
-   requires => [qw( first_api_client can_upload_media_unicode )],
+   requires => [ $main::API_CLIENTS,
+                 qw( can_upload_media_unicode )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
       my $alt_filename_encoded = "%E2%98%95";
 

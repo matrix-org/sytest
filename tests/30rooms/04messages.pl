@@ -26,12 +26,12 @@ test "Local room members see posted message events",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, sub {
+            await_event_for( $recvuser, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.room.message";
 
-               require_json_keys( $event, qw( type content room_id user_id ));
-               require_json_keys( my $content = $event->{content}, qw( msgtype body ));
+               assert_json_keys( $event, qw( type content room_id user_id ));
+               assert_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
                return unless $event->{room_id} eq $room_id;
 
@@ -90,13 +90,13 @@ test "Local non-members don't see posted message events",
       my ( $nonmember, $room_id ) = @_;
 
       Future->wait_any(
-         await_event_for( $nonmember, sub {
+         await_event_for( $nonmember, filter => sub {
             my ( $event ) = @_;
             log_if_fail "Received event:", $event;
 
             return unless $event->{type} eq "m.room.message";
 
-            require_json_keys( $event, qw( type content room_id user_id ));
+            assert_json_keys( $event, qw( type content room_id user_id ));
             return unless $event->{room_id} eq $room_id;
 
             die "Nonmember received event about a room they're not a member of";
@@ -117,24 +117,19 @@ test "Local room members can get room messages",
       Future->needs_all( map {
          my $user = $_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
-
-            params => { limit => 1, dir => "b" },
-         )->then( sub {
+         matrix_get_room_messages( $user, $room_id, limit => 1 )->then( sub {
             my ( $body ) = @_;
             log_if_fail "Body:", $body;
 
-            require_json_keys( $body, qw( start end chunk ));
-            require_json_list( my $chunk = $body->{chunk} );
+            assert_json_keys( $body, qw( start end chunk ));
+            assert_json_list( my $chunk = $body->{chunk} );
 
             scalar @$chunk == 1 or
                die "Expected one message";
 
             my ( $event ) = @$chunk;
 
-            require_json_keys( $event, qw( type room_id user_id content ));
+            assert_json_keys( $event, qw( type room_id user_id content ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
@@ -151,12 +146,12 @@ test "Remote room members also see posted message events",
    do => sub {
       my ( $senduser, $remote_user, $room_id ) = @_;
 
-      await_event_for( $remote_user, sub {
+      await_event_for( $remote_user, filter => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.message";
 
-         require_json_keys( $event, qw( type content room_id user_id ));
-         require_json_keys( my $content = $event->{content}, qw( msgtype body ));
+         assert_json_keys( $event, qw( type content room_id user_id ));
+         assert_json_keys( my $content = $event->{content}, qw( msgtype body ));
 
          return unless $event->{room_id} eq $room_id;
 
@@ -178,23 +173,18 @@ test "Remote room members can get room messages",
    check => sub {
       my ( $remote_user, $room_id ) = @_;
 
-      do_request_json_for( $remote_user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/messages",
-
-         params => { limit => 1, dir => "b" },
-      )->then( sub {
+      matrix_get_room_messages( $remote_user, $room_id, limit => 1 )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( my $chunk = $body->{chunk} );
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( my $chunk = $body->{chunk} );
 
          scalar @$chunk == 1 or
             die "Expected one message";
 
          my ( $event ) = @$chunk;
 
-         require_json_keys( $event, qw( type room_id user_id content ));
+         assert_json_keys( $event, qw( type room_id user_id content ));
 
          $event->{room_id} eq $room_id or
             die "Expected room_id to be $room_id";

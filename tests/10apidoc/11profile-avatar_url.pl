@@ -16,7 +16,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( avatar_url ));
+         assert_json_keys( $body, qw( avatar_url ));
 
          $body->{avatar_url} eq $avatar_url or
             die "Expected avatar_url to be '$avatar_url'";
@@ -41,11 +41,12 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
    };
 
 test "GET /profile/:user_id/avatar_url publicly accessible",
-   requires => [qw( first_api_client ), $user_fixture,
-                qw( can_set_avatar_url )],
+   requires => [ $main::API_CLIENTS, $user_fixture,
+                 qw( can_set_avatar_url )],
 
    check => sub {
-      my ( $http, $user ) = @_;
+      my ( $clients, $user ) = @_;
+      my $http = $clients->[0];
       my $user_id = $user->user_id;
 
       $http->do_request_json(
@@ -55,7 +56,7 @@ test "GET /profile/:user_id/avatar_url publicly accessible",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( avatar_url ));
+         assert_json_keys( $body, qw( avatar_url ));
 
          $body->{avatar_url} eq $avatar_url or
             die "Expected avatar_url to be '$avatar_url'";

@@ -3,7 +3,9 @@ package SyTest::Federation::Server;
 use strict;
 use warnings;
 
-use base qw( SyTest::Federation::_Base Net::Async::HTTP::Server );
+use base qw( SyTest::Federation::_Base Net::Async::HTTP::Server
+   SyTest::Federation::AuthChecks
+);
 
 no if $] >= 5.017011, warnings => 'experimental::smartmatch';
 use feature qw( switch );
@@ -45,10 +47,53 @@ sub configure
    return $self->SUPER::configure( %params );
 }
 
+sub client
+{
+   my $self = shift;
+   return $self->{client};
+}
+
 sub next_event_id
 {
    my $self = shift;
    return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
+}
+
+sub create_event
+{
+   my $self = shift;
+   my %fields = @_;
+
+   defined $fields{$_} or croak "Every event needs a '$_' field"
+      for qw( type auth_events content depth prev_events room_id sender );
+
+   if( defined $fields{state_key} ) {
+      defined $fields{$_} or croak "Every state event needs a '$_' field"
+         for qw( prev_state );
+   }
+
+   my $event = {
+      %fields,
+
+      event_id         => $self->next_event_id,
+      origin           => $self->server_name,
+      origin_server_ts => $self->time_ms,
+   };
+
+   $self->sign_event( $event );
+
+   return $self->{events_by_id}{ $event->{event_id} } = $event;
+}
+
+sub get_event
+{
+   my $self = shift;
+   my ( $id ) = @_;
+
+   my $event = $self->{events_by_id}{$id} or
+      croak "$self has no event id '$id'";
+
+   return $event;
 }
 
 sub _fetch_key
@@ -231,13 +276,13 @@ sub mk_await_request_pair
 {
    my $class = shift;
    my ( $shortname, $paramnames ) = @_;
+   my @paramnames = @$paramnames;
 
-   my $n_params = scalar @$paramnames;
    my $okey = "awaiting_$shortname";
 
    my $awaitfunc = sub {
       my $self = shift;
-      my @paramvalues = splice @_, 0, $n_params;
+      my @paramvalues = splice @_, 0, scalar @paramnames;
 
       my $ikey = join "\0", @paramvalues;
 
@@ -253,10 +298,23 @@ sub mk_await_request_pair
 
    my $on_requestfunc = sub {
       my $self = shift;
-      my ( $req ) = @_;
+      my ( $req, @pathvalues ) = @_;
 
       my @paramvalues;
-      push @paramvalues, $req->query_param( $_ ) for @$paramnames;
+      # :name is the next path component, ?name is a request param
+      foreach my $name ( @paramnames ) {
+         if( $name =~ m/^:/ ) {
+            push @paramvalues, shift @pathvalues;
+            next;
+         }
+
+         if( $name =~ m/^\?(.*)$/ ) {
+            push @paramvalues, $req->query_param( $1 );
+            next;
+         }
+
+         die "Unsure what to do with paramname $name\n";
+      }
 
       my $ikey = join "\0", @paramvalues;
 
@@ -277,11 +335,19 @@ sub mk_await_request_pair
 }
 
 __PACKAGE__->mk_await_request_pair(
-   query_directory => [ 'room_alias' ],
+   query_directory => [qw( ?room_alias )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   query_profile => [ 'user_id' ],
+   query_profile => [qw( ?user_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   make_join => [qw( :room_id :user_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   send_join => [qw( :room_id )],
 );
 
 sub on_request_federation_v1_send

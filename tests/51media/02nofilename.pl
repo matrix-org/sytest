@@ -1,10 +1,11 @@
 my $content_id;
 
 test "Can upload without a file name",
-   requires => [qw( first_api_client ), local_user_fixture() ],
+   requires => [ $main::API_CLIENTS, local_user_fixture() ],
 
    do => sub {
-      my ( $http, $user ) = @_;
+      my ( $clients, $user ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request(
          method       => "POST",
@@ -18,7 +19,7 @@ test "Can upload without a file name",
       )->then(sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( content_uri ));
+         assert_json_keys( $body, qw( content_uri ));
 
          my $content_uri = URI->new( $body->{content_uri} );
          my $server = $content_uri->authority;
@@ -52,15 +53,15 @@ sub test_using_client
 }
 
 test "Can download without a file name locally",
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS ],
 
    check => sub {
-      my ( $http ) = @_;
-      test_using_client( $http );
+      my ( $clients ) = @_;
+      test_using_client( $clients->[0] );
    };
 
 test "Can download without a file name over federation",
-   requires => [qw( api_clients )],
+   requires => [ $main::API_CLIENTS ],
 
    check => sub {
       my ( $clients ) = @_;

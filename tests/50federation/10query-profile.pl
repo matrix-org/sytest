@@ -1,5 +1,9 @@
+our $INBOUND_SERVER;
+our $OUTBOUND_CLIENT;
+our $SPYGLASS_USER;
+
 test "Outbound federation can query profile data",
-   requires => [qw( inbound_server ), our $SPYGLASS_USER,
+   requires => [ $INBOUND_SERVER, $SPYGLASS_USER,
                 qw( can_get_displayname )],
 
    check => sub {
@@ -24,7 +28,7 @@ test "Outbound federation can query profile data",
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
 
-         require_json_keys( $body, qw( displayname ));
+         assert_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq "The displayname of \@user:$local_server_name" or
             die "Displayname not as expected";
@@ -36,11 +40,11 @@ test "Outbound federation can query profile data",
 my $dname = "Displayname Set For Federation Test";
 
 test "Inbound federation can query profile data",
-   requires => [qw( outbound_client ), local_user_fixture(),
-                qw( can_set_displayname )],
+   requires => [ $OUTBOUND_CLIENT, qw( first_home_server ), local_user_fixture(),
+                 qw( can_set_displayname )],
 
    do => sub {
-      my ( $outbound_client, $user ) = @_;
+      my ( $outbound_client, $first_home_server, $user ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -51,8 +55,9 @@ test "Inbound federation can query profile data",
          },
       )->then( sub {
          $outbound_client->do_request_json(
-            method => "GET",
-            uri    => "/query/profile",
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/query/profile",
 
             params => {
                user_id => $user->user_id,
@@ -63,7 +68,7 @@ test "Inbound federation can query profile data",
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
 
-         require_json_keys( $body, qw( displayname ));
+         assert_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq $dname or
             die "Expected displayname to be '$dname'";

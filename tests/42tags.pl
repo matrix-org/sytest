@@ -58,7 +58,7 @@ sub matrix_list_tags
    )->then( sub {
       my ( $body ) = @_;
 
-      require_json_keys( $body, qw( tags ) );
+      assert_json_keys( $body, qw( tags ) );
 
       Future->done( $body->{tags} );
    });
@@ -66,21 +66,15 @@ sub matrix_list_tags
 
 
 test "Can add tag",
-   requires => [qw( first_api_client )],
+   requires => [ local_user_fixture( with_events => 0 ) ],
 
    provides => [qw( can_add_tag )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
-
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
-
-         matrix_create_room( $user );
-      })->then( sub {
-         ( $room_id ) = @_;
+      matrix_create_room( $user )->then( sub {
+         my ( $room_id ) = @_;
 
          matrix_add_tag( $user, $room_id, "test_tag", {} );
       })->on_done( sub {
@@ -90,21 +84,15 @@ test "Can add tag",
 
 
 test "Can remove tag",
-   requires => [qw( first_api_client )],
+   requires => [ local_user_fixture( with_events => 0 ) ],
 
    provides => [qw( can_remove_tag )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
-
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
-
-         matrix_create_room( $user );
-      })->then( sub {
-         ( $room_id ) = @_;
+      matrix_create_room( $user )->then( sub {
+         my ( $room_id ) = @_;
 
          matrix_remove_tag( $user, $room_id, "test_tag" );
       })->on_done( sub {
@@ -114,18 +102,15 @@ test "Can remove tag",
 
 
 test "Can list tags for a room",
-   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
+      my $room_id;
 
-      matrix_register_user( $http, undef, with_events => 0 )->then( sub {
-         ( $user ) = @_;
-
-         matrix_create_room( $user );
-      })->then( sub {
+      matrix_create_room( $user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_add_tag( $user, $room_id, "test_tag", {} );
@@ -154,32 +139,24 @@ test "Can list tags for a room",
    };
 
 
-=head2 register_user_and_create_room_and_add_tag
+=head2 create_room_and_add_tag
 
-   my ( $user, $room_id ) = register_user_and_create_room_and_add_tag( $http,
-      with_events => 0
-   )->get;
+   my ( $room_id ) = create_room_and_add_tag( $user )->get;
 
-Register a new user, create a room and add a tag called "test_tag" for that
-user to the room with a tag content of {"order": 1}.
+Creates a room and add a tag called "test_tag" for that user to the room with
+a tag content of {"order": 1}.
 
 =cut
 
-sub register_user_and_create_room_and_add_tag
+sub create_room_and_add_tag
 {
-   my ( $http, %params ) = @_;
+   my ( $user ) = @_;
 
-   my ( $user, $room_id );
+   matrix_create_room( $user )->then( sub {
+      my ( $room_id ) = @_;
 
-   matrix_register_user( $http, undef, %params )->then( sub {
-      ( $user ) = @_;
-         matrix_create_room( $user );
-   })->then( sub {
-      ( $room_id ) = @_;
-
-      matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
-   })->then( sub {
-      Future->done( $user, $room_id );
+      matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } )
+         ->then_done( $room_id );
    });
 }
 
@@ -212,19 +189,16 @@ sub check_tag_event {
 
 
 test "Tags appear in the v1 /events stream",
-   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+   requires => [ local_user_fixture( with_events => 1 ),
+                 qw( can_add_tag can_remove_tag ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
+      create_room_and_add_tag( $user )->then( sub {
+         my ( $room_id ) = @_;
 
-      register_user_and_create_room_and_add_tag( $http,
-         with_events => 1
-      )->then( sub {
-         ( $user, $room_id ) = @_;
-
-         await_event_for( $user, sub {
+         await_event_for( $user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.tag"
                and $event->{room_id} eq $room_id;
@@ -237,22 +211,22 @@ test "Tags appear in the v1 /events stream",
    };
 
 
-=head2 check_private_user_data
+=head2 check_account_data
 
-   check_private_user_data( $event, %args );
+   check_account_data( $event, %args );
 
-Checks that the private_user_data section has a tag event
+Checks that the account_data section has a tag event
 and that the tag event has the correct content.  If the C<expect_empty>
 named argument is set then the 'correct' content is an empty tag.
 
 =cut
 
-sub check_private_user_data {
-   my ( $private_user_data, %args ) = @_;
+sub check_account_data {
+   my ( $account_data, %args ) = @_;
 
-   log_if_fail "Private User Data:", $private_user_data;
+   log_if_fail "Private User Data:", $account_data;
 
-   my $tag_event = $private_user_data->[0];
+   my $tag_event = $account_data->[0];
    $tag_event->{type} eq "m.tag" or die "Expected a m.tag event";
    not defined $tag_event->{room_id} or die "Unxpected room_id";
 
@@ -261,26 +235,27 @@ sub check_private_user_data {
 
 
 test "Tags appear in the v1 /initalSync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
+      my $room_id;
 
-      register_user_and_create_room_and_add_tag( $http,
-         with_events => 0
-      )->then( sub {
-         ( $user, $room_id ) = @_;
+      create_room_and_add_tag( $user )->then( sub {
+         ( $room_id ) = @_;
 
          matrix_initialsync( $user );
       })->then( sub {
          my ( $body ) = @_;
 
          my $room = $body->{rooms}[0];
-         require_json_keys( $room, qw( private_user_data ) );
+         assert_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data} );
+         # TODO(paul): Surely assert that the $room found is indeed $room_id ?
+
+         check_account_data( $room->{account_data} );
 
          Future->done( 1 );
       });
@@ -288,28 +263,27 @@ test "Tags appear in the v1 /initalSync",
 
 
 test "Tags appear in the v1 room initial sync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag )],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id );
-      register_user_and_create_room_and_add_tag( $http,
-         with_events => 0
-      )->then( sub {
-         ( $user, $room_id ) = @_;
+      my $room_id;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync"
-        );
+      create_room_and_add_tag( $user )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_initialsync_room( $user, $room_id );
       })->then( sub {
          my ( $body ) = @_;
 
          my $room = $body;
-         require_json_keys( $room, qw( private_user_data ) );
+         assert_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data} );
+         # TODO(paul): Surely assert that the $room found is indeed $room_id ?
+
+         check_account_data( $room->{account_data} );
 
          Future->done( 1 );
       });
@@ -317,17 +291,18 @@ test "Tags appear in the v1 room initial sync",
 
 
 test "Tags appear in an initial v2 /sync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag can_sync ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id, $filter_id );
+      my ( $room_id, $filter_id );
 
       my $filter = {};
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -339,10 +314,10 @@ test "Tags appear in an initial v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( private_user_data ) );
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data}{events} );
+         check_account_data( $room->{account_data}{events} );
 
          Future->done( 1 );
       });
@@ -350,17 +325,18 @@ test "Tags appear in an initial v2 /sync",
 
 
 test "Newly updated tags appear in an incremental v2 /sync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag can_sync ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id, $filter_id, $next_batch );
+      my ( $room_id, $filter_id, $next_batch );
 
       my $filter = {};
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -378,27 +354,28 @@ test "Newly updated tags appear in an incremental v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( private_user_data ) );
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data}{events} );
+         check_account_data( $room->{account_data}{events} );
 
          Future->done( 1 );
       });
    };
 
 test "Deleted tags appear in an incremental v2 /sync",
-   requires => [qw( first_api_client can_add_tag can_remove_tag can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_add_tag can_remove_tag can_sync ) ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $room_id, $filter_id, $next_batch );
+      my ( $room_id, $filter_id, $next_batch );
 
       my $filter = {};
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -424,10 +401,10 @@ test "Deleted tags appear in an incremental v2 /sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $room = $body->{rooms}{joined}{$room_id};
-         require_json_keys( $room, qw( private_user_data ) );
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( account_data ) );
 
-         check_private_user_data( $room->{private_user_data}{events},
+         check_account_data( $room->{account_data}{events},
             expect_empty => 1,
          );
 

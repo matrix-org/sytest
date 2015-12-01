@@ -1,17 +1,18 @@
 test "GET /register yields a set of flows",
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS ],
 
    provides => [qw( can_register_password_flow )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request_json(
          uri => "/api/v1/register",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( flows ));
+         assert_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
 
          my $has_register_flow;
@@ -38,12 +39,14 @@ test "GET /register yields a set of flows",
    };
 
 test "POST /register can create a user",
-   requires => [qw( first_api_client can_register_password_flow )],
+   requires => [ $main::API_CLIENTS,
+                 qw( can_register_password_flow ) ],
 
    critical => 1,
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request_json(
          method => "POST",
@@ -57,7 +60,7 @@ test "POST /register can create a user",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( user_id access_token ));
+         assert_json_keys( $body, qw( user_id access_token ));
 
          Future->done( 1 );
       });
@@ -118,13 +121,15 @@ sub local_user_fixture
    my %args = @_;
 
    fixture(
-      requires => [qw( first_api_client )],
+      requires => [ $main::API_CLIENTS ],
 
       setup => sub {
-         my ( $api_client ) = @_;
+         my ( $clients ) = @_;
+         my $http = $clients->[0];
 
-         matrix_register_user( $api_client )
-         ->then_with_f( sub {
+         matrix_register_user( $http, undef,
+            with_events => $args{with_events} // 1,
+         )->then_with_f( sub {
             my $f = shift;
             return $f unless defined( my $displayname = $args{displayname} );
 
@@ -156,9 +161,9 @@ sub local_user_fixture
 
 sub local_user_fixtures
 {
-   my ( $count ) = @_;
+   my ( $count, %args ) = @_;
 
-   return map { local_user_fixture() } 1 .. $count;
+   return map { local_user_fixture( %args ) } 1 .. $count;
 }
 
 push @EXPORT, qw( remote_user_fixture );
@@ -166,7 +171,7 @@ push @EXPORT, qw( remote_user_fixture );
 sub remote_user_fixture
 {
    fixture(
-      requires => [qw( api_clients )],
+      requires => [ $main::API_CLIENTS ],
 
       setup => sub {
          my ( $clients ) = @_;
@@ -184,12 +189,13 @@ push @EXPORT, qw( SPYGLASS_USER );
 # don't mutate server-side state, so it's fairly safe to reüse this user among
 # different tests.
 our $SPYGLASS_USER = fixture(
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS ],
 
    setup => sub {
-      my ( $api_client ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
-      matrix_register_user( $api_client )
+      matrix_register_user( $http )
       ->on_done( sub {
          my ( $user ) = @_;
 
