@@ -46,7 +46,7 @@ test "POST /createRoom makes a public room",
 test "POST /createRoom makes a private room",
    requires => [ $user_fixture ],
 
-   provides => [qw( can_create_private_room )],
+   proves => [qw( can_create_private_room )],
 
    do => sub {
       my ( $user ) = @_;
@@ -64,8 +64,6 @@ test "POST /createRoom makes a private room",
          assert_json_keys( $body, qw( room_id ));
          assert_json_nonempty_string( $body->{room_id} );
 
-         provide can_create_private_room => 1;
-
          Future->done(1);
       });
    };
@@ -74,7 +72,7 @@ test "POST /createRoom makes a private room with invites",
    requires => [ $user_fixture, local_user_fixture(),
                  qw( can_create_private_room )],
 
-   provides => [qw( can_create_private_room_with_invite )],
+   proves => [qw( can_create_private_room_with_invite )],
 
    do => sub {
       my ( $user, $invitee ) = @_;
@@ -93,8 +91,6 @@ test "POST /createRoom makes a private room with invites",
 
          assert_json_keys( $body, qw( room_id ));
          assert_json_nonempty_string( $body->{room_id} );
-
-         provide can_create_private_room_with_invite => 1;
 
          Future->done(1);
       });

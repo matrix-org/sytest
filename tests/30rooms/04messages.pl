@@ -15,7 +15,7 @@ test "Local room members see posted message events",
    requires => [ $senduser_fixture, $local_user_fixture, $room_fixture,
                  qw( can_send_message )],
 
-   provides => [qw( can_receive_room_message_locally )],
+   proves => [qw( can_receive_room_message_locally )],
 
    do => sub {
       my ( $senduser, $local_user, $room_id ) = @_;
@@ -45,8 +45,6 @@ test "Local room members see posted message events",
                return 1;
             });
          } $senduser, $local_user )
-      })->on_done( sub {
-         provide can_receive_room_message_locally => 1;
       });
    };
 

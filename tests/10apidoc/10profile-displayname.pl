@@ -5,7 +5,7 @@ my $displayname = "Testing Displayname";
 test "PUT /profile/:user_id/displayname sets my name",
    requires => [ $user_fixture ],
 
-   provides => [qw( can_set_displayname )],
+   proves => [qw( can_set_displayname )],
 
    check => sub {
       my ( $user ) = @_;
@@ -20,8 +20,6 @@ test "PUT /profile/:user_id/displayname sets my name",
 
          $body->{displayname} eq $displayname or
             die "Expected displayname to be '$displayname'";
-
-         provide can_set_displayname => 1;
 
          Future->done(1);
       });
@@ -44,7 +42,7 @@ test "GET /profile/:user_id/displayname publicly accessible",
    requires => [ $main::API_CLIENTS, $user_fixture,
                  qw( can_set_displayname )],
 
-   provides => [qw( can_get_displayname )],
+   proves => [qw( can_get_displayname )],
 
    check => sub {
       my ( $clients, $user ) = @_;
@@ -62,8 +60,6 @@ test "GET /profile/:user_id/displayname publicly accessible",
 
          $body->{displayname} eq $displayname or
             die "Expected displayname to be '$displayname'";
-
-         provide can_get_displayname => 1;
 
          Future->done(1);
       });

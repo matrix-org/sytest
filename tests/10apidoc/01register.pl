@@ -1,7 +1,7 @@
 test "GET /register yields a set of flows",
    requires => [ $main::API_CLIENTS ],
 
-   provides => [qw( can_register_password_flow )],
+   proves => [qw( can_register_password_flow )],
 
    check => sub {
       my ( $clients ) = @_;
@@ -31,10 +31,7 @@ test "GET /register yields a set of flows",
                @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password";
          }
 
-         $has_register_flow and
-            provide can_register_password_flow => 1;
-
-         Future->done(1);
+         Future->done( $has_register_flow );
       });
    };
 

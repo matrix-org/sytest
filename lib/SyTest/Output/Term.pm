@@ -105,7 +105,7 @@ sub diag
 {
    shift;
    my ( $message ) = @_;
-   print "$message\n";
+   print "\n${YELLOW_B} #${RESET} $message";
 }
 
 package SyTest::Output::Term::Test {

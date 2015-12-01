@@ -9,7 +9,7 @@ test "Can upload with Unicode file name",
    requires => [ $main::API_CLIENTS, local_user_fixture(),
                  qw( can_upload_media )],
 
-   provides => [qw( can_upload_media_unicode )],
+   proves => [qw( can_upload_media_unicode )],
 
    do => sub {
       my ( $clients, $user ) = @_;
@@ -35,7 +35,6 @@ test "Can upload with Unicode file name",
          my $path = $content_uri->path;
 
          $content_id = "$server$path";
-         provide can_upload_media_unicode => 1;
 
          Future->done(1)
       });
