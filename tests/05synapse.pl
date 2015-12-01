@@ -57,15 +57,13 @@ prepare "Generating AS credentials",
 
 struct HomeserverInfo => [qw( server_name client_location )];
 
-prepare "Starting synapse",
+push our @EXPORT, qw( HOMESERVER_INFO );
+
+our $HOMESERVER_INFO = fixture(
    requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls
                     as_user_info )],
 
-   provides => [qw(
-      homeserver_info first_home_server
-   )],
-
-   do => sub {
+   setup => sub {
       my ( $ports, $args, $test_http_server_uri_base, $want_tls,
            $as_user_info ) = @_;
 
@@ -146,22 +144,8 @@ prepare "Starting synapse",
                ->then_fail( "Synapse server on port $secure_port failed to start" ),
          );
       } 0 .. $#$ports )
-      ->on_done( sub {
-         provide homeserver_info => \@info;
-
-         # Legacy
-         provide first_home_server => $info[0]->server_name;
+      ->then( sub {
+         Future->done( \@info );
       });
-   };
-
-push our @EXPORT, qw( HOMESERVER_INFO );
-
-# TODO: this should be an array
-our $HOMESERVER_INFO = fixture(
-   requires => [qw( homeserver_info )],
-
-   setup => sub {
-      my ( $info ) = @_;
-      Future->done( $info );
    },
 );
