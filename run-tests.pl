@@ -587,48 +587,6 @@ sub test
    }
 }
 
-sub prepare
-{
-   my ( $name, %params ) = @_;
-
-   local @PROVIDES = @{ $params{provides} || [] };
-
-   my @reqs;
-   foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
-
-      $output->skip_prepare( $name, $req );
-      return;
-   }
-
-   $output->start_prepare( $name );
-
-   my $do = $params{do};
-   my $success = eval {
-      $do->( @reqs )->get;
-      1;
-   };
-
-   if( $success ) {
-      $output->pass_prepare;
-   }
-   else {
-      my $e = $@; chomp $e;
-      $output->fail_prepare( $e );
-      $failed++;
-   }
-
-   if( not $success ) {
-      no warnings 'exiting';
-      last TEST if $STOP_ON_FAIL;
-
-      die "prepare failed\n";
-   }
-
-   exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
-      for @PROVIDES;
-}
-
 my %only_files;
 my $stop_after;
 if( @ARGV ) {
