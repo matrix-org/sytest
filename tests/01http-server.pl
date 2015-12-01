@@ -9,20 +9,21 @@ my $DIR = dirname( __FILE__ );
 
 struct Awaiter => [qw( pathmatch filter future )];
 
-prepare "Environment closures for receiving HTTP pokes",
-   requires => [qw( )],
+push our @EXPORT, qw( ServerInfo await_http_request TEST_SERVER_INFO );
 
-   provides => [qw( test_http_server_uri_base test_http_server_hostandport )],
+struct ServerInfo => [qw( server_name client_location )];
 
-   do => sub {
+our $TEST_SERVER_INFO = fixture(
+   requires => [],
+
+   setup => sub {
       my $listen_host = "localhost";
 
       my $http_server = SyTest::HTTPServer->new;
       $loop->add( $http_server );
 
-      push our @EXPORT, qw( await_http_request );
-
       my $http_client;
+      my $server_info;
 
       $http_server->listen(
          addr => {
@@ -39,8 +40,7 @@ prepare "Environment closures for receiving HTTP pokes",
 
          my $uri_base = "https://$listen_host:$sockport";
 
-         provide test_http_server_hostandport => "$listen_host:$sockport";
-         provide test_http_server_uri_base => $uri_base;
+         $server_info = ServerInfo( "$listen_host:$sockport", $uri_base );
 
          $http_client = SyTest::HTTPClient->new(
             uri_base => $uri_base,
@@ -101,7 +101,11 @@ prepare "Environment closures for receiving HTTP pokes",
             }),
          )
       })
-   };
+      ->then( sub {
+         Future->done( $server_info );
+      });
+   },
+);
 
 # List of Awaiter structs
 my @pending_awaiters;
