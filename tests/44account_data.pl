@@ -157,7 +157,7 @@ test "Account data appears in v1 /events stream",
             my ( $event ) = @_;
 
             return $event->{type} eq "my.test.type"
-               and $event->{content}{cats_or_rats} eq "cats";
+               && $event->{content}{cats_or_rats} eq "cats";
          }),
          matrix_add_account_data( $user, "my.test.type", {
             cats_or_rats => "cats",
@@ -177,8 +177,8 @@ test "Room account data appears in v1 /events stream",
             my ( $event ) = @_;
 
             return $event->{type} eq "my.test.type"
-               and $event->{content}{cats_or_rats} eq "rats"
-               and $event->{room_id} eq $room_id;
+               && $event->{content}{cats_or_rats} eq "rats"
+               && $event->{room_id} eq $room_id;
          }),
          matrix_add_room_account_data( $user, $room_id, "my.test.type", {
             cats_or_rats => "rats",
