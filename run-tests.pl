@@ -39,7 +39,7 @@ use Module::Pluggable
 # A number of commandline arguments exist simply for passing values through to
 # the way that synapse is started by tests/05synapse.pl. We'll collect them
 # all in one place for neatness
-my %SYNAPSE_ARGS = (
+our %SYNAPSE_ARGS = (
    directory  => "../synapse",
    python     => "python",
    extra_args => [],
@@ -49,7 +49,8 @@ my %SYNAPSE_ARGS = (
    coverage   => 0,
 );
 
-my $WANT_TLS = 1;
+our $WANT_TLS = 1;  # This is shared with the test scripts
+
 my %FIXED_BUGS;
 
 my $STOP_ON_FAIL;
@@ -246,15 +247,12 @@ my $loop = IO::Async::Loop->new;
 $SIG{INT} = sub { exit 1 };
 
 
+# We need two servers; a "local" and a "remote" one for federation-based tests
+our @HOMESERVER_PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
+
 # Some tests create objects as a side-effect that later tests will depend on,
 # such as clients, users, rooms, etc... These are called the Environment
 my %test_environment = (
-   synapse_args => \%SYNAPSE_ARGS,
-
-   # We need two servers; a "local" and a "remote" one for federation-based tests
-   synapse_ports => [ $PORT_BASE + 1, $PORT_BASE + 2 ],
-
-   want_tls => $WANT_TLS,
 );
 
 our @PROVIDES;
