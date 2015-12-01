@@ -29,7 +29,7 @@ my $status_msg = "Testing something";
 test "PUT /presence/:user_id/status updates my presence",
    requires => [ $fixture ],
 
-   provides => [qw( can_set_presence )],
+   proves => [qw( can_set_presence )],
 
    do => sub {
       my ( $user ) = @_;
@@ -56,8 +56,6 @@ test "PUT /presence/:user_id/status updates my presence",
 
          ( $body->{status_msg} // "" ) eq $status_msg or
             die "Incorrect status_msg";
-
-         provide can_set_presence => 1;
 
          Future->done(1);
       });

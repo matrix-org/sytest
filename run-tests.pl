@@ -250,35 +250,6 @@ $SIG{INT} = sub { exit 1 };
 # We need two servers; a "local" and a "remote" one for federation-based tests
 our @HOMESERVER_PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
 
-# Some tests create objects as a side-effect that later tests will depend on,
-# such as clients, users, rooms, etc... These are called the Environment
-my %test_environment = (
-);
-
-our @PROVIDES;
-
-sub provide
-{
-   my ( $name, $value ) = @_;
-   exists $test_environment{$name} and
-      carp "Overwriting existing test environment key '$name'";
-   any { $name eq $_ } @PROVIDES or
-      carp "Was not expecting to provide '$name'";
-
-   if( $value ne "1" ) {
-      croak "Providing a non-boolean or non-true value is now deprecated; use fixture() for sharing non-boolean test values";
-   }
-
-   $test_environment{$name} = $value;
-}
-
-sub unprovide
-{
-   my @names = @_;
-
-   delete $test_environment{$_} for @names;
-}
-
 # Util. function for tests
 sub delay
 {
@@ -325,10 +296,10 @@ sub fixture
       else {
          push @requires, $req;
          push @req_futures, $f_start->then( sub {
-            my ( $env ) = @_;
+            my ( $proven ) = @_;
 
-            exists $env->{$req} or die "TODO: Missing fixture dependency $req\n";
-            Future->done( $env->{$req} );
+            $proven->{$req} or die "TODO: Missing fixture dependency $req\n";
+            Future->done;
          });
       }
    }
@@ -362,6 +333,8 @@ sub fixture
 my $failed;
 my $expected_fail;
 my $skipped_count = 0;
+
+my %proven;
 
 our $SKIPPING;
 
@@ -397,11 +370,10 @@ sub _run_test
 
    undef @log_if_fail_lines;
 
-   local @PROVIDES = @{ $params{provides} || [] };
    local $MORE_STUBS = [];
 
-   # If the test doesn't provide anything, and we're in skipping mode, just stop right now
-   if( $SKIPPING and !@PROVIDES ) {
+   # If we're in skipping mode, just stop right now
+   if( $SKIPPING ) {
       $t->skipped++;
       return;
    }
@@ -415,22 +387,16 @@ sub _run_test
       if( is_Fixture( $req ) ) {
          my $fixture = $req;
 
-         exists $test_environment{$_} or die "TODO: Missing fixture dependency $_"
-            for @{ $fixture->requires };
-
          push @req_futures, $f_start->then( sub {
-            $fixture->start->( \%test_environment );
+            $fixture->start->( \%proven );
             $fixture->result;
          });
       }
       else {
-         if( !exists $test_environment{$req} ) {
+         if( !exists $proven{$req} ) {
             $t->skip( "lack of $req" );
             return;
          }
-
-         # Fetch its value immediately
-         push @req_futures, Future->done( $test_environment{$req} );
       }
    }
 
@@ -503,9 +469,7 @@ sub _run_test
    } @requires )->get;
 
    if( $success ) {
-      exists $test_environment{$_} or warn "Test step ${\$t->name} did not provide a value for $_\n"
-         for @PROVIDES;
-
+      $proven{$_}++ for @{ $params{proves} // [] };
       $t->pass;
    }
    else {
@@ -675,15 +639,16 @@ if( $WAIT_AT_END ) {
 if( $failed ) {
    $output->final_fail( $failed );
 
-   my @f;
-   foreach my $synapse ( @{ $test_environment{synapses} } ) {
-      $synapse->print_output;
-      push @f, $synapse->await_finish;
+   # TODO: umh.. this apparently broke some time ago. Should fix it
+   #my @f;
+   #foreach my $synapse ( @{ $test_environment{synapses} } ) {
+   #   $synapse->print_output;
+   #   push @f, $synapse->await_finish;
+   #
+   #   $synapse->kill( 'INT' );
+   #}
 
-      $synapse->kill( 'INT' );
-   }
-
-   Future->wait_all( @f )->get if @f;
+   #Future->wait_all( @f )->get if @f;
    exit 1;
 }
 else {

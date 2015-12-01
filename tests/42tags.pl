@@ -68,7 +68,7 @@ sub matrix_list_tags
 test "Can add tag",
    requires => [ local_user_fixture( with_events => 0 ) ],
 
-   provides => [qw( can_add_tag )],
+   proves => [qw( can_add_tag )],
 
    do => sub {
       my ( $user ) = @_;
@@ -77,8 +77,6 @@ test "Can add tag",
          my ( $room_id ) = @_;
 
          matrix_add_tag( $user, $room_id, "test_tag", {} );
-      })->on_done( sub {
-         provide can_add_tag => 1
       });
    };
 
@@ -86,7 +84,7 @@ test "Can add tag",
 test "Can remove tag",
    requires => [ local_user_fixture( with_events => 0 ) ],
 
-   provides => [qw( can_remove_tag )],
+   proves => [qw( can_remove_tag )],
 
    do => sub {
       my ( $user ) = @_;
@@ -95,8 +93,6 @@ test "Can remove tag",
          my ( $room_id ) = @_;
 
          matrix_remove_tag( $user, $room_id, "test_tag" );
-      })->on_done( sub {
-         provide can_remove_tag => 1
       });
    };
 
