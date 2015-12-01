@@ -25,12 +25,10 @@ test "POST /rooms/:room_id/receipt can create receipts",
 
             content => {},
          );
-      })->then( sub {
-         push our @EXPORT, qw( matrix_advance_room_receipt );
-
-         Future->done(1);
-      });
+      })->then_done(1);
    };
+
+push our @EXPORT, qw( matrix_advance_room_receipt );
 
 sub matrix_advance_room_receipt
 {

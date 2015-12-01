@@ -186,7 +186,7 @@ test "POST /rooms/:room_id/leave can leave a room",
       );
    };
 
-push @EXPORT, qw( matrix_leave_room );
+push our @EXPORT, qw( matrix_leave_room );
 
 sub matrix_leave_room
 {
@@ -230,11 +230,11 @@ test "POST /rooms/:room_id/invite can send an invite",
          $body->{membership} eq "invite" or
             die "Expected membership to be 'invite'";
 
-         push our @EXPORT, qw( matrix_invite_user_to_room );
-
          Future->done(1);
       });
    };
+
+push our @EXPORT, qw( matrix_invite_user_to_room );
 
 sub matrix_invite_user_to_room
 {
