@@ -39,7 +39,7 @@ use Module::Pluggable
 # A number of commandline arguments exist simply for passing values through to
 # the way that synapse is started by tests/05synapse.pl. We'll collect them
 # all in one place for neatness
-my %SYNAPSE_ARGS = (
+our %SYNAPSE_ARGS = (
    directory  => "../synapse",
    python     => "python",
    extra_args => [],
@@ -49,7 +49,8 @@ my %SYNAPSE_ARGS = (
    coverage   => 0,
 );
 
-my $WANT_TLS = 1;
+our $WANT_TLS = 1;  # This is shared with the test scripts
+
 my %FIXED_BUGS;
 
 my $STOP_ON_FAIL;
@@ -246,15 +247,12 @@ my $loop = IO::Async::Loop->new;
 $SIG{INT} = sub { exit 1 };
 
 
+# We need two servers; a "local" and a "remote" one for federation-based tests
+our @HOMESERVER_PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
+
 # Some tests create objects as a side-effect that later tests will depend on,
 # such as clients, users, rooms, etc... These are called the Environment
 my %test_environment = (
-   synapse_args => \%SYNAPSE_ARGS,
-
-   # We need two servers; a "local" and a "remote" one for federation-based tests
-   synapse_ports => [ $PORT_BASE + 1, $PORT_BASE + 2 ],
-
-   want_tls => $WANT_TLS,
 );
 
 our @PROVIDES;
@@ -266,6 +264,10 @@ sub provide
       carp "Overwriting existing test environment key '$name'";
    any { $name eq $_ } @PROVIDES or
       carp "Was not expecting to provide '$name'";
+
+   if( $value ne "1" ) {
+      croak "Providing a non-boolean or non-true value is now deprecated; use fixture() for sharing non-boolean test values";
+   }
 
    $test_environment{$name} = $value;
 }
@@ -585,48 +587,6 @@ sub test
       no warnings 'exiting';
       last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
    }
-}
-
-sub prepare
-{
-   my ( $name, %params ) = @_;
-
-   local @PROVIDES = @{ $params{provides} || [] };
-
-   my @reqs;
-   foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
-
-      $output->skip_prepare( $name, $req );
-      return;
-   }
-
-   $output->start_prepare( $name );
-
-   my $do = $params{do};
-   my $success = eval {
-      $do->( @reqs )->get;
-      1;
-   };
-
-   if( $success ) {
-      $output->pass_prepare;
-   }
-   else {
-      my $e = $@; chomp $e;
-      $output->fail_prepare( $e );
-      $failed++;
-   }
-
-   if( not $success ) {
-      no warnings 'exiting';
-      last TEST if $STOP_ON_FAIL;
-
-      die "prepare failed\n";
-   }
-
-   exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
-      for @PROVIDES;
 }
 
 my %only_files;

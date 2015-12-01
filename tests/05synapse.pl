@@ -37,11 +37,8 @@ push our @EXPORT, qw( AS_USER_INFO HOMESERVER_INFO );
 struct ASUserInfo => [qw( localpart user_id as2hs_token hs2as_token )];
 
 our $AS_USER_INFO = fixture(
-   requires => [qw( synapse_ports )],
-
    setup => sub {
-      my ( $ports ) = @_;
-      my $port = $ports->[0];
+      my $port = $HOMESERVER_PORTS[0];
 
       my $localpart = "as-user";
 
@@ -55,39 +52,38 @@ our $AS_USER_INFO = fixture(
 );
 
 our $HOMESERVER_INFO = fixture(
-   requires => [ qw( synapse_ports synapse_args want_tls ),
-                 $main::TEST_SERVER_INFO, $AS_USER_INFO ],
+   requires => [ $main::TEST_SERVER_INFO, $AS_USER_INFO ],
 
    setup => sub {
-      my ( $ports, $args, $want_tls, $test_server_info, $as_user_info ) = @_;
+      my ( $test_server_info, $as_user_info ) = @_;
 
       my @info;
 
       Future->needs_all( map {
          my $idx = $_;
 
-         my $secure_port = $ports->[$idx];
-         my $unsecure_port = $want_tls ? 0 : $secure_port + 1000;
+         my $secure_port = $HOMESERVER_PORTS[$idx];
+         my $unsecure_port = $WANT_TLS ? 0 : $secure_port + 1000;
 
-         my @extra_args = extract_extra_args( $idx, $args->{extra_args} );
+         my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
 
-         my $location = $want_tls ?
+         my $location = $WANT_TLS ?
             "https://localhost:$secure_port" :
             "http://localhost:$unsecure_port";
 
          $info[$idx] = ServerInfo( "localhost:$secure_port", $location );
 
          my $synapse = SyTest::Synapse->new(
-            synapse_dir   => $args->{directory},
+            synapse_dir   => $SYNAPSE_ARGS{directory},
             port          => $secure_port,
             unsecure_port => $unsecure_port,
             output        => $output,
-            print_output  => $args->{log},
+            print_output  => $SYNAPSE_ARGS{log},
             extra_args    => \@extra_args,
-            python        => $args->{python},
-            coverage      => $args->{coverage},
-            ( scalar @{ $args->{log_filter} } ?
-               ( filter_output => $args->{log_filter} ) :
+            python        => $SYNAPSE_ARGS{python},
+            coverage      => $SYNAPSE_ARGS{coverage},
+            ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
+               ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
 
             config => {
@@ -138,7 +134,7 @@ our $HOMESERVER_INFO = fixture(
             $loop->delay_future( after => 20 )
                ->then_fail( "Synapse server on port $secure_port failed to start" ),
          );
-      } 0 .. $#$ports )
+      } 0 .. $#HOMESERVER_PORTS )
       ->then( sub {
          Future->done( \@info );
       });
