@@ -3,14 +3,14 @@ use Future::Utils qw( repeat );
 push our @EXPORT, qw( AS_USER await_as_event );
 
 our $AS_USER = fixture(
-   requires => [ $main::API_CLIENTS, qw( as_credentials )],
+   requires => [ $main::API_CLIENTS, $main::AS_USER_INFO ],
 
    setup => sub {
-      my ( $clients, $as_credentials ) = @_;
+      my ( $clients, $as_user_info ) = @_;
       my $http = $clients->[0];
-      my ( $user_id, $token ) = @$as_credentials;
 
-      Future->done( User( $http, $user_id, $token, undef, undef, [], undef ) );
+      Future->done( User( $http, $as_user_info->user_id, $as_user_info->as2hs_token,
+            undef, undef, [], undef ) );
    },
 );
 

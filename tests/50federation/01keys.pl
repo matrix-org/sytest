@@ -7,10 +7,11 @@ use Protocol::Matrix qw( encode_json_for_signing );
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 test "Federation key API allows unsigned requests for keys",
-   requires => [qw( first_home_server ), $main::HTTP_CLIENT ],
+   requires => [ $main::HOMESERVER_INFO, $main::HTTP_CLIENT ],
 
    check => sub {
-      my ( $first_home_server, $client ) = @_;
+      my ( $info, $client ) = @_;
+      my $first_home_server = $info->[0]->server_name;
 
       # Key API specifically does not require a signed request to ask for the
       # server's own key
@@ -77,10 +78,11 @@ test "Federation key API allows unsigned requests for keys",
    };
 
 test "Federation key API can act as a notary server",
-   requires => [qw( first_home_server ), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT ],
+   requires => [ $main::HOMESERVER_INFO, $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT ],
 
    check => sub {
-      my ( $first_home_server, $inbound_server, $client ) = @_;
+      my ( $info, $inbound_server, $client ) = @_;
+      my $first_home_server = $info->[0]->server_name;
 
       my $key_id = $inbound_server->key_id;
       my $local_server_name = $inbound_server->server_name;

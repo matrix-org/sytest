@@ -7,13 +7,13 @@ multi_test "Test that a message is pushed",
       # We need to register two users because you are never pushed for
       # messages that you send yourself.
       local_user_fixtures( 2, with_events => 0 ),
-      qw( test_http_server_uri_base
+      $main::TEST_SERVER_INFO,
 
-      can_create_private_room
-   )],
+      qw( can_create_private_room )
+   ],
 
    do => sub {
-      my ( $alice, $bob, $test_http_server_uri_base ) = @_;
+      my ( $alice, $bob, $test_server_info ) = @_;
 
       my $room_id;
 
@@ -61,7 +61,7 @@ multi_test "Test that a message is pushed",
                pushkey             => "a_push_key",
                lang                => "en",
                data                => {
-                  url => "$test_http_server_uri_base/alice_push",
+                  url => $test_server_info->client_location . "/alice_push",
                },
             },
          )->SyTest::pass_on_done( "Alice's pusher created" )

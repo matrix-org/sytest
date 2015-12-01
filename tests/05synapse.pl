@@ -32,17 +32,36 @@ sub gen_token
    return join "", map { chr 64 + rand 63 } 1 .. $length;
 }
 
-prepare "Starting synapse",
-   requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls )],
+push our @EXPORT, qw( AS_USER_INFO HOMESERVER_INFO );
 
-   provides => [qw(
-      synapse_client_locations as_credentials hs2as_token
-   )],
+struct ASUserInfo => [qw( localpart user_id as2hs_token hs2as_token )];
 
-   do => sub {
-      my ( $ports, $args, $test_http_server_uri_base, $want_tls ) = @_;
+our $AS_USER_INFO = fixture(
+   requires => [qw( synapse_ports )],
 
-      my @locations;
+   setup => sub {
+      my ( $ports ) = @_;
+      my $port = $ports->[0];
+
+      my $localpart = "as-user";
+
+      Future->done( ASUserInfo(
+         $localpart,
+         "\@${localpart}:localhost:${port}",
+         gen_token( 32 ),
+         gen_token( 32 ),
+      ));
+   },
+);
+
+our $HOMESERVER_INFO = fixture(
+   requires => [ qw( synapse_ports synapse_args want_tls ),
+                 $main::TEST_SERVER_INFO, $AS_USER_INFO ],
+
+   setup => sub {
+      my ( $ports, $args, $want_tls, $test_server_info, $as_user_info ) = @_;
+
+      my @info;
 
       Future->needs_all( map {
          my $idx = $_;
@@ -52,9 +71,11 @@ prepare "Starting synapse",
 
          my @extra_args = extract_extra_args( $idx, $args->{extra_args} );
 
-         $locations[$idx] = $want_tls ?
+         my $location = $want_tls ?
             "https://localhost:$secure_port" :
             "http://localhost:$unsecure_port";
+
+         $info[$idx] = ServerInfo( "localhost:$secure_port", $location );
 
          my $synapse = SyTest::Synapse->new(
             synapse_dir   => $args->{directory},
@@ -71,13 +92,14 @@ prepare "Starting synapse",
 
             config => {
                # Config for testing recaptcha. 90jira/SYT-8.pl
-               recaptcha_siteverify_api => "$test_http_server_uri_base/recaptcha/api/siteverify",
+               recaptcha_siteverify_api => $test_server_info->client_location .
+                                              "/recaptcha/api/siteverify",
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
 
                use_insecure_ssl_client_just_for_testing_do_not_use => 1,
                report_stats => "False",
-               user_agent_suffix => $locations[$idx],
+               user_agent_suffix => $location,
                allow_guest_access => "True",
             },
          );
@@ -86,10 +108,10 @@ prepare "Starting synapse",
          if( $idx == 0 ) {
             # Configure application services on first instance only
             my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
-               url      => "$test_http_server_uri_base/appserv",
-               as_token => ( my $as2hs_token = gen_token( 32 ) ),
-               hs_token => ( my $hs2as_token = gen_token( 32 ) ),
-               sender_localpart => ( my $as_user = "as-user" ),
+               url      => $test_server_info->client_location . "/appserv",
+               as_token => $as_user_info->as2hs_token,
+               hs_token => $as_user_info->hs2as_token,
+               sender_localpart => $as_user_info->localpart,
                namespaces => {
                   users => [
                      { regex => '@astest-.*', exclusive => "true" },
@@ -104,9 +126,6 @@ prepare "Starting synapse",
             $synapse->append_config(
                app_service_config_files => [ $appserv_conf ],
             );
-
-            provide as_credentials => [ "\@$as_user:localhost:$secure_port", $as2hs_token ];
-            provide hs2as_token => $hs2as_token;
          }
 
          $synapse->start;
@@ -120,7 +139,8 @@ prepare "Starting synapse",
                ->then_fail( "Synapse server on port $secure_port failed to start" ),
          );
       } 0 .. $#$ports )
-      ->on_done( sub {
-         provide synapse_client_locations => \@locations;
+      ->then( sub {
+         Future->done( \@info );
       });
-   };
+   },
+);

@@ -28,11 +28,17 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( uri_base restrict_methods )) {
+   foreach (qw( uri_base restrict_methods server_name )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
    $self->SUPER::configure( %params );
+}
+
+sub server_name
+{
+   my $self = shift;
+   return $self->{server_name};
 }
 
 sub full_uri_for
