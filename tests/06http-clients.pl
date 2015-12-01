@@ -1,6 +1,6 @@
 use SyTest::HTTPClient;
 
-push our @EXPORT, qw( HTTP_CLIENT );
+push our @EXPORT, qw( HTTP_CLIENT API_CLIENTS );
 
 our $HTTP_CLIENT = fixture(
    setup => sub {
@@ -15,12 +15,12 @@ our $HTTP_CLIENT = fixture(
    },
 );
 
-prepare "Creating test Matrix HTTP clients",
+# TODO: This ought to be an array, one per homeserver; though that's hard to
+#   arrange currently
+our $API_CLIENTS = fixture(
    requires => [qw( synapse_client_locations )],
 
-   provides => [qw( api_clients first_api_client )],
-
-   do => sub {
+   setup => sub {
       my ( $locations ) = @_;
 
       my @clients = map {
@@ -35,8 +35,6 @@ prepare "Creating test Matrix HTTP clients",
          $client;
       } @$locations;
 
-      provide api_clients => \@clients;
-      provide first_api_client => $clients[0];
-
-      Future->done;
-   };
+      Future->done( \@clients );
+   },
+);

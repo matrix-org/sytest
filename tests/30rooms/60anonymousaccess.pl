@@ -586,10 +586,11 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
    };
 
 test "GET /publicRooms lists rooms",
-   requires => [qw( first_api_client ), local_user_fixture() ],
+   requires => [ $main::API_CLIENTS, local_user_fixture() ],
 
    check => sub {
-      my ( $http, $user ) = @_;
+      my ( $clients, $user ) = @_;
+      my $http = $clients->[0];
 
       Future->needs_all(
          matrix_create_room( $user,
@@ -690,10 +691,11 @@ test "GET /publicRooms lists rooms",
 sub anonymous_user_fixture
 {
    fixture(
-      requires => [qw( first_api_client )],
+      requires => [ $main::API_CLIENTS ],
 
       setup => sub {
-         my ( $http ) = @_;
+         my ( $clients ) = @_;
+         my $http = $clients->[0];
 
          $http->do_request_json(
             method  => "POST",

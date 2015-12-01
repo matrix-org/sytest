@@ -4,12 +4,13 @@ use JSON qw( decode_json );
 my $password = "s3kr1t";
 
 my $registered_user_fixture = fixture(
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS ],
 
    setup => sub {
-      my ( $api_client ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
-      $api_client->do_request_json(
+      $http->do_request_json(
          method => "POST",
          uri    => "/api/v1/register",
 
@@ -27,12 +28,13 @@ my $registered_user_fixture = fixture(
 );
 
 test "GET /login yields a set of flows",
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS ],
 
    provides => [qw( can_login_password_flow )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $clients ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request_json(
          uri => "/api/v1/login",
@@ -68,13 +70,14 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [qw( first_api_client ), $registered_user_fixture,
-                qw( can_login_password_flow )],
+   requires => [ $main::API_CLIENTS, $registered_user_fixture,
+                 qw( can_login_password_flow )],
 
    provides => [qw( can_login first_home_server )],
 
    do => sub {
-      my ( $http, $user_id ) = @_;
+      my ( $clients, $user_id ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request_json(
          method => "POST",
@@ -99,11 +102,12 @@ test "POST /login can log in as a user",
    };
 
 test "POST /login wrong password is rejected",
-   requires => [qw( first_api_client ), $registered_user_fixture,
-                qw( can_login_password_flow )],
+   requires => [ $main::API_CLIENTS, $registered_user_fixture,
+                 qw( can_login_password_flow )],
 
    do => sub {
-      my ( $http, $user_id ) = @_;
+      my ( $clients, $user_id ) = @_;
+      my $http = $clients->[0];
 
       $http->do_request_json(
          method => "POST",
@@ -131,10 +135,11 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [qw( first_api_client ), $registered_user_fixture ],
+   requires => [ $main::API_CLIENTS, $registered_user_fixture ],
 
    do => sub {
-      my ( $http, $user_id ) = @_;
+      my ( $clients, $user_id ) = @_;
+      my $http = $clients->[0];
 
       my $first_body;
 
