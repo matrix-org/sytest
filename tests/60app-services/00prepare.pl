@@ -3,7 +3,7 @@ use Future::Utils qw( repeat );
 push our @EXPORT, qw( AS_USER await_as_event );
 
 our $AS_USER = fixture(
-   requires => [ $main::API_CLIENTS, qw( as_user_info )],
+   requires => [ $main::API_CLIENTS, $main::AS_USER_INFO ],
 
    setup => sub {
       my ( $clients, $as_user_info ) = @_;

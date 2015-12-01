@@ -58,7 +58,7 @@ test "Regular users cannot register within the AS namespace",
    };
 
 test "AS can make room aliases",
-   requires => [ $main::AS_USER, qw( as_user_info ), $room_fixture,
+   requires => [ $main::AS_USER, $main::AS_USER_INFO, $room_fixture,
                 qw( can_create_room_alias )],
 
    do => sub {

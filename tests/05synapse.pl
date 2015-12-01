@@ -32,36 +32,33 @@ sub gen_token
    return join "", map { chr 64 + rand 63 } 1 .. $length;
 }
 
+push our @EXPORT, qw( AS_USER_INFO HOMESERVER_INFO );
+
 struct ASUserInfo => [qw( localpart user_id as2hs_token hs2as_token )];
 
-prepare "Generating AS credentials",
+our $AS_USER_INFO = fixture(
    requires => [qw( synapse_ports )],
 
-   provides => [qw( as_user_info )],
-
-   do => sub {
+   setup => sub {
       my ( $ports ) = @_;
       my $port = $ports->[0];
 
       my $localpart = "as-user";
 
-      provide as_user_info => ASUserInfo(
+      Future->done( ASUserInfo(
          $localpart,
          "\@${localpart}:localhost:${port}",
          gen_token( 32 ),
          gen_token( 32 ),
-      );
-
-      Future->done;
-   };
+      ));
+   },
+);
 
 struct HomeserverInfo => [qw( server_name client_location )];
 
-push our @EXPORT, qw( HOMESERVER_INFO );
-
 our $HOMESERVER_INFO = fixture(
-   requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls
-                    as_user_info )],
+   requires => [ qw( synapse_ports synapse_args test_http_server_uri_base want_tls ),
+                 $AS_USER_INFO ],
 
    setup => sub {
       my ( $ports, $args, $test_http_server_uri_base, $want_tls,
