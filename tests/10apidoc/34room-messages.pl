@@ -1,7 +1,7 @@
 test "POST /rooms/:room_id/send/:event_type sends a message",
    requires => [ local_user_and_room_fixtures() ],
 
-   provides => [qw( can_send_message )],
+   proves => [qw( can_send_message )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -20,8 +20,6 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
          push our @EXPORT, qw(
             matrix_send_room_message matrix_send_room_text_message
          );
-
-         provide can_send_message => 1;
 
          Future->done(1);
       });
@@ -78,7 +76,7 @@ test "GET /rooms/:room_id/messages returns a message",
    requires => [ local_user_and_room_fixtures(),
                  qw( can_send_message )],
 
-   provides => [qw( can_get_messages )],
+   proves => [qw( can_get_messages )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -102,7 +100,6 @@ test "GET /rooms/:room_id/messages returns a message",
          scalar @{ $body->{chunk} } > 0 or
             die "Expected some messages but got none at all\n";
 
-         provide can_get_messages => 1;
          push our @EXPORT, qw( matrix_get_room_messages );
 
          Future->done(1);

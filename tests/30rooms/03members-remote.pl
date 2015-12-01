@@ -25,7 +25,7 @@ test "Remote users can join room by alias",
    requires => [ $remote_user_fixture, $room_fixture,
                  qw( can_join_room_by_alias can_get_room_membership )],
 
-   provides => [qw( can_join_remote_room_by_alias )],
+   proves => [qw( can_join_remote_room_by_alias )],
 
    do => sub {
       my ( $user, $room_id, $room_alias ) = @_;
@@ -51,8 +51,6 @@ test "Remote users can join room by alias",
 
          $body->{membership} eq "join" or
             die "Expected membership to be 'join'";
-
-         provide can_join_remote_room_by_alias => 1;
 
          Future->done(1);
       });

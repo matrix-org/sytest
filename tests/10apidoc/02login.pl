@@ -30,7 +30,7 @@ my $registered_user_fixture = fixture(
 test "GET /login yields a set of flows",
    requires => [ $main::API_CLIENTS ],
 
-   provides => [qw( can_login_password_flow )],
+   proves => [qw( can_login_password_flow )],
 
    check => sub {
       my ( $clients ) = @_;
@@ -62,10 +62,7 @@ test "GET /login yields a set of flows",
                @$stages == 1 && $stages->[0] eq "m.login.password";
          }
 
-         $has_login_flow and
-            provide can_login_password_flow => 1;
-
-         Future->done(1);
+         Future->done( $has_login_flow );
       });
    };
 
@@ -73,7 +70,7 @@ test "POST /login can log in as a user",
    requires => [ $main::API_CLIENTS, $registered_user_fixture,
                  qw( can_login_password_flow )],
 
-   provides => [qw( can_login )],
+   proves => [qw( can_login )],
 
    do => sub {
       my ( $clients, $user_id ) = @_;
@@ -95,8 +92,6 @@ test "POST /login can log in as a user",
 
          assert_eq( $body->{home_server}, $http->server_name,
             'Response home_server' );
-
-         provide can_login => 1;
 
          Future->done(1);
       });

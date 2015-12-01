@@ -3,7 +3,7 @@ my $fixture = local_user_fixture();
 test "Can upload device keys",
    requires => [ $fixture ],
 
-   provides => [qw( can_upload_e2e_keys )],
+   proves => [qw( can_upload_e2e_keys )],
 
    do => sub {
       my ( $user ) = @_;
@@ -30,8 +30,6 @@ test "Can upload device keys",
 
          $content->{one_time_key_counts}{my_algorithm} eq "1" or
             die "Expected 1 one time key";
-
-         provide can_upload_e2e_keys => 1;
 
          Future->done(1)
       })

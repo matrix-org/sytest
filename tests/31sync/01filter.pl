@@ -29,16 +29,14 @@ sub matrix_create_filter
 test "Can create filter",
    requires => [ local_user_fixture( with_events => 0 ) ],
 
-   provides => [qw( can_create_filter )],
+   proves => [qw( can_create_filter )],
 
    do => sub {
       my ( $user ) = @_;
 
       matrix_create_filter( $user, {
          room => { timeline => { limit => 10 } },
-      })->on_done( sub {
-         provide can_create_filter => 1
-      })
+      });
    };
 
 

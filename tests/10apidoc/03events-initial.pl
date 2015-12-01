@@ -32,7 +32,7 @@ test "GET /events initially",
 test "GET /initialSync initially",
    requires => [ $main::SPYGLASS_USER ],
 
-   provides => [qw( can_initial_sync )],
+   proves => [qw( can_initial_sync )],
 
    check => sub {
       my ( $user ) = @_;
@@ -52,8 +52,6 @@ test "GET /initialSync initially",
          if( exists $body->{presence} ) {
             assert_json_list( $body->{presence} );
          }
-
-         provide can_initial_sync => 1;
 
          Future->done(1);
       });

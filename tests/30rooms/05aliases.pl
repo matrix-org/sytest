@@ -15,7 +15,7 @@ test "Room aliases can contain Unicode",
    requires => [ $creator_fixture, $room_fixture,
                  qw( can_create_room_alias )],
 
-   provides => [qw( can_create_room_alias_unicode )],
+   proves => [qw( can_create_room_alias_unicode )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -45,8 +45,6 @@ test "Room aliases can contain Unicode",
 
          $body->{room_id} eq $room_id or die "Expected room_id";
 
-         provide can_create_room_alias_unicode => 1;
-
          Future->done(1);
       });
    };
@@ -55,7 +53,7 @@ test "Remote room alias queries can handle Unicode",
    requires => [ remote_user_fixture(), $room_fixture,
                  qw( can_create_room_alias_unicode )],
 
-   provides => [qw( can_federate_room_alias_unicode )],
+   proves => [qw( can_federate_room_alias_unicode )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -67,8 +65,6 @@ test "Remote room alias queries can handle Unicode",
          my ( $body ) = @_;
 
          $body->{room_id} eq $room_id or die "Expected room_id";
-
-         provide can_federate_room_alias_unicode => 1;
 
          Future->done(1);
       });

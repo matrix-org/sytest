@@ -1,7 +1,7 @@
 test "POST /rooms/:room_id/receipt can create receipts",
    requires => [ local_user_and_room_fixtures() ],
 
-   provides => [qw( can_post_room_receipts )],
+   proves => [qw( can_post_room_receipts )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -26,8 +26,6 @@ test "POST /rooms/:room_id/receipt can create receipts",
             content => {},
          );
       })->then( sub {
-         provide can_post_room_receipts => 1;
-
          push our @EXPORT, qw( matrix_advance_room_receipt );
 
          Future->done(1);

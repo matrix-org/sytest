@@ -5,7 +5,7 @@ my $avatar_url = "http://somewhere/my-pic.jpg";
 test "PUT /profile/:user_id/avatar_url sets my avatar",
    requires => [ $user_fixture ],
 
-   provides => [qw( can_set_avatar_url )],
+   proves => [qw( can_set_avatar_url )],
 
    check => sub {
       my ( $user ) = @_;
@@ -20,8 +20,6 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
 
          $body->{avatar_url} eq $avatar_url or
             die "Expected avatar_url to be '$avatar_url'";
-
-         provide can_set_avatar_url => 1;
 
          Future->done(1);
       });
