@@ -75,10 +75,10 @@ test "Both GET and PUT work",
    check => sub {
       # Nothing to be done
 
-      push our @EXPORT, qw( matrix_change_room_powerlevels );
-
       Future->done(1);
    };
+
+push our @EXPORT, qw( matrix_change_room_powerlevels );
 
 sub matrix_change_room_powerlevels
 {

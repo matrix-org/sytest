@@ -334,6 +334,7 @@ my $failed;
 my $expected_fail;
 my $skipped_count = 0;
 
+use constant { PROVEN => 1, PRESUMED => 2 };
 my %proven;
 
 our $SKIPPING;
@@ -374,6 +375,7 @@ sub _run_test
 
    # If we're in skipping mode, just stop right now
    if( $SKIPPING ) {
+      $proven{$_} = PRESUMED for @{ $params{proves} // [] };
       $t->skipped++;
       return;
    }
@@ -397,6 +399,7 @@ sub _run_test
             $t->skip( "lack of $req" );
             return;
          }
+         $output->diag( "Presuming ability '$req'" ) if $proven{$req} == PRESUMED;
       }
    }
 
@@ -469,7 +472,7 @@ sub _run_test
    } @requires )->get;
 
    if( $success ) {
-      $proven{$_}++ for @{ $params{proves} // [] };
+      $proven{$_} = PROVEN for @{ $params{proves} // [] };
       $t->pass;
    }
    else {

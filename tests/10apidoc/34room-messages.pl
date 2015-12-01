@@ -17,13 +17,11 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
          assert_json_keys( $body, qw( event_id ));
          assert_json_nonempty_string( $body->{event_id} );
 
-         push our @EXPORT, qw(
-            matrix_send_room_message matrix_send_room_text_message
-         );
-
          Future->done(1);
       });
    };
+
+push our @EXPORT, qw( matrix_send_room_message matrix_send_room_text_message );
 
 sub matrix_send_room_message
 {
@@ -100,11 +98,11 @@ test "GET /rooms/:room_id/messages returns a message",
          scalar @{ $body->{chunk} } > 0 or
             die "Expected some messages but got none at all\n";
 
-         push our @EXPORT, qw( matrix_get_room_messages );
-
          Future->done(1);
       });
    };
+
+push our @EXPORT, qw( matrix_get_room_messages );
 
 sub matrix_get_room_messages
 {
