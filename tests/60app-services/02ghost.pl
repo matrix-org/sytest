@@ -1,9 +1,7 @@
 my $user_fixture = local_user_fixture();
 
-our $AS_USER;
-
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [ as_ghost_fixture(), $AS_USER, $user_fixture,
+   requires => [ as_ghost_fixture(), $main::AS_USER, $user_fixture,
                      room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally )],
 

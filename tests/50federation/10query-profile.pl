@@ -1,9 +1,5 @@
-our $INBOUND_SERVER;
-our $OUTBOUND_CLIENT;
-our $SPYGLASS_USER;
-
 test "Outbound federation can query profile data",
-   requires => [ $INBOUND_SERVER, $SPYGLASS_USER,
+   requires => [ $main::INBOUND_SERVER, $main::SPYGLASS_USER,
                 qw( can_get_displayname )],
 
    check => sub {
@@ -40,7 +36,7 @@ test "Outbound federation can query profile data",
 my $dname = "Displayname Set For Federation Test";
 
 test "Inbound federation can query profile data",
-   requires => [ $OUTBOUND_CLIENT, qw( first_home_server ), local_user_fixture(),
+   requires => [ $main::OUTBOUND_CLIENT, qw( first_home_server ), local_user_fixture(),
                  qw( can_set_displayname )],
 
    do => sub {

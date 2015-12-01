@@ -6,11 +6,8 @@ use Protocol::Matrix qw( encode_json_for_signing );
 
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
-our $INBOUND_SERVER;
-our $OUTBOUND_CLIENT;
-
 test "Federation key API allows unsigned requests for keys",
-   requires => [qw( first_home_server ), our $HTTP_CLIENT ],
+   requires => [qw( first_home_server ), $main::HTTP_CLIENT ],
 
    check => sub {
       my ( $first_home_server, $client ) = @_;
@@ -80,7 +77,7 @@ test "Federation key API allows unsigned requests for keys",
    };
 
 test "Federation key API can act as a notary server",
-   requires => [qw( first_home_server ), $INBOUND_SERVER, $OUTBOUND_CLIENT ],
+   requires => [qw( first_home_server ), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT ],
 
    check => sub {
       my ( $first_home_server, $inbound_server, $client ) = @_;
