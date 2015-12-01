@@ -1,7 +1,5 @@
 use Future::Utils qw( try_repeat_until_success );
 
-our $API_CLIENTS;
-
 test "Anonymous user cannot view non-world-readable rooms",
    requires => [ anonymous_user_fixture(), local_user_fixture() ],
 
@@ -588,7 +586,7 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
    };
 
 test "GET /publicRooms lists rooms",
-   requires => [ $API_CLIENTS, local_user_fixture() ],
+   requires => [ $main::API_CLIENTS, local_user_fixture() ],
 
    check => sub {
       my ( $clients, $user ) = @_;
@@ -693,7 +691,7 @@ test "GET /publicRooms lists rooms",
 sub anonymous_user_fixture
 {
    fixture(
-      requires => [ $API_CLIENTS ],
+      requires => [ $main::API_CLIENTS ],
 
       setup => sub {
          my ( $clients ) = @_;

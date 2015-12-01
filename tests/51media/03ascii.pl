@@ -1,9 +1,7 @@
 my $content_id;
 
-our $API_CLIENTS;
-
 test "Can upload with ASCII file name",
-   requires => [ $API_CLIENTS, local_user_fixture() ],
+   requires => [ $main::API_CLIENTS, local_user_fixture() ],
 
    do => sub {
       my ( $clients, $user ) = @_;
@@ -56,7 +54,7 @@ sub test_using_client
 }
 
 test "Can download with ASCII file name locally",
-   requires => [ $API_CLIENTS ],
+   requires => [ $main::API_CLIENTS ],
 
    check => sub {
       my ( $clients ) = @_;
@@ -64,7 +62,7 @@ test "Can download with ASCII file name locally",
    };
 
 test "Can download with ASCII file name over federation",
-   requires => [ $API_CLIENTS ],
+   requires => [ $main::API_CLIENTS ],
 
    check => sub {
       my ( $clients ) = @_;
@@ -72,7 +70,7 @@ test "Can download with ASCII file name over federation",
    };
 
 test "Can download specifying a different ASCII file name",
-   requires => [ $API_CLIENTS ],
+   requires => [ $main::API_CLIENTS ],
 
    check => sub {
       my ( $clients ) = @_;

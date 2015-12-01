@@ -5,10 +5,8 @@ EOF
 my $content_type = "text/plain";
 my $content_id;
 
-our $API_CLIENTS;
-
 test "POST /media/v1/upload can create an upload",
-   requires => [ $API_CLIENTS, local_user_fixture() ],
+   requires => [ $main::API_CLIENTS, local_user_fixture() ],
 
    provides => [qw( can_upload_media )],
 
@@ -41,7 +39,7 @@ test "POST /media/v1/upload can create an upload",
    };
 
 test "GET /media/v1/download can fetch the value again",
-   requires => [ $API_CLIENTS,
+   requires => [ $main::API_CLIENTS,
                  qw( can_upload_media )],
 
    provides => [qw( can_download_media )],

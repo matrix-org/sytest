@@ -1,7 +1,5 @@
-our $API_CLIENTS;
-
 test "GET /register yields a set of flows",
-   requires => [ $API_CLIENTS ],
+   requires => [ $main::API_CLIENTS ],
 
    provides => [qw( can_register_password_flow )],
 
@@ -41,7 +39,7 @@ test "GET /register yields a set of flows",
    };
 
 test "POST /register can create a user",
-   requires => [ $API_CLIENTS,
+   requires => [ $main::API_CLIENTS,
                  qw( can_register_password_flow ) ],
 
    critical => 1,
@@ -123,7 +121,7 @@ sub local_user_fixture
    my %args = @_;
 
    fixture(
-      requires => [ $API_CLIENTS ],
+      requires => [ $main::API_CLIENTS ],
 
       setup => sub {
          my ( $clients ) = @_;
@@ -173,7 +171,7 @@ push @EXPORT, qw( remote_user_fixture );
 sub remote_user_fixture
 {
    fixture(
-      requires => [ $API_CLIENTS ],
+      requires => [ $main::API_CLIENTS ],
 
       setup => sub {
          my ( $clients ) = @_;
@@ -191,7 +189,7 @@ push @EXPORT, qw( SPYGLASS_USER );
 # don't mutate server-side state, so it's fairly safe to reüse this user among
 # different tests.
 our $SPYGLASS_USER = fixture(
-   requires => [ $API_CLIENTS ],
+   requires => [ $main::API_CLIENTS ],
 
    setup => sub {
       my ( $clients ) = @_;

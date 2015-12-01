@@ -6,8 +6,6 @@ my $room_fixture = room_fixture(
 
 our $AS_USER;
 
-our $API_CLIENTS;
-
 test "AS can create a user",
    requires => [ $AS_USER, $room_fixture ],
 
@@ -51,7 +49,7 @@ test "AS cannot create users outside its own namespace",
    };
 
 test "Regular users cannot register within the AS namespace",
-   requires => [ $API_CLIENTS ],
+   requires => [ $main::API_CLIENTS ],
 
    do => sub {
       my ( $clients ) = @_;

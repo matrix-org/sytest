@@ -2,8 +2,6 @@ my $user_fixture = local_user_fixture();
 
 my $avatar_url = "http://somewhere/my-pic.jpg";
 
-our $API_CLIENTS;
-
 test "PUT /profile/:user_id/avatar_url sets my avatar",
    requires => [ $user_fixture ],
 
@@ -43,7 +41,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
    };
 
 test "GET /profile/:user_id/avatar_url publicly accessible",
-   requires => [ $API_CLIENTS, $user_fixture,
+   requires => [ $main::API_CLIENTS, $user_fixture,
                  qw( can_set_avatar_url )],
 
    check => sub {

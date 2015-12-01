@@ -5,10 +5,8 @@ my $FILENAME_ENCODED = uc uri_escape( $FILENAME );
 
 my $content_id;
 
-our $API_CLIENTS;
-
 test "Can upload with Unicode file name",
-   requires => [ $API_CLIENTS, local_user_fixture(),
+   requires => [ $main::API_CLIENTS, local_user_fixture(),
                  qw( can_upload_media )],
 
    provides => [qw( can_upload_media_unicode )],
@@ -65,7 +63,7 @@ sub test_using_client
 }
 
 test "Can download with Unicode file name locally",
-   requires => [ $API_CLIENTS,
+   requires => [ $main::API_CLIENTS,
                  qw( can_upload_media_unicode )],
 
    check => sub {
@@ -74,7 +72,7 @@ test "Can download with Unicode file name locally",
    };
 
 test "Can download with Unicode file name over federation",
-   requires => [ $API_CLIENTS,
+   requires => [ $main::API_CLIENTS,
                  qw( can_upload_media_unicode ) ],
 
    check => sub {
@@ -83,7 +81,7 @@ test "Can download with Unicode file name over federation",
    };
 
 test "Can download specifying a different Unicode file name",
-   requires => [ $API_CLIENTS,
+   requires => [ $main::API_CLIENTS,
                  qw( can_upload_media_unicode )],
 
    check => sub {

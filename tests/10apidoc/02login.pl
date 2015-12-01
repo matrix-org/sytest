@@ -3,10 +3,8 @@ use JSON qw( decode_json );
 # Doesn't matter what this is, but later tests will use it.
 my $password = "s3kr1t";
 
-our $API_CLIENTS;
-
 my $registered_user_fixture = fixture(
-   requires => [ $API_CLIENTS ],
+   requires => [ $main::API_CLIENTS ],
 
    setup => sub {
       my ( $clients ) = @_;
@@ -30,7 +28,7 @@ my $registered_user_fixture = fixture(
 );
 
 test "GET /login yields a set of flows",
-   requires => [ $API_CLIENTS ],
+   requires => [ $main::API_CLIENTS ],
 
    provides => [qw( can_login_password_flow )],
 
@@ -72,7 +70,7 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [ $API_CLIENTS, $registered_user_fixture,
+   requires => [ $main::API_CLIENTS, $registered_user_fixture,
                  qw( can_login_password_flow )],
 
    provides => [qw( can_login first_home_server )],
@@ -104,7 +102,7 @@ test "POST /login can log in as a user",
    };
 
 test "POST /login wrong password is rejected",
-   requires => [ $API_CLIENTS, $registered_user_fixture,
+   requires => [ $main::API_CLIENTS, $registered_user_fixture,
                  qw( can_login_password_flow )],
 
    do => sub {
@@ -137,7 +135,7 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [ $API_CLIENTS, $registered_user_fixture ],
+   requires => [ $main::API_CLIENTS, $registered_user_fixture ],
 
    do => sub {
       my ( $clients, $user_id ) = @_;
