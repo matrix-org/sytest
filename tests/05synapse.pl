@@ -54,15 +54,12 @@ our $AS_USER_INFO = fixture(
    },
 );
 
-struct HomeserverInfo => [qw( server_name client_location )];
-
 our $HOMESERVER_INFO = fixture(
-   requires => [ qw( synapse_ports synapse_args test_http_server_uri_base want_tls ),
-                 $AS_USER_INFO ],
+   requires => [ qw( synapse_ports synapse_args want_tls ),
+                 $main::TEST_SERVER_INFO, $AS_USER_INFO ],
 
    setup => sub {
-      my ( $ports, $args, $test_http_server_uri_base, $want_tls,
-           $as_user_info ) = @_;
+      my ( $ports, $args, $want_tls, $test_server_info, $as_user_info ) = @_;
 
       my @info;
 
@@ -78,7 +75,7 @@ our $HOMESERVER_INFO = fixture(
             "https://localhost:$secure_port" :
             "http://localhost:$unsecure_port";
 
-         $info[$idx] = HomeserverInfo( "localhost:$secure_port", $location );
+         $info[$idx] = ServerInfo( "localhost:$secure_port", $location );
 
          my $synapse = SyTest::Synapse->new(
             synapse_dir   => $args->{directory},
@@ -95,7 +92,8 @@ our $HOMESERVER_INFO = fixture(
 
             config => {
                # Config for testing recaptcha. 90jira/SYT-8.pl
-               recaptcha_siteverify_api => "$test_http_server_uri_base/recaptcha/api/siteverify",
+               recaptcha_siteverify_api => $test_server_info->client_location .
+                                              "/recaptcha/api/siteverify",
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
 
@@ -110,7 +108,7 @@ our $HOMESERVER_INFO = fixture(
          if( $idx == 0 ) {
             # Configure application services on first instance only
             my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
-               url      => "$test_http_server_uri_base/appserv",
+               url      => $test_server_info->client_location . "/appserv",
                as_token => $as_user_info->as2hs_token,
                hs_token => $as_user_info->hs2as_token,
                sender_localpart => $as_user_info->localpart,
