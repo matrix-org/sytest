@@ -267,6 +267,10 @@ sub provide
    any { $name eq $_ } @PROVIDES or
       carp "Was not expecting to provide '$name'";
 
+   if( $value ne "1" ) {
+      croak "Providing a non-boolean or non-true value is now deprecated; use fixture() for sharing non-boolean test values";
+   }
+
    $test_environment{$name} = $value;
 }
 
