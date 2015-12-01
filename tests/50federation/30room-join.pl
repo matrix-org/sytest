@@ -129,11 +129,12 @@ test "Outbound federation can send room-join requests",
    };
 
 test "Inbound federation can receive room-join requests",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, qw( first_home_server ),
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO,
                  room_fixture( requires_users => [ local_user_fixture() ] ) ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $first_home_server, $room_id ) = @_;
+      my ( $outbound_client, $inbound_server, $info, $room_id ) = @_;
+      my $first_home_server = $info->[0]->server_name;
 
       my $local_server_name = $outbound_client->server_name;
 
