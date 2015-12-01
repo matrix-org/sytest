@@ -129,7 +129,7 @@ test "GET /publicRooms lists newly-created room",
    };
 
 test "GET /directory/room/:room_alias yields room ID",
-   requires => [ our $SPYGLASS_USER, $room_fixture ],
+   requires => [ $main::SPYGLASS_USER, $room_fixture ],
 
    check => sub {
       my ( $user, $room_id, $room_alias ) = @_;

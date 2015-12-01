@@ -1,15 +1,12 @@
 use List::UtilsBy qw( partition_by extract_by );
 
-our $INBOUND_SERVER;
-our $OUTBOUND_CLIENT;
-
 sub make_auth_events
 {
    [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
 }
 
 test "Outbound federation can send room-join requests",
-   requires => [ local_user_fixture(), $INBOUND_SERVER ],
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER ],
 
    do => sub {
       my ( $user, $inbound_server ) = @_;
@@ -132,7 +129,7 @@ test "Outbound federation can send room-join requests",
    };
 
 test "Inbound federation can receive room-join requests",
-   requires => [ $OUTBOUND_CLIENT, $INBOUND_SERVER, qw( first_home_server ),
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, qw( first_home_server ),
                  room_fixture( requires_users => [ local_user_fixture() ] ) ],
 
    do => sub {

@@ -4,10 +4,8 @@ my $room_fixture = room_fixture(
    requires_users => [ $user_fixture ],
 );
 
-our $AS_USER;
-
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [ $AS_USER, qw( first_home_server ), $user_fixture, $room_fixture,
+   requires => [ $main::AS_USER, qw( first_home_server ), $user_fixture, $room_fixture,
                  qw( can_invite_room )],
 
    do => sub {
@@ -46,7 +44,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
-   requires => [ $AS_USER, qw( first_home_server ),
+   requires => [ $main::AS_USER, qw( first_home_server ),
                   local_user_fixture(), $room_fixture,
 
                 qw( can_join_room_by_alias )],
