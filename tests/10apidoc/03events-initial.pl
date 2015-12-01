@@ -184,7 +184,7 @@ sub matrix_sync
    )->on_done( sub {
       my ( $body ) = @_;
 
-      assert_json_keys( $body, qw( rooms presence next_batch ) );
+      assert_json_keys( $body, qw( account_data rooms presence next_batch ) );
       assert_json_keys( $body->{presence}, qw( events ));
       assert_json_keys( $body->{rooms}, qw( join invite leave ) );
    });
