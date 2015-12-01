@@ -102,7 +102,7 @@ test "GET /rooms/:room_id/messages returns a message",
       });
    };
 
-push our @EXPORT, qw( matrix_get_room_messages );
+push @EXPORT, qw( matrix_get_room_messages );
 
 sub matrix_get_room_messages
 {
