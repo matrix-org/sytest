@@ -6,8 +6,6 @@ use SyTest::Identity::Server;
 
 use IO::Async::Listener 0.69;  # for ->configure( handle => undef )
 
-our $HOMESERVER_INFO;
-
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 my $DIR = dirname( __FILE__ );
@@ -56,7 +54,7 @@ test "Can invite existing 3pid",
    };
 
 test "Can invite unbound 3pid",
-   requires => [ local_user_fixtures( 2 ), $HOMESERVER_INFO,
+   requires => [ local_user_fixtures( 2 ), $main::HOMESERVER_INFO,
                  id_server_fixture() ],
 
    do => sub {
@@ -67,7 +65,7 @@ test "Can invite unbound 3pid",
    };
 
 test "Can invite unbound 3pid over federation",
-   requires => [ local_user_fixture(), remote_user_fixture(), $HOMESERVER_INFO,
+   requires => [ local_user_fixture(), remote_user_fixture(), $main::HOMESERVER_INFO,
                     id_server_fixture() ],
 
    do => sub {
@@ -101,7 +99,7 @@ sub can_invite_unbound_3pid
 }
 
 test "Can accept unbound 3pid invite after inviter leaves",
-   requires => [ local_user_fixtures( 3 ), $HOMESERVER_INFO,
+   requires => [ local_user_fixtures( 3 ), $main::HOMESERVER_INFO,
                     id_server_fixture() ],
 
    do => sub {
@@ -134,7 +132,7 @@ test "Can accept unbound 3pid invite after inviter leaves",
    };
 
 test "3pid invite join with wrong but valid signature are rejected",
-   requires => [ local_user_fixtures( 2 ), $HOMESERVER_INFO,
+   requires => [ local_user_fixtures( 2 ), $main::HOMESERVER_INFO,
                     id_server_fixture() ],
 
    do => sub {
@@ -148,7 +146,7 @@ test "3pid invite join with wrong but valid signature are rejected",
    };
 
 test "3pid invite join valid signature but revoked keys are rejected",
-   requires => [ local_user_fixtures( 2 ), $HOMESERVER_INFO,
+   requires => [ local_user_fixtures( 2 ), $main::HOMESERVER_INFO,
                     id_server_fixture() ],
 
    do => sub {
@@ -162,7 +160,7 @@ test "3pid invite join valid signature but revoked keys are rejected",
    };
 
 test "3pid invite join valid signature but unreachable ID server are rejected",
-   requires => [ local_user_fixtures( 2 ), $HOMESERVER_INFO,
+   requires => [ local_user_fixtures( 2 ), $main::HOMESERVER_INFO,
                     id_server_fixture() ],
 
    do => sub {
