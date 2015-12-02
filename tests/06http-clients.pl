@@ -1,7 +1,5 @@
 use SyTest::HTTPClient;
 
-our $HOMESERVER_INFO;
-
 push our @EXPORT, qw( HTTP_CLIENT API_CLIENTS );
 
 our $HTTP_CLIENT = fixture(
@@ -20,7 +18,7 @@ our $HTTP_CLIENT = fixture(
 # TODO: This ought to be an array, one per homeserver; though that's hard to
 #   arrange currently
 our $API_CLIENTS = fixture(
-   requires => [ $HOMESERVER_INFO ],
+   requires => [ $main::HOMESERVER_INFO ],
 
    setup => sub {
       my ( $info ) = @_;
