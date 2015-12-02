@@ -484,10 +484,6 @@ sub _run_test
       my $e = $@; chomp $e;
       $t->fail( $e );
    }
-
-   if( $t->failed ) {
-      $test->expect_fail ? $expected_fail++ : $failed++;
-   }
 }
 
 our $RUNNING_TEST;
@@ -612,6 +608,8 @@ foreach my $test ( @TESTS ) {
    }
 
    if( $t->failed ) {
+      $test->expect_fail ? $expected_fail++ : $failed++;
+
       $output->diag( $_ ) for @log_if_fail_lines;
 
       last if $STOP_ON_FAIL and not $test->expect_fail;
