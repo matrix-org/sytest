@@ -365,7 +365,10 @@ sub require_stub
    });
 }
 
-struct Test => [qw( file name multi params )];
+struct Test => [qw(
+   file name multi expect_fail critical proves requires check do timeout
+)];
+
 my @TESTS;
 
 sub _push_test
@@ -376,12 +379,13 @@ sub _push_test
    # is not yet fixed
    $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
-   push @TESTS, Test( $filename, $name, $multi, \%params );
+   push @TESTS, Test( $filename, $name, $multi,
+      @params{qw( expect_fail critical proves requires check do timeout )} );
 }
 
 sub _run_test
 {
-   my ( $t, %params ) = @_;
+   my ( $t, $test ) = @_;
 
    undef @log_if_fail_lines;
 
@@ -389,12 +393,12 @@ sub _run_test
 
    # If we're in skipping mode, just stop right now
    if( $SKIPPING ) {
-      $proven{$_} = PRESUMED for @{ $params{proves} // [] };
+      $proven{$_} = PRESUMED for @{ $test->proves // [] };
       $t->skipped++;
       return;
    }
 
-   my @requires = @{ $params{requires} || [] };
+   my @requires = @{ $test->requires // [] };
 
    my $f_start = Future->new;
    my @req_futures;
@@ -426,8 +430,8 @@ sub _run_test
          ->on_done( sub { @reqs = @_ } )
          ->on_fail( sub { die "fixture failed - $_[0]\n" } );
 
-      my $check = $params{check};
-      if( my $do = $params{do} ) {
+      my $check = $test->check;
+      if( my $do = $test->do ) {
          if( $check ) {
             $f_test = $f_test->then( sub {
                Future->wrap( $check->( @reqs ) )
@@ -458,14 +462,10 @@ sub _run_test
          });
       }
 
-      if( my $await = $params{await} ) {
-         die "TODO: 'await' now dead";
-      }
-
       Future->wait_any(
          $f_test,
 
-         $loop->delay_future( after => $params{timeout} // 10 )
+         $loop->delay_future( after => $test->timeout // 10 )
             ->then_fail( "Timed out waiting for test" )
       )->get;
 
@@ -486,7 +486,7 @@ sub _run_test
    } @requires )->get;
 
    if( $success ) {
-      $proven{$_} = PROVEN for @{ $params{proves} // [] };
+      $proven{$_} = PROVEN for @{ $test->proves // [] };
       $t->pass;
    }
    else {
@@ -495,7 +495,7 @@ sub _run_test
    }
 
    if( $t->failed ) {
-      $params{expect_fail} ? $expected_fail++ : $failed++;
+      $test->expect_fail ? $expected_fail++ : $failed++;
    }
 }
 
@@ -605,10 +605,10 @@ foreach my $test ( @TESTS ) {
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
 
-   my $t = $output->$m( $test->name, $test->params->{expect_fail} );
+   my $t = $output->$m( $test->name, $test->expect_fail );
    local $RUNNING_TEST = $t;
 
-   _run_test( $t, %{ $test->params } );
+   _run_test( $t, $test );
 
    $t->leave;
 
@@ -619,9 +619,9 @@ foreach my $test ( @TESTS ) {
    if( $t->failed ) {
       $output->diag( $_ ) for @log_if_fail_lines;
 
-      last if $STOP_ON_FAIL and not $test->params->{expect_fail};
+      last if $STOP_ON_FAIL and not $test->expect_fail;
 
-      if( $test->params->{critical} ) {
+      if( $test->critical ) {
          warn "This CRITICAL test has failed - bailing out\n";
          last;
       }
