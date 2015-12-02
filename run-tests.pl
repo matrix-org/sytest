@@ -368,6 +368,17 @@ sub require_stub
 struct Test => [qw( file name multi params )];
 my @TESTS;
 
+sub _push_test
+{
+   my ( $filename, $multi, $name, %params ) = @_;
+
+   # We expect this test to fail if it's declared to be dependent on a bug that
+   # is not yet fixed
+   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
+
+   push @TESTS, Test( $filename, $name, $multi, \%params );
+}
+
 sub _run_test
 {
    my ( $t, %params ) = @_;
@@ -531,25 +542,8 @@ TEST: {
 
          no warnings 'once';
 
-         local *test = sub {
-            my ( $name, %params ) = @_;
-
-            # We expect this test to fail if it's declared to be dependent on a bug that
-            # is not yet fixed
-            $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
-
-            push @TESTS, Test( $filename, $name, 0, \%params );
-         };
-
-         local *multi_test = sub {
-            my ( $name, %params ) = @_;
-
-            # We expect this test to fail if it's declared to be dependent on a bug that
-            # is not yet fixed
-            $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
-
-            push @TESTS, Test( $filename, $name, 1, \%params );
-         };
+         local *test       = sub { _push_test( $filename, 0, @_ ); };
+         local *multi_test = sub { _push_test( $filename, 1, @_ ); };
 
          # Slurp and eval() the file instead of do() because then lexical
          # environment such as strict/warnings will still apply
