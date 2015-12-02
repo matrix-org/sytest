@@ -365,6 +365,9 @@ sub require_stub
    });
 }
 
+struct Test => [qw( file name multi params )];
+my @TESTS;
+
 sub _run_test
 {
    my ( $t, %params ) = @_;
@@ -485,75 +488,21 @@ sub _run_test
    }
 }
 
-sub test
+our $RUNNING_TEST;
+
+sub pass
 {
-   my ( $name, %params ) = @_;
-
-   # We expect this test to fail if it's declared to be dependent on a bug that
-   # is not yet fixed
-   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
-
-   my $t = $output->enter_test( $name, $params{expect_fail} );
-   _run_test( $t, %params );
-   $t->leave;
-
-   if( $t->failed ) {
-      $output->diag( $_ ) for @log_if_fail_lines;
-   }
-   if( $t->skipped ) {
-      $skipped_count++;
-   }
-
-   if( $t->failed ) {
-      no warnings 'exiting';
-
-      last TEST if $STOP_ON_FAIL and not $params{expect_fail};
-
-      warn( "This CRITICAL test has failed - bailing out\n" ), last TEST if $params{critical};
-   }
+   my ( $testname ) = @_;
+   $RUNNING_TEST->ok( 1, $testname );
 }
 
+# A convenience for the otherwise-common pattern of
+#   ->on_done( sub { pass $message } )
+sub SyTest::pass_on_done
 {
-   our $RUNNING_TEST;
-
-   sub pass
-   {
-      my ( $testname ) = @_;
-      $RUNNING_TEST->ok( 1, $testname );
-   }
-
-   # A convenience for the otherwise-common pattern of
-   #   ->on_done( sub { pass $message } )
-   sub SyTest::pass_on_done
-   {
-      my $self = shift;
-      my ( $message ) = @_;
-      $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
-   }
-
-   sub multi_test
-   {
-      my ( $name, %params ) = @_;
-
-      # We expect this test to fail if it's declared to be dependent on a bug that
-      # is not yet fixed
-      $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
-
-      local $RUNNING_TEST = my $t = $output->enter_multi_test(
-          $name, $params{expect_fail} );
-      _run_test( $t, %params );
-      $t->leave;
-
-      if( $t->failed ) {
-         $output->diag( $_ ) for @log_if_fail_lines;
-      }
-      if( $t->skipped ) {
-         $skipped_count++;
-      }
-
-      no warnings 'exiting';
-      last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
-   }
+   my $self = shift;
+   my ( $message ) = @_;
+   $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
 }
 
 my %only_files;
@@ -580,7 +529,27 @@ TEST: {
 
          return unless basename( $filename ) =~ m/\.pl$/;
 
-         $output->run_file( $filename );
+         no warnings 'once';
+
+         local *test = sub {
+            my ( $name, %params ) = @_;
+
+            # We expect this test to fail if it's declared to be dependent on a bug that
+            # is not yet fixed
+            $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
+
+            push @TESTS, Test( $filename, $name, 0, \%params );
+         };
+
+         local *multi_test = sub {
+            my ( $name, %params ) = @_;
+
+            # We expect this test to fail if it's declared to be dependent on a bug that
+            # is not yet fixed
+            $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
+
+            push @TESTS, Test( $filename, $name, 1, \%params );
+         };
 
          # Slurp and eval() the file instead of do() because then lexical
          # environment such as strict/warnings will still apply
@@ -588,8 +557,6 @@ TEST: {
             open my $fh, "<", $filename or die "Cannot read $filename - $!\n";
             local $/; <$fh>
          };
-
-         local $SKIPPING = 1 if %only_files and not exists $only_files{$filename};
 
          # Protect against symbolic leakage between test files by cleaning up
          # extra symbols in the 'main::' namespace
@@ -631,6 +598,40 @@ TEST: {
       },
       "tests"
    );
+}
+
+# Now run the tests
+my $prev_filename;
+foreach my $test ( @TESTS ) {
+   if( !$prev_filename or $prev_filename ne $test->file ) {
+      $output->run_file( $prev_filename = $test->file );
+   }
+
+   local $SKIPPING = 1 if %only_files and not exists $only_files{ $test->file };
+
+   my $m = $test->multi ? "enter_multi_test" : "enter_test";
+
+   my $t = $output->$m( $test->name, $test->params->{expect_fail} );
+   local $RUNNING_TEST = $t;
+
+   _run_test( $t, %{ $test->params } );
+
+   $t->leave;
+
+   if( $t->skipped ) {
+      $skipped_count++;
+   }
+
+   if( $t->failed ) {
+      $output->diag( $_ ) for @log_if_fail_lines;
+
+      last if $STOP_ON_FAIL and not $test->params->{expect_fail};
+
+      if( $test->params->{critical} ) {
+         warn "This CRITICAL test has failed - bailing out\n";
+         last;
+      }
+   }
 }
 
 if( $WAIT_AT_END ) {
