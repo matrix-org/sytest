@@ -36,7 +36,7 @@ test "Outbound federation can query profile data",
 my $dname = "Displayname Set For Federation Test";
 
 test "Inbound federation can query profile data",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO, local_user_fixture(),
+   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0], local_user_fixture(),
                  qw( can_set_displayname )],
 
    do => sub {
@@ -52,7 +52,7 @@ test "Inbound federation can query profile data",
       )->then( sub {
          $outbound_client->do_request_json(
             method   => "GET",
-            hostname => $info->[0]->server_name,
+            hostname => $info->server_name,
             uri      => "/query/profile",
 
             params => {

@@ -91,11 +91,10 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [ $main::API_CLIENTS, $room_fixture ],
+   requires => [ $main::API_CLIENTS[0], $room_fixture ],
 
    check => sub {
-      my ( $clients, $room_id, undef ) = @_;
-      my $http = $clients->[0];
+      my ( $http, $room_id, undef ) = @_;
 
       $http->do_request_json(
          method => "GET",

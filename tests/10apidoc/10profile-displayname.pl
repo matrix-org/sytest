@@ -39,14 +39,13 @@ test "PUT /profile/:user_id/displayname sets my name",
    };
 
 test "GET /profile/:user_id/displayname publicly accessible",
-   requires => [ $main::API_CLIENTS, $user_fixture,
+   requires => [ $main::API_CLIENTS[0], $user_fixture,
                  qw( can_set_displayname )],
 
    proves => [qw( can_get_displayname )],
 
    check => sub {
-      my ( $clients, $user ) = @_;
-      my $http = $clients->[0];
+      my ( $http, $user ) = @_;
       my $user_id = $user->user_id;
 
       $http->do_request_json(

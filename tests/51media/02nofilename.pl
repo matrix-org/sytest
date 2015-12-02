@@ -1,11 +1,10 @@
 my $content_id;
 
 test "Can upload without a file name",
-   requires => [ $main::API_CLIENTS, local_user_fixture() ],
+   requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
 
    do => sub {
-      my ( $clients, $user ) = @_;
-      my $http = $clients->[0];
+      my ( $http, $user ) = @_;
 
       $http->do_request(
          method       => "POST",
@@ -53,17 +52,17 @@ sub test_using_client
 }
 
 test "Can download without a file name locally",
-   requires => [ $main::API_CLIENTS ],
+   requires => [ $main::API_CLIENTS[0] ],
 
    check => sub {
-      my ( $clients ) = @_;
-      test_using_client( $clients->[0] );
+      my ( $http ) = @_;
+      test_using_client( $http );
    };
 
 test "Can download without a file name over federation",
-   requires => [ $main::API_CLIENTS ],
+   requires => [ $main::API_CLIENTS[1] ],
 
    check => sub {
-      my ( $clients ) = @_;
-      test_using_client( $clients->[1] );
+      my ( $http ) = @_;
+      test_using_client( $http );
    };
