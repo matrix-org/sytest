@@ -337,8 +337,6 @@ my $skipped_count = 0;
 use constant { PROVEN => 1, PRESUMED => 2 };
 my %proven;
 
-our $SKIPPING;
-
 our $MORE_STUBS;
 
 sub maybe_stub
@@ -390,13 +388,6 @@ sub _run_test
    undef @log_if_fail_lines;
 
    local $MORE_STUBS = [];
-
-   # If we're in skipping mode, just stop right now
-   if( $SKIPPING ) {
-      $proven{$_} = PRESUMED for @{ $test->proves // [] };
-      $t->skipped++;
-      return;
-   }
 
    my @requires = @{ $test->requires // [] };
 
@@ -597,11 +588,15 @@ TEST: {
 # Now run the tests
 my $prev_filename;
 foreach my $test ( @TESTS ) {
+   if( %only_files and not exists $only_files{ $test->file } ) {
+      $proven{$_} = PRESUMED for @{ $test->proves // [] };
+      $skipped_count++;
+      next;
+   }
+
    if( !$prev_filename or $prev_filename ne $test->file ) {
       $output->run_file( $prev_filename = $test->file );
    }
-
-   local $SKIPPING = 1 if %only_files and not exists $only_files{ $test->file };
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
 
