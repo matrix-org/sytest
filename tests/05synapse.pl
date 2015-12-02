@@ -51,16 +51,14 @@ our $AS_USER_INFO = fixture(
    },
 );
 
-our $HOMESERVER_INFO = fixture(
-   requires => [ $main::TEST_SERVER_INFO, $AS_USER_INFO ],
+our @HOMESERVER_INFO = map {
+   my $idx = $_;
 
-   setup => sub {
-      my ( $test_server_info, $as_user_info ) = @_;
+   fixture(
+      requires => [ $main::TEST_SERVER_INFO, $AS_USER_INFO ],
 
-      my @info;
-
-      Future->needs_all( map {
-         my $idx = $_;
+      setup => sub {
+         my ( $test_server_info, $as_user_info ) = @_;
 
          my $secure_port = $HOMESERVER_PORTS[$idx];
          my $unsecure_port = $WANT_TLS ? 0 : $secure_port + 1000;
@@ -71,7 +69,7 @@ our $HOMESERVER_INFO = fixture(
             "https://localhost:$secure_port" :
             "http://localhost:$unsecure_port";
 
-         $info[$idx] = ServerInfo( "localhost:$secure_port", $location );
+         my $info = ServerInfo( "localhost:$secure_port", $location );
 
          my $synapse = SyTest::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
@@ -133,10 +131,7 @@ our $HOMESERVER_INFO = fixture(
 
             $loop->delay_future( after => 20 )
                ->then_fail( "Synapse server on port $secure_port failed to start" ),
-         );
-      } 0 .. $#HOMESERVER_PORTS )
-      ->then( sub {
-         Future->done( \@info );
-      });
-   },
-);
+         )->then_done( $info );
+      },
+   );
+} 0 .. $#HOMESERVER_PORTS;

@@ -18,10 +18,10 @@ our $HTTP_CLIENT = fixture(
 # TODO: This ought to be an array, one per homeserver; though that's hard to
 #   arrange currently
 our $API_CLIENTS = fixture(
-   requires => [ $main::HOMESERVER_INFO ],
+   requires => [ @main::HOMESERVER_INFO ],
 
    setup => sub {
-      my ( $info ) = @_;
+      my @info = @_;
 
       my @clients = map {
          my $location = $_->client_location;
@@ -34,7 +34,7 @@ our $API_CLIENTS = fixture(
          $loop->add( $client );
 
          $client;
-      } @$info;
+      } @info;
 
       Future->done( \@clients );
    },
