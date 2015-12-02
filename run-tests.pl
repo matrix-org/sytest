@@ -545,25 +545,7 @@ TEST: {
 
          # Tell eval what the filename is so we get nicer warnings/errors that
          # give the filename instead of (eval 123)
-         my $died_during_compile;
-
-         my $success = do {
-            local $SIG{__DIE__} = sub {
-               return if $^S;
-               $died_during_compile = 1 if !defined $^S;
-               die @_;
-            };
-
-            eval( "#line 1 $filename\n" . $code . "; 1" );
-         };
-
-         if( !$success ) {
-            die $@ if $died_during_compile;
-
-            chomp( my $e = $@ );
-            $output->abort_file( $filename, $e );
-            $failed++;
-         }
+         eval( "#line 1 $filename\n" . $code . "; 1" ) or die $@;
 
          {
             no strict 'refs';
