@@ -4,11 +4,10 @@ use JSON qw( decode_json );
 my $password = "s3kr1t";
 
 my $registered_user_fixture = fixture(
-   requires => [ $main::API_CLIENTS ],
+   requires => [ $main::API_CLIENTS[0] ],
 
    setup => sub {
-      my ( $clients ) = @_;
-      my $http = $clients->[0];
+      my ( $http ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -28,13 +27,12 @@ my $registered_user_fixture = fixture(
 );
 
 test "GET /login yields a set of flows",
-   requires => [ $main::API_CLIENTS ],
+   requires => [ $main::API_CLIENTS[0] ],
 
    proves => [qw( can_login_password_flow )],
 
    check => sub {
-      my ( $clients ) = @_;
-      my $http = $clients->[0];
+      my ( $http ) = @_;
 
       $http->do_request_json(
          uri => "/api/v1/login",
@@ -67,14 +65,13 @@ test "GET /login yields a set of flows",
    };
 
 test "POST /login can log in as a user",
-   requires => [ $main::API_CLIENTS, $registered_user_fixture,
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
                  qw( can_login_password_flow )],
 
    proves => [qw( can_login )],
 
    do => sub {
-      my ( $clients, $user_id ) = @_;
-      my $http = $clients->[0];
+      my ( $http, $user_id ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -98,12 +95,11 @@ test "POST /login can log in as a user",
    };
 
 test "POST /login wrong password is rejected",
-   requires => [ $main::API_CLIENTS, $registered_user_fixture,
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
                  qw( can_login_password_flow )],
 
    do => sub {
-      my ( $clients, $user_id ) = @_;
-      my $http = $clients->[0];
+      my ( $http, $user_id ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -131,11 +127,10 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [ $main::API_CLIENTS, $registered_user_fixture ],
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture ],
 
    do => sub {
-      my ( $clients, $user_id ) = @_;
-      my $http = $clients->[0];
+      my ( $http, $user_id ) = @_;
 
       my $first_body;
 

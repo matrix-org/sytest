@@ -1,11 +1,10 @@
 test "GET /register yields a set of flows",
-   requires => [ $main::API_CLIENTS ],
+   requires => [ $main::API_CLIENTS[0] ],
 
    proves => [qw( can_register_password_flow )],
 
    check => sub {
-      my ( $clients ) = @_;
-      my $http = $clients->[0];
+      my ( $http ) = @_;
 
       $http->do_request_json(
          uri => "/api/v1/register",
@@ -36,14 +35,13 @@ test "GET /register yields a set of flows",
    };
 
 test "POST /register can create a user",
-   requires => [ $main::API_CLIENTS,
+   requires => [ $main::API_CLIENTS[0],
                  qw( can_register_password_flow ) ],
 
    critical => 1,
 
    do => sub {
-      my ( $clients ) = @_;
-      my $http = $clients->[0];
+      my ( $http ) = @_;
 
       $http->do_request_json(
          method => "POST",
@@ -118,11 +116,10 @@ sub local_user_fixture
    my %args = @_;
 
    fixture(
-      requires => [ $main::API_CLIENTS ],
+      requires => [ $main::API_CLIENTS[0] ],
 
       setup => sub {
-         my ( $clients ) = @_;
-         my $http = $clients->[0];
+         my ( $http ) = @_;
 
          matrix_register_user( $http, undef,
             with_events => $args{with_events} // 1,
@@ -168,11 +165,10 @@ push @EXPORT, qw( remote_user_fixture );
 sub remote_user_fixture
 {
    fixture(
-      requires => [ $main::API_CLIENTS ],
+      requires => [ $main::API_CLIENTS[1] ],
 
       setup => sub {
-         my ( $clients ) = @_;
-         my $http = $clients->[1];
+         my ( $http ) = @_;
 
          matrix_register_user( $http )
       }
@@ -186,11 +182,10 @@ push @EXPORT, qw( SPYGLASS_USER );
 # don't mutate server-side state, so it's fairly safe to reüse this user among
 # different tests.
 our $SPYGLASS_USER = fixture(
-   requires => [ $main::API_CLIENTS ],
+   requires => [ $main::API_CLIENTS[0] ],
 
    setup => sub {
-      my ( $clients ) = @_;
-      my $http = $clients->[0];
+      my ( $http ) = @_;
 
       matrix_register_user( $http )
       ->on_done( sub {

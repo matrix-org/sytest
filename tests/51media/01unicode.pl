@@ -6,14 +6,13 @@ my $FILENAME_ENCODED = uc uri_escape( $FILENAME );
 my $content_id;
 
 test "Can upload with Unicode file name",
-   requires => [ $main::API_CLIENTS, local_user_fixture(),
+   requires => [ $main::API_CLIENTS[0], local_user_fixture(),
                  qw( can_upload_media )],
 
    proves => [qw( can_upload_media_unicode )],
 
    do => sub {
-      my ( $clients, $user ) = @_;
-      my $http = $clients->[0];
+      my ( $http, $user ) = @_;
 
       $http->do_request(
          method       => "POST",
@@ -62,30 +61,29 @@ sub test_using_client
 }
 
 test "Can download with Unicode file name locally",
-   requires => [ $main::API_CLIENTS,
+   requires => [ $main::API_CLIENTS[0],
                  qw( can_upload_media_unicode )],
 
    check => sub {
-      my ( $clients ) = @_;
-      test_using_client( $clients->[0] );
+      my ( $http ) = @_;
+      test_using_client( $http );
    };
 
 test "Can download with Unicode file name over federation",
-   requires => [ $main::API_CLIENTS,
+   requires => [ $main::API_CLIENTS[1],
                  qw( can_upload_media_unicode ) ],
 
    check => sub {
-      my ( $clients ) = @_;
-      test_using_client( $clients->[1] );
+      my ( $http ) = @_;
+      test_using_client( $http );
    };
 
 test "Can download specifying a different Unicode file name",
-   requires => [ $main::API_CLIENTS,
+   requires => [ $main::API_CLIENTS[0],
                  qw( can_upload_media_unicode )],
 
    check => sub {
-      my ( $clients ) = @_;
-      my $http = $clients->[0];
+      my ( $http ) = @_;
 
       my $alt_filename_encoded = "%E2%98%95";
 

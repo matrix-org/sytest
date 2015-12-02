@@ -39,12 +39,11 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
    };
 
 test "GET /profile/:user_id/avatar_url publicly accessible",
-   requires => [ $main::API_CLIENTS, $user_fixture,
+   requires => [ $main::API_CLIENTS[0], $user_fixture,
                  qw( can_set_avatar_url )],
 
    check => sub {
-      my ( $clients, $user ) = @_;
-      my $http = $clients->[0];
+      my ( $http, $user ) = @_;
       my $user_id = $user->user_id;
 
       $http->do_request_json(
