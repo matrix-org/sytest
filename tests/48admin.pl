@@ -23,12 +23,14 @@ test "/whois",
 
          assert_json_keys( $body, qw( devices user_id ) );
          assert_eq( $body->{user_id}, $user->user_id, "user_id" );
-         assert_json_list( $body->{devices} );
-         assert_json_keys( $body->{devices}[0], "sessions" );
-         assert_json_list( $body->{devices}[0]{sessions} );
-         assert_json_keys( $body->{devices}[0]{sessions}[0], "connections" );
-         assert_json_list( $body->{devices}[0]{sessions}[0]{connections} );
-         assert_json_keys( $body->{devices}[0]{sessions}[0]{connections}[0], qw( ip last_seen user_agent ) );
+         assert_json_object( $body->{devices} );
+         while (my ( $key, $value ) = each $body->{devices} ) {
+            assert_json_keys( $value, "sessions" );
+            assert_json_list( $value->{sessions} );
+            assert_json_keys( $value->{sessions}[0], "connections" );
+            assert_json_list( $value->{sessions}[0]{connections} );
+            assert_json_keys( $value->{sessions}[0]{connections}[0], qw( ip last_seen user_agent ) );
+         }
 
          Future->done( 1 );
       });
