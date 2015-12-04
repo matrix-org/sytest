@@ -7,9 +7,11 @@ test "Banned rooms appear in the leave section of sync",
 
       my ( $filter_id_a, $filter_id_b, $room_id );
 
+      my $filter = { room => { include_leave => JSON::true } };
+
       Future->needs_all(
-         matrix_create_filter( $user_a, {} ),
-         matrix_create_filter( $user_b, {} ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
@@ -47,9 +49,11 @@ test "Newly banned rooms appear in the leave section of incremental sync",
 
       my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
+      my $filter = { room => { include_leave => JSON::true } };
+
       Future->needs_all(
-         matrix_create_filter( $user_a, {} ),
-         matrix_create_filter( $user_b, {} ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
@@ -92,9 +96,11 @@ test "Newly banned rooms appear in the leave section of incremental sync",
 
       my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
+      my $filter = { room => { include_leave => JSON::true } };
+
       Future->needs_all(
-         matrix_create_filter( $user_a, {} ),
-         matrix_create_filter( $user_b, {} ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
