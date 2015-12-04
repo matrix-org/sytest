@@ -92,6 +92,14 @@ GetOptions(
    'h|help' => sub { usage(0) },
 ) or usage(1);
 
+my %only_files;
+my $stop_after;
+if( @ARGV ) {
+   $only_files{$_}++ for @ARGV;
+
+   $stop_after = maxstr keys %only_files;
+}
+
 push @{ $SYNAPSE_ARGS{extra_args} }, "-v" if $VERBOSE;
 
 sub usage
@@ -377,6 +385,11 @@ sub _push_test
    # is not yet fixed
    $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
+   if( %only_files and not exists $only_files{$filename} ) {
+      $proven{$_} = PRESUMED for @{ $params{proves} // [] };
+      return;
+   }
+
    push @TESTS, Test( $filename, $name, $multi,
       @params{qw( expect_fail critical proves requires check do timeout )} );
 }
@@ -503,14 +516,6 @@ sub SyTest::pass_on_done
    $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
 }
 
-my %only_files;
-my $stop_after;
-if( @ARGV ) {
-   $only_files{$_}++ for @ARGV;
-
-   $stop_after = maxstr keys %only_files;
-}
-
 sub list_symbols
 {
    my ( $pkg ) = @_;
@@ -566,12 +571,6 @@ TEST: {
 # Now run the tests
 my $prev_filename;
 foreach my $test ( @TESTS ) {
-   if( %only_files and not exists $only_files{ $test->file } ) {
-      $proven{$_} = PRESUMED for @{ $test->proves // [] };
-      $skipped_count++;
-      next;
-   }
-
    if( !$prev_filename or $prev_filename ne $test->file ) {
       $output->run_file( $prev_filename = $test->file );
    }
