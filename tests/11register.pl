@@ -2,11 +2,10 @@ use JSON qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha",
-   requires => [ $main::API_CLIENTS ],
+   requires => [ $main::API_CLIENTS[0] ],
 
    do => sub {
-      my ( $clients ) = @_;
-      my $http = $clients->[0];
+      my ( $http ) = @_;
 
       Future->needs_all(
          await_http_request( "/recaptcha/api/siteverify", sub {1} )
