@@ -17,12 +17,42 @@ my $CYAN_B = -t STDOUT ? "\e[1;36m" : "";
 
 my $RESET = -t STDOUT ? "\e[m" : "";
 
+my $CLEARLINE = "\r\e[K";
+
+# Some private functions, since there's just one terminal
+{
+   my $partial;
+
+   sub _printline
+   {
+      my ( $message ) = @_;
+      print join "",
+         ( length $partial ? $CLEARLINE : "" ),
+         $message, "\n",
+         ( length $partial ? $partial : "" );
+   }
+
+   sub _morepartial
+   {
+      my ( $message ) = @_;
+      $partial .= $message;
+      print $message;
+   }
+
+   sub _finishpartial
+   {
+      my ( $message ) = @_;
+      print $message, "\n";
+      undef $partial;
+   }
+}
+
 # File status
 sub run_file
 {
    shift;
    my ( $filename ) = @_;
-   print "${CYAN_B}Running $filename...${RESET}\n";
+   _printline "${CYAN_B}Running $filename...${RESET}";
 }
 
 # General test status
@@ -67,10 +97,17 @@ sub diag
 {
    shift;
    my ( $message ) = @_;
-   print "\n${YELLOW_B} #${RESET} $message";
+   _printline "${YELLOW_B} #${RESET} $message";
 }
 
 package SyTest::Output::Term::Test {
+
+   BEGIN {
+      *_printline     = \&SyTest::Output::Term::_printline;
+      *_morepartial   = \&SyTest::Output::Term::_morepartial;
+      *_finishpartial = \&SyTest::Output::Term::_finishpartial;
+   }
+
    sub new { my $class = shift; bless { @_ }, $class }
 
    sub name            { shift->{name}        }
@@ -83,8 +120,11 @@ package SyTest::Output::Term::Test {
    sub start
    {
       my $self = shift;
-      print "  ${CYAN}Testing if: ${\$self->name}${RESET}... ";
-      print "\n" if $self->multi;
+
+      my $message = "  ${CYAN}Testing if: ${\$self->name}${RESET}... ";
+      $self->multi ?
+         _printline $message :
+         _morepartial $message;
    }
 
    sub pass { }
@@ -104,8 +144,8 @@ package SyTest::Output::Term::Test {
       my ( $ok, $stepname ) = @_;
 
       $ok ?
-         print "   ${CYAN}| $stepname... ${GREEN}OK${RESET}\n" :
-         print "   ${CYAN}| $stepname... ${RED}NOT OK${RESET}\n";
+         _printline "   ${CYAN}| $stepname... ${GREEN}OK${RESET}" :
+         _printline "   ${CYAN}| $stepname... ${RED}NOT OK${RESET}";
 
       $self->failed++ if not $ok;
    }
@@ -114,7 +154,9 @@ package SyTest::Output::Term::Test {
    {
       my $self = shift;
       my ( $reason ) = @_;
-      print "  ${YELLOW_B}SKIP${RESET} ${\$self->name} due to $reason\n";
+
+      _printline "  ${YELLOW_B}SKIP${RESET} ${\$self->name} due to $reason\n";
+
       $self->skipped++;
    }
 
@@ -124,28 +166,28 @@ package SyTest::Output::Term::Test {
 
       return if $self->skipped;
 
-      print "   ${CYAN}+--- " if $self->multi;
+      _morepartial "   ${CYAN}+--- " if $self->multi;
 
       if( !$self->failed ) {
-         print "${GREEN}PASS${RESET}\n";
+         _finishpartial "${GREEN}PASS${RESET}";
 
          if( $self->expect_fail ) {
-            print "${YELLOW_B}EXPECTED TO FAIL${RESET} but passed anyway\n";
+            _printline "${YELLOW_B}EXPECTED TO FAIL${RESET} but passed anyway\n";
          }
       }
       else {
          if( $self->expect_fail ) {
-            print "${YELLOW_B}EXPECTED FAIL${RESET}:\n";
+            _finishpartial "${YELLOW_B}EXPECTED FAIL${RESET}:";
          }
          else {
-            print "${RED_B}FAIL${RESET}:\n";
+            _finishpartial "${RED_B}FAIL${RESET}:";
          }
 
          $self->failure = "${\$self->failed} subtests failed" if
             $self->multi and not length $self->failure;
 
-         print " | $_\n" for split m/\n/, $self->failure;
-         print " +----------------------\n";
+         _printline " | $_" for split m/\n/, $self->failure;
+         _printline " +----------------------";
       }
    }
 }
