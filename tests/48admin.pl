@@ -24,7 +24,8 @@ test "/whois",
          assert_json_keys( $body, qw( devices user_id ) );
          assert_eq( $body->{user_id}, $user->user_id, "user_id" );
          assert_json_object( $body->{devices} );
-         while (my ( $key, $value ) = each $body->{devices} ) {
+
+         foreach my $value ( values %{ $body->{devices} } ) {
             assert_json_keys( $value, "sessions" );
             assert_json_list( $value->{sessions} );
             assert_json_keys( $value->{sessions}[0], "connections" );
