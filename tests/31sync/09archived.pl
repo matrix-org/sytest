@@ -7,7 +7,9 @@ test "Left rooms appear in the leave section of sync",
 
       my ( $filter_id, $room_id );
 
-      matrix_create_filter( $user, {} )->then( sub {
+      matrix_create_filter( $user,
+         { room => { include_leave => JSON::true } }
+      )->then( sub {
          ( $filter_id ) = @_;
 
          matrix_create_room( $user );
@@ -37,7 +39,9 @@ test "Newly left rooms appear in the leave section of incremental sync",
 
       my ( $filter_id, $room_id, $next );
 
-     matrix_create_filter( $user, {} )->then( sub {
+     matrix_create_filter( $user,
+         { room => { include_leave => JSON::true } }
+     )->then( sub {
          ( $filter_id ) = @_;
 
          matrix_create_room( $user );
@@ -74,7 +78,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
       my ( $filter_id, $room_id_1, $room_id_2, $next );
 
       my $filter = {
-         room => { timeline => { limit => 1 } },
+         room => { timeline => { limit => 1 }, include_leave => JSON::true }
       };
 
       matrix_create_filter( $user, {} )->then( sub {
@@ -126,7 +130,9 @@ test "Left rooms appear in the leave section of full state sync",
 
       my ( $filter_id, $room_id, $next );
 
-      matrix_create_filter( $user, {} )->then( sub {
+      matrix_create_filter( $user,
+         { room => { include_leave => JSON::true } }
+      )->then( sub {
          ( $filter_id ) = @_;
 
          matrix_create_room( $user );
@@ -167,6 +173,7 @@ test "Archived rooms only contain history from before the user left",
          room => {
             timeline => { types => [ "m.room.message" ] },
             state => { types => [ "a.madeup.test.state" ] },
+            include_leave => JSON::true,
          },
       };
 
