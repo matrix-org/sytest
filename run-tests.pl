@@ -572,9 +572,17 @@ TEST: {
    );
 }
 
-my $failed_count;
-my $expected_fail_count;
+my $done_count = 0;
+my $failed_count = 0;
+my $expected_fail_count = 0;
 my $skipped_count = 0;
+
+$OUTPUT->status(
+   tests   => scalar @TESTS,
+   done    => $done_count,
+   failed  => $failed_count,
+   skipped => $skipped_count,
+);
 
 # Now run the tests
 my $prev_filename;
@@ -592,6 +600,8 @@ foreach my $test ( @TESTS ) {
 
    $t->leave;
 
+   $done_count++;
+
    if( $t->skipped ) {
       $skipped_count++;
    }
@@ -608,7 +618,16 @@ foreach my $test ( @TESTS ) {
          last;
       }
    }
+
+   $OUTPUT->status(
+      tests   => scalar @TESTS,
+      done    => $done_count,
+      failed  => $failed_count,
+      skipped => $skipped_count,
+   );
 }
+
+$OUTPUT->status();
 
 if( $WAIT_AT_END ) {
    print STDERR "Waiting... (hit ENTER to end)\n";

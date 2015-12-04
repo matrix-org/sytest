@@ -15,35 +15,69 @@ my $YELLOW_B = -t STDOUT ? "\e[1;33m" : "";
 my $CYAN = -t STDOUT ? "\e[36m" : "";
 my $CYAN_B = -t STDOUT ? "\e[1;36m" : "";
 
+my $BLUE_BG = -t STDOUT ? "\e[44m" : "";
+
+my $RESET_FG = -t STDOUT ? "\e[39m" : "";
 my $RESET = -t STDOUT ? "\e[m" : "";
 
 my $CLEARLINE = "\r\e[K";
+my $PREVLINE = "\eM";
 
 # Some private functions, since there's just one terminal
 {
    my $partial;
+   my $status;
 
    sub _printline
    {
       my ( $message ) = @_;
+
       print join "",
-         ( length $partial ? $CLEARLINE : "" ),
+         ( length $partial || length $status ? $CLEARLINE : () ),
+         ( length $partial && length $status ? $PREVLINE . $CLEARLINE : () ),
          $message, "\n",
-         ( length $partial ? $partial : "" );
+         ( length $partial ? $partial : () ),
+         ( length $partial && length $status ? "\n" : () ),
+         ( length $status ? $status : () );
    }
 
    sub _morepartial
    {
       my ( $message ) = @_;
+      my $was_partial = length $partial;
+
       $partial .= $message;
-      print $message;
+
+      print join "",
+         ( length $status && $was_partial ? $PREVLINE : () ),
+         $CLEARLINE, $partial,
+         ( length $status ? ( "\n", $status ) : () );
    }
 
    sub _finishpartial
    {
       my ( $message ) = @_;
-      print $message, "\n";
+      my $was_partial = length $partial;
+
+      print join "",
+         ( length $status && $was_partial ? $CLEARLINE . $PREVLINE : () ),
+         $CLEARLINE, $partial, $message,
+         ( length $status ? ( "\n", $status ) : ( "\n" ) );
+
       undef $partial;
+   }
+
+   sub _printstatus
+   {
+      print "\n" if !length $status and length $partial;
+      ( $status ) = @_;
+      print $CLEARLINE . $status;
+   }
+
+   sub _clearstatus
+   {
+      print $CLEARLINE . $PREVLINE if length $status;
+      undef $status;
    }
 }
 
@@ -98,6 +132,23 @@ sub diag
    shift;
    my ( $message ) = @_;
    _printline "${YELLOW_B} #${RESET} $message";
+}
+
+sub status
+{
+   shift;
+   my %args = @_;
+
+   return _clearstatus unless %args;
+
+   my $message = join " | ",
+      sprintf( "Tests: %d / %d", $args{done}, $args{tests} ),
+      ( $args{failed} ? sprintf( "${RED_B}%d FAIL${RESET_FG}", $args{failed} )
+                      : "OK" ),
+      ( $args{skipped} ? sprintf( "${YELLOW_B}%d SKIPPED${RESET_FG}", $args{skipped} )
+                       : () );
+
+   _printstatus "${BLUE_BG}$message${RESET}";
 }
 
 package SyTest::Output::Term::Test {

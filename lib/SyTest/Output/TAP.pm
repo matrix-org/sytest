@@ -57,6 +57,8 @@ sub diag
    print "# $message\n";
 }
 
+sub status {}
+
 package SyTest::Output::TAP::Test {
    sub new { my $class = shift; bless { subnum => 0, @_ }, $class }
 
