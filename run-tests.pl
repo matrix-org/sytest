@@ -145,7 +145,7 @@ EOF
    exit $exitcode;
 }
 
-my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
+my $OUTPUT = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
 
 if( $CLIENT_LOG ) {
@@ -408,7 +408,7 @@ sub _run_test
             $t->skip( "lack of $req" );
             return;
          }
-         $output->diag( "Presuming ability '$req'" ) if $proven{$req} == PRESUMED;
+         $OUTPUT->diag( "Presuming ability '$req'" ) if $proven{$req} == PRESUMED;
       }
    }
 
@@ -573,12 +573,12 @@ foreach my $test ( @TESTS ) {
    }
 
    if( !$prev_filename or $prev_filename ne $test->file ) {
-      $output->run_file( $prev_filename = $test->file );
+      $OUTPUT->run_file( $prev_filename = $test->file );
    }
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
 
-   my $t = $output->$m( $test->name, $test->expect_fail );
+   my $t = $OUTPUT->$m( $test->name, $test->expect_fail );
    local $RUNNING_TEST = $t;
 
    _run_test( $t, $test );
@@ -592,7 +592,7 @@ foreach my $test ( @TESTS ) {
    if( $t->failed ) {
       $test->expect_fail ? $expected_fail++ : $failed++;
 
-      $output->diag( $_ ) for @log_if_fail_lines;
+      $OUTPUT->diag( $_ ) for @log_if_fail_lines;
 
       last if $STOP_ON_FAIL and not $test->expect_fail;
 
@@ -610,7 +610,7 @@ if( $WAIT_AT_END ) {
 }
 
 if( $failed ) {
-   $output->final_fail( $failed );
+   $OUTPUT->final_fail( $failed );
 
    # TODO: umh.. this apparently broke some time ago. Should fix it
    #my @f;
@@ -625,7 +625,7 @@ if( $failed ) {
    exit 1;
 }
 else {
-   $output->final_pass( $expected_fail, $skipped_count );
+   $OUTPUT->final_pass( $expected_fail, $skipped_count );
    exit 0;
 }
 
