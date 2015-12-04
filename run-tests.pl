@@ -39,7 +39,7 @@ use Module::Pluggable
 # A number of commandline arguments exist simply for passing values through to
 # the way that synapse is started by tests/05synapse.pl. We'll collect them
 # all in one place for neatness
-my %SYNAPSE_ARGS = (
+our %SYNAPSE_ARGS = (
    directory  => "../synapse",
    python     => "python",
    extra_args => [],
@@ -49,7 +49,8 @@ my %SYNAPSE_ARGS = (
    coverage   => 0,
 );
 
-my $WANT_TLS = 1;
+our $WANT_TLS = 1;  # This is shared with the test scripts
+
 my %FIXED_BUGS;
 
 my $STOP_ON_FAIL;
@@ -246,36 +247,8 @@ my $loop = IO::Async::Loop->new;
 $SIG{INT} = sub { exit 1 };
 
 
-# Some tests create objects as a side-effect that later tests will depend on,
-# such as clients, users, rooms, etc... These are called the Environment
-my %test_environment = (
-   synapse_args => \%SYNAPSE_ARGS,
-
-   # We need two servers; a "local" and a "remote" one for federation-based tests
-   synapse_ports => [ $PORT_BASE + 1, $PORT_BASE + 2 ],
-
-   want_tls => $WANT_TLS,
-);
-
-our @PROVIDES;
-
-sub provide
-{
-   my ( $name, $value ) = @_;
-   exists $test_environment{$name} and
-      carp "Overwriting existing test environment key '$name'";
-   any { $name eq $_ } @PROVIDES or
-      carp "Was not expecting to provide '$name'";
-
-   $test_environment{$name} = $value;
-}
-
-sub unprovide
-{
-   my @names = @_;
-
-   delete $test_environment{$_} for @names;
-}
+# We need two servers; a "local" and a "remote" one for federation-based tests
+our @HOMESERVER_PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
 
 # Util. function for tests
 sub delay
@@ -323,10 +296,10 @@ sub fixture
       else {
          push @requires, $req;
          push @req_futures, $f_start->then( sub {
-            my ( $env ) = @_;
+            my ( $proven ) = @_;
 
-            exists $env->{$req} or die "TODO: Missing fixture dependency $req\n";
-            Future->done( $env->{$req} );
+            $proven->{$req} or die "TODO: Missing fixture dependency $req\n";
+            Future->done;
          });
       }
    }
@@ -361,7 +334,8 @@ my $failed;
 my $expected_fail;
 my $skipped_count = 0;
 
-our $SKIPPING;
+use constant { PROVEN => 1, PRESUMED => 2 };
+my %proven;
 
 our $MORE_STUBS;
 
@@ -389,22 +363,33 @@ sub require_stub
    });
 }
 
+struct Test => [qw(
+   file name multi expect_fail critical proves requires check do timeout
+)];
+
+my @TESTS;
+
+sub _push_test
+{
+   my ( $filename, $multi, $name, %params ) = @_;
+
+   # We expect this test to fail if it's declared to be dependent on a bug that
+   # is not yet fixed
+   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
+
+   push @TESTS, Test( $filename, $name, $multi,
+      @params{qw( expect_fail critical proves requires check do timeout )} );
+}
+
 sub _run_test
 {
-   my ( $t, %params ) = @_;
+   my ( $t, $test ) = @_;
 
    undef @log_if_fail_lines;
 
-   local @PROVIDES = @{ $params{provides} || [] };
    local $MORE_STUBS = [];
 
-   # If the test doesn't provide anything, and we're in skipping mode, just stop right now
-   if( $SKIPPING and !@PROVIDES ) {
-      $t->skipped++;
-      return;
-   }
-
-   my @requires = @{ $params{requires} || [] };
+   my @requires = @{ $test->requires // [] };
 
    my $f_start = Future->new;
    my @req_futures;
@@ -413,22 +398,17 @@ sub _run_test
       if( is_Fixture( $req ) ) {
          my $fixture = $req;
 
-         exists $test_environment{$_} or die "TODO: Missing fixture dependency $_"
-            for @{ $fixture->requires };
-
          push @req_futures, $f_start->then( sub {
-            $fixture->start->( \%test_environment );
+            $fixture->start->( \%proven );
             $fixture->result;
          });
       }
       else {
-         if( !exists $test_environment{$req} ) {
+         if( !exists $proven{$req} ) {
             $t->skip( "lack of $req" );
             return;
          }
-
-         # Fetch its value immediately
-         push @req_futures, Future->done( $test_environment{$req} );
+         $output->diag( "Presuming ability '$req'" ) if $proven{$req} == PRESUMED;
       }
    }
 
@@ -441,8 +421,8 @@ sub _run_test
          ->on_done( sub { @reqs = @_ } )
          ->on_fail( sub { die "fixture failed - $_[0]\n" } );
 
-      my $check = $params{check};
-      if( my $do = $params{do} ) {
+      my $check = $test->check;
+      if( my $do = $test->do ) {
          if( $check ) {
             $f_test = $f_test->then( sub {
                Future->wrap( $check->( @reqs ) )
@@ -473,14 +453,10 @@ sub _run_test
          });
       }
 
-      if( my $await = $params{await} ) {
-         die "TODO: 'await' now dead";
-      }
-
       Future->wait_any(
          $f_test,
 
-         $loop->delay_future( after => $params{timeout} // 10 )
+         $loop->delay_future( after => $test->timeout // 10 )
             ->then_fail( "Timed out waiting for test" )
       )->get;
 
@@ -501,132 +477,30 @@ sub _run_test
    } @requires )->get;
 
    if( $success ) {
-      exists $test_environment{$_} or warn "Test step ${\$t->name} did not provide a value for $_\n"
-         for @PROVIDES;
-
+      $proven{$_} = PROVEN for @{ $test->proves // [] };
       $t->pass;
    }
    else {
       my $e = $@; chomp $e;
       $t->fail( $e );
    }
-
-   if( $t->failed ) {
-      $params{expect_fail} ? $expected_fail++ : $failed++;
-   }
 }
 
-sub test
+our $RUNNING_TEST;
+
+sub pass
 {
-   my ( $name, %params ) = @_;
-
-   # We expect this test to fail if it's declared to be dependent on a bug that
-   # is not yet fixed
-   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
-
-   my $t = $output->enter_test( $name, $params{expect_fail} );
-   _run_test( $t, %params );
-   $t->leave;
-
-   if( $t->failed ) {
-      $output->diag( $_ ) for @log_if_fail_lines;
-   }
-   if( $t->skipped ) {
-      $skipped_count++;
-   }
-
-   if( $t->failed ) {
-      no warnings 'exiting';
-
-      last TEST if $STOP_ON_FAIL and not $params{expect_fail};
-
-      warn( "This CRITICAL test has failed - bailing out\n" ), last TEST if $params{critical};
-   }
+   my ( $testname ) = @_;
+   $RUNNING_TEST->ok( 1, $testname );
 }
 
+# A convenience for the otherwise-common pattern of
+#   ->on_done( sub { pass $message } )
+sub SyTest::pass_on_done
 {
-   our $RUNNING_TEST;
-
-   sub pass
-   {
-      my ( $testname ) = @_;
-      $RUNNING_TEST->ok( 1, $testname );
-   }
-
-   # A convenience for the otherwise-common pattern of
-   #   ->on_done( sub { pass $message } )
-   sub SyTest::pass_on_done
-   {
-      my $self = shift;
-      my ( $message ) = @_;
-      $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
-   }
-
-   sub multi_test
-   {
-      my ( $name, %params ) = @_;
-
-      # We expect this test to fail if it's declared to be dependent on a bug that
-      # is not yet fixed
-      $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
-
-      local $RUNNING_TEST = my $t = $output->enter_multi_test(
-          $name, $params{expect_fail} );
-      _run_test( $t, %params );
-      $t->leave;
-
-      if( $t->failed ) {
-         $output->diag( $_ ) for @log_if_fail_lines;
-      }
-      if( $t->skipped ) {
-         $skipped_count++;
-      }
-
-      no warnings 'exiting';
-      last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
-   }
-}
-
-sub prepare
-{
-   my ( $name, %params ) = @_;
-
-   local @PROVIDES = @{ $params{provides} || [] };
-
-   my @reqs;
-   foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
-
-      $output->skip_prepare( $name, $req );
-      return;
-   }
-
-   $output->start_prepare( $name );
-
-   my $do = $params{do};
-   my $success = eval {
-      $do->( @reqs )->get;
-      1;
-   };
-
-   if( $success ) {
-      $output->pass_prepare;
-   }
-   else {
-      my $e = $@; chomp $e;
-      $output->fail_prepare( $e );
-      $failed++;
-   }
-
-   if( not $success ) {
-      no warnings 'exiting';
-      last TEST if $STOP_ON_FAIL;
-
-      die "prepare failed\n";
-   }
-
-   exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
-      for @PROVIDES;
+   my $self = shift;
+   my ( $message ) = @_;
+   $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
 }
 
 my %only_files;
@@ -653,7 +527,10 @@ TEST: {
 
          return unless basename( $filename ) =~ m/\.pl$/;
 
-         $output->run_file( $filename );
+         no warnings 'once';
+
+         local *test       = sub { _push_test( $filename, 0, @_ ); };
+         local *multi_test = sub { _push_test( $filename, 1, @_ ); };
 
          # Slurp and eval() the file instead of do() because then lexical
          # environment such as strict/warnings will still apply
@@ -662,33 +539,13 @@ TEST: {
             local $/; <$fh>
          };
 
-         local $SKIPPING = 1 if %only_files and not exists $only_files{$filename};
-
          # Protect against symbolic leakage between test files by cleaning up
          # extra symbols in the 'main::' namespace
          my %was_symbs = map { $_ => 1 } list_symbols( "main" );
 
          # Tell eval what the filename is so we get nicer warnings/errors that
          # give the filename instead of (eval 123)
-         my $died_during_compile;
-
-         my $success = do {
-            local $SIG{__DIE__} = sub {
-               return if $^S;
-               $died_during_compile = 1 if !defined $^S;
-               die @_;
-            };
-
-            eval( "#line 1 $filename\n" . $code . "; 1" );
-         };
-
-         if( !$success ) {
-            die $@ if $died_during_compile;
-
-            chomp( my $e = $@ );
-            $output->abort_file( $filename, $e );
-            $failed++;
-         }
+         eval( "#line 1 $filename\n" . $code . "; 1" ) or die $@;
 
          {
             no strict 'refs';
@@ -706,6 +563,46 @@ TEST: {
    );
 }
 
+# Now run the tests
+my $prev_filename;
+foreach my $test ( @TESTS ) {
+   if( %only_files and not exists $only_files{ $test->file } ) {
+      $proven{$_} = PRESUMED for @{ $test->proves // [] };
+      $skipped_count++;
+      next;
+   }
+
+   if( !$prev_filename or $prev_filename ne $test->file ) {
+      $output->run_file( $prev_filename = $test->file );
+   }
+
+   my $m = $test->multi ? "enter_multi_test" : "enter_test";
+
+   my $t = $output->$m( $test->name, $test->expect_fail );
+   local $RUNNING_TEST = $t;
+
+   _run_test( $t, $test );
+
+   $t->leave;
+
+   if( $t->skipped ) {
+      $skipped_count++;
+   }
+
+   if( $t->failed ) {
+      $test->expect_fail ? $expected_fail++ : $failed++;
+
+      $output->diag( $_ ) for @log_if_fail_lines;
+
+      last if $STOP_ON_FAIL and not $test->expect_fail;
+
+      if( $test->critical ) {
+         warn "This CRITICAL test has failed - bailing out\n";
+         last;
+      }
+   }
+}
+
 if( $WAIT_AT_END ) {
    print STDERR "Waiting... (hit ENTER to end)\n";
    $loop->add( my $stdin = IO::Async::Stream->new_for_stdin( on_read => sub {} ) );
@@ -715,15 +612,16 @@ if( $WAIT_AT_END ) {
 if( $failed ) {
    $output->final_fail( $failed );
 
-   my @f;
-   foreach my $synapse ( @{ $test_environment{synapses} } ) {
-      $synapse->print_output;
-      push @f, $synapse->await_finish;
+   # TODO: umh.. this apparently broke some time ago. Should fix it
+   #my @f;
+   #foreach my $synapse ( @{ $test_environment{synapses} } ) {
+   #   $synapse->print_output;
+   #   push @f, $synapse->await_finish;
+   #
+   #   $synapse->kill( 'INT' );
+   #}
 
-      $synapse->kill( 'INT' );
-   }
-
-   Future->wait_all( @f )->get if @f;
+   #Future->wait_all( @f )->get if @f;
    exit 1;
 }
 else {

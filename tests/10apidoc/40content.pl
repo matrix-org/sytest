@@ -6,9 +6,9 @@ my $content_type = "text/plain";
 my $content_id;
 
 test "POST /media/v1/upload can create an upload",
-   requires => [qw( first_api_client ), local_user_fixture() ],
+   requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
 
-   provides => [qw( can_upload_media )],
+   proves => [qw( can_upload_media )],
 
    do => sub {
       my ( $http, $user ) = @_;
@@ -28,8 +28,6 @@ test "POST /media/v1/upload can create an upload",
 
          assert_json_keys( $body, qw( content_uri ));
 
-         provide can_upload_media => 1;
-
          my $content_uri = URI->new( $body->{content_uri} );
          $content_id = [ $content_uri->authority, $content_uri->path ];
 
@@ -38,10 +36,10 @@ test "POST /media/v1/upload can create an upload",
    };
 
 test "GET /media/v1/download can fetch the value again",
-   requires => [qw( first_api_client
-                    can_upload_media )],
+   requires => [ $main::API_CLIENTS[0],
+                 qw( can_upload_media )],
 
-   provides => [qw( can_download_media )],
+   proves => [qw( can_download_media )],
 
    check => sub {
       my ( $http ) = @_;
@@ -57,8 +55,6 @@ test "GET /media/v1/download can fetch the value again",
             die "Content not as expected";
          $response->content_type eq $content_type or
             die "Content-Type not as expected";
-
-         provide can_download_media => 1;
 
          Future->done(1);
       });

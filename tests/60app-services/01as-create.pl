@@ -5,9 +5,7 @@ my $room_fixture = room_fixture(
 );
 
 test "AS can create a user",
-   requires => [qw( as_user ), $room_fixture ],
-
-   provides => [qw( make_as_user )],
+   requires => [ $main::AS_USER, $room_fixture ],
 
    do => sub {
       my ( $as_user, $room_id ) = @_;
@@ -27,33 +25,12 @@ test "AS can create a user",
 
          assert_json_keys( $body, qw( user_id home_server ));
 
-         provide make_as_user => sub {
-            my ( $user_id_fragment ) = @_;
-
-            do_request_json_for( $as_user,
-               method => "POST",
-               uri    => "/api/v1/register",
-
-               content => {
-                  type => "m.login.application_service",
-                  user => "astest-$user_id_fragment"
-               },
-            )->then( sub {
-               my ( $body ) = @_;
-
-               # TODO: user has no event stream yet. Should they?
-               Future->done(
-                  User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, undef, [], undef )
-               );
-            });
-         };
-
          Future->done(1);
       });
    };
 
 test "AS cannot create users outside its own namespace",
-   requires => [qw( as_user )],
+   requires => [ $main::AS_USER ],
 
    do => sub {
       my ( $as_user ) = @_;
@@ -70,7 +47,7 @@ test "AS cannot create users outside its own namespace",
    };
 
 test "Regular users cannot register within the AS namespace",
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS[0] ],
 
    do => sub {
       my ( $http ) = @_;
@@ -80,16 +57,27 @@ test "Regular users cannot register within the AS namespace",
    };
 
 test "AS can make room aliases",
-   requires => [qw( await_as_event as_user first_home_server ), $room_fixture,
+   requires => [ $main::AS_USER, $main::AS_USER_INFO, $room_fixture,
                 qw( can_create_room_alias )],
 
    do => sub {
-      my ( $await_as_event, $as_user, $first_home_server, $room_id ) = @_;
-      my $room_alias = "#astest-01create-1:$first_home_server";
+      my ( $as_user, $as_user_info, $room_id ) = @_;
+      my $server_name = $as_user->http->server_name;
+      my $room_alias = "#astest-01create-1:$server_name";
 
       Future->needs_all(
-         $await_as_event->( "m.room.aliases" )->then( sub {
-            my ( $event ) = @_;
+         await_as_event( "m.room.aliases" )->then( sub {
+            my ( $event, $request ) = @_;
+
+            # As this is the first AS event we've received, lets check that the
+            # token matches, to give that coverage.
+
+            my $access_token = $request->query_param( "access_token" );
+
+            assert_ok( defined $access_token,
+               "HS provides an access_token" );
+            assert_eq( $access_token, $as_user_info->hs2as_token,
+               "HS provides the correct token" );
 
             log_if_fail "Event", $event;
 
@@ -139,12 +127,13 @@ test "AS can make room aliases",
    };
 
 test "Regular users cannot create room aliases within the AS namespace",
-   requires => [qw( first_home_server ), $user_fixture, $room_fixture,
-                qw( can_create_room_alias )],
+   requires => [ $user_fixture, $room_fixture,
+                 qw( can_create_room_alias )],
 
    do => sub {
-      my ( $first_home_server, $user, $room_id ) = @_;
-      my $room_alias = "#astest-01create-2:$first_home_server";
+      my ( $user, $room_id ) = @_;
+      my $server_name = $user->http->server_name;
+      my $room_alias = "#astest-01create-2:$server_name";
 
       do_request_json_for( $user,
          method => "PUT",
@@ -155,3 +144,45 @@ test "Regular users cannot create room aliases within the AS namespace",
          }
       )->main::expect_http_4xx;
    };
+
+push our @EXPORT, qw( matrix_register_as_ghost as_ghost_fixture );
+
+sub matrix_register_as_ghost
+{
+   my ( $as_user, $user_id ) = @_;
+   is_User( $as_user ) or croak "Expected a User, got $as_user";
+
+   do_request_json_for( $as_user,
+      method => "POST",
+      uri    => "/api/v1/register",
+
+      content => {
+         type => "m.login.application_service",
+         user => $user_id,
+      }
+   )->then( sub {
+      my ( $body ) = @_;
+
+      # TODO: user has no event stream yet. Should they?
+      Future->done(
+         User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, undef, [], undef )
+      );
+   });
+}
+
+my $next_as_user_id = 0;
+sub as_ghost_fixture
+{
+   fixture(
+      requires => [ $main::AS_USER ],
+
+      setup => sub {
+         my ( $as_user ) = @_;
+
+         my $user_id = "astest-$next_as_user_id";
+         $next_as_user_id++;
+
+         matrix_register_as_ghost( $as_user, $user_id );
+      },
+   );
+}

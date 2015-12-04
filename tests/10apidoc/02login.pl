@@ -4,12 +4,12 @@ use JSON qw( decode_json );
 my $password = "s3kr1t";
 
 my $registered_user_fixture = fixture(
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS[0] ],
 
    setup => sub {
-      my ( $api_client ) = @_;
+      my ( $http ) = @_;
 
-      $api_client->do_request_json(
+      $http->do_request_json(
          method => "POST",
          uri    => "/api/v1/register",
 
@@ -27,9 +27,9 @@ my $registered_user_fixture = fixture(
 );
 
 test "GET /login yields a set of flows",
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS[0] ],
 
-   provides => [qw( can_login_password_flow )],
+   proves => [qw( can_login_password_flow )],
 
    check => sub {
       my ( $http ) = @_;
@@ -60,18 +60,15 @@ test "GET /login yields a set of flows",
                @$stages == 1 && $stages->[0] eq "m.login.password";
          }
 
-         $has_login_flow and
-            provide can_login_password_flow => 1;
-
-         Future->done(1);
+         Future->done( $has_login_flow );
       });
    };
 
 test "POST /login can log in as a user",
-   requires => [qw( first_api_client ), $registered_user_fixture,
-                qw( can_login_password_flow )],
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
+                 qw( can_login_password_flow )],
 
-   provides => [qw( can_login first_home_server )],
+   proves => [qw( can_login )],
 
    do => sub {
       my ( $http, $user_id ) = @_;
@@ -90,17 +87,16 @@ test "POST /login can log in as a user",
 
          assert_json_keys( $body, qw( access_token home_server ));
 
-         provide can_login => 1;
-
-         provide first_home_server => $body->{home_server};
+         assert_eq( $body->{home_server}, $http->server_name,
+            'Response home_server' );
 
          Future->done(1);
       });
    };
 
 test "POST /login wrong password is rejected",
-   requires => [qw( first_api_client ), $registered_user_fixture,
-                qw( can_login_password_flow )],
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
+                 qw( can_login_password_flow )],
 
    do => sub {
       my ( $http, $user_id ) = @_;
@@ -131,7 +127,7 @@ test "POST /login wrong password is rejected",
    };
 
 test "POST /tokenrefresh invalidates old refresh token",
-   requires => [qw( first_api_client ), $registered_user_fixture ],
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture ],
 
    do => sub {
       my ( $http, $user_id ) = @_;

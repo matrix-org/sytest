@@ -1,5 +1,5 @@
 test "Outbound federation can query room alias directory",
-   requires => [qw( inbound_server ), our $SPYGLASS_USER,
+   requires => [ $main::INBOUND_SERVER, $main::SPYGLASS_USER,
                 qw( can_lookup_room_alias )],
 
    check => sub {
@@ -44,11 +44,12 @@ test "Inbound federation can query room alias directory",
    # TODO(paul): technically this doesn't need local_user_fixture(), if we had
    #   some user we could assert can perform media/directory/etc... operations
    #   but doesn't mutate any of its own state, or join rooms, etc...
-   requires => [qw( outbound_client first_home_server ), local_user_fixture(),
-                qw( can_create_room_alias)],
+   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0], local_user_fixture(),
+                 qw( can_create_room_alias )],
 
    do => sub {
-      my ( $outbound_client, $first_home_server, $user ) = @_;
+      my ( $outbound_client, $info, $user ) = @_;
+      my $first_home_server = $info->server_name;
 
       my $room_id;
       my $room_alias = "#50federation-11query-directory:$first_home_server";
@@ -68,8 +69,9 @@ test "Inbound federation can query room alias directory",
          )
       })->then( sub {
          $outbound_client->do_request_json(
-            method => "GET",
-            uri    => "/query/directory",
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/query/directory",
 
             params => {
                room_alias => $room_alias,

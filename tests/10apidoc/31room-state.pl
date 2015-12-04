@@ -20,7 +20,7 @@ my $room_fixture = fixture(
 test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
    requires => [ $user_fixture, $room_fixture ],
 
-   provides => [qw( can_get_room_membership )],
+   proves => [qw( can_get_room_membership )],
 
    check => sub {
       my ( $user, $room_id, undef ) = @_;
@@ -36,8 +36,6 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
          $body->{membership} eq "join" or
             die "Expected membership as 'join'";
 
-         provide can_get_room_membership => 1;
-
          Future->done(1);
       });
    };
@@ -45,7 +43,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
 test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
    requires => [ $user_fixture, $room_fixture ],
 
-   provides => [qw( can_get_room_powerlevels )],
+   proves => [qw( can_get_room_powerlevels )],
 
    check => sub {
       my ( $user, $room_id, undef ) = @_;
@@ -62,8 +60,6 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
          assert_json_object( $body->{users} );
          assert_json_object( $body->{events} );
 
-         provide can_get_room_powerlevels => 1;
-
          Future->done(1);
       });
    };
@@ -71,7 +67,7 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
    requires => [ $user_fixture, $room_fixture ],
 
-   provides => [qw( can_room_initial_sync )],
+   proves => [qw( can_room_initial_sync )],
 
    check => sub {
       my ( $user, $room_id, undef ) = @_;
@@ -90,14 +86,12 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
          $body->{membership} eq "join" or
             die "Expected 'membership' as 'join'";
 
-         provide can_room_initial_sync => 1;
-
          Future->done(1);
       });
    };
 
 test "GET /publicRooms lists newly-created room",
-   requires => [qw( first_api_client ), $room_fixture ],
+   requires => [ $main::API_CLIENTS[0], $room_fixture ],
 
    check => sub {
       my ( $http, $room_id, undef ) = @_;
@@ -128,7 +122,7 @@ test "GET /publicRooms lists newly-created room",
    };
 
 test "GET /directory/room/:room_alias yields room ID",
-   requires => [ our $SPYGLASS_USER, $room_fixture ],
+   requires => [ $main::SPYGLASS_USER, $room_fixture ],
 
    check => sub {
       my ( $user, $room_id, $room_alias ) = @_;
@@ -152,7 +146,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    requires => [ $user_fixture, $room_fixture,
                  qw( can_room_initial_sync )],
 
-   provides => [qw( can_set_room_name )],
+   proves => [qw( can_set_room_name )],
 
    do => sub {
       my ( $user, $room_id, undef ) = @_;
@@ -179,8 +173,6 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
          $state_by_type{"m.room.name"} or
             die "Expected to find m.room.name state";
 
-         provide can_set_room_name => 1;
-
          Future->done(1);
       });
    };
@@ -189,7 +181,7 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
    requires => [ $user_fixture, $room_fixture,
                  qw( can_set_room_name )],
 
-   provides => [qw( can_get_room_name )],
+   proves => [qw( can_get_room_name )],
 
    check => sub {
       my ( $user, $room_id, undef ) = @_;
@@ -205,8 +197,6 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
          $body->{name} eq $name or
             die "Expected name to be '$name'";
 
-         provide can_get_room_name => 1;
-
          Future->done(1);
       });
    };
@@ -217,7 +207,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    requires => [ $user_fixture, $room_fixture,
                  qw( can_room_initial_sync )],
 
-   provides => [qw( can_set_room_topic )],
+   proves => [qw( can_set_room_topic )],
 
    do => sub {
       my ( $user, $room_id, undef ) = @_;
@@ -244,8 +234,6 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
          $state_by_type{"m.room.topic"} or
             die "Expected to find m.room.topic state";
 
-         provide can_set_room_topic => 1;
-
          Future->done(1);
       });
    };
@@ -254,7 +242,7 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
    requires => [ $user_fixture, $room_fixture,
                  qw( can_set_room_topic )],
 
-   provides => [qw( can_get_room_topic )],
+   proves => [qw( can_get_room_topic )],
 
    check => sub {
       my ( $user, $room_id, undef ) = @_;
@@ -270,8 +258,6 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
          $body->{topic} eq $topic or
             die "Expected topic to be '$topic'";
 
-         provide can_get_room_topic => 1;
-
          Future->done(1);
       });
    };
@@ -279,7 +265,7 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
 test "GET /rooms/:room_id/state fetches entire room state",
    requires => [ $user_fixture, $room_fixture ],
 
-   provides => [qw( can_get_room_all_state )],
+   proves => [qw( can_get_room_all_state )],
 
    check => sub {
       my ( $user, $room_id, undef ) = @_;
@@ -297,8 +283,6 @@ test "GET /rooms/:room_id/state fetches entire room state",
          defined $state_by_type{$_} or die "Missing $_ state" for
             qw( m.room.create m.room.join_rules m.room.name m.room.power_levels );
 
-         provide can_get_room_all_state => 1;
-
          Future->done(1);
       });
    };
@@ -308,7 +292,7 @@ test "GET /rooms/:room_id/state fetches entire room state",
 test "POST /createRoom with creation content",
    requires => [ $user_fixture ],
 
-   provides => [qw( can_create_room_with_creation_content )],
+   proves => [qw( can_create_room_with_creation_content )],
 
    do => sub {
       my ( $user ) = @_;
@@ -338,8 +322,6 @@ test "POST /createRoom with creation content",
          log_if_fail "state", $state;
 
          assert_json_keys( $state, qw( m.federate ));
-
-         provide can_create_room_with_creation_content => 1;
 
          Future->done(1);
       });

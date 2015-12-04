@@ -2,7 +2,7 @@ use JSON qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha",
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS[0] ],
 
    do => sub {
       my ( $http ) = @_;

@@ -586,7 +586,7 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
    };
 
 test "GET /publicRooms lists rooms",
-   requires => [qw( first_api_client ), local_user_fixture() ],
+   requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
 
    check => sub {
       my ( $http, $user ) = @_;
@@ -690,7 +690,7 @@ test "GET /publicRooms lists rooms",
 sub anonymous_user_fixture
 {
    fixture(
-      requires => [qw( first_api_client )],
+      requires => [ $main::API_CLIENTS[0] ],
 
       setup => sub {
          my ( $http ) = @_;

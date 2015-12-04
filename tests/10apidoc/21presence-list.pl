@@ -26,7 +26,7 @@ test "GET /presence/:user_id/list initially empty",
 test "POST /presence/:user_id/list can invite users",
    requires => [ $fixture, $friend_fixture ],
 
-   provides => [qw( can_invite_presence )],
+   proves => [qw( can_invite_presence )],
 
    do => sub {
       my ( $user, $friend ) = @_;
@@ -56,8 +56,6 @@ test "POST /presence/:user_id/list can invite users",
          $body->[0]->{user_id} eq $friend->user_id or
             die "Expected friend user_id";
 
-         provide can_invite_presence => 1;
-
          Future->done(1);
       });
    };
@@ -66,7 +64,7 @@ test "POST /presence/:user_id/list can drop users",
    requires => [ $fixture,
                  qw( can_invite_presence )],
 
-   provides => [qw( can_drop_presence )],
+   proves => [qw( can_drop_presence )],
 
    do => sub {
       my ( $user ) = @_;
@@ -103,8 +101,6 @@ test "POST /presence/:user_id/list can drop users",
 
          assert_json_list( $body );
          @$body == 0 or die "Expected an empty list";
-
-         provide can_drop_presence => 1;
 
          Future->done(1);
       });

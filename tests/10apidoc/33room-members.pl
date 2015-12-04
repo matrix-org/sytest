@@ -69,7 +69,7 @@ test "POST /join/:room_alias can join a room",
    requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
-   provides => [qw( can_join_room_by_alias )],
+   proves => [qw( can_join_room_by_alias )],
 
    do => sub {
       my ( $user, $room_id, $room_alias ) = @_;
@@ -100,8 +100,6 @@ test "POST /join/:room_alias can join a room",
 
          $body->{membership} eq "join" or
             die "Expected membership to be 'join'";
-
-         provide can_join_room_by_alias => 1;
 
          Future->done(1);
       });
@@ -207,7 +205,7 @@ test "POST /rooms/:room_id/invite can send an invite",
    requires => [ $creator_fixture, local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
-   provides => [qw( can_invite_room )],
+   proves => [qw( can_invite_room )],
 
    do => sub {
       my ( $creator, $invited_user, $room_id, undef ) = @_;
@@ -232,13 +230,11 @@ test "POST /rooms/:room_id/invite can send an invite",
          $body->{membership} eq "invite" or
             die "Expected membership to be 'invite'";
 
-         provide can_invite_room => 1;
-
-         push our @EXPORT, qw( matrix_invite_user_to_room );
-
          Future->done(1);
       });
    };
+
+push @EXPORT, qw( matrix_invite_user_to_room );
 
 sub matrix_invite_user_to_room
 {
@@ -269,7 +265,7 @@ test "POST /rooms/:room_id/ban can ban a user",
    requires => [ $creator_fixture, local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
-   provides => [qw( can_ban_room )],
+   proves => [qw( can_ban_room )],
 
    do => sub {
       my ( $creator, $banned_user, $room_id, undef ) = @_;
@@ -296,8 +292,6 @@ test "POST /rooms/:room_id/ban can ban a user",
 
          $body->{membership} eq "ban" or
             die "Expecting membership to be 'ban'";
-
-         provide can_ban_room => 1;
 
          Future->done(1);
       });

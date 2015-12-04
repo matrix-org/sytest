@@ -26,12 +26,13 @@ sub wait_for_event_in_room {
 }
 
 test "State is included in the timeline in the initial sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id );
+      my ( $filter_id, $room_id );
 
       my $filter = {
          room => {
@@ -42,8 +43,8 @@ test "State is included in the timeline in the initial sync",
          presence => {types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -81,12 +82,13 @@ test "State is included in the timeline in the initial sync",
 # state that has arrived over federation counts as an 'outlier', so should
 # only appear in the state dictionary, not the timeline.
 test "State from remote users is included in the state in the initial sync",
-    requires => [remote_user_fixture(), qw( first_api_client can_sync )],
+    requires => [ local_user_fixture( with_events => 0 ), remote_user_fixture(),
+                  qw( can_sync ) ],
 
     check => sub {
-        my ( $remote_user, $http ) = @_;
+        my ( $user, $remote_user) = @_;
 
-        my ( $user, $filter_id, $room_id );
+        my ( $filter_id, $room_id );
 
         my $filter = {
             room => {
@@ -97,8 +99,8 @@ test "State from remote users is included in the state in the initial sync",
             presence => {types => [] },
         };
 
-        matrix_register_user_with_filter( $http, $filter )->then( sub {
-            ( $user, $filter_id ) = @_;
+        matrix_create_filter( $user, $filter )->then( sub {
+            ( $filter_id ) = @_;
 
             matrix_create_room( $remote_user );
         })->then( sub {
@@ -137,12 +139,13 @@ test "State from remote users is included in the state in the initial sync",
 
 
 test "Changes to state are included in an incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = {
          room => {
@@ -153,8 +156,8 @@ test "Changes to state are included in an incremental sync",
          presence => {types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -204,12 +207,13 @@ test "Changes to state are included in an incremental sync",
 
 
 test "Changes to state are included in an gapped incremental sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = {
          room => {
@@ -220,8 +224,8 @@ test "Changes to state are included in an gapped incremental sync",
          presence => {types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
@@ -281,12 +285,13 @@ test "Changes to state are included in an gapped incremental sync",
 
 
 test "State from remote users is included in the timeline in an incremental sync",
-    requires => [remote_user_fixture(), qw( first_api_client can_sync )],
+    requires => [ local_user_fixture( with_events => 0 ), remote_user_fixture(),
+                  qw( can_sync ) ],
 
     check => sub {
-        my ( $remote_user, $http ) = @_;
+        my ( $user, $remote_user ) = @_;
 
-        my ( $user, $filter_id, $room_id, $next_batch );
+        my ( $filter_id, $room_id, $next_batch );
 
         my $filter = {
             room => {
@@ -297,8 +302,8 @@ test "State from remote users is included in the timeline in an incremental sync
             presence => {types => [] },
         };
 
-        matrix_register_user_with_filter( $http, $filter )->then( sub {
-            ( $user, $filter_id ) = @_;
+        matrix_create_filter( $user, $filter )->then( sub {
+            ( $filter_id ) = @_;
 
             matrix_create_room( $remote_user );
         })->then( sub {
@@ -344,20 +349,21 @@ test "State from remote users is included in the timeline in an incremental sync
 
 
 test "A full_state incremental update returns all state",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = { room => {
           timeline => { limit => 2 },
           state     => { types => [ "a.madeup.test.state" ] },
       } };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -443,12 +449,13 @@ test "A full_state incremental update returns all state",
 
 
 test "When user joins a room the state is included in the next sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -460,10 +467,10 @@ test "When user joins a room the state is included in the next sync",
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_create_room( $user_a );
       })->then( sub {
@@ -505,13 +512,14 @@ test "When user joins a room the state is included in the next sync",
 
 
 test "A change to displayname should not result in a full state sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
    bug => 'SYN-515',
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user ) = @_;
 
-      my ( $user, $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id, $next_batch );
 
       my $filter = {
          room => {
@@ -522,8 +530,8 @@ test "A change to displayname should not result in a full state sync",
          presence => { types => [] },
       };
 
-      matrix_register_user_with_filter( $http, $filter )->then( sub {
-         ( $user, $filter_id ) = @_;
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user );
       })->then( sub {
@@ -566,12 +574,13 @@ test "A change to displayname should not result in a full state sync",
 
 
 test "When user joins a room the state is included in a gapped sync",
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync )],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -583,10 +592,11 @@ test "When user joins a room the state is included in a gapped sync",
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
+
          matrix_create_room( $user_a )
       })->then( sub {
          ( $room_id ) = @_;
@@ -634,12 +644,13 @@ test "When user joins a room the state is included in a gapped sync",
 
 test "When user joins and leaves a room in the same batch, the full state is still included in the next sync",
    bug => 'SYN-514',
-   requires => [qw( first_api_client can_sync )],
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync ) ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $user_a, $user_b ) = @_;
 
-      my ( $user_a, $filter_id_a, $user_b, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
 
       my $filter = {
          room => {
@@ -651,10 +662,10 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       };
 
       Future->needs_all(
-         matrix_register_user_with_filter( $http, $filter ),
-         matrix_register_user_with_filter( $http, $filter ),
+         matrix_create_filter( $user_a, $filter ),
+         matrix_create_filter( $user_b, $filter ),
       )->then( sub {
-         ( $user_a, $filter_id_a, $user_b, $filter_id_b ) = @_;
+         ( $filter_id_a, $filter_id_b ) = @_;
 
          matrix_create_room( $user_a );
       })->then( sub {

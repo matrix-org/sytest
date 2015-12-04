@@ -13,13 +13,14 @@ my $room_fixture = fixture(
 );
 
 test "PUT /directory/room/:room_alias creates alias",
-   requires => [qw( first_home_server ), $user_fixture, $room_fixture ],
+   requires => [ $user_fixture, $room_fixture ],
 
-   provides => [qw( can_create_room_alias can_lookup_room_alias )],
+   proves => [qw( can_create_room_alias can_lookup_room_alias )],
 
    do => sub {
-      my ( $first_home_server, $user, $room_id ) = @_;
-      my $room_alias = "${alias_localpart}:$first_home_server";
+      my ( $user, $room_id ) = @_;
+      my $server_name = $user->http->server_name;
+      my $room_alias = "${alias_localpart}:$server_name";
 
       do_request_json_for( $user,
          method => "PUT",
@@ -28,14 +29,13 @@ test "PUT /directory/room/:room_alias creates alias",
          content => {
             room_id => $room_id,
          },
-      )->on_done( sub {
-         provide can_create_room_alias => 1;
-      })
+      );
    },
 
    check => sub {
-      my ( $first_home_server, $user, $room_id ) = @_;
-      my $room_alias = "${alias_localpart}:$first_home_server";
+      my ( $user, $room_id ) = @_;
+      my $server_name = $user->http->server_name;
+      my $room_alias = "${alias_localpart}:$server_name";
 
       do_request_json_for( $user,
          method => "GET",
@@ -47,8 +47,6 @@ test "PUT /directory/room/:room_alias creates alias",
          assert_json_list( $body->{servers} );
 
          $body->{room_id} eq $room_id or die "Expected room_id";
-
-         provide can_lookup_room_alias => 1;
 
          Future->done(1);
       });

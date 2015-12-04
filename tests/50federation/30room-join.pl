@@ -6,10 +6,10 @@ sub make_auth_events
 }
 
 test "Outbound federation can send room-join requests",
-   requires => [ local_user_fixture(), qw( inbound_server outbound_client )],
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER ],
 
    do => sub {
-      my ( $user, $inbound_server, $outbound_client ) = @_;
+      my ( $user, $inbound_server ) = @_;
       my $local_server_name = $inbound_server->server_name;
 
       # We'll have to jump through the extra hoop of using the directory
@@ -129,19 +129,22 @@ test "Outbound federation can send room-join requests",
    };
 
 test "Inbound federation can receive room-join requests",
-   requires => [qw( outbound_client inbound_server first_home_server ),
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 $main::HOMESERVER_INFO[0],
                  room_fixture( requires_users => [ local_user_fixture() ] ) ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $first_home_server, $room_id ) = @_;
+      my ( $outbound_client, $inbound_server, $info, $room_id ) = @_;
+      my $first_home_server = $info->server_name;
 
       my $local_server_name = $outbound_client->server_name;
 
       my $user_id = "\@50fed-user:$local_server_name";
 
       $outbound_client->do_request_json(
-         method => "GET",
-         uri    => "/make_join/$room_id/$user_id",
+         method   => "GET",
+         hostname => $first_home_server,
+         uri      => "/make_join/$room_id/$user_id",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "make_join body", $body;
@@ -197,8 +200,9 @@ test "Inbound federation can receive room-join requests",
          );
 
          $outbound_client->do_request_json(
-            method => "PUT",
-            uri    => "/send_join/$room_id/$event{event_id}",
+            method   => "PUT",
+            hostname => $first_home_server,
+            uri      => "/send_join/$room_id/$event{event_id}",
 
             content => \%event,
          )

@@ -3,7 +3,7 @@ my ( $user_fixture, $room_fixture ) = local_user_and_room_fixtures();
 test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
    requires => [ $user_fixture, $room_fixture ],
 
-   provides => [qw( can_get_power_levels )],
+   proves => [qw( can_get_power_levels )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -31,7 +31,6 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
          $body->{users}{ $user->user_id } > $body->{users_default} or
             die "Expected room creator to have a higher-than-default powerlevel";
 
-         provide can_get_power_levels => 1;
          Future->done(1);
       });
    };
@@ -40,7 +39,7 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
    requires => [ $user_fixture, $room_fixture,
                  qw( can_get_power_levels )],
 
-   provides => [qw( can_set_power_levels )],
+   proves => [qw( can_set_power_levels )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -64,7 +63,6 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
          $levels->{users}{'@random-other-user:their.home'} == 20 or
             die "Expected to have set other user's level to 20";
 
-         provide can_set_power_levels => 1;
          Future->done(1);
       });
    };
@@ -72,17 +70,15 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
 test "Both GET and PUT work",
    requires => [qw( can_get_power_levels can_set_power_levels )],
 
-   provides => [qw( can_change_power_levels )],
+   proves => [qw( can_change_power_levels )],
 
    check => sub {
       # Nothing to be done
 
-      push our @EXPORT, qw( matrix_change_room_powerlevels );
-
-      provide can_change_power_levels => 1;
-
       Future->done(1);
    };
+
+push our @EXPORT, qw( matrix_change_room_powerlevels );
 
 sub matrix_change_room_powerlevels
 {
