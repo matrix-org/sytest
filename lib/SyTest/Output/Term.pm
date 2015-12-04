@@ -40,37 +40,6 @@ sub enter_multi_test
    return SyTest::Output::Term::Test->new( name => $name, expect_fail => $expect_fail, multi => 1 );
 }
 
-# General preparation status
-sub start_prepare
-{
-   shift;
-   my ( $name ) = @_;
-   print "  ${CYAN}Preparing: $name${RESET}... ";
-}
-
-sub skip_prepare
-{
-   shift;
-   my ( $name, $req ) = @_;
-   print "  ${YELLOW_B}SKIP${RESET} '$name' prepararation due to lack of $req\n";
-}
-
-sub pass_prepare
-{
-   shift;
-   print "DONE\n";
-}
-
-sub fail_prepare
-{
-   shift;
-   my ( $failure ) = @_;
-
-   print "${RED_B}FAIL${RESET}:\n";
-   print " | $_\n" for split m/\n/, $failure;
-   print " +----------------------\n";
-}
-
 # Overall summary
 sub final_pass
 {
