@@ -338,10 +338,6 @@ sub fixture
    );
 }
 
-my $failed;
-my $expected_fail;
-my $skipped_count = 0;
-
 use constant { PROVEN => 1, PRESUMED => 2 };
 my %proven;
 
@@ -571,6 +567,10 @@ TEST: {
    );
 }
 
+my $failed_count;
+my $expected_fail_count;
+my $skipped_count = 0;
+
 # Now run the tests
 my $prev_filename;
 foreach my $test ( @TESTS ) {
@@ -598,7 +598,7 @@ foreach my $test ( @TESTS ) {
    }
 
    if( $t->failed ) {
-      $test->expect_fail ? $expected_fail++ : $failed++;
+      $test->expect_fail ? $expected_fail_count++ : $failed_count++;
 
       $OUTPUT->diag( $_ ) for @log_if_fail_lines;
 
@@ -617,8 +617,8 @@ if( $WAIT_AT_END ) {
    $stdin->read_until( "\n" )->get;
 }
 
-if( $failed ) {
-   $OUTPUT->final_fail( $failed );
+if( $failed_count ) {
+   $OUTPUT->final_fail( $failed_count );
 
    # TODO: umh.. this apparently broke some time ago. Should fix it
    #my @f;
@@ -633,7 +633,7 @@ if( $failed ) {
    exit 1;
 }
 else {
-   $OUTPUT->final_pass( $expected_fail, $skipped_count );
+   $OUTPUT->final_pass( $expected_fail_count, $skipped_count );
    exit 0;
 }
 
