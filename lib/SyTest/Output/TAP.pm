@@ -71,8 +71,6 @@ package SyTest::Output::TAP::Test {
 
    sub start {}
 
-   sub progress {}
-
    sub pass { }
 
    sub fail
