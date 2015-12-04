@@ -148,6 +148,14 @@ EOF
 my $OUTPUT = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
 
+# Turn warnings into $OUTPUT->diag calls
+$SIG{__WARN__} = sub {
+   my $message = join "", @_;
+   chomp $message;
+
+   $OUTPUT->diag( $message );
+};
+
 if( $CLIENT_LOG ) {
    require Net::Async::HTTP;
    require Net::Async::HTTP::Server;
