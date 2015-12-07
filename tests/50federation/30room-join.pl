@@ -1,9 +1,6 @@
 use List::UtilsBy qw( partition_by extract_by );
 
-sub make_auth_events
-{
-   [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
-}
+use SyTest::Federation::Room;
 
 test "Outbound federation can send room-join requests",
    requires => [ local_user_fixture(), $main::INBOUND_SERVER ],
@@ -12,13 +9,18 @@ test "Outbound federation can send room-join requests",
       my ( $user, $inbound_server ) = @_;
       my $local_server_name = $inbound_server->server_name;
 
+      my $creator = '@50fed:' . $local_server_name;
+
+      my $room = SyTest::Federation::Room->create(
+         server  => $inbound_server,
+         creator => $creator,
+      );
+      my $room_id = $room->room_id;
+
       # We'll have to jump through the extra hoop of using the directory
       # service first, because we can't join a remote room by room ID alone
 
       my $room_alias = "#50fed-room-alias:$local_server_name";
-      my $room_id    = $inbound_server->next_room_id;
-      my $creator    = '@50fed:' . $local_server_name;
-
       require_stub $inbound_server->await_query_directory( $room_alias )
          ->on_done( sub {
             my ( $req ) = @_;
@@ -31,55 +33,18 @@ test "Outbound federation can send room-join requests",
             } );
          });
 
-      my $create_event = $inbound_server->create_event(
-         type => "m.room.create",
-
-         auth_events => [],
-         prev_events => [],
-         prev_state  => [],
-         content     => { creator => $creator },
-         depth       => 0,
-         room_id     => $room_id,
-         sender      => $creator,
-         state_key   => "",
-      );
-
-      my $joinrules_event = $inbound_server->create_event(
-         type => "m.room.join_rules",
-
-         auth_events => make_auth_events( $create_event ),
-         prev_events => make_auth_events( $create_event ),
-         prev_state  => [],
-         content     => { join_rule => "public" },
-         depth       => 0,
-         room_id     => $room_id,
-         sender      => $creator,
-         state_key   => "",
-      );
-
-      my %join_protoevent = (
-         type => "m.room.member",
-
-         auth_events      => make_auth_events( $create_event, $joinrules_event ),
-         content          => { membership => "join" },
-         depth            => 0,
-         event_id         => my $join_event_id = $inbound_server->next_event_id,
-         origin           => $inbound_server->server_name,
-         origin_server_ts => $inbound_server->time_ms,
-         prev_events      => [],
-         room_id          => $room_id,
-         sender           => $user->user_id,
-         state_key        => $user->user_id,
-      );
-
       Future->needs_all(
          # Await PDU?
 
          $inbound_server->await_make_join( $room_id, $user->user_id )->then( sub {
             my ( $req, $room_id, $user_id ) = @_;
 
+            my $proto = $room->make_join_protoevent(
+               user_id => $user_id,
+            );
+
             $req->respond_json( {
-               event => \%join_protoevent,
+               event => $proto,
             } );
 
             Future->done;
