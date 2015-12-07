@@ -19,7 +19,7 @@ sub extract_extra_args
 my @synapses;
 
 END {
-   $output->diag( "Killing synapse servers " ) if @synapses;
+   $OUTPUT->diag( "Killing synapse servers " ) if @synapses;
 
    foreach my $synapse ( values @synapses ) {
       $synapse->kill( 'INT' );
@@ -75,7 +75,7 @@ our @HOMESERVER_INFO = map {
             synapse_dir   => $SYNAPSE_ARGS{directory},
             port          => $secure_port,
             unsecure_port => $unsecure_port,
-            output        => $output,
+            output        => $OUTPUT,
             print_output  => $SYNAPSE_ARGS{log},
             extra_args    => \@extra_args,
             python        => $SYNAPSE_ARGS{python},

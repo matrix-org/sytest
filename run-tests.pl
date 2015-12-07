@@ -92,6 +92,14 @@ GetOptions(
    'h|help' => sub { usage(0) },
 ) or usage(1);
 
+my %only_files;
+my $stop_after;
+if( @ARGV ) {
+   $only_files{$_}++ for @ARGV;
+
+   $stop_after = maxstr keys %only_files;
+}
+
 push @{ $SYNAPSE_ARGS{extra_args} }, "-v" if $VERBOSE;
 
 sub usage
@@ -145,8 +153,16 @@ EOF
    exit $exitcode;
 }
 
-my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
+my $OUTPUT = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
+
+# Turn warnings into $OUTPUT->diag calls
+$SIG{__WARN__} = sub {
+   my $message = join "", @_;
+   chomp $message;
+
+   $OUTPUT->diag( $message );
+};
 
 if( $CLIENT_LOG ) {
    require Net::Async::HTTP;
@@ -330,10 +346,6 @@ sub fixture
    );
 }
 
-my $failed;
-my $expected_fail;
-my $skipped_count = 0;
-
 use constant { PROVEN => 1, PRESUMED => 2 };
 my %proven;
 
@@ -377,6 +389,11 @@ sub _push_test
    # is not yet fixed
    $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
+   if( %only_files and not exists $only_files{$filename} ) {
+      $proven{$_} = PRESUMED for @{ $params{proves} // [] };
+      return;
+   }
+
    push @TESTS, Test( $filename, $name, $multi,
       @params{qw( expect_fail critical proves requires check do timeout )} );
 }
@@ -408,7 +425,7 @@ sub _run_test
             $t->skip( "lack of $req" );
             return;
          }
-         $output->diag( "Presuming ability '$req'" ) if $proven{$req} == PRESUMED;
+         $OUTPUT->diag( "Presuming ability '$req'" ) if $proven{$req} == PRESUMED;
       }
    }
 
@@ -503,14 +520,6 @@ sub SyTest::pass_on_done
    $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
 }
 
-my %only_files;
-my $stop_after;
-if( @ARGV ) {
-   $only_files{$_}++ for @ARGV;
-
-   $stop_after = maxstr keys %only_files;
-}
-
 sub list_symbols
 {
    my ( $pkg ) = @_;
@@ -563,36 +572,44 @@ TEST: {
    );
 }
 
+my $done_count = 0;
+my $failed_count = 0;
+my $expected_fail_count = 0;
+my $skipped_count = 0;
+
+$OUTPUT->status(
+   tests   => scalar @TESTS,
+   done    => $done_count,
+   failed  => $failed_count,
+   skipped => $skipped_count,
+);
+
 # Now run the tests
 my $prev_filename;
 foreach my $test ( @TESTS ) {
-   if( %only_files and not exists $only_files{ $test->file } ) {
-      $proven{$_} = PRESUMED for @{ $test->proves // [] };
-      $skipped_count++;
-      next;
-   }
-
    if( !$prev_filename or $prev_filename ne $test->file ) {
-      $output->run_file( $prev_filename = $test->file );
+      $OUTPUT->run_file( $prev_filename = $test->file );
    }
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
 
-   my $t = $output->$m( $test->name, $test->expect_fail );
+   my $t = $OUTPUT->$m( $test->name, $test->expect_fail );
    local $RUNNING_TEST = $t;
 
    _run_test( $t, $test );
 
    $t->leave;
 
+   $done_count++;
+
    if( $t->skipped ) {
       $skipped_count++;
    }
 
    if( $t->failed ) {
-      $test->expect_fail ? $expected_fail++ : $failed++;
+      $test->expect_fail ? $expected_fail_count++ : $failed_count++;
 
-      $output->diag( $_ ) for @log_if_fail_lines;
+      $OUTPUT->diag( $_ ) for @log_if_fail_lines;
 
       last if $STOP_ON_FAIL and not $test->expect_fail;
 
@@ -601,7 +618,16 @@ foreach my $test ( @TESTS ) {
          last;
       }
    }
+
+   $OUTPUT->status(
+      tests   => scalar @TESTS,
+      done    => $done_count,
+      failed  => $failed_count,
+      skipped => $skipped_count,
+   );
 }
+
+$OUTPUT->status();
 
 if( $WAIT_AT_END ) {
    print STDERR "Waiting... (hit ENTER to end)\n";
@@ -609,8 +635,8 @@ if( $WAIT_AT_END ) {
    $stdin->read_until( "\n" )->get;
 }
 
-if( $failed ) {
-   $output->final_fail( $failed );
+if( $failed_count ) {
+   $OUTPUT->final_fail( $failed_count );
 
    # TODO: umh.. this apparently broke some time ago. Should fix it
    #my @f;
@@ -625,7 +651,7 @@ if( $failed ) {
    exit 1;
 }
 else {
-   $output->final_pass( $expected_fail, $skipped_count );
+   $OUTPUT->final_pass( $expected_fail_count, $skipped_count );
    exit 0;
 }
 

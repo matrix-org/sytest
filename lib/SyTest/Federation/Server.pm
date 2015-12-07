@@ -233,7 +233,7 @@ sub _dispatch
       }
    }
 
-   print STDERR "TODO: Respond to request to /_matrix/${\join '/', @trial}\n";
+   warn "TODO: Respond to request to /_matrix/${\join '/', @trial}";
 
    return Future->done(
       response => HTTP::Response->new(
@@ -291,7 +291,7 @@ sub mk_await_request_pair
 
       return $self->{$okey}{$ikey} = Future->new
          ->on_cancel( sub {
-            print STDERR "Cancelling unused $shortname await for @paramvalues";
+            warn "Cancelling unused $shortname await for @paramvalues";
             delete $self->{$okey}{$ikey};
          });
    };
@@ -362,7 +362,7 @@ sub on_request_federation_v1_send
    foreach my $edu ( @{ $body->{edus} } ) {
       next if $self->on_edu( $edu, $origin );
 
-      print STDERR "TODO: Unhandled incoming EDU of type '$edu->{edu_type}'\n";
+      warn "TODO: Unhandled incoming EDU of type '$edu->{edu_type}'";
    }
 
    Future->done( json => {} );

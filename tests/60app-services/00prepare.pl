@@ -54,7 +54,7 @@ my $f = repeat {
             $f->done( $event, $request );
          }
          else {
-            print "Ignoring incoming AS event of type $type\n";
+            warn "Ignoring incoming AS event of type $type\n";
          }
       }
 
