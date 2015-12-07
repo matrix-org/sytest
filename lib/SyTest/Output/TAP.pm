@@ -36,38 +36,6 @@ sub enter_multi_test
    );
 }
 
-# General preparation status
-my $running;
-sub start_prepare
-{
-   shift;
-   ( $running ) = @_;
-}
-
-sub skip_prepare
-{
-   shift;
-   my ( $name, $req ) = @_;
-   ++$test_num;
-   print "ok $test_num $name # skip Missing requirement $req\n";
-}
-
-sub pass_prepare
-{
-   ++$test_num;
-   print "ok $test_num prepared $running\n";
-}
-
-sub fail_prepare
-{
-   shift;
-   my ( $failure ) = @_;
-   ++$test_num;
-   print "not ok $test_num prepared $running\n";
-
-   print "# $_\n" for split m/\n/, $failure;
-}
-
 # Overall summary
 sub final_pass
 {
@@ -89,6 +57,8 @@ sub diag
    print "# $message\n";
 }
 
+sub status {}
+
 package SyTest::Output::TAP::Test {
    sub new { my $class = shift; bless { subnum => 0, @_ }, $class }
 
@@ -102,8 +72,6 @@ package SyTest::Output::TAP::Test {
    sub subnum :lvalue  { shift->{subnum}      }
 
    sub start {}
-
-   sub progress {}
 
    sub pass { }
 
