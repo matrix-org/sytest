@@ -26,6 +26,7 @@ sub _init
    my ( $params ) = @_;
 
    $self->{next_event_id} = 0;
+   $self->{next_room_id} = 0;
 
    # Use 'on_request' as a configured parameter rather than a subclass method
    # so that the '$CLIENT_LOG' logic in run-tests.pl can properly put
@@ -57,6 +58,12 @@ sub next_event_id
 {
    my $self = shift;
    return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
+}
+
+sub next_room_id
+{
+   my $self = shift;
+   return sprintf "!%d:%s", $self->{next_room_id}++, $self->server_name;
 }
 
 sub create_event

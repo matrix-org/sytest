@@ -16,7 +16,7 @@ test "Outbound federation can send room-join requests",
       # service first, because we can't join a remote room by room ID alone
 
       my $room_alias = "#50fed-room-alias:$local_server_name";
-      my $room_id    = "!50fed-room-alias:$local_server_name";
+      my $room_id    = $inbound_server->next_room_id;
       my $creator    = '@50fed:' . $local_server_name;
 
       require_stub $inbound_server->await_query_directory( $room_alias )
