@@ -85,7 +85,7 @@ test "Outbound federation can send room-join requests",
             Future->done;
          }),
 
-         $inbound_server->await_send_join( $room_id, $join_event_id )->then( sub {
+         $inbound_server->await_send_join( $room_id )->then( sub {
             my ( $req, $room_id, $event_id ) = @_;
 
             $req->method eq "PUT" or
