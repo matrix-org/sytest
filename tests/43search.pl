@@ -1,3 +1,6 @@
+use List::Util qw( first );
+
+
 test "Can search for an event by body",
    requires => [ local_user_and_room_fixtures() ],
 
@@ -36,7 +39,9 @@ test "Can search for an event by body",
 
          $room_events->{count} == 1 or die "Expected one search result";
 
-         my $result = $room_events->{results}{ $event_id };
+         my $results = $room_events->{results};
+         my $result = first { $_->{result}{event_id} eq $event_id } @$results;
+
          assert_json_keys( $result, qw( rank result ) );
          assert_json_keys( $result->{result}, qw(
             event_id room_id user_id content type
