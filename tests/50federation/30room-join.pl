@@ -123,7 +123,7 @@ test "Inbound federation can receive room-join requests",
          my $protoevent = $body->{event};
 
          assert_json_keys( $protoevent, qw(
-            auth_events content depth event_id prev_state room_id sender state_key type
+            auth_events content depth prev_state room_id sender state_key type
          ));
 
          assert_json_nonempty_list( my $auth_events = $protoevent->{auth_events} );
@@ -139,7 +139,6 @@ test "Inbound federation can receive room-join requests",
          assert_json_nonempty_list( $protoevent->{prev_events} );
 
          assert_json_number( $protoevent->{depth} );
-         assert_json_string( $protoevent->{event_id} );
 
          $protoevent->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
