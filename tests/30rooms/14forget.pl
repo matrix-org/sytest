@@ -25,10 +25,10 @@ test "Forgotten room messages cannot be paginated",
             state_key => $user->user_id
          )
       })->then( sub {
-         my ( $event ) = @_;
+         my ( $content ) = @_;
 
-         log_if_fail "member event", $event;
-         $event->{membership} eq "leave" or die "Wrong membership state";
+         assert_eq( $content->{membership}, "leave",
+            "membership state" );
 
          matrix_forget_room( $user, $room_id )
       })->then( sub {
@@ -37,10 +37,10 @@ test "Forgotten room messages cannot be paginated",
             state_key => $user->user_id
          )
       })->then( sub {
-         my ( $event ) = @_;
+         my ( $content ) = @_;
 
-         log_if_fail "member event", $event;
-         $event->{membership} eq "leave" or die "Wrong membership state";
+         assert_eq( $content->{membership}, "leave",
+            "membership state" );
 
          matrix_get_room_messages( $user, $room_id, limit => 1 )
             ->main::expect_http_403;
@@ -72,9 +72,10 @@ test "Forgetting room leaves room",
             state_key => $user->user_id,
          )
       })->then( sub {
-         my ( $event ) = @_;
+         my ( $content ) = @_;
 
-         $event->{membership} eq "leave" or die "Wrong membership state";
+         assert_eq( $content->{membership}, "leave",
+            "membership state" );
 
          matrix_get_room_messages( $user, $room_id, limit => 1 )
             ->main::expect_http_403;

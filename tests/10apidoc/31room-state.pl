@@ -328,7 +328,8 @@ test "POST /createRoom with creation content",
    };
 
 push our @EXPORT, qw(
-   matrix_get_room_state matrix_put_room_state matrix_initialsync_room
+   matrix_get_room_state matrix_put_room_state matrix_get_my_member_event
+   matrix_initialsync_room
 );
 
 sub matrix_get_room_state
@@ -368,6 +369,22 @@ sub matrix_put_room_state
    );
 }
 
+sub matrix_get_my_member_event
+{
+   my ( $user, $room_id ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
+
+   # TODO: currently have to go the long way around finding it; see SPEC-264
+   matrix_get_room_state( $user, $room_id )->then( sub {
+      my ( $state ) = @_;
+
+      my $member_event = first {
+         $_->{type} eq "m.room.member" and $_->{state_key} eq $user->user_id
+      } @$state;
+
+      Future->done( $member_event );
+   });
+}
 
 sub matrix_initialsync_room
 {

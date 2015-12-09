@@ -8,15 +8,8 @@ test "POST /rooms/:room_id/receipt can create receipts",
 
       # We need an event ID in the room. The ID of our own member event seems
       # reasonable. Lets fetch it.
-      #
-      # TODO: currently have to go the long way around finding it; see SPEC-264
-      matrix_get_room_state( $user, $room_id )->then( sub {
-         my ( $state ) = @_;
-
-         my $member_event = first {
-            $_->{type} eq "m.room.member" and $_->{state_key} eq $user->user_id
-         } @$state;
-
+      matrix_get_my_member_event( $user, $room_id )->then( sub {
+         my ( $member_event ) = @_;
          my $event_id = $member_event->{event_id};
 
          do_request_json_for( $user,

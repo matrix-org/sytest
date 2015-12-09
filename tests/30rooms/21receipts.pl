@@ -42,14 +42,8 @@ multi_test "Read receipts are visible to /initialSync",
       my $member_event_id;
       my $message_event_id;
 
-      # TODO: currently have to go the long way around finding it; see SPEC-264
-      matrix_get_room_state( $user, $room_id )->then( sub {
-         my ( $state ) = @_;
-
-         my $member_event = first {
-            $_->{type} eq "m.room.member" and $_->{state_key} eq $user->user_id
-         } @$state;
-
+      matrix_get_my_member_event( $user, $room_id )->then( sub {
+         my ( $member_event ) = @_;
          $member_event_id = $member_event->{event_id};
 
          matrix_advance_room_receipt( $user, $room_id, "m.read" => $member_event_id )
@@ -130,14 +124,8 @@ test "Read receipts are sent as events",
       # reasonable. Lets fetch it.
       my $event_id;
 
-      # TODO: currently have to go the long way around finding it; see SPEC-264
-      matrix_get_room_state( $user, $room_id )->then( sub {
-         my ( $state ) = @_;
-
-         my $member_event = first {
-            $_->{type} eq "m.room.member" and $_->{state_key} eq $user->user_id
-         } @$state;
-
+      matrix_get_my_member_event( $user, $room_id )->then( sub {
+         my ( $member_event ) = @_;
          $event_id = $member_event->{event_id};
 
          matrix_advance_room_receipt( $user, $room_id, "m.read" => $event_id )
