@@ -732,9 +732,9 @@ sub matrix_get_room_membership
       state_key => $tested_user->user_id,
    )->then(
       sub {
-         my ( $event ) = @_;
+         my ( $content ) = @_;
 
-         Future->done( $event->{membership} );
+         Future->done( $content->{membership} );
       },
       sub {
          Future->done( "leave" );
