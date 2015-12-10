@@ -90,6 +90,15 @@ test "Outbound federation can send room-join requests",
             $body->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
 
+            matrix_get_my_member_event( $user, $room_id )
+         })->then( sub {
+            my ( $event ) = @_;
+
+            # The joining HS (i.e. the SUT) should have invented the event ID
+            # for my membership event.
+
+            # TODO - sanity check the $event
+
             Future->done(1);
          }),
       )
