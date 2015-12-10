@@ -65,11 +65,13 @@ test "Outbound federation can send room-join requests",
 
             $req->respond_json(
                # TODO(paul): This workaround is for SYN-490
-               [ 200, {
+               my $response = [ 200, {
                   auth_chain => \@auth_chain,
                   state      => [],
                } ]
             );
+
+            log_if_fail "send_join response", $response;
 
             Future->done;
          }),
