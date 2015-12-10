@@ -22,6 +22,7 @@ sub create
       room_id => $room_id,
       server  => $server,
 
+      current_state => {},
       prev_events => [],
    }, $class;
 
@@ -65,16 +66,28 @@ sub create_event
 
    my $server = $self->{server};
 
+   $fields{prev_state} = [] if defined $fields{state_key}; # TODO: give it a better value
+
    my $event = $server->create_event(
       %fields,
 
       prev_events => $self->{prev_events},
-      prev_state  => [], # TODO
    );
 
    $self->{prev_events} = make_event_refs( $event );
 
+   if( defined $fields{state_key} ) {
+      $self->{current_state}{ join "\0", $fields{type}, $fields{state_key} }
+         = $event;
+   }
+
    return $event;
+}
+
+sub current_state_events
+{
+   my $self = shift;
+   return values %{ $self->{current_state} };
 }
 
 sub make_join_protoevent
