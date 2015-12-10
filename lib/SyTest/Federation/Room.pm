@@ -26,38 +26,32 @@ sub create
       prev_events => [],
    }, $class;
 
-   my $create_event = $self->create_event(
+   $self->create_event(
       type => "m.room.create",
 
-      auth_events => [],
       content     => { creator => $creator },
       depth       => 0,
       sender      => $creator,
       state_key   => "",
    );
 
-   my $creator_member_event = $self->create_event(
+   $self->create_event(
       type => "m.room.member",
 
-      auth_events => make_event_refs( $create_event ),
       content     => { membership => "join" },
       depth       => 0,
       sender      => $creator,
       state_key   => $creator,
    );
 
-   my $joinrules_event = $self->create_event(
+   $self->create_event(
       type => "m.room.join_rules",
 
-      auth_events => make_event_refs( $create_event, $creator_member_event ),
       content     => { join_rule => "public" },
       depth       => 0,
       sender      => $creator,
       state_key   => "",
    );
-
-   # TODO: this will want to be better
-   $self->{auth_events} = make_event_refs( $create_event, $joinrules_event );
 
    return $self;
 }
@@ -76,9 +70,14 @@ sub create_event
 
    $fields{prev_state} = [] if defined $fields{state_key}; # TODO: give it a better value
 
+   my @auth_events = grep { defined }
+      $self->get_current_state_event( "m.room.create" ),
+      $self->get_current_state_event( "m.room.member", $fields{sender} );
+
    my $event = $server->create_event(
       %fields,
 
+      auth_events => make_event_refs( @auth_events ),
       room_id     => $self->room_id,
       prev_events => $self->{prev_events},
    );
@@ -99,6 +98,15 @@ sub current_state_events
    return values %{ $self->{current_state} };
 }
 
+sub get_current_state_event
+{
+   my $self = shift;
+   my ( $type, $state_key ) = @_;
+   $state_key //= "";
+
+   return $self->{current_state}{ join "\0", $type, $state_key };
+}
+
 sub make_join_protoevent
 {
    my $self = shift;
@@ -108,10 +116,14 @@ sub make_join_protoevent
 
    my $server = $self->{server};
 
+   my @auth_events = grep { defined }
+      $self->get_current_state_event( "m.room.create" ),
+      $self->get_current_state_event( "m.room.join_rules" );
+
    return {
       type => "m.room.member",
 
-      auth_events      => $self->{auth_events},
+      auth_events      => make_event_refs( @auth_events ),
       content          => { membership => "join" },
       depth            => 0,
       event_id         => my $join_event_id = $server->next_event_id,
