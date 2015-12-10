@@ -95,7 +95,7 @@ sub make_join_protoevent
       event_id         => my $join_event_id = $server->next_event_id,
       origin           => $server->server_name,
       origin_server_ts => $server->time_ms,
-      prev_events      => [],
+      prev_events      => $self->{prev_events},
       room_id          => $self->room_id,
       sender           => $user_id,
       state_key        => $user_id,
