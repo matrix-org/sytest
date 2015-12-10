@@ -32,7 +32,6 @@ sub create
       auth_events => [],
       content     => { creator => $creator },
       depth       => 0,
-      room_id     => $room_id,
       sender      => $creator,
       state_key   => "",
    );
@@ -43,7 +42,6 @@ sub create
       auth_events => make_event_refs( $create_event ),
       content     => { membership => "join" },
       depth       => 0,
-      room_id     => $room_id,
       sender      => $creator,
       state_key   => $creator,
    );
@@ -54,7 +52,6 @@ sub create
       auth_events => make_event_refs( $create_event, $creator_member_event ),
       content     => { join_rule => "public" },
       depth       => 0,
-      room_id     => $room_id,
       sender      => $creator,
       state_key   => "",
    );
@@ -82,6 +79,7 @@ sub create_event
    my $event = $server->create_event(
       %fields,
 
+      room_id     => $self->room_id,
       prev_events => $self->{prev_events},
    );
 
