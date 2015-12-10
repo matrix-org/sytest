@@ -59,9 +59,9 @@ test "Outbound federation can send room-join requests",
             my $event = $req->body_from_json;
             log_if_fail "send_join event", $event;
 
-            my @auth_chain = map {
-               $inbound_server->get_event( $_->[0] )
-            } @{ $event->{auth_events} };
+            my @auth_chain = $inbound_server->get_auth_chain(
+               map { $_->[0] } @{ $event->{auth_events} }
+            );
 
             $req->respond_json(
                # TODO(paul): This workaround is for SYN-490

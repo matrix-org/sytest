@@ -103,6 +103,34 @@ sub get_event
    return $event;
 }
 
+sub get_auth_chain
+{
+   my $self = shift;
+   my @event_ids = @_;
+
+   my %events_by_id = map { $_ => $self->get_event( $_ ) } @event_ids;
+
+   my @auth_chain = @event_ids;
+
+   while( @event_ids ) {
+      my $event = $events_by_id{shift @event_ids};
+
+      my @auth_ids = map { $_->[0] } @{ $event->{auth_events} };
+
+      foreach my $id ( @auth_ids ) {
+         next if $events_by_id{$id};
+
+         $events_by_id{$id} = $self->get_event( $id );
+         push @event_ids, $id;
+      }
+
+      unshift @auth_chain, @auth_ids;
+   }
+
+   # uniqify by first occurence
+   return map { my $e = delete $events_by_id{$_}; $e ? ( $e ) : () } @auth_chain;
+}
+
 sub _fetch_key
 {
    my $self = shift;
