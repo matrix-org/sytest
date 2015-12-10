@@ -37,10 +37,21 @@ sub create
       state_key   => "",
    );
 
+   my $creator_member_event = $self->create_event(
+      type => "m.room.member",
+
+      auth_events => make_event_refs( $create_event ),
+      content     => { membership => "join" },
+      depth       => 0,
+      room_id     => $room_id,
+      sender      => $creator,
+      state_key   => $creator,
+   );
+
    my $joinrules_event = $self->create_event(
       type => "m.room.join_rules",
 
-      auth_events => make_event_refs( $create_event ),
+      auth_events => make_event_refs( $create_event, $creator_member_event ),
       content     => { join_rule => "public" },
       depth       => 0,
       room_id     => $room_id,
