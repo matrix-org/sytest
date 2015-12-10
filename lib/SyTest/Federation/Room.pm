@@ -3,7 +3,7 @@ package SyTest::Federation::Room;
 use strict;
 use warnings;
 
-sub make_auth_events
+sub make_event_refs
 {
    [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
 }
@@ -18,12 +18,17 @@ sub create
    my $creator = $args{creator};
    my $room_id = $args{room_id} // $server->next_room_id;
 
-   my $create_event = $server->create_event(
+   my $self = bless {
+      room_id => $room_id,
+      server  => $server,
+
+      prev_events => [],
+   }, $class;
+
+   my $create_event = $self->create_event(
       type => "m.room.create",
 
       auth_events => [],
-      prev_events => [],
-      prev_state  => [],
       content     => { creator => $creator },
       depth       => 0,
       room_id     => $room_id,
@@ -31,12 +36,10 @@ sub create
       state_key   => "",
    );
 
-   my $joinrules_event = $server->create_event(
+   my $joinrules_event = $self->create_event(
       type => "m.room.join_rules",
 
-      auth_events => make_auth_events( $create_event ),
-      prev_events => make_auth_events( $create_event ),
-      prev_state  => [],
+      auth_events => make_event_refs( $create_event ),
       content     => { join_rule => "public" },
       depth       => 0,
       room_id     => $room_id,
@@ -44,18 +47,34 @@ sub create
       state_key   => "",
    );
 
-   return bless {
-      room_id => $room_id,
-      server  => $server,
+   # TODO: this will want to be better
+   $self->{auth_events} = make_event_refs( $create_event, $joinrules_event );
 
-      # TODO: this will want to be better
-      auth_events => make_auth_events( $create_event, $joinrules_event ),
-   }, $class;
+   return $self;
 }
 
 sub room_id
 {
    return $_[0]->{room_id};
+}
+
+sub create_event
+{
+   my $self = shift;
+   my %fields = @_;
+
+   my $server = $self->{server};
+
+   my $event = $server->create_event(
+      %fields,
+
+      prev_events => $self->{prev_events},
+      prev_state  => [], # TODO
+   );
+
+   $self->{prev_events} = make_event_refs( $event );
+
+   return $event;
 }
 
 sub make_join_protoevent
