@@ -331,6 +331,7 @@ sub mk_await_request_pair
          });
    };
 
+   my $was_on_requestfunc = $class->can( "on_request_federation_v1_$shortname" );
    my $on_requestfunc = sub {
       my $self = shift;
       my ( $req, @pathvalues ) = @_;
@@ -357,6 +358,9 @@ sub mk_await_request_pair
          $f->done( $req, @paramvalues );
          Future->done;
       }
+      elsif( $was_on_requestfunc ) {
+         return $self->$was_on_requestfunc( $req, @paramvalues );
+      }
       else {
          Future->done( response => HTTP::Response->new(
             404, "Not found", [ Content_length => 0 ], "",
@@ -365,6 +369,7 @@ sub mk_await_request_pair
    };
 
    no strict 'refs';
+   no warnings 'redefine';
    *{"${class}::await_$shortname"} = $awaitfunc;
    *{"${class}::on_request_federation_v1_$shortname"} = $on_requestfunc;
 }
