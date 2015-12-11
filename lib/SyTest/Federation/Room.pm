@@ -126,7 +126,6 @@ sub make_join_protoevent
       auth_events      => make_event_refs( @auth_events ),
       content          => { membership => "join" },
       depth            => 0,
-      event_id         => my $join_event_id = $server->next_event_id,
       origin           => $server->server_name,
       origin_server_ts => $server->time_ms,
       prev_events      => $self->{prev_events},
