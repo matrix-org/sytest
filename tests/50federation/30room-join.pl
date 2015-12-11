@@ -11,11 +11,15 @@ test "Outbound federation can send room-join requests",
 
       my $creator = '@50fed:' . $local_server_name;
 
-      my $room = SyTest::Federation::Room->create(
+      my $room = SyTest::Federation::Room->new(
          room_id => $inbound_server->next_room_id,
+      );
+
+      $room->create_initial_events(
          server  => $inbound_server,
          creator => $creator,
       );
+
       my $room_id = $room->room_id;
 
       # We'll have to jump through the extra hoop of using the directory

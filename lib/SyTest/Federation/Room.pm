@@ -8,22 +8,34 @@ sub make_event_refs
    [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
 }
 
-sub create
+sub new
 {
    my $class = shift;
    my %args = @_;
 
-   my $server = $args{server};
-
-   my $creator = $args{creator};
    my $room_id = $args{room_id};
 
-   my $self = bless {
+   return bless {
       room_id => $room_id,
 
       current_state => {},
       prev_events => [],
    }, $class;
+}
+
+sub room_id
+{
+   return $_[0]->{room_id};
+}
+
+sub create_initial_events
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $server = $args{server};
+
+   my $creator = $args{creator};
 
    $self->create_event(
       server => $server,
@@ -56,11 +68,6 @@ sub create
    );
 
    return $self;
-}
-
-sub room_id
-{
-   return $_[0]->{room_id};
 }
 
 sub create_event
