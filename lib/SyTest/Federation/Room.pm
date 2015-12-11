@@ -16,18 +16,18 @@ sub create
    my $server = $args{server};
 
    my $creator = $args{creator};
-   my $room_id = $args{room_id} // $server->next_room_id;
+   my $room_id = $args{room_id};
 
    my $self = bless {
       room_id => $room_id,
-      server  => $server,
 
       current_state => {},
       prev_events => [],
    }, $class;
 
    $self->create_event(
-      type => "m.room.create",
+      server => $server,
+      type   => "m.room.create",
 
       content     => { creator => $creator },
       depth       => 0,
@@ -36,7 +36,8 @@ sub create
    );
 
    $self->create_event(
-      type => "m.room.member",
+      server => $server,
+      type   => "m.room.member",
 
       content     => { membership => "join" },
       depth       => 0,
@@ -45,7 +46,8 @@ sub create
    );
 
    $self->create_event(
-      type => "m.room.join_rules",
+      server => $server,
+      type   => "m.room.join_rules",
 
       content     => { join_rule => "public" },
       depth       => 0,
@@ -66,7 +68,7 @@ sub create_event
    my $self = shift;
    my %fields = @_;
 
-   my $server = $self->{server};
+   my $server = delete $fields{server};
 
    $fields{prev_state} = [] if defined $fields{state_key}; # TODO: give it a better value
 
@@ -114,8 +116,6 @@ sub make_join_protoevent
 
    my $user_id = $args{user_id};
 
-   my $server = $self->{server};
-
    my @auth_events = grep { defined }
       $self->get_current_state_event( "m.room.create" ),
       $self->get_current_state_event( "m.room.join_rules" );
@@ -126,8 +126,6 @@ sub make_join_protoevent
       auth_events      => make_event_refs( @auth_events ),
       content          => { membership => "join" },
       depth            => 0,
-      origin           => $server->server_name,
-      origin_server_ts => $server->time_ms,
       prev_events      => $self->{prev_events},
       room_id          => $self->room_id,
       sender           => $user_id,

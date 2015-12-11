@@ -12,6 +12,7 @@ test "Outbound federation can send room-join requests",
       my $creator = '@50fed:' . $local_server_name;
 
       my $room = SyTest::Federation::Room->create(
+         room_id => $inbound_server->next_room_id,
          server  => $inbound_server,
          creator => $creator,
       );
@@ -42,6 +43,9 @@ test "Outbound federation can send room-join requests",
             my $proto = $room->make_join_protoevent(
                user_id => $user_id,
             );
+
+            $proto->{origin}           = $inbound_server->server_name;
+            $proto->{origin_server_ts} = $inbound_server->time_ms;
 
             $req->respond_json( {
                event => $proto,
