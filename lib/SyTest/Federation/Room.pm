@@ -134,9 +134,10 @@ sub create_event
 
    $fields{prev_state} = [] if defined $fields{state_key}; # TODO: give it a better value
 
-   my @auth_events = grep { defined }
+   my @auth_events = grep { defined } (
       $self->get_current_state_event( "m.room.create" ),
-      $self->get_current_state_event( "m.room.member", $fields{sender} );
+      $self->get_current_state_event( "m.room.member", $fields{sender} ),
+   );
 
    my $event = $server->create_event(
       %fields,
@@ -210,9 +211,10 @@ sub make_join_protoevent
 
    my $user_id = $args{user_id};
 
-   my @auth_events = grep { defined }
+   my @auth_events = grep { defined } (
       $self->get_current_state_event( "m.room.create" ),
-      $self->get_current_state_event( "m.room.join_rules" );
+      $self->get_current_state_event( "m.room.join_rules" ),
+   );
 
    return {
       type => "m.room.member",
