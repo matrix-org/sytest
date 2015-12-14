@@ -3,6 +3,8 @@ package SyTest::Federation::Room;
 use strict;
 use warnings;
 
+use Carp;
+
 =head1 NAME
 
 C<SyTest::Federation::Room> - represent a single Room instance
@@ -31,7 +33,8 @@ sub new
    my $class = shift;
    my %args = @_;
 
-   my $room_id = $args{room_id};
+   my $room_id = $args{room_id} or
+      croak "Require a 'room_id'";
 
    return bless {
       room_id => $room_id,
@@ -77,9 +80,11 @@ sub create_initial_events
    my $self = shift;
    my %args = @_;
 
-   my $server = $args{server};
+   my $server = $args{server} or
+      croak "Require a 'server'";
 
-   my $creator = $args{creator};
+   my $creator = $args{creator} or
+      croak "Require a 'creator'";
 
    $self->create_event(
       server => $server,
@@ -130,7 +135,8 @@ sub create_event
    my $self = shift;
    my %fields = @_;
 
-   my $server = delete $fields{server};
+   my $server = delete $fields{server} or
+      croak "Require a 'server'";
 
    $fields{prev_state} = [] if defined $fields{state_key}; # TODO: give it a better value
 
