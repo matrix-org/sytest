@@ -86,6 +86,9 @@ sub create_initial_events
    my $creator = $args{creator} or
       croak "Require a 'creator'";
 
+   # TODO(paul): have create_event calculate the depth field. But currently
+   #   synapse doesn't check it (SYN-507)
+
    $self->create_event(
       server => $server,
       type   => "m.room.create",
@@ -227,6 +230,8 @@ sub make_join_protoevent
 
       auth_events      => make_event_refs( @auth_events ),
       content          => { membership => "join" },
+      # TODO(paul): depth should be calculated as 1 + max(depth of auth_events)
+      #   but for now, synapse doesn't test it (SYN-507)
       depth            => 0,
       prev_events      => $self->{prev_events},
       room_id          => $self->room_id,
