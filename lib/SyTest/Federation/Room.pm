@@ -5,6 +5,8 @@ use warnings;
 
 use Carp;
 
+use List::Util qw( max );
+
 =head1 NAME
 
 C<SyTest::Federation::Room> - represent a single Room instance
@@ -61,6 +63,28 @@ sub room_id
    return $_[0]->{room_id};
 }
 
+=head2 next_depth
+
+   $depth = $room->next_depth
+
+Returns the depth value that the next inserted event should have. This will be
+1 more than the maximum depth of any of the events currently known for the
+C<prev_events> field.
+
+=cut
+
+sub next_depth
+{
+   my $self = shift;
+
+   if( @{ $self->{prev_events} } ) {
+      return 1 + max( map { $_->{depth} } @{ $self->{prev_events} } );
+   }
+   else {
+      return 0;
+   }
+}
+
 =head2 create_initial_events
 
    $room->create_initial_events( server => $server, creator => $creator )
@@ -86,15 +110,11 @@ sub create_initial_events
    my $creator = $args{creator} or
       croak "Require a 'creator'";
 
-   # TODO(paul): have create_event calculate the depth field. But currently
-   #   synapse doesn't check it (SYN-507)
-
    $self->create_event(
       server => $server,
       type   => "m.room.create",
 
       content     => { creator => $creator },
-      depth       => 0,
       sender      => $creator,
       state_key   => "",
    );
@@ -104,7 +124,6 @@ sub create_initial_events
       type   => "m.room.member",
 
       content     => { membership => "join" },
-      depth       => 0,
       sender      => $creator,
       state_key   => $creator,
    );
@@ -114,7 +133,6 @@ sub create_initial_events
       type   => "m.room.join_rules",
 
       content     => { join_rule => "public" },
-      depth       => 0,
       sender      => $creator,
       state_key   => "",
    );
@@ -125,8 +143,8 @@ sub create_initial_events
    $event = $room->create_event( server => $server, %fields )
 
 Constructs a new event in the room and updates the current state, if it is a
-state event. This helper also fills in the C<prev_events> and C<auth_events>
-lists, meaning the caller does not have to.
+state event. This helper also fills in the C<depth>, C<prev_events> and
+C<auth_events> lists, meaning the caller does not have to.
 
 C<$server> is an instance of L<SyTest::Federation::Server> required to
 actually create and persist the event.
@@ -147,6 +165,8 @@ sub create_event
       $self->get_current_state_event( "m.room.create" ),
       $self->get_current_state_event( "m.room.member", $fields{sender} ),
    );
+
+   $fields{depth} //= $self->next_depth;
 
    my $event = $server->create_event(
       %fields,
@@ -230,9 +250,7 @@ sub make_join_protoevent
 
       auth_events      => make_event_refs( @auth_events ),
       content          => { membership => "join" },
-      # TODO(paul): depth should be calculated as 1 + max(depth of auth_events)
-      #   but for now, synapse doesn't test it (SYN-507)
-      depth            => 0,
+      depth            => $self->next_depth,
       prev_events      => make_event_refs( @{ $self->{prev_events} } ),
       room_id          => $self->room_id,
       sender           => $user_id,
