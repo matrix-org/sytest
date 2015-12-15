@@ -12,6 +12,7 @@ use feature qw( switch );
 
 use Carp;
 
+use List::MoreUtils qw( uniq );
 use List::UtilsBy qw( extract_first_by );
 use Protocol::Matrix qw( encode_base64_unpadded verify_json_signature );
 use HTTP::Headers::Util qw( split_header_words );
@@ -110,7 +111,7 @@ sub get_auth_chain
 
    my %events_by_id = map { $_ => $self->get_event( $_ ) } @event_ids;
 
-   my @auth_chain = @event_ids;
+   my @all_event_ids = @event_ids;
 
    while( @event_ids ) {
       my $event = $events_by_id{shift @event_ids};
@@ -124,11 +125,11 @@ sub get_auth_chain
          push @event_ids, $id;
       }
 
-      unshift @auth_chain, @auth_ids;
+      # Keep the list in a linearised causality order
+      @all_event_ids = uniq( @auth_ids, @all_event_ids );
    }
 
-   # uniqify by first occurence
-   return map { my $e = delete $events_by_id{$_}; $e ? ( $e ) : () } @auth_chain;
+   return @events_by_id{ @all_event_ids };
 }
 
 sub _fetch_key
