@@ -153,10 +153,10 @@ sub create_event
 
       auth_events => make_event_refs( @auth_events ),
       room_id     => $self->room_id,
-      prev_events => $self->{prev_events},
+      prev_events => make_event_refs( @{ $self->{prev_events} } ),
    );
 
-   $self->{prev_events} = make_event_refs( $event );
+   $self->{prev_events} = [ $event ];
 
    if( defined $fields{state_key} ) {
       $self->{current_state}{ join "\0", $fields{type}, $fields{state_key} }
@@ -233,7 +233,7 @@ sub make_join_protoevent
       # TODO(paul): depth should be calculated as 1 + max(depth of auth_events)
       #   but for now, synapse doesn't test it (SYN-507)
       depth            => 0,
-      prev_events      => $self->{prev_events},
+      prev_events      => make_event_refs( @{ $self->{prev_events} } ),
       room_id          => $self->room_id,
       sender           => $user_id,
       state_key        => $user_id,
