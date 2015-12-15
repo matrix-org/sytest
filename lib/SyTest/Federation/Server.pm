@@ -19,6 +19,7 @@ use JSON qw( encode_json );
 
 use Struct::Dumb qw( struct );
 struct Awaiter => [qw( type matcher f )];
+struct RoomAwaiter => [qw( type room_id matcher f )];
 
 sub _init
 {
@@ -384,6 +385,13 @@ sub on_request_federation_v1_send
       warn "TODO: Unhandled incoming EDU of type '$edu->{edu_type}'";
    }
 
+   # A PDU is an event
+   foreach my $event ( @{ $body->{pdus} } ) {
+      next if $self->on_event( $event );
+
+      warn "TODO: Unhandled incoming event of type '$event->{type}'";
+   }
+
    Future->done( json => {} );
 }
 
@@ -410,6 +418,34 @@ sub on_edu
       return;
 
    $awaiter->f->done( $edu, $origin );
+   return 1;
+}
+
+sub await_event
+{
+   my $self = shift;
+   my ( $type, $room_id, $matcher ) = @_;
+
+   push @{ $self->{event_waiters} }, RoomAwaiter( $type, $room_id, $matcher, my $f = $self->loop->new_future );
+
+   return $f;
+}
+
+sub on_event
+{
+   my $self = shift;
+   my ( $event ) = @_;
+
+   my $type    = $event->{type};
+   my $room_id = $event->{room_id};
+
+   my $awaiter = extract_first_by {
+      $_->type eq $type and $_->room_id eq $room_id and
+         ( not $_->matcher or $_->matcher->( $event ) )
+   } @{ $self->{event_waiters} //= [] } or
+      return;
+
+   $awaiter->f->done( $event );
    return 1;
 }
 
