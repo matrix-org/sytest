@@ -52,8 +52,7 @@ sub key_id { $_[0]->{key_id} }
 
    $key = $store->secret_key
 
-Return the public or secret halves of the signing key the server is currently
-using
+Return the public or secret halves of the signing key of the local homeserver.
 
 =cut
 
@@ -89,7 +88,7 @@ sub sign_event
 
    $store->put_key( server_name => $name, key_id => $id, key => $key )
 
-Accessor and mutator for federation key storage
+Accessor and mutator for remote homeserver federation key storage.
 
 =cut
 
