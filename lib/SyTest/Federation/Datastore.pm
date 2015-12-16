@@ -7,6 +7,7 @@ use Carp;
 
 use Protocol::Matrix qw( sign_event_json );
 
+use List::MoreUtils qw( uniq );
 use Time::HiRes qw( time );
 
 sub new
@@ -192,6 +193,43 @@ sub create_event
    $self->put_event( $event );
 
    return $event;
+}
+
+=head2 get_auth_chain_events
+
+   @events = $store->get_auth_chain_events( @event_ids )
+
+Returns a list of every event in the (recursive) authentication chain leading
+up to the events with the given ID(s).
+
+=cut
+
+sub get_auth_chain_events
+{
+   my $self = shift;
+   my @event_ids = @_;
+
+   my %events_by_id = map { $_ => $self->get_event( $_ ) } @event_ids;
+
+   my @all_event_ids = @event_ids;
+
+   while( @event_ids ) {
+      my $event = $events_by_id{shift @event_ids};
+
+      my @auth_ids = map { $_->[0] } @{ $event->{auth_events} };
+
+      foreach my $id ( @auth_ids ) {
+         next if $events_by_id{$id};
+
+         $events_by_id{$id} = $self->get_event( $id );
+         push @event_ids, $id;
+      }
+
+      # Keep the list in a linearised causality order
+      @all_event_ids = uniq( @auth_ids, @all_event_ids );
+   }
+
+   return @events_by_id{ @all_event_ids };
 }
 
 1;

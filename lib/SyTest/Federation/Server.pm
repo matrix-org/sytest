@@ -12,7 +12,6 @@ use feature qw( switch );
 
 use Carp;
 
-use List::MoreUtils qw( uniq );
 use List::UtilsBy qw( extract_first_by );
 use Protocol::Matrix qw( encode_base64_unpadded verify_json_signature );
 use HTTP::Headers::Util qw( split_header_words );
@@ -64,36 +63,6 @@ sub next_room_id
 {
    my $self = shift;
    return sprintf "!%d:%s", $self->{next_room_id}++, $self->server_name;
-}
-
-sub get_auth_chain
-{
-   my $self = shift;
-   my @event_ids = @_;
-
-   my $store = $self->{datastore};
-
-   my %events_by_id = map { $_ => $store->get_event( $_ ) } @event_ids;
-
-   my @all_event_ids = @event_ids;
-
-   while( @event_ids ) {
-      my $event = $events_by_id{shift @event_ids};
-
-      my @auth_ids = map { $_->[0] } @{ $event->{auth_events} };
-
-      foreach my $id ( @auth_ids ) {
-         next if $events_by_id{$id};
-
-         $events_by_id{$id} = $store->get_event( $id );
-         push @event_ids, $id;
-      }
-
-      # Keep the list in a linearised causality order
-      @all_event_ids = uniq( @auth_ids, @all_event_ids );
-   }
-
-   return @events_by_id{ @all_event_ids };
 }
 
 sub _fetch_key
