@@ -7,12 +7,14 @@ test "Outbound federation can send room-join requests",
 
    do => sub {
       my ( $user, $inbound_server ) = @_;
+
       my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
 
       my $creator = '@50fed:' . $local_server_name;
 
       my $room = SyTest::Federation::Room->new(
-         room_id => $inbound_server->next_room_id,
+         datastore => $datastore,
       );
 
       $room->create_initial_events(
@@ -67,7 +69,7 @@ test "Outbound federation can send room-join requests",
             my $event = $req->body_from_json;
             log_if_fail "send_join event", $event;
 
-            my @auth_chain = $inbound_server->get_auth_chain(
+            my @auth_chain = $datastore->get_auth_chain_events(
                map { $_->[0] } @{ $event->{auth_events} }
             );
 
@@ -122,6 +124,7 @@ test "Inbound federation can receive room-join requests",
       my $first_home_server = $info->server_name;
 
       my $local_server_name = $outbound_client->server_name;
+      my $datastore         = $inbound_server->datastore;
 
       my $user_id = "\@50fed-user:$local_server_name";
 
@@ -177,7 +180,7 @@ test "Inbound federation can receive room-join requests",
                auth_events content depth prev_events prev_state room_id sender
                state_key type ) ),
 
-            event_id         => $inbound_server->next_event_id,
+            event_id         => $datastore->next_event_id,
             origin           => $local_server_name,
             origin_server_ts => $inbound_server->time_ms,
          );

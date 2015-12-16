@@ -12,7 +12,6 @@ use feature qw( switch );
 
 use Carp;
 
-use List::MoreUtils qw( uniq );
 use List::UtilsBy qw( extract_first_by );
 use Protocol::Matrix qw( encode_base64_unpadded verify_json_signature );
 use HTTP::Headers::Util qw( split_header_words );
@@ -25,9 +24,6 @@ sub _init
 {
    my $self = shift;
    my ( $params ) = @_;
-
-   $self->{next_event_id} = 0;
-   $self->{next_room_id} = 0;
 
    # Use 'on_request' as a configured parameter rather than a subclass method
    # so that the '$CLIENT_LOG' logic in run-tests.pl can properly put
@@ -53,83 +49,6 @@ sub client
 {
    my $self = shift;
    return $self->{client};
-}
-
-sub next_event_id
-{
-   my $self = shift;
-   return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
-}
-
-sub next_room_id
-{
-   my $self = shift;
-   return sprintf "!%d:%s", $self->{next_room_id}++, $self->server_name;
-}
-
-sub create_event
-{
-   my $self = shift;
-   my %fields = @_;
-
-   defined $fields{$_} or croak "Every event needs a '$_' field"
-      for qw( type auth_events content depth prev_events room_id sender );
-
-   if( defined $fields{state_key} ) {
-      defined $fields{$_} or croak "Every state event needs a '$_' field"
-         for qw( prev_state );
-   }
-
-   my $event = {
-      %fields,
-
-      event_id         => $self->next_event_id,
-      origin           => $self->server_name,
-      origin_server_ts => $self->time_ms,
-   };
-
-   $self->sign_event( $event );
-
-   return $self->{events_by_id}{ $event->{event_id} } = $event;
-}
-
-sub get_event
-{
-   my $self = shift;
-   my ( $id ) = @_;
-
-   my $event = $self->{events_by_id}{$id} or
-      croak "$self has no event id '$id'";
-
-   return $event;
-}
-
-sub get_auth_chain
-{
-   my $self = shift;
-   my @event_ids = @_;
-
-   my %events_by_id = map { $_ => $self->get_event( $_ ) } @event_ids;
-
-   my @all_event_ids = @event_ids;
-
-   while( @event_ids ) {
-      my $event = $events_by_id{shift @event_ids};
-
-      my @auth_ids = map { $_->[0] } @{ $event->{auth_events} };
-
-      foreach my $id ( @auth_ids ) {
-         next if $events_by_id{$id};
-
-         $events_by_id{$id} = $self->get_event( $id );
-         push @event_ids, $id;
-      }
-
-      # Keep the list in a linearised causality order
-      @all_event_ids = uniq( @auth_ids, @all_event_ids );
-   }
-
-   return @events_by_id{ @all_event_ids };
 }
 
 sub _fetch_key
@@ -291,17 +210,15 @@ sub on_request_key_v2_server
    my $algo = "sha256";
    my $fingerprint = Net::SSLeay::X509_digest( $cert, Net::SSLeay::EVP_get_digestbyname( $algo ) );
 
-   my $fedparams = $self->{federation_params};
-
    Future->done( json => $self->signed_data( {
-      server_name => $fedparams->server_name,
+      server_name => $self->server_name,
       tls_fingerprints => [
          { $algo => encode_base64_unpadded( $fingerprint ) },
       ],
       valid_until_ts => ( time + 86400 ) * 1000, # +24h in msec
       verify_keys => {
-         $fedparams->key_id => {
-            key => encode_base64_unpadded( $fedparams->public_key ),
+         $self->key_id => {
+            key => encode_base64_unpadded( $self->{datastore}->public_key ),
          },
       },
       old_verify_keys => {},

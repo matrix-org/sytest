@@ -24,9 +24,12 @@ sub make_event_refs
 
 =head2 new
 
-   $room = SyTest::Federation::Room->new( room_id => $room_id )
+   $room = SyTest::Federation::Room->new( room_id => $room_id, datastore => $store )
 
 Constructs a new Room instance, initially blank containing no state or events.
+
+C<room_id> may be left undefined, and a new room ID will be allocated from the
+datastore if so.
 
 =cut
 
@@ -35,11 +38,14 @@ sub new
    my $class = shift;
    my %args = @_;
 
-   my $room_id = $args{room_id} or
-      croak "Require a 'room_id'";
+   my $datastore = $args{datastore} or
+      croak "Require a 'datastore'";
+
+   my $room_id = $args{room_id} // $datastore->next_room_id;
 
    return bless {
-      room_id => $room_id,
+      room_id   => $room_id,
+      datastore => $datastore,
 
       current_state => {},
       prev_events => [],
@@ -87,15 +93,12 @@ sub next_depth
 
 =head2 create_initial_events
 
-   $room->create_initial_events( server => $server, creator => $creator )
+   $room->create_initial_events( creator => $creator )
 
 Convenience helper method to create all the initial state events required at
 room creation time. It supplies the C<m.room.create> event with the given
 C<$creator> user ID as the room's creator, the C<m.room.member> event for this
 user, and a C<m.room.join_rules> to set the room join permission as C<public>.
-
-C<$server> is an instance of L<SyTest::Federation::Server> required to
-actually create and persist the individual events.
 
 =cut
 
@@ -104,15 +107,11 @@ sub create_initial_events
    my $self = shift;
    my %args = @_;
 
-   my $server = $args{server} or
-      croak "Require a 'server'";
-
    my $creator = $args{creator} or
       croak "Require a 'creator'";
 
    $self->create_event(
-      server => $server,
-      type   => "m.room.create",
+      type => "m.room.create",
 
       content     => { creator => $creator },
       sender      => $creator,
@@ -120,8 +119,7 @@ sub create_initial_events
    );
 
    $self->create_event(
-      server => $server,
-      type   => "m.room.member",
+      type => "m.room.member",
 
       content     => { membership => "join" },
       sender      => $creator,
@@ -129,8 +127,7 @@ sub create_initial_events
    );
 
    $self->create_event(
-      server => $server,
-      type   => "m.room.join_rules",
+      type => "m.room.join_rules",
 
       content     => { join_rule => "public" },
       sender      => $creator,
@@ -140,14 +137,11 @@ sub create_initial_events
 
 =head2 create_event
 
-   $event = $room->create_event( server => $server, %fields )
+   $event = $room->create_event( %fields )
 
 Constructs a new event in the room and updates the current state, if it is a
 state event. This helper also fills in the C<depth>, C<prev_events> and
 C<auth_events> lists, meaning the caller does not have to.
-
-C<$server> is an instance of L<SyTest::Federation::Server> required to
-actually create and persist the event.
 
 =cut
 
@@ -155,9 +149,6 @@ sub create_event
 {
    my $self = shift;
    my %fields = @_;
-
-   my $server = delete $fields{server} or
-      croak "Require a 'server'";
 
    $fields{prev_state} = [] if defined $fields{state_key}; # TODO: give it a better value
 
@@ -168,7 +159,7 @@ sub create_event
 
    $fields{depth} //= $self->next_depth;
 
-   my $event = $server->create_event(
+   my $event = $self->{datastore}->create_event(
       %fields,
 
       auth_events => make_event_refs( @auth_events ),
