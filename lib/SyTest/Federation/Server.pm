@@ -225,6 +225,67 @@ sub on_request_key_v2_server
    } ) );
 }
 
+sub on_request_federation_v1_query_directory
+{
+   my $self = shift;
+   my ( $req, $alias ) = @_;
+
+   my $room_id = $self->{datastore}->get_alias( $alias ) or
+      return Future->done( response => HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+   Future->done( json => {
+      room_id => $room_id,
+      servers => [ $self->server_name ],
+   } );
+}
+
+sub on_request_federation_v1_make_join
+{
+   my $self = shift;
+   my ( $req, $room_id, $user_id ) = @_;
+
+   my $room = $self->{datastore}->get_room( $room_id ) or
+      return Future->done( response => HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+   Future->done( json => {
+      event => $room->make_join_protoevent(
+         user_id => $user_id,
+      ),
+   } );
+}
+
+sub on_request_federation_v1_send_join
+{
+   my $self = shift;
+   my ( $req, $room_id ) = @_;
+
+   my $store = $self->{datastore};
+
+   my $room = $store->get_room( $room_id ) or
+      return Future->done( response => HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+   my $event = $req->body_from_json;
+
+   my @auth_chain = $store->get_auth_chain_events(
+      map { $_->[0] } @{ $event->{auth_events} }
+   );
+   my @state_events = $room->current_state_events;
+
+   $room->insert_event( $event );
+
+   # SYN-490
+   Future->done( json => [ 200, {
+      auth_chain => \@auth_chain,
+      state      => \@state_events,
+   } ] );
+}
+
 sub mk_await_request_pair
 {
    my $class = shift;
