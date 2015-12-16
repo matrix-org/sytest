@@ -20,6 +20,12 @@ sub configure
    $self->next::method( %params );
 }
 
+sub datastore
+{
+   my $self = shift;
+   return $self->{datastore};
+}
+
 sub server_name
 {
    my $self = shift;

@@ -66,12 +66,6 @@ sub next_room_id
    return sprintf "!%d:%s", $self->{next_room_id}++, $self->server_name;
 }
 
-sub create_event
-{
-   my $self = shift;
-   return $self->{datastore}->create_event( @_ );
-}
-
 sub get_auth_chain
 {
    my $self = shift;

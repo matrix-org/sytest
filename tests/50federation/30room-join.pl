@@ -12,7 +12,8 @@ test "Outbound federation can send room-join requests",
       my $creator = '@50fed:' . $local_server_name;
 
       my $room = SyTest::Federation::Room->new(
-         room_id => $inbound_server->next_room_id,
+         room_id   => $inbound_server->next_room_id,
+         datastore => $inbound_server->datastore,
       );
 
       $room->create_initial_events(
