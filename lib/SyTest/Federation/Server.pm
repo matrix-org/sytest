@@ -291,17 +291,15 @@ sub on_request_key_v2_server
    my $algo = "sha256";
    my $fingerprint = Net::SSLeay::X509_digest( $cert, Net::SSLeay::EVP_get_digestbyname( $algo ) );
 
-   my $fedparams = $self->{federation_params};
-
    Future->done( json => $self->signed_data( {
-      server_name => $fedparams->server_name,
+      server_name => $self->server_name,
       tls_fingerprints => [
          { $algo => encode_base64_unpadded( $fingerprint ) },
       ],
       valid_until_ts => ( time + 86400 ) * 1000, # +24h in msec
       verify_keys => {
-         $fedparams->key_id => {
-            key => encode_base64_unpadded( $fedparams->public_key ),
+         $self->key_id => {
+            key => encode_base64_unpadded( $self->{datastore}->public_key ),
          },
       },
       old_verify_keys => {},

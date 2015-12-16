@@ -11,8 +11,6 @@ use SyTest::Federation::Server;
 
 my $DIR = dirname( __FILE__ );
 
-struct FederationParams => [qw( server_name key_id public_key secret_key )];
-
 push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT );
 
 our $INBOUND_SERVER = fixture(
@@ -39,21 +37,22 @@ our $INBOUND_SERVER = fixture(
 
          my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
 
-         my $fedparams = FederationParams( $server_name, "ed25519:1", $pkey, $skey );
-
-         my $datastore = SyTest::Federation::Datastore->new();
+         my $datastore = SyTest::Federation::Datastore->new(
+            server_name => $server_name,
+            key_id      => "ed25519:1",
+            public_key  => $pkey,
+            secret_key  => $skey,
+         );
 
          my $outbound_client = SyTest::Federation::Client->new(
-            federation_params => $fedparams,
-            datastore         => $datastore,
-            uri_base          => "/_matrix/federation/v1",
+            datastore => $datastore,
+            uri_base  => "/_matrix/federation/v1",
          );
          $loop->add( $outbound_client );
 
          $inbound_server->configure(
-            federation_params => $fedparams,
-            datastore         => $datastore,
-            client            => $outbound_client,
+            datastore => $datastore,
+            client    => $outbound_client,
          );
       });
    },

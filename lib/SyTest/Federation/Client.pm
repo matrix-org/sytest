@@ -48,10 +48,8 @@ sub do_request_json
       $params{full_uri} = $uri;
    }
 
-   my $fedparams = $self->{federation_params};
-
-   my $origin = $fedparams->server_name;
-   my $key_id = $fedparams->key_id;
+   my $origin = $self->server_name;
+   my $key_id = $self->key_id;
 
    my %signing_block = (
       method => $params{method},

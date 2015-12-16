@@ -13,7 +13,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( federation_params datastore )) {
+   foreach (qw( datastore )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -23,13 +23,13 @@ sub configure
 sub server_name
 {
    my $self = shift;
-   return $self->{federation_params}->server_name;
+   return $self->{datastore}->server_name;
 }
 
 sub key_id
 {
    my $self = shift;
-   return $self->{federation_params}->key_id;
+   return $self->{datastore}->key_id;
 }
 
 # mutates the data
@@ -38,12 +38,12 @@ sub sign_data
    my $self = shift;
    my ( $data ) = @_;
 
-   my $fedparams = $self->{federation_params};
+   my $store = $self->{datastore};
 
    sign_json( $data,
-      secret_key => $fedparams->secret_key,
-      origin     => $fedparams->server_name,
-      key_id     => $fedparams->key_id,
+      secret_key => $store->secret_key,
+      origin     => $store->server_name,
+      key_id     => $store->key_id,
    );
 }
 
@@ -63,12 +63,12 @@ sub sign_event
    my $self = shift;
    my ( $event ) = @_;
 
-   my $fedparams = $self->{federation_params};
+   my $store = $self->{datastore};
 
    sign_event_json( $event,
-      secret_key => $fedparams->secret_key,
-      origin     => $fedparams->server_name,
-      key_id     => $fedparams->key_id,
+      secret_key => $store->secret_key,
+      origin     => $store->server_name,
+      key_id     => $store->key_id,
    );
 }
 
