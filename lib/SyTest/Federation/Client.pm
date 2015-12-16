@@ -135,7 +135,7 @@ sub join_room
 
       my $protoevent = $body->{event};
 
-      my %event = (
+      my %member_event = (
          ( map { $_ => $protoevent->{$_} } qw(
             auth_events content depth prev_events prev_state room_id sender
             state_key type ) ),
@@ -145,21 +145,32 @@ sub join_room
          origin_server_ts => $self->time_ms,
       );
 
+      # TODO: really ought to sign it...
+
       $self->do_request_json(
          method   => "PUT",
          hostname => $server_name,
-         uri      => "/send_join/$room_id/$event{event_id}",
+         uri      => "/send_join/$room_id/$member_event{event_id}",
 
-         content => \%event,
+         content => \%member_event,
       )->then( sub {
          my ( $join_body ) = @_;
+         # SYN-490 workaround
+         $join_body = $join_body->[1] if ref $join_body eq "ARRAY";
 
          my $room = SyTest::Federation::Room->new(
             datastore => $store,
             room_id   => $room_id,
          );
 
-         # TODO: Consider how to set initial state on the $room object
+         my %done_event;
+         foreach my $event ( @{ $join_body->{auth_chain} }, @{ $join_body->{state} } ) {
+            $done_event{ $event->{event_id} }++ or
+               $room->insert_event( $event );
+         }
+
+         $room->insert_event( \%member_event );
+
          Future->done( $room );
       });
    });
