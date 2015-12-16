@@ -25,8 +25,6 @@ sub _init
    my $self = shift;
    my ( $params ) = @_;
 
-   $self->{next_room_id} = 0;
-
    # Use 'on_request' as a configured parameter rather than a subclass method
    # so that the '$CLIENT_LOG' logic in run-tests.pl can properly put
    # debug-printing wrapping logic around it.
@@ -51,12 +49,6 @@ sub client
 {
    my $self = shift;
    return $self->{client};
-}
-
-sub next_room_id
-{
-   my $self = shift;
-   return sprintf "!%d:%s", $self->{next_room_id}++, $self->server_name;
 }
 
 sub _fetch_key

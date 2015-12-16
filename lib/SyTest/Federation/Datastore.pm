@@ -20,6 +20,7 @@ sub new
       keys => {},
 
       next_event_id => 0,
+      next_room_id => 0,
    }, $class;
 }
 
@@ -230,6 +231,20 @@ sub get_auth_chain_events
    }
 
    return @events_by_id{ @all_event_ids };
+}
+
+=head2 next_room_id
+
+   $room_id = $store->next_room_id
+
+Allocates and returns a new string room ID for a unique room.
+
+=cut
+
+sub next_room_id
+{
+   my $self = shift;
+   return sprintf "!%d:%s", $self->{next_room_id}++, $self->server_name;
 }
 
 1;
