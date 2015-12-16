@@ -26,7 +26,6 @@ sub _init
    my $self = shift;
    my ( $params ) = @_;
 
-   $self->{next_event_id} = 0;
    $self->{next_room_id} = 0;
 
    # Use 'on_request' as a configured parameter rather than a subclass method
@@ -58,7 +57,7 @@ sub client
 sub next_event_id
 {
    my $self = shift;
-   return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
+   return $self->{datastore}->next_event_id;
 }
 
 sub next_room_id

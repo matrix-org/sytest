@@ -11,6 +11,8 @@ sub new
    return bless {
       %args,
       keys => {},
+
+      next_event_id => 0,
    }, $class;
 }
 
@@ -82,6 +84,20 @@ sub put_key
    my $hk = "$params{server_name}:$params{key_id}";
 
    $self->{keys}{$hk} = $params{key};
+}
+
+=head2 next_event_id
+
+   $event_id = $store->next_event_id
+
+Allocates and returns a new string event ID for a unique event on this server.
+
+=cut
+
+sub next_event_id
+{
+   my $self = shift;
+   return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
 }
 
 1;
