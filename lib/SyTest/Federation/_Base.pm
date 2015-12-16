@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use mro 'c3';
-use Protocol::Matrix qw( sign_json sign_event_json encode_base64_unpadded );
+use Protocol::Matrix qw( sign_json encode_base64_unpadded );
 
 use Time::HiRes qw( time );
 
@@ -56,20 +56,6 @@ sub signed_data
    $self->sign_data( my $copy = { %$orig } );
 
    return $copy;
-}
-
-sub sign_event
-{
-   my $self = shift;
-   my ( $event ) = @_;
-
-   my $store = $self->{datastore};
-
-   sign_event_json( $event,
-      secret_key => $store->secret_key,
-      origin     => $store->server_name,
-      key_id     => $store->key_id,
-   );
 }
 
 sub get_key

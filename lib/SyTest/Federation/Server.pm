@@ -87,9 +87,11 @@ sub create_event
       origin_server_ts => $self->time_ms,
    };
 
-   $self->sign_event( $event );
+   my $store = $self->{datastore};
 
-   $self->{datastore}->put_event( $event );
+   $store->sign_event( $event );
+   $store->put_event( $event );
+
    return $event;
 }
 

@@ -5,6 +5,8 @@ use warnings;
 
 use Carp;
 
+use Protocol::Matrix qw( sign_event_json );
+
 sub new
 {
    my $class = shift;
@@ -53,6 +55,27 @@ using
 
 sub public_key { $_[0]->{public_key} }
 sub secret_key { $_[0]->{secret_key} }
+
+=head2 sign_event
+
+   $store->sign_event( $event )
+
+Applies the event signing algorithm to the given event, adding the result to
+the C<signatures> key.
+
+=cut
+
+sub sign_event
+{
+   my $self = shift;
+   my ( $event ) = @_;
+
+   sign_event_json( $event,
+      secret_key => $self->secret_key,
+      origin     => $self->server_name,
+      key_id     => $self->key_id,
+   );
+}
 
 =head2 get_key
 
