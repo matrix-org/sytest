@@ -10,6 +10,8 @@ use Protocol::Matrix qw( sign_event_json );
 use List::MoreUtils qw( uniq );
 use Time::HiRes qw( time );
 
+use SyTest::Federation::Room;
+
 sub new
 {
    my $class = shift;
@@ -21,6 +23,9 @@ sub new
 
       next_event_id => 0,
       next_room_id => 0,
+
+      room_aliases => {},
+      rooms_by_id  => {},
    }, $class;
 }
 
@@ -244,6 +249,73 @@ sub next_room_id
 {
    my $self = shift;
    return sprintf "!%d:%s", $self->{next_room_id}++, $self->server_name;
+}
+
+=head2 get_room
+
+   $room = $store->get_room( $room_id )
+
+Returns a L<SyTest::Federation::Room> having the given ID, if one exists, or
+C<undef> if not.
+
+=cut
+
+sub get_room
+{
+   my $self = shift;
+   my ( $room_id ) = @_;
+
+   return $self->{rooms_by_id}{$room_id};
+}
+
+=head2 create_room
+
+   $room = $store->create_room( creator => $creator, [ alias => $alias ] )
+
+Creates a new L<SyTest::Federation::Room> instance with a new room ID and
+stores it in the data store. It creates the initial room events using the
+given C<creator> user ID. It associates the optional C<alias> if supplied.
+
+=cut
+
+sub create_room
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $creator = $args{creator};
+
+   my $room = SyTest::Federation::Room->new(
+      datastore => $self,
+   );
+
+   $room->create_initial_events(
+      creator => $creator,
+   );
+
+   $self->{rooms_by_id}{ $room->room_id } = $room;
+
+   $self->{room_aliases}{ $args{alias} } = $room->room_id
+      if $args{alias};
+
+   return $room;
+}
+
+=head2 get_alias
+
+   $room_id = $store->get_alias( $room_alias )
+
+Returns the room ID associated with the given room alias, if one exists, or
+C<undef> if not.
+
+=cut
+
+sub get_alias
+{
+   my $self = shift;
+   my ( $room_alias ) = @_;
+
+   return $self->{room_aliases}{$room_alias};
 }
 
 1;
