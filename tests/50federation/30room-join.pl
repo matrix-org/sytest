@@ -125,6 +125,7 @@ test "Inbound federation can receive room-join requests",
       my $first_home_server = $info->server_name;
 
       my $local_server_name = $outbound_client->server_name;
+      my $datastore         = $inbound_server->datastore;
 
       my $user_id = "\@50fed-user:$local_server_name";
 
@@ -180,7 +181,7 @@ test "Inbound federation can receive room-join requests",
                auth_events content depth prev_events prev_state room_id sender
                state_key type ) ),
 
-            event_id         => $inbound_server->next_event_id,
+            event_id         => $datastore->next_event_id,
             origin           => $local_server_name,
             origin_server_ts => $inbound_server->time_ms,
          );

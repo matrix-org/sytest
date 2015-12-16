@@ -53,12 +53,6 @@ sub client
    return $self->{client};
 }
 
-sub next_event_id
-{
-   my $self = shift;
-   return $self->{datastore}->next_event_id;
-}
-
 sub next_room_id
 {
    my $self = shift;
