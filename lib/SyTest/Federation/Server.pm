@@ -69,30 +69,7 @@ sub next_room_id
 sub create_event
 {
    my $self = shift;
-   my %fields = @_;
-
-   defined $fields{$_} or croak "Every event needs a '$_' field"
-      for qw( type auth_events content depth prev_events room_id sender );
-
-   if( defined $fields{state_key} ) {
-      defined $fields{$_} or croak "Every state event needs a '$_' field"
-         for qw( prev_state );
-   }
-
-   my $event = {
-      %fields,
-
-      event_id         => $self->next_event_id,
-      origin           => $self->server_name,
-      origin_server_ts => $self->time_ms,
-   };
-
-   my $store = $self->{datastore};
-
-   $store->sign_event( $event );
-   $store->put_event( $event );
-
-   return $event;
+   return $self->{datastore}->create_event( @_ );
 }
 
 sub get_auth_chain

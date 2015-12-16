@@ -7,6 +7,8 @@ use Carp;
 
 use Protocol::Matrix qw( sign_event_json );
 
+use Time::HiRes qw( time );
+
 sub new
 {
    my $class = shift;
@@ -154,6 +156,42 @@ sub put_event
    my ( $event ) = @_;
 
    $self->{events_by_id}{ $event->{event_id} } = $event;
+}
+
+=head2 create_event
+
+   $event = $store->create_event( %fields )
+
+Creates a new event with the given fields, signs it with L<sign_event>, stores
+it using L<put_event> and returns it.
+
+=cut
+
+sub create_event
+{
+   my $self = shift;
+   my %fields = @_;
+
+   defined $fields{$_} or croak "Every event needs a '$_' field"
+      for qw( type auth_events content depth prev_events room_id sender );
+
+   if( defined $fields{state_key} ) {
+      defined $fields{$_} or croak "Every state event needs a '$_' field"
+         for qw( prev_state );
+   }
+
+   my $event = {
+      %fields,
+
+      event_id         => $self->next_event_id,
+      origin           => $self->server_name,
+      origin_server_ts => int( time() * 1000 ),
+   };
+
+   $self->sign_event( $event );
+   $self->put_event( $event );
+
+   return $event;
 }
 
 1;
