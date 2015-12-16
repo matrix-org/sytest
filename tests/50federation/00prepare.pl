@@ -5,6 +5,7 @@ Net::Async::HTTP->VERSION( '0.39' ); # ->GET with 'headers'
 
 use Crypt::NaCl::Sodium;
 
+use SyTest::Federation::Datastore;
 use SyTest::Federation::Client;
 use SyTest::Federation::Server;
 
@@ -40,19 +41,18 @@ our $INBOUND_SERVER = fixture(
 
          my $fedparams = FederationParams( $server_name, "ed25519:1", $pkey, $skey );
 
-         # For now, the federation keystore is just a hash keyed on "origin/keyid"
-         my $keystore = {};
+         my $datastore = SyTest::Federation::Datastore->new();
 
          my $outbound_client = SyTest::Federation::Client->new(
             federation_params => $fedparams,
-            keystore          => $keystore,
+            datastore         => $datastore,
             uri_base          => "/_matrix/federation/v1",
          );
          $loop->add( $outbound_client );
 
          $inbound_server->configure(
             federation_params => $fedparams,
-            keystore          => $keystore,
+            datastore         => $datastore,
             client            => $outbound_client,
          );
       });

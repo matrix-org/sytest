@@ -13,7 +13,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( federation_params keystore )) {
+   foreach (qw( federation_params datastore )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -77,10 +77,15 @@ sub get_key
    my $self = shift;
    my %params = @_;
 
-   # hashes have keys. not the same as crypto keys. Grr.
-   my $hk = "$params{server_name}:$params{key_id}";
+   if( my $key = $self->{datastore}->get_key( %params ) ) {
+      return Future->done( $key );
+   }
 
-   $self->{keystore}{$hk} //= $self->_fetch_key( $params{server_name}, $params{key_id} );
+   $self->_fetch_key( $params{server_name}, $params{key_id} )
+      ->on_done( sub {
+         my ( $key ) = @_;
+         $self->{datastore}->put_key( %params, key => $key );
+      });
 }
 
 sub time_ms
