@@ -115,4 +115,54 @@ sub send_edu
    )->then_done(); # response body is empty
 }
 
+sub join_room
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $server_name = $args{server_name};
+   my $room_id     = $args{room_id};
+   my $user_id     = $args{user_id};
+
+   my $store = $self->{datastore};
+
+   $self->do_request_json(
+      method   => "GET",
+      hostname => $server_name,
+      uri      => "/make_join/$room_id/$user_id"
+   )->then( sub {
+      my ( $body ) = @_;
+
+      my $protoevent = $body->{event};
+
+      my %event = (
+         ( map { $_ => $protoevent->{$_} } qw(
+            auth_events content depth prev_events prev_state room_id sender
+            state_key type ) ),
+
+         event_id         => $store->next_event_id,
+         origin           => $store->server_name,
+         origin_server_ts => $self->time_ms,
+      );
+
+      $self->do_request_json(
+         method   => "PUT",
+         hostname => $server_name,
+         uri      => "/send_join/$room_id/$event{event_id}",
+
+         content => \%event,
+      )->then( sub {
+         my ( $join_body ) = @_;
+
+         my $room = SyTest::Federation::Room->new(
+            datastore => $store,
+            room_id   => $room_id,
+         );
+
+         # TODO: Consider how to set initial state on the $room object
+         Future->done( $room );
+      });
+   });
+}
+
 1;
