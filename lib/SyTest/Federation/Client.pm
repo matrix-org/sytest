@@ -84,7 +84,7 @@ sub do_request_json
    );
 }
 
-sub send_edu
+sub send_transaction
 {
    my $self = shift;
    my %params = @_;
@@ -95,15 +95,8 @@ sub send_edu
       origin           => $self->server_name,
       origin_server_ts => JSON::number( $ts ),
       previous_ids     => [], # TODO
-      pdus             => [],
-      edus             => [
-         {
-            edu_type => $params{edu_type},
-            content  => $params{content},
-            origin   => $self->server_name,
-            destination => $params{destination},
-         }
-      ],
+      pdus             => $params{pdus} // [],
+      edus             => $params{edus} // [],
    );
 
    $self->do_request_json(
@@ -113,6 +106,35 @@ sub send_edu
 
       content => \%transaction,
    )->then_done(); # response body is empty
+}
+
+sub send_edu
+{
+   my $self = shift;
+   my %params = @_;
+
+   $self->send_transaction(
+      %params,
+      edus => [
+         {
+            edu_type => $params{edu_type},
+            content  => $params{content},
+            origin   => $self->server_name,
+            destination => $params{destination},
+         }
+      ],
+   );
+}
+
+sub send_event
+{
+   my $self = shift;
+   my %params = @_;
+
+   $self->send_transaction(
+      %params,
+      pdus => [ $params{event} ],
+   );
 }
 
 sub join_room
