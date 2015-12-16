@@ -12,6 +12,7 @@ use feature qw( switch );
 
 use Carp;
 
+use List::MoreUtils qw( uniq );
 use List::UtilsBy qw( extract_first_by );
 use Protocol::Matrix qw( encode_base64_unpadded verify_json_signature );
 use HTTP::Headers::Util qw( split_header_words );
@@ -26,6 +27,7 @@ sub _init
    my ( $params ) = @_;
 
    $self->{next_event_id} = 0;
+   $self->{next_room_id} = 0;
 
    # Use 'on_request' as a configured parameter rather than a subclass method
    # so that the '$CLIENT_LOG' logic in run-tests.pl can properly put
@@ -57,6 +59,12 @@ sub next_event_id
 {
    my $self = shift;
    return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
+}
+
+sub next_room_id
+{
+   my $self = shift;
+   return sprintf "!%d:%s", $self->{next_room_id}++, $self->server_name;
 }
 
 sub create_event
@@ -94,6 +102,34 @@ sub get_event
       croak "$self has no event id '$id'";
 
    return $event;
+}
+
+sub get_auth_chain
+{
+   my $self = shift;
+   my @event_ids = @_;
+
+   my %events_by_id = map { $_ => $self->get_event( $_ ) } @event_ids;
+
+   my @all_event_ids = @event_ids;
+
+   while( @event_ids ) {
+      my $event = $events_by_id{shift @event_ids};
+
+      my @auth_ids = map { $_->[0] } @{ $event->{auth_events} };
+
+      foreach my $id ( @auth_ids ) {
+         next if $events_by_id{$id};
+
+         $events_by_id{$id} = $self->get_event( $id );
+         push @event_ids, $id;
+      }
+
+      # Keep the list in a linearised causality order
+      @all_event_ids = uniq( @auth_ids, @all_event_ids );
+   }
+
+   return @events_by_id{ @all_event_ids };
 }
 
 sub _fetch_key
@@ -296,6 +332,7 @@ sub mk_await_request_pair
          });
    };
 
+   my $was_on_requestfunc = $class->can( "on_request_federation_v1_$shortname" );
    my $on_requestfunc = sub {
       my $self = shift;
       my ( $req, @pathvalues ) = @_;
@@ -322,6 +359,9 @@ sub mk_await_request_pair
          $f->done( $req, @paramvalues );
          Future->done;
       }
+      elsif( $was_on_requestfunc ) {
+         return $self->$was_on_requestfunc( $req, @paramvalues );
+      }
       else {
          Future->done( response => HTTP::Response->new(
             404, "Not found", [ Content_length => 0 ], "",
@@ -330,6 +370,7 @@ sub mk_await_request_pair
    };
 
    no strict 'refs';
+   no warnings 'redefine';
    *{"${class}::await_$shortname"} = $awaitfunc;
    *{"${class}::on_request_federation_v1_$shortname"} = $on_requestfunc;
 }
