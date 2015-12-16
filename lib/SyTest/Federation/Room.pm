@@ -28,6 +28,9 @@ sub make_event_refs
 
 Constructs a new Room instance, initially blank containing no state or events.
 
+C<room_id> may be left undefined, and a new room ID will be allocated from the
+datastore if so.
+
 =cut
 
 sub new
@@ -35,10 +38,10 @@ sub new
    my $class = shift;
    my %args = @_;
 
-   my $room_id = $args{room_id} or
-      croak "Require a 'room_id'";
    my $datastore = $args{datastore} or
       croak "Require a 'datastore'";
+
+   my $room_id = $args{room_id} // $datastore->next_room_id;
 
    return bless {
       room_id   => $room_id,
