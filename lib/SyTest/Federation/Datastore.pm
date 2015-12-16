@@ -3,6 +3,8 @@ package SyTest::Federation::Datastore;
 use strict;
 use warnings;
 
+use Carp;
+
 sub new
 {
    my $class = shift;
@@ -98,6 +100,37 @@ sub next_event_id
 {
    my $self = shift;
    return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
+}
+
+=head2 get_event
+
+   $event = $store->get_event( $event_id )
+
+=head2 put_event
+
+   $store->put_event( $event )
+
+Accessor and mutator for event storage
+
+=cut
+
+sub get_event
+{
+   my $self = shift;
+   my ( $event_id ) = @_;
+
+   my $event = $self->{events_by_id}{$event_id} or
+      croak "$self has no event id '$event_id'";
+
+   return $event;
+}
+
+sub put_event
+{
+   my $self = shift;
+   my ( $event ) = @_;
+
+   $self->{events_by_id}{ $event->{event_id} } = $event;
 }
 
 1;

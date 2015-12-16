@@ -89,17 +89,7 @@ sub create_event
 
    $self->sign_event( $event );
 
-   return $self->{events_by_id}{ $event->{event_id} } = $event;
-}
-
-sub get_event
-{
-   my $self = shift;
-   my ( $id ) = @_;
-
-   my $event = $self->{events_by_id}{$id} or
-      croak "$self has no event id '$id'";
-
+   $self->{datastore}->put_event( $event );
    return $event;
 }
 
@@ -108,7 +98,9 @@ sub get_auth_chain
    my $self = shift;
    my @event_ids = @_;
 
-   my %events_by_id = map { $_ => $self->get_event( $_ ) } @event_ids;
+   my $store = $self->{datastore};
+
+   my %events_by_id = map { $_ => $store->get_event( $_ ) } @event_ids;
 
    my @all_event_ids = @event_ids;
 
@@ -120,7 +112,7 @@ sub get_auth_chain
       foreach my $id ( @auth_ids ) {
          next if $events_by_id{$id};
 
-         $events_by_id{$id} = $self->get_event( $id );
+         $events_by_id{$id} = $store->get_event( $id );
          push @event_ids, $id;
       }
 
