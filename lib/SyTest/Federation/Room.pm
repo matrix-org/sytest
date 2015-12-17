@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 
 use List::Util qw( max );
+use List::UtilsBy qw( extract_by );
 
 =head1 NAME
 
@@ -184,8 +185,10 @@ sub insert_event
    my $prev_events = $self->{prev_events};
    push @$prev_events, $event;
 
-   my %remove = map { $_->[0] => 1 } @{ $event->{prev_events} };
-   @$prev_events = grep { !$remove{ $_->{event_id} } } @$prev_events;
+   # Remove from $self->{prev_events} any event IDs that are now recursively
+   # implied by this new event.
+   my %to_remove = map { $_->[0] => 1 } @{ $event->{prev_events} };
+   extract_by { $to_remove{ $_->{event_id} } } @$prev_events;
 }
 
 sub _insert_event
