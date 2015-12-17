@@ -301,16 +301,16 @@ sub create_room
    return $room;
 }
 
-=head2 get_alias
+=head2 lookup_alias
 
-   $room_id = $store->get_alias( $room_alias )
+   $room_id = $store->lookup_alias( $room_alias )
 
 Returns the room ID associated with the given room alias, if one exists, or
 C<undef> if not.
 
 =cut
 
-sub get_alias
+sub lookup_alias
 {
    my $self = shift;
    my ( $room_alias ) = @_;

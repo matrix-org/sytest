@@ -231,7 +231,7 @@ sub on_request_federation_v1_query_directory
    my $self = shift;
    my ( $req, $alias ) = @_;
 
-   my $room_id = $self->{datastore}->get_alias( $alias ) or
+   my $room_id = $self->{datastore}->lookup_alias( $alias ) or
       return Future->done( response => HTTP::Response->new(
          404, "Not found", [ Content_length => 0 ], "",
       ) );
