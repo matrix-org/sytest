@@ -69,6 +69,7 @@ test "Can back-paginate search results",
                     keys => [ "content.body" ],
                     search_term => "Message",
                     order_by => "recent",
+                    filter => { limit => 10 },
                 }
             }
         };
@@ -77,8 +78,8 @@ test "Can back-paginate search results",
             my $msgnum = $_[0];
             matrix_send_room_text_message( $user, $room_id,
                                            body => "Message number $msgnum" )
-                ->on_done( sub { ($event_ids[$msgnum]) = @_ } )
-        }, foreach => [ 0 .. 19 ] ) -> then ( sub {
+                ->on_done( sub { ( $event_ids[$msgnum] ) = @_ } )
+        }, foreach => [ 0 .. 19 ] )->then( sub {
             do_request_json_for( $user,
                                  method  => "POST",
                                  uri     => "/api/v1/search",
@@ -94,15 +95,15 @@ test "Can back-paginate search results",
             my $room_events = $body->{search_categories}{room_events};
 
             assert_json_keys( $room_events, qw( count results next_batch ) );
-
-            $room_events->{count} == 20 or die "Expected count == 20";
+            assert_eq( $room_events->{count}, 20, 'event count' );
 
             my $results = $room_events->{results};
-            scalar @$results == 10 or die "Expected 10 search results";
-            $results->[0]{result}{event_id} eq $event_ids[19]
-                or die "First result incorrect";
-            $results->[9]{result}{event_id} eq $event_ids[10]
-                or die "Final result incorrect";
+            assert_eq( scalar @$results, 10, 'search results' );
+
+            assert_eq( $results->[0]{result}{event_id}, $event_ids[19],
+                       'first result event_id' );
+            assert_eq( $results->[9]{result}{event_id}, $event_ids[10],
+                       'final result event_id' );
 
             my $next_batch = $room_events->{next_batch};
 
@@ -122,15 +123,15 @@ test "Can back-paginate search results",
             my $room_events = $body->{search_categories}{room_events};
 
             assert_json_keys( $room_events, qw( count results next_batch ) );
-
-            $room_events->{count} == 20 or die "Expected count == 20";
+            assert_eq( $room_events->{count}, 20, 'event count' );
 
             my $results = $room_events->{results};
-            scalar @$results == 10 or die "Expected 10 search results";
-            $results->[0]{result}{event_id} eq $event_ids[9]
-                or die "First result incorrect";
-            $results->[9]{result}{event_id} eq $event_ids[0]
-                or die "Final result incorrect";
+            assert_eq( scalar @$results, 10, 'search results' );
+
+            assert_eq( $results->[0]{result}{event_id}, $event_ids[9],
+                       'first result event_id' );
+            assert_eq( $results->[9]{result}{event_id}, $event_ids[0],
+                       'final result event_id' );
 
             my $next_batch = $room_events->{next_batch};
 
@@ -150,13 +151,13 @@ test "Can back-paginate search results",
             my $room_events = $body->{search_categories}{room_events};
 
             assert_json_keys( $room_events, qw( count results ) );
-            not exists($room_events->{next_batch}) or die "unexpected next_batch";
+            not exists( $room_events->{next_batch} ) or die "unexpected next_batch";
 
-            $room_events->{count} == 20 or die "Expected count == 20";
+            assert_eq( $room_events->{count}, 20, 'event count' );
 
             my $results = $room_events->{results};
-            scalar @$results == 0 or die "Expected 0 search results";
+            assert_eq( scalar @$results, 0, 'search results' );
 
-            Future->done(1);
+            Future->done( 1 );
         });
     };
