@@ -243,6 +243,25 @@ sub on_request_federation_v1_query_directory
    } );
 }
 
+sub on_request_federation_v1_event
+{
+   my $self = shift;
+   my ( $req, $event_id ) = @_;
+
+   my $event = $self->{datastore}->get_event( $event_id ) or
+      return Future->done( response => HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+   Future->done( json => {
+      origin           => $self->server_name,
+      origin_server_ts => $self->time_ms,
+      pdus             => [
+         $event,
+      ]
+   } );
+}
+
 sub on_request_federation_v1_make_join
 {
    my $self = shift;
