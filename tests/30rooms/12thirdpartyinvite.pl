@@ -95,11 +95,11 @@ sub can_invite_unbound_3pid
       )
    })->then( sub {
       my ( $body ) = @_;
+
       log_if_fail "m.room.member invite", $body;
       $body->{third_party_invite}{display_name} eq "Bob" or
          die "Expected third_party_invite display_name to be 'Bob'";
-      Future->done( 1 );
-   })->then( sub {
+
       matrix_join_room( $invitee, $room_id )
    })->then( sub {
       matrix_get_room_state( $inviter, $room_id,
