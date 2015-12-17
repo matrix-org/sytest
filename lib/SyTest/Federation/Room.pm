@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 
 use List::Util qw( max );
+use List::UtilsBy qw( extract_by );
 
 =head1 NAME
 
@@ -167,14 +168,38 @@ sub create_event
       prev_events => make_event_refs( @{ $self->{prev_events} } ),
    );
 
+   $self->_insert_event( $event );
+
    $self->{prev_events} = [ $event ];
 
-   if( defined $fields{state_key} ) {
-      $self->{current_state}{ join "\0", $fields{type}, $fields{state_key} }
+   return $event;
+}
+
+sub insert_event
+{
+   my $self = shift;
+   my ( $event ) = @_;
+
+   $self->_insert_event( $event );
+
+   my $prev_events = $self->{prev_events};
+   push @$prev_events, $event;
+
+   # Remove from $self->{prev_events} any event IDs that are now recursively
+   # implied by this new event.
+   my %to_remove = map { $_->[0] => 1 } @{ $event->{prev_events} };
+   extract_by { $to_remove{ $_->{event_id} } } @$prev_events;
+}
+
+sub _insert_event
+{
+   my $self = shift;
+   my ( $event ) = @_;
+
+   if( defined $event->{state_key} ) {
+      $self->{current_state}{ join "\0", $event->{type}, $event->{state_key} }
          = $event;
    }
-
-   return $event;
 }
 
 =head2 current_state_events

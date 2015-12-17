@@ -5,6 +5,8 @@ use warnings;
 
 use base qw( SyTest::Federation::_Base SyTest::HTTPClient );
 
+use List::UtilsBy qw( uniq_by );
+
 use MIME::Base64 qw( decode_base64 );
 use HTTP::Headers::Util qw( join_header_words );
 
@@ -84,7 +86,7 @@ sub do_request_json
    );
 }
 
-sub send_edu
+sub send_transaction
 {
    my $self = shift;
    my %params = @_;
@@ -95,15 +97,8 @@ sub send_edu
       origin           => $self->server_name,
       origin_server_ts => JSON::number( $ts ),
       previous_ids     => [], # TODO
-      pdus             => [],
-      edus             => [
-         {
-            edu_type => $params{edu_type},
-            content  => $params{content},
-            origin   => $self->server_name,
-            destination => $params{destination},
-         }
-      ],
+      pdus             => $params{pdus} // [],
+      edus             => $params{edus} // [],
    );
 
    $self->do_request_json(
@@ -113,6 +108,96 @@ sub send_edu
 
       content => \%transaction,
    )->then_done(); # response body is empty
+}
+
+sub send_edu
+{
+   my $self = shift;
+   my %params = @_;
+
+   $self->send_transaction(
+      %params,
+      edus => [
+         {
+            edu_type => $params{edu_type},
+            content  => $params{content},
+            origin   => $self->server_name,
+            destination => $params{destination},
+         }
+      ],
+   );
+}
+
+sub send_event
+{
+   my $self = shift;
+   my %params = @_;
+
+   $self->send_transaction(
+      %params,
+      pdus => [ $params{event} ],
+   );
+}
+
+sub join_room
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $server_name = $args{server_name};
+   my $room_id     = $args{room_id};
+   my $user_id     = $args{user_id};
+
+   my $store = $self->{datastore};
+
+   $self->do_request_json(
+      method   => "GET",
+      hostname => $server_name,
+      uri      => "/make_join/$room_id/$user_id"
+   )->then( sub {
+      my ( $body ) = @_;
+
+      my $protoevent = $body->{event};
+
+      my %member_event = (
+         ( map { $_ => $protoevent->{$_} } qw(
+            auth_events content depth prev_events prev_state room_id sender
+            state_key type ) ),
+
+         event_id         => $store->next_event_id,
+         origin           => $store->server_name,
+         origin_server_ts => $self->time_ms,
+      );
+
+      # TODO: really ought to sign it...
+
+      $self->do_request_json(
+         method   => "PUT",
+         hostname => $server_name,
+         uri      => "/send_join/$room_id/$member_event{event_id}",
+
+         content => \%member_event,
+      )->then( sub {
+         my ( $join_body ) = @_;
+         # SYN-490 workaround
+         $join_body = $join_body->[1] if ref $join_body eq "ARRAY";
+
+         my $room = SyTest::Federation::Room->new(
+            datastore => $store,
+            room_id   => $room_id,
+         );
+
+         my @events = uniq_by { $_->{event_id} } (
+            @{ $join_body->{auth_chain} },
+            @{ $join_body->{state} },
+            \%member_event,
+         );
+
+         $room->insert_event( $_ ) for @events;
+
+         Future->done( $room );
+      });
+   });
 }
 
 1;
