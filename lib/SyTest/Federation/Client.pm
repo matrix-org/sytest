@@ -5,6 +5,8 @@ use warnings;
 
 use base qw( SyTest::Federation::_Base SyTest::HTTPClient );
 
+use List::UtilsBy qw( uniq_by );
+
 use MIME::Base64 qw( decode_base64 );
 use HTTP::Headers::Util qw( join_header_words );
 
@@ -185,13 +187,13 @@ sub join_room
             room_id   => $room_id,
          );
 
-         my %done_event;
-         foreach my $event ( @{ $join_body->{auth_chain} }, @{ $join_body->{state} } ) {
-            $done_event{ $event->{event_id} }++ or
-               $room->insert_event( $event );
-         }
+         my @events = uniq_by { $_->{event_id} } (
+            \%member_event,
+            @{ $join_body->{auth_chain} },
+            @{ $join_body->{state} }
+         );
 
-         $room->insert_event( \%member_event );
+         $room->insert_event( $_ ) for @events;
 
          Future->done( $room );
       });
