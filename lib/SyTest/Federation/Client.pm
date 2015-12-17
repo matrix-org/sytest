@@ -188,9 +188,9 @@ sub join_room
          );
 
          my @events = uniq_by { $_->{event_id} } (
-            \%member_event,
             @{ $join_body->{auth_chain} },
-            @{ $join_body->{state} }
+            @{ $join_body->{state} },
+            \%member_event,
          );
 
          $room->insert_event( $_ ) for @events;
