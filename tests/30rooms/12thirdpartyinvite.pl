@@ -89,6 +89,17 @@ sub can_invite_unbound_3pid
    })->then( sub {
       $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
    })->then( sub {
+      matrix_get_room_state( $inviter, $room_id,
+         type      => "m.room.member",
+         state_key => $invitee->user_id,
+      )
+   })->then( sub {
+      my ( $body ) = @_;
+      log_if_fail "Body", $body;
+      $body->{third_party_invite}{display_name} eq "Bob" or
+         die "Expected third_party_invite display_name to be 'Bob'";
+      Future->done( 1 );
+   })->then( sub {
       matrix_join_room( $invitee, $room_id )
    })->then( sub {
       matrix_get_room_state( $inviter, $room_id,
