@@ -196,6 +196,8 @@ test "Remote room members can get room messages",
 test "Message history can be paginated",
    requires => [ local_user_and_room_fixtures() ],
 
+   proves => [qw( can_paginate_room )],
+
    do => sub {
       my ( $user, $room_id ) = @_;
 
