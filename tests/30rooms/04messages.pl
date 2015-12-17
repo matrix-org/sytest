@@ -1,3 +1,5 @@
+use Future::Utils qw( repeat );
+
 my $senduser_fixture = local_user_fixture();
 
 my $local_user_fixture = local_user_fixture();
@@ -186,6 +188,53 @@ test "Remote room members can get room messages",
 
          $event->{room_id} eq $room_id or
             die "Expected room_id to be $room_id";
+
+         Future->done(1);
+      });
+   };
+
+test "Message history can be paginated",
+   requires => [ local_user_and_room_fixtures() ],
+
+   proves => [qw( can_paginate_room )],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      ( repeat {
+         matrix_send_room_text_message( $user, $room_id,
+            body => "Message number $_[0]"
+         )
+      } foreach => [ 1 .. 20 ] )->then( sub {
+         matrix_get_room_messages( $user, $room_id, limit => 5 )
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "First messages body", $body;
+
+         my $chunk = $body->{chunk};
+         @$chunk == 5 or
+            die "Expected 5 messages";
+
+         # This should be 20 to 16
+         assert_eq( $chunk->[0]{content}{body}, "Message number 20",
+            'chunk[0] content body' );
+         assert_eq( $chunk->[4]{content}{body}, "Message number 16",
+            'chunk[4] content body' );
+
+         matrix_get_room_messages( $user, $room_id, limit => 5, from => $body->{end} )
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Second message body", $body;
+
+         my $chunk = $body->{chunk};
+         @$chunk == 5 or
+            die "Expected 5 messages";
+
+         # This should be 15 to 11
+         assert_eq( $chunk->[0]{content}{body}, "Message number 15",
+            'chunk[0] content body' );
+         assert_eq( $chunk->[4]{content}{body}, "Message number 11",
+            'chunk[4] content body' );
 
          Future->done(1);
       });

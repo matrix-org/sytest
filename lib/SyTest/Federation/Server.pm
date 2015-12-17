@@ -19,13 +19,12 @@ use JSON qw( encode_json );
 
 use Struct::Dumb qw( struct );
 struct Awaiter => [qw( type matcher f )];
+struct RoomAwaiter => [qw( type room_id matcher f )];
 
 sub _init
 {
    my $self = shift;
    my ( $params ) = @_;
-
-   $self->{next_event_id} = 0;
 
    # Use 'on_request' as a configured parameter rather than a subclass method
    # so that the '$CLIENT_LOG' logic in run-tests.pl can properly put
@@ -51,49 +50,6 @@ sub client
 {
    my $self = shift;
    return $self->{client};
-}
-
-sub next_event_id
-{
-   my $self = shift;
-   return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
-}
-
-sub create_event
-{
-   my $self = shift;
-   my %fields = @_;
-
-   defined $fields{$_} or croak "Every event needs a '$_' field"
-      for qw( type auth_events content depth prev_events room_id sender );
-
-   if( defined $fields{state_key} ) {
-      defined $fields{$_} or croak "Every state event needs a '$_' field"
-         for qw( prev_state );
-   }
-
-   my $event = {
-      %fields,
-
-      event_id         => $self->next_event_id,
-      origin           => $self->server_name,
-      origin_server_ts => $self->time_ms,
-   };
-
-   $self->sign_event( $event );
-
-   return $self->{events_by_id}{ $event->{event_id} } = $event;
-}
-
-sub get_event
-{
-   my $self = shift;
-   my ( $id ) = @_;
-
-   my $event = $self->{events_by_id}{$id} or
-      croak "$self has no event id '$id'";
-
-   return $event;
 }
 
 sub _fetch_key
@@ -255,21 +211,80 @@ sub on_request_key_v2_server
    my $algo = "sha256";
    my $fingerprint = Net::SSLeay::X509_digest( $cert, Net::SSLeay::EVP_get_digestbyname( $algo ) );
 
-   my $fedparams = $self->{federation_params};
-
    Future->done( json => $self->signed_data( {
-      server_name => $fedparams->server_name,
+      server_name => $self->server_name,
       tls_fingerprints => [
          { $algo => encode_base64_unpadded( $fingerprint ) },
       ],
       valid_until_ts => ( time + 86400 ) * 1000, # +24h in msec
       verify_keys => {
-         $fedparams->key_id => {
-            key => encode_base64_unpadded( $fedparams->public_key ),
+         $self->key_id => {
+            key => encode_base64_unpadded( $self->{datastore}->public_key ),
          },
       },
       old_verify_keys => {},
    } ) );
+}
+
+sub on_request_federation_v1_query_directory
+{
+   my $self = shift;
+   my ( $req, $alias ) = @_;
+
+   my $room_id = $self->{datastore}->lookup_alias( $alias ) or
+      return Future->done( response => HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+   Future->done( json => {
+      room_id => $room_id,
+      servers => [ $self->server_name ],
+   } );
+}
+
+sub on_request_federation_v1_make_join
+{
+   my $self = shift;
+   my ( $req, $room_id, $user_id ) = @_;
+
+   my $room = $self->{datastore}->get_room( $room_id ) or
+      return Future->done( response => HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+   Future->done( json => {
+      event => $room->make_join_protoevent(
+         user_id => $user_id,
+      ),
+   } );
+}
+
+sub on_request_federation_v1_send_join
+{
+   my $self = shift;
+   my ( $req, $room_id ) = @_;
+
+   my $store = $self->{datastore};
+
+   my $room = $store->get_room( $room_id ) or
+      return Future->done( response => HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+   my $event = $req->body_from_json;
+
+   my @auth_chain = $store->get_auth_chain_events(
+      map { $_->[0] } @{ $event->{auth_events} }
+   );
+   my @state_events = $room->current_state_events;
+
+   $room->insert_event( $event );
+
+   # SYN-490
+   Future->done( json => [ 200, {
+      auth_chain => \@auth_chain,
+      state      => \@state_events,
+   } ] );
 }
 
 sub mk_await_request_pair
@@ -296,6 +311,7 @@ sub mk_await_request_pair
          });
    };
 
+   my $was_on_requestfunc = $class->can( "on_request_federation_v1_$shortname" );
    my $on_requestfunc = sub {
       my $self = shift;
       my ( $req, @pathvalues ) = @_;
@@ -322,6 +338,9 @@ sub mk_await_request_pair
          $f->done( $req, @paramvalues );
          Future->done;
       }
+      elsif( $was_on_requestfunc ) {
+         return $self->$was_on_requestfunc( $req, @paramvalues );
+      }
       else {
          Future->done( response => HTTP::Response->new(
             404, "Not found", [ Content_length => 0 ], "",
@@ -330,6 +349,7 @@ sub mk_await_request_pair
    };
 
    no strict 'refs';
+   no warnings 'redefine';
    *{"${class}::await_$shortname"} = $awaitfunc;
    *{"${class}::on_request_federation_v1_$shortname"} = $on_requestfunc;
 }
@@ -365,6 +385,13 @@ sub on_request_federation_v1_send
       warn "TODO: Unhandled incoming EDU of type '$edu->{edu_type}'";
    }
 
+   # A PDU is an event
+   foreach my $event ( @{ $body->{pdus} } ) {
+      next if $self->on_event( $event );
+
+      warn "TODO: Unhandled incoming event of type '$event->{type}'";
+   }
+
    Future->done( json => {} );
 }
 
@@ -391,6 +418,34 @@ sub on_edu
       return;
 
    $awaiter->f->done( $edu, $origin );
+   return 1;
+}
+
+sub await_event
+{
+   my $self = shift;
+   my ( $type, $room_id, $matcher ) = @_;
+
+   push @{ $self->{event_waiters} }, RoomAwaiter( $type, $room_id, $matcher, my $f = $self->loop->new_future );
+
+   return $f;
+}
+
+sub on_event
+{
+   my $self = shift;
+   my ( $event ) = @_;
+
+   my $type    = $event->{type};
+   my $room_id = $event->{room_id};
+
+   my $awaiter = extract_first_by {
+      $_->type eq $type and $_->room_id eq $room_id and
+         ( not $_->matcher or $_->matcher->( $event ) )
+   } @{ $self->{event_waiters} //= [] } or
+      return;
+
+   $awaiter->f->done( $event );
    return 1;
 }
 
