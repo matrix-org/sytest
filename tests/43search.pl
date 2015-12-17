@@ -132,6 +132,31 @@ test "Can back-paginate search results",
             $results->[9]{result}{event_id} eq $event_ids[0]
                 or die "Final result incorrect";
 
+            my $next_batch = $room_events->{next_batch};
+
+            do_request_json_for( $user,
+                                 method  => "POST",
+                                 uri     => "/api/v1/search",
+                                 params  => { next_batch => $next_batch },
+                                 content => $search_query,
+            );
+        })->then( sub {
+            my ( $body ) = @_;
+
+            log_if_fail "Third search result:", $body;
+
+            assert_json_keys( $body, qw( search_categories ) );
+            assert_json_keys( $body->{search_categories}, qw ( room_events ) );
+            my $room_events = $body->{search_categories}{room_events};
+
+            assert_json_keys( $room_events, qw( count results ) );
+            not exists($room_events->{next_batch}) or die "unexpected next_batch";
+
+            $room_events->{count} == 20 or die "Expected count == 20";
+
+            my $results = $room_events->{results};
+            scalar @$results == 0 or die "Expected 0 search results";
+
             Future->done(1);
         });
     };
