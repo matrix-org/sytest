@@ -239,3 +239,69 @@ test "Message history can be paginated",
          Future->done(1);
       });
    };
+
+test "Message history can be paginated over federation",
+   requires => do {
+      my $local_user_fixture = local_user_fixture();
+
+      [ $local_user_fixture,
+        room_fixture( requires_users => [ $local_user_fixture ], with_alias => 1 ),
+        remote_user_fixture(),
+
+        qw( can_paginate_room ),
+     ];
+   },
+
+   proves => [qw( can_paginate_room_remotely )],
+
+   do => sub {
+      my ( $creator, $room_id, $room_alias, $remote_user ) = @_;
+
+      ( repeat {
+         matrix_send_room_text_message( $creator, $room_id,
+            body => "Message number $_[0]"
+         )
+      } foreach => [ 1 .. 20 ] )->then( sub {
+         matrix_join_room( $remote_user, $room_alias );
+      })->then( sub {
+         # The member event is likely to arrive first
+         matrix_get_room_messages( $remote_user, $room_id, limit => 5+1 )
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "First messages body", $body;
+
+         my $chunk = $body->{chunk};
+         @$chunk == 6 or
+            die "Expected 6 messages";
+
+         assert_eq( $chunk->[0]{type}, "m.room.member",
+            'first message type' );
+         assert_eq( $chunk->[0]{state_key}, $remote_user->user_id,
+            'first message state_key' );
+
+         shift @$chunk;
+
+         # This should be 20 to 16
+         assert_eq( $chunk->[0]{content}{body}, "Message number 20",
+            'chunk[0] content body' );
+         assert_eq( $chunk->[4]{content}{body}, "Message number 16",
+            'chunk[4] content body' );
+
+         matrix_get_room_messages( $remote_user, $room_id, limit => 5, from => $body->{end} )
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Second message body", $body;
+
+         my $chunk = $body->{chunk};
+         @$chunk == 5 or
+            die "Expected 5 messages";
+
+         # This should be 15 to 11
+         assert_eq( $chunk->[0]{content}{body}, "Message number 15",
+            'chunk[0] content body' );
+         assert_eq( $chunk->[4]{content}{body}, "Message number 11",
+            'chunk[4] content body' );
+
+         Future->done(1);
+      });
+   };

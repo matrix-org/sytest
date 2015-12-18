@@ -352,7 +352,7 @@ sub matrix_create_and_join_room
             )
          } @local_members )
    })->then( sub {
-      return Future->done( $room_id ) unless $n_joiners;
+      return Future->done unless $n_joiners;
 
       # Now wait for the creator to see every join event, so we're sure
       # the remote joins have happened
@@ -376,8 +376,12 @@ sub matrix_create_and_join_room
 
          delay( 3 )
             ->then_fail( "Timed out waiting to receive m.room.member join events to newly-created room" )
-      )->then_done( $room_id );
-   })
+      )
+   })->then( sub {
+      Future->done( $room_id,
+         ( $options{with_alias} ? ( $room_alias_fullname ) : () )
+      );
+   });
 }
 
 push @EXPORT, qw( room_fixture );
@@ -387,12 +391,12 @@ sub room_fixture
    my %args = @_;
 
    fixture(
-      requires => $args{requires_users},
+      requires => delete $args{requires_users},
 
       setup => sub {
          my @members = @_;
 
-         matrix_create_and_join_room( \@members )
+         matrix_create_and_join_room( \@members, %args )
       }
    );
 }
