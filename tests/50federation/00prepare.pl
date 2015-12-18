@@ -133,3 +133,21 @@ test "Checking local federation server",
          Future->done(1);
       });
    };
+
+push @EXPORT, qw( federation_user_id_fixture );
+
+my $next_user_id = 0;
+
+sub federation_user_id_fixture
+{
+   fixture(
+      requires => [ $INBOUND_SERVER ],
+
+      setup => sub {
+         my ( $inbound_server ) = @_;
+
+         my $user_id = sprintf "\@__ANON__-%d:%s", $next_user_id++, $inbound_server->server_name;
+         Future->done( $user_id );
+      },
+   );
+}

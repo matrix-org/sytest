@@ -1,17 +1,16 @@
 test "Outbound federation can send events",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER ],
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER, federation_user_id_fixture() ],
 
    do => sub {
-      my ( $user, $inbound_server ) = @_;
+      my ( $user, $inbound_server, $creator_id ) = @_;
 
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
-      my $creator = '@50fed:' . $local_server_name;
       my $room_alias = "#50fed-31send:$local_server_name";
 
       my $room = $datastore->create_room(
-         creator => $creator,
+         creator => $creator_id,
          alias   => $room_alias,
       );
 
@@ -46,15 +45,14 @@ test "Outbound federation can send events",
 
 test "Inbound federation can receive events",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures() ],
+                 local_user_and_room_fixtures(),
+                 federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, $user, $room_id ) = @_;
+      my ( $outbound_client, $info, $user, $room_id, $user_id ) = @_;
       my $first_home_server = $info->server_name;
 
       my $local_server_name = $outbound_client->server_name;
-
-      my $user_id = "\@50fed-user:$local_server_name";
 
       $outbound_client->join_room(
          server_name => $first_home_server,
