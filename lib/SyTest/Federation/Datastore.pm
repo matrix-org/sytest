@@ -202,12 +202,28 @@ sub create_event
 
 =head2 get_backfill_events
 
-   @events = $store->get_backfill_events( start_at => \@ids, limit => $limit )
+   @events = $store->get_backfill_events( start_at => \@ids, ... )
 
 Returns a list of events, starting from the event(s) whose ID(s) are given by
 the C<start_at> argument, and continuing backwards through their
-C<prev_events> linkage, until at most C<$limit> events have been found. They
-are returned in a linearized order, most recent first.
+C<prev_events> linkage. They are returned in a linearized order, most recent
+first.
+
+The following other named arguments affect the behaviour:
+
+=over 4
+
+=item limit => $limit
+
+Gives the maximum number of events that should be returned.
+
+=item stop_before => \@ids
+
+Gives a list of event IDs that should not be entered into or returned (most
+likely because the caller already has them). These events do not count towards
+the overall count limit.
+
+=back
 
 =cut
 
@@ -224,15 +240,19 @@ sub get_backfill_events
 
    my @event_ids = @$start_at;
 
+   my %stop_before = map { $_ => 1 } @{ $params{stop_before} // [] };
+
    my @events;
    while( @event_ids and @events < $limit ) {
       my $id = shift @event_ids;
-      my $event = $self->get_event( $id );
+      my $event = eval { $self->get_event( $id ) }
+         or next;
 
       push @events, $event;
 
-      # TODO: avoid duplicates
-      push @event_ids, map { $_->[0] } @{ $event->{prev_events} };
+      push @event_ids, grep { !$stop_before{$_} }
+                       map { $_->[0] } @{ $event->{prev_events} };
+      $stop_before{$id}++;
    }
 
    return @events;
