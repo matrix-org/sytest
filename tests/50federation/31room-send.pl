@@ -49,7 +49,7 @@ test "Inbound federation can receive events",
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, $user, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $info, $creator, $room_id, $user_id ) = @_;
       my $first_home_server = $info->server_name;
 
       my $local_server_name = $outbound_client->server_name;
@@ -75,7 +75,7 @@ test "Inbound federation can receive events",
             destination => $first_home_server,
          );
       })->then( sub {
-         await_event_for( $user, filter => sub {
+         await_event_for( $creator, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
             return unless $event->{room_id} eq $room_id;
