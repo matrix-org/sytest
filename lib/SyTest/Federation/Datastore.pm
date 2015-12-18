@@ -200,6 +200,44 @@ sub create_event
    return $event;
 }
 
+=head2 get_backfill_events
+
+   @events = $store->get_backfill_events( start_at => \@ids, limit => $limit )
+
+Returns a list of events, starting from the event(s) whose ID(s) are given by
+the C<start_at> argument, and continuing backwards through their
+C<prev_events> linkage, until at most C<$limit> events have been found. They
+are returned in a linearized order, most recent first.
+
+=cut
+
+sub get_backfill_events
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $start_at = $params{start_at} or
+      croak "Require 'start_at'";
+
+   my $limit = $params{limit} or
+      croak "Require 'limit'";
+
+   my @event_ids = @$start_at;
+
+   my @events;
+   while( @event_ids and @events < $limit ) {
+      my $id = shift @event_ids;
+      my $event = $self->get_event( $id );
+
+      push @events, $event;
+
+      # TODO: avoid duplicates
+      push @event_ids, map { $_->[0] } @{ $event->{prev_events} };
+   }
+
+   return @events;
+}
+
 =head2 get_auth_chain_events
 
    @events = $store->get_auth_chain_events( @event_ids )
