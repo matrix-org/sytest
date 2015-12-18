@@ -2,6 +2,7 @@ package SyTest::Federation::Server;
 
 use strict;
 use warnings;
+use 5.014;  # So we can use the /r flag to s///
 
 use base qw( SyTest::Federation::_Base Net::Async::HTTP::Server
    SyTest::Federation::AuthChecks
@@ -380,9 +381,14 @@ sub on_request_federation_v1_send
    my $origin = $body->{origin};
 
    foreach my $edu ( @{ $body->{edus} } ) {
+      my $type = $edu->{edu_type};
+
       next if $self->on_edu( $edu, $origin );
 
-      warn "TODO: Unhandled incoming EDU of type '$edu->{edu_type}'";
+      my $code = $self->can( "on_edu_" . ( $type =~ s/\./_/gr ) );
+      next if $code and $self->$code( $edu, $origin );
+
+      warn "TODO: Unhandled incoming EDU of type '$type'";
    }
 
    # A PDU is an event
@@ -418,6 +424,12 @@ sub on_edu
       return;
 
    $awaiter->f->done( $edu, $origin );
+   return 1;
+}
+
+sub on_edu_m_presence
+{
+   # silently ignore
    return 1;
 }
 
