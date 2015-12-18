@@ -170,7 +170,7 @@ sub start
    if( $self->{coverage} ) {
       # Ensures that even --generate-config has coverage reports. This is intentional
       push @command,
-         "-m", "coverage", "run", "--branch", "-p", "--source=$self->{synapse_dir}/synapse";
+         "-m", "coverage", "run", "-p", "--source=$self->{synapse_dir}/synapse";
    }
 
    push @command,
