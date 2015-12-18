@@ -1,5 +1,107 @@
 use Future::Utils qw( repeat );
 
+test "Outbound federation can backfill events",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER, federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      my $room_alias = "#50fed-31backfill:$local_server_name";
+
+      my $room = $datastore->create_room(
+         creator => $creator_id,
+         alias   => $room_alias,
+      );
+
+      # Create some past messages to backfill from
+      $room->create_event(
+         type => "m.room.message",
+
+         sender  => $creator_id,
+         content => {
+            msgtype => "m.text",
+            body    => "Message $_ here",
+         },
+      ) for 1 .. 10;
+
+      Future->needs_all(
+         $inbound_server->await_backfill( $room->room_id )->then( sub {
+            my ( $req ) = @_;
+
+            my $v     = $req->query_param( 'v' );
+            my $limit = $req->query_param( 'limit' );
+
+            my @events = $datastore->get_backfill_events(
+               start_at => [ $v ],
+               limit    => $limit,
+            );
+
+            $req->respond_json( {
+               origin           => $inbound_server->server_name,
+               origin_server_ts => $inbound_server->time_ms,
+               pdus             => \@events,
+            } );
+
+            Future->done;
+         }),
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/api/v1/join/$room_alias",
+
+            content => {},
+         )->then( sub {
+            my ( $body ) = @_;
+
+            my $room_id = $body->{room_id};
+
+            # 10 m.room.message events + my own m.room.member
+            my $want_count = 11;
+
+            # We may have to get more than once to have all 11 events
+
+            my $token;
+            my @events;
+            ( repeat {
+               matrix_get_room_messages( $user, $room_id,
+                  limit => $want_count - scalar(@events),
+                  from  => $token,
+               )->then( sub {
+                  my ( $body ) = @_;
+                  push @events, @{ $body->{chunk} };
+
+                  $token = $body->{end};
+                  Future->done;
+               });
+            } while => sub { !shift->failure and @events < $want_count } )->then( sub {
+               log_if_fail "Events", \@events;
+
+               assert_json_keys( $events[0], qw( type event_id room_id ));
+               assert_eq( $events[0]->{type}, "m.room.member",
+                  'events[0] type' );
+
+               my $member_event = shift @events;
+               # TODO: assert on its fields
+
+               foreach my $message ( @events ) {
+                  assert_json_keys( $message, qw( type event_id room_id sender ));
+                  assert_eq( $message->{type}, "m.room.message",
+                     'message type' );
+                  assert_eq( $message->{room_id}, $room_id,
+                     'message room_id' );
+                  assert_eq( $message->{sender}, $creator_id,
+                     'message sender' );
+               }
+
+               Future->done(1);
+            });
+         }),
+      )
+   };
+
 test "Inbound federation can backfill events",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures(),
