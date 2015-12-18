@@ -153,7 +153,7 @@ sub _check_authorization
    if( length $req->body ) {
       my $body = $req->body_from_json;
 
-      $origin eq $body->{origin} or
+      !exists $body->{origin} or $origin eq $body->{origin} or
          return Future->fail( "'origin' in Authorization header does not match content", matrix_auth => );
 
       $to_verify{content} = $body;
