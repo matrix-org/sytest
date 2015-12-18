@@ -161,7 +161,7 @@ $SIG{__WARN__} = sub {
    my $message = join "", @_;
    chomp $message;
 
-   $OUTPUT->diag( $message );
+   $OUTPUT->diagwarn( $message );
 };
 
 if( $CLIENT_LOG ) {

@@ -134,6 +134,13 @@ sub diag
    _printline "${YELLOW_B} #${RESET} $message";
 }
 
+sub diagwarn
+{
+   shift;
+   my ( $message ) = @_;
+   _printline "${RED_B} **${RESET} $message";
+}
+
 sub status
 {
    shift;

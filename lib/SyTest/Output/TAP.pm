@@ -57,6 +57,13 @@ sub diag
    print "# $message\n";
 }
 
+sub diagwarn
+{
+   shift;
+   my ( $message ) = @_;
+   print "#** $message\n";
+}
+
 sub status {}
 
 package SyTest::Output::TAP::Test {
