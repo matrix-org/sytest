@@ -29,6 +29,7 @@ test "Inbound federation can return events",
          );
       })->then( sub {
          my ( $body ) = @_;
+         log_if_fail "Body", $body;
 
          assert_json_keys( $body, qw( origin origin_server_ts pdus ));
          assert_json_list( my $events = $body->{pdus} );
@@ -36,8 +37,6 @@ test "Inbound federation can return events",
          @$events == 1 or
             die "Expected 1 event, found " . scalar(@$events);
          my ( $event ) = @$events;
-
-         log_if_fail "Retrieved event", $event;
 
          # Check that the string fields seem right
          assert_eq( $event->{$_}, $member_event->{$_},
