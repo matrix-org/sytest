@@ -31,7 +31,11 @@ test "Outbound federation can backfill events",
          $inbound_server->await_backfill( $room->room_id )->then( sub {
             my ( $req ) = @_;
 
+            # The helpfully-named 'v' parameter gives the "versions", i.e. the
+            # event IDs to start the backfill walk from. This can just be used
+            # in the 'start_at' list for $datastore->get_backfill_events.
             my $v     = $req->query_param( 'v' );
+
             my $limit = $req->query_param( 'limit' );
 
             my @events = $datastore->get_backfill_events(
