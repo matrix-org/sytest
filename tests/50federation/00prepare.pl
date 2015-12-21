@@ -138,6 +138,15 @@ push @EXPORT, qw( federation_user_id_fixture );
 
 my $next_user_id = 0;
 
+=head2 federation_user_id_fixture
+
+   $fixture = federation_user_id_fixture
+
+Returns a new Fixture, which when provisioned will allocate a new user ID
+within the "fake" internal federation context, and return it as a string.
+
+=cut
+
 sub federation_user_id_fixture
 {
    fixture(
