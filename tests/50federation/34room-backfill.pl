@@ -34,6 +34,9 @@ test "Outbound federation can backfill events",
             # The helpfully-named 'v' parameter gives the "versions", i.e. the
             # event IDs to start the backfill walk from. This can just be used
             # in the 'start_at' list for $datastore->get_backfill_events.
+            # This would typically be an event ID the requesting server is
+            # aware exists but has not yet seen, such as one listed in a
+            # prev_events or auth_events list.
             my $v     = $req->query_param( 'v' );
 
             my $limit = $req->query_param( 'limit' );
