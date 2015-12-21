@@ -69,18 +69,21 @@ test "Outbound federation can backfill events",
 
             my $token;
             my @events;
-            ( repeat {
-               matrix_get_room_messages( $user, $room_id,
-                  limit => $want_count - scalar(@events),
-                  from  => $token,
-               )->then( sub {
-                  my ( $body ) = @_;
-                  push @events, @{ $body->{chunk} };
 
-                  $token = $body->{end};
-                  Future->done;
-               });
-            } while => sub { !shift->failure and @events < $want_count } )->then( sub {
+            (
+               repeat {
+                  matrix_get_room_messages( $user, $room_id,
+                     limit => $want_count - scalar(@events),
+                     from  => $token,
+                  )->then( sub {
+                     my ( $body ) = @_;
+                     push @events, @{ $body->{chunk} };
+
+                     $token = $body->{end};
+                     Future->done;
+                  });
+               } while => sub { !shift->failure and @events < $want_count }
+            )->then( sub {
                log_if_fail "Events", \@events;
 
                assert_json_keys( $events[0], qw( type event_id room_id ));
