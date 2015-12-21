@@ -91,7 +91,19 @@ test "Outbound federation can backfill events",
                   'events[0] type' );
 
                my $member_event = shift @events;
-               # TODO: assert on its fields
+               assert_json_keys( $member_event,
+                  qw( type event_id room_id sender state_key content ));
+
+               assert_eq( $member_event->{type}, "m.room.member",
+                  'member event type' );
+               assert_eq( $member_event->{room_id}, $room_id,
+                  'member event room_id' );
+               assert_eq( $member_event->{sender}, $user->user_id,
+                  'member event sender' );
+               assert_eq( $member_event->{state_key}, $user->user_id,
+                  'member event state_key' );
+               assert_eq( $member_event->{content}{membership}, "join",
+                  'member event content.membership' );
 
                foreach my $message ( @events ) {
                   assert_json_keys( $message, qw( type event_id room_id sender ));
