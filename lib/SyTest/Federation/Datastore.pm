@@ -240,7 +240,7 @@ sub get_backfill_events
 
    my @event_ids = @$start_at;
 
-   my %stop_before = map { $_ => 1 } @{ $params{stop_before} // [] };
+   my %exclude = map { $_ => 1 } @{ $params{stop_before} // [] };
 
    my @events;
    while( @event_ids and @events < $limit ) {
@@ -250,9 +250,11 @@ sub get_backfill_events
 
       push @events, $event;
 
-      push @event_ids, grep { !$stop_before{$_} }
+      push @event_ids, grep { !$exclude{$_} }
                        map { $_->[0] } @{ $event->{prev_events} };
-      $stop_before{$id}++;
+
+      # Don't include this event if we encounter it again
+      $exclude{$id} = 1;
    }
 
    return @events;
