@@ -19,6 +19,10 @@ test "Outbound federation can request missing events",
       )->then( sub {
          my ( $room ) = @_;
 
+         # TODO: We happen to know the latest event in the server should be my
+         #   m.room.member state event, but that's a bit fragile
+         my $latest_event = $room->get_current_state_event( "m.room.member", $user_id );
+
          # Generate but don't send an event
          $missing_event = $room->create_event(
             type => "m.room.message",
@@ -55,12 +59,21 @@ test "Outbound federation can request missing events",
                assert_json_keys( $body, qw( earliest_events latest_events limit ));
                # TODO: min_depth but I have no idea what it does
 
-               assert_json_list( $body->{earliest_events} );
-               assert_json_list( $body->{latest_events} );
+               assert_json_list( my $earliest = $body->{earliest_events} );
+               @$earliest == 1 or
+                  die "Expected a single 'earliest_event' ID";
+               assert_eq( $earliest->[0], $latest_event->{event_id},
+                  'earliest_events[0]' );
+
+               assert_json_list( my $latest = $body->{latest_events} );
+               @$latest == 1 or
+                  die "Expected a single 'latest_events' ID";
+               assert_eq( $latest->[0], $sent_event->{event_id},
+                  'latest_events[0]' );
 
                my @events = $datastore->get_backfill_events(
-                  start_at    => $body->{latest_events},
-                  stop_before => $body->{earliest_events},
+                  start_at    => $latest,
+                  stop_before => $earliest,
                   limit       => $body->{limit},
                );
 
