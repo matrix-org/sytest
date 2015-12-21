@@ -34,6 +34,12 @@ test "Outbound federation can request missing events",
          my $sent_event = $room->create_event(
             type => "m.room.message",
 
+            # This would be done by $room->create_event anyway but lets be
+            #   sure for this test
+            prev_events => [
+               [ $missing_event->{event_id}, $missing_event->{hashes} ],
+            ],
+
             sender  => $user_id,
             content => {
                body => "Message 2",
