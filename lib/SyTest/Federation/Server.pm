@@ -153,7 +153,7 @@ sub _check_authorization
    if( length $req->body ) {
       my $body = $req->body_from_json;
 
-      $origin eq $body->{origin} or
+      !exists $body->{origin} or $origin eq $body->{origin} or
          return Future->fail( "'origin' in Authorization header does not match content", matrix_auth => );
 
       $to_verify{content} = $body;
@@ -369,6 +369,10 @@ __PACKAGE__->mk_await_request_pair(
 
 __PACKAGE__->mk_await_request_pair(
    send_join => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   get_missing_events => [qw( :room_id )],
 );
 
 sub on_request_federation_v1_send

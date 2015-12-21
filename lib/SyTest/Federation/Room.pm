@@ -142,7 +142,10 @@ sub create_initial_events
 
 Constructs a new event in the room and updates the current state, if it is a
 state event. This helper also fills in the C<depth>, C<prev_events> and
-C<auth_events> lists, meaning the caller does not have to.
+C<auth_events> lists if they are absent from C<%fields>, meaning the caller
+does not have to. Any values that are passed are used instead, even if they
+are somehow invalid - this allows callers to construct intentionally-invalid
+events for testing purposes.
 
 =cut
 
@@ -157,15 +160,15 @@ sub create_event
       $self->get_current_state_event( "m.room.create" ),
       $self->get_current_state_event( "m.room.member", $fields{sender} ),
    );
+   $fields{auth_events} //= make_event_refs( @auth_events ),
 
    $fields{depth} //= $self->next_depth;
 
-   my $event = $self->{datastore}->create_event(
-      %fields,
+   $fields{prev_events} //= make_event_refs( @{ $self->{prev_events} } );
 
-      auth_events => make_event_refs( @auth_events ),
-      room_id     => $self->room_id,
-      prev_events => make_event_refs( @{ $self->{prev_events} } ),
+   my $event = $self->{datastore}->create_event(
+      room_id => $self->room_id,
+      %fields,
    );
 
    $self->_insert_event( $event );
