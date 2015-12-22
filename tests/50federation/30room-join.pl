@@ -3,15 +3,14 @@ use List::UtilsBy qw( partition_by extract_by );
 use SyTest::Federation::Room;
 
 test "Outbound federation can send room-join requests",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER ],
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture() ],
 
    do => sub {
-      my ( $user, $inbound_server ) = @_;
+      my ( $user, $inbound_server, $creator_id ) = @_;
 
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
-
-      my $creator = '@50fed:' . $local_server_name;
 
       my $room = SyTest::Federation::Room->new(
          datastore => $datastore,
@@ -19,7 +18,7 @@ test "Outbound federation can send room-join requests",
 
       $room->create_initial_events(
          server  => $inbound_server,
-         creator => $creator,
+         creator => $creator_id,
       );
 
       my $room_id = $room->room_id;
@@ -117,16 +116,15 @@ test "Outbound federation can send room-join requests",
 test "Inbound federation can receive room-join requests",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  $main::HOMESERVER_INFO[0],
-                 room_fixture( requires_users => [ local_user_fixture() ] ) ],
+                 room_fixture( requires_users => [ local_user_fixture() ] ),
+                 federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $room_id ) = @_;
+      my ( $outbound_client, $inbound_server, $info, $room_id, $user_id ) = @_;
       my $first_home_server = $info->server_name;
 
       my $local_server_name = $outbound_client->server_name;
       my $datastore         = $inbound_server->datastore;
-
-      my $user_id = "\@50fed-user:$local_server_name";
 
       $outbound_client->do_request_json(
          method   => "GET",

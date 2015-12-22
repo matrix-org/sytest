@@ -34,6 +34,8 @@ test "User sees their own presence in a sync",
 test "User is offline if they set_presence=offline in their sync",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
+   # This test passes if we set a displayname for the user.
+   expect_fail => 1,
 
    check => sub {
       my ( $user ) = @_;

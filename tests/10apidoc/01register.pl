@@ -136,6 +136,17 @@ sub local_user_fixture
             )->then_done( $user );
          })->then_with_f( sub {
             my $f = shift;
+            return $f unless defined( my $avatar_url = $args{avatar_url} );
+
+            my $user = $f->get;
+            do_request_json_for( $user,
+               method => "PUT",
+               uri    => "/api/v1/profile/:user_id/avatar_url",
+
+               content => { avatar_url => $avatar_url },
+            )->then_done( $user );
+         })->then_with_f( sub {
+            my $f = shift;
             return $f unless defined( my $presence = $args{presence} );
 
             my $user = $f->get;

@@ -5,6 +5,7 @@ use List::UtilsBy qw( partition_by );
 my $creator_fixture = local_user_fixture(
    # Some of these tests depend on the user having a displayname
    displayname => "My name here",
+   avatar_url => "mxc://foo/bar",
 );
 
 my $remote_user_fixture = remote_user_fixture();

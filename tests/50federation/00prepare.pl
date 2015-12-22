@@ -133,3 +133,30 @@ test "Checking local federation server",
          Future->done(1);
       });
    };
+
+push @EXPORT, qw( federation_user_id_fixture );
+
+my $next_user_id = 0;
+
+=head2 federation_user_id_fixture
+
+   $fixture = federation_user_id_fixture
+
+Returns a new Fixture, which when provisioned will allocate a new user ID
+within the "fake" internal federation context, and return it as a string.
+
+=cut
+
+sub federation_user_id_fixture
+{
+   fixture(
+      requires => [ $INBOUND_SERVER ],
+
+      setup => sub {
+         my ( $inbound_server ) = @_;
+
+         my $user_id = sprintf "\@__ANON__-%d:%s", $next_user_id++, $inbound_server->server_name;
+         Future->done( $user_id );
+      },
+   );
+}

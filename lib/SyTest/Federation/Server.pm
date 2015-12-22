@@ -153,7 +153,7 @@ sub _check_authorization
    if( length $req->body ) {
       my $body = $req->body_from_json;
 
-      $origin eq $body->{origin} or
+      !exists $body->{origin} or $origin eq $body->{origin} or
          return Future->fail( "'origin' in Authorization header does not match content", matrix_auth => );
 
       $to_verify{content} = $body;
@@ -240,6 +240,25 @@ sub on_request_federation_v1_query_directory
    Future->done( json => {
       room_id => $room_id,
       servers => [ $self->server_name ],
+   } );
+}
+
+sub on_request_federation_v1_event
+{
+   my $self = shift;
+   my ( $req, $event_id ) = @_;
+
+   my $event = $self->{datastore}->get_event( $event_id ) or
+      return Future->done( response => HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+   Future->done( json => {
+      origin           => $self->server_name,
+      origin_server_ts => $self->time_ms,
+      pdus             => [
+         $event,
+      ]
    } );
 }
 
@@ -369,6 +388,14 @@ __PACKAGE__->mk_await_request_pair(
 
 __PACKAGE__->mk_await_request_pair(
    send_join => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   get_missing_events => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   backfill => [qw( :room_id )],
 );
 
 sub on_request_federation_v1_send
