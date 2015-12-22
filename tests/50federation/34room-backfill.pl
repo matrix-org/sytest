@@ -135,8 +135,6 @@ test "Inbound federation can backfill events",
 
       my $local_server_name = $outbound_client->server_name;
 
-      my $user_id = "\@50fed-user:$local_server_name";
-
       my $join_event;
 
       # Create some past messages to backfill from
