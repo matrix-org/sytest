@@ -215,7 +215,7 @@ test "Annonymous user can call /sync on a world readable room",
    do => sub {
       my ( $anonymous_user, $user ) = @_;
 
-      my ($room_id, $sent_event_id);
+      my ( $room_id, $sent_event_id );
 
       matrix_create_and_join_room( [ $user ] )
       ->then( sub {
