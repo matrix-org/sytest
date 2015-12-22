@@ -1,5 +1,3 @@
-my $alias_localpart = "#another-alias";
-
 my $user_fixture = local_user_fixture();
 
 my $room_fixture = fixture(
@@ -8,19 +6,22 @@ my $room_fixture = fixture(
    setup => sub {
       my ( $user ) = @_;
 
-      matrix_create_room( $user );
+      matrix_create_room( $user )->then( sub {
+         my ( $room_id, undef ) = @_;
+         Future->done( $room_id );  # Don't return the alias
+      });
    },
 );
 
 test "PUT /directory/room/:room_alias creates alias",
-   requires => [ $user_fixture, $room_fixture ],
+   requires => [ $user_fixture, $room_fixture, room_alias_name_fixture() ],
 
    proves => [qw( can_create_room_alias can_lookup_room_alias )],
 
    do => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, $room_alias_name ) = @_;
       my $server_name = $user->http->server_name;
-      my $room_alias = "${alias_localpart}:$server_name";
+      my $room_alias = "#${room_alias_name}:$server_name";
 
       do_request_json_for( $user,
          method => "PUT",
@@ -33,9 +34,9 @@ test "PUT /directory/room/:room_alias creates alias",
    },
 
    check => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, $room_alias_name ) = @_;
       my $server_name = $user->http->server_name;
-      my $room_alias = "${alias_localpart}:$server_name";
+      my $room_alias = "#${room_alias_name}:$server_name";
 
       do_request_json_for( $user,
          method => "GET",
