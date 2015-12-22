@@ -122,3 +122,31 @@ sub matrix_create_room
       Future->done( $body->{room_id}, $body->{room_alias} );
    });
 }
+
+push @EXPORT, qw( room_alias_name_fixture );
+
+my $next_alias_name = 0;
+
+=head2 room_alias_name_fixture
+
+   $fixture = room_alias_name_fixture
+
+Returns a new Fixture, which when provisioned will allocate a new room alias
+name (i.e. localpart, before the homeserver domain name, and return it as a
+string.
+
+=cut
+
+sub room_alias_name_fixture
+{
+   return fixture(
+      setup => sub {
+         my ( $info ) = @_;
+
+         my $alias_name = sprintf "__ANON__-%d", $next_alias_name++;
+
+         Future->done( $alias_name );
+      },
+   );
+}
+
