@@ -1,5 +1,8 @@
 my $user_fixture = local_user_fixture();
 
+# An incrementing parameter for initialSync to defeat the caching mechanism and ensure fresh results every time
+my $initial_sync_limit = 1;
+
 test "POST /createRoom makes a public room",
    requires => [ $user_fixture,
                  qw( can_initial_sync )],
@@ -32,7 +35,8 @@ test "POST /createRoom makes a public room",
    check => sub {
       my ( $user ) = @_;
 
-      matrix_initialsync( $user )->then( sub {
+      # Change the limit for each request to defeat caching
+      matrix_initialsync( $user, limit => $initial_sync_limit++ )->then( sub {
          my ( $body ) = @_;
 
          assert_json_list( $body->{rooms} );
