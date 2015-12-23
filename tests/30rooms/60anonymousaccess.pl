@@ -62,13 +62,17 @@ test "Anonymous user cannot call /events on non-world_readable room",
 
 sub await_event_not_presence_for
 {
-   my ( $user, $room_id, $ignored_users ) = @_;
+   my ( $user, $room_id, $allowed_users ) = @_;
    await_event_for( $user,
       room_id => $room_id,
       filter  => sub {
          my ( $event ) = @_;
-         return not( $event->{type} eq "m.presence" and
-            any { $event->{content}{user_id} eq $_->user_id } @$ignored_users );
+
+         # Include all events where the type is not m.presence.
+         # If the type is m.presence, then only include it if it is for one of
+         # the allowed users
+         return ((not $event->{type} eq "m.presence") or
+            any { $event->{content}{user_id} eq $_->user_id } @$allowed_users);
       },
    )->on_done( sub {
       my ( $event ) = @_;
@@ -101,7 +105,7 @@ test "Anonymous user can call /events on world_readable room",
                method => "GET",
                uri    => "/api/v1/events",
             )->main::expect_http_400->then( sub {
-               await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user, $user ] )
+               await_event_not_presence_for( $anonymous_user, $room_id, [] )
             })->then( sub {
                my ( $event ) = @_;
 
@@ -127,7 +131,7 @@ test "Anonymous user can call /events on world_readable room",
                   content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
                ),
 
-               await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user ] )->then( sub {
+               await_event_not_presence_for( $anonymous_user, $room_id, [ $user ] )->then( sub {
                   my ( $event ) = @_;
 
                   assert_eq( $event->{type}, "m.presence",
@@ -148,7 +152,7 @@ test "Anonymous user can call /events on world_readable room",
                   content => {},
                ),
 
-               await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user, $user ] )->then( sub {
+               await_event_not_presence_for( $anonymous_user, $room_id, [] )->then( sub {
                   my ( $event ) = @_;
 
                   assert_eq( $event->{type}, "m.receipt",
@@ -172,7 +176,7 @@ test "Anonymous user can call /events on world_readable room",
                   },
                ),
 
-               await_event_not_presence_for( $anonymous_user, $room_id, [ $anonymous_user, $user ] )->then( sub {
+               await_event_not_presence_for( $anonymous_user, $room_id, [] )->then( sub {
                   my ( $event ) = @_;
 
                   assert_eq( $event->{type}, "m.typing",
