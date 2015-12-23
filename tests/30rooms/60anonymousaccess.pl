@@ -201,14 +201,12 @@ test "Anonymous user doesn't get events before room made world_readable",
       ->then( sub {
          ( $room_id ) = @_;
 
+         matrix_send_room_text_message( $user, $room_id, body => "private" );
+      })->then( sub {
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+      })->then( sub {
          Future->needs_all(
-            delay( 0.05 )->then( sub {
-               matrix_send_room_text_message( $user, $room_id, body => "private" )->then(sub {
-                  matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-               })->then( sub {
-                  matrix_send_room_text_message( $user, $room_id, body => "public" );
-               });
-            }),
+            matrix_send_room_text_message( $user, $room_id, body => "public" ),
 
             # The client is allowed to see exactly two events, the
             # m.room.history_visibility event and the public message.
