@@ -239,11 +239,9 @@ test "Annonymous user can call /sync on a world readable room",
       })->then( sub {
          my ( $sync_body ) = @_;
 
-         assert_eq(
-            $sent_event_id,
-            $sync_body->{rooms}{join}{$room_id}{timeline}{events}[0]{event_id},
-            "event id"
-         );
+         assert_json_object( my $room = $sync_body->{rooms}{join}{$room_id} );
+         assert_json_list( my $events = $room->{timeline}{events} );
+         assert_eq( $events->[0]{event_id}, $sent_event_id, 'event id' );
 
          Future->done( 1 );
       });
