@@ -1,5 +1,8 @@
 use List::Util qw( first );
 
+# An incrementing parameter for initialSync to defeat the caching mechanism and ensure fresh results every time
+my $initial_sync_limit = 1;
+
 sub find_receipt
 {
    my ( $body, %args ) = @_;
@@ -48,7 +51,7 @@ multi_test "Read receipts are visible to /initialSync",
 
          matrix_advance_room_receipt( $user, $room_id, "m.read" => $member_event_id )
       })->then( sub {
-         matrix_initialsync( $user )
+         matrix_initialsync( $user, limit => $initial_sync_limit++ );  # Change the limit to defeat caching
       })->then( sub {
          my ( $body ) = @_;
 
@@ -78,7 +81,7 @@ multi_test "Read receipts are visible to /initialSync",
 
          matrix_advance_room_receipt( $user, $room_id, "m.read" => $message_event_id );
       })->then( sub {
-         matrix_initialsync( $user );
+         matrix_initialsync( $user, limit => $initial_sync_limit++ );  # Change the limit to defeat caching
       })->then( sub {
          my ( $body ) = @_;
 
@@ -96,7 +99,7 @@ multi_test "Read receipts are visible to /initialSync",
          # Now lets check that they are monotonically racheted
          matrix_advance_room_receipt( $user, $room_id, "m.read" => $member_event_id );
       })->then( sub {
-         matrix_initialsync( $user );
+         matrix_initialsync( $user, limit => $initial_sync_limit++ );  # Change the limit to defeat caching
       })->then( sub {
          my ( $body ) = @_;
 
