@@ -14,14 +14,12 @@ my $room_fixture = fixture(
 );
 
 test "PUT /directory/room/:room_alias creates alias",
-   requires => [ $user_fixture, $room_fixture, room_alias_name_fixture() ],
+   requires => [ $user_fixture, $room_fixture, room_alias_fixture() ],
 
    proves => [qw( can_create_room_alias can_lookup_room_alias )],
 
    do => sub {
-      my ( $user, $room_id, $room_alias_name ) = @_;
-      my $server_name = $user->http->server_name;
-      my $room_alias = "#${room_alias_name}:$server_name";
+      my ( $user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -34,9 +32,7 @@ test "PUT /directory/room/:room_alias creates alias",
    },
 
    check => sub {
-      my ( $user, $room_id, $room_alias_name ) = @_;
-      my $server_name = $user->http->server_name;
-      my $room_alias = "#${room_alias_name}:$server_name";
+      my ( $user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
