@@ -5,12 +5,16 @@ use warnings;
 use 5.010;
 use base qw( IO::Async::Notifier );
 
+use Future::Utils qw( try_repeat );
+
 use IO::Async::Process;
 use IO::Async::FileStream;
 
 use Cwd qw( getcwd abs_path );
-use File::Path qw( make_path );
+use File::Basename qw( dirname );
+use File::Path qw( make_path remove_tree );
 use List::Util qw( any );
+use POSIX qw( strftime );
 
 use YAML ();
 
@@ -113,6 +117,12 @@ sub start
       $self->${\"clear_db_$db_type"}( %db_args );
    }
 
+   # Clean up the media_store directory each time, or else it fills up with
+   # thousands of automatically-generated avatar images
+   if( -d "media_store" ) {
+      remove_tree( "media_store" );
+   }
+
    my $cwd = getcwd;
    my $log = "$self->{hs_dir}/homeserver.log";
 
@@ -133,6 +143,11 @@ sub start
         "metrics_port" => ( $port - 8000 + 9090 ),
 
         "perspectives" => {servers => {}},
+
+        # Stack traces are useful
+        "full_twisted_stacktraces" => "true",
+
+        "bcrypt_rounds" => 0,
 
         %{ $self->{config} },
    } );
@@ -175,7 +190,7 @@ sub start
          },
       ],
 
-      command => [ @command, "--generate-config" ],
+      command => [ @command, "--generate-config", "--report-stats=no" ],
 
       on_finish => sub {
          my ( $pid, $exitcode, $stdout, $stderr ) = @_;
@@ -281,7 +296,11 @@ sub on_synapse_read
          }
       }
 
-      $self->started_future->done if $line =~ m/INFO .* Synapse now listening on port $self->{port}\s*$/;
+      # During logfile rotations sometimes we get a spurious read here. It might
+      # be a bug in IO::Async::FileStream, but whatever... ignore it for now
+      if( not $self->started_future->is_ready ) {
+         $self->started_future->done if $line =~ m/INFO .* Synapse now listening on port $self->{port}\s*$/;
+      }
    }
 
    return 0;
@@ -346,6 +365,28 @@ sub clear_db_pg
       $dbh->do( "DROP TABLE $tablename CASCADE" ) or
          die $dbh->errstr;
    }
+}
+
+sub rotate_logfile
+{
+   my $self = shift;
+   my ( $newname ) = @_;
+
+   my $logpath = $self->{logpath};
+
+   $newname //= dirname( $logpath ) . strftime( "/homeserver-%Y-%m-%dT%H:%M:%S.log", localtime );
+
+   rename( $logpath, $newname );
+
+   $self->kill( 'HUP' );
+
+   try_repeat {
+      -f $logpath and return Future->done(1);
+
+      $self->loop->delay_future( after => 0.5 )->then_done(0);
+   } foreach => [ 1 .. 20 ],
+     while => sub { !shift->get },
+     otherwise => sub { die "Timed out waiting for synapse to recreate its log file" };
 }
 
 1;

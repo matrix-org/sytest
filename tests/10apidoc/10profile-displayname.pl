@@ -1,34 +1,34 @@
+my $user_fixture = local_user_fixture();
+
 my $displayname = "Testing Displayname";
 
 test "PUT /profile/:user_id/displayname sets my name",
-   requires => [qw( do_request_json )],
+   requires => [ $user_fixture ],
 
-   provides => [qw( can_set_displayname )],
+   proves => [qw( can_set_displayname )],
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/profile/:user_id/displayname",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( displayname ));
+         assert_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq $displayname or
             die "Expected displayname to be '$displayname'";
-
-         provide can_set_displayname => 1;
 
          Future->done(1);
       });
    },
 
    do => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/profile/:user_id/displayname",
 
@@ -39,9 +39,10 @@ test "PUT /profile/:user_id/displayname sets my name",
    };
 
 test "GET /profile/:user_id/displayname publicly accessible",
-   requires => [qw( first_api_client user can_set_displayname )],
+   requires => [ $main::API_CLIENTS[0], $user_fixture,
+                 qw( can_set_displayname )],
 
-   provides => [qw( can_get_displayname )],
+   proves => [qw( can_get_displayname )],
 
    check => sub {
       my ( $http, $user ) = @_;
@@ -54,12 +55,10 @@ test "GET /profile/:user_id/displayname publicly accessible",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( displayname ));
+         assert_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq $displayname or
             die "Expected displayname to be '$displayname'";
-
-         provide can_get_displayname => 1;
 
          Future->done(1);
       });

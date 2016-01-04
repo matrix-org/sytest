@@ -1,11 +1,7 @@
-# A handy little structure for other scripts to find in 'user' and 'more_users'
-our @EXPORT = qw( User );
-struct User => [qw( http user_id access_token refresh_token eventstream_token saved_events pending_get_events )];
-
 test "GET /register yields a set of flows",
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS[0] ],
 
-   provides => [qw( can_register_password_flow )],
+   proves => [qw( can_register_password_flow )],
 
    check => sub {
       my ( $http ) = @_;
@@ -15,7 +11,7 @@ test "GET /register yields a set of flows",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( flows ));
+         assert_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
 
          my $has_register_flow;
@@ -29,24 +25,20 @@ test "GET /register yields a set of flows",
             ref $flow->{stages} eq "ARRAY" or defined $flow->{type} or
                die "Expected flow[$idx] to have 'stages' as a list or a 'type'";
 
-            $has_register_flow++ if $flow->{type} eq "m.login.password" or
-               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password"
+            $has_register_flow++ if
+               $flow->{type} eq "m.login.password" or
+               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password";
          }
 
-         $has_register_flow and
-            provide can_register_password_flow => 1;
-
-         Future->done(1);
+         Future->done( $has_register_flow );
       });
    };
 
-# Doesn't matter what this is, but later tests will use it.
-my $password = "s3kr1t";
-
 test "POST /register can create a user",
-   requires => [qw( first_api_client can_register_password_flow )],
+   requires => [ $main::API_CLIENTS[0],
+                 qw( can_register_password_flow ) ],
 
-   provides => [qw( can_register login_details )],
+   critical => 1,
 
    do => sub {
       my ( $http ) = @_;
@@ -58,23 +50,26 @@ test "POST /register can create a user",
          content => {
             type     => "m.login.password",
             user     => "01register-user",
-            password => $password,
+            password => "s3kr1t",
          },
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( user_id access_token ));
-
-         provide can_register => 1;
-         provide login_details => [ $body->{user_id}, $password ];
+         assert_json_keys( $body, qw( user_id access_token ));
 
          Future->done( 1 );
       });
    };
 
-sub register_new_user
+push our @EXPORT, qw( matrix_register_user );
+
+my $next_anon_uid = 1;
+
+sub matrix_register_user
 {
-   my ( $with_events, $http, $uid ) = @_;
+   my ( $http, $uid, %opts ) = @_;
+
+   $uid //= sprintf "_ANON_-%d", $next_anon_uid++;
 
    $http->do_request_json(
       method => "POST",
@@ -91,35 +86,130 @@ sub register_new_user
 
       my $user = User( $http, $body->{user_id}, $access_token, undef, undef, [], undef );
 
-      if( $with_events ) {
-         $http->do_request_json(
-            method => "GET",
-            uri    => "/api/v1/events",
-            params => { access_token => $access_token, timeout => 0 },
-         )->then( sub {
+      my $f = Future->done;
+
+      if( $opts{with_events} // 1 ) {
+         $f = $f->then( sub {
+            $http->do_request_json(
+               method => "GET",
+               uri    => "/api/v1/events",
+               params => { access_token => $access_token, timeout => 0 },
+            )
+         })->on_done( sub {
             my ( $body ) = @_;
 
             $user->eventstream_token = $body->{end};
-            Future->done( $user );
-         })
+         });
       }
-      else {
-         Future->done( $user );
-      }
+
+      return $f->then_done( $user )
+         ->on_done( sub {
+            log_if_fail "Registered new user $uid";
+         });
    });
 }
 
-prepare "Creating test-user-creation helper function",
-   requires => [qw( can_register )],
+push @EXPORT, qw( local_user_fixture local_user_fixtures );
 
-   provides => [qw( register_new_user register_new_user_without_events)],
+sub local_user_fixture
+{
+   my %args = @_;
 
-   do => sub {
-      provide register_new_user =>
-         sub { register_new_user( 1, @_ ) };
+   fixture(
+      requires => [ $main::API_CLIENTS[0] ],
 
-      provide register_new_user_without_events =>
-         sub { register_new_user( 0, @_ ) };
+      setup => sub {
+         my ( $http ) = @_;
 
-      Future->done;
-   };
+         matrix_register_user( $http, undef,
+            with_events => $args{with_events} // 1,
+         )->then_with_f( sub {
+            my $f = shift;
+            return $f unless defined( my $displayname = $args{displayname} );
+
+            my $user = $f->get;
+            do_request_json_for( $user,
+               method => "PUT",
+               uri    => "/api/v1/profile/:user_id/displayname",
+
+               content => { displayname => $displayname },
+            )->then_done( $user );
+         })->then_with_f( sub {
+            my $f = shift;
+            return $f unless defined( my $avatar_url = $args{avatar_url} );
+
+            my $user = $f->get;
+            do_request_json_for( $user,
+               method => "PUT",
+               uri    => "/api/v1/profile/:user_id/avatar_url",
+
+               content => { avatar_url => $avatar_url },
+            )->then_done( $user );
+         })->then_with_f( sub {
+            my $f = shift;
+            return $f unless defined( my $presence = $args{presence} );
+
+            my $user = $f->get;
+            do_request_json_for( $user,
+               method => "PUT",
+               uri    => "/api/v1/presence/:user_id/status",
+
+               content => {
+                  presence   => $presence,
+                  status_msg => ucfirst $presence,
+               }
+            )->then_done( $user );
+         });
+      },
+   );
+}
+
+sub local_user_fixtures
+{
+   my ( $count, %args ) = @_;
+
+   return map { local_user_fixture( %args ) } 1 .. $count;
+}
+
+push @EXPORT, qw( remote_user_fixture );
+
+sub remote_user_fixture
+{
+   fixture(
+      requires => [ $main::API_CLIENTS[1] ],
+
+      setup => sub {
+         my ( $http ) = @_;
+
+         matrix_register_user( $http )
+      }
+   );
+}
+
+push @EXPORT, qw( SPYGLASS_USER );
+
+# A special user which we'll allow to be shared among tests, because we only
+# allow it to perform HEAD and GET requests. This user is useful for tests that
+# don't mutate server-side state, so it's fairly safe to reüse this user among
+# different tests.
+our $SPYGLASS_USER = fixture(
+   requires => [ $main::API_CLIENTS[0] ],
+
+   setup => sub {
+      my ( $http ) = @_;
+
+      matrix_register_user( $http )
+      ->on_done( sub {
+         my ( $user ) = @_;
+
+         $user->http = SyTest::HTTPClient->new(
+            max_connections_per_host => 3,
+            uri_base                 => $user->http->{uri_base}, # cheating
+
+            restrict_methods => [qw( HEAD GET )],
+         );
+
+         $loop->add( $user->http );
+      });
+   },
+);

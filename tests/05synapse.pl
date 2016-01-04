@@ -19,7 +19,7 @@ sub extract_extra_args
 my @synapses;
 
 END {
-   $output->diag( "Killing synapse servers " ) if @synapses;
+   $OUTPUT->diag( "Killing synapse servers " ) if @synapses;
 
    foreach my $synapse ( values @synapses ) {
       $synapse->kill( 'INT' );
@@ -32,48 +32,69 @@ sub gen_token
    return join "", map { chr 64 + rand 63 } 1 .. $length;
 }
 
-prepare "Starting synapse",
-   requires => [qw( synapse_ports synapse_args test_http_server_uri_base want_tls )],
+push our @EXPORT, qw( AS_USER_INFO HOMESERVER_INFO );
 
-   provides => [qw( synapse_client_locations as_credentials hs2as_token )],
+struct ASUserInfo => [qw( localpart user_id as2hs_token hs2as_token )];
 
-   do => sub {
-      my ( $ports, $args, $test_http_server_uri_base, $want_tls ) = @_;
+our $AS_USER_INFO = fixture(
+   setup => sub {
+      my $port = $HOMESERVER_PORTS[0];
 
-      my @locations;
+      my $localpart = "as-user";
 
-      Future->needs_all( map {
-         my $idx = $_;
+      Future->done( ASUserInfo(
+         $localpart,
+         "\@${localpart}:localhost:${port}",
+         gen_token( 32 ),
+         gen_token( 32 ),
+      ));
+   },
+);
 
-         my $secure_port = $ports->[$idx];
-         my $unsecure_port = $want_tls ? 0 : $secure_port + 1000;
+our @HOMESERVER_INFO = map {
+   my $idx = $_;
 
-         my @extra_args = extract_extra_args( $idx, $args->{extra_args} );
+   fixture(
+      requires => [ $main::TEST_SERVER_INFO, $AS_USER_INFO ],
 
-         $locations[$idx] = $want_tls ?
+      setup => sub {
+         my ( $test_server_info, $as_user_info ) = @_;
+
+         my $secure_port = $HOMESERVER_PORTS[$idx];
+         my $unsecure_port = $WANT_TLS ? 0 : $secure_port + 1000;
+
+         my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
+
+         my $location = $WANT_TLS ?
             "https://localhost:$secure_port" :
             "http://localhost:$unsecure_port";
 
+         my $info = ServerInfo( "localhost:$secure_port", $location );
+
          my $synapse = SyTest::Synapse->new(
-            synapse_dir   => $args->{directory},
+            synapse_dir   => $SYNAPSE_ARGS{directory},
             port          => $secure_port,
             unsecure_port => $unsecure_port,
-            output        => $output,
-            print_output  => $args->{log},
+            output        => $OUTPUT,
+            print_output  => $SYNAPSE_ARGS{log},
             extra_args    => \@extra_args,
-            python        => $args->{python},
-            coverage      => $args->{coverage},
-            ( scalar @{ $args->{log_filter} } ?
-               ( filter_output => $args->{log_filter} ) :
+            python        => $SYNAPSE_ARGS{python},
+            coverage      => $SYNAPSE_ARGS{coverage},
+            ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
+               ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
 
             config => {
                # Config for testing recaptcha. 90jira/SYT-8.pl
-               recaptcha_siteverify_api => "$test_http_server_uri_base/recaptcha/api/siteverify",
+               recaptcha_siteverify_api => $test_server_info->client_location .
+                                              "/recaptcha/api/siteverify",
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
 
                use_insecure_ssl_client_just_for_testing_do_not_use => 1,
+               report_stats => "False",
+               user_agent_suffix => $location,
+               allow_guest_access => "True",
             },
          );
          $loop->add( $synapse );
@@ -81,10 +102,10 @@ prepare "Starting synapse",
          if( $idx == 0 ) {
             # Configure application services on first instance only
             my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
-               url      => "$test_http_server_uri_base/appserv",
-               as_token => ( my $as2hs_token = gen_token( 32 ) ),
-               hs_token => ( my $hs2as_token = gen_token( 32 ) ),
-               sender_localpart => ( my $as_user = "as-user" ),
+               url      => $test_server_info->client_location . "/appserv",
+               as_token => $as_user_info->as2hs_token,
+               hs_token => $as_user_info->hs2as_token,
+               sender_localpart => $as_user_info->localpart,
                namespaces => {
                   users => [
                      { regex => '@astest-.*', exclusive => "true" },
@@ -99,9 +120,6 @@ prepare "Starting synapse",
             $synapse->append_config(
                app_service_config_files => [ $appserv_conf ],
             );
-
-            provide as_credentials => [ "\@$as_user:localhost:$secure_port", $as2hs_token ];
-            provide hs2as_token => $hs2as_token;
          }
 
          $synapse->start;
@@ -113,9 +131,7 @@ prepare "Starting synapse",
 
             $loop->delay_future( after => 20 )
                ->then_fail( "Synapse server on port $secure_port failed to start" ),
-         );
-      } 0 .. $#$ports )
-      ->on_done( sub {
-         provide synapse_client_locations => \@locations;
-      });
-   };
+         )->then_done( $info );
+      },
+   );
+} 0 .. $#HOMESERVER_PORTS;

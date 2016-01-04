@@ -23,9 +23,8 @@ Tests
 -----
 
 Each file under the ``tests`` directory is run as a normal perl file, within
-the context of the main program. It should contain calls to ``test``,
-``multi_test`` and ``prepare``, which sequentially control the execution of all
-the tests and other preparation steps that happen between them.
+the context of the main program. It should contain calls to ``test`` and
+``multi_test`` which sequentially control the execution of all the tests.
 
 Each call to ``test`` or ``multi_test`` takes a single positional argument
 giving descriptive text to use as a caption, and a set of named arguments to
@@ -47,12 +46,13 @@ is described in more detail in the following sections.
     Provides a ``CODE`` reference similar to the ``do`` argument, which
     contains "immediate" checking code for the test.
 
-``await``
-    Provides a ``CODE`` reference similar to the ``check`` argument, which
-    contains "deferred" checking code for the test.
-
 ``requires``
-    Provides an ``ARRAY`` reference giving a list of named requirements.
+    Provides an ``ARRAY`` reference giving a list of named requirements and
+    fixture objects.
+
+``critical``
+    If true and the test fails, the entire test run will bail out at this
+    point; no further tests will be attempted at all.
 
 A call to ``test`` is a simplified version of ``multi_test`` which produces
 only a single line of test output indicating success or failure automatically.
@@ -60,17 +60,13 @@ A call to ``multi_test`` can make use of additional functions within the body
 in order to report success or failure of multiple steps within it. Aside from
 this difference, the two behave identically.
 
-A call to ``provide`` is similar to ``test``, except that it doesn't take a
-checking blocks, only a ``do``.
-
 Code Blocks
 -----------
 
-The blocks of code given to ``do``, ``check`` and ``await`` arguments follow
-the same basic pattern. Each is given a list of arguments matching the
-dependencies of the test (see below), and is expected to return a ``Future``.
-The interpretation of the return value of this future depends on the type of
-block.
+The blocks of code given to ``do`` and ``check`` arguments follow the same
+basic pattern. Each is given a list of arguments matching the dependencies of
+the test (see below), and is expected to return a ``Future``. The
+interpretation of the return value of this future depends on the type of block.
 
 If a test provides both a ``do`` and a ``check`` block, then the checking one
 is run either side of the main step code, to test that it fails before the main
@@ -86,11 +82,9 @@ real distinction between ``do`` and ``check`` at presence, though stylistically
 activity, in case a distinction is introduced later (for example, allowing
 multiple blocks to execute concurrently).
 
-If an ``await`` block is provided it is called after any ``do`` or ``check``
-functions, expecting it to return a true value. If it returns false, fails,
-or times out after (a default of) 10 seconds, the test fails. If the test needs
-to perform some activity repeatedly to poll for something it is waiting to
-happen, it should use a ``Future::Utils::repeat`` loop.
+The entire combination of one or both ``check`` blocks and the ``do`` block are
+given a total deadline of 10 seconds between them. If they have not succeeded
+by this time, they will be aborted and the test will fail.
 
 Dependencies and Environment
 ----------------------------
@@ -119,6 +113,13 @@ beginning with ``can_``, and take the value ``1``. They are requested at the
 end of the ``requires`` list, after all of the significant values, so as not to
 cause "holes" when unpacking the argument list.
 
+Note that while it was the original intention for the test environment to
+accumulate shared state that later tests can use, it leads to more fragile
+tests simply because of that shared state. Where possible, fixtures should be
+used instead, especially when the state would only nominally be shared in order
+to reduce the amount of setup boilerplate code required to implement a test.
+See the Fixtures section below.
+
 Initial Environment
 -------------------
 
@@ -134,37 +135,75 @@ itself:
     The first value from ``http_clients``, pointing at the first home server,
     for convenience where most of the tests run there.
 
-Test Assertions
----------------
+Fixtures
+--------
 
-The following convenient helper functions are also available for test code.
-Each will throw an exception if it fails; the return value does not need to be
-tested.
+As an alternative to accumulating state as named values within the test
+environment, fixtures are another feature provided to reduce the amount of test
+setup and teardown code in individual test cases. A fixture is an object that
+encapsulates the dual processes of creating some values or state for a test to
+use, and of destroying or resetting that state afterwards. The fixture object
+also stores the value it created once that has been set up, allowing the value
+to be reused by multiple tests if they all share the same fixture object.
 
-``require_json_object``
-    Asserts that it is given a representation of a JSON object (i.e. a ``HASH``
-    ref).
+A fixture object is created by the ``fixture`` function, which takes the
+following named arguments:
 
-``require_json_keys``
-    Asserts that it is given a representation of a JSON object and that
-    additionally it defines values for all of the key names given.
+``setup``
+    A required ``CODE`` reference to a block of code used to lazily create the
+    actual value for the fixture; that is, the value that will be passed to the
+    running test code that uses the fixture. This block yields its return value
+    via a future.
 
-``require_json_list``
-    Asserts that it is given a representation of a JSON object (i.e. an
-    ``ARRAY`` ref).
+``teardown``
+    An optional ``CODE`` reference to a code block that will be invoked at the
+    end of the test using the fixture. This can be used to perform any final
+    tidying up that is required after the fixture value has been used. This
+    block returns a future but the actual final value yielded from that is
+    ignored.
 
-``require_json_number``
-    Asserts that it is given a likely representation of a JSON number (i.e. a
-    non-reference that passes the ``looks_like_number()`` test). Because of the
-    limits of the JSON-to-Perl decoding process it isn't possible to definitely
-    assert this originally came from a number in the JSON encoding, as compared
-    to a string representation of a number.
+``requires``
+    An ``ARRAY`` reference giving named requirements and other fixture objects.
 
-``require_json_string``
-    Asserts that it is given a likely representation of a JSON string (i.e. a
-    non-reference). Note that this will also be true of values that were
-    originally JSON numbers or booleans.
+Once a fixture object is constructed, it has not yet actually invoked the
+``setup`` code; that is deferred until the first time the fixture object is
+actually needed by a test. By using fixtures to provide initial context or
+values to a test is therefore lazy, and avoids performing any work if the test
+is skipped.
 
-``require_json_nonempty_string``
-    Asserts that it is given a likely representation of a JSON string, and
-    additionally that the string is not empty.
+Each fixture can declare named requirements or other fixture objects in its own
+dependencies. In this way a recursive tree of abilities can be constructed.
+The values of the named requirements and dependent fixtures are passed in to
+the ``setup`` block.
+
+If the fixture does not have a ``teardown`` block then it may be shared by
+multiple tests; each subsequent test that uses the same fixture object will
+receive the same value. The ``setup`` code will not be re-run; simply the value
+that it returned the first time will be reused by the second.
+
+If the fixture provides a ``teardown`` block, then it is invoked at the end of
+the test, once the eventual pass or failure has been determined. This is passed
+the fixture value, and is expected to return a future to provide a way to know
+when it has finished executing; the final return value yielded by this future
+is not important. After the ``teardown`` block is invoked, the fixture object
+can no longer be reused by other tests; it should therefore be constructed
+uniquely for just one test.
+
+Because of the optional nature of the ``teardown`` block, there are then two
+main kinds of fixtures:
+
+- Fixtures that provide access to some (possibly-shared) resource that is
+  lazily provisioned the first time a test requires it. These are fixtures
+  that lack a ``teardown`` block.
+
+- Fixtures that provide access to some resource that is created and destroyed
+  over the lifetime of the test. These are fixtures that have a ``teardown``
+  block.
+
+The intented use for fixtures is that test files will provide wrapper functions
+that create a new fixture object to encapsulate some common setup pattern that
+later tests may require. Later tests can then simply invoke that function as
+part of their ``requires`` list to have the setup for that fixture value
+effectively folded into to the start of the test, so that the main body of the
+``check`` or ``do`` block of that test is invoked with the value or context
+already provisioned.

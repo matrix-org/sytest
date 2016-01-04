@@ -2,16 +2,16 @@ use JSON qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha",
-   requires => [qw( first_api_client await_http_request expect_http_4xx )],
+   requires => [ $main::API_CLIENTS[0] ],
 
    do => sub {
-      my ( $http, $await_http_request, $expect_http_4xx ) = @_;
+      my ( $http ) = @_;
 
       Future->needs_all(
-         $await_http_request->( "/recaptcha/api/siteverify", sub {1} )->then( sub {
+         await_http_request( "/recaptcha/api/siteverify", sub {1} )
+            ->SyTest::pass_on_done( "Got recaptcha verify request" )
+         ->then( sub {
             my ( $request ) = @_;
-
-            pass "Got captcha verify request";
 
             my $params = $request->body_from_form;
 
@@ -39,7 +39,7 @@ multi_test "Register with a recaptcha",
                   response => "sytest_captcha_response",
                },
             },
-         )->$expect_http_4xx
+         )->main::expect_http_4xx
          ->then( sub {
             my ( $response ) = @_;
 
@@ -47,10 +47,10 @@ multi_test "Register with a recaptcha",
 
             log_if_fail "Body:", $body;
 
-            require_json_keys( $body, qw(completed) );
-            require_json_list( my $completed = $body->{completed} );
+            assert_json_keys( $body, qw(completed) );
+            assert_json_list( my $completed = $body->{completed} );
 
-            @$completed eq 1 or
+            @$completed == 1 or
                die "Expected one completed stage";
 
             $completed->[0] eq "m.login.recaptcha" or

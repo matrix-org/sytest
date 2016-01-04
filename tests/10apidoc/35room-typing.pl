@@ -1,14 +1,12 @@
 test "PUT /rooms/:room_id/typing/:user_id sets typing notification",
-   requires => [qw( do_request_json room_id
-                    can_create_room )],
+   requires => [ local_user_and_room_fixtures() ],
 
-
-   provides => [qw( can_set_room_typing )],
+   proves => [qw( can_set_room_typing )],
 
    do => sub {
-      my ( $do_request_json, $room_id ) = @_;
+      my ( $user, $room_id ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "PUT",
          uri    => "/api/v1/rooms/$room_id/typing/:user_id",
 
@@ -17,8 +15,6 @@ test "PUT /rooms/:room_id/typing/:user_id sets typing notification",
          my ( $body ) = @_;
 
          # Body is empty
-
-         provide can_set_room_typing => 1;
 
          Future->done(1);
       });

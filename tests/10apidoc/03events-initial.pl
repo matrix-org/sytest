@@ -1,25 +1,23 @@
-use List::UtilsBy qw( extract_by );
+use List::UtilsBy qw( extract_first_by );
 use Future::Utils qw( repeat );
 
 test "GET /events initially",
-   requires => [qw( do_request_json user first_api_client )],
+   requires => [ $main::SPYGLASS_USER ],
 
-   provides => [qw( can_get_events )],
+   critical => 1,
 
    check => sub {
-      my ( $do_request_json, $user, $http ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/events",
          params => { timeout => 0 },
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( start end chunk ));
-         require_json_list( $body->{chunk} );
-
-         provide can_get_events => 1;
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
 
          # We can't be absolutely sure that there won't be any events yet, so
          # don't check that.
@@ -32,123 +30,160 @@ test "GET /events initially",
    };
 
 test "GET /initialSync initially",
-   requires => [qw( do_request_json )],
+   requires => [ $main::SPYGLASS_USER ],
 
-   provides => [qw( can_initial_sync )],
+   proves => [qw( can_initial_sync )],
 
    check => sub {
-      my ( $do_request_json ) = @_;
+      my ( $user ) = @_;
 
-      $do_request_json->(
+      do_request_json_for( $user,
          method => "GET",
          uri    => "/api/v1/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( end ));
+         assert_json_keys( $body, qw( end ));
 
          # Spec says these are optional
          if( exists $body->{rooms} ) {
-            require_json_list( $body->{rooms} );
+            assert_json_list( $body->{rooms} );
          }
          if( exists $body->{presence} ) {
-            require_json_list( $body->{presence} );
+            assert_json_list( $body->{presence} );
          }
-
-         provide can_initial_sync => 1;
 
          Future->done(1);
       });
    };
 
-prepare "Environment closures for stateful /event access",
-   requires => [qw( user can_get_events )],
+sub matrix_initialsync
+{
+   my ( $user, %args ) = @_;
 
-   provides => [qw( flush_events_for await_event_for )],
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/api/v1/initialSync",
 
-   do => sub {
-      my ( $first_user ) = @_;
+      params => {
+         ( map { defined $args{$_} ? ( $_ => $args{$_} ) : () }
+            qw( limit archived ) ),
+      },
+   );
+}
 
-      # A useful closure, which keeps track of the current eventstream token
-      # and fetches new events since it
+# A useful function which keeps track of the current eventstream token and
+#   fetches new events since it
+# $room_id may be undefined, in which case it gets events for all joined rooms.
+sub GET_new_events_for
+{
+   my ( $user, %params ) = @_;
 
-      my $GET_new_events_for = sub {
-         my ( $user ) = @_;
+   return $user->pending_get_events //=
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/api/v1/events",
+         params => {
+            %params,
+            from    => $user->eventstream_token,
+            timeout => 500,
+         },
+      )->on_ready( sub {
+         undef $user->pending_get_events;
+      })->then( sub {
+         my ( $body ) = @_;
+         $user->eventstream_token = $body->{end};
 
-         return $user->pending_get_events //=
-            $user->http->do_request_json(
-               method => "GET",
-               uri    => "/api/v1/events",
-               params => {
-                  access_token => $user->access_token,
-                  from         => $user->eventstream_token,
-                  timeout      => 500,
-               }
-            )->on_ready( sub {
-               undef $user->pending_get_events;
-            })->then( sub {
-               my ( $body ) = @_;
-               $user->eventstream_token = $body->{end};
+         my @events = ( @{ $user->saved_events }, @{ $body->{chunk} } );
+         @{ $user->saved_events } = ();
 
-               my @events = ( @{ $user->saved_events }, @{ $body->{chunk} } );
-               @{ $user->saved_events } = ();
+         Future->done( @events );
+      });
+}
 
-               Future->done( @events );
-            });
-      };
+# Some Matrix protocol helper functions
 
-      provide flush_events_for => sub {
-         my ( $user ) = @_;
+push our @EXPORT, qw( matrix_initialsync matrix_sync flush_events_for await_event_for );
 
-         $user->http->do_request_json(
-            method => "GET",
-            uri    => "/api/v1/events",
-            params => {
-               access_token => $user->access_token,
-               timeout      => 0,
-            }
-         )->then( sub {
-            my ( $body ) = @_;
-            $user->eventstream_token = $body->{end};
-            @{ $user->saved_events } = ();
+sub flush_events_for
+{
+   my ( $user ) = @_;
 
-            Future->done;
-         });
-      };
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/api/v1/events",
+      params => {
+         timeout => 0,
+      }
+   )->then( sub {
+      my ( $body ) = @_;
+      $user->eventstream_token = $body->{end};
+      @{ $user->saved_events } = ();
 
-      provide await_event_for => sub {
-         my ( $user, $filter ) = @_;
-         # Carp::shortmess is no good here as every test runs in the 'main' package
-         my $caller = sprintf "%s line %d.", (caller)[1,2];
+      Future->done;
+   });
+}
 
-         my $f = repeat {
-            # Just replay saved ones the first time around, if there are any
-            my $replay_saved = !shift && scalar @{ $user->saved_events };
+# Note that semantics are undefined if calls are interleaved with differing
+# $room_ids for the same user.
+sub await_event_for
+{
+   my ( $user, %params ) = @_;
 
-            ( $replay_saved
-               ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
-               : $GET_new_events_for->( $user )
-            )->then( sub {
-               my $found;
-               foreach my $event ( @_ ) {
-                  not $found and $filter->( $event ) and
-                     $found = 1, next;
+   my $filter = delete $params{filter} || sub { 1 };
+   my $room_id = $params{room_id};  # May be undefined, in which case we listen to all joined rooms.
 
-                  # Save it for later
-                  push @{ $user->saved_events }, $event;
-               }
+   my $failmsg = SyTest::CarpByFile::shortmess( "Timed out waiting for an event" );
 
-               Future->done( $found );
-            });
-         } while => sub { !$_[0]->failure and !$_[0]->get };
+   my $f = repeat {
+      # Just replay saved ones the first time around, if there are any
+      my $replay_saved = !shift && scalar @{ $user->saved_events };
 
-         return Future->wait_any(
-            $f,
+      ( $replay_saved
+         ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
+         : GET_new_events_for( $user, %params )
+      )->then( sub {
+         my @events = @_;
 
-            delay( 10 )
-               ->then_fail( "Timed out waiting for an event at $caller\n" ),
-         );
-      };
+         my $found = extract_first_by { $filter->( $_ ) } @events;
 
-      Future->done(1);
-   };
+         # Save the rest for next time
+         push @{ $user->saved_events }, @events;
+
+         Future->done( $found );
+      });
+   } while => sub { !$_[0]->failure and !$_[0]->get };
+
+   return Future->wait_any(
+      $f,
+
+      delay( 10 )
+         ->then_fail( $failmsg ),
+   );
+}
+
+=head2 matrix_sync
+
+   my ( $sync_body ) = matrix_sync( $user, %query_params )->get;
+
+Make a v2_alpha/sync request for the user. Returns the response body as a
+reference to a hash.
+
+=cut
+
+sub matrix_sync
+{
+   my ( $user, %params ) = @_;
+
+   do_request_json_for( $user,
+      method  => "GET",
+      uri     => "/v2_alpha/sync",
+      params  => \%params,
+   )->on_done( sub {
+      my ( $body ) = @_;
+
+      assert_json_keys( $body, qw( account_data rooms presence next_batch ) );
+      assert_json_keys( $body->{presence}, qw( events ));
+      assert_json_keys( $body->{rooms}, qw( join invite leave ) );
+   });
+}

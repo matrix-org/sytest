@@ -2,11 +2,12 @@ package SyTest::HTTPServer::Request;
 use 5.014; # ${^GLOBAL_PHASE}
 use base qw( Net::Async::HTTP::Server::Request );
 
+use HTTP::Response;
 use JSON qw( decode_json encode_json );
 
 use constant JSON_MIME_TYPE => "application/json";
 
-use Carp;
+use SyTest::CarpByFile;
 
 sub DESTROY
 {

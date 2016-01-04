@@ -1,42 +1,33 @@
 sub make_room_and_message
 {
-   my ( $do_request_json_for, $make_test_room, $users, $sender ) = @_;
+   my ( $users, $sender ) = @_;
 
    my $room_id;
-   $make_test_room->( @$users )->then( sub {
+   matrix_create_and_join_room( $users )->then( sub {
       ( $room_id ) = @_;
-      $do_request_json_for->( $sender,
-         method => "POST",
-         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
 
+      matrix_send_room_message( $sender, $room_id,
          content => { msgtype => "m.message", body => "orangutans are not monkeys" },
       )
    })->then( sub {
-      my ( $body ) = @_;
+      my ( $event_id ) = @_;
 
-      require_json_keys( $body, qw( event_id ));
-      require_json_nonempty_string( $body->{event_id} );
-
-      return Future->done( $room_id, $body->{event_id} );
+      return Future->done( $room_id, $event_id );
    });
 }
 
 test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
-   requires => [qw( do_request_json_for make_test_room local_users )],
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_send_message )],
 
    do => sub {
-      my ( $do_request_json_for, $make_test_room, $local_users ) = @_;
-      # 100 power level
-      my $room_creator   = $local_users->[0];
-      # 0 power level
-      my $test_user = $local_users->[1];
+      my ( $creator, $sender ) = @_;
 
-      make_room_and_message(
-         $do_request_json_for, $make_test_room, $local_users, $test_user
-      )->then( sub {
+      make_room_and_message( [ $creator, $sender ], $sender )
+      ->then( sub {
          my ( $room_id, $to_redact ) = @_;
 
-         $do_request_json_for->( $room_creator,
+         do_request_json_for( $creator,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
             content => {},
@@ -45,19 +36,17 @@ test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
    };
 
 test "POST /rooms/:room_id/redact/:event_id as original message sender redacts message",
-   requires => [qw( do_request_json_for make_test_room local_users )],
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_send_message )],
 
    do => sub {
-      my ( $do_request_json_for, $make_test_room, $local_users ) = @_;
-      # 0 power level
-      my $test_user = $local_users->[1];
+      my ( $creator, $sender ) = @_;
 
-      make_room_and_message(
-         $do_request_json_for, $make_test_room, $local_users, $test_user
-      )->then( sub {
+      make_room_and_message( [ $creator, $sender ], $sender )
+      ->then( sub {
          my ( $room_id, $to_redact ) = @_;
 
-         $do_request_json_for->( $test_user,
+         do_request_json_for( $sender,
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
                content => {},
@@ -66,23 +55,20 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
    };
 
 test "POST /rooms/:room_id/redact/:event_id as random user does not redact message",
-   requires => [qw( do_request_json_for make_test_room local_users expect_http_403 )],
+   requires => [ local_user_fixtures( 3 ),
+                 qw( can_send_message )],
 
    do => sub {
-      my ( $do_request_json_for, $make_test_room, $local_users, $expect_http_403 ) = @_;
-      # Both have 0 power level
-      my $test_user = $local_users->[1];
-      my $other_test_user = $local_users->[2];
+      my ( $creator, $sender, $redactor ) = @_;
 
-      make_room_and_message(
-         $do_request_json_for, $make_test_room, $local_users, $test_user
-      )->then( sub {
+      make_room_and_message( [ $creator, $sender, $redactor ], $sender )
+      ->then( sub {
          my ( $room_id, $to_redact ) = @_;
 
-         $do_request_json_for->( $other_test_user,
+         do_request_json_for( $redactor,
                method => "POST",
                uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
                content => {},
-         )
-      })->$expect_http_403;
+         )->main::expect_http_403;
+      });
    };
