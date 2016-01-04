@@ -123,7 +123,7 @@ sub matrix_create_room
    });
 }
 
-push @EXPORT, qw( room_alias_name_fixture );
+push @EXPORT, qw( room_alias_name_fixture room_alias_fixture );
 
 my $next_alias_name = 0;
 
@@ -157,3 +157,33 @@ sub room_alias_name_fixture
    );
 }
 
+=head2 room_alias_fixture
+
+   $fixture = room_alias_fixture( prefix => $prefix )
+
+Returns a new Fixture, which when provisioned will allocate a name for a new
+room alias on the first homeserver, and return it as a string. Note that this
+does not actually create the alias on the server itself, it simply suggests a
+new unique name for one.
+
+An optional prefix string can be provided, which will be prepended onto the
+alias name.
+
+=cut
+
+sub room_alias_fixture
+{
+   my %args = @_;
+
+   return fixture(
+      requires => [
+         room_alias_name_fixture( prefix => $args{prefix} ), $main::HOMESERVER_INFO[0],
+      ],
+
+      setup => sub {
+         my ( $alias_name, $info ) = @_;
+
+         Future->done( sprintf "#%s:%s", $alias_name, $info->server_name );
+      },
+   );
+}
