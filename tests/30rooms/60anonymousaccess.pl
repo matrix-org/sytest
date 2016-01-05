@@ -1,4 +1,5 @@
 use Future::Utils qw( try_repeat_until_success );
+use JSON qw( encode_json );
 
 test "Anonymous user cannot view non-world-readable rooms",
    requires => [ anonymous_user_fixture(), local_user_fixture() ],
@@ -60,6 +61,26 @@ test "Anonymous user cannot call /events on non-world_readable room",
       });
    };
 
+test "Anonymous user cannot call /sync on non-world_readable room",
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user, $user ) = @_;
+
+      my $room_id;
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_send_room_text_message( $user, $room_id, body => "mice" )
+      })->then( sub {
+         matrix_sync( $anonymous_user, filter => encode_json( {
+            room => { rooms => [ $room_id ] }
+         }))->main::expect_http_403;
+      });
+   };
+
 sub await_event_not_presence_for
 {
    my ( $user, $room_id, $allowed_users ) = @_;
@@ -79,7 +100,6 @@ sub await_event_not_presence_for
       log_if_fail "event", $event
    });
 }
-
 
 test "Anonymous user can call /events on world_readable room",
    requires => [ anonymous_user_fixture(), local_user_fixture(), local_user_fixture() ],
@@ -190,6 +210,44 @@ test "Anonymous user can call /events on world_readable room",
                }),
             );
          });
+      });
+   };
+
+test "Annonymous user can call /sync on a world readable room",
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user, $user ) = @_;
+
+      my ( $room_id, $sent_event_id );
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+      })->then( sub {
+         matrix_send_room_text_message( $user, $room_id, body => "mice" );
+      })->then( sub {
+         ( $sent_event_id ) = @_;
+
+         matrix_sync( $anonymous_user, filter => encode_json({
+            room => {
+               rooms => [ $room_id ],
+               ephemeral => { types => [] },
+               state => { types => [] },
+               timeline => { types => ["m.room.message"] },
+            },
+            presence => { types => [] }
+         }));
+      })->then( sub {
+         my ( $sync_body ) = @_;
+
+         assert_json_object( my $room = $sync_body->{rooms}{join}{$room_id} );
+         assert_json_list( my $events = $room->{timeline}{events} );
+         assert_eq( $events->[0]{event_id}, $sent_event_id, 'event id' );
+
+         Future->done( 1 );
       });
    };
 
