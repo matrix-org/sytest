@@ -17,8 +17,7 @@ test "Anonymous user cannot view non-world-readable rooms",
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
          matrix_get_room_messages( $anonymous_user, $room_id, limit => "1" )
-            ->main::expect_http_403;
-      });
+      })->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
 test "Anonymous user can view world-readable rooms",
@@ -56,8 +55,7 @@ test "Anonymous user cannot call /events on non-world_readable room",
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
          matrix_get_room_messages( $anonymous_user, $room_id, limit => "2" )
-            ->main::expect_http_403;
-      });
+      })->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
 sub await_event_not_presence_for
@@ -755,4 +753,30 @@ sub ignore_presence_for
             any { $event->{content}{user_id} eq $_->user_id } @$ignored_users
       )
    } @events ];
+}
+
+sub expect_4xx_or_empty_chunk
+{
+   my ( $f ) = @_;
+
+   $f->then( sub {
+      my ( $body ) = @_;
+
+      log_if_fail "Body", $body;
+
+      assert_json_keys( $body, qw( chunk ) );
+      assert_json_list( $body->{chunk} );
+      die "Want list to be empty" if @{ $body->{chunk} };
+
+      Future->done( 1 );
+   },
+   http => sub {
+      my ( undef, undef, $response ) = @_;
+
+      log_if_fail "HTTP Response", $response;
+
+      $response->code >= 400 and $response->code < 500 or die "want 4xx";
+
+      Future->done( 1 );
+   });
 }
