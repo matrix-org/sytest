@@ -745,6 +745,87 @@ test "GET /publicRooms lists rooms",
       });
    };
 
+test "GET /publicRooms includes avatar URLs",
+   requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
+
+   check => sub {
+      my ( $http, $user ) = @_;
+
+      Future->needs_all(
+         matrix_create_room( $user,
+            visibility => "public",
+            room_alias_name => "nonworldreadable",
+         )->then( sub {
+            my ( $room_id ) = @_;
+
+            matrix_put_room_state( $user, $room_id,
+               type      => "m.room.avatar",
+               state_key => "",
+               content   => {
+                  url => "https://example.com/ruffed.jpg",
+               }
+            );
+         }),
+
+         matrix_create_room( $user,
+            visibility => "public",
+            room_alias_name => "worldreadable",
+         )->then( sub {
+            my ( $room_id ) = @_;
+
+            Future->needs_all(
+               matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
+               matrix_put_room_state( $user, $room_id,
+                  type      => "m.room.avatar",
+                  state_key => "",
+                  content   => {
+                     url => "https://example.com/ringtails.jpg",
+                  }
+               ),
+            );
+         }),
+      )->then( sub {
+         $http->do_request_json(
+            method => "GET",
+            uri    => "/api/v1/publicRooms",
+      )})->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "publicRooms", $body;
+
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
+
+         my %seen = (
+            worldreadable    => 0,
+            nonworldreadable => 0,
+         );
+
+         foreach my $room ( @{ $body->{chunk} } ) {
+            my $aliases = $room->{aliases};
+
+            foreach my $alias ( @{$aliases} ) {
+               if( $alias =~ m/^\Q#worldreadable:/ ) {
+                  assert_json_keys( $room, qw( avatar_url ) );
+                  assert_eq( $room->{avatar_url}, "https://example.com/ringtails.jpg", "avatar_url" );
+                  $seen{worldreadable} = 1;
+               }
+               elsif( $alias =~ m/^\Q#nonworldreadable:/ ) {
+                  assert_json_keys( $room, qw( avatar_url ) );
+                  assert_eq( $room->{avatar_url}, "https://example.com/ruffed.jpg", "avatar_url" );
+                  $seen{nonworldreadable} = 1;
+               }
+            }
+         }
+
+         foreach my $key (keys %seen ) {
+            $seen{$key} or die "Didn't see $key";
+         }
+
+         Future->done(1);
+      });
+   };
+
 sub anonymous_user_fixture
 {
    fixture(
