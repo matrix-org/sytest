@@ -81,8 +81,8 @@ test "Can invite existing 3pid in createRoom",
                my ( $body ) = @_;
 
                log_if_fail "Body", $body;
-               $body->{membership} eq "invite" or
-                  die "Expected invited user membership to be 'invite'";
+               assert_eq( $body->{membership}, "invite",
+                  'invited user membership' );
             });
          });
       });
