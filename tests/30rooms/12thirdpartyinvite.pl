@@ -66,8 +66,8 @@ test "Can invite existing 3pid in createRoom",
       $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
       ->then( sub {
          my $invite_info = {
-            medium => "email",
-            address => $invitee_email,
+            medium    => "email",
+            address   => $invitee_email,
             id_server => $id_server->name,
          };
          matrix_create_room( $inviter, invite_3pid => [ $invite_info ] )
