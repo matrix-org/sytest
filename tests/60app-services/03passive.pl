@@ -46,14 +46,12 @@ multi_test "Inviting an AS-hosted user asks the AS server",
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
    requires => [ $main::AS_USER, local_user_fixture(), $room_fixture,
+                 room_alias_fixture( prefix => "astest-" ),
 
                 qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $as_user, $local_user, $room_id ) = @_;
-      my $server_name = $as_user->http->server_name;
-
-      my $room_alias = "#astest-03passive-1:$server_name";
+      my ( $as_user, $local_user, $room_id, $room_alias ) = @_;
 
       require_stub await_http_request( "/appserv/rooms/$room_alias", sub { 1 } )
          ->then( sub {

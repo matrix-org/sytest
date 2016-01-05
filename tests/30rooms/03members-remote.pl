@@ -11,13 +11,13 @@ my $creator_fixture = local_user_fixture(
 my $remote_user_fixture = remote_user_fixture();
 
 my $room_fixture = fixture(
-   requires => [ $creator_fixture ],
+   requires => [ $creator_fixture, room_alias_name_fixture() ],
 
    setup => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_alias_name ) = @_;
 
       matrix_create_room( $user,
-         room_alias_name => "03members-remote"
+         room_alias_name => $room_alias_name,
       );
    },
 );
@@ -208,14 +208,14 @@ test "New room members see first user's profile information in per-room initialS
    };
 
 test "Remote users may not join unfederated rooms",
-   requires => [ local_user_fixture(), remote_user_fixture(),
+   requires => [ local_user_fixture(), remote_user_fixture(), room_alias_name_fixture(),
                  qw( can_create_room_with_creation_content )],
 
    check => sub {
-      my ( $creator, $remote_user ) = @_;
+      my ( $creator, $remote_user, $room_alias_name ) = @_;
 
       matrix_create_room( $creator,
-         room_alias_name  => "unfederated",
+         room_alias_name  => $room_alias_name,
          creation_content => {
             "m.federate" => JSON::false,
          },
