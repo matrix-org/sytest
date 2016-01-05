@@ -1,4 +1,5 @@
 use Future::Utils qw( try_repeat_until_success );
+use JSON qw( encode_json );
 
 test "Anonymous user cannot view non-world-readable rooms",
    requires => [ anonymous_user_fixture(), local_user_fixture() ],
@@ -17,8 +18,7 @@ test "Anonymous user cannot view non-world-readable rooms",
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
          matrix_get_room_messages( $anonymous_user, $room_id, limit => "1" )
-            ->main::expect_http_403;
-      });
+      })->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
 test "Anonymous user can view world-readable rooms",
@@ -56,7 +56,26 @@ test "Anonymous user cannot call /events on non-world_readable room",
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
          matrix_get_room_messages( $anonymous_user, $room_id, limit => "2" )
-            ->main::expect_http_403;
+      })->followed_by( \&expect_4xx_or_empty_chunk );
+   };
+
+test "Anonymous user cannot call /sync on non-world_readable room",
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user, $user ) = @_;
+
+      my $room_id;
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_send_room_text_message( $user, $room_id, body => "mice" )
+      })->then( sub {
+         matrix_sync( $anonymous_user, filter => encode_json( {
+            room => { rooms => [ $room_id ] }
+         }))->main::expect_http_403;
       });
    };
 
@@ -79,7 +98,6 @@ sub await_event_not_presence_for
       log_if_fail "event", $event
    });
 }
-
 
 test "Anonymous user can call /events on world_readable room",
    requires => [ anonymous_user_fixture(), local_user_fixture(), local_user_fixture() ],
@@ -190,6 +208,44 @@ test "Anonymous user can call /events on world_readable room",
                }),
             );
          });
+      });
+   };
+
+test "Annonymous user can call /sync on a world readable room",
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user, $user ) = @_;
+
+      my ( $room_id, $sent_event_id );
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+      })->then( sub {
+         matrix_send_room_text_message( $user, $room_id, body => "mice" );
+      })->then( sub {
+         ( $sent_event_id ) = @_;
+
+         matrix_sync( $anonymous_user, filter => encode_json({
+            room => {
+               rooms => [ $room_id ],
+               ephemeral => { types => [] },
+               state => { types => [] },
+               timeline => { types => ["m.room.message"] },
+            },
+            presence => { types => [] }
+         }));
+      })->then( sub {
+         my ( $sync_body ) = @_;
+
+         assert_json_object( my $room = $sync_body->{rooms}{join}{$room_id} );
+         assert_json_list( my $events = $room->{timeline}{events} );
+         assert_eq( $events->[0]{event_id}, $sent_event_id, 'event id' );
+
+         Future->done( 1 );
       });
    };
 
@@ -689,6 +745,87 @@ test "GET /publicRooms lists rooms",
       });
    };
 
+test "GET /publicRooms includes avatar URLs",
+   requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
+
+   check => sub {
+      my ( $http, $user ) = @_;
+
+      Future->needs_all(
+         matrix_create_room( $user,
+            visibility => "public",
+            room_alias_name => "nonworldreadable",
+         )->then( sub {
+            my ( $room_id ) = @_;
+
+            matrix_put_room_state( $user, $room_id,
+               type      => "m.room.avatar",
+               state_key => "",
+               content   => {
+                  url => "https://example.com/ruffed.jpg",
+               }
+            );
+         }),
+
+         matrix_create_room( $user,
+            visibility => "public",
+            room_alias_name => "worldreadable",
+         )->then( sub {
+            my ( $room_id ) = @_;
+
+            Future->needs_all(
+               matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
+               matrix_put_room_state( $user, $room_id,
+                  type      => "m.room.avatar",
+                  state_key => "",
+                  content   => {
+                     url => "https://example.com/ringtails.jpg",
+                  }
+               ),
+            );
+         }),
+      )->then( sub {
+         $http->do_request_json(
+            method => "GET",
+            uri    => "/api/v1/publicRooms",
+      )})->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "publicRooms", $body;
+
+         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_list( $body->{chunk} );
+
+         my %seen = (
+            worldreadable    => 0,
+            nonworldreadable => 0,
+         );
+
+         foreach my $room ( @{ $body->{chunk} } ) {
+            my $aliases = $room->{aliases};
+
+            foreach my $alias ( @{$aliases} ) {
+               if( $alias =~ m/^\Q#worldreadable:/ ) {
+                  assert_json_keys( $room, qw( avatar_url ) );
+                  assert_eq( $room->{avatar_url}, "https://example.com/ringtails.jpg", "avatar_url" );
+                  $seen{worldreadable} = 1;
+               }
+               elsif( $alias =~ m/^\Q#nonworldreadable:/ ) {
+                  assert_json_keys( $room, qw( avatar_url ) );
+                  assert_eq( $room->{avatar_url}, "https://example.com/ruffed.jpg", "avatar_url" );
+                  $seen{nonworldreadable} = 1;
+               }
+            }
+         }
+
+         foreach my $key (keys %seen ) {
+            $seen{$key} or die "Didn't see $key";
+         }
+
+         Future->done(1);
+      });
+   };
+
 sub anonymous_user_fixture
 {
    fixture(
@@ -755,4 +892,30 @@ sub ignore_presence_for
             any { $event->{content}{user_id} eq $_->user_id } @$ignored_users
       )
    } @events ];
+}
+
+sub expect_4xx_or_empty_chunk
+{
+   my ( $f ) = @_;
+
+   $f->then( sub {
+      my ( $body ) = @_;
+
+      log_if_fail "Body", $body;
+
+      assert_json_keys( $body, qw( chunk ) );
+      assert_json_list( $body->{chunk} );
+      die "Want list to be empty" if @{ $body->{chunk} };
+
+      Future->done( 1 );
+   },
+   http => sub {
+      my ( undef, undef, $response ) = @_;
+
+      log_if_fail "HTTP Response", $response;
+
+      $response->code >= 400 and $response->code < 500 or die "want 4xx";
+
+      Future->done( 1 );
+   });
 }
