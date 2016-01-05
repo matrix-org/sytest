@@ -53,6 +53,42 @@ test "Can invite existing 3pid",
       });
    };
 
+test "Can invite existing 3pid in createRoom",
+   requires => [ local_user_fixtures( 2 ), id_server_fixture() ],
+
+   do => sub {
+      my ( $inviter, $invitee, $id_server ) = @_;
+
+      my $invitee_mxid = $invitee->user_id;
+
+      my $room_id;
+
+      $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
+      ->then( sub {
+         my $invite_info = {
+            medium => "email",
+            address => $invitee_email,
+            id_server => $id_server->name,
+         };
+         matrix_create_room( $inviter, invite_3pid => [ $invite_info ] )
+         ->then( sub {
+            ( $room_id ) = @_;
+
+            matrix_get_room_state( $inviter, $room_id,
+               type      => "m.room.member",
+               state_key => $invitee_mxid,
+            )->on_done( sub {
+               my ( $body ) = @_;
+
+               log_if_fail "Body", $body;
+               $body->{membership} eq "invite" or
+                  die "Expected invited user membership to be 'invite'";
+            });
+         });
+      });
+   };
+
+
 test "Can invite unbound 3pid",
    requires => [ local_user_fixtures( 2 ), $main::HOMESERVER_INFO[0],
                  id_server_fixture() ],

@@ -117,6 +117,8 @@ sub matrix_create_room
             ( room_alias_name => $opts{room_alias_name} ) : () ),
          ( defined $opts{invite} ?
             ( invite => $opts{invite} ) : () ),
+         ( defined $opts{invite_3pid} ?
+            ( invite_3pid => $opts{invite_3pid} ) : () ),
          ( defined $opts{creation_content} ?
             ( creation_content => $opts{creation_content} ) : () ),
       }
