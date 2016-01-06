@@ -1,13 +1,9 @@
 multi_test "Non-present room members cannot ban others",
-   requires => [qw(
-      local_users
-      can_ban_room can_change_power_levels
-   )],
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_ban_room can_change_power_levels )],
 
-   await => sub {
-      my ( $local_users ) = @_;
-      my $creator = $local_users->[0];
-      my $testuser = $local_users->[1];
+   do => sub {
+      my ( $creator, $testuser ) = @_;
 
       my $room_id;
 

@@ -1,21 +1,21 @@
-local *SyTest::Federation::Server::on_request_federation_v1_query_profile = sub {
-   my $self = shift;
-   my ( $req ) = @_;
-
-   my $user_id = $req->query_param( "user_id" );
-
-   Future->done( {
-      displayname => "The displayname of $user_id",
-      avatar_url  => "",
-   } );
-};
-
 test "Outbound federation can query profile data",
-   requires => [qw( user local_server_name
-                    can_get_displayname )],
+   requires => [ $main::INBOUND_SERVER, $main::SPYGLASS_USER,
+                qw( can_get_displayname )],
 
    check => sub {
-      my ( $user, $local_server_name ) = @_;
+      my ( $inbound_server, $user ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+
+      require_stub $inbound_server->await_query_profile( "\@user:$local_server_name" )
+         ->on_done( sub {
+            my ( $req ) = @_;
+
+            $req->respond_json( {
+               displayname => "The displayname of \@user:$local_server_name",
+               avatar_url  => "",
+            } );
+         });
 
       do_request_json_for( $user,
          method => "GET",
@@ -24,7 +24,7 @@ test "Outbound federation can query profile data",
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
 
-         require_json_keys( $body, qw( displayname ));
+         assert_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq "The displayname of \@user:$local_server_name" or
             die "Displayname not as expected";
@@ -36,11 +36,11 @@ test "Outbound federation can query profile data",
 my $dname = "Displayname Set For Federation Test";
 
 test "Inbound federation can query profile data",
-   requires => [qw( outbound_client user
-                    can_set_displayname )],
+   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0], local_user_fixture(),
+                 qw( can_set_displayname )],
 
    do => sub {
-      my ( $outbound_client, $user ) = @_;
+      my ( $outbound_client, $info, $user ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -51,8 +51,9 @@ test "Inbound federation can query profile data",
          },
       )->then( sub {
          $outbound_client->do_request_json(
-            method => "GET",
-            uri    => "/query/profile",
+            method   => "GET",
+            hostname => $info->server_name,
+            uri      => "/query/profile",
 
             params => {
                user_id => $user->user_id,
@@ -63,7 +64,7 @@ test "Inbound federation can query profile data",
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
 
-         require_json_keys( $body, qw( displayname ));
+         assert_json_keys( $body, qw( displayname ));
 
          $body->{displayname} eq $dname or
             die "Expected displayname to be '$dname'";

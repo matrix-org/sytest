@@ -1,10 +1,14 @@
-test "AS can create a user",
-   requires => [qw( as_user )],
+my $user_fixture = local_user_fixture();
 
-   provides => [qw( make_as_user )],
+my $room_fixture = room_fixture(
+   requires_users => [ $user_fixture ],
+);
+
+test "AS can create a user",
+   requires => [ $main::AS_USER, $room_fixture ],
 
    do => sub {
-      my ( $as_user ) = @_;
+      my ( $as_user, $room_id ) = @_;
 
       do_request_json_for( $as_user,
          method => "POST",
@@ -19,35 +23,14 @@ test "AS can create a user",
 
          log_if_fail "Body", $body;
 
-         require_json_keys( $body, qw( user_id home_server ));
-
-         provide make_as_user => sub {
-            my ( $user_id_fragment ) = @_;
-
-            do_request_json_for( $as_user,
-               method => "POST",
-               uri    => "/api/v1/register",
-
-               content => {
-                  type => "m.login.application_service",
-                  user => "astest-$user_id_fragment"
-               },
-            )->then( sub {
-               my ( $body ) = @_;
-
-               # TODO: user has no event stream yet. Should they?
-               Future->done(
-                  User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, undef, [], undef )
-               );
-            });
-         };
+         assert_json_keys( $body, qw( user_id home_server ));
 
          Future->done(1);
       });
    };
 
 test "AS cannot create users outside its own namespace",
-   requires => [qw( as_user )],
+   requires => [ $main::AS_USER ],
 
    do => sub {
       my ( $as_user ) = @_;
@@ -64,7 +47,7 @@ test "AS cannot create users outside its own namespace",
    };
 
 test "Regular users cannot register within the AS namespace",
-   requires => [qw( first_api_client )],
+   requires => [ $main::API_CLIENTS[0] ],
 
    do => sub {
       my ( $http ) = @_;
@@ -73,42 +56,41 @@ test "Regular users cannot register within the AS namespace",
          ->main::expect_http_4xx;
    };
 
-my $room_id;
-prepare "Creating a new test room",
-   requires => [qw( user )],
-
-   do => sub {
-      my ( $user ) = @_;
-
-      matrix_create_room( $user )
-         ->on_done( sub {
-            ( $room_id ) = @_;
-         });
-   };
-
 test "AS can make room aliases",
-   requires => [qw( await_as_event as_user first_home_server
-                    can_create_room_alias )],
+   requires => [
+      $main::AS_USER, $main::AS_USER_INFO, $room_fixture,
+      room_alias_fixture( prefix => "astest-" ),
+      qw( can_create_room_alias ),
+   ],
 
    do => sub {
-      my ( $await_as_event, $as_user, $first_home_server ) = @_;
-      my $room_alias = "#astest-01create-1:$first_home_server";
+      my ( $as_user, $as_user_info, $room_id, $room_alias ) = @_;
 
       Future->needs_all(
-         $await_as_event->( "m.room.aliases" )->then( sub {
-            my ( $event ) = @_;
+         await_as_event( "m.room.aliases" )->then( sub {
+            my ( $event, $request ) = @_;
+
+            # As this is the first AS event we've received, lets check that the
+            # token matches, to give that coverage.
+
+            my $access_token = $request->query_param( "access_token" );
+
+            assert_ok( defined $access_token,
+               "HS provides an access_token" );
+            assert_eq( $access_token, $as_user_info->hs2as_token,
+               "HS provides the correct token" );
 
             log_if_fail "Event", $event;
 
-            require_json_keys( $event, qw( content room_id user_id ));
+            assert_json_keys( $event, qw( content room_id user_id ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
             $event->{user_id} eq $as_user->user_id or
                die "Expected user_id to be ${\$as_user->user_id}";
 
-            require_json_keys( my $content = $event->{content}, qw( aliases ));
-            require_json_list( my $aliases = $content->{aliases} );
+            assert_json_keys( my $content = $event->{content}, qw( aliases ));
+            assert_json_list( my $aliases = $content->{aliases} );
 
             grep { $_ eq $room_alias } @$aliases or
                die "EXpected to find our alias in the aliases list";
@@ -136,7 +118,7 @@ test "AS can make room aliases",
 
          log_if_fail "Body", $body;
 
-         require_json_keys( $body, qw( room_id ));
+         assert_json_keys( $body, qw( room_id ));
 
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id'";
@@ -146,12 +128,13 @@ test "AS can make room aliases",
    };
 
 test "Regular users cannot create room aliases within the AS namespace",
-   requires => [qw( user first_home_server
-                    can_create_room_alias )],
+   requires => [
+      $user_fixture, $room_fixture, room_alias_fixture( prefix => "astest-" ),
+      qw( can_create_room_alias ),
+   ],
 
    do => sub {
-      my ( $user, $first_home_server ) = @_;
-      my $room_alias = "#astest-01create-2:$first_home_server";
+      my ( $user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -162,3 +145,45 @@ test "Regular users cannot create room aliases within the AS namespace",
          }
       )->main::expect_http_4xx;
    };
+
+push our @EXPORT, qw( matrix_register_as_ghost as_ghost_fixture );
+
+sub matrix_register_as_ghost
+{
+   my ( $as_user, $user_id ) = @_;
+   is_User( $as_user ) or croak "Expected a User, got $as_user";
+
+   do_request_json_for( $as_user,
+      method => "POST",
+      uri    => "/api/v1/register",
+
+      content => {
+         type => "m.login.application_service",
+         user => $user_id,
+      }
+   )->then( sub {
+      my ( $body ) = @_;
+
+      # TODO: user has no event stream yet. Should they?
+      Future->done(
+         User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, undef, [], undef )
+      );
+   });
+}
+
+my $next_as_user_id = 0;
+sub as_ghost_fixture
+{
+   fixture(
+      requires => [ $main::AS_USER ],
+
+      setup => sub {
+         my ( $as_user ) = @_;
+
+         my $user_id = "astest-$next_as_user_id";
+         $next_as_user_id++;
+
+         matrix_register_as_ghost( $as_user, $user_id );
+      },
+   );
+}

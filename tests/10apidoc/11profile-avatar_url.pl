@@ -1,9 +1,11 @@
+my $user_fixture = local_user_fixture();
+
 my $avatar_url = "http://somewhere/my-pic.jpg";
 
 test "PUT /profile/:user_id/avatar_url sets my avatar",
-   requires => [qw( user )],
+   requires => [ $user_fixture ],
 
-   provides => [qw( can_set_avatar_url )],
+   proves => [qw( can_set_avatar_url )],
 
    check => sub {
       my ( $user ) = @_;
@@ -14,12 +16,10 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( avatar_url ));
+         assert_json_keys( $body, qw( avatar_url ));
 
          $body->{avatar_url} eq $avatar_url or
             die "Expected avatar_url to be '$avatar_url'";
-
-         provide can_set_avatar_url => 1;
 
          Future->done(1);
       });
@@ -39,7 +39,8 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
    };
 
 test "GET /profile/:user_id/avatar_url publicly accessible",
-   requires => [qw( first_api_client user can_set_avatar_url )],
+   requires => [ $main::API_CLIENTS[0], $user_fixture,
+                 qw( can_set_avatar_url )],
 
    check => sub {
       my ( $http, $user ) = @_;
@@ -52,7 +53,7 @@ test "GET /profile/:user_id/avatar_url publicly accessible",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( avatar_url ));
+         assert_json_keys( $body, qw( avatar_url ));
 
          $body->{avatar_url} eq $avatar_url or
             die "Expected avatar_url to be '$avatar_url'";

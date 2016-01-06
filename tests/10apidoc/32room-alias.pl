@@ -1,13 +1,25 @@
-my $alias_localpart = "#another-alias";
+my $user_fixture = local_user_fixture();
+
+my $room_fixture = fixture(
+   requires => [ $user_fixture ],
+
+   setup => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room( $user )->then( sub {
+         my ( $room_id, undef ) = @_;
+         Future->done( $room_id );  # Don't return the alias
+      });
+   },
+);
 
 test "PUT /directory/room/:room_alias creates alias",
-   requires => [qw( user room_id first_home_server )],
+   requires => [ $user_fixture, $room_fixture, room_alias_fixture() ],
 
-   provides => [qw( can_create_room_alias can_lookup_room_alias )],
+   proves => [qw( can_create_room_alias can_lookup_room_alias )],
 
    do => sub {
-      my ( $user, $room_id, $first_home_server ) = @_;
-      my $room_alias = "${alias_localpart}:$first_home_server";
+      my ( $user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -16,14 +28,11 @@ test "PUT /directory/room/:room_alias creates alias",
          content => {
             room_id => $room_id,
          },
-      )->on_done( sub {
-         provide can_create_room_alias => 1;
-      })
+      );
    },
 
    check => sub {
-      my ( $user, $room_id, $first_home_server ) = @_;
-      my $room_alias = "${alias_localpart}:$first_home_server";
+      my ( $user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $user,
          method => "GET",
@@ -31,12 +40,10 @@ test "PUT /directory/room/:room_alias creates alias",
       )->then( sub {
          my ( $body ) = @_;
 
-         require_json_keys( $body, qw( room_id servers ));
-         require_json_list( $body->{servers} );
+         assert_json_keys( $body, qw( room_id servers ));
+         assert_json_list( $body->{servers} );
 
          $body->{room_id} eq $room_id or die "Expected room_id";
-
-         provide can_lookup_room_alias => 1;
 
          Future->done(1);
       });

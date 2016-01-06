@@ -1,6 +1,6 @@
 test "GET /initialSync with non-numeric 'limit'",
-   requires => [qw( user
-                    can_initial_sync )],
+   requires => [ $main::SPYGLASS_USER,
+                 qw( can_initial_sync )],
 
    check => sub {
       my ( $user ) = @_;
@@ -14,7 +14,7 @@ test "GET /initialSync with non-numeric 'limit'",
    };
 
 test "GET /events with non-numeric 'limit'",
-   requires => [qw( user )],
+   requires => [ $main::SPYGLASS_USER ],
 
    check => sub {
       my ( $user ) = @_;
@@ -28,7 +28,7 @@ test "GET /events with non-numeric 'limit'",
    };
 
 test "GET /events with negative 'limit'",
-   requires => [qw( user )],
+   requires => [ $main::SPYGLASS_USER ],
 
    check => sub {
       my ( $user ) = @_;
@@ -42,7 +42,7 @@ test "GET /events with negative 'limit'",
    };
 
 test "GET /events with non-numeric 'timeout'",
-   requires => [qw( user )],
+   requires => [ $main::SPYGLASS_USER ],
 
    check => sub {
       my ( $user ) = @_;
@@ -53,4 +53,30 @@ test "GET /events with non-numeric 'timeout'",
 
          params => { from => $user->eventstream_token, timeout => "hello" },
       )->main::expect_http_4xx;
+   };
+
+test "Event size limits",
+   requires => [ local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      Future->needs_all(
+         do_request_json_for( $user,
+            method  => "POST",
+            uri     => "/api/v1/rooms/$room_id/send/m.room.message",
+            content => {
+               msgtype => "m.text",
+               body    => "A" x 70000,
+            },
+         )->followed_by( \&main::expect_http_413 ),
+
+         do_request_json_for( $user,
+            method  => "PUT",
+            uri     => "/api/v1/rooms/$room_id/state/oooooooh/",
+            content => {
+               key => "O" x 70000,
+            }
+         )->followed_by( \&main::expect_http_413 ),
+      );
    };

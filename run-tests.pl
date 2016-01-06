@@ -4,9 +4,14 @@ use strict;
 use warnings;
 use 5.014; # package NAME { BLOCK }
 
+use if $] >= 5.020, warnings => FATAL => "experimental";
+
 use lib 'lib';
 
 use SyTest::CarpByFile;
+use SyTest::Assertions qw( :all );
+
+use SyTest::JSONSensible;
 
 use Future;
 use IO::Async::Loop;
@@ -34,7 +39,7 @@ use Module::Pluggable
 # A number of commandline arguments exist simply for passing values through to
 # the way that synapse is started by tests/05synapse.pl. We'll collect them
 # all in one place for neatness
-my %SYNAPSE_ARGS = (
+our %SYNAPSE_ARGS = (
    directory  => "../synapse",
    python     => "python",
    extra_args => [],
@@ -44,8 +49,11 @@ my %SYNAPSE_ARGS = (
    coverage   => 0,
 );
 
-my $WANT_TLS = 1;
+our $WANT_TLS = 1;  # This is shared with the test scripts
+
 my %FIXED_BUGS;
+
+my $STOP_ON_FAIL;
 
 GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
@@ -53,7 +61,8 @@ GetOptions(
    'server-grep=s' => \$SYNAPSE_ARGS{log_filter},
    'd|synapse-directory=s' => \$SYNAPSE_ARGS{directory},
 
-   's|stop-on-fail+' => \my $STOP_ON_FAIL,
+   's|stop-on-fail' => sub { $STOP_ON_FAIL = 1 },
+   'a|all'          => sub { $STOP_ON_FAIL = 0 },
 
    'O|output-format=s' => \(my $OUTPUT_FORMAT = "term"),
 
@@ -83,6 +92,14 @@ GetOptions(
    'h|help' => sub { usage(0) },
 ) or usage(1);
 
+my %only_files;
+my $stop_after;
+if( @ARGV ) {
+   $only_files{$_}++ for @ARGV;
+
+   $stop_after = maxstr keys %only_files;
+}
+
 push @{ $SYNAPSE_ARGS{extra_args} }, "-v" if $VERBOSE;
 
 sub usage
@@ -93,7 +110,9 @@ sub usage
 run-tests.pl: [options...] [test-file]
 
 Options:
-   -C, --client-log             - enable logging of requests made by the client
+   -C, --client-log             - enable logging of requests made by the
+                                  internal HTTP client. Also logs the internal
+                                  HTTP server.
 
    -S, --server-log             - enable pass-through of server logs
 
@@ -104,6 +123,9 @@ Options:
 
    -s, --stop-on-fail           - stop after the first failed test
 
+   -a, --all                    - don't stop after the first failed test;
+                                  attempt as many as possible
+
    -O, --output-format FORMAT   - set the style of test output report
 
    -w, --wait-at-end            - pause for input before shutting down testing
@@ -112,25 +134,39 @@ Options:
    -v, --verbose                - increase the verbosity of output and
                                   synapse's logging level
 
+   -n, --no-tls                 - prefer plaintext client connections where
+                                  possible
+
        --python PATH            - path to the 'python' binary
+
+       --coverage               - generate code coverage stats for synapse
+
+   -p, --port-base NUMBER       - initial port number to run server under test
 
    -F, --fixed BUGS             - bug names that are expected to be fixed
                                   (ignores 'bug' declarations with these names)
 
    -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
 
-       --coverage               - generate code coverage stats for synapse
-
 EOF
 
    exit $exitcode;
 }
 
-my $output = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
+my $OUTPUT = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
+
+# Turn warnings into $OUTPUT->diag calls
+$SIG{__WARN__} = sub {
+   my $message = join "", @_;
+   chomp $message;
+
+   $OUTPUT->diagwarn( $message );
+};
 
 if( $CLIENT_LOG ) {
    require Net::Async::HTTP;
+   require Net::Async::HTTP::Server;
    require Class::Method::Modifiers;
    require JSON;
 
@@ -140,11 +176,15 @@ if( $CLIENT_LOG ) {
          my $request = $args{request};
 
          my $request_uri = $request->uri;
+
+         my $request_user = $args{request_user};
+
          if( $request_uri->path =~ m{/events$} ) {
             my %params = $request_uri->query_form;
+            my $request_for = defined $request_user ? "user=$request_user" : "token=$params{access_token}";
+
             print STDERR "\e[1;32mPolling events\e[m",
-               ( defined $params{from} ? " since $params{from}" : "" ),
-               " for token=$params{access_token}\n";
+               ( defined $params{from} ? " since $params{from}" : "" ) . " for $request_for\n";
 
             return $orig->( $self, %args )
                ->on_done( sub {
@@ -154,7 +194,7 @@ if( $CLIENT_LOG ) {
                      my $content_decoded = JSON::decode_json( $response->content );
                      my $events = $content_decoded->{chunk};
                      foreach my $event ( @$events ) {
-                        print STDERR "\e[1;33mReceived event\e[m for token=$params{access_token}:\n";
+                        print STDERR "\e[1;33mReceived event\e[m for ${request_for}:\n";
                         print STDERR "  $_\n" for split m/\n/, pp( $event );
                         print STDERR "-- \n";
                      }
@@ -168,7 +208,9 @@ if( $CLIENT_LOG ) {
             );
          }
          else {
-            print STDERR "\e[1;32mRequesting\e[m:\n";
+            my $request_for = defined $request_user ? " for user=$request_user" : "";
+
+            print STDERR "\e[1;32mRequesting\e[m${request_for}:\n";
             print STDERR "  $_\n" for split m/\n/, $request->as_string;
             print STDERR "-- \n";
 
@@ -176,12 +218,42 @@ if( $CLIENT_LOG ) {
                ->on_done( sub {
                   my ( $response ) = @_;
 
-                  print STDERR "\e[1;33mResponse\e[m from $request_uri:\n";
+                  print STDERR "\e[1;33mResponse\e[m from ${ \$request->method } ${ \$request->uri->path }${request_for}:\n";
                   print STDERR "  $_\n" for split m/\n/, $response->as_string;
                   print STDERR "-- \n";
                }
             );
          }
+      }
+   );
+
+   Class::Method::Modifiers::install_modifier( "Net::Async::HTTP::Server",
+      around => configure => sub {
+         my ( $orig, $self, %args ) = @_;
+
+         if( defined( my $on_request = $args{on_request} ) ) {
+            $args{on_request} = sub {
+               my ( undef, $request ) = @_;
+
+               print STDERR "\e[1;32mReceived request\e[m:\n";
+               print STDERR "  $_\n" for split m/\n/, $request->as_http_request->as_string;
+               print STDERR "-- \n";
+
+               return $on_request->( @_ );
+            };
+         }
+
+         return $orig->( $self, %args );
+      }
+   );
+   Class::Method::Modifiers::install_modifier( "Net::Async::HTTP::Server::Request",
+      before => respond => sub {
+         my ( $self, $response ) = @_;
+         my $request_path = $self->path;
+
+         print STDERR "\e[1;33mSending response\e[m to $request_path:\n";
+         print STDERR "  $_\n" for split m/\n/, $response->as_string;
+         print STDERR "-- \n";
       }
    );
 }
@@ -191,36 +263,8 @@ my $loop = IO::Async::Loop->new;
 $SIG{INT} = sub { exit 1 };
 
 
-# Some tests create objects as a side-effect that later tests will depend on,
-# such as clients, users, rooms, etc... These are called the Environment
-my %test_environment = (
-   synapse_args => \%SYNAPSE_ARGS,
-
-   # We need two servers; a "local" and a "remote" one for federation-based tests
-   synapse_ports => [ $PORT_BASE + 1, $PORT_BASE + 2 ],
-
-   want_tls => $WANT_TLS,
-);
-
-our @PROVIDES;
-
-sub provide
-{
-   my ( $name, $value ) = @_;
-   exists $test_environment{$name} and
-      carp "Overwriting existing test environment key '$name'";
-   any { $name eq $_ } @PROVIDES or
-      carp "Was not expecting to provide '$name'";
-
-   $test_environment{$name} = $value;
-}
-
-sub unprovide
-{
-   my @names = @_;
-
-   delete $test_environment{$_} for @names;
-}
+# We need two servers; a "local" and a "remote" one for federation-based tests
+our @HOMESERVER_PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
 
 # Util. function for tests
 sub delay
@@ -239,283 +283,241 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
-my $failed;
-my $expected_fail;
-my $skipped_count = 0;
+struct Fixture => [qw( requires start result teardown )], predicate => "is_Fixture";
 
-our $SKIPPING;
-
-sub _run_test
+sub fixture
 {
-   my ( $t, %params ) = @_;
+   my %args = @_;
+
+   my $setup = $args{setup} or croak "fixture needs a 'setup' block";
+   ref( $setup ) eq "CODE" or croak "Expected fixture 'setup' block to be CODE";
+
+   my $teardown = $args{teardown};
+   !$teardown || ref( $teardown ) eq "CODE" or croak "Expected fixture 'teardown' to be CODE";
+
+   my @req_futures;
+   my $f_start = Future->new;
+
+   my @requires;
+   foreach my $req ( @{ $args{requires} // [] } ) {
+      if( is_Fixture( $req ) ) {
+         push @requires, @{ $req->requires };
+         push @req_futures, $f_start->then( sub {
+            my ( $env ) = @_;
+
+            $req->start->( $env );
+            $req->result;
+         });
+      }
+      else {
+         push @requires, $req;
+         push @req_futures, $f_start->then( sub {
+            my ( $proven ) = @_;
+
+            $proven->{$req} or die "TODO: Missing fixture dependency $req\n";
+            Future->done;
+         });
+      }
+   }
+
+   return Fixture(
+      \@requires,
+
+      sub { $f_start->done( @_ ) unless $f_start->is_ready },
+
+      Future->needs_all( @req_futures )
+         ->then( $setup ),
+
+      $teardown ? sub {
+         my ( $self ) = @_;
+         my $result_f = $self->result;
+         $self->result = Future->fail(
+            "This Fixture has been torn down and cannot be used again"
+         );
+
+         if( $self->result->is_ready ) {
+            return $teardown->( $result_f->get );
+         }
+         else {
+            $result_f->cancel;
+            Future->done;
+         }
+      } : undef,
+   );
+}
+
+use constant { PROVEN => 1, PRESUMED => 2 };
+my %proven;
+
+our $MORE_STUBS;
+
+sub maybe_stub
+{
+   my ( $f ) = @_;
+   my $failmsg = SyTest::CarpByFile::shortmess( "Stub" );
+
+   $MORE_STUBS or
+      croak "Cannot declare a stub outside of a test";
+
+   push @$MORE_STUBS, $f->on_fail( sub {
+      my ( $failure ) = @_;
+      die "$failmsg $failure";
+   });
+}
+
+sub require_stub
+{
+   my ( $f ) = @_;
+   my $failmsg = SyTest::CarpByFile::shortmess( "Required stub never happened" );
+
+   maybe_stub $f->on_cancel( sub {
+      die $failmsg;
+   });
+}
+
+struct Test => [qw(
+   file name multi expect_fail critical proves requires check do timeout
+)];
+
+my @TESTS;
+
+sub _push_test
+{
+   my ( $filename, $multi, $name, %params ) = @_;
 
    # We expect this test to fail if it's declared to be dependent on a bug that
    # is not yet fixed
    $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
-   undef @log_if_fail_lines;
-
-   local @PROVIDES = @{ $params{provides} || [] };
-
-   # If the test doesn't provide anything, and we're in skipping mode, just stop right now
-   if( $SKIPPING and !@PROVIDES ) {
-      $t->skipped++;
+   if( %only_files and not exists $only_files{$filename} ) {
+      $proven{$_} = PRESUMED for @{ $params{proves} // [] };
       return;
    }
 
-   my @reqs;
-   foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
+   push @TESTS, Test( $filename, $name, $multi,
+      @params{qw( expect_fail critical proves requires check do timeout )} );
+}
 
-      $t->skip( "lack of $req" );
-      return;
+sub _run_test
+{
+   my ( $t, $test ) = @_;
+
+   undef @log_if_fail_lines;
+
+   local $MORE_STUBS = [];
+
+   my @requires = @{ $test->requires // [] };
+
+   my $f_start = Future->new;
+   my @req_futures;
+
+   foreach my $req ( @requires ) {
+      if( is_Fixture( $req ) ) {
+         my $fixture = $req;
+
+         push @req_futures, $f_start->then( sub {
+            $fixture->start->( \%proven );
+            $fixture->result;
+         });
+      }
+      else {
+         if( !exists $proven{$req} ) {
+            $t->skip( "lack of $req" );
+            return;
+         }
+         $OUTPUT->diag( "Presuming ability '$req'" ) if $proven{$req} == PRESUMED;
+      }
    }
 
    $t->start;
+   $f_start->done;
 
    my $success = eval {
-      my $check = $params{check};
-      if( my $do = $params{do} ) {
+      my @reqs;
+      my $f_test = Future->needs_all( @req_futures )
+         ->on_done( sub { @reqs = @_ } )
+         ->on_fail( sub { die "fixture failed - $_[0]\n" } );
+
+      my $check = $test->check;
+      if( my $do = $test->do ) {
          if( $check ) {
-            eval { Future->wrap( $check->( @reqs ) )->get } and
-               warn "Warning: ${\$t->name} was already passing before we did anything\n";
+            $f_test = $f_test->then( sub {
+               Future->wrap( $check->( @reqs ) )
+            })->followed_by( sub {
+               my ( $f ) = @_;
+
+               $f->failure or
+                  warn "Warning: ${\$t->name} was already passing before we did anything\n";
+
+               Future->done;
+            });
          }
 
-         Future->wrap( $do->( @reqs ) )->get;
+         $f_test = $f_test->then( sub {
+            Future->wrap( $do->( @reqs ) )
+         });
       }
 
       if( $check ) {
-         Future->wrap( $check->( @reqs ) )->get or
-            die "Test check function failed to return a true value"
+         $f_test = $f_test->then( sub {
+            Future->wrap( $check->( @reqs ) )
+         })->then( sub {
+            my ( $result ) = @_;
+            $result or
+               die "Test check function failed to return a true value";
+
+            Future->done;
+         });
       }
 
-      if( my $await = $params{await} ) {
-         Future->wait_any(
-            Future->wrap( $await->( @reqs ) )->then( sub {
-               my ( $success ) = @_;
-               $success or die "'await' check did not return a true value";
-               Future->done
-            }),
+      Future->wait_any(
+         $f_test,
 
-            $loop->delay_future( after => 2 )
-               ->then( sub {
-                  $output->start_waiting;
-                  $loop->new_future->on_cancel( sub { $output->stop_waiting });
-               }),
+         $loop->delay_future( after => $test->timeout // 10 )
+            ->then_fail( "Timed out waiting for test" )
+      )->get;
 
-            $loop->delay_future( after => $params{timeout} // 10 )
-               ->then_fail( "Timed out waiting for 'await'" )
-         )->get;
+      foreach my $stub_f ( @$MORE_STUBS ) {
+         $stub_f->cancel;
       }
 
       1;
    };
 
-   if( $success ) {
-      exists $test_environment{$_} or warn "Test step ${\$t->name} did not provide a value for $_\n"
-         for @PROVIDES;
+   Future->needs_all( map {
+      if( is_Fixture( $_ ) and $_->teardown ) {
+         $_->teardown->( $_ );
+      }
+      else {
+         ();
+      }
+   } @requires )->get;
 
+   if( $success ) {
+      $proven{$_} = PROVEN for @{ $test->proves // [] };
       $t->pass;
    }
    else {
       my $e = $@; chomp $e;
       $t->fail( $e );
    }
-
-   if( $t->failed ) {
-      $params{expect_fail} ? $expected_fail++ : $failed++;
-   }
 }
 
-sub test
+our $RUNNING_TEST;
+
+sub pass
 {
-   my ( $name, %params ) = @_;
-
-   my $t = $output->enter_test( $name, $params{expect_fail} );
-   _run_test( $t, %params );
-   $t->leave;
-
-   if( $t->failed ) {
-      $output->diag( $_ ) for @log_if_fail_lines;
-   }
-   if( $t->skipped ) {
-      $skipped_count++;
-   }
-
-   no warnings 'exiting';
-   last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
-
-   die "This CRITICAL test has failed - bailing out\n" if $t->failed and $params{critical};
+   my ( $testname ) = @_;
+   $RUNNING_TEST->ok( 1, $testname );
 }
 
+# A convenience for the otherwise-common pattern of
+#   ->on_done( sub { pass $message } )
+sub SyTest::pass_on_done
 {
-   our $RUNNING_TEST;
-
-   sub pass
-   {
-      my ( $testname ) = @_;
-      ok( 1, $testname );
-   }
-
-   # A convenience for the otherwise-common pattern of
-   #   ->on_done( sub { pass $message } )
-   sub SyTest::pass_on_done
-   {
-      my $self = shift;
-      my ( $message ) = @_;
-      $self->on_done( sub { ok( 1, $message ) } );
-   }
-
-   sub ok
-   {
-      die "Cannot call ok() outside of a multi_test\n" unless $RUNNING_TEST;
-
-      my ( $ok, $stepname ) = @_;
-      $RUNNING_TEST->ok( $ok, $stepname );
-   }
-
-   sub is_eq
-   {
-      die "Cannot call is_eq() outside of a multi_test\n" unless $RUNNING_TEST;
-
-      my ( $got, $want, $stepname ) = @_;
-      $RUNNING_TEST->ok( my $ok = $got eq $want, $stepname );
-      if( !$ok ) {
-         $output->diag( "Got $got, expected $want" );
-      }
-   }
-
-   sub multi_test
-   {
-      my ( $name, %params ) = @_;
-
-      local $RUNNING_TEST = my $t = $output->enter_multi_test( $name );
-      _run_test( $t, %params );
-      $t->leave;
-
-      if( $t->failed ) {
-         $output->diag( $_ ) for @log_if_fail_lines;
-      }
-      if( $t->skipped ) {
-         $skipped_count++;
-      }
-
-      no warnings 'exiting';
-      last TEST if $STOP_ON_FAIL and $t->failed and not $params{expect_fail};
-   }
-}
-
-sub prepare
-{
-   my ( $name, %params ) = @_;
-
-   local @PROVIDES = @{ $params{provides} || [] };
-
-   my @reqs;
-   foreach my $req ( @{ $params{requires} || [] } ) {
-      push @reqs, $test_environment{$req} and next if exists $test_environment{$req};
-
-      $output->skip_prepare( $name, $req );
-      return;
-   }
-
-   $output->start_prepare( $name );
-
-   my $do = $params{do};
-   my $success = eval {
-      $do->( @reqs )->get;
-      1;
-   };
-
-   if( $success ) {
-      $output->pass_prepare;
-   }
-   else {
-      my $e = $@; chomp $e;
-      $output->fail_prepare( $e );
-      $failed++;
-   }
-
-    no warnings 'exiting';
-    last TEST if $STOP_ON_FAIL and not $success;
-
-   exists $test_environment{$_} or warn "Prepare step $name did not provide a value for $_\n"
-      for @PROVIDES;
-}
-
-## Some assertion functions useful by test scripts
-
-sub require_json_object
-{
-   my ( $obj ) = @_;
-   ref $obj eq "HASH" or croak "Expected a JSON object";
-}
-
-sub require_json_keys
-{
-   my ( $obj, @keys ) = @_;
-   require_json_object( $obj );
-   foreach ( @keys ) {
-      defined $obj->{$_} or croak "Expected a '$_' key";
-   }
-}
-
-sub require_json_list
-{
-   my ( $list ) = @_;
-   ref $list eq "ARRAY" or croak "Expected a JSON list";
-}
-
-sub require_json_nonempty_list
-{
-   my ( $list ) = @_;
-   require_json_list( $list );
-   @$list or croak "Expected a non-empty JSON list";
-}
-
-sub require_json_number
-{
-   my ( $num ) = @_;
-   # Our hacked-up JSON decoder represents numbers as JSON::number instances
-   ref $num eq "JSON::number" or croak "Expected a JSON number";
-}
-
-sub require_json_string
-{
-   my ( $str ) = @_;
-   !ref $str or croak "Expected a JSON string";
-}
-
-sub require_json_nonempty_string
-{
-   my ( $str ) = @_;
-   !ref $str and length $str or croak "Expected a non-empty JSON string";
-}
-
-sub require_base64_unpadded
-{
-   my ( $str ) = @_;
-   !ref $str or croak "Expected a plain string";
-
-   $str =~ m([^A-Za-z0-9+/=]) and
-      die "String contains invalid base64 characters";
-   $str =~ m(=) and
-      die "String contains trailing padding";
-}
-
-sub require_base64_unpadded_and_decode
-{
-   my ( $str ) = @_;
-   require_base64_unpadded $str;
-   return decode_base64 $str;
-}
-
-my %only_files;
-my $stop_after;
-if( @ARGV ) {
-   $only_files{$_}++ for @ARGV;
-
-   $stop_after = maxstr keys %only_files;
+   my $self = shift;
+   my ( $message ) = @_;
+   $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
 }
 
 sub list_symbols
@@ -534,7 +536,10 @@ TEST: {
 
          return unless basename( $filename ) =~ m/\.pl$/;
 
-         $output->run_file( $filename );
+         no warnings 'once';
+
+         local *test       = sub { _push_test( $filename, 0, @_ ); };
+         local *multi_test = sub { _push_test( $filename, 1, @_ ); };
 
          # Slurp and eval() the file instead of do() because then lexical
          # environment such as strict/warnings will still apply
@@ -542,8 +547,6 @@ TEST: {
             open my $fh, "<", $filename or die "Cannot read $filename - $!\n";
             local $/; <$fh>
          };
-
-         local $SKIPPING = 1 if %only_files and not exists $only_files{$filename};
 
          # Protect against symbolic leakage between test files by cleaning up
          # extra symbols in the 'main::' namespace
@@ -569,28 +572,86 @@ TEST: {
    );
 }
 
+my $done_count = 0;
+my $failed_count = 0;
+my $expected_fail_count = 0;
+my $skipped_count = 0;
+
+$OUTPUT->status(
+   tests   => scalar @TESTS,
+   done    => $done_count,
+   failed  => $failed_count,
+   skipped => $skipped_count,
+);
+
+# Now run the tests
+my $prev_filename;
+foreach my $test ( @TESTS ) {
+   if( !$prev_filename or $prev_filename ne $test->file ) {
+      $OUTPUT->run_file( $prev_filename = $test->file );
+   }
+
+   my $m = $test->multi ? "enter_multi_test" : "enter_test";
+
+   my $t = $OUTPUT->$m( $test->name, $test->expect_fail );
+   local $RUNNING_TEST = $t;
+
+   _run_test( $t, $test );
+
+   $t->leave;
+
+   $done_count++;
+
+   if( $t->skipped ) {
+      $skipped_count++;
+   }
+
+   if( $t->failed ) {
+      $test->expect_fail ? $expected_fail_count++ : $failed_count++;
+
+      $OUTPUT->diag( $_ ) for @log_if_fail_lines;
+
+      last if $STOP_ON_FAIL and not $test->expect_fail;
+
+      if( $test->critical ) {
+         warn "This CRITICAL test has failed - bailing out\n";
+         last;
+      }
+   }
+
+   $OUTPUT->status(
+      tests   => scalar @TESTS,
+      done    => $done_count,
+      failed  => $failed_count,
+      skipped => $skipped_count,
+   );
+}
+
+$OUTPUT->status();
+
 if( $WAIT_AT_END ) {
    print STDERR "Waiting... (hit ENTER to end)\n";
    $loop->add( my $stdin = IO::Async::Stream->new_for_stdin( on_read => sub {} ) );
    $stdin->read_until( "\n" )->get;
 }
 
-if( $failed ) {
-   $output->final_fail( $failed );
+if( $failed_count ) {
+   $OUTPUT->final_fail( $failed_count );
 
-   my @f;
-   foreach my $synapse ( @{ $test_environment{synapses} } ) {
-      $synapse->print_output;
-      push @f, $synapse->await_finish;
+   # TODO: umh.. this apparently broke some time ago. Should fix it
+   #my @f;
+   #foreach my $synapse ( @{ $test_environment{synapses} } ) {
+   #   $synapse->print_output;
+   #   push @f, $synapse->await_finish;
+   #
+   #   $synapse->kill( 'INT' );
+   #}
 
-      $synapse->kill( 'INT' );
-   }
-
-   Future->wait_all( @f )->get if @f;
+   #Future->wait_all( @f )->get if @f;
    exit 1;
 }
 else {
-   $output->final_pass( $expected_fail, $skipped_count );
+   $OUTPUT->final_pass( $expected_fail_count, $skipped_count );
    exit 0;
 }
 

@@ -2,13 +2,13 @@ use JSON qw( decode_json );
 use URI;
 
 multi_test "Register with a recaptcha",
-   requires => [qw( first_api_client await_http_request )],
+   requires => [ $main::API_CLIENTS[0] ],
 
    do => sub {
-      my ( $http, $await_http_request ) = @_;
+      my ( $http ) = @_;
 
       Future->needs_all(
-         $await_http_request->( "/recaptcha/api/siteverify", sub {1} )
+         await_http_request( "/recaptcha/api/siteverify", sub {1} )
             ->SyTest::pass_on_done( "Got recaptcha verify request" )
          ->then( sub {
             my ( $request ) = @_;
@@ -47,8 +47,8 @@ multi_test "Register with a recaptcha",
 
             log_if_fail "Body:", $body;
 
-            require_json_keys( $body, qw(completed) );
-            require_json_list( my $completed = $body->{completed} );
+            assert_json_keys( $body, qw(completed) );
+            assert_json_list( my $completed = $body->{completed} );
 
             @$completed == 1 or
                die "Expected one completed stage";

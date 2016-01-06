@@ -12,7 +12,7 @@ use IO::Async::FileStream;
 
 use Cwd qw( getcwd abs_path );
 use File::Basename qw( dirname );
-use File::Path qw( make_path );
+use File::Path qw( make_path remove_tree );
 use List::Util qw( any );
 use POSIX qw( strftime );
 
@@ -117,6 +117,12 @@ sub start
       $self->${\"clear_db_$db_type"}( %db_args );
    }
 
+   # Clean up the media_store directory each time, or else it fills up with
+   # thousands of automatically-generated avatar images
+   if( -d "media_store" ) {
+      remove_tree( "media_store" );
+   }
+
    my $cwd = getcwd;
    my $log = "$self->{hs_dir}/homeserver.log";
 
@@ -137,6 +143,11 @@ sub start
         "metrics_port" => ( $port - 8000 + 9090 ),
 
         "perspectives" => {servers => {}},
+
+        # Stack traces are useful
+        "full_twisted_stacktraces" => "true",
+
+        "bcrypt_rounds" => 0,
 
         %{ $self->{config} },
    } );

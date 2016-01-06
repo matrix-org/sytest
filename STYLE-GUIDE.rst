@@ -122,7 +122,7 @@ Places where horizontal whitespace is found::
   $object->method( 4, 5, 6 )   #   after each comma
 
   $arrref->[ $x * $y ]         # within an aggregate lookup on a non-literal
-  $href->{ "key_" . $s }       #   expression
+  $href->{ "key_" . $s }       #   or simple variable expression
 
   my ( $vars, $here ) = @_;    # after 'my' and within the parens of a list
                                #   assignment
@@ -144,9 +144,9 @@ aligned::
 Miscellaneous Punctuation
 -------------------------
 
-Comma-separated lists having a single item per line should end in a trailing
-comma so that more items can be added without disturbing existing lines (see
-the named-argument passing example above).
+Comma-separated lists having a single item or name/value pair per line should
+end in a trailing comma so that more items can be added without disturbing
+existing lines (see the named-argument passing example above).
 
 The final statement of a block should always end in a semicolon, even though
 the language syntax doesn't strictly require it. An exception can be made in
@@ -293,6 +293,6 @@ interesting::
      Future->done(1);
   };
 
-This is a situation in which it is acceptable to omit the parens around the
-method call, as this becomes an "atomically" recognisable pattern, reused in
-many situations.
+This is a situation in which it is acceptable to omit the whitespace within
+the parens of the method call, as this becomes an "atomically" recognisable
+pattern, reused in many situations.

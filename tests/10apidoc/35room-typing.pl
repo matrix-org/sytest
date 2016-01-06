@@ -1,8 +1,7 @@
 test "PUT /rooms/:room_id/typing/:user_id sets typing notification",
-   requires => [qw( user room_id )],
+   requires => [ local_user_and_room_fixtures() ],
 
-
-   provides => [qw( can_set_room_typing )],
+   proves => [qw( can_set_room_typing )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -16,8 +15,6 @@ test "PUT /rooms/:room_id/typing/:user_id sets typing notification",
          my ( $body ) = @_;
 
          # Body is empty
-
-         provide can_set_room_typing => 1;
 
          Future->done(1);
       });

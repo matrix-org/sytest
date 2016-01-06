@@ -19,8 +19,9 @@ sub do_request_json_for
    );
 
    $user->http->do_request_json(
-      uri    => $uri,
-      params => \%params,
+      uri          => $uri,
+      params       => \%params,
+      request_user => $user->user_id,
       %args,
    );
 }

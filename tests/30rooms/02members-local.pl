@@ -1,143 +1,140 @@
 use List::Util qw( first );
 
-prepare "More local room members",
-   requires => [qw( more_users room_id )],
+my $creator_fixture = local_user_fixture(
+   # Some of these tests depend on the user having a displayname
+   displayname => "My name here",
+   avatar_url => "mxc://foo/bar",
+);
 
-   do => sub {
-      my ( $more_users, $room_id ) = @_;
+my $local_user_fixture = local_user_fixture();
 
-      Future->needs_all( map {
-         my $user = $_;
+my $room_fixture = fixture(
+   requires => [ $creator_fixture, $local_user_fixture ],
 
-         flush_events_for( $user )->then( sub {
-            matrix_join_room( $user, $room_id )
-         });
-      } @$more_users );
-   };
+   setup => sub {
+      my ( $creator, $local_user ) = @_;
+
+      # Don't use matrix_create_and_join_room here because we explicitly do
+      # not want to wait for the join events; as we'll be testing later on
+      # that we do in fact receive them
+
+      Future->needs_all(
+         map { flush_events_for( $_ ) } $creator, $local_user
+      )->then( sub {
+         matrix_create_room( $creator )
+      })->then( sub {
+         my ( $room_id ) = @_;
+
+         matrix_join_room( $local_user, $room_id )
+            ->then_done( $room_id );
+      });
+   },
+);
 
 test "New room members see their own join event",
-   requires => [qw( more_users room_id )],
+   requires => [ $local_user_fixture, $room_fixture ],
 
-   await => sub {
-      my ( $more_users, $room_id ) = @_;
+   do => sub {
+      my ( $local_user, $room_id ) = @_;
 
-      Future->needs_all( map {
-         my $user = $_;
+      await_event_for( $local_user, filter => sub {
+         my ( $event ) = @_;
+         return unless $event->{type} eq "m.room.member";
 
-         await_event_for( $user, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.member";
+         assert_json_keys( $event, qw( type room_id user_id ));
+         return unless $event->{room_id} eq $room_id;
+         return unless $event->{user_id} eq $local_user->user_id;
 
-            require_json_keys( $event, qw( type room_id user_id ));
-            return unless $event->{room_id} eq $room_id;
-            return unless $event->{user_id} eq $user->user_id;
+         assert_json_keys( my $content = $event->{content}, qw( membership ));
 
-            require_json_keys( my $content = $event->{content}, qw( membership ));
+         $content->{membership} eq "join" or
+            die "Expected user membership as 'join'";
 
-            $content->{membership} eq "join" or
-               die "Expected user membership as 'join'";
-
-            return 1;
-         });
-      } @$more_users );
+         return 1;
+      });
    };
 
 test "New room members see existing users' presence in room initialSync",
-   requires => [qw( user more_users room_id
-                    can_room_initial_sync )],
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
+                 qw( can_room_initial_sync )],
 
    check => sub {
-      my ( $first_user, $more_users, $room_id ) = @_;
+      my ( $first_user, $local_user, $room_id ) = @_;
 
-      Future->needs_all( map {
-         my $user = $_;
+      matrix_initialsync_room( $local_user, $room_id )
+      ->then( sub {
+         my ( $body ) = @_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync",
-         )->then( sub {
-            my ( $body ) = @_;
+         my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
-            my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
+         $presence{$first_user->user_id} or
+            die "Expected to find initial user's presence";
 
-            $presence{$first_user->user_id} or
-               die "Expected to find initial user's presence";
+         assert_json_keys( $presence{ $first_user->user_id }, qw( type content ));
+         assert_json_keys( $presence{ $first_user->user_id }{content},
+            qw( presence last_active_ago ));
 
-            require_json_keys( $presence{ $first_user->user_id }, qw( type content ));
-            require_json_keys( $presence{ $first_user->user_id }{content},
-               qw( presence status_msg last_active_ago ));
+         # No status_msg or last_active_ago - see SYT-34
 
-            Future->done(1);
-         });
-      } @$more_users );
+         Future->done(1);
+      });
    };
 
 test "Existing members see new members' join events",
-   requires => [qw( user more_users room_id )],
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture ],
 
-   await => sub {
-      my ( $user, $more_users, $room_id ) = @_;
+   do => sub {
+      my ( $first_user, $local_user, $room_id ) = @_;
 
-      Future->needs_all( map {
-         my $other_user = $_;
+      await_event_for( $first_user, filter => sub {
+         my ( $event ) = @_;
+         return unless $event->{type} eq "m.room.member";
+         assert_json_keys( $event, qw( type room_id user_id ));
+         return unless $event->{room_id} eq $room_id;
+         return unless $event->{user_id} eq $local_user->user_id;
 
-         await_event_for( $user, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.member";
-            require_json_keys( $event, qw( type room_id user_id ));
-            return unless $event->{room_id} eq $room_id;
-            return unless $event->{user_id} eq $other_user->user_id;
+         assert_json_keys( my $content = $event->{content}, qw( membership ));
 
-            require_json_keys( my $content = $event->{content}, qw( membership ));
+         $content->{membership} eq "join" or
+            die "Expected user membership as 'join'";
 
-            $content->{membership} eq "join" or
-               die "Expected user membership as 'join'";
-
-            return 1;
-         });
-      } @$more_users );
+         return 1;
+      });
    };
 
 test "Existing members see new members' presence",
-   requires => [qw( user more_users )],
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture ],
 
-   await => sub {
-      my ( $user, $more_users ) = @_;
+   do => sub {
+      my ( $first_user, $local_user ) = @_;
 
-      Future->needs_all( map {
-         my $other_user = $_;
+      await_event_for( $first_user, filter => sub {
+         my ( $event ) = @_;
+         return unless $event->{type} eq "m.presence";
+         assert_json_keys( $event, qw( type content ));
+         assert_json_keys( my $content = $event->{content}, qw( user_id presence ));
+         return unless $content->{user_id} eq $local_user->user_id;
 
-         await_event_for( $user, sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.presence";
-            require_json_keys( $event, qw( type content ));
-            require_json_keys( my $content = $event->{content}, qw( user_id presence ));
-            return unless $content->{user_id} eq $other_user->user_id;
-
-            return 1;
-         });
-      } @$more_users );
+         return 1;
+      });
    };
 
 test "All room members see all room members' presence in global initialSync",
-   requires => [qw( user more_users
-                    can_initial_sync )],
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
+                 qw( can_initial_sync )],
 
    check => sub {
-      my ( $user, $more_users ) = @_;
-      my @all_users = ( $user, @$more_users );
+      my ( $first_user, $local_user, $room_id ) = @_;
+      my @all_users = ( $first_user, $local_user );
 
       Future->needs_all( map {
          my $user = $_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/initialSync",
-         )->then( sub {
+         matrix_initialsync( $user )->then( sub {
             my ( $body ) = @_;
 
-            require_json_keys( $body, qw( presence ));
-            require_json_list( my $presence = $body->{presence} );
+            assert_json_keys( $body, qw( presence ));
+            assert_json_list( my $presence = $body->{presence} );
 
             my %presence_by_userid = map { $_->{content}{user_id} => $_ } @$presence;
 
@@ -147,9 +144,9 @@ test "All room members see all room members' presence in global initialSync",
                $presence_by_userid{$user_id} or
                   die "Expected to see presence of $user_id";
 
-               require_json_keys( my $event = $presence_by_userid{$user_id},
+               assert_json_keys( my $event = $presence_by_userid{$user_id},
                   qw( type content ) );
-               require_json_keys( my $content = $event->{content},
+               assert_json_keys( my $content = $event->{content},
                   qw( user_id presence last_active_ago ));
 
                $content->{presence} eq "online" or
@@ -162,72 +159,59 @@ test "All room members see all room members' presence in global initialSync",
    };
 
 test "New room members see first user's profile information in global initialSync",
-   requires => [qw( user more_users
-                    can_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
+                 qw( can_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $first_user, $more_users ) = @_;
+      my ( $first_user, $local_user, $room_id ) = @_;
 
-      Future->needs_all( map {
-         my $user = $_;
+      matrix_initialsync( $local_user )->then( sub {
+         my ( $body ) = @_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/initialSync",
-         )->then( sub {
-            my ( $body ) = @_;
+         assert_json_keys( $body, qw( presence ));
+         assert_json_list( $body->{presence} );
 
-            require_json_keys( $body, qw( presence ));
-            require_json_list( $body->{presence} );
+         my %presence_by_userid = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
-            my %presence_by_userid = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
+         my $presence = $presence_by_userid{ $first_user->user_id } or
+            die "Failed to find presence of first user";
 
-            my $presence = $presence_by_userid{ $first_user->user_id } or
-               die "Failed to find presence of first user";
+         assert_json_keys( $presence, qw( content ));
+         assert_json_keys( my $content = $presence->{content},
+            qw( user_id displayname avatar_url ));
 
-            require_json_keys( $presence, qw( content ));
-            require_json_keys( my $content = $presence->{content},
-               qw( user_id displayname avatar_url ));
-
-            Future->done(1);
-         });
-      } @$more_users );
+         Future->done(1);
+      });
    };
 
 test "New room members see first user's profile information in per-room initialSync",
-   requires => [qw( user more_users room_id
-                    can_room_initial_sync can_set_displayname can_set_avatar_url )],
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
+                 qw( can_room_initial_sync can_set_displayname can_set_avatar_url )],
 
    check => sub {
-      my ( $first_user, $more_users, $room_id ) = @_;
+      my ( $first_user, $local_user, $room_id ) = @_;
 
-      Future->needs_all( map {
-         my $user = $_;
+      matrix_initialsync_room ( $local_user, $room_id )
+      ->then( sub {
+         my ( $body ) = @_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync",
-         )->then( sub {
-            my ( $body ) = @_;
+         assert_json_keys( $body, qw( state ));
+         assert_json_list( $body->{state} );
 
-            require_json_keys( $body, qw( state ));
-            require_json_list( $body->{state} );
+         my $first_member = first {
+            $_->{type} eq "m.room.member" and $_->{state_key} eq $first_user->user_id
+         } @{ $body->{state} }
+            or die "Failed to find first user in m.room.member state";
 
-            my $first_member = first {
-               $_->{type} eq "m.room.member" and $_->{state_key} eq $first_user->user_id
-            } @{ $body->{state} }
-               or die "Failed to find first user in m.room.member state";
+         assert_json_keys( $first_member, qw( user_id content ));
+         assert_json_keys( my $content = $first_member->{content},
+            qw( displayname avatar_url ));
 
-            require_json_keys( $first_member, qw( user_id content ));
-            require_json_keys( my $content = $first_member->{content},
-               qw( displayname avatar_url ));
+         length $content->{displayname} or
+            die "First user does not have profile displayname\n";
+         length $content->{avatar_url} or
+            die "First user does not have profile avatar_url\n";
 
-            length $content->{displayname} or
-               die "First user does not have profile displayname\n";
-            length $content->{avatar_url} or
-               die "First user does not have profile avatar_url\n";
-
-            Future->done(1);
-         });
-      } @$more_users );
+         Future->done(1);
+      });
    };
