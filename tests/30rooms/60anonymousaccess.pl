@@ -628,6 +628,65 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
       })
    };
 
+test "Anonymous user can upgrade to fully featured user",
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture(), $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $creator, $room_id, $anonymous_user, $http ) = @_;
+
+      my ( $local_part ) = $anonymous_user->user_id =~ m/^@([^:]+):/g;
+      $http->do_request_json(
+         method  => "POST",
+         uri     => "/r0/register",
+         content => {
+            username => $local_part,
+            password => "SIR_Arthur_David",
+            guest_access_token => $anonymous_user->access_token,
+         },
+      )->followed_by( sub {
+         $http->do_request_json(
+            method  => "POST",
+            uri     => "/r0/register",
+            content => {
+               username     => $local_part,
+               password     => "SIR_Arthur_David",
+               guest_access_token => $anonymous_user->access_token,
+               auth         => {
+                  type => "m.login.dummy",
+               },
+            },
+         )
+      })->on_done( sub {
+         my ( $body ) = @_;
+         $anonymous_user->access_token = $body->{access_token};
+      })
+   },
+
+   check => sub {
+      my ( undef, $room_id, $anonymous_user ) = @_;
+
+      matrix_join_room( $anonymous_user, $room_id );
+   };
+
+test "Anonymous user cannot upgrade other users",
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture(), anonymous_user_fixture(), $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $creator, $room_id, $anonymous_user1, $anonymous_user2, $http ) = @_;
+
+      my ( $local_part1 ) = $anonymous_user1->user_id =~ m/^@([^:]+):/g;
+      $http->do_request_json(
+         method  => "POST",
+         uri     => "/r0/register",
+         content => {
+            username => $local_part1,
+            password => "SIR_Arthur_David",
+            guest_access_token => $anonymous_user2->access_token,
+         },
+      )->main::expect_http_4xx;
+   };
+
+
 test "GET /publicRooms lists rooms",
    requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
 
