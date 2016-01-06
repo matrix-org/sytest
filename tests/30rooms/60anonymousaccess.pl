@@ -59,26 +59,6 @@ test "Anonymous user cannot call /events on non-world_readable room",
       })->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
-test "Anonymous user cannot call /sync on non-world_readable room",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
-
-   do => sub {
-      my ( $anonymous_user, $user ) = @_;
-
-      my $room_id;
-
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_send_room_text_message( $user, $room_id, body => "mice" )
-      })->then( sub {
-         matrix_sync( $anonymous_user, filter => encode_json( {
-            room => { rooms => [ $room_id ] }
-         }))->main::expect_http_403;
-      });
-   };
-
 sub await_event_not_presence_for
 {
    my ( $user, $room_id, $allowed_users ) = @_;
@@ -225,9 +205,14 @@ test "Annonymous user can call /sync on a world readable room",
 
          matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
       })->then( sub {
+         matrix_set_room_guest_access( $user, $room_id, "can_join" );
+      })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "mice" );
       })->then( sub {
          ( $sent_event_id ) = @_;
+
+         matrix_join_room( $anonymous_user, $room_id );
+      })->then( sub {
 
          matrix_sync( $anonymous_user, filter => encode_json({
             room => {
