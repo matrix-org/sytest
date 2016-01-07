@@ -6,13 +6,13 @@ my $creator_fixture = local_user_fixture();
 
 # This provides $room_id *AND* $room_alias
 my $room_fixture = fixture(
-   requires => [ $creator_fixture ],
+   requires => [ $creator_fixture, room_alias_name_fixture() ],
 
    setup => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_alias_name ) = @_;
 
       matrix_create_room( $user,
-         room_alias_name => "33room-members",
+         room_alias_name => $room_alias_name,
       );
    },
 );

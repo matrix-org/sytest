@@ -71,15 +71,15 @@ test "Remote room alias queries can handle Unicode",
    };
 
 multi_test "Canonical alias can be set",
-   requires => [ local_user_fixture() ],
+   requires => [ local_user_fixture(), room_alias_name_fixture() ],
 
    do => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_alias_name ) = @_;
 
       my ( $room_id, $room_alias );
 
       matrix_create_room( $user,
-         room_alias_name => "is-this-canonical",
+         room_alias_name => $room_alias_name,
       )->then( sub {
          ( $room_id, $room_alias ) = @_;
 

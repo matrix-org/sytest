@@ -59,26 +59,6 @@ test "Anonymous user cannot call /events on non-world_readable room",
       })->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
-test "Anonymous user cannot call /sync on non-world_readable room",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
-
-   do => sub {
-      my ( $anonymous_user, $user ) = @_;
-
-      my $room_id;
-
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_send_room_text_message( $user, $room_id, body => "mice" )
-      })->then( sub {
-         matrix_sync( $anonymous_user, filter => encode_json( {
-            room => { rooms => [ $room_id ] }
-         }))->main::expect_http_403;
-      });
-   };
-
 sub await_event_not_presence_for
 {
    my ( $user, $room_id, $allowed_users ) = @_;
@@ -225,9 +205,14 @@ test "Annonymous user can call /sync on a world readable room",
 
          matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
       })->then( sub {
+         matrix_set_room_guest_access( $user, $room_id, "can_join" );
+      })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "mice" );
       })->then( sub {
          ( $sent_event_id ) = @_;
+
+         matrix_join_room( $anonymous_user, $room_id );
+      })->then( sub {
 
          matrix_sync( $anonymous_user, filter => encode_json({
             room => {
@@ -642,6 +627,65 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
          });
       })
    };
+
+test "Anonymous user can upgrade to fully featured user",
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture(), $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $creator, $room_id, $anonymous_user, $http ) = @_;
+
+      my ( $local_part ) = $anonymous_user->user_id =~ m/^@([^:]+):/g;
+      $http->do_request_json(
+         method  => "POST",
+         uri     => "/r0/register",
+         content => {
+            username => $local_part,
+            password => "SIR_Arthur_David",
+            guest_access_token => $anonymous_user->access_token,
+         },
+      )->followed_by( sub {
+         $http->do_request_json(
+            method  => "POST",
+            uri     => "/r0/register",
+            content => {
+               username     => $local_part,
+               password     => "SIR_Arthur_David",
+               guest_access_token => $anonymous_user->access_token,
+               auth         => {
+                  type => "m.login.dummy",
+               },
+            },
+         )
+      })->on_done( sub {
+         my ( $body ) = @_;
+         $anonymous_user->access_token = $body->{access_token};
+      })
+   },
+
+   check => sub {
+      my ( undef, $room_id, $anonymous_user ) = @_;
+
+      matrix_join_room( $anonymous_user, $room_id );
+   };
+
+test "Anonymous user cannot upgrade other users",
+   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture(), anonymous_user_fixture(), $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $creator, $room_id, $anonymous_user1, $anonymous_user2, $http ) = @_;
+
+      my ( $local_part1 ) = $anonymous_user1->user_id =~ m/^@([^:]+):/g;
+      $http->do_request_json(
+         method  => "POST",
+         uri     => "/r0/register",
+         content => {
+            username => $local_part1,
+            password => "SIR_Arthur_David",
+            guest_access_token => $anonymous_user2->access_token,
+         },
+      )->main::expect_http_4xx;
+   };
+
 
 test "GET /publicRooms lists rooms",
    requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
