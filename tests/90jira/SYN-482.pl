@@ -1,6 +1,8 @@
 multi_test "Limit on room/initialSync is reached over federation (SYN-482)",
    requires => [ local_user_and_room_fixtures(), remote_user_fixture() ],
 
+   # This test might pass if other federation tests are run before it is run.
+   # It seems to consistently fail if run in isolation.
    bug => 'SYN-482',
 
    check => sub {
