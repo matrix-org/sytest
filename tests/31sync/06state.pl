@@ -63,8 +63,7 @@ test "State is included in the timeline in the initial sync",
          assert_json_keys( $room, qw( timeline state ephemeral ));
 
          # state from the timeline should *not* appear in the state dictionary
-         @{ $room->{state}{events} } == 0
-            or die "Expected no state events";
+         assert_json_empty_list( $room->{state}{events} );
 
          @{ $room->{timeline}{events} } == 1
             or die "Expected one timeline event";
@@ -124,8 +123,7 @@ test "State from remote users is included in the state in the initial sync",
             @{ $room->{state}{events} } == 1
                 or die "Expected one state event";
 
-            @{ $room->{timeline}{events} } == 0
-                or die "Expected no timeline events";
+            assert_json_empty_list( $room->{timeline}{events} );
 
             my $event = $room->{state}{events}[0];
             $event->{type} eq "a.madeup.test.state"
@@ -331,8 +329,7 @@ test "State from remote users is included in the timeline in an incremental sync
             my $room = $body->{rooms}{join}{$room_id};
             assert_json_keys( $room, qw( timeline state ephemeral ));
 
-            @{ $room->{state}{events} } == 0
-                or die "Expected no state events";
+            assert_json_empty_list( $room->{state}{events} );
 
             @{ $room->{timeline}{events} } == 1
                 or die "Expected one timeline event";
@@ -386,8 +383,8 @@ test "A full_state incremental update returns all state",
          my ( $body ) = @_;
 
          $next_batch = $body->{next_batch};
-         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 0
-             or die "Expected zero state events";
+         assert_json_empty_list( $body->{rooms}{join}{$room_id}{state}{events} );
+
          @{ $body->{rooms}{join}{$room_id}{timeline}{events} } == 2
              or die "Expected two timeline events";
 
@@ -565,8 +562,7 @@ test "A change to displayname should not result in a full state sync",
          # The m.room.member event is filtered out; the only thing which could
          # come back is therefore the madeup.test.state event, which shouldn't,
          # as this is an incremental sync.
-         @{ $body->{rooms}{join}{$room_id}{state}{events} } == 0
-            or die "Expected no state events";
+         assert_json_empty_list( $body->{rooms}{join}{$room_id}{state}{events} );
 
          Future->done(1);
       })

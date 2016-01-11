@@ -16,8 +16,7 @@ test "GET /presence/:user_id/list initially empty",
       )->then( sub {
          my ( $body ) = @_;
 
-         assert_json_list( $body );
-         @$body == 0 or die "Expected an empty list";
+         assert_json_empty_list( $body );
 
          Future->done(1);
       });
@@ -99,8 +98,7 @@ test "POST /presence/:user_id/list can drop users",
       )->then( sub {
          my ( $body ) = @_;
 
-         assert_json_list( $body );
-         @$body == 0 or die "Expected an empty list";
+         assert_json_empty_list( $body );
 
          Future->done(1);
       });
