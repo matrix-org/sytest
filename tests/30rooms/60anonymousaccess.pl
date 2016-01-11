@@ -41,6 +41,18 @@ test "Anonymous user can view world-readable rooms",
       });
    };
 
+test "Anonymous user cannot call /events globally",
+   requires => [ anonymous_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user ) = @_;
+
+      do_request_json_for( $anonymous_user,
+         method => "GET",
+         uri    => "/api/v1/events",
+      )->followed_by( \&expect_4xx_or_empty_chunk );
+   };
+
 test "Anonymous user cannot call /events on non-world_readable room",
    requires => [ anonymous_user_fixture(), local_user_fixture() ],
 
@@ -55,7 +67,13 @@ test "Anonymous user cannot call /events on non-world_readable room",
 
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
-         matrix_get_room_messages( $anonymous_user, $room_id, limit => "2" )
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/events",
+            params => {
+               room_id => $room_id,
+            },
+         );
       })->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
@@ -99,12 +117,8 @@ test "Anonymous user can call /events on world_readable room",
                ( $sent_event_id ) = @_;
             }),
 
-            do_request_json_for( $anonymous_user,
-               method => "GET",
-               uri    => "/api/v1/events",
-            )->main::expect_http_400->then( sub {
-               await_event_not_presence_for( $anonymous_user, $room_id, [] )
-            })->then( sub {
+            await_event_not_presence_for( $anonymous_user, $room_id, [] )
+            ->then( sub {
                my ( $event ) = @_;
 
                assert_json_keys( $event, qw( content ) );
