@@ -149,8 +149,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
          assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         @{ $room->{state}{events} } == 0
-            or die "Did not expect a state event";
+         assert_json_empty_list( $room->{state}{events} );
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one timeline event";
          $room->{timeline}{events}[0]{event_id} eq $event_id
@@ -212,8 +211,7 @@ test "A filtered timeline reaches its limit",
          assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         @{ $room->{state}{events} } == 0
-            or die "Did not expect a state event";
+         assert_json_empty_list( $room->{state}{events} );
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one timeline event";
          $room->{timeline}{events}[0]{event_id} eq $event_id

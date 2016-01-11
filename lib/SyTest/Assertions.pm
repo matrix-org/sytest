@@ -15,6 +15,7 @@ our @EXPORT_OK = qw(
    assert_json_object
    assert_json_keys
    assert_json_list
+   assert_json_empty_list
    assert_json_nonempty_list
    assert_json_number
    assert_json_string
@@ -107,6 +108,23 @@ sub assert_json_list
 {
    my ( $list ) = @_;
    ref $list eq "ARRAY" or croak "Expected a JSON list";
+}
+
+=head2 assert_json_empty_list
+
+   assert_json_empty_list( $list )
+
+Fails the test if C<$list> does not represent a JSON list, or if it contains
+any elements.
+
+=cut
+
+sub assert_json_empty_list
+{
+   my ( $list ) = @_;
+   assert_json_list( $list );
+   @$list and
+      croak sprintf "Expected an empty JSON list; got %d elements", scalar @$list;
 }
 
 =head2 assert_json_nonempty_list

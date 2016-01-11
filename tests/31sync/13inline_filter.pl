@@ -16,8 +16,7 @@ test "Can pass a JSON filter as a query parameter",
 
          my $room = $body->{rooms}{join}{$room_id};
 
-         @{ $room->{timeline}{events} } == 0
-            or die "Expected no timeline events because limit is 0";
+         assert_json_empty_list( $room->{timeline}{events} );
 
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event because of the filter";
