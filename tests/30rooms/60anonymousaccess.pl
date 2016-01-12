@@ -1,5 +1,6 @@
-use Future::Utils qw( try_repeat_until_success );
+use Future::Utils qw( try_repeat_until_success repeat );
 use JSON qw( encode_json );
+use Data::Dumper;
 
 test "Anonymous user cannot view non-world-readable rooms",
    requires => [ anonymous_user_fixture(), local_user_fixture() ],
@@ -481,6 +482,69 @@ test "Anonymous users can get individual state for world_readable rooms after le
          );
       });
    };
+
+test "Annonymous user calling /events doesn't tightloop",
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user, $user ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+      })->then( sub {
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/initialSync",
+         );
+      })->then( sub {
+         my ( $sync_body ) = @_;
+         my $sync_from = $sync_body->{messages}->{end};
+
+         repeat( sub {
+            my ( undef, $f ) = @_;
+
+            my $body = $f ? $f->get : undef;
+            my $end_token = $body ? $body->{end} : $sync_from;
+
+            log_if_fail "Events body", $body;
+
+            get_events_no_timeout( $anonymous_user, $room_id, $end_token );
+         }, foreach => [ 0 .. 5 ], until => sub {
+            my ( $res ) = @_;
+            $res->failure or not @{$res->get->{chunk}};
+         });
+      })->then( sub {
+          my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_empty_list( $body->{chunk} );
+
+         Future->done(1);
+      });
+   };
+
+
+sub get_events_no_timeout
+{
+   my ( $user, $room_id, $from_token ) = @_;
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/api/v1/events",
+      params => {
+         room_id => $room_id,
+         timeout => 0,
+         from => $from_token,
+      },
+   );
+}
+
 
 sub check_events
 {
