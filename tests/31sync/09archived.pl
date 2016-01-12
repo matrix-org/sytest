@@ -121,7 +121,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
    };
 
 
-test "Oldly left rooms don't appear in the leave section of sync",
+test "Previously left rooms don't appear in the leave section of sync",
    requires => [ local_user_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
 
@@ -146,24 +146,22 @@ test "Oldly left rooms don't appear in the leave section of sync",
       })->then( sub {
          matrix_join_room( $user2, $room_id_1 );
       })->then( sub {
+         matrix_join_room( $user2, $room_id_2 );
+      })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
          $next = $body->{next_batch};
 
-          Future->done(1);
-      })->then( sub {
          matrix_leave_room( $user, $room_id_1 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id );
+         matrix_sync( $user, filter => $filter_id, since => $next );
       })->then( sub {
          my ( $body ) = @_;
 
          $next = $body->{next_batch};
 
-          Future->done(1);
-      })->then( sub {
          Future->needs_all( map {
             matrix_put_room_state( $user2, $room_id_1,
                content  => { "filler" => $_, membership => "join" },
@@ -172,11 +170,21 @@ test "Oldly left rooms don't appear in the leave section of sync",
             )
          } 0 .. 20 );
       })->then( sub {
+         Future->needs_all( map {
+            matrix_send_room_message( $user2, $room_id_2,
+               content => { "filler" => $_ },
+               type    => "a.made.up.filler.type",
+            )
+         }  0 .. 20 ); 
+      })->then( sub {
          matrix_sync( $user, filter => $filter_id, since => $next );
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body->{rooms}{leave} , qw( ) );
+         my $leave = $body->{rooms}{leave};
+
+         assert_json_object( $leave );
+         keys %$leave == 0 or die "Expected no rooms in 'leave' state";
 
          Future->done(1);
       });
