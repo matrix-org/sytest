@@ -167,7 +167,8 @@ sub await_event_for
    my ( $sync_body ) = matrix_sync( $user, %query_params )->get;
 
 Make a v2_alpha/sync request for the user. Returns the response body as a
-reference to a hash.
+reference to a hash. As a side-effect, this function updates the
+C<sync_next_batch> field of the user object.
 
 =cut
 
@@ -185,5 +186,7 @@ sub matrix_sync
       assert_json_keys( $body, qw( account_data rooms presence next_batch ) );
       assert_json_keys( $body->{presence}, qw( events ));
       assert_json_keys( $body->{rooms}, qw( join invite leave ) );
+
+      $user->sync_next_batch = $body->{next_batch};
    });
 }
