@@ -162,20 +162,20 @@ test "Previously left rooms don't appear in the leave section of sync",
 
          $next = $body->{next_batch};
 
-         Future->needs_all( map {
-            matrix_put_room_state( $user2, $room_id_1,
-               content  => { "filler" => $_, membership => "join" },
-               type      => "m.room.member",
-               state_key => $user2->user_id,
-            )
-         } 0 .. 20 );
+         matrix_put_room_state( $user2, $room_id_1,
+            content  => { "filler" => $_, membership => "join" },
+            type      => "m.room.member",
+            state_key => $user2->user_id,
+         )
       })->then( sub {
+         # Pad out the timeline with filler messages to create a "gap" between
+         # this sync and the next.
          Future->needs_all( map {
             matrix_send_room_message( $user2, $room_id_2,
                content => { "filler" => $_ },
                type    => "a.made.up.filler.type",
             )
-         }  0 .. 20 ); 
+         }  0 .. 5 );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id, since => $next );
       })->then( sub {
