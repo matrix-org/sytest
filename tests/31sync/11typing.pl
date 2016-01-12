@@ -55,7 +55,7 @@ test "Typing events appear in incremental sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id );
 
       my $filter = {
          room => {
@@ -75,13 +75,9 @@ test "Typing events appear in incremental sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_typing( $user, $room_id, typing => 1, timeout => 30000 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -110,7 +106,7 @@ test "Typing events appear in gapped sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id );
 
       my $filter = {
          room => {
@@ -130,10 +126,6 @@ test "Typing events appear in gapped sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_typing( $user, $room_id, typing => 1, timeout => 30000 );
       })->then( sub {
          Future->needs_all( map {
@@ -143,7 +135,7 @@ test "Typing events appear in gapped sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
       })->then( sub {
          my ( $body ) = @_;
 

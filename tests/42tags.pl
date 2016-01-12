@@ -327,7 +327,7 @@ test "Newly updated tags appear in an incremental v2 /sync",
    do => sub {
       my ( $user ) = @_;
 
-      my ( $room_id, $filter_id, $next_batch );
+      my ( $room_id, $filter_id );
 
       my $filter = {};
 
@@ -340,13 +340,9 @@ test "Newly updated tags appear in an incremental v2 /sync",
 
          matrix_sync( $user, $filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
          matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -366,7 +362,7 @@ test "Deleted tags appear in an incremental v2 /sync",
    do => sub {
       my ( $user ) = @_;
 
-      my ( $room_id, $filter_id, $next_batch );
+      my ( $room_id, $filter_id );
 
       my $filter = {};
 
@@ -379,21 +375,13 @@ test "Deleted tags appear in an incremental v2 /sync",
 
          matrix_sync( $user, $filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
          matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
          matrix_remove_tag( $user, $room_id, "test_tag" );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
       })->then( sub {
          my ( $body ) = @_;
 

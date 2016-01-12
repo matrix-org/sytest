@@ -113,7 +113,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $event_id, $next_batch );
+      my ( $filter_id, $room_id, $event_id );
 
       my $filter = {
          room => {
@@ -134,14 +134,13 @@ test "A message sent after an initial sync appears in the timeline of an increme
       })->then( sub {
          my ( $body ) = @_;
 
-         $next_batch = $body->{next_batch};
          matrix_send_room_text_message( $user, $room_id,
             body => "A test message", txn_id => "my_transaction_id"
          );
       })->then( sub {
          ( $event_id ) = @_;
 
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -267,7 +266,7 @@ test "A full_state incremental update returns only recent timeline",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id );
 
       my $filter = { room => { timeline => { limit => 1 } } };
 
@@ -282,7 +281,6 @@ test "A full_state incremental update returns only recent timeline",
       })->then( sub {
          my ( $body ) = @_;
 
-         $next_batch = $body->{next_batch};
          Future->needs_all( map {
             matrix_send_room_message( $user, $room_id,
                content => { "filler" => $_ },
@@ -295,7 +293,7 @@ test "A full_state incremental update returns only recent timeline",
                type    => "another.filler.type",
              );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch,
+         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch,
              full_state => 'true');
       })->then( sub {
          my ( $body ) = @_;

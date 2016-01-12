@@ -37,7 +37,7 @@ test "Newly left rooms appear in the leave section of incremental sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id );
 
      matrix_create_filter( $user,
          { room => { include_leave => JSON::true } }
@@ -50,13 +50,9 @@ test "Newly left rooms appear in the leave section of incremental sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_leave_room( $user, $room_id );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -75,7 +71,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id_1, $room_id_2, $next );
+      my ( $filter_id, $room_id_1, $room_id_2 );
 
       my $filter = {
          room => { timeline => { limit => 1 }, include_leave => JSON::true }
@@ -91,10 +87,6 @@ test "Newly left rooms appear in the leave section of gapped sync",
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_leave_room( $user, $room_id_1 );
       })->then( sub {
          # Pad out the timeline with filler messages to create a "gap" between
@@ -109,7 +101,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -128,7 +120,7 @@ test "Left rooms appear in the leave section of full state sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id );
 
       matrix_create_filter( $user,
          { room => { include_leave => JSON::true } }
@@ -141,14 +133,10 @@ test "Left rooms appear in the leave section of full state sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_leave_room( $user, $room_id );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id,
-             since => $next, full_state => 'true');
+             since => $user->sync_next_batch, full_state => 'true');
       })->then( sub {
          my ( $body ) = @_;
 

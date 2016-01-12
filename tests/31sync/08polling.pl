@@ -5,7 +5,7 @@ test "Sync can be polled for updates",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id );
 
       matrix_create_filter( $user, {} )->then( sub {
          ( $filter_id ) = @_;
@@ -18,10 +18,9 @@ test "Sync can be polled for updates",
       })->then( sub {
          my ( $body ) = @_;
 
-         $next = $body->{next_batch};
          Future->needs_all(
             matrix_sync( $user,
-               filter => $filter_id, since => $next, timeout => 10000
+               filter => $filter_id, since => $user->sync_next_batch, timeout => 10000
             ),
 
             delay( 0.1 )->then( sub {
@@ -54,7 +53,7 @@ test "Sync is woken up for leaves",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id );
 
       matrix_create_filter( $user, {} )->then( sub {
          ( $filter_id ) = @_;
@@ -65,12 +64,9 @@ test "Sync is woken up for leaves",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
          Future->needs_all(
             matrix_sync( $user,
-               filter => $filter_id, since => $next, timeout => 10000
+               filter => $filter_id, since => $user->sync_next_batch, timeout => 10000
             ),
 
             delay( 0.1 )->then( sub {
