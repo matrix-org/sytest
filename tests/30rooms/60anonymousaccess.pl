@@ -1,6 +1,5 @@
 use Future::Utils qw( try_repeat_until_success repeat );
 use JSON qw( encode_json );
-use Data::Dumper;
 
 test "Anonymous user cannot view non-world-readable rooms",
    requires => [ anonymous_user_fixture(), local_user_fixture() ],
@@ -485,6 +484,7 @@ test "Anonymous users can get individual state for world_readable rooms after le
 
 test "Annonymous user calling /events doesn't tightloop",
    requires => [ anonymous_user_fixture(), local_user_fixture() ],
+   bug => 'SYN-582',
 
    do => sub {
       my ( $anonymous_user, $user ) = @_;
@@ -508,15 +508,14 @@ test "Annonymous user calling /events doesn't tightloop",
          repeat( sub {
             my ( undef, $f ) = @_;
 
-            my $body = $f ? $f->get : undef;
-            my $end_token = $body ? $body->{end} : $sync_from;
+            my $end_token = $f ? $f->get->{end} : $sync_from;
 
-            log_if_fail "Events body", $body;
+            log_if_fail "Events body", $f ? $f->get : undef;
 
             get_events_no_timeout( $anonymous_user, $room_id, $end_token );
          }, foreach => [ 0 .. 5 ], until => sub {
             my ( $res ) = @_;
-            $res->failure or not @{$res->get->{chunk}};
+            $res->failure or not @{ $res->get->{chunk} };
          });
       })->then( sub {
           my ( $body ) = @_;
