@@ -35,7 +35,7 @@ test "User is offline if they set_presence=offline in their sync",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
    # This test passes if we set a displayname for the user.
-   expect_fail => 1,
+   bug => "SYT-47",
 
    check => sub {
       my ( $user ) = @_;
