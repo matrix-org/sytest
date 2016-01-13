@@ -114,7 +114,8 @@ our @HOMESERVER_INFO = map {
                      { regex => '#astest-.*', exclusive => "true" },
                   ],
                   rooms => [],
-               }
+               },
+               ratelimit => "false",
             } );
 
             $synapse->append_config(

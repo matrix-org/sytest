@@ -87,6 +87,72 @@ multi_test "AS-ghosted users can use rooms via AS",
       })->then_done(1);
    };
 
+test "Application services can be not rate limited",
+   requires => [ as_ghost_fixture(), $main::AS_USER,
+                     room_fixture( requires_users => [ $user_fixture ] ),
+                qw( can_receive_room_message_locally )],
+
+   do => sub {
+      my ( $ghost, $as_user, $room_id ) = @_;
+
+      Future->needs_all(
+         ( map {
+            await_as_event( "m.room.member" )->then( sub { Future->done( 1 ); } ),
+         } ( 0, 1 )),
+
+         do_request_json_for( $as_user,
+            method => "POST",
+            uri    => "/api/v1/rooms/$room_id/join",
+            params => {
+               user_id => $ghost->user_id,
+            },
+
+            content => {},
+         ),
+
+         do_request_json_for( $as_user,
+            method => "POST",
+            uri    => "/api/v1/rooms/$room_id/join",
+            params => {
+               user_id => $as_user->user_id,
+            },
+
+            content => {},
+         ),
+      )->then( sub {
+         Future->needs_all(
+            ( map {
+               await_as_event( "m.room.message" )->then( sub { Future->done( 1 ); } )
+            } 0 .. 300 ),
+
+            ( map {
+               do_request_json_for( $as_user,
+                  method => "POST",
+                  uri    => "/api/v1/rooms/$room_id/send/m.room.message",
+                  params => {
+                     user_id => $as_user->user_id,
+                  },
+
+                  content => { msgtype => "m.text", body => "Message from AS directly $_" },
+               )
+            } 0 .. 150 ),
+
+            ( map {
+               do_request_json_for( $ghost,
+                  method => "POST",
+                  uri    => "/api/v1/rooms/$room_id/send/m.room.message",
+                  params => {
+                     user_id => $ghost->user_id,
+                  },
+
+                  content => { msgtype => "m.text", body => "Message from AS ghost directly $_" },
+               )
+            } 0 .. 150 ),
+         )
+      });
+   };
+
+
 multi_test "AS-ghosted users can use rooms themselves",
    requires => [ as_ghost_fixture(), $user_fixture,
                      room_fixture( requires_users => [ $user_fixture ] ),
