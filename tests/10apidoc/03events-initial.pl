@@ -103,7 +103,10 @@ sub GET_new_events_for
 
 # Some Matrix protocol helper functions
 
-push our @EXPORT, qw( matrix_initialsync matrix_sync flush_events_for await_event_for );
+push our @EXPORT, qw(
+   matrix_initialsync matrix_sync matrix_sync_again
+   flush_events_for await_event_for
+);
 
 sub flush_events_for
 {
@@ -189,4 +192,21 @@ sub matrix_sync
 
       $user->sync_next_batch = $body->{next_batch};
    });
+}
+
+=head2 matrix_sync_again
+
+   my ( $sync_body ) = matrix_sync_again( $user, %query_params )->get;
+
+A convenient wrapper around L</matrix_sync> which applies the user's
+C<sync_next_batch> field as the C<since> parameter, to perform an incremental
+sync since the last time the function was called.
+
+=cut
+
+sub matrix_sync_again
+{
+   my ( $user, %params ) = @_;
+
+   matrix_sync( $user, since => $user->sync_next_batch, %params );
 }
