@@ -484,7 +484,6 @@ test "Anonymous users can get individual state for world_readable rooms after le
 
 test "Annonymous user calling /events doesn't tightloop",
    requires => [ anonymous_user_fixture(), local_user_fixture() ],
-   bug => 'SYN-582',
 
    do => sub {
       my ( $anonymous_user, $user ) = @_;
