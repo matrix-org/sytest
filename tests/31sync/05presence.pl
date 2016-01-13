@@ -60,6 +60,15 @@ test "User is offline if they set_presence=offline in their sync",
                or die "Expected to be offline";
          }
 
+         # Additionally my presence should still be "offline"
+         # But we can't assert on that yet - see SYT-34
+         #
+         # matrix_get_presence_status( $user );
+         #    ->then( sub {
+         #    my ( $status ) = @_;
+         #    assert_eq( $status->{presence}, "offline" );
+         # });
+
          Future->done(1);
       })
    };
