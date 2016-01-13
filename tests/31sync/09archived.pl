@@ -125,8 +125,6 @@ test "Previously left rooms don't appear in the leave section of sync",
    requires => [ local_user_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
 
-   bug => 'SYN-589',
-
    check => sub {
       my ( $user, $user2 ) = @_;
 
