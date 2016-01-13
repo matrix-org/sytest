@@ -120,7 +120,7 @@ test "Previously left rooms don't appear in the leave section of sync",
    check => sub {
       my ( $user, $user2 ) = @_;
 
-      my ( $filter_id, $room_id_1, $room_id_2, $next );
+      my ( $filter_id, $room_id_1, $room_id_2 );
 
       my $filter = {
          room => { timeline => { limit => 1 }, include_leave => JSON::true }
@@ -140,18 +140,10 @@ test "Previously left rooms don't appear in the leave section of sync",
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_leave_room( $user, $room_id_1 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_put_room_state( $user2, $room_id_1,
             content  => { "filler" => $_, membership => "join" },
             type      => "m.room.member",
@@ -167,7 +159,7 @@ test "Previously left rooms don't appear in the leave section of sync",
             )
          }  0 .. 5 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
