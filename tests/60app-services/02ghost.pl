@@ -97,7 +97,7 @@ test "Application services can be not rate limited",
 
       Future->needs_all(
          ( map {
-            await_as_event( "m.room.member" )->then( sub { Future->done( 1 ); } ),
+            await_as_event( "m.room.member" )->then_done( 1 ),
          } ( 0, 1 )),
 
          do_request_json_for( $as_user,
@@ -122,8 +122,8 @@ test "Application services can be not rate limited",
       )->then( sub {
          Future->needs_all(
             ( map {
-               await_as_event( "m.room.message" )->then( sub { Future->done( 1 ); } )
-            } 0 .. 300 ),
+               await_as_event( "m.room.message" )->then_done( 1 ),
+            } 1 .. 300 ),
 
             ( map {
                do_request_json_for( $as_user,
@@ -135,7 +135,7 @@ test "Application services can be not rate limited",
 
                   content => { msgtype => "m.text", body => "Message from AS directly $_" },
                )
-            } 0 .. 150 ),
+            } 1 .. 150 ),
 
             ( map {
                do_request_json_for( $ghost,
@@ -147,7 +147,7 @@ test "Application services can be not rate limited",
 
                   content => { msgtype => "m.text", body => "Message from AS ghost directly $_" },
                )
-            } 0 .. 150 ),
+            } 1 .. 150 ),
          )
       });
    };
