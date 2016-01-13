@@ -77,7 +77,7 @@ test "Typing events appear in incremental sync",
       })->then( sub {
          matrix_typing( $user, $room_id, typing => 1, timeout => 30000 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -135,7 +135,7 @@ test "Typing events appear in gapped sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 

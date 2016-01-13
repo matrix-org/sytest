@@ -245,7 +245,7 @@ test "New account data appears in incremental v2 /sync",
             $user, $room_id, "my.changing.type", "cats", "rats"
          ),
       })->then( sub {
-         matrix_sync( $user, since => $user->sync_next_batch );
+         matrix_sync_again( $user );
       })->then( sub {
          my ( $body ) = @_;
 

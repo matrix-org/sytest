@@ -19,9 +19,7 @@ test "Sync can be polled for updates",
          my ( $body ) = @_;
 
          Future->needs_all(
-            matrix_sync( $user,
-               filter => $filter_id, since => $user->sync_next_batch, timeout => 10000
-            ),
+            matrix_sync_again( $user, filter => $filter_id, timeout => 10000 ),
 
             delay( 0.1 )->then( sub {
                matrix_send_room_text_message(
@@ -65,9 +63,7 @@ test "Sync is woken up for leaves",
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          Future->needs_all(
-            matrix_sync( $user,
-               filter => $filter_id, since => $user->sync_next_batch, timeout => 10000
-            ),
+            matrix_sync_again( $user, filter => $filter_id, timeout => 10000 ),
 
             delay( 0.1 )->then( sub {
                matrix_leave_room(

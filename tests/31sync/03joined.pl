@@ -26,7 +26,7 @@ test "Can sync a joined room",
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{ephemeral}, qw( events ));
 
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -60,8 +60,7 @@ test "Full state sync includes joined rooms",
       })->then( sub {
          my ( $body ) = @_;
 
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch,
-             full_state => 'true');
+         matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -97,7 +96,7 @@ test "Newly joined room is included in an incremental sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -107,7 +106,7 @@ test "Newly joined room is included in an incremental sync",
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{ephemeral}, qw( events ));
 
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -155,7 +154,7 @@ test "Newly joined room has correct timeline in incremental sync",
       })->then( sub {
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $user_b->sync_next_batch );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
          my $room = $body->{rooms}{join}{$room_id};

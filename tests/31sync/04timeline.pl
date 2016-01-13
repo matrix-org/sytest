@@ -140,7 +140,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
       })->then( sub {
          ( $event_id ) = @_;
 
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -293,8 +293,7 @@ test "A full_state incremental update returns only recent timeline",
                type    => "another.filler.type",
              );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch,
-             full_state => 'true');
+         matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
          my ( $body ) = @_;
 

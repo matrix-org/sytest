@@ -52,7 +52,7 @@ test "Newly left rooms appear in the leave section of incremental sync",
       })->then( sub {
          matrix_leave_room( $user, $room_id );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -101,7 +101,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -135,8 +135,7 @@ test "Left rooms appear in the leave section of full state sync",
       })->then( sub {
          matrix_leave_room( $user, $room_id );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id,
-             since => $user->sync_next_batch, full_state => 'true');
+         matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
          my ( $body ) = @_;
 

@@ -181,7 +181,7 @@ test "Changes to state are included in an incremental sync",
             state_key => "this_state_changes",
          );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -258,7 +258,7 @@ test "Changes to state are included in an gapped incremental sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -393,8 +393,7 @@ test "A full_state incremental update returns all state",
             )
          } 0 .. 10 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch,
-             full_state => 'true');
+         matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -477,7 +476,7 @@ test "When user joins a room the state is included in the next sync",
       })->then( sub {
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $user_b->sync_next_batch );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -543,7 +542,7 @@ test "A change to displayname should not result in a full state sync",
             state_key => $user->user_id,
          );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $user->sync_next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -603,7 +602,7 @@ test "When user joins a room the state is included in a gapped sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $user_b->sync_next_batch );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -666,7 +665,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       })->then( sub {
          matrix_leave_room( $user_b, $room_id );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $user_b->sync_next_batch );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 

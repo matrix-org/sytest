@@ -71,7 +71,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
             content => { user_id => $user_b->user_id, reason => "testing" },
          );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $user_b->sync_next_batch );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -121,7 +121,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $user_b->sync_next_batch );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 

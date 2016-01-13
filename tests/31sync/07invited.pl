@@ -68,7 +68,7 @@ test "Rooms a user is invited to appear in an incremental sync",
 
          matrix_invite_user_to_room( $user_a, $user_b, $room_id );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $user_b->sync_next_batch );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
          my $room = $body->{rooms}{invite}{$room_id};

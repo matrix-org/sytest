@@ -94,7 +94,7 @@ test "User sees updates to presence from other users in the incremental sync.",
          # Set user B's presence to online by syncing.
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         matrix_sync( $user_a, filter => $filter_id_a, since => $user_a->sync_next_batch );
+         matrix_sync_again( $user_a, filter => $filter_id_a );
       })->then( sub {
          my ( $body ) = @_;
 
