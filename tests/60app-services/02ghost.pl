@@ -157,3 +157,35 @@ multi_test "AS-ghosted users can use rooms themselves",
          })->SyTest::pass_on_done( "Creator received ghost's message" )
       })->then_done(1);
    };
+
+my $unregistered_as_user_localpart = "astest-02ghost-1";
+
+test "Ghost user must register before joining room",
+   requires => [ $main::AS_USER, local_user_and_room_fixtures(), $main::HOMESERVER_INFO[0] ],
+
+   check => sub {
+      my ( $as_user, undef, $room_id, $hs_info ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
+         uri    => "/api/v1/rooms/$room_id/join",
+         params => {
+            user_id => "@".$unregistered_as_user_localpart.":".$hs_info->server_name,
+         },
+         content => {},
+      );
+   },
+
+   do => sub {
+      my ( $as_user, undef, $room_id ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
+         uri    => "/api/v1/register",
+
+         content => {
+            type => "m.login.application_service",
+            user => $unregistered_as_user_localpart,
+         },
+      );
+   };
