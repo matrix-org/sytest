@@ -126,11 +126,31 @@ sub start
    my $cwd = getcwd;
    my $log = "$self->{hs_dir}/homeserver.log";
 
+   my $listeners = [{
+      type => "http",
+      port => $port,
+      bind_address => "127.0.0.1",
+      tls => 1,
+      resources => [{
+         names => ["client", "federation"], compress => 0
+      }]
+   }];
+
+   if ($self->{unsecure_port}) {
+      push @$listeners, {
+         type => "http",
+         port => $self->{unsecure_port},
+         bind_address => "127.0.0.1",
+         tls => 0,
+         resources => [{
+            names => ["client", "federation"], compress => 0
+         }]
+      }
+   }
+
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
-        "bind_port" => $port,
-        "unsecure_port" => $self->{unsecure_port},
         "tls-dh-params-path" => "$cwd/keys/tls.dh",
         "rc_messages_per_second" => 1000,
         "rc_message_burst_count" => 1000,
@@ -146,6 +166,8 @@ sub start
 
         # Stack traces are useful
         "full_twisted_stacktraces" => "true",
+
+        "listeners" => $listeners,
 
         "bcrypt_rounds" => 0,
 
