@@ -70,6 +70,22 @@ SyTest requires a number of dependencies that are easiest installed from CPAN.
    Synapse does not need to be installed, as SyTest will run it directly from
    its source code directory.
 
+Installing on OS X
+------------------
+Dependencies can be installed on OS X in the same manner, except that packages
+using NaCl / libsodium will fail. This can be worked around by:
+
+Installing libsodium manually, eg.::
+
+    brew install libsodium
+
+...and force installing Crypt::NaCl::Sodium::
+
+    cpan
+    force install Crypt::NaCl::Sodium
+
+Then run install-deps.pl as normal.
+
 Running
 -------
 
