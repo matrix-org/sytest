@@ -77,12 +77,12 @@ using NaCl / libsodium will fail. This can be worked around by:
 
 Installing libsodium manually, eg.::
 
-    brew install libsodium
+    $ brew install libsodium
 
 ...and force installing Crypt::NaCl::Sodium::
 
-    cpan
-    force install Crypt::NaCl::Sodium
+    $ cpan
+    cpan> force install Crypt::NaCl::Sodium
 
 Then run install-deps.pl as normal.
 
