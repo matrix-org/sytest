@@ -132,15 +132,11 @@ test "Anonymous user can call /events on world_readable room",
             my ( $stream_token ) = @_;
 
             Future->needs_all(
-               do_request_json_for( $user_not_in_room,
-                  method  => "PUT",
-                  uri     => "/api/v1/presence/:user_id/status",
-                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
+               matrix_set_presence_status( $user_not_in_room, "online",
+                  status_msg => "Worshiping lemurs' tails",
                ),
-               do_request_json_for( $user,
-                  method  => "PUT",
-                  uri     => "/api/v1/presence/:user_id/status",
-                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
+               matrix_set_presence_status( $user, "online",
+                  status_msg => "Worshiping lemurs' tails",
                ),
 
                await_event_not_presence_for( $anonymous_user, $room_id, [ $user ] )->then( sub {

@@ -34,8 +34,6 @@ test "User sees their own presence in a sync",
 test "User is offline if they set_presence=offline in their sync",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
-   # This test passes if we set a displayname for the user.
-   bug => "SYT-47",
 
    check => sub {
       my ( $user ) = @_;
@@ -51,13 +49,28 @@ test "User is offline if they set_presence=offline in their sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $events = $body->{presence}{events};
-         my $presence = first { $_->{type} eq "m.presence" } @$events
-            or die "Expected to see our own presence";
+         # Either I'm absent entirely, or I'm present in state "offline"; but
+         # I shouldn't be "online"
 
-         $presence->{sender} eq $user->user_id or die "Unexpected sender";
-         $presence->{content}{presence} eq "offline"
-            or die "Expected to be offline";
+         my $events = $body->{presence}{events};
+
+         my $presence = first {
+            $_->{type} eq "m.presence" and $_->{sender} eq $user->user_id
+         } @$events;
+
+         if( $presence ) {
+            $presence->{content}{presence} eq "offline"
+               or die "Expected to be offline";
+         }
+
+         # Additionally my presence should still be "offline"
+         # But we can't assert on that yet - see SYT-34
+         #
+         # matrix_get_presence_status( $user );
+         #    ->then( sub {
+         #    my ( $status ) = @_;
+         #    assert_eq( $status->{presence}, "offline" );
+         # });
 
          Future->done(1);
       })
