@@ -54,8 +54,11 @@ test "User is offline if they set_presence=offline in their sync",
 
          my $events = $body->{presence}{events};
 
-         if( my $presence = first { $_->{type} eq "m.presence" } @$events ) {
-            $presence->{sender} eq $user->user_id or die "Unexpected sender";
+         my $presence = first {
+            $_->{type} eq "m.presence" and $_->{sender} eq $user->user_id
+         } @$events;
+
+         if( $presence ) {
             $presence->{content}{presence} eq "offline"
                or die "Expected to be offline";
          }
