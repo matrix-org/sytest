@@ -9,7 +9,7 @@ our $AS_USER = fixture(
       my ( $http, $as_user_info ) = @_;
 
       Future->done( User( $http, $as_user_info->user_id, $as_user_info->as2hs_token,
-            undef, undef, [], undef ) );
+            undef, undef, undef, [], undef ) );
    },
 );
 

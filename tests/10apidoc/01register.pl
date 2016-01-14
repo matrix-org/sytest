@@ -84,7 +84,7 @@ sub matrix_register_user
       my ( $body ) = @_;
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $access_token, undef, undef, [], undef );
+      my $user = User( $http, $body->{user_id}, $access_token, undef, undef, undef, [], undef );
 
       my $f = Future->done;
 

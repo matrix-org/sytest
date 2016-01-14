@@ -3,6 +3,7 @@ use Future::Utils qw( repeat );
 push our @EXPORT, qw(
    matrix_add_push_rule matrix_delete_push_rule
    matrix_get_push_rule matrix_get_push_rules
+   matrix_set_push_rule_enabled
 );
 
 =head2 matrix_add_push_rule
@@ -46,6 +47,28 @@ sub matrix_delete_push_rule
    do_request_json_for( $user,
       method  => "DELETE",
       uri     => "/r0/pushrules/$scope/$kind/$rule_id",
+   );
+}
+
+=head2 matrix_set_push_rule_enabled
+
+   matrix_set_push_rule_enabled( $user, $scope, $kind, $rule_id, $enabled )->get
+
+scope: Either "global" or "device/<profile_tag>"
+kind: Either "override", "underride", "sender", "room", or "content"
+rule_id: String id for the rule.
+enabled: JSON::true or JSON::false
+
+=cut
+
+sub matrix_set_push_rule_enabled
+{
+   my ( $user, $scope, $kind, $rule_id, $enabled ) = @_;
+
+   do_request_json_for( $user,
+      method  => "PUT",
+      uri     => "/r0/pushrules/$scope/$kind/$rule_id/enabled",
+      content => { enabled => $enabled },
    );
 }
 
@@ -267,3 +290,24 @@ test "Can delete a push rule",
       });
    };
 
+test "Can disable a push rule",
+   requires => [ local_user_fixture() ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      check_add_push_rule( $user, "global", "room", "#a:example.com", {
+         actions => ["notify"],
+      })->then( sub {
+         matrix_set_push_rule_enabled( $user, "global", "room", "#a:example.com", JSON::false );
+      })->then( sub {
+         matrix_get_push_rule( $user, "global", "room", "#a:example.com" );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( enabled ));
+         assert_eq( $body->{enabled}, JSON::false, "enabled" );
+
+         Future->done(1);
+      });
+   };
