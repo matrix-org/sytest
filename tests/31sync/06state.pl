@@ -143,7 +143,7 @@ test "Changes to state are included in an incremental sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id );
 
       my $filter = {
          room => {
@@ -175,16 +175,13 @@ test "Changes to state are included in an incremental sync",
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
          matrix_put_room_state( $user, $room_id,
             type      => "a.madeup.test.state",
             content   => { "my_key" => 2 },
             state_key => "this_state_changes",
          );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -211,7 +208,7 @@ test "Changes to state are included in an gapped incremental sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id );
 
       my $filter = {
          room => {
@@ -245,7 +242,6 @@ test "Changes to state are included in an gapped incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         $next_batch = $body->{next_batch};
          @{ $body->{rooms}{join}{$room_id}{state}{events} } == 2
             or die "Expected two state events";
 
@@ -262,7 +258,7 @@ test "Changes to state are included in an gapped incremental sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -289,7 +285,7 @@ test "State from remote users is included in the timeline in an incremental sync
     check => sub {
         my ( $user, $remote_user ) = @_;
 
-        my ( $filter_id, $room_id, $next_batch );
+        my ( $filter_id, $room_id );
 
         my $filter = {
             room => {
@@ -312,16 +308,13 @@ test "State from remote users is included in the timeline in an incremental sync
         })->then( sub {
             matrix_sync( $user, filter => $filter_id );
         })->then( sub {
-            my ( $body ) = @_;
-            $next_batch = $body->{next_batch};
-
             matrix_put_room_state( $remote_user, $room_id,
                                    type    => "a.madeup.test.state",
                                    content => { "my_key" => 1 });
         })->then( sub {
             # wait for the event to turn up on the other side
             wait_for_event_in_room( $user, $room_id, 
-               sync_params => { filter => $filter_id, since => $next_batch },
+               sync_params => { filter => $filter_id, since => $user->sync_next_batch },
             );
         })->then( sub {
             my ( $body ) = @_;
@@ -352,7 +345,7 @@ test "A full_state incremental update returns all state",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id );
 
       my $filter = { room => {
           timeline => { limit => 2 },
@@ -382,7 +375,6 @@ test "A full_state incremental update returns all state",
       })->then( sub {
          my ( $body ) = @_;
 
-         $next_batch = $body->{next_batch};
          assert_json_empty_list( $body->{rooms}{join}{$room_id}{state}{events} );
 
          @{ $body->{rooms}{join}{$room_id}{timeline}{events} } == 2
@@ -401,8 +393,7 @@ test "A full_state incremental update returns all state",
             )
          } 0 .. 10 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch,
-             full_state => 'true');
+         matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -452,7 +443,7 @@ test "When user joins a room the state is included in the next sync",
    check => sub {
       my ( $user_a, $user_b ) = @_;
 
-      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id );
 
       my $filter = {
          room => {
@@ -483,12 +474,9 @@ test "When user joins a room the state is included in the next sync",
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_b = $body->{next_batch};
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -516,7 +504,7 @@ test "A change to displayname should not result in a full state sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id );
 
       my $filter = {
          room => {
@@ -544,7 +532,6 @@ test "A change to displayname should not result in a full state sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         $next_batch = $body->{next_batch};
          @{ $body->{rooms}{join}{$room_id}{state}{events} } == 1
             or die "Expected one state event";
 
@@ -555,7 +542,7 @@ test "A change to displayname should not result in a full state sync",
             state_key => $user->user_id,
          );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -576,7 +563,7 @@ test "When user joins a room the state is included in a gapped sync",
    check => sub {
       my ( $user_a, $user_b ) = @_;
 
-      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id );
 
       my $filter = {
          room => {
@@ -606,9 +593,6 @@ test "When user joins a room the state is included in a gapped sync",
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b);
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_b = $body->{next_batch};
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
          Future->needs_all( map {
@@ -618,7 +602,7 @@ test "When user joins a room the state is included in a gapped sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -646,7 +630,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
    check => sub {
       my ( $user_a, $user_b ) = @_;
 
-      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id );
 
       my $filter = {
          room => {
@@ -677,14 +661,11 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_b = $body->{next_batch};
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
          matrix_leave_room( $user_b, $room_id );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 

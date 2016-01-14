@@ -231,8 +231,6 @@ test "New account data appears in incremental v2 /sync",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      my ( $next_batch );
-
       Future->needs_all(
          setup_incremental_account_data(
             $user, $room_id, "my.unchanging.type", "lions", "tigers"
@@ -243,15 +241,11 @@ test "New account data appears in incremental v2 /sync",
       )->then( sub {
          matrix_sync( $user );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
          setup_incremental_account_data(
             $user, $room_id, "my.changing.type", "cats", "rats"
          ),
       })->then( sub {
-         matrix_sync( $user, since => $next_batch );
+         matrix_sync_again( $user );
       })->then( sub {
          my ( $body ) = @_;
 

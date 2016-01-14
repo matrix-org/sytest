@@ -965,7 +965,7 @@ sub anonymous_user_fixture
             my ( $body ) = @_;
             my $access_token = $body->{access_token};
 
-            Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, [], undef ) );
+            Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, undef, [], undef ) );
          });
    })
 }

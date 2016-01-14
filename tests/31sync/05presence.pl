@@ -71,7 +71,7 @@ test "User sees updates to presence from other users in the incremental sync.",
    check => sub {
       my ( $user_a, $user_b ) = @_;
 
-      my ( $filter_id_a, $filter_id_b, $next_a );
+      my ( $filter_id_a, $filter_id_b );
 
       my $filter = { presence => { types => [ "m.presence" ] } };
 
@@ -91,13 +91,10 @@ test "User sees updates to presence from other users in the incremental sync.",
       })->then( sub {
          matrix_sync( $user_a, filter => $filter_id_a );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_a = $body->{next_batch};
          # Set user B's presence to online by syncing.
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         matrix_sync( $user_a, filter => $filter_id_a, since => $next_a );
+         matrix_sync_again( $user_a, filter => $filter_id_a );
       })->then( sub {
          my ( $body ) = @_;
 
