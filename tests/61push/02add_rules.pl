@@ -290,7 +290,7 @@ test "Can delete a push rule",
       });
    };
 
-test "Can disable and enable a push rule",
+test "Can disable a push rule",
    requires => [ local_user_fixture() ],
 
    check => sub {
@@ -299,7 +299,7 @@ test "Can disable and enable a push rule",
       check_add_push_rule( $user, "global", "room", "#a:example.com", {
          actions => ["notify"],
       })->then( sub {
-         matrix_set_push_rule_enabled( $user, "global", "room", "#a:example.com", JSON::false);
+         matrix_set_push_rule_enabled( $user, "global", "room", "#a:example.com", JSON::false );
       })->then( sub {
          matrix_get_push_rule( $user, "global", "room", "#a:example.com" );
       })->then( sub {
