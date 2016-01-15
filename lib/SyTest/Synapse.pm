@@ -25,6 +25,7 @@ sub _init
 
    $self->{$_} = delete $args->{$_} for qw(
       port unsecure_port output synapse_dir extra_args python config coverage
+      dendron
    );
 
    $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
@@ -126,15 +127,24 @@ sub start
    my $cwd = getcwd;
    my $log = "$self->{hs_dir}/homeserver.log";
 
-   my $listeners = [{
-      type => "http",
-      port => $port,
-      bind_address => "127.0.0.1",
-      tls => 1,
-      resources => [{
-         names => ["client", "federation"], compress => 0
-      }]
-   }];
+   my $listeners = [];
+
+   if ($self->{dendron}) {
+      # If we are running synapse behind dendron then only bind the unsecure
+      # port for synapse.
+      $self->{unsecure_port} = $port + 9000 - 8000;
+   }
+   else {
+      push @$listeners, {
+         type => "http",
+         port => $port,
+         bind_address => "127.0.0.1",
+         tls => 1,
+         resources => [{
+            names => ["client", "federation"], compress => 0
+         }]
+      };
+   }
 
    if ($self->{unsecure_port}) {
       push @$listeners, {
@@ -148,10 +158,15 @@ sub start
       }
    }
 
+   my $cert_file = "$self->{hs_dir}/cert.pem";
+   my $key_file = "$self->{hs_dir}/key.pem";
+
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
-        "tls-dh-params-path" => "$cwd/keys/tls.dh",
+        "tls_certificate_path" => $cert_file,
+        "tls_private_key_path" => $key_file,
+        "tls_dh_params_path" => "$cwd/keys/tls.dh",
         "rc_messages_per_second" => 1000,
         "rc_message_burst_count" => 1000,
         "enable_registration" => "true",
@@ -187,32 +202,53 @@ sub start
       : "$self->{synapse_dir}"
    );
 
-   my @command = ( $self->{python} );
+   my @synapse_command = ( $self->{python} );
 
    if( $self->{coverage} ) {
       # Ensures that even --generate-config has coverage reports. This is intentional
-      push @command,
+      push @synapse_command,
          "-m", "coverage", "run", "-p", "--source=$self->{synapse_dir}/synapse";
    }
 
-   push @command,
+   push @synapse_command,
       "-m", "synapse.app.homeserver",
       "--config-path" => $config_path,
       "--server-name" => "localhost:$port";
 
    $output->diag( "Generating config for port $port" );
 
+   my @config_command = (
+      @synapse_command, "--generate-config", "--report-stats=no"
+   );
+
+   my @command;
+
+   if ($self->{dendron}) {
+      @command = (
+         $self->{dendron},
+         "--synapse-python" => $self->{python},
+         "--synapse-config" => $config_path,
+         "--synapse-url" => "http://127.0.0.1:$self->{unsecure_port}",
+         "--cert-file" => $cert_file,
+         "--key-file" => $key_file,
+         "--addr" => "127.0.0.1:$port",
+      )
+   }
+   else {
+      @command = @synapse_command
+   }
+
+   my $env = {
+      "PYTHONPATH" => $pythonpath,
+      "PATH" => $ENV{PATH},
+      "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
+   };
+
    my $loop = $self->loop;
    $loop->run_child(
-      setup => [
-         env => {
-            "PYTHONPATH" => $pythonpath,
-            "PATH" => $ENV{PATH},
-            "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
-         },
-      ],
+      setup => [ env => $env ],
 
-      command => [ @command, "--generate-config", "--report-stats=no" ],
+      command => [ @config_command ],
 
       on_finish => sub {
          my ( $pid, $exitcode, $stdout, $stderr ) = @_;
@@ -225,13 +261,7 @@ sub start
          $output->diag( "Starting server for port $port" );
          $self->add_child(
             $self->{proc} = IO::Async::Process->new(
-               setup => [
-                  env => {
-                     "PYTHONPATH" => $pythonpath,
-                     "PATH" => $ENV{PATH},
-                     "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
-                  },
-               ],
+               setup => [ env => $env ],
 
                command => [ @command, @{ $self->{extra_args} } ],
 
@@ -321,7 +351,12 @@ sub on_synapse_read
       # During logfile rotations sometimes we get a spurious read here. It might
       # be a bug in IO::Async::FileStream, but whatever... ignore it for now
       if( not $self->started_future->is_ready ) {
-         $self->started_future->done if $line =~ m/INFO .* Synapse now listening on port $self->{port}\s*$/;
+         if ( $self->{dendron} ) {
+            $self->started_future->done if $line =~ m/INFO .* Synapse now listening on port $self->{unsecure_port}\s*$/;
+         }
+         else {
+            $self->started_future->done if $line =~ m/INFO .* Synapse now listening on port $self->{port}\s*$/;
+         }
       }
    }
 
