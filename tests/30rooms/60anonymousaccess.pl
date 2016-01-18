@@ -1,4 +1,4 @@
-use Future::Utils qw( try_repeat_until_success );
+use Future::Utils qw( try_repeat_until_success repeat );
 use JSON qw( encode_json );
 
 test "Anonymous user cannot view non-world-readable rooms",
@@ -41,6 +41,18 @@ test "Anonymous user can view world-readable rooms",
       });
    };
 
+test "Anonymous user cannot call /events globally",
+   requires => [ anonymous_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user ) = @_;
+
+      do_request_json_for( $anonymous_user,
+         method => "GET",
+         uri    => "/api/v1/events",
+      )->followed_by( \&expect_4xx_or_empty_chunk );
+   };
+
 test "Anonymous user cannot call /events on non-world_readable room",
    requires => [ anonymous_user_fixture(), local_user_fixture() ],
 
@@ -55,7 +67,13 @@ test "Anonymous user cannot call /events on non-world_readable room",
 
          matrix_send_room_text_message( $user, $room_id, body => "mice" )
       })->then( sub {
-         matrix_get_room_messages( $anonymous_user, $room_id, limit => "2" )
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/events",
+            params => {
+               room_id => $room_id,
+            },
+         );
       })->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
@@ -99,12 +117,8 @@ test "Anonymous user can call /events on world_readable room",
                ( $sent_event_id ) = @_;
             }),
 
-            do_request_json_for( $anonymous_user,
-               method => "GET",
-               uri    => "/api/v1/events",
-            )->main::expect_http_400->then( sub {
-               await_event_not_presence_for( $anonymous_user, $room_id, [] )
-            })->then( sub {
+            await_event_not_presence_for( $anonymous_user, $room_id, [] )
+            ->then( sub {
                my ( $event ) = @_;
 
                assert_json_keys( $event, qw( content ) );
@@ -118,15 +132,11 @@ test "Anonymous user can call /events on world_readable room",
             my ( $stream_token ) = @_;
 
             Future->needs_all(
-               do_request_json_for( $user_not_in_room,
-                  method  => "PUT",
-                  uri     => "/api/v1/presence/:user_id/status",
-                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
+               matrix_set_presence_status( $user_not_in_room, "online",
+                  status_msg => "Worshiping lemurs' tails",
                ),
-               do_request_json_for( $user,
-                  method  => "PUT",
-                  uri     => "/api/v1/presence/:user_id/status",
-                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
+               matrix_set_presence_status( $user, "online",
+                  status_msg => "Worshiping lemurs' tails",
                ),
 
                await_event_not_presence_for( $anonymous_user, $room_id, [ $user ] )->then( sub {
@@ -467,6 +477,68 @@ test "Anonymous users can get individual state for world_readable rooms after le
          );
       });
    };
+
+test "Annonymous user calling /events doesn't tightloop",
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user, $user ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+      })->then( sub {
+         do_request_json_for( $anonymous_user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/initialSync",
+         );
+      })->then( sub {
+         my ( $sync_body ) = @_;
+         my $sync_from = $sync_body->{messages}->{end};
+
+         repeat( sub {
+            my ( undef, $f ) = @_;
+
+            my $end_token = $f ? $f->get->{end} : $sync_from;
+
+            log_if_fail "Events body", $f ? $f->get : undef;
+
+            get_events_no_timeout( $anonymous_user, $room_id, $end_token );
+         }, foreach => [ 0 .. 5 ], until => sub {
+            my ( $res ) = @_;
+            $res->failure or not @{ $res->get->{chunk} };
+         });
+      })->then( sub {
+          my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_empty_list( $body->{chunk} );
+
+         Future->done(1);
+      });
+   };
+
+
+sub get_events_no_timeout
+{
+   my ( $user, $room_id, $from_token ) = @_;
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/api/v1/events",
+      params => {
+         room_id => $room_id,
+         timeout => 0,
+         from => $from_token,
+      },
+   );
+}
+
 
 sub check_events
 {
@@ -889,7 +961,7 @@ sub anonymous_user_fixture
             my ( $body ) = @_;
             my $access_token = $body->{access_token};
 
-            Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, [], undef ) );
+            Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, undef, [], undef ) );
          });
    })
 }

@@ -113,7 +113,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $event_id, $next_batch );
+      my ( $filter_id, $room_id, $event_id );
 
       my $filter = {
          room => {
@@ -134,14 +134,13 @@ test "A message sent after an initial sync appears in the timeline of an increme
       })->then( sub {
          my ( $body ) = @_;
 
-         $next_batch = $body->{next_batch};
          matrix_send_room_text_message( $user, $room_id,
             body => "A test message", txn_id => "my_transaction_id"
          );
       })->then( sub {
          ( $event_id ) = @_;
 
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -149,8 +148,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
          assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         @{ $room->{state}{events} } == 0
-            or die "Did not expect a state event";
+         assert_json_empty_list( $room->{state}{events} );
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one timeline event";
          $room->{timeline}{events}[0]{event_id} eq $event_id
@@ -212,8 +210,7 @@ test "A filtered timeline reaches its limit",
          assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         @{ $room->{state}{events} } == 0
-            or die "Did not expect a state event";
+         assert_json_empty_list( $room->{state}{events} );
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one timeline event";
          $room->{timeline}{events}[0]{event_id} eq $event_id
@@ -269,7 +266,7 @@ test "A full_state incremental update returns only recent timeline",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id );
 
       my $filter = { room => { timeline => { limit => 1 } } };
 
@@ -284,7 +281,6 @@ test "A full_state incremental update returns only recent timeline",
       })->then( sub {
          my ( $body ) = @_;
 
-         $next_batch = $body->{next_batch};
          Future->needs_all( map {
             matrix_send_room_message( $user, $room_id,
                content => { "filler" => $_ },
@@ -297,8 +293,7 @@ test "A full_state incremental update returns only recent timeline",
                type    => "another.filler.type",
              );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch,
-             full_state => 'true');
+         matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
          my ( $body ) = @_;
 
