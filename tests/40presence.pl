@@ -21,11 +21,8 @@ test "Presence changes are reported to local room members",
    do => sub {
       my ( $senduser, $local_user, undef ) = @_;
 
-      do_request_json_for( $senduser,
-         method => "PUT",
-         uri    => "/api/v1/presence/:user_id/status",
-
-         content => { presence => "online", status_msg => $status_msg },
+      matrix_set_presence_status( $senduser, "online",
+         status_msg => $status_msg,
       )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
@@ -86,12 +83,7 @@ test "Presence changes to OFFLINE are reported to local room members",
    do => sub {
       my ( $senduser, $local_user, undef ) = @_;
 
-      do_request_json_for( $senduser,
-         method => "PUT",
-         uri    => "/api/v1/presence/:user_id/status",
-
-         content => { presence => "offline" },
-      )->then( sub {
+      matrix_set_presence_status( $senduser, "offline" )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
 
