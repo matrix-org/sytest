@@ -1,4 +1,4 @@
-use List::Util qw( all first );
+use List::Util qw( first );
 
 sub inviteonly_room_fixture
 {
