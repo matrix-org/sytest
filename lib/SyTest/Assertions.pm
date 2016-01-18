@@ -50,7 +50,7 @@ sub assert_ok
 
    assert_eq( $got, $want, $name )
 
-Fails the test of C<$got> is not stringily equal to C<$want>.
+Fails the test if C<$got> is not stringily equal to C<$want>.
 
 =cut
 
