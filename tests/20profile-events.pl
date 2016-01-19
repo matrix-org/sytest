@@ -90,3 +90,23 @@ test "Global /initialSync reports my own profile",
          Future->done(1);
       });
    };
+
+test "Newly-registered users have a presence state",
+   requires => [ local_user_fixture() ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      matrix_get_presence_status( $user )->then( sub {
+         my ( $status ) = @_;
+         log_if_fail "Status", $status;
+
+         defined $status->{presence} or
+            die "Expected 'presence' to be defined";
+
+         !exists $status->{status_msg} or defined $status->{status_msg} or
+            die "Expected 'status_msg' to be defined if it is present";
+
+         Future->done(1);
+      });
+   };
