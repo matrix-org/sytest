@@ -26,7 +26,7 @@ test "Can sync a joined room",
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{ephemeral}, qw( events ));
 
-         matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -60,8 +60,7 @@ test "Full state sync includes joined rooms",
       })->then( sub {
          my ( $body ) = @_;
 
-         matrix_sync( $user, filter => $filter_id, since => $body->{next_batch},
-             full_state => 'true');
+         matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -84,7 +83,7 @@ test "Newly joined room is included in an incremental sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id );
 
       my $filter = { room => { timeline => { limit => 10 } } };
 
@@ -93,15 +92,11 @@ test "Newly joined room is included in an incremental sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
          matrix_create_room( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -111,7 +106,7 @@ test "Newly joined room is included in an incremental sync",
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{ephemeral}, qw( events ));
 
-         matrix_sync( $user, filter => $filter_id, since => $body->{next_batch} );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -130,7 +125,7 @@ test "Newly joined room has correct timeline in incremental sync",
    check => sub {
       my ( $user_a, $user_b ) = @_;
 
-      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id );
 
       my $filter = {
          room => {
@@ -151,11 +146,7 @@ test "Newly joined room has correct timeline in incremental sync",
             matrix_send_room_text_message( $user_a, $room_id, body => "test" );
          } 0 .. 3 );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b )->on_done( sub {
-            my ( $body ) = @_;
-
-            $next_b = $body->{next_batch};
-         });
+         matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
          Future->needs_all( map {
             matrix_send_room_text_message( $user_a, $room_id, body => "test" );
@@ -163,7 +154,7 @@ test "Newly joined room has correct timeline in incremental sync",
       })->then( sub {
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
          my $room = $body->{rooms}{join}{$room_id};

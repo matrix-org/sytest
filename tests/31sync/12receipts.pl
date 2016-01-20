@@ -59,7 +59,7 @@ test "New read receipts appear in incremental v2 /sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $event_id, $next_batch );
+      my ( $filter_id, $room_id, $event_id );
 
       my $filter = {
          presence => { types => [] },
@@ -83,13 +83,9 @@ test "New read receipts appear in incremental v2 /sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
          matrix_advance_room_receipt( $user, $room_id, "m.read", $event_id );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 

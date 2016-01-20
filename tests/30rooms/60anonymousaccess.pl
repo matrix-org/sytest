@@ -132,15 +132,11 @@ test "Anonymous user can call /events on world_readable room",
             my ( $stream_token ) = @_;
 
             Future->needs_all(
-               do_request_json_for( $user_not_in_room,
-                  method  => "PUT",
-                  uri     => "/api/v1/presence/:user_id/status",
-                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
+               matrix_set_presence_status( $user_not_in_room, "online",
+                  status_msg => "Worshiping lemurs' tails",
                ),
-               do_request_json_for( $user,
-                  method  => "PUT",
-                  uri     => "/api/v1/presence/:user_id/status",
-                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
+               matrix_set_presence_status( $user, "online",
+                  status_msg => "Worshiping lemurs' tails",
                ),
 
                await_event_not_presence_for( $anonymous_user, $room_id, [ $user ] )->then( sub {
@@ -567,10 +563,11 @@ sub check_events
 
       my $found = 0;
       foreach my $event ( @{ $body->{chunk} } ) {
-         next if all { $_ ne "content" } keys %{ $event };
-         next if all { $_ ne "body" } keys %{ $event->{content} };
-         $found = 1 if $event->{content}->{body} eq "public";
-         die "Should not have found private" if $event->{content}->{body} eq "private";
+         next if !exists $event->{content};
+         next if !exists $event->{content}{body};
+
+         $found = 1 if $event->{content}{body} eq "public";
+         die "Should not have found private" if $event->{content}{body} eq "private";
       }
 
       Future->done( $found );
@@ -965,7 +962,7 @@ sub anonymous_user_fixture
             my ( $body ) = @_;
             my $access_token = $body->{access_token};
 
-            Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, [], undef ) );
+            Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, undef, [], undef ) );
          });
    })
 }

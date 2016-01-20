@@ -47,7 +47,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
    check => sub {
       my ( $user_a, $user_b ) = @_;
 
-      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id );
 
       my $filter = { room => { include_leave => JSON::true } };
 
@@ -65,17 +65,13 @@ test "Newly banned rooms appear in the leave section of incremental sync",
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_b = $body->{next_batch};
-
          do_request_json_for( $user_a,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/ban",
             content => { user_id => $user_b->user_id, reason => "testing" },
          );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -94,7 +90,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
    check => sub {
       my ( $user_a, $user_b ) = @_;
 
-      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id );
 
       my $filter = { room => { include_leave => JSON::true } };
 
@@ -112,10 +108,6 @@ test "Newly banned rooms appear in the leave section of incremental sync",
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_b = $body->{next_batch};
-
          do_request_json_for( $user_a,
             method => "POST",
             uri    => "/api/v1/rooms/$room_id/ban",
@@ -129,7 +121,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
 
