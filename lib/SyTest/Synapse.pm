@@ -260,7 +260,7 @@ sub start
                $polling_period *= 2;
                $polling_count -= 1;
 
-               if ($polling_count == 0) {
+               if ( $polling_count == 0 ) {
                   die "Synapse failed to start within ${polling_period}s";
                }
 
