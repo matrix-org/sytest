@@ -239,6 +239,37 @@ sub start
             )
          );
 
+         my $polling_period = 0.01;
+         my $polling_count = 20;
+         my $poll;
+         $poll = sub {
+            $loop->connect(
+               addr => {
+                  family   => "inet",
+                  socktype => "stream",
+                  port     => $self->{port},
+                  ip       => "127.0.0.1",
+               }
+            )->then( sub {
+               my ( $connection ) = @_;
+
+               $connection->close;
+
+               $self->started_future->done;
+            }, sub {
+               $polling_period *= 2;
+               $polling_count -= 1;
+
+               if ( $polling_count == 0 ) {
+                  die "Synapse failed to start within ${polling_period}s";
+               }
+
+               $loop->delay_future( after => $polling_period )->then( $poll );
+            });
+         };
+
+         $self->adopt_future( $poll->() );
+
          $self->open_logfile;
       }
    );
@@ -316,12 +347,6 @@ sub on_synapse_read
          if( !$filter or any { $line =~ m/$_/ } @$filter ) {
             print STDERR "\e[1;35m[server $self->{port}]\e[m: $line\n";
          }
-      }
-
-      # During logfile rotations sometimes we get a spurious read here. It might
-      # be a bug in IO::Async::FileStream, but whatever... ignore it for now
-      if( not $self->started_future->is_ready ) {
-         $self->started_future->done if $line =~ m/INFO .* Synapse now listening on port $self->{port}\s*$/;
       }
    }
 
