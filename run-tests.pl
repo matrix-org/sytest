@@ -437,9 +437,11 @@ sub _run_test
 
    my $success = eval {
       my @reqs;
-      my $f_test = Future->needs_all( @req_futures )
+      my $f_setup = Future->needs_all( @req_futures )
          ->on_done( sub { @reqs = @_ } )
          ->on_fail( sub { die "fixture failed - $_[0]\n" } );
+
+      my $f_test = $f_setup;
 
       my $check = $test->check;
       if( my $do = $test->do ) {
@@ -472,6 +474,12 @@ sub _run_test
             Future->done;
          });
       }
+
+      Future->wait_any(
+         $f_setup,
+         $loop->delay_future( after => 60 )
+            ->then_fail( "Timed out waiting for setup" )
+      )->get;
 
       Future->wait_any(
          $f_test,
