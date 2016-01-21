@@ -224,11 +224,19 @@ sub start
    my @command;
 
    if ($self->{dendron}) {
+      $db_type eq "pg" or die "Dendron can only run against postgres";
+
+      my @db_arg_pairs = ();
+      while ( my ( $key, $value ) = each %db_args) {
+         push @db_arg_pairs, $key . '=' . $value;
+      }
+
       @command = (
          $self->{dendron},
          "--synapse-python" => $self->{python},
          "--synapse-config" => $config_path,
          "--synapse-url" => "http://127.0.0.1:$self->{unsecure_port}",
+         "--synapse-postgres" => join(" ", @db_arg_pairs),
          "--cert-file" => $cert_file,
          "--key-file" => $key_file,
          "--addr" => "127.0.0.1:$port",
@@ -273,6 +281,7 @@ sub start
          my $polling_count = 20;
          my $poll;
          $poll = sub {
+            print STDERR "Connecting to server $self->{port}\n";
             $loop->connect(
                addr => {
                   family   => "inet",
@@ -281,6 +290,7 @@ sub start
                   ip       => "127.0.0.1",
                }
             )->then( sub {
+               print STDERR "Connected to server $self->{port}\n";
                my ( $connection ) = @_;
 
                $connection->close;
