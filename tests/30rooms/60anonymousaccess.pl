@@ -97,6 +97,129 @@ sub await_event_not_presence_for
    });
 }
 
+
+test "Real user can call /events on world_readable room",
+   requires => [ local_user_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ),
+                 local_user_fixture( with_events => 0 ) ],
+
+   do => sub {
+      my ( $real_user, $user, $user_not_in_room ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+      })->then( sub {
+         flush_events_for( $real_user )
+      })->then( sub {
+         Future->needs_all(
+            matrix_send_room_text_message( $user, $room_id, body => "mice" ),
+
+            await_event_not_presence_for( $real_user, $room_id, [] )
+            ->then( sub {
+               my ( $event ) = @_;
+
+               assert_json_keys( $event, qw( content ) );
+               my $content = $event->{content};
+               assert_json_keys( $content, qw( body ) );
+               $content->{body} eq "mice" or die "Want content body to be mice";
+
+               Future->done( 1 );
+            }),
+         );
+      });
+   };
+
+test "Real user can call /events on another world_readable room",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 local_user_fixture( with_events => 0 ) ],
+
+   do => sub {
+      my ( $real_user, $user ) = @_;
+
+      my ( $room_id1, $room_id2 );
+
+      Future->needs_all(
+         matrix_create_and_join_room( [ $user ] ),
+         matrix_create_and_join_room( [ $user ] ),
+      )->then( sub {
+         ( $room_id1, $room_id2 ) = @_;
+
+         Future->needs_all(
+            matrix_set_room_history_visibility( $user, $room_id1, "world_readable" ),
+            matrix_set_room_history_visibility( $user, $room_id2, "world_readable" ),
+         )
+      })->then( sub {
+         flush_events_for( $real_user )
+      })->then( sub {
+         Future->needs_all(
+            matrix_send_room_text_message( $user, $room_id1, body => "moose" ),
+            await_event_not_presence_for( $real_user, $room_id1, [] ),
+         );
+      })->then( sub {
+         flush_events_for( $real_user )
+      })->then( sub {
+         Future->needs_all(
+            delay( 0.1 )->then( sub {
+               matrix_send_room_text_message( $user, $room_id2, body => "mice" );
+            }),
+
+            await_event_not_presence_for( $real_user, $room_id2, [] )
+            ->then( sub {
+               my ( $event ) = @_;
+
+               assert_json_keys( $event, qw( content ) );
+               my $content = $event->{content};
+               assert_json_keys( $content, qw( body ) );
+               $content->{body} eq "mice" or die "Want content body to be mice";
+
+               Future->done( 1 );
+            }),
+         );
+      });
+   };
+
+
+test "Real user's /events on world_readable room is woken up",
+   requires => [ local_user_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ),
+                 local_user_fixture( with_events => 0 ) ],
+
+   do => sub {
+      my ( $real_user, $user, $user_not_in_room ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_and_join_room( [ $user ] )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+      })->then( sub {
+         flush_events_for( $real_user )
+      })->then( sub {
+         Future->needs_all(
+            matrix_send_room_text_message( $user, $room_id, body => "mice" ),
+
+            await_event_not_presence_for( $real_user, $room_id, [] )
+            ->then( sub {
+               my ( $event ) = @_;
+
+               assert_json_keys( $event, qw( content ) );
+               my $content = $event->{content};
+               assert_json_keys( $content, qw( body ) );
+               $content->{body} eq "mice" or die "Want content body to be mice";
+
+               Future->done( 1 );
+            }),
+         );
+      });
+   };
+
+
+
 test "Anonymous user can call /events on world_readable room",
    requires => [ anonymous_user_fixture(), local_user_fixture(), local_user_fixture() ],
 
@@ -110,6 +233,8 @@ test "Anonymous user can call /events on world_readable room",
          ( $room_id ) = @_;
 
          matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+      })->then( sub {
+         matrix_initialsync_room( $anonymous_user, $room_id )
       })->then( sub {
          Future->needs_all(
             matrix_send_room_text_message( $user, $room_id, body => "mice" )
