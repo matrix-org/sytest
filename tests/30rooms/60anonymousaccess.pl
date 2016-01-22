@@ -194,7 +194,7 @@ foreach my $i (
    );
 
    test(
-      "Real user can call /events on another world_readable room",
+      "$name user can call /events on another world_readable room",
       requires => [ $fixture->( with_events => 0 ),
                     local_user_fixture( with_events => 0 ) ],
 
@@ -235,7 +235,7 @@ foreach my $i (
                   assert_json_keys( $event, qw( content ) );
                   my $content = $event->{content};
                   assert_json_keys( $content, qw( body ) );
-                  $content->{body} eq "mice" or die "Want content body to be mice";
+                  assert_eq( $content->{body}, "mice" );
 
                   Future->done( 1 );
                }),
