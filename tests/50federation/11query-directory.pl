@@ -8,7 +8,7 @@ test "Outbound federation can query room alias directory",
       my $local_server_name = $inbound_server->server_name;
       my $room_alias = "#test:$local_server_name";
 
-      require_stub $inbound_server->await_query_directory( $room_alias )
+      require_stub $inbound_server->await_request_query_directory( $room_alias )
          ->on_done( sub {
             my ( $req ) = @_;
 

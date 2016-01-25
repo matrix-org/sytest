@@ -370,7 +370,7 @@ sub mk_await_request_pair
 
    no strict 'refs';
    no warnings 'redefine';
-   *{"${class}::await_$shortname"} = $awaitfunc;
+   *{"${class}::await_request_$shortname"} = $awaitfunc;
    *{"${class}::on_request_federation_v1_$shortname"} = $on_requestfunc;
 }
 

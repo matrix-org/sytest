@@ -7,7 +7,7 @@ test "Outbound federation can query profile data",
 
       my $local_server_name = $inbound_server->server_name;
 
-      require_stub $inbound_server->await_query_profile( "\@user:$local_server_name" )
+      require_stub $inbound_server->await_request_query_profile( "\@user:$local_server_name" )
          ->on_done( sub {
             my ( $req ) = @_;
 
