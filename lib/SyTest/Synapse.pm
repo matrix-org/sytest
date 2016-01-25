@@ -161,6 +161,8 @@ sub start
    my $cert_file = "$self->{hs_dir}/cert.pem";
    my $key_file = "$self->{hs_dir}/key.pem";
 
+   my $macaroon_secret_key = "secret_$self->{port}";
+
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
@@ -172,6 +174,7 @@ sub start
         "enable_registration" => "true",
         "database" => $db_config,
         "database_config" => $db_config_path,
+        "macaroon_secret_key" => $macaroon_secret_key,
 
         # Metrics are always useful
         "enable_metrics" => 1,
@@ -228,6 +231,9 @@ sub start
 
       my @db_arg_pairs = ();
       while ( my ( $key, $value ) = each %db_args) {
+         if ( $key eq "database" ) {
+            $key = "dbname";
+         }
          push @db_arg_pairs, $key . '=' . $value;
       }
 
@@ -237,6 +243,8 @@ sub start
          "--synapse-config" => $config_path,
          "--synapse-url" => "http://127.0.0.1:$self->{unsecure_port}",
          "--synapse-postgres" => join(" ", @db_arg_pairs),
+         "--macaroon-secret" => $macaroon_secret_key,
+         "--server-name" => "localhost:$port",
          "--cert-file" => $cert_file,
          "--key-file" => $key_file,
          "--addr" => "127.0.0.1:$port",
