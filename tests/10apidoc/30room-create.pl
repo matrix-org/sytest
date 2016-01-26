@@ -14,7 +14,7 @@ test "POST /createRoom makes a public room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/api/v1/createRoom",
+         uri    => "/r0/createRoom",
 
          content => {
             visibility      => "public",
@@ -57,7 +57,7 @@ test "POST /createRoom makes a private room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/api/v1/createRoom",
+         uri    => "/r0/createRoom",
 
          content => {
             visibility => "private",
@@ -83,7 +83,7 @@ test "POST /createRoom makes a private room with invites",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/api/v1/createRoom",
+         uri    => "/r0/createRoom",
 
          content => {
             visibility => "private",
@@ -109,7 +109,7 @@ sub matrix_create_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/api/v1/createRoom",
+      uri    => "/r0/createRoom",
 
       content => {
          visibility => $opts{visibility} || "public",

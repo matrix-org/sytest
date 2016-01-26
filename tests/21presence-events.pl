@@ -1,5 +1,5 @@
 # Eventually this will be changed; see SPEC-53
-my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
+my $PRESENCE_LIST_URI = "/r0/presence/list/:user_id";
 
 my $fixture = local_user_fixture();
 

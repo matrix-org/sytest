@@ -35,7 +35,7 @@ test "GET /login yields a set of flows",
       my ( $http ) = @_;
 
       $http->do_request_json(
-         uri => "/api/v1/login",
+         uri => "/r0/login",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -75,7 +75,7 @@ test "POST /login can log in as a user",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/login",
+         uri    => "/r0/login",
 
          content => {
             type     => "m.login.password",
@@ -103,7 +103,7 @@ test "POST /login wrong password is rejected",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/login",
+         uri    => "/r0/login",
 
          content => {
             type     => "m.login.password",
@@ -136,7 +136,7 @@ test "POST /tokenrefresh invalidates old refresh token",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/login",
+         uri    => "/r0/login",
 
          content => {
             type     => "m.login.password",
