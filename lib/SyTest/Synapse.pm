@@ -279,8 +279,8 @@ sub start
             )
          );
 
-         my $polling_period = 0.01;
-         my $polling_count = 20;
+         my $polling_period = 0.1;
+
          my $poll;
          $poll = sub {
             print STDERR "Connecting to server $self->{port}\n";
@@ -299,13 +299,6 @@ sub start
 
                $self->started_future->done;
             }, sub {
-               $polling_period *= 2;
-               $polling_count -= 1;
-
-               if ( $polling_count == 0 ) {
-                  die "Synapse failed to start within ${polling_period}s";
-               }
-
                $loop->delay_future( after => $polling_period )->then( $poll );
             });
          };
