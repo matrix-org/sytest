@@ -52,6 +52,46 @@ test "Can invite existing 3pid",
       });
    };
 
+test "Can invite existing 3pid with no ops",
+   requires => [ local_user_fixtures( 3 ), id_server_fixture() ],
+
+   do => sub {
+      my ( $creator, $inviter, $invitee, $id_server ) = @_;
+
+      my $invitee_mxid = $invitee->user_id;
+
+      my $room_id;
+
+      $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
+      ->then( sub {
+         matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private" )
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $inviter,
+            method => "POST",
+            uri    => "/api/v1/rooms/$room_id/invite",
+
+            content => {
+               id_server    => $id_server->name,
+               medium       => "email",
+               address      => $invitee_email,
+            },
+         );
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee_mxid,
+         );
+      })->on_done( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+         assert_eq( $body->{membership}, "invite",
+            'invited user membership' );
+      });
+   };
+
 test "Can invite existing 3pid in createRoom",
    requires => [ local_user_fixtures( 2 ), id_server_fixture() ],
 
@@ -88,34 +128,34 @@ test "Can invite existing 3pid in createRoom",
 
 
 test "Can invite unbound 3pid",
-   requires => [ local_user_fixtures( 2 ), $main::HOMESERVER_INFO[0],
+   requires => [ local_user_fixtures( 3 ), $main::HOMESERVER_INFO[0],
                  id_server_fixture() ],
 
    do => sub {
-      my ( $inviter, $invitee, $info, $id_server ) = @_;
+      my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;
       my $hs_uribase = $info->client_location;
 
-      can_invite_unbound_3pid( $inviter, $invitee, $hs_uribase, $id_server );
+      can_invite_unbound_3pid( $creator, $inviter, $invitee, $hs_uribase, $id_server );
    };
 
 test "Can invite unbound 3pid over federation",
-   requires => [ local_user_fixture(), remote_user_fixture(),
+   requires => [ local_user_fixture( 2 ), remote_user_fixture(),
                  $main::HOMESERVER_INFO[1], id_server_fixture() ],
 
    do => sub {
-      my ( $inviter, $invitee, $info, $id_server ) = @_;
+      my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;
       my $hs_uribase = $info->client_location;
 
-      can_invite_unbound_3pid( $inviter, $invitee, $hs_uribase, $id_server );
+      can_invite_unbound_3pid( $creator, $inviter, $invitee, $hs_uribase, $id_server );
    };
 
 sub can_invite_unbound_3pid
 {
-   my ( $inviter, $invitee, $hs_uribase, $id_server ) = @_;
+   my ( $creator, $inviter, $invitee, $hs_uribase, $id_server ) = @_;
 
    my $room_id;
 
-   matrix_create_room( $inviter, visibility => "private" )
+   matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private" )
    ->then( sub {
       ( $room_id ) = @_;
 

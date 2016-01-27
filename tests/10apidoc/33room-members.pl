@@ -324,6 +324,13 @@ sub matrix_create_and_join_room
 
       log_if_fail "room_id=$room_id";
 
+      Future->needs_all(
+        ( map {
+            my $user = $_;
+            matrix_invite_user_to_room( $creator, $user, $room_id );
+         } @other_members)
+      );
+   })->then( sub {
       # Best not to join remote users concurrently because of
       #   https://matrix.org/jira/browse/SYN-318
       my %members_by_server = partition_by { $_->http } @other_members;
