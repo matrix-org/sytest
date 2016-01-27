@@ -129,7 +129,7 @@ sub start
 
    my $listeners = [];
 
-   if ($self->{dendron}) {
+   if( $self->{dendron} ) {
       # If we are running synapse behind dendron then only bind the unsecure
       # port for synapse.
       $self->{unsecure_port} = $port + 9000 - 8000;
@@ -141,19 +141,19 @@ sub start
          bind_address => "127.0.0.1",
          tls => 1,
          resources => [{
-            names => ["client", "federation"], compress => 0
+            names => [ "client", "federation" ], compress => 0
          }]
       };
    }
 
-   if ($self->{unsecure_port}) {
+   if( $self->{unsecure_port} ) {
       push @$listeners, {
          type => "http",
          port => $self->{unsecure_port},
          bind_address => "127.0.0.1",
          tls => 0,
          resources => [{
-            names => ["client", "federation"], compress => 0
+            names => [ "client", "federation" ], compress => 0
          }]
       }
    }
@@ -180,7 +180,7 @@ sub start
         "enable_metrics" => 1,
         "metrics_port" => ( $port - 8000 + 9090 ),
 
-        "perspectives" => {servers => {}},
+        "perspectives" => { servers => {} },
 
         # Stack traces are useful
         "full_twisted_stacktraces" => "true",
@@ -226,11 +226,11 @@ sub start
 
    my @command;
 
-   if ($self->{dendron}) {
+   if( $self->{dendron} ) {
       $db_type eq "pg" or die "Dendron can only run against postgres";
 
       my @db_arg_pairs = ();
-      while ( my ( $key, $value ) = each %db_args) {
+      while( my ( $key, $value ) = each %db_args ) {
          if ( $key eq "database" ) {
             $key = "dbname";
          }
