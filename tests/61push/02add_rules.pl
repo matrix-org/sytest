@@ -205,10 +205,15 @@ test "Can add global push rule before an existing rule",
    check => sub {
       my ( $user ) = @_;
 
+
       check_add_push_rule( $user, "global", "room", "#a:example.com", {
-            actions => ["notify"],
+         actions => ["notify"],
       })->then( sub {
          check_add_push_rule( $user, "global", "room", "#b:example.com", {
+            actions => ["notify"],
+         });
+      })->then( sub {
+         check_add_push_rule( $user, "global", "room", "#c:example.com", {
             actions => ["notify"],
          }, before => "#a:example.com" );
       })->then( sub {
@@ -219,8 +224,11 @@ test "Can add global push rule before an existing rule",
          assert_json_keys( my $global = $body->{global}, qw( room ) );
          assert_json_list( my $room = $global->{room} );
 
+         log_if_fail "Room rules", $room;
+
          assert_eq( $room->[0]{rule_id}, "#b:example.com" );
-         assert_eq( $room->[1]{rule_id}, "#a:example.com" );
+         assert_eq( $room->[1]{rule_id}, "#c:example.com" );
+         assert_eq( $room->[2]{rule_id}, "#a:example.com" );
 
          Future->done(1);
       });
@@ -244,7 +252,7 @@ test "Can add global push rule after an existing rule",
       })->then( sub {
          check_add_push_rule( $user, "global", "room", "#c:example.com", {
             actions => ["notify"],
-         }, after => "#a:example.com" );
+         }, after => "#b:example.com" );
       })->then( sub {
          matrix_get_push_rules( $user );
       })->then( sub {
@@ -253,9 +261,11 @@ test "Can add global push rule after an existing rule",
          assert_json_keys( my $global = $body->{global}, qw( room ) );
          assert_json_list( my $room = $global->{room} );
 
-         assert_eq( $room->[0]{rule_id}, "#a:example.com" );
+         log_if_fail "Room rules", $room;
+
+         assert_eq( $room->[0]{rule_id}, "#b:example.com" );
          assert_eq( $room->[1]{rule_id}, "#c:example.com" );
-         assert_eq( $room->[2]{rule_id}, "#b:example.com" );
+         assert_eq( $room->[2]{rule_id}, "#a:example.com" );
 
          Future->done(1);
       });
@@ -289,6 +299,7 @@ test "Can delete a push rule",
          Future->done(1);
       });
    };
+
 
 test "Can disable a push rule",
    requires => [ local_user_fixture() ],
