@@ -31,7 +31,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
          do_request_json_for( $as_user,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/join",
+            uri    => "/r0/rooms/$room_id/join",
             params => {
                user_id => $ghost->user_id,
             },
@@ -58,7 +58,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
             do_request_json_for( $as_user,
                method => "POST",
-               uri    => "/api/v1/rooms/$room_id/send/m.room.message",
+               uri    => "/r0/rooms/$room_id/send/m.room.message",
                params => {
                   user_id => $ghost->user_id,
                },
@@ -168,7 +168,7 @@ test "Ghost user must register before joining room",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/api/v1/rooms/$room_id/join",
+         uri    => "/r0/rooms/$room_id/join",
          params => {
             user_id => "@".$unregistered_as_user_localpart.":".$hs_info->server_name,
          },

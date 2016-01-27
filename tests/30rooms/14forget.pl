@@ -233,7 +233,7 @@ sub matrix_forget_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/api/v1/rooms/$room_id/forget",
+      uri    => "/r0/rooms/$room_id/forget",
 
       content => {},
    )->then_done(1);

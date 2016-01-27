@@ -18,7 +18,7 @@ sub matrix_get_presence_status
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/api/v1/presence/:user_id/status",
+      uri    => "/r0/presence/:user_id/status",
    );
 }
 
@@ -37,7 +37,7 @@ sub matrix_set_presence_status
 
    do_request_json_for( $user,
       method => "PUT",
-      uri    => "/api/v1/presence/:user_id/status",
+      uri    => "/r0/presence/:user_id/status",
 
       content => { presence => $presence, %params }
    )->then_done();

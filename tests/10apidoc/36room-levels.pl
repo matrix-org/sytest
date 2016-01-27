@@ -10,7 +10,7 @@ test "GET /rooms/:room_id/state/m.room.power_levels can fetch levels",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
+         uri    => "/r0/rooms/$room_id/state/m.room.power_levels",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -52,7 +52,7 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
 
          do_request_json_for( $user,
             method => "PUT",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.power_levels",
+            uri    => "/r0/rooms/$room_id/state/m.room.power_levels",
             content => $levels,
          )
       })->then( sub {

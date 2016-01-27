@@ -92,7 +92,7 @@ sub matrix_register_user
          $f = $f->then( sub {
             $http->do_request_json(
                method => "GET",
-               uri    => "/api/v1/events",
+               uri    => "/r0/events",
                params => { access_token => $access_token, timeout => 0 },
             )
          })->on_done( sub {
@@ -130,7 +130,7 @@ sub local_user_fixture
             my $user = $f->get;
             do_request_json_for( $user,
                method => "PUT",
-               uri    => "/api/v1/profile/:user_id/displayname",
+               uri    => "/r0/profile/:user_id/displayname",
 
                content => { displayname => $displayname },
             )->then_done( $user );
@@ -141,7 +141,7 @@ sub local_user_fixture
             my $user = $f->get;
             do_request_json_for( $user,
                method => "PUT",
-               uri    => "/api/v1/profile/:user_id/avatar_url",
+               uri    => "/r0/profile/:user_id/avatar_url",
 
                content => { avatar_url => $avatar_url },
             )->then_done( $user );
@@ -152,7 +152,7 @@ sub local_user_fixture
             my $user = $f->get;
             do_request_json_for( $user,
                method => "PUT",
-               uri    => "/api/v1/presence/:user_id/status",
+               uri    => "/r0/presence/:user_id/status",
 
                content => {
                   presence   => $presence,
