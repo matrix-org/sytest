@@ -32,17 +32,17 @@ sub gen_token
    return join "", map { chr 64 + rand 63 } 1 .. $length;
 }
 
-push our @EXPORT, qw( AS_USER_INFO HOMESERVER_INFO );
+push our @EXPORT, qw( AS_INFO HOMESERVER_INFO );
 
-struct ASUserInfo => [qw( localpart user_id as2hs_token hs2as_token )];
+struct ASInfo => [qw( localpart user_id as2hs_token hs2as_token )];
 
-our $AS_USER_INFO = fixture(
+our $AS_INFO = fixture(
    setup => sub {
       my $port = $HOMESERVER_PORTS[0];
 
       my $localpart = "as-user";
 
-      Future->done( ASUserInfo(
+      Future->done( ASInfo(
          $localpart,
          "\@${localpart}:localhost:${port}",
          gen_token( 32 ),
@@ -55,7 +55,7 @@ our @HOMESERVER_INFO = map {
    my $idx = $_;
 
    fixture(
-      requires => [ $main::TEST_SERVER_INFO, $AS_USER_INFO ],
+      requires => [ $main::TEST_SERVER_INFO, $AS_INFO ],
 
       setup => sub {
          my ( $test_server_info, $as_user_info ) = @_;
