@@ -205,7 +205,6 @@ test "Can add global push rule before an existing rule",
    check => sub {
       my ( $user ) = @_;
 
-
       check_add_push_rule( $user, "global", "room", "#a:example.com", {
          actions => ["notify"],
       })->then( sub {
