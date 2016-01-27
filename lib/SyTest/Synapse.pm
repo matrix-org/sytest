@@ -283,7 +283,6 @@ sub start
 
          my $poll;
          $poll = sub {
-            print STDERR "Connecting to server $self->{port}\n";
             $loop->connect(
                addr => {
                   family   => "inet",
@@ -303,6 +302,7 @@ sub start
             });
          };
 
+         print STDERR "Connecting to server $self->{port}\n";
          $self->adopt_future( $poll->() );
 
          $self->open_logfile;
