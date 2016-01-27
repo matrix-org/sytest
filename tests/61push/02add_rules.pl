@@ -176,10 +176,10 @@ test "New rules appear before old rules by default",
       my ( $user ) = @_;
 
       check_add_push_rule( $user, "global", "room", "#a:example.com", {
-         actions => ["notify"],
+         actions => [ "notify" ],
       })->then( sub {
          check_add_push_rule( $user, "global", "room", "#b:example.com", {
-            actions => ["notify"],
+            actions => [ "notify" ],
          });
       })->then( sub {
          matrix_get_push_rules( $user );
@@ -206,14 +206,14 @@ test "Can add global push rule before an existing rule",
       my ( $user ) = @_;
 
       check_add_push_rule( $user, "global", "room", "#a:example.com", {
-         actions => ["notify"],
+         actions => [ "notify" ],
       })->then( sub {
          check_add_push_rule( $user, "global", "room", "#b:example.com", {
-            actions => ["notify"],
+            actions => [ "notify" ],
          });
       })->then( sub {
          check_add_push_rule( $user, "global", "room", "#c:example.com", {
-            actions => ["notify"],
+            actions => [ "notify" ],
          }, before => "#a:example.com" );
       })->then( sub {
          matrix_get_push_rules( $user );
@@ -243,14 +243,14 @@ test "Can add global push rule after an existing rule",
       my ( $user ) = @_;
 
       check_add_push_rule( $user, "global", "room", "#a:example.com", {
-         actions => ["notify"],
+         actions => [ "notify" ],
       })->then( sub {
          check_add_push_rule( $user, "global", "room", "#b:example.com", {
-            actions => ["notify"],
+            actions => [ "notify" ],
          });
       })->then( sub {
          check_add_push_rule( $user, "global", "room", "#c:example.com", {
-            actions => ["notify"],
+            actions => [ "notify" ],
          }, after => "#b:example.com" );
       })->then( sub {
          matrix_get_push_rules( $user );
@@ -278,10 +278,10 @@ test "Can delete a push rule",
       my ( $user ) = @_;
 
       check_add_push_rule( $user, "global", "room", "#a:example.com", {
-         actions => ["notify"],
+         actions => [ "notify" ],
       })->then( sub {
          check_add_push_rule( $user, "global", "room", "#b:example.com", {
-            actions => ["notify"],
+            actions => [ "notify" ],
          });
       })->then( sub {
          matrix_delete_push_rule( $user, "global", "room", "#a:example.com");
@@ -307,7 +307,7 @@ test "Can disable a push rule",
       my ( $user ) = @_;
 
       check_add_push_rule( $user, "global", "room", "#a:example.com", {
-         actions => ["notify"],
+         actions => [ "notify" ],
       })->then( sub {
          matrix_set_push_rule_enabled( $user, "global", "room", "#a:example.com", JSON::false );
       })->then( sub {
