@@ -371,3 +371,60 @@ test "A prev_batch token can be used in the v1 messages API",
          Future->done(1);
       })
    };
+
+
+test "A next_batch token can be used in the v1 messages API",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      my ( $filter_id, $room_id, $next_batch, $event_id_1, $event_id_2 );
+
+      my $filter = { room => { timeline => { limit => 1 } } };
+
+      # we send an event, then sync, then send another event,
+      # and check that we can paginate forward from the sync.
+
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_send_room_text_message( $user, $room_id, body => "1" );
+      })->then( sub {
+         ( $event_id_1 ) = @_;
+
+         matrix_sync( $user, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{join}{$room_id};
+         $room->{timeline}{events}[0]{event_id} eq $event_id_1
+            or die "Unexpected timeline event";
+
+         $next_batch = $body->{next_batch};
+
+         matrix_send_room_text_message( $user, $room_id, body => "2" );
+      })->then( sub {
+         ( $event_id_2 ) = @_;
+
+         matrix_get_room_messages( $user, $room_id,
+                                   from => $next_batch,
+                                   dir => 'f');
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( chunk start end ) );
+         @{ $body->{chunk} } == 1 or die "Expected only one event";
+         $body->{chunk}[0]{event_id} eq $event_id_2
+            or die "Unexpected event";
+         $body->{chunk}[0]{content}{body} eq "2"
+            or die "Unexpected message body.";
+
+         Future->done(1);
+      })
+   };
