@@ -147,7 +147,7 @@ test "Changes to state are included in an incremental sync",
 
       my $filter = {
          room => {
-            timeline  => { types => [] },
+            timeline  => { types => [ "a.madeup.test.state" ] },
             state     => { types => [ "a.madeup.test.state" ] },
             ephemeral => { types => [] },
          },
@@ -187,10 +187,10 @@ test "Changes to state are included in an incremental sync",
 
          my $room = $body->{rooms}{join}{$room_id};
          assert_json_keys( $room, qw( timeline state ephemeral ));
-         @{ $room->{state}{events} } == 1
+         @{ $room->{timeline}{events} } == 1
             or die "Expected only one state event";
 
-         my $event = $room->{state}{events}[0];
+         my $event = $room->{timeline}{events}[0];
          $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
          $event->{content}{my_key} == 2
@@ -313,7 +313,7 @@ test "State from remote users is included in the timeline in an incremental sync
                                    content => { "my_key" => 1 });
         })->then( sub {
             # wait for the event to turn up on the other side
-            wait_for_event_in_room( $user, $room_id, 
+            wait_for_event_in_room( $user, $room_id,
                sync_params => { filter => $filter_id, since => $user->sync_next_batch },
             );
         })->then( sub {
@@ -549,7 +549,7 @@ test "A change to displayname should not result in a full state sync",
          # The m.room.member event is filtered out; the only thing which could
          # come back is therefore the madeup.test.state event, which shouldn't,
          # as this is an incremental sync.
-         assert_json_empty_list( $body->{rooms}{join}{$room_id}{state}{events} );
+         not keys %{ $body->{rooms}{join} } or die "Expected empty sync";
 
          Future->done(1);
       })
@@ -637,6 +637,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
             timeline  => { types => [] },
             state     => { types => [ "a.madeup.test.state" ] },
             ephemeral => { types => [] },
+            include_leave => JSON::true,
          },
          presence => { types => [] },
       };
@@ -650,6 +651,8 @@ test "When user joins and leaves a room in the same batch, the full state is sti
          matrix_create_room( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
+
+         log_if_fail "Room id", $room_id;
 
          matrix_put_room_state( $user_a, $room_id,
             type      => "a.madeup.test.state",
@@ -670,7 +673,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline state ));
          my $eventcount = scalar @{ $room->{state}{events} };
          $eventcount == 1 or
              die "Expected one state event, got $eventcount";
