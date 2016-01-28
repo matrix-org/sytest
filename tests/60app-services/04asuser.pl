@@ -1,5 +1,5 @@
 test "AS user (not ghost) can join room without registering",
-   requires => [ $main::AS_USER, local_user_fixture(), $main::HOMESERVER_INFO[0] ],
+   requires => [ $main::AS_USER[0], local_user_fixture(), $main::HOMESERVER_INFO[0] ],
 
    do => sub {
       my ( $as_user, $user, $hs_info ) = @_;
@@ -18,7 +18,7 @@ test "AS user (not ghost) can join room without registering",
 # TODO: Remove this test when the in-use ASes stop passing the user_id param
 # (or if we end up killing non-ghost AS users)
 test "AS user (not ghost) can join room without registering, with user_id query param",
-   requires => [ $main::AS_USER, local_user_fixture(), $main::HOMESERVER_INFO[0] ],
+   requires => [ $main::AS_USER[0], local_user_fixture(), $main::HOMESERVER_INFO[0] ],
 
    do => sub {
       my ( $as_user, $user, $hs_info ) = @_;

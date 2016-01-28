@@ -5,7 +5,7 @@ my $room_fixture = room_fixture(
 );
 
 test "AS can create a user",
-   requires => [ $main::AS_USER, $room_fixture ],
+   requires => [ $main::AS_USER[0], $room_fixture ],
 
    do => sub {
       my ( $as_user, $room_id ) = @_;
@@ -30,7 +30,7 @@ test "AS can create a user",
    };
 
 test "AS cannot create users outside its own namespace",
-   requires => [ $main::AS_USER ],
+   requires => [ $main::AS_USER[0] ],
 
    do => sub {
       my ( $as_user ) = @_;
@@ -58,7 +58,7 @@ test "Regular users cannot register within the AS namespace",
 
 test "AS can make room aliases",
    requires => [
-      $main::AS_USER, $main::APPSERV, $room_fixture,
+      $main::AS_USER[0], $main::APPSERV[0], $room_fixture,
       room_alias_fixture( prefix => "astest-" ),
       qw( can_create_room_alias ),
    ],
@@ -174,8 +174,11 @@ sub matrix_register_as_ghost
 my $next_as_user_id = 0;
 sub as_ghost_fixture
 {
+   my ( $idx ) = @_;
+   $idx //= 0;
+
    fixture(
-      requires => [ $main::AS_USER ],
+      requires => [ $main::AS_USER[$idx] ],
 
       setup => sub {
          my ( $as_user ) = @_;
