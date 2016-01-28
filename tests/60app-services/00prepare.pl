@@ -1,6 +1,8 @@
 use Future::Utils qw( repeat );
 
-push our @EXPORT, qw( AS_USER await_as_event );
+use SyTest::ApplicationService;
+
+push our @EXPORT, qw( AS_USER APPSERV await_as_event );
 
 our $AS_USER = fixture(
    requires => [ $main::API_CLIENTS[0], $main::AS_INFO ],
@@ -11,6 +13,18 @@ our $AS_USER = fixture(
       Future->done( User( $http, $as_user_info->user_id, $as_user_info->as2hs_token,
             undef, undef, undef, [], undef ) );
    },
+);
+
+our $APPSERV = fixture(
+   requires => [ $main::AS_INFO ],
+
+   setup => sub {
+      my ( $info ) = @_;
+
+      Future->done( SyTest::ApplicationService->new(
+         $info, \&main::await_http_request,
+      ) );
+   }
 );
 
 # Map event types to ARRAYs of Futures
