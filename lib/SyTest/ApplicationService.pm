@@ -55,12 +55,18 @@ sub new
    }, $class;
 }
 
+sub info
+{
+   my $self = shift;
+   return $self->{info};
+}
+
 sub await_http_request
 {
    my $self = shift;
    my ( $path, @args ) = @_;
 
-   $self->{await_http}->( $self->{info}->path . $path, @args );
+   $self->{await_http}->( $self->info->path . $path, @args );
 }
 
 sub await_event
