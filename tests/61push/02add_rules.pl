@@ -200,8 +200,6 @@ test "New rules appear before old rules by default",
 test "Can add global push rule before an existing rule",
    requires => [ local_user_fixture() ],
 
-   bug => "SYN-591",
-
    check => sub {
       my ( $user ) = @_;
 
@@ -236,8 +234,6 @@ test "Can add global push rule before an existing rule",
 
 test "Can add global push rule after an existing rule",
    requires => [ local_user_fixture() ],
-
-   bug => "SYN-592",
 
    check => sub {
       my ( $user ) = @_;
