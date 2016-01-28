@@ -103,7 +103,7 @@ test "POST /login can log in as a user with just the local part of the id",
    do => sub {
       my ( $http, $user_id ) = @_;
 
-      my ( $user_localpart ) = ( $user_id =~ /@([^:]*):/ );
+      my ( $user_localpart ) = ( $user_id =~ m/@([^:]*):/ );
 
       $http->do_request_json(
          method => "POST",
