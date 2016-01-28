@@ -1,15 +1,15 @@
 my $user_fixture = local_user_fixture();
 
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [ as_ghost_fixture(), $main::AS_USER, $user_fixture,
+   requires => [ as_ghost_fixture(), $main::AS_USER, $user_fixture, $main::APPSERV,
                      room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $ghost, $as_user, $creator, $room_id ) = @_;
+      my ( $ghost, $as_user, $creator, $appserv, $room_id ) = @_;
 
       Future->needs_all(
-         await_as_event( "m.room.member" )->then( sub {
+         $appserv->await_event( "m.room.member" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "AS event", $event;
@@ -41,7 +41,7 @@ multi_test "AS-ghosted users can use rooms via AS",
       )->SyTest::pass_on_done( "User joined room via AS" )
       ->then( sub {
          Future->needs_all(
-            await_as_event( "m.room.message" )->then( sub {
+            $appserv->await_event( "m.room.message" )->then( sub {
                my ( $event ) = @_;
 
                log_if_fail "AS event", $event;
@@ -88,15 +88,15 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [ as_ghost_fixture(), $user_fixture,
+   requires => [ as_ghost_fixture(), $user_fixture, $main::APPSERV,
                      room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally can_send_message )],
 
    do => sub {
-      my ( $ghost, $creator, $room_id ) = @_;
+      my ( $ghost, $creator, $appserv, $room_id ) = @_;
 
       Future->needs_all(
-         await_as_event( "m.room.member" )->then( sub {
+         $appserv->await_event( "m.room.member" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "AS event", $event;
@@ -118,7 +118,7 @@ multi_test "AS-ghosted users can use rooms themselves",
       )->SyTest::pass_on_done( "Ghost joined room themselves" )
       ->then( sub {
          Future->needs_all(
-            await_as_event( "m.room.message" )->then( sub {
+            $appserv->await_event( "m.room.message" )->then( sub {
                my ( $event ) = @_;
 
                log_if_fail "AS event", $event;
