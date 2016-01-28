@@ -34,7 +34,7 @@ sub gen_token
 
 push our @EXPORT, qw( AS_INFO HOMESERVER_INFO );
 
-struct ASInfo => [qw( localpart user_id as2hs_token hs2as_token )];
+struct ASInfo => [qw( localpart user_id as2hs_token hs2as_token path )];
 
 our $AS_INFO = fixture(
    setup => sub {
@@ -47,6 +47,7 @@ our $AS_INFO = fixture(
          "\@${localpart}:localhost:${port}",
          gen_token( 32 ),
          gen_token( 32 ),
+         "/appserv",
       ));
    },
 );
@@ -102,7 +103,7 @@ our @HOMESERVER_INFO = map {
          if( $idx == 0 ) {
             # Configure application services on first instance only
             my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
-               url      => $test_server_info->client_location . "/appserv",
+               url      => $test_server_info->client_location . $as_user_info->path,
                as_token => $as_user_info->as2hs_token,
                hs_token => $as_user_info->hs2as_token,
                sender_localpart => $as_user_info->localpart,

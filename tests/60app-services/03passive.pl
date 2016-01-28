@@ -5,17 +5,17 @@ my $room_fixture = room_fixture(
 );
 
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [ $main::AS_USER, $user_fixture, $room_fixture,
+   requires => [ $main::AS_USER, $main::AS_INFO, $user_fixture, $room_fixture,
                  qw( can_invite_room )],
 
    do => sub {
-      my ( $as_user, $creator, $room_id ) = @_;
+      my ( $as_user, $as_info, $creator, $room_id ) = @_;
       my $server_name = $as_user->http->server_name;
 
       my $localpart = "astest-03passive-1";
       my $user_id = "\@$localpart:$server_name";
 
-      require_stub await_http_request( "/appserv/users/$user_id", sub { 1 } )
+      require_stub await_http_request( $as_info->path . "/users/$user_id", sub { 1 } )
          ->then( sub {
             my ( $request ) = @_;
 
@@ -45,15 +45,15 @@ multi_test "Inviting an AS-hosted user asks the AS server",
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
-   requires => [ $main::AS_USER, local_user_fixture(), $room_fixture,
+   requires => [ $main::AS_USER, $main::AS_INFO, local_user_fixture(), $room_fixture,
                  room_alias_fixture( prefix => "astest-" ),
 
                 qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $as_user, $local_user, $room_id, $room_alias ) = @_;
+      my ( $as_user, $as_info, $local_user, $room_id, $room_alias ) = @_;
 
-      require_stub await_http_request( "/appserv/rooms/$room_alias", sub { 1 } )
+      require_stub await_http_request( $as_info->path . "/rooms/$room_alias", sub { 1 } )
          ->then( sub {
             my ( $request ) = @_;
 
