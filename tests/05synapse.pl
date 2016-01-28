@@ -80,6 +80,7 @@ our @HOMESERVER_INFO = map {
             extra_args    => \@extra_args,
             python        => $SYNAPSE_ARGS{python},
             coverage      => $SYNAPSE_ARGS{coverage},
+            dendron       => $SYNAPSE_ARGS{dendron},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
