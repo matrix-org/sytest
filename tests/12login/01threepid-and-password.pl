@@ -5,23 +5,24 @@ test "Can login with 3pid and password using m.login.password",
    requires => [ local_user_fixture( password => $password ), id_server_fixture() ],
 
    check => sub {
-      my ( $user, $id_server) = @_;
+      my ( $user, $id_server ) = @_;
 
       my $http = $user->http;
 
       my $medium = "email";
       my $address = 'bob@example.com';
+      my $client_secret = "a client secret";
 
-      my $sid = $id_server->validate_identity( $medium, $address, "a client secret");
+      my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/unstable/account/3pid",
+         uri    => "/r0/account/3pid",
          content => {
             three_pid_creds => {
                id_server     => $id_server->name,
                sid           => $sid,
-               client_secret => "",
+               client_secret => $client_secret,
             },
             bind => JSON::false,
          },
