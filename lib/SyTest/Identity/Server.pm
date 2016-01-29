@@ -113,9 +113,37 @@ sub on_request
       $resp{public_key} = $self->{keys}{"ed25519:0"};
       $req->respond_json( \%resp );
    }
+   elsif( $path eq "/_matrix/identity/api/v1/3pid/getValidated3pid" ) {
+      my $sid = $req->query_param( "sid" );
+      if( !defined $self->{validated}{$sid} ) {
+         $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
+         return;
+      }
+      $resp{medium} = $self->{validated}{$sid}{medium};
+      $resp{address} = $self->{validated}{$sid}{address};
+      $resp{validated_at} = $self->{validated}{$sid}{validated_at};
+      $req->respond_json( \%resp );
+   }
    else {
+      print STDERR "Unexpected request for $path";
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
    }
+}
+
+sub validate_identity
+{
+   my $self = shift;
+   my ( $medium, $address, $client_secret ) = @_;
+
+   my $sid = "session_${\ $self->{sid}++ }";
+
+   $self->{validated}{$sid} = {
+      medium       => $medium,
+      address      => $address,
+      validated_at => 0,
+   };
+
+   return $sid;
 }
 
 sub bind_identity
