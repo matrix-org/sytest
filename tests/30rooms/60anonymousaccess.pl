@@ -75,7 +75,7 @@ foreach my $i (
          })->then( sub {
             do_request_json_for( $nonjoined_user,
                method => "GET",
-               uri    => "/api/v1/events",
+               uri    => "/r0/events",
                params => {
                   room_id => $room_id,
                },
@@ -145,7 +145,7 @@ foreach my $i (
                Future->needs_all(
                   do_request_json_for( $user,
                      method  => "POST",
-                     uri     => "/v2_alpha/rooms/$room_id/receipt/m.read/$sent_event_id",
+                     uri     => "/r0/rooms/$room_id/receipt/m.read/$sent_event_id",
                      content => {},
                   ),
 
@@ -166,7 +166,7 @@ foreach my $i (
                Future->needs_all(
                   do_request_json_for( $user,
                      method  => "PUT",
-                     uri     => "/api/v1/rooms/$room_id/typing/:user_id",
+                     uri     => "/r0/rooms/$room_id/typing/:user_id",
                      content => {
                         typing => JSON::true,
                         timeout => 5000,
@@ -245,7 +245,7 @@ foreach my $i (
 
          do_request_json_for( $nonjoined_user,
             method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state",
+            uri    => "/r0/rooms/$room_id/state",
          );
       },
    );
@@ -266,7 +266,7 @@ foreach my $i (
 
          do_request_json_for( $nonjoined_user,
             method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
+            uri    => "/r0/rooms/$room_id/state/m.room.member/".$user->user_id,
          );
       },
    );
@@ -357,7 +357,7 @@ foreach my $i (
          })->then( sub {
             do_request_json_for( $nonjoined_user,
                method => "GET",
-               uri    => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
+               uri    => "/r0/rooms/$room_id/state/m.room.member/".$user->user_id,
             );
          });
       },
@@ -388,7 +388,7 @@ test "Anonymous user cannot call /events globally",
 
       do_request_json_for( $anonymous_user,
          method => "GET",
-         uri    => "/api/v1/events",
+         uri    => "/r0/events",
       )->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
@@ -482,7 +482,7 @@ test "Annonymous user calling /events doesn't tightloop",
       })->then( sub {
          do_request_json_for( $anonymous_user,
             method => "GET",
-            uri    => "/api/v1/rooms/$room_id/initialSync",
+            uri    => "/r0/rooms/$room_id/initialSync",
          );
       })->then( sub {
          my ( $sync_body ) = @_;
@@ -518,7 +518,7 @@ sub get_events_no_timeout
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/api/v1/events",
+      uri    => "/r0/events",
       params => {
          room_id => $room_id,
          timeout => 0,
@@ -534,7 +534,7 @@ sub check_events
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/api/v1/events",
+      uri    => "/r0/events",
       params => {
          limit   => "3",
          dir     => "b",
@@ -596,7 +596,7 @@ test "Anonymous user can set display names",
    do => sub {
       my ( $anonymous_user, $user, $room_id ) = @_;
 
-      my $displayname_uri = "/api/v1/profile/:user_id/displayname";
+      my $displayname_uri = "/r0/profile/:user_id/displayname";
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )->then( sub {
          matrix_join_room( $anonymous_user, $room_id );
@@ -627,7 +627,7 @@ test "Anonymous user can set display names",
             }),
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+               uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
             )->then( sub {
                my ( $body ) = @_;
                $body->{displayname} eq "creeper" or die "Wrong displayname";
@@ -801,7 +801,7 @@ test "GET /publicRooms lists rooms",
       )->then( sub {
          $http->do_request_json(
             method => "GET",
-            uri    => "/api/v1/publicRooms",
+            uri    => "/r0/publicRooms",
       )})->then( sub {
          my ( $body ) = @_;
 
@@ -892,7 +892,7 @@ test "GET /publicRooms includes avatar URLs",
       )->then( sub {
          $http->do_request_json(
             method => "GET",
-            uri    => "/api/v1/publicRooms",
+            uri    => "/r0/publicRooms",
       )})->then( sub {
          my ( $body ) = @_;
 
@@ -941,7 +941,7 @@ sub anonymous_user_fixture
 
          $http->do_request_json(
             method  => "POST",
-            uri     => "/v2_alpha/register",
+            uri     => "/r0/register",
             content => {},
             params  => {
                kind => "guest",

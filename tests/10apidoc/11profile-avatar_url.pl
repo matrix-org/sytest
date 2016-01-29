@@ -12,7 +12,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/profile/:user_id/avatar_url",
+         uri    => "/r0/profile/:user_id/avatar_url",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -30,7 +30,7 @@ test "PUT /profile/:user_id/avatar_url sets my avatar",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/api/v1/profile/:user_id/avatar_url",
+         uri    => "/r0/profile/:user_id/avatar_url",
 
          content => {
             avatar_url => $avatar_url,
@@ -48,7 +48,7 @@ test "GET /profile/:user_id/avatar_url publicly accessible",
 
       $http->do_request_json(
          method => "GET",
-         uri    => "/api/v1/profile/$user_id/avatar_url",
+         uri    => "/r0/profile/$user_id/avatar_url",
          # no access_token
       )->then( sub {
          my ( $body ) = @_;

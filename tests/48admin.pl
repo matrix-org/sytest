@@ -16,7 +16,7 @@ test "/whois",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/api/v1/admin/whois/".$user->user_id,
+            uri    => "/r0/admin/whois/".$user->user_id,
          )
       })->then( sub {
          my ( $body ) = @_;
