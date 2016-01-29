@@ -144,7 +144,7 @@ test "Can invite unbound 3pid",
    };
 
 test "Can invite unbound 3pid over federation",
-   requires => [ local_user_fixture( ), remote_user_fixture(),
+   requires => [ local_user_fixture(), remote_user_fixture(),
                  $main::HOMESERVER_INFO[1], id_server_fixture() ],
 
    do => sub {
