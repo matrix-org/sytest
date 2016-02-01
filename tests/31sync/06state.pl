@@ -190,6 +190,8 @@ test "Changes to state are included in an incremental sync",
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one state event";
 
+         assert_json_empty_list( $room->{state}{events} );
+
          my $event = $room->{timeline}{events}[0];
          $event->{type} eq "a.madeup.test.state"
             or die "Unexpected state event type";
