@@ -58,8 +58,8 @@ sub new
             # Ignore any cancelled ones
             shift @$queue while $queue and @$queue and $queue->[0]->is_cancelled;
 
-            if( $queue and my $f = shift @$queue ) {
-               $f->done( $event, $request );
+            if( $queue and my $next_f = shift @$queue ) {
+               $next_f->done( $event, $request );
             }
             else {
                warn "Ignoring incoming AS event of type $type\n";
