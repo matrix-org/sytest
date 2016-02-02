@@ -56,12 +56,14 @@ sub new
          foreach my $event ( @{ $request->body_from_json->{events} } ) {
             my $type = $event->{type};
 
-            my $queue = $futures_by_type{$type};
+            my $futures = $futures_by_type{$type};
 
             # Ignore any cancelled ones
-            shift @$queue while $queue and @$queue and $queue->[0]->is_cancelled;
+            while( $futures and @$futures and $futures->[0]->is_cancelled ) {
+               shift @$futures;
+            }
 
-            if( $queue and my $next_f = shift @$queue ) {
+            if( $futures and my $next_f = shift @$futures ) {
                $next_f->done( $event, $request );
             }
             else {
