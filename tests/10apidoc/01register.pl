@@ -78,7 +78,7 @@ sub matrix_register_user
       content => {
          type     => "m.login.password",
          user     => $uid,
-         password => "an0th3r s3kr1t",
+         password => $opts{password} // "an0th3r s3kr1t",
       },
    )->then( sub {
       my ( $body ) = @_;
@@ -123,6 +123,7 @@ sub local_user_fixture
 
          matrix_register_user( $http, undef,
             with_events => $args{with_events} // 1,
+            password => $args{password},
          )->then_with_f( sub {
             my $f = shift;
             return $f unless defined( my $displayname = $args{displayname} );

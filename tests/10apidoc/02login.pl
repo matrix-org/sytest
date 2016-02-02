@@ -94,6 +94,38 @@ test "POST /login can log in as a user",
       });
    };
 
+test "POST /login can log in as a user with just the local part of the id",
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
+                 qw( can_login_password_flow )],
+
+   proves => [qw( can_login )],
+
+   do => sub {
+      my ( $http, $user_id ) = @_;
+
+      my ( $user_localpart ) = ( $user_id =~ m/@([^:]*):/ );
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/login",
+
+         content => {
+            type     => "m.login.password",
+            user     => $user_localpart,
+            password => $password,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( access_token home_server ));
+
+         assert_eq( $body->{home_server}, $http->server_name,
+            'Response home_server' );
+
+         Future->done(1);
+      });
+   };
+
 test "POST /login wrong password is rejected",
    requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
                  qw( can_login_password_flow )],
