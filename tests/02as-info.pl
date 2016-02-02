@@ -6,7 +6,7 @@ sub gen_token
    return join "", map { chr 64 + rand 63 } 1 .. $length;
 }
 
-struct ASInfo => [qw( localpart user_id as2hs_token hs2as_token path )];
+struct ASInfo => [qw( localpart user_id as2hs_token hs2as_token path id )];
 
 our $AS_INFO = fixture(
    setup => sub {
@@ -20,6 +20,7 @@ our $AS_INFO = fixture(
          gen_token( 32 ),
          gen_token( 32 ),
          "/appserv",
+         undef,
       ));
    },
 );
