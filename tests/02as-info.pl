@@ -20,7 +20,7 @@ our $AS_INFO = fixture(
          gen_token( 32 ),
          gen_token( 32 ),
          "/appserv",
-         undef,
+         "0",
       ));
    },
 );
