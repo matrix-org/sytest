@@ -5,6 +5,32 @@ use warnings;
 
 use Future::Utils qw( repeat );
 
+=head1 NAME
+
+C<SyTest::ApplicationService> - abstraction of a single application service
+
+=head1 DESCRIPTION
+
+An instance of this class represents an abstracted application service for the
+homeserver to talk to. It provides the test scripts a way to receive inbound
+HTTP requests and respond to them, and allows access to the user information
+allowing a test script to send API requests.
+
+=cut
+
+=head1 CONSTRUCTOR
+
+=cut
+
+=head2 new
+
+   $appserv = SyTest::ApplicationService->new( $info, $await_http )
+
+Returns a newly constructed instance that uses the given C<ASInfo> structure
+and the C<await_http> function.
+
+=cut
+
 sub new
 {
    my $class = shift;
@@ -55,11 +81,33 @@ sub new
    }, $class;
 }
 
+=head1 METHODS
+
+=cut
+
+=head2 info
+
+   $info = $appserv->info
+
+Returns the C<ASInfo> structure instance this object was constructed with.
+
+=cut
+
 sub info
 {
    my $self = shift;
    return $self->{info};
 }
+
+=head2 await_http_request
+
+   $f = $appserv->await_http_request( $path, @args )
+
+A wrapper around the C<await_http_request> function the instance was
+constructed with, that prepends this server's path prefix onto the C<$path>
+argument for convenience.
+
+=cut
 
 sub await_http_request
 {
@@ -68,6 +116,15 @@ sub await_http_request
 
    $self->{await_http}->( $self->info->path . $path, @args );
 }
+
+=head2 await_event
+
+   $f = $appserv->await_event( $type )
+
+Returns a L<Future> that will succeed with the next event of the given
+C<$type> that the homeserver pushes to the application service.
+
+=cut
 
 sub await_event
 {
