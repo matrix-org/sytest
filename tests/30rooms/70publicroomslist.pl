@@ -48,7 +48,7 @@ test "Name/topic keys are corrct",
 
          foreach my $room ( @{ $body->{chunk} } ) {
             assert_json_keys( $room,
-               qw( world_readable guest_can_join num_joined_members aliases canonical_alias )
+               qw( world_readable guest_can_join num_joined_members aliases )
             );
 
             my $name = $room->{name};
