@@ -14,7 +14,7 @@ sub matrix_add_tag
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/v2_alpha/user/:user_id/rooms/$room_id/tags/$tag",
+      uri     => "/r0/user/:user_id/rooms/$room_id/tags/$tag",
       content => $content
    );
 }
@@ -34,7 +34,7 @@ sub matrix_remove_tag
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/v2_alpha/user/:user_id/rooms/$room_id/tags/$tag",
+      uri     => "/r0/user/:user_id/rooms/$room_id/tags/$tag",
       content => {}
    );
 }
@@ -54,7 +54,7 @@ sub matrix_list_tags
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/v2_alpha/user/:user_id/rooms/$room_id/tags",
+      uri     => "/r0/user/:user_id/rooms/$room_id/tags",
    )->then( sub {
       my ( $body ) = @_;
 

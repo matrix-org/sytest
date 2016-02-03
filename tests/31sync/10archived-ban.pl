@@ -24,7 +24,7 @@ test "Banned rooms appear in the leave section of sync",
 
          do_request_json_for( $user_a,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/ban",
+            uri    => "/r0/rooms/$room_id/ban",
             content => { user_id => $user_b->user_id, reason => "testing" },
          );
       })->then( sub {
@@ -67,7 +67,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
       })->then( sub {
          do_request_json_for( $user_a,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/ban",
+            uri    => "/r0/rooms/$room_id/ban",
             content => { user_id => $user_b->user_id, reason => "testing" },
          );
       })->then( sub {
@@ -110,7 +110,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
       })->then( sub {
          do_request_json_for( $user_a,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/ban",
+            uri    => "/r0/rooms/$room_id/ban",
             content => { user_id => $user_b->user_id, reason => "testing" },
          );
       })->then( sub {

@@ -17,7 +17,7 @@ test "Can search for an event by body",
 
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/api/v1/search",
+            uri     => "/r0/search",
             content => {
                search_categories => {
                   room_events => {
@@ -82,7 +82,7 @@ test "Can back-paginate search results",
         }, foreach => [ 0 .. 19 ] )->then( sub {
             do_request_json_for( $user,
                                  method  => "POST",
-                                 uri     => "/api/v1/search",
+                                 uri     => "/r0/search",
                                  content => $search_query,
             );
         })->then( sub {
@@ -109,7 +109,7 @@ test "Can back-paginate search results",
 
             do_request_json_for( $user,
                                  method  => "POST",
-                                 uri     => "/api/v1/search",
+                                 uri     => "/r0/search",
                                  params  => { next_batch => $next_batch },
                                  content => $search_query,
             );
@@ -137,7 +137,7 @@ test "Can back-paginate search results",
 
             do_request_json_for( $user,
                                  method  => "POST",
-                                 uri     => "/api/v1/search",
+                                 uri     => "/r0/search",
                                  params  => { next_batch => $next_batch },
                                  content => $search_query,
             );

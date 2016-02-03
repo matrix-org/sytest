@@ -11,6 +11,7 @@ use Exporter 'import';
 our @EXPORT_OK = qw(
    assert_ok
    assert_eq
+   assert_deeply_eq
 
    assert_json_object
    assert_json_keys
@@ -50,7 +51,7 @@ sub assert_ok
 
    assert_eq( $got, $want, $name )
 
-Fails the test of C<$got> is not stringily equal to C<$want>.
+Fails the test if C<$got> is not stringily equal to C<$want>.
 
 =cut
 
@@ -60,6 +61,72 @@ sub assert_eq
 
    defined $got && defined $want && $got eq $want or
       croak "Got ${\ pp $got }, expected ${\ pp $want } for $name";
+}
+
+=head2 assert_deeply_eq
+
+   assert_deeply_eq( $got, $want, $name )
+
+Fails the test if the data structure in C<$got> is not identical to C<$want>
+or if any of the leaves differ in string value.
+
+Structures are identical if they are equal-sized arrays containing
+corresponding structurally-equal elements, or if they are hashes containing the
+same keys that map to corresponding structurally-equal values.
+
+=cut
+
+sub _assert_deeply_eq
+{
+   my ( $got, $want, $outerkey, $name ) = @_;
+   my $outerkeystr = $outerkey // "(toplevel)";
+   $outerkey //= "";
+
+   my $wanttype = ref $want;
+   if( !defined $want ) {
+      # want undef
+      !defined $got or
+         croak "Got ${\ pp $got }, expected undef at $outerkeystr for $name";
+   }
+   elsif( !$wanttype ) {
+      # want a non-reference
+      defined $got && $got eq $want or
+         croak "Got ${\ pp $got }, expected ${\ pp $want } at $outerkeystr for $name";
+   }
+   # want a reference
+   elsif( $wanttype ne ref $got ) {
+      croak "Got ${\ pp $got }, expected ${\pp $want } at $outerkeystr for $name";
+   }
+   elsif( $wanttype eq "ARRAY" ) {
+      foreach my $idx ( 0 .. $#$want ) {
+         @$got >= $idx or
+            croak "Got no value at index $idx at $outerkeystr for $name";
+         _assert_deeply_eq( $got->[$idx], $want->[$idx], "$outerkey\[$idx]", $name );
+      }
+      @$got == @$want or
+         croak "Got extra values at $outerkeystr for $name";
+   }
+   elsif( $wanttype eq "HASH" ) {
+      foreach my $key ( keys %$want ) {
+         exists $got->{$key} or
+            croak "Got no value for '$key' at $outerkeystr for $name";
+         _assert_deeply_eq( $got->{$key}, $want->{$key}, "$outerkey\{$key}", $name );
+      }
+      # Now check that $got didn't have extra keys that we didn't want
+      foreach my $key ( keys %$got ) {
+         exists $want->{$key} or
+            croak "Got a value for '$key' that was not expected at $outerkeystr for $name";
+      }
+   }
+   else {
+      die "TODO: not sure how to deeply check a $wanttype reference";
+   }
+}
+
+sub assert_deeply_eq
+{
+   my ( $got, $want, $name ) = @_;
+   _assert_deeply_eq( $got, $want, undef, $name );
 }
 
 =head2 assert_json_object

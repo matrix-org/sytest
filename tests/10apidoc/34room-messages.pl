@@ -8,7 +8,7 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
+         uri    => "/r0/rooms/$room_id/send/m.room.message",
 
          content => { msgtype => "m.message", body => "Here is the message content" },
       )->then( sub {
@@ -34,7 +34,7 @@ sub matrix_send_room_message
    my $type = $opts{type} // "m.room.message";
 
    my $method = "POST";
-   my $uri = "/api/v1/rooms/$room_id/send/$type";
+   my $uri = "/r0/rooms/$room_id/send/$type";
 
    if( defined $opts{txn_id} ) {
       $method = "PUT";
@@ -84,7 +84,7 @@ test "GET /rooms/:room_id/messages returns a message",
       )->then( sub {
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
+            uri    => "/r0/rooms/$room_id/messages",
 
             # With no params this does "forwards from END"; i.e. nothing useful
             params => { dir => "b" },
@@ -113,7 +113,7 @@ sub matrix_get_room_messages
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/api/v1/rooms/$room_id/messages",
+      uri    => "/r0/rooms/$room_id/messages",
 
       params => \%params,
    );

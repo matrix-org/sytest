@@ -12,7 +12,7 @@ test "Banned user is kicked and may not rejoin until unbanned",
 
       do_request_json_for( $creator,
          method => "POST",
-         uri    => "/api/v1/rooms/$room_id/ban",
+         uri    => "/r0/rooms/$room_id/ban",
 
          content => { user_id => $banned_user->user_id, reason => "testing" },
       )->then( sub {
@@ -30,28 +30,28 @@ test "Banned user is kicked and may not rejoin until unbanned",
       })->then( sub {
          do_request_json_for( $creator,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/invite",
+            uri    => "/r0/rooms/$room_id/invite",
 
             content => { user_id => $banned_user->user_id },
          )->main::expect_http_403;  # Must be unbanned first
       })->then( sub {
          do_request_json_for( $creator,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/kick",
+            uri    => "/r0/rooms/$room_id/kick",
 
             content => { user_id => $banned_user->user_id },
          )->main::expect_http_403;  # Must be unbanned first
       })->then( sub {
          do_request_json_for( $creator,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/unban",
+            uri    => "/r0/rooms/$room_id/unban",
 
             content => { user_id => $banned_user->user_id },
          );
       })->then( sub {
          do_request_json_for( $banned_user,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/join",
+            uri    => "/r0/rooms/$room_id/join",
 
             content => {},
          );

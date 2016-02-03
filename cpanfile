@@ -2,6 +2,7 @@
 
 requires 'Class::Method::Modifiers';
 requires 'Data::Dump';
+requires 'DBD::Pg';
 requires 'Digest::SHA';
 requires 'File::Basename';
 requires 'File::Path';

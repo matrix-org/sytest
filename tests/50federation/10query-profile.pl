@@ -19,7 +19,7 @@ test "Outbound federation can query profile data",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/profile/\@user:$local_server_name/displayname",
+         uri    => "/r0/profile/\@user:$local_server_name/displayname",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
@@ -44,7 +44,7 @@ test "Inbound federation can query profile data",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/api/v1/profile/:user_id/displayname",
+         uri    => "/r0/profile/:user_id/displayname",
 
          content => {
             displayname => $dname,

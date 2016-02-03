@@ -13,7 +13,7 @@ test "Displayname change reports an event to myself",
       ->then( sub {
          do_request_json_for( $user,
             method => "PUT",
-            uri    => "/api/v1/profile/:user_id/displayname",
+            uri    => "/r0/profile/:user_id/displayname",
 
             content => { displayname => $displayname },
          )
@@ -43,7 +43,7 @@ test "Avatar URL change reports an event to myself",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/api/v1/profile/:user_id/avatar_url",
+         uri    => "/r0/profile/:user_id/avatar_url",
 
          content => { avatar_url => $avatar_url },
       )->then( sub {
