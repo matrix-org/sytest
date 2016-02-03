@@ -419,8 +419,8 @@ test "A next_batch token can be used in the v1 messages API",
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( chunk start end ) );
-         assert_eq( @{ $body->{chunk} }, 1, "event count" );
-         assert_eq( $body->{chunk}[0]{event_id}, $event_id_2, 
+         assert_eq( scalar @{ $body->{chunk} }, 1, "event count" );
+         assert_eq( $body->{chunk}[0]{event_id}, $event_id_2,
                     "Event ID 2" );
          assert_eq( $body->{chunk}[0]{content}{body}, "2",
                     "Message body" );
