@@ -58,16 +58,16 @@ test "Regular users cannot register within the AS namespace",
 
 test "AS can make room aliases",
    requires => [
-      $main::AS_USER, $main::AS_USER_INFO, $room_fixture,
+      $main::AS_USER, $main::APPSERV, $room_fixture,
       room_alias_fixture( prefix => "astest-" ),
       qw( can_create_room_alias ),
    ],
 
    do => sub {
-      my ( $as_user, $as_user_info, $room_id, $room_alias ) = @_;
+      my ( $as_user, $appserv, $room_id, $room_alias ) = @_;
 
       Future->needs_all(
-         await_as_event( "m.room.aliases" )->then( sub {
+         $appserv->await_event( "m.room.aliases" )->then( sub {
             my ( $event, $request ) = @_;
 
             # As this is the first AS event we've received, lets check that the
@@ -77,7 +77,7 @@ test "AS can make room aliases",
 
             assert_ok( defined $access_token,
                "HS provides an access_token" );
-            assert_eq( $access_token, $as_user_info->hs2as_token,
+            assert_eq( $access_token, $appserv->info->hs2as_token,
                "HS provides the correct token" );
 
             log_if_fail "Event", $event;

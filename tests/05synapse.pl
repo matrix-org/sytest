@@ -26,36 +26,13 @@ END {
    }
 }
 
-sub gen_token
-{
-   my ( $length ) = @_;
-   return join "", map { chr 64 + rand 63 } 1 .. $length;
-}
-
-push our @EXPORT, qw( AS_USER_INFO HOMESERVER_INFO );
-
-struct ASUserInfo => [qw( localpart user_id as2hs_token hs2as_token )];
-
-our $AS_USER_INFO = fixture(
-   setup => sub {
-      my $port = $HOMESERVER_PORTS[0];
-
-      my $localpart = "as-user";
-
-      Future->done( ASUserInfo(
-         $localpart,
-         "\@${localpart}:localhost:${port}",
-         gen_token( 32 ),
-         gen_token( 32 ),
-      ));
-   },
-);
+push our @EXPORT, qw( HOMESERVER_INFO );
 
 our @HOMESERVER_INFO = map {
    my $idx = $_;
 
    fixture(
-      requires => [ $main::TEST_SERVER_INFO, $AS_USER_INFO ],
+      requires => [ $main::TEST_SERVER_INFO, $main::AS_INFO ],
 
       setup => sub {
          my ( $test_server_info, $as_user_info ) = @_;
@@ -80,6 +57,7 @@ our @HOMESERVER_INFO = map {
             extra_args    => \@extra_args,
             python        => $SYNAPSE_ARGS{python},
             coverage      => $SYNAPSE_ARGS{coverage},
+            dendron       => $SYNAPSE_ARGS{dendron},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
@@ -102,7 +80,7 @@ our @HOMESERVER_INFO = map {
          if( $idx == 0 ) {
             # Configure application services on first instance only
             my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
-               url      => $test_server_info->client_location . "/appserv",
+               url      => $test_server_info->client_location . $as_user_info->path,
                as_token => $as_user_info->as2hs_token,
                hs_token => $as_user_info->hs2as_token,
                sender_localpart => $as_user_info->localpart,

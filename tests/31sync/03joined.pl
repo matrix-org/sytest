@@ -160,6 +160,7 @@ test "Newly joined room has correct timeline in incremental sync",
          my $room = $body->{rooms}{join}{$room_id};
          my $timeline = $room->{timeline};
 
+         log_if_fail "Room id", $room_id;
          log_if_fail "Timeline", $timeline;
 
          map {
