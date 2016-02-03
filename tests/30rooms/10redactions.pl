@@ -29,7 +29,7 @@ test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
 
          do_request_json_for( $creator,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
+            uri    => "/r0/rooms/$room_id/redact/$to_redact",
             content => {},
          );
       });
@@ -48,7 +48,7 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
 
          do_request_json_for( $sender,
                method => "POST",
-               uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
+               uri    => "/r0/rooms/$room_id/redact/$to_redact",
                content => {},
          );
       });
@@ -67,7 +67,7 @@ test "POST /rooms/:room_id/redact/:event_id as random user does not redact messa
 
          do_request_json_for( $redactor,
                method => "POST",
-               uri    => "/api/v1/rooms/$room_id/redact/$to_redact",
+               uri    => "/r0/rooms/$room_id/redact/$to_redact",
                content => {},
          )->main::expect_http_403;
       });

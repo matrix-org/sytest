@@ -11,7 +11,7 @@ test "GET /events initially",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/events",
+         uri    => "/r0/events",
          params => { timeout => 0 },
       )->then( sub {
          my ( $body ) = @_;
@@ -39,7 +39,7 @@ test "GET /initialSync initially",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/initialSync",
+         uri    => "/r0/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -63,7 +63,7 @@ sub matrix_initialsync
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/api/v1/initialSync",
+      uri    => "/r0/initialSync",
 
       params => {
          ( map { defined $args{$_} ? ( $_ => $args{$_} ) : () }
@@ -82,7 +82,7 @@ sub GET_new_events_for
    return $user->pending_get_events //=
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/events",
+         uri    => "/r0/events",
          params => {
             %params,
             from    => $user->eventstream_token,
@@ -114,7 +114,7 @@ sub flush_events_for
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/api/v1/events",
+      uri    => "/r0/events",
       params => {
          timeout => 0,
       }
@@ -181,7 +181,7 @@ sub matrix_sync
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/v2_alpha/sync",
+      uri     => "/r0/sync",
       params  => \%params,
    )->on_done( sub {
       my ( $body ) = @_;

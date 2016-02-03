@@ -16,7 +16,7 @@ test "Outbound federation can send events",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/api/v1/join/$room_alias",
+         uri    => "/r0/join/$room_alias",
 
          content => {},
       )->then( sub {

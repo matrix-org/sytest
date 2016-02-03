@@ -30,7 +30,7 @@ multi_test "Register with a recaptcha",
 
          $http->do_request_json(
             method  => "POST",
-            uri     => "/v2_alpha/register",
+            uri     => "/r0/register",
             content => {
                username => "SYT-8-username",
                password => "my secret",

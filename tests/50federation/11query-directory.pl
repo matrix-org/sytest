@@ -22,7 +22,7 @@ test "Outbound federation can query room alias directory",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/directory/room/$room_alias",
+         uri    => "/r0/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
@@ -60,7 +60,7 @@ test "Inbound federation can query room alias directory",
 
          do_request_json_for( $user,
             method => "PUT",
-            uri    => "/api/v1/directory/room/$room_alias",
+            uri    => "/r0/directory/room/$room_alias",
 
             content => {
                room_id => $room_id,
