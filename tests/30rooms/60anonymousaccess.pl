@@ -446,28 +446,6 @@ test "Anonymous user cannot call /events globally",
       )->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
-sub await_event_not_history_visibility_or_presence_for
-{
-   my ( $user, $room_id, $allowed_users ) = @_;
-   await_event_for( $user,
-      room_id => $room_id,
-      filter  => sub {
-         my ( $event ) = @_;
-
-         return 0 if defined $event->{type} and $event->{type} eq "m.room.history_visibility";
-
-         # Include all events where the type is not m.presence.
-         # If the type is m.presence, then only include it if it is for one of
-         # the allowed users
-         return ((not $event->{type} eq "m.presence") or
-            any { $event->{content}{user_id} eq $_->user_id } @$allowed_users);
-      },
-   )->on_done( sub {
-      my ( $event ) = @_;
-      log_if_fail "event", $event
-   });
-}
-
 test "Anonymous users can join guest_access rooms",
    requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
 
@@ -1076,5 +1054,29 @@ sub expect_4xx_or_empty_chunk
       $response->code >= 400 and $response->code < 500 or die "want 4xx";
 
       Future->done( 1 );
+   });
+}
+
+push @EXPORT, qw( await_event_not_history_visibility_or_presence_for );
+
+sub await_event_not_history_visibility_or_presence_for
+{
+   my ( $user, $room_id, $allowed_users ) = @_;
+   await_event_for( $user,
+      room_id => $room_id,
+      filter  => sub {
+         my ( $event ) = @_;
+
+         return 0 if defined $event->{type} and $event->{type} eq "m.room.history_visibility";
+
+         # Include all events where the type is not m.presence.
+         # If the type is m.presence, then only include it if it is for one of
+         # the allowed users
+         return ((not $event->{type} eq "m.presence") or
+            any { $event->{content}{user_id} eq $_->user_id } @$allowed_users);
+      },
+   )->on_done( sub {
+      my ( $event ) = @_;
+      log_if_fail "event", $event
    });
 }
