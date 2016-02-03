@@ -80,14 +80,10 @@ sub GET_new_events_for
    my ( $user, %params ) = @_;
 
    return $user->pending_get_events //=
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/r0/events",
-         params => {
-            %params,
-            from    => $user->eventstream_token,
-            timeout => 500,
-         },
+      matrix_get_events( $user,
+         %params,
+         from    => $user->eventstream_token,
+         timeout => 500,
       )->on_ready( sub {
          undef $user->pending_get_events;
       })->then( sub {

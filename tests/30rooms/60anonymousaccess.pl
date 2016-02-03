@@ -73,13 +73,7 @@ foreach my $i (
 
             matrix_send_room_text_message( $creator_user, $room_id, body => "mice" )
          })->then( sub {
-            do_request_json_for( $nonjoined_user,
-               method => "GET",
-               uri    => "/r0/events",
-               params => {
-                  room_id => $room_id,
-               },
-            );
+            matrix_get_events( $nonjoined_user, room_id => $room_id );
          })->followed_by( \&expect_4xx_or_empty_chunk );
       },
    );
@@ -388,10 +382,8 @@ test "Anonymous user cannot call /events globally",
    do => sub {
       my ( $anonymous_user ) = @_;
 
-      do_request_json_for( $anonymous_user,
-         method => "GET",
-         uri    => "/r0/events",
-      )->followed_by( \&expect_4xx_or_empty_chunk );
+      matrix_get_events( $anonymous_user )
+         ->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
 test "Anonymous users can join guest_access rooms",
@@ -496,14 +488,10 @@ sub get_events_no_timeout
 {
    my ( $user, $room_id, $from_token ) = @_;
 
-   do_request_json_for( $user,
-      method => "GET",
-      uri    => "/r0/events",
-      params => {
-         room_id => $room_id,
-         timeout => 0,
-         from => $from_token,
-      },
+   matrix_get_events( $user,
+      room_id => $room_id,
+      timeout => 0,
+      from    => $from_token,
    );
 }
 
@@ -512,15 +500,8 @@ sub check_events
 {
    my ( $user, $room_id ) = @_;
 
-   do_request_json_for( $user,
-      method => "GET",
-      uri    => "/r0/events",
-      params => {
-         limit   => "3",
-         dir     => "b",
-         room_id => $room_id,
-      },
-   )->then( sub {
+   matrix_get_events( $user, limit => 3, dir => "b", room_id => $room_id )
+   ->then( sub {
       my ( $body ) = @_;
 
       log_if_fail "Body", $body;
