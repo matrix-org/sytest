@@ -24,7 +24,7 @@ test "Room aliases can contain Unicode",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/api/v1/directory/room/$room_alias",
+         uri    => "/r0/directory/room/$room_alias",
 
          content => { room_id => $room_id },
       );
@@ -37,7 +37,7 @@ test "Room aliases can contain Unicode",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/directory/room/$room_alias",
+         uri    => "/r0/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -60,7 +60,7 @@ test "Remote room alias queries can handle Unicode",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/directory/room/$room_alias",
+         uri    => "/r0/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
 

@@ -5,7 +5,7 @@ my $room_fixture = room_fixture(
 );
 
 test "AS can create a user",
-   requires => [ $main::AS_USER, $room_fixture ],
+   requires => [ $main::AS_USER[0], $room_fixture ],
 
    do => sub {
       my ( $as_user, $room_id ) = @_;
@@ -30,7 +30,7 @@ test "AS can create a user",
    };
 
 test "AS cannot create users outside its own namespace",
-   requires => [ $main::AS_USER ],
+   requires => [ $main::AS_USER[0] ],
 
    do => sub {
       my ( $as_user ) = @_;
@@ -58,16 +58,16 @@ test "Regular users cannot register within the AS namespace",
 
 test "AS can make room aliases",
    requires => [
-      $main::AS_USER, $main::AS_USER_INFO, $room_fixture,
+      $main::AS_USER[0], $main::APPSERV[0], $room_fixture,
       room_alias_fixture( prefix => "astest-" ),
       qw( can_create_room_alias ),
    ],
 
    do => sub {
-      my ( $as_user, $as_user_info, $room_id, $room_alias ) = @_;
+      my ( $as_user, $appserv, $room_id, $room_alias ) = @_;
 
       Future->needs_all(
-         await_as_event( "m.room.aliases" )->then( sub {
+         $appserv->await_event( "m.room.aliases" )->then( sub {
             my ( $event, $request ) = @_;
 
             # As this is the first AS event we've received, lets check that the
@@ -77,7 +77,7 @@ test "AS can make room aliases",
 
             assert_ok( defined $access_token,
                "HS provides an access_token" );
-            assert_eq( $access_token, $as_user_info->hs2as_token,
+            assert_eq( $access_token, $appserv->info->hs2as_token,
                "HS provides the correct token" );
 
             log_if_fail "Event", $event;
@@ -100,7 +100,7 @@ test "AS can make room aliases",
 
          do_request_json_for( $as_user,
             method => "PUT",
-            uri    => "/api/v1/directory/room/$room_alias",
+            uri    => "/r0/directory/room/$room_alias",
 
             content => {
                room_id => $room_id,
@@ -111,7 +111,7 @@ test "AS can make room aliases",
 
          do_request_json_for( $as_user,
             method => "GET",
-            uri    => "/api/v1/directory/room/$room_alias",
+            uri    => "/r0/directory/room/$room_alias",
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -138,7 +138,7 @@ test "Regular users cannot create room aliases within the AS namespace",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/api/v1/directory/room/$room_alias",
+         uri    => "/r0/directory/room/$room_alias",
 
          content => {
             room_id => $room_id,
@@ -174,8 +174,11 @@ sub matrix_register_as_ghost
 my $next_as_user_id = 0;
 sub as_ghost_fixture
 {
+   my ( $idx ) = @_;
+   $idx //= 0;
+
    fixture(
-      requires => [ $main::AS_USER ],
+      requires => [ $main::AS_USER[$idx] ],
 
       setup => sub {
          my ( $as_user ) = @_;

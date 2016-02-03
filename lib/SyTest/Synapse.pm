@@ -13,7 +13,7 @@ use IO::Async::FileStream;
 use Cwd qw( getcwd abs_path );
 use File::Basename qw( dirname );
 use File::Path qw( make_path remove_tree );
-use List::Util qw( any );
+use List::Util qw( any pairmap );
 use POSIX qw( strftime );
 
 use YAML ();
@@ -25,6 +25,7 @@ sub _init
 
    $self->{$_} = delete $args->{$_} for qw(
       port unsecure_port output synapse_dir extra_args python config coverage
+      dendron
    );
 
    $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
@@ -126,43 +127,60 @@ sub start
    my $cwd = getcwd;
    my $log = "$self->{hs_dir}/homeserver.log";
 
-   my $listeners = [{
-      type => "http",
-      port => $port,
-      bind_address => "127.0.0.1",
-      tls => 1,
-      resources => [{
-         names => ["client", "federation"], compress => 0
-      }]
-   }];
+   my $listeners = [];
 
-   if ($self->{unsecure_port}) {
+   if( $self->{dendron} ) {
+      # If we are running synapse behind dendron then only bind the unsecure
+      # port for synapse.
+      $self->{unsecure_port} = $port + 9000 - 8000;
+   }
+   else {
+      push @$listeners, {
+         type => "http",
+         port => $port,
+         bind_address => "127.0.0.1",
+         tls => 1,
+         resources => [{
+            names => [ "client", "federation" ], compress => 0
+         }]
+      };
+   }
+
+   if( $self->{unsecure_port} ) {
       push @$listeners, {
          type => "http",
          port => $self->{unsecure_port},
          bind_address => "127.0.0.1",
          tls => 0,
          resources => [{
-            names => ["client", "federation"], compress => 0
+            names => [ "client", "federation" ], compress => 0
          }]
       }
    }
 
+   my $cert_file = "$self->{hs_dir}/cert.pem";
+   my $key_file = "$self->{hs_dir}/key.pem";
+
+   my $macaroon_secret_key = "secret_$self->{port}";
+
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
-        "tls-dh-params-path" => "$cwd/keys/tls.dh",
+        "tls_certificate_path" => $cert_file,
+        "tls_private_key_path" => $key_file,
+        "tls_dh_params_path" => "$cwd/keys/tls.dh",
         "rc_messages_per_second" => 1000,
         "rc_message_burst_count" => 1000,
         "enable_registration" => "true",
         "database" => $db_config,
         "database_config" => $db_config_path,
+        "macaroon_secret_key" => $macaroon_secret_key,
 
         # Metrics are always useful
         "enable_metrics" => 1,
         "metrics_port" => ( $port - 8000 + 9090 ),
 
-        "perspectives" => {servers => {}},
+        "perspectives" => { servers => {} },
 
         # Stack traces are useful
         "full_twisted_stacktraces" => "true",
@@ -187,32 +205,60 @@ sub start
       : "$self->{synapse_dir}"
    );
 
-   my @command = ( $self->{python} );
+   my @synapse_command = ( $self->{python} );
 
    if( $self->{coverage} ) {
       # Ensures that even --generate-config has coverage reports. This is intentional
-      push @command,
+      push @synapse_command,
          "-m", "coverage", "run", "-p", "--source=$self->{synapse_dir}/synapse";
    }
 
-   push @command,
+   push @synapse_command,
       "-m", "synapse.app.homeserver",
       "--config-path" => $config_path,
       "--server-name" => "localhost:$port";
 
    $output->diag( "Generating config for port $port" );
 
+   my @config_command = (
+      @synapse_command, "--generate-config", "--report-stats=no"
+   );
+
+   my @command;
+
+   if( $self->{dendron} ) {
+      $db_type eq "pg" or die "Dendron can only run against postgres";
+
+      my @db_arg_pairs = pairmap { $a eq "database" ? "dbname=$b" : "$a=$b" } %db_args;
+
+      @command = (
+         $self->{dendron},
+         "--synapse-python" => $self->{python},
+         "--synapse-config" => $config_path,
+         "--synapse-url" => "http://127.0.0.1:$self->{unsecure_port}",
+         "--synapse-postgres" => join( " ", @db_arg_pairs ),
+         "--macaroon-secret" => $macaroon_secret_key,
+         "--server-name" => "localhost:$port",
+         "--cert-file" => $cert_file,
+         "--key-file" => $key_file,
+         "--addr" => "127.0.0.1:$port",
+      )
+   }
+   else {
+      @command = @synapse_command
+   }
+
+   my $env = {
+      "PYTHONPATH" => $pythonpath,
+      "PATH" => $ENV{PATH},
+      "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
+   };
+
    my $loop = $self->loop;
    $loop->run_child(
-      setup => [
-         env => {
-            "PYTHONPATH" => $pythonpath,
-            "PATH" => $ENV{PATH},
-            "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
-         },
-      ],
+      setup => [ env => $env ],
 
-      command => [ @command, "--generate-config", "--report-stats=no" ],
+      command => [ @config_command ],
 
       on_finish => sub {
          my ( $pid, $exitcode, $stdout, $stderr ) = @_;
@@ -225,13 +271,7 @@ sub start
          $output->diag( "Starting server for port $port" );
          $self->add_child(
             $self->{proc} = IO::Async::Process->new(
-               setup => [
-                  env => {
-                     "PYTHONPATH" => $pythonpath,
-                     "PATH" => $ENV{PATH},
-                     "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
-                  },
-               ],
+               setup => [ env => $env ],
 
                command => [ @command, @{ $self->{extra_args} } ],
 
@@ -239,8 +279,8 @@ sub start
             )
          );
 
-         my $polling_period = 0.01;
-         my $polling_count = 20;
+         my $polling_period = 0.1;
+
          my $poll;
          $poll = sub {
             $loop->connect(
@@ -251,23 +291,18 @@ sub start
                   ip       => "127.0.0.1",
                }
             )->then( sub {
+               print STDERR "Connected to server $self->{port}\n";
                my ( $connection ) = @_;
 
                $connection->close;
 
                $self->started_future->done;
             }, sub {
-               $polling_period *= 2;
-               $polling_count -= 1;
-
-               if ( $polling_count == 0 ) {
-                  die "Synapse failed to start within ${polling_period}s";
-               }
-
                $loop->delay_future( after => $polling_period )->then( $poll );
             });
          };
 
+         print STDERR "Connecting to server $self->{port}\n";
          $self->adopt_future( $poll->() );
 
          $self->open_logfile;

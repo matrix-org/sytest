@@ -62,7 +62,7 @@ test "Fetching eventstream a second time doesn't yield the message again",
 
          do_request_json_for( $recvuser,
             method => "GET",
-            uri    => "/api/v1/events",
+            uri    => "/r0/events",
             params => {
                from    => $recvuser->eventstream_token,
                timeout => 0,

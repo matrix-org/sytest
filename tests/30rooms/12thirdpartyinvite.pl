@@ -1,15 +1,3 @@
-use Crypt::NaCl::Sodium;
-use File::Basename qw( dirname );
-use IO::Async::SSL;
-use Protocol::Matrix qw( encode_base64_unpadded sign_json );
-use SyTest::Identity::Server;
-
-use IO::Async::Listener 0.69;  # for ->configure( handle => undef )
-
-my $crypto_sign = Crypt::NaCl::Sodium->sign;
-
-my $DIR = dirname( __FILE__ );
-
 my $invitee_email = 'lemurs@monkeyworld.org';
 
 test "Can invite existing 3pid",
@@ -30,7 +18,7 @@ test "Can invite existing 3pid",
 
          do_request_json_for( $inviter,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/invite",
+            uri    => "/r0/rooms/$room_id/invite",
 
             content => {
                id_server    => $id_server->name,
@@ -267,7 +255,7 @@ sub do_3pid_invite {
 
    do_request_json_for( $inviter,
       method  => "POST",
-      uri     => "/api/v1/rooms/$room_id/invite",
+      uri     => "/r0/rooms/$room_id/invite",
       content => {
          id_server    => $id_server,
          medium       => "email",
@@ -276,30 +264,3 @@ sub do_3pid_invite {
    )
 }
 
-sub id_server_fixture
-{
-   return fixture(
-      setup => sub {
-         my $id_server = SyTest::Identity::Server->new;
-         $loop->add( $id_server );
-
-         $id_server->listen(
-            host    => "localhost",
-            service => "",
-            extensions => [qw( SSL )],
-            # Synapse currently only talks IPv4
-            family => "inet",
-
-            SSL_cert_file => "$DIR/../../keys/tls-selfsigned.crt",
-            SSL_key_file => "$DIR/../../keys/tls-selfsigned.key",
-         )->then_done( $id_server );
-      },
-
-      teardown => sub {
-         my ( $id_server ) = @_;
-         $loop->remove( $id_server );
-
-         Future->done;
-      },
-   );
-}

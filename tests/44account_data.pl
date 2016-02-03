@@ -14,7 +14,7 @@ sub matrix_add_account_data
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/v2_alpha/user/:user_id/account_data/$type",
+      uri     => "/r0/user/:user_id/account_data/$type",
       content => $content
    );
 }
@@ -33,7 +33,7 @@ sub matrix_add_room_account_data
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/v2_alpha/user/:user_id/rooms/$room_id/account_data/$type",
+      uri     => "/r0/user/:user_id/rooms/$room_id/account_data/$type",
       content => $content
    );
 }
@@ -172,18 +172,21 @@ test "Room account data appears in v1 /events stream",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      Future->needs_all(
-         await_event_for( $user, filter => sub {
-            my ( $event ) = @_;
+      flush_events_for( $user )
+      ->then( sub {
+         Future->needs_all(
+            await_event_for( $user, filter => sub {
+               my ( $event ) = @_;
 
-            return $event->{type} eq "my.test.type"
-               && $event->{content}{cats_or_rats} eq "rats"
-               && $event->{room_id} eq $room_id;
-         }),
-         matrix_add_room_account_data( $user, $room_id, "my.test.type", {
-            cats_or_rats => "rats",
-         }),
-      );
+               return $event->{type} eq "my.test.type"
+                  && $event->{content}{cats_or_rats} eq "rats"
+                  && $event->{room_id} eq $room_id;
+            }),
+            matrix_add_room_account_data( $user, $room_id, "my.test.type", {
+               cats_or_rats => "rats",
+            }),
+         );
+      });
    };
 
 

@@ -51,7 +51,7 @@ multi_test "Test that a message is pushed",
          # message that Bob sent.
          do_request_json_for( $alice,
             method  => "POST",
-            uri     => "/api/v1/pushers/set",
+            uri     => "/r0/pushers/set",
             content => {
                profile_tag         => "tag",
                kind                => "http",
