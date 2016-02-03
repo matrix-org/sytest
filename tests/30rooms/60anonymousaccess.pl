@@ -963,6 +963,8 @@ test "GET /publicRooms includes avatar URLs",
       });
    };
 
+push our @EXPORT, qw( anonymous_user_fixture );
+
 sub anonymous_user_fixture
 {
    fixture(
@@ -987,7 +989,7 @@ sub anonymous_user_fixture
    })
 }
 
-push our @EXPORT, qw( matrix_set_room_guest_access matrix_get_room_membership );
+push @EXPORT, qw( matrix_set_room_guest_access matrix_get_room_membership );
 
 sub matrix_set_room_guest_access
 {
