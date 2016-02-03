@@ -85,6 +85,7 @@ our @HOMESERVER_INFO = map {
                my $as_info = $as_infos[$idx];
 
                my $appserv_conf = $synapse->write_yaml_file( "appserv-$idx.yaml", {
+                  id       => $as_info->id,
                   url      => $test_server_info->client_location . $as_info->path,
                   as_token => $as_info->as2hs_token,
                   hs_token => $as_info->hs2as_token,

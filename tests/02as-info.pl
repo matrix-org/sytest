@@ -25,7 +25,7 @@ our @AS_INFO = map {
             gen_token( 32 ),
             gen_token( 32 ),
             "/appservs/$idx",
-            $idx,
+            "AS-$idx",
          ));
       },
    );
