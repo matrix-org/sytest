@@ -43,10 +43,7 @@ sub new
 
    my $f = repeat {
       $await_http->( qr{^\Q$path\E/transactions/\d+$}, sub { 1 },
-         # Disable the timeout logic so this doesn't fail after 10 seconds;
-         #   we're just waiting indefinitely for the next transaction to
-         #   arrive.
-         timeout => undef,
+         timeout => 0,
       )->then( sub {
          my ( $request ) = @_;
 
