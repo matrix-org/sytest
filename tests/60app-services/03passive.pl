@@ -5,7 +5,7 @@ my $room_fixture = room_fixture(
 );
 
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [ $main::AS_USER, $main::APPSERV, $user_fixture, $room_fixture,
+   requires => [ $main::AS_USER[0], $main::APPSERV[0], $user_fixture, $room_fixture,
                  qw( can_invite_room )],
 
    do => sub {
@@ -45,7 +45,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
-   requires => [ $main::AS_USER, $main::APPSERV, local_user_fixture(), $room_fixture,
+   requires => [ $main::AS_USER[0], $main::APPSERV[0], local_user_fixture(), $room_fixture,
                  room_alias_fixture( prefix => "astest-" ),
 
                 qw( can_join_room_by_alias )],
@@ -123,7 +123,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
    };
 
 test "Events in rooms with AS-hosted room aliases are sent to AS server",
-   requires => [ $user_fixture, $room_fixture, $main::APPSERV,
+   requires => [ $user_fixture, $room_fixture, $main::APPSERV[0],
                  qw( can_join_room_by_alias can_send_message )],
 
    do => sub {

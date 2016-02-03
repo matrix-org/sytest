@@ -1,7 +1,7 @@
 my $user_fixture = local_user_fixture();
 
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [ as_ghost_fixture(), $main::AS_USER, $user_fixture, $main::APPSERV,
+   requires => [ as_ghost_fixture(), $main::AS_USER[0], $user_fixture, $main::APPSERV[0],
                      room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally )],
 
@@ -88,7 +88,7 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [ as_ghost_fixture(), $user_fixture, $main::APPSERV,
+   requires => [ as_ghost_fixture(), $user_fixture, $main::APPSERV[0],
                      room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally can_send_message )],
 
@@ -161,7 +161,7 @@ multi_test "AS-ghosted users can use rooms themselves",
 my $unregistered_as_user_localpart = "astest-02ghost-1";
 
 test "Ghost user must register before joining room",
-   requires => [ $main::AS_USER, local_user_and_room_fixtures(), $main::HOMESERVER_INFO[0] ],
+   requires => [ $main::AS_USER[0], local_user_and_room_fixtures(), $main::HOMESERVER_INFO[0] ],
 
    check => sub {
       my ( $as_user, undef, $room_id, $hs_info ) = @_;

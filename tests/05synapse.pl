@@ -32,10 +32,10 @@ our @HOMESERVER_INFO = map {
    my $idx = $_;
 
    fixture(
-      requires => [ $main::TEST_SERVER_INFO, $main::AS_INFO ],
+      requires => [ $main::TEST_SERVER_INFO, @main::AS_INFO ],
 
       setup => sub {
-         my ( $test_server_info, $as_user_info ) = @_;
+         my ( $test_server_info, @as_infos ) = @_;
 
          my $secure_port = $HOMESERVER_PORTS[$idx];
          my $unsecure_port = $WANT_TLS ? 0 : $secure_port + 1000;
@@ -79,24 +79,33 @@ our @HOMESERVER_INFO = map {
 
          if( $idx == 0 ) {
             # Configure application services on first instance only
-            my $appserv_conf = $synapse->write_yaml_file( "appserv.yaml", {
-               url      => $test_server_info->client_location . $as_user_info->path,
-               as_token => $as_user_info->as2hs_token,
-               hs_token => $as_user_info->hs2as_token,
-               sender_localpart => $as_user_info->localpart,
-               namespaces => {
-                  users => [
-                     { regex => '@astest-.*', exclusive => "true" },
-                  ],
-                  aliases => [
-                     { regex => '#astest-.*', exclusive => "true" },
-                  ],
-                  rooms => [],
-               }
-            } );
+            my @confs;
+
+            foreach my $idx ( 0 .. $#as_infos ) {
+               my $as_info = $as_infos[$idx];
+
+               my $appserv_conf = $synapse->write_yaml_file( "appserv-$idx.yaml", {
+                  id       => $as_info->id,
+                  url      => $test_server_info->client_location . $as_info->path,
+                  as_token => $as_info->as2hs_token,
+                  hs_token => $as_info->hs2as_token,
+                  sender_localpart => $as_info->localpart,
+                  namespaces => {
+                     users => [
+                        { regex => '@astest-.*', exclusive => "true" },
+                     ],
+                     aliases => [
+                        { regex => '#astest-.*', exclusive => "true" },
+                     ],
+                     rooms => [],
+                  }
+               } );
+
+               push @confs, $appserv_conf;
+            }
 
             $synapse->append_config(
-               app_service_config_files => [ $appserv_conf ],
+               app_service_config_files => \@confs,
             );
          }
 
