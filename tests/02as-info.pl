@@ -8,19 +8,25 @@ sub gen_token
 
 struct ASInfo => [qw( localpart user_id as2hs_token hs2as_token path id )];
 
-our $AS_INFO = fixture(
-   setup => sub {
-      my $port = $HOMESERVER_PORTS[0];
+my $n_appservers = 1;
 
-      my $localpart = "as-user";
+our @AS_INFO = map {
+   my $idx = $_;
 
-      Future->done( ASInfo(
-         $localpart,
-         "\@${localpart}:localhost:${port}",
-         gen_token( 32 ),
-         gen_token( 32 ),
-         "/appserv",
-         "0",
-      ));
-   },
-);
+   fixture(
+      setup => sub {
+         my $port = $HOMESERVER_PORTS[0];
+
+         my $localpart = "as-user-$idx";
+
+         Future->done( ASInfo(
+            $localpart,
+            "\@${localpart}:localhost:${port}",
+            gen_token( 32 ),
+            gen_token( 32 ),
+            "/appservs/$idx",
+            "AS-$idx",
+         ));
+      },
+   );
+} 1 .. $n_appservers;
