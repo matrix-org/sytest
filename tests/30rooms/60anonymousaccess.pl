@@ -467,7 +467,11 @@ test "Annonymous user calling /events doesn't tightloop",
 
             log_if_fail "Events body", $f ? $f->get : undef;
 
-            get_events_no_timeout( $anonymous_user, $room_id, $end_token );
+            matrix_get_events( $anonymous_user,
+               room_id => $room_id,
+               timeout => 0,
+               from    => $end_token,
+            );
          }, foreach => [ 0 .. 5 ], until => sub {
             my ( $res ) = @_;
             $res->failure or not @{ $res->get->{chunk} };
@@ -482,18 +486,6 @@ test "Annonymous user calling /events doesn't tightloop",
          Future->done(1);
       });
    };
-
-
-sub get_events_no_timeout
-{
-   my ( $user, $room_id, $from_token ) = @_;
-
-   matrix_get_events( $user,
-      room_id => $room_id,
-      timeout => 0,
-      from    => $from_token,
-   );
-}
 
 
 sub check_events
