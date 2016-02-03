@@ -403,8 +403,8 @@ test "A next_batch token can be used in the v1 messages API",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         $room->{timeline}{events}[0]{event_id} eq $event_id_1
-            or die "Unexpected timeline event";
+         assert_eq( $room->{timeline}{events}[0]{event_id}, $event_id_1,
+                    "Event ID 1" );
 
          $next_batch = $body->{next_batch};
 
@@ -414,16 +414,16 @@ test "A next_batch token can be used in the v1 messages API",
 
          matrix_get_room_messages( $user, $room_id,
                                    from => $next_batch,
-                                   dir => 'f');
+                                   dir => 'f' );
       })->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( chunk start end ) );
-         @{ $body->{chunk} } == 1 or die "Expected only one event";
-         $body->{chunk}[0]{event_id} eq $event_id_2
-            or die "Unexpected event";
-         $body->{chunk}[0]{content}{body} eq "2"
-            or die "Unexpected message body.";
+         assert_eq( @{ $body->{chunk} }, 1, "event count" );
+         assert_eq( $body->{chunk}[0]{event_id}, $event_id_2, 
+                    "Event ID 2" );
+         assert_eq( $body->{chunk}[0]{content}{body}, "2",
+                    "Message body" );
 
          Future->done(1);
       })
