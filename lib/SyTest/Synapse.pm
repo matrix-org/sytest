@@ -291,7 +291,7 @@ sub start
                   ip       => "127.0.0.1",
                }
             )->then( sub {
-               print STDERR "Connected to server $self->{port}\n";
+               $output->diag( "Connected to server $self->{port}" );
                my ( $connection ) = @_;
 
                $connection->close;
@@ -302,7 +302,7 @@ sub start
             });
          };
 
-         print STDERR "Connecting to server $self->{port}\n";
+         $output->diag( "Connecting to server $self->{port}" );
          $self->adopt_future( $poll->() );
 
          $self->open_logfile;
@@ -334,7 +334,7 @@ sub on_finish
    say $self->pid . " stopped";
 
    if( $exitcode > 0 ) {
-      print STDERR "Process failed ($exitcode)\n";
+      warn "Process failed ($exitcode)";
 
       print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
          for @{ $self->{stderr_lines} // [] };
