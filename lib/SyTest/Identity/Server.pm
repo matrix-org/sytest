@@ -125,7 +125,7 @@ sub on_request
       $req->respond_json( \%resp );
    }
    else {
-      print STDERR "Unexpected request to Identity Service for $path";
+      warn "Unexpected request to Identity Service for $path";
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
    }
 }
