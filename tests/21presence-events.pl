@@ -1,5 +1,5 @@
 # Eventually this will be changed; see SPEC-53
-my $PRESENCE_LIST_URI = "/api/v1/presence/list/:user_id";
+my $PRESENCE_LIST_URI = "/r0/presence/list/:user_id";
 
 my $fixture = local_user_fixture();
 
@@ -42,11 +42,8 @@ test "Presence change reports an event to myself",
    do => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/api/v1/presence/:user_id/status",
-
-         content => { presence => "online", status_msg => $status_msg },
+      matrix_set_presence_status( $user, "online",
+         status_msg => $status_msg,
       )->then( sub {
          await_event_for( $user, filter => sub {
             my ( $event ) = @_;
@@ -79,11 +76,8 @@ test "Friends presence changes reports events",
             invite => [ $friend->user_id ],
          }
       )->then( sub {
-         do_request_json_for( $friend,
-            method => "PUT",
-            uri    => "/api/v1/presence/:user_id/status",
-
-            content => { presence => "online", status_msg => $friend_status },
+         matrix_set_presence_status( $friend, "online",
+            status_msg => $friend_status,
          );
       })->then( sub {
          await_event_for( $user, filter => sub {

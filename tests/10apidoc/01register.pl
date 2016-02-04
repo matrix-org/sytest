@@ -78,13 +78,13 @@ sub matrix_register_user
       content => {
          type     => "m.login.password",
          user     => $uid,
-         password => "an0th3r s3kr1t",
+         password => $opts{password} // "an0th3r s3kr1t",
       },
    )->then( sub {
       my ( $body ) = @_;
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $access_token, undef, undef, [], undef );
+      my $user = User( $http, $body->{user_id}, $access_token, undef, undef, undef, [], undef );
 
       my $f = Future->done;
 
@@ -92,7 +92,7 @@ sub matrix_register_user
          $f = $f->then( sub {
             $http->do_request_json(
                method => "GET",
-               uri    => "/api/v1/events",
+               uri    => "/r0/events",
                params => { access_token => $access_token, timeout => 0 },
             )
          })->on_done( sub {
@@ -123,6 +123,7 @@ sub local_user_fixture
 
          matrix_register_user( $http, undef,
             with_events => $args{with_events} // 1,
+            password => $args{password},
          )->then_with_f( sub {
             my $f = shift;
             return $f unless defined( my $displayname = $args{displayname} );
@@ -130,7 +131,7 @@ sub local_user_fixture
             my $user = $f->get;
             do_request_json_for( $user,
                method => "PUT",
-               uri    => "/api/v1/profile/:user_id/displayname",
+               uri    => "/r0/profile/:user_id/displayname",
 
                content => { displayname => $displayname },
             )->then_done( $user );
@@ -141,7 +142,7 @@ sub local_user_fixture
             my $user = $f->get;
             do_request_json_for( $user,
                method => "PUT",
-               uri    => "/api/v1/profile/:user_id/avatar_url",
+               uri    => "/r0/profile/:user_id/avatar_url",
 
                content => { avatar_url => $avatar_url },
             )->then_done( $user );
@@ -152,7 +153,7 @@ sub local_user_fixture
             my $user = $f->get;
             do_request_json_for( $user,
                method => "PUT",
-               uri    => "/api/v1/presence/:user_id/status",
+               uri    => "/r0/presence/:user_id/status",
 
                content => {
                   presence   => $presence,

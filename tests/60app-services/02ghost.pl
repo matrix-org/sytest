@@ -1,15 +1,15 @@
 my $user_fixture = local_user_fixture();
 
 multi_test "AS-ghosted users can use rooms via AS",
-   requires => [ as_ghost_fixture(), $main::AS_USER, $user_fixture,
+   requires => [ as_ghost_fixture(), $main::AS_USER[0], $user_fixture, $main::APPSERV[0],
                      room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally )],
 
    do => sub {
-      my ( $ghost, $as_user, $creator, $room_id ) = @_;
+      my ( $ghost, $as_user, $creator, $appserv, $room_id ) = @_;
 
       Future->needs_all(
-         await_as_event( "m.room.member" )->then( sub {
+         $appserv->await_event( "m.room.member" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "AS event", $event;
@@ -31,7 +31,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
          do_request_json_for( $as_user,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/join",
+            uri    => "/r0/rooms/$room_id/join",
             params => {
                user_id => $ghost->user_id,
             },
@@ -41,7 +41,7 @@ multi_test "AS-ghosted users can use rooms via AS",
       )->SyTest::pass_on_done( "User joined room via AS" )
       ->then( sub {
          Future->needs_all(
-            await_as_event( "m.room.message" )->then( sub {
+            $appserv->await_event( "m.room.message" )->then( sub {
                my ( $event ) = @_;
 
                log_if_fail "AS event", $event;
@@ -58,7 +58,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
             do_request_json_for( $as_user,
                method => "POST",
-               uri    => "/api/v1/rooms/$room_id/send/m.room.message",
+               uri    => "/r0/rooms/$room_id/send/m.room.message",
                params => {
                   user_id => $ghost->user_id,
                },
@@ -88,15 +88,15 @@ multi_test "AS-ghosted users can use rooms via AS",
    };
 
 multi_test "AS-ghosted users can use rooms themselves",
-   requires => [ as_ghost_fixture(), $user_fixture,
+   requires => [ as_ghost_fixture(), $user_fixture, $main::APPSERV[0],
                      room_fixture( requires_users => [ $user_fixture ] ),
                 qw( can_receive_room_message_locally can_send_message )],
 
    do => sub {
-      my ( $ghost, $creator, $room_id ) = @_;
+      my ( $ghost, $creator, $appserv, $room_id ) = @_;
 
       Future->needs_all(
-         await_as_event( "m.room.member" )->then( sub {
+         $appserv->await_event( "m.room.member" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "AS event", $event;
@@ -118,7 +118,7 @@ multi_test "AS-ghosted users can use rooms themselves",
       )->SyTest::pass_on_done( "Ghost joined room themselves" )
       ->then( sub {
          Future->needs_all(
-            await_as_event( "m.room.message" )->then( sub {
+            $appserv->await_event( "m.room.message" )->then( sub {
                my ( $event ) = @_;
 
                log_if_fail "AS event", $event;
@@ -156,4 +156,36 @@ multi_test "AS-ghosted users can use rooms themselves",
             return 1;
          })->SyTest::pass_on_done( "Creator received ghost's message" )
       })->then_done(1);
+   };
+
+my $unregistered_as_user_localpart = "astest-02ghost-1";
+
+test "Ghost user must register before joining room",
+   requires => [ $main::AS_USER[0], local_user_and_room_fixtures(), $main::HOMESERVER_INFO[0] ],
+
+   check => sub {
+      my ( $as_user, undef, $room_id, $hs_info ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
+         uri    => "/r0/rooms/$room_id/join",
+         params => {
+            user_id => "@".$unregistered_as_user_localpart.":".$hs_info->server_name,
+         },
+         content => {},
+      );
+   },
+
+   do => sub {
+      my ( $as_user, undef, $room_id ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
+         uri    => "/api/v1/register",
+
+         content => {
+            type => "m.login.application_service",
+            user => $unregistered_as_user_localpart,
+         },
+      );
    };

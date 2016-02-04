@@ -1,385 +1,389 @@
-use Future::Utils qw( try_repeat_until_success );
+use Future::Utils qw( try_repeat_until_success repeat );
 use JSON qw( encode_json );
 
-test "Anonymous user cannot view non-world-readable rooms",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+foreach my $i (
+   [ "Anonymous", sub { anonymous_user_fixture() } ],
+   [ "Real", sub { local_user_fixture() } ]
+) {
+   my ( $name, $fixture ) = @$i;
 
-   do => sub {
-      my ( $anonymous_user, $user ) = @_;
+   # /messages
 
-      my $room_id;
+   test(
+      "$name non-joined user cannot view non-world-readable rooms",
 
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
+      requires => [ $fixture->(), local_user_fixture() ],
 
-         matrix_set_room_history_visibility( $user, $room_id, "shared" );
-      })->then( sub {
-         matrix_send_room_text_message( $user, $room_id, body => "mice" )
-      })->then( sub {
-         matrix_get_room_messages( $anonymous_user, $room_id, limit => "1" )
-      })->followed_by( \&expect_4xx_or_empty_chunk );
-   };
+      do => sub {
+         my ( $nonjoined_user, $creator_user ) = @_;
 
-test "Anonymous user can view world-readable rooms",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+         my $room_id;
 
-   do => sub {
-      my ( $anonymous_user, $user ) = @_;
+         matrix_create_and_join_room( [ $creator_user ] )
+         ->then( sub {
+            ( $room_id ) = @_;
 
-      my $room_id;
-
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-      })->then( sub {
-         matrix_send_room_text_message( $user, $room_id, body => "mice" )
-      })->then( sub {
-         matrix_get_room_messages( $anonymous_user, $room_id, limit => "2" )
-      });
-   };
-
-test "Anonymous user cannot call /events on non-world_readable room",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
-
-   do => sub {
-      my ( $anonymous_user, $user ) = @_;
-
-      my $room_id;
-
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_send_room_text_message( $user, $room_id, body => "mice" )
-      })->then( sub {
-         matrix_get_room_messages( $anonymous_user, $room_id, limit => "2" )
-      })->followed_by( \&expect_4xx_or_empty_chunk );
-   };
-
-sub await_event_not_presence_for
-{
-   my ( $user, $room_id, $allowed_users ) = @_;
-   await_event_for( $user,
-      room_id => $room_id,
-      filter  => sub {
-         my ( $event ) = @_;
-
-         # Include all events where the type is not m.presence.
-         # If the type is m.presence, then only include it if it is for one of
-         # the allowed users
-         return ((not $event->{type} eq "m.presence") or
-            any { $event->{content}{user_id} eq $_->user_id } @$allowed_users);
+            matrix_set_room_history_visibility( $creator_user, $room_id, "shared" );
+         })->then( sub {
+            matrix_send_room_text_message( $creator_user, $room_id, body => "mice" )
+         })->then( sub {
+            matrix_get_room_messages( $nonjoined_user, $room_id, limit => "1" )
+         })->followed_by( \&expect_4xx_or_empty_chunk );
       },
-   )->on_done( sub {
-      my ( $event ) = @_;
-      log_if_fail "event", $event
-   });
-}
+   );
 
-test "Anonymous user can call /events on world_readable room",
-   requires => [ anonymous_user_fixture(), local_user_fixture(), local_user_fixture() ],
+   test(
+      "$name non-joined user can view world-readable rooms",
 
-   do => sub {
-      my ( $anonymous_user, $user, $user_not_in_room ) = @_;
+      requires => [ $fixture->(), local_user_fixture() ],
 
-      my ( $room_id, $sent_event_id );
+      do => sub {
+         my ( $nonjoined_user, $creator_user ) = @_;
 
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
+         my $room_id;
 
-         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-      })->then( sub {
-         Future->needs_all(
-            matrix_send_room_text_message( $user, $room_id, body => "mice" )
-            ->on_done( sub {
-               ( $sent_event_id ) = @_;
-            }),
+         matrix_create_and_join_room( [ $creator_user ] )
+         ->then( sub {
+            ( $room_id ) = @_;
 
-            do_request_json_for( $anonymous_user,
-               method => "GET",
-               uri    => "/api/v1/events",
-            )->main::expect_http_400->then( sub {
-               await_event_not_presence_for( $anonymous_user, $room_id, [] )
+            matrix_set_room_history_visibility( $creator_user, $room_id, "world_readable" );
+         })->then( sub {
+            matrix_send_room_text_message( $creator_user, $room_id, body => "mice" )
+         })->then( sub {
+            matrix_get_room_messages( $nonjoined_user, $room_id, limit => "2" )
+         });
+      },
+   );
+
+   # /events
+
+   test(
+      "$name non-joined user cannot call /events on non-world_readable room",
+
+      requires => [ $fixture->(), local_user_fixture() ],
+
+      do => sub {
+         my ( $nonjoined_user, $creator_user ) = @_;
+
+         my $room_id;
+
+         matrix_create_and_join_room( [ $creator_user ] )
+         ->then( sub {
+            ( $room_id ) = @_;
+
+            matrix_send_room_text_message( $creator_user, $room_id, body => "mice" )
+         })->then( sub {
+            matrix_get_events( $nonjoined_user, room_id => $room_id );
+         })->followed_by( \&expect_4xx_or_empty_chunk );
+      },
+   );
+
+   test(
+      "$name non-joined user can call /events on world_readable room",
+
+      requires => [ $fixture->(), local_user_fixture(), local_user_fixture() ],
+
+      do => sub {
+         my ( $nonjoined_user, $user, $user_not_in_room ) = @_;
+
+         my ( $room_id, $sent_event_id );
+
+         matrix_create_and_join_room( [ $user ] )
+         ->then( sub {
+            ( $room_id ) = @_;
+
+            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+         })->then( sub {
+            matrix_initialsync_room( $nonjoined_user, $room_id )
+         })->then( sub {
+            Future->needs_all(
+               matrix_send_room_text_message( $user, $room_id, body => "mice" )
+               ->on_done( sub {
+                  ( $sent_event_id ) = @_;
+               }),
+
+               await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id, [] )
+               ->then( sub {
+                  my ( $event ) = @_;
+
+                  assert_json_keys( $event, qw( content ) );
+                  my $content = $event->{content};
+                  assert_json_keys( $content, qw( body ) );
+                  assert_eq( $content->{body}, "mice", "content body" );
+
+                  Future->done( 1 );
+               }),
+            )->then( sub {
+               my ( $stream_token ) = @_;
+
+               Future->needs_all(
+                  matrix_set_presence_status( $user_not_in_room, "online",
+                     status_msg => "Worshiping lemurs' tails",
+                  ),
+                  matrix_set_presence_status( $user, "online",
+                     status_msg => "Worshiping lemurs' tails",
+                  ),
+
+                  await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id, [ $user ] )->then( sub {
+                     my ( $event ) = @_;
+
+                     assert_eq( $event->{type}, "m.presence",
+                        "event type" );
+                     assert_eq( $event->{content}{user_id}, $user->user_id,
+                        "event content.user_id" );
+
+                     Future->done( 1 );
+                  }),
+               ),
             })->then( sub {
-               my ( $event ) = @_;
+               my ( $stream_token ) = @_;
 
-               assert_json_keys( $event, qw( content ) );
-               my $content = $event->{content};
-               assert_json_keys( $content, qw( body ) );
-               $content->{body} eq "mice" or die "Want content body to be mice";
+               Future->needs_all(
+                  do_request_json_for( $user,
+                     method  => "POST",
+                     uri     => "/r0/rooms/$room_id/receipt/m.read/$sent_event_id",
+                     content => {},
+                  ),
 
-               Future->done( 1 );
-            }),
-         )->then( sub {
-            my ( $stream_token ) = @_;
+                  await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id, [] )->then( sub {
+                     my ( $event ) = @_;
 
-            Future->needs_all(
-               do_request_json_for( $user_not_in_room,
-                  method  => "PUT",
-                  uri     => "/api/v1/presence/:user_id/status",
-                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
-               ),
-               do_request_json_for( $user,
-                  method  => "PUT",
-                  uri     => "/api/v1/presence/:user_id/status",
-                  content => { presence => "online", status_msg => "Worshiping lemurs' tails" },
-               ),
+                     assert_eq( $event->{type}, "m.receipt",
+                        "event type" );
+                     assert_ok( $event->{content}{$sent_event_id}{"m.read"}{ $user->user_id },
+                        "receipt event ID for user" );
 
-               await_event_not_presence_for( $anonymous_user, $room_id, [ $user ] )->then( sub {
-                  my ( $event ) = @_;
+                     Future->done( 1 );
+                  }),
+               );
+            })->then( sub {
+               my ( $stream_token ) = @_;
 
-                  assert_eq( $event->{type}, "m.presence",
-                     "event type" );
-                  assert_eq( $event->{content}{user_id}, $user->user_id,
-                     "event content.user_id" );
+               Future->needs_all(
+                  do_request_json_for( $user,
+                     method  => "PUT",
+                     uri     => "/r0/rooms/$room_id/typing/:user_id",
+                     content => {
+                        typing => JSON::true,
+                        timeout => 5000,
+                     },
+                  ),
 
-                  Future->done( 1 );
-               }),
-            ),
+                  await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id, [] )->then( sub {
+                     my ( $event ) = @_;
+
+                     assert_eq( $event->{type}, "m.typing",
+                        "event type" );
+                     assert_eq( $event->{room_id}, $room_id,
+                        "event room_id" );
+                     assert_eq( $event->{content}{user_ids}[0], $user->user_id,
+                        "event content user_ids[0]" );
+
+                     Future->done( 1 );
+                  }),
+               );
+            });
+         });
+      },
+   );
+
+   test(
+      "$name non-joined user doesn't get events before room made world_readable",
+
+      requires => [ $fixture->(), local_user_fixture() ],
+
+      do => sub {
+         my ( $nonjoined_user, $user ) = @_;
+
+         my $room_id;
+
+         matrix_create_and_join_room( [ $user ] )
+         ->then( sub {
+            ( $room_id ) = @_;
+
+            matrix_send_room_text_message( $user, $room_id, body => "private" );
          })->then( sub {
-            my ( $stream_token ) = @_;
-
-            Future->needs_all(
-               do_request_json_for( $user,
-                  method  => "POST",
-                  uri     => "/v2_alpha/rooms/$room_id/receipt/m.read/$sent_event_id",
-                  content => {},
-               ),
-
-               await_event_not_presence_for( $anonymous_user, $room_id, [] )->then( sub {
-                  my ( $event ) = @_;
-
-                  assert_eq( $event->{type}, "m.receipt",
-                     "event type" );
-                  assert_ok( $event->{content}{$sent_event_id}{"m.read"}{ $user->user_id },
-                     "receipt event ID for user" );
-
-                  Future->done( 1 );
-               }),
-            );
+            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
          })->then( sub {
-            my ( $stream_token ) = @_;
-
             Future->needs_all(
-               do_request_json_for( $user,
-                  method  => "PUT",
-                  uri     => "/api/v1/rooms/$room_id/typing/:user_id",
-                  content => {
-                     typing => JSON::true,
-                     timeout => 5000,
-                  },
-               ),
+               matrix_send_room_text_message( $user, $room_id, body => "public" ),
 
-               await_event_not_presence_for( $anonymous_user, $room_id, [] )->then( sub {
-                  my ( $event ) = @_;
-
-                  assert_eq( $event->{type}, "m.typing",
-                     "event type" );
-                  assert_eq( $event->{room_id}, $room_id,
-                     "event room_id" );
-                  assert_eq( $event->{content}{user_ids}[0], $user->user_id,
-                     "event content user_ids[0]" );
-
+               # The client is allowed to see exactly two events, the
+               # m.room.history_visibility event and the public message.
+               # The server is free to return these in separate calls to
+               # /events, so we try at most two times to get the events we expect.
+               check_events( $nonjoined_user, $room_id )
+               ->then( sub {
                   Future->done( 1 );
+               }, sub {
+                  check_events( $nonjoined_user, $room_id );
                }),
             );
          });
-      });
-   };
+      },
+   );
 
-test "Annonymous user can call /sync on a world readable room",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+   # /state
 
-   do => sub {
-      my ( $anonymous_user, $user ) = @_;
+   test(
+      "$name non-joined users can get state for world_readable rooms",
 
-      my ( $room_id, $sent_event_id );
+      requires => [ local_user_and_room_fixtures(), $fixture->() ],
 
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
+      do => sub {
+         my ( $user, $room_id ) = @_;
 
          matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-      })->then( sub {
-         matrix_set_room_guest_access( $user, $room_id, "can_join" );
-      })->then( sub {
-         matrix_send_room_text_message( $user, $room_id, body => "mice" );
-      })->then( sub {
-         ( $sent_event_id ) = @_;
+      },
 
-         matrix_join_room( $anonymous_user, $room_id );
-      })->then( sub {
+      check => sub {
+         my ( $user, $room_id, $nonjoined_user ) = @_;
 
-         matrix_sync( $anonymous_user, filter => encode_json({
-            room => {
-               rooms => [ $room_id ],
-               ephemeral => { types => [] },
-               state => { types => [] },
-               timeline => { types => ["m.room.message"] },
-            },
-            presence => { types => [] }
-         }));
-      })->then( sub {
-         my ( $sync_body ) = @_;
-
-         assert_json_object( my $room = $sync_body->{rooms}{join}{$room_id} );
-         assert_json_list( my $events = $room->{timeline}{events} );
-         assert_eq( $events->[0]{event_id}, $sent_event_id, 'event id' );
-
-         Future->done( 1 );
-      });
-   };
-
-test "Anonymous user doesn't get events before room made world_readable",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
-
-   do => sub {
-      my ( $anonymous_user, $user ) = @_;
-
-      my $room_id;
-
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_send_room_text_message( $user, $room_id, body => "private" );
-      })->then( sub {
-         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-      })->then( sub {
-         Future->needs_all(
-            matrix_send_room_text_message( $user, $room_id, body => "public" ),
-
-            # The client is allowed to see exactly two events, the
-            # m.room.history_visibility event and the public message.
-            # The server is free to return these in separate calls to
-            # /events, so we try at most two times to get the events we expect.
-            check_events( $anonymous_user, $room_id )
-            ->then(sub {
-               Future->done( 1 );
-            }, sub {
-               check_events( $anonymous_user, $room_id );
-            }),
+         do_request_json_for( $nonjoined_user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/state",
          );
-      });
-   };
+      },
+   );
 
-test "Anonymous users can get state for world_readable rooms",
-   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
+   test(
+      "$name non-joined users can get individual state for world_readable rooms",
 
-   do => sub {
-      my ( $user, $room_id ) = @_;
+      requires => [ local_user_and_room_fixtures(), $fixture->() ],
 
-      matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-   },
+      do => sub {
+         my ( $user, $room_id ) = @_;
 
-   check => sub {
-      my ( $user, $room_id, $anonymous_user ) = @_;
-
-      do_request_json_for( $anonymous_user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state",
-      );
-   };
-
-test "Real users can get state for world_readable rooms",
-   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
-
-   do => sub {
-      my ( $user, $room_id ) = @_;
-
-      matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-   },
-
-   check => sub {
-      my ( $user, $room_id, $non_joined_user ) = @_;
-
-      do_request_json_for( $non_joined_user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state",
-      );
-   };
-
-test "Anonymous users can get individual state for world_readable rooms",
-   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
-
-   do => sub {
-      my ( $user, $room_id ) = @_;
-
-      matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-   },
-
-   check => sub {
-      my ( $user, $room_id, $anonymous_user ) = @_;
-
-      do_request_json_for( $anonymous_user,
-         method => "GET",
-         uri    => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
-      );
-   };
-
-test "Anonymous user cannot room initalSync for non-world_readable rooms",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
-
-   do => sub {
-      my ( $anonymous_user, $user ) = @_;
-
-      my $room_id;
-
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_send_room_text_message( $user, $room_id, body => "private" )
-      })->then( sub {
-         matrix_initialsync_room( $anonymous_user, $room_id )
-            ->main::expect_http_403;
-      });
-   };
-
-
-test "Anonymous user can room initialSync for world_readable rooms",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
-
-   do => sub {
-      my ( $anonymous_user, $user ) = @_;
-
-      my $room_id;
-
-      matrix_create_and_join_room( [ $user ] )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_send_room_text_message( $user, $room_id, body => "private" )
-      })->then(sub {
          matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-      })->then( sub {
-         matrix_send_room_text_message( $user, $room_id, body => "public" );
-      })->then( sub {
-         matrix_initialsync_room( $anonymous_user, $room_id );
-      })->then( sub {
-         my ( $body ) = @_;
+      },
 
-         assert_json_keys( $body, qw( room_id state messages presence ));
-         assert_json_keys( $body->{messages}, qw( chunk start end ));
-         assert_json_list( $body->{messages}{chunk} );
-         assert_json_list( $body->{state} );
+      check => sub {
+         my ( $user, $room_id, $nonjoined_user ) = @_;
 
-         log_if_fail "room initialSync body", $body;
+         do_request_json_for( $nonjoined_user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/state/m.room.member/".$user->user_id,
+         );
+      },
+   );
 
-         my $chunk = $body->{messages}{chunk};
+   # room /initialSync
 
-         @{ $chunk } == 2 or die "Wrong number of chunks";
-         $chunk->[0]->{type} eq "m.room.history_visibility" or die "Want m.room.history_visibility";
-         $chunk->[0]->{content}->{history_visibility} eq "world_readable" or die "Wrong history_visibility value";
-         $chunk->[1]->{type} eq "m.room.message" or die "Want m.room.message";
-         $chunk->[1]->{content}->{body} eq "public" or die "Wrong message body";
+   test(
+      "$name non-joined users cannot room initalSync for non-world_readable rooms",
 
-         Future->done( 1 );
-      });
+      requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+      do => sub {
+         my ( $non_joined_user, $creating_user ) = @_;
+
+         my $room_id;
+
+         matrix_create_and_join_room( [ $creating_user ] )
+         ->then( sub {
+            ( $room_id ) = @_;
+
+            matrix_send_room_text_message( $creating_user, $room_id, body => "private" )
+         })->then( sub {
+            matrix_initialsync_room( $non_joined_user, $room_id )
+               ->main::expect_http_403;
+         });
+      },
+   );
+
+   test(
+      "$name non-joined users can room initialSync for world_readable rooms",
+
+      requires => [ anonymous_user_fixture(), local_user_fixture() ],
+
+      do => sub {
+         my ( $syncing_user, $creating_user ) = @_;
+
+         my $room_id;
+
+         matrix_create_and_join_room( [ $creating_user ] )
+         ->then( sub {
+            ( $room_id ) = @_;
+
+            matrix_send_room_text_message( $creating_user, $room_id, body => "private" )
+         })->then( sub {
+            matrix_set_room_history_visibility( $creating_user, $room_id, "world_readable" );
+         })->then( sub {
+            matrix_send_room_text_message( $creating_user, $room_id, body => "public" );
+         })->then( sub {
+            matrix_initialsync_room( $syncing_user, $room_id );
+         })->then( sub {
+            my ( $body ) = @_;
+
+            assert_json_keys( $body, qw( room_id state messages presence ));
+            assert_json_keys( $body->{messages}, qw( chunk start end ));
+            assert_json_list( $body->{messages}{chunk} );
+            assert_json_list( $body->{state} );
+
+            log_if_fail "room initialSync body", $body;
+
+            my $chunk = $body->{messages}{chunk};
+
+            @{ $chunk } == 2 or die "Wrong number of chunks";
+            assert_eq( $chunk->[0]->{type}, "m.room.history_visibility", "event 0 type" );
+            assert_eq( $chunk->[0]->{content}->{history_visibility}, "world_readable", "history_visibility content" );
+            assert_eq( $chunk->[1]->{type}, "m.room.message", "event 1 type" );
+            assert_eq( $chunk->[1]->{content}->{body}, "public", "message content body" );
+
+            Future->done( 1 );
+         });
+      },
+   );
+
+   test(
+      "$name non-joined users can get individual state for world_readable rooms after leaving",
+
+      requires => [ local_user_and_room_fixtures(), $fixture->() ],
+
+      do => sub {
+         my ( $user, $room_id, $nonjoined_user ) = @_;
+
+         Future->needs_all(
+            matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
+            matrix_set_room_guest_access( $user, $room_id, "can_join" ),
+         )->then( sub {
+            matrix_join_room( $nonjoined_user, $room_id );
+         })->then( sub {
+            matrix_leave_room( $nonjoined_user, $room_id );
+         })->then( sub {
+            do_request_json_for( $nonjoined_user,
+               method => "GET",
+               uri    => "/r0/rooms/$room_id/state/m.room.member/".$user->user_id,
+            );
+         });
+      },
+   );
+
+   test(
+      "$name non-joined users cannot send messages to guest_access rooms if not joined",
+
+      requires => [ local_user_and_room_fixtures(), $fixture->() ],
+
+      do => sub {
+         my ( $user, $room_id, $nonjoined_user ) = @_;
+
+         matrix_set_room_guest_access( $user, $room_id, "can_join" )
+         ->then( sub {
+            matrix_send_room_text_message( $nonjoined_user, $room_id, body => "sup" )
+               ->main::expect_http_403;
+         });
+      },
+   );
+}
+
+test "Anonymous user cannot call /events globally",
+   requires => [ anonymous_user_fixture() ],
+
+   do => sub {
+      my ( $anonymous_user ) = @_;
+
+      matrix_get_events( $anonymous_user )
+         ->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
 test "Anonymous users can join guest_access rooms",
@@ -434,53 +438,62 @@ test "Anonymous users can send messages to guest_access rooms if joined",
       })
    };
 
-test "Anonymous users cannot send messages to guest_access rooms if not joined",
-   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
+test "Annonymous user calling /events doesn't tightloop",
+   requires => [ anonymous_user_fixture(), local_user_fixture() ],
 
    do => sub {
-      my ( $user, $room_id, $anonymous_user ) = @_;
+      my ( $anonymous_user, $user ) = @_;
 
-      matrix_set_room_guest_access( $user, $room_id, "can_join" )
+      my ( $room_id );
+
+      matrix_create_and_join_room( [ $user ] )
       ->then( sub {
-         matrix_send_room_text_message( $anonymous_user, $room_id, body => "sup" )
-            ->main::expect_http_403;
-      });
-   };
+         ( $room_id ) = @_;
 
-test "Anonymous users can get individual state for world_readable rooms after leaving",
-   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
-
-   do => sub {
-      my ( $user, $room_id, $anonymous_user ) = @_;
-
-      Future->needs_all(
-         matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
-         matrix_set_room_guest_access( $user, $room_id, "can_join" ),
-      )->then( sub {
-         matrix_join_room( $anonymous_user, $room_id );
-      })->then( sub {
-         matrix_leave_room( $anonymous_user, $room_id );
+         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
       })->then( sub {
          do_request_json_for( $anonymous_user,
             method => "GET",
-            uri    => "/api/v1/rooms/$room_id/state/m.room.member/".$user->user_id,
+            uri    => "/r0/rooms/$room_id/initialSync",
          );
+      })->then( sub {
+         my ( $sync_body ) = @_;
+         my $sync_from = $sync_body->{messages}->{end};
+
+         repeat( sub {
+            my ( undef, $f ) = @_;
+
+            my $end_token = $f ? $f->get->{end} : $sync_from;
+
+            log_if_fail "Events body", $f ? $f->get : undef;
+
+            matrix_get_events( $anonymous_user,
+               room_id => $room_id,
+               timeout => 0,
+               from    => $end_token,
+            );
+         }, foreach => [ 0 .. 5 ], until => sub {
+            my ( $res ) = @_;
+            $res->failure or not @{ $res->get->{chunk} };
+         });
+      })->then( sub {
+          my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_empty_list( $body->{chunk} );
+
+         Future->done(1);
       });
    };
+
 
 sub check_events
 {
    my ( $user, $room_id ) = @_;
 
-   do_request_json_for( $user,
-      method => "GET",
-      uri    => "/api/v1/events",
-      params => {
-         limit   => "3",
-         dir     => "b",
-         room_id => $room_id,
-      },
-   )->then( sub {
+   matrix_get_events( $user, limit => 3, dir => "b", room_id => $room_id )
+   ->then( sub {
       my ( $body ) = @_;
 
       log_if_fail "Body", $body;
@@ -491,10 +504,11 @@ sub check_events
 
       my $found = 0;
       foreach my $event ( @{ $body->{chunk} } ) {
-         next if all { $_ ne "content" } keys %{ $event };
-         next if all { $_ ne "body" } keys %{ $event->{content} };
-         $found = 1 if $event->{content}->{body} eq "public";
-         die "Should not have found private" if $event->{content}->{body} eq "private";
+         next if !exists $event->{content};
+         next if !exists $event->{content}{body};
+
+         $found = 1 if $event->{content}{body} eq "public";
+         die "Should not have found private" if $event->{content}{body} eq "private";
       }
 
       Future->done( $found );
@@ -535,7 +549,7 @@ test "Anonymous user can set display names",
    do => sub {
       my ( $anonymous_user, $user, $room_id ) = @_;
 
-      my $displayname_uri = "/api/v1/profile/:user_id/displayname";
+      my $displayname_uri = "/r0/profile/:user_id/displayname";
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )->then( sub {
          matrix_join_room( $anonymous_user, $room_id );
@@ -566,7 +580,7 @@ test "Anonymous user can set display names",
             }),
             do_request_json_for( $anonymous_user,
                method => "GET",
-               uri    => "/api/v1/rooms/$room_id/state/m.room.member/:user_id",
+               uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
             )->then( sub {
                my ( $body ) = @_;
                $body->{displayname} eq "creeper" or die "Wrong displayname";
@@ -740,7 +754,7 @@ test "GET /publicRooms lists rooms",
       )->then( sub {
          $http->do_request_json(
             method => "GET",
-            uri    => "/api/v1/publicRooms",
+            uri    => "/r0/publicRooms",
       )})->then( sub {
          my ( $body ) = @_;
 
@@ -831,7 +845,7 @@ test "GET /publicRooms includes avatar URLs",
       )->then( sub {
          $http->do_request_json(
             method => "GET",
-            uri    => "/api/v1/publicRooms",
+            uri    => "/r0/publicRooms",
       )})->then( sub {
          my ( $body ) = @_;
 
@@ -870,6 +884,8 @@ test "GET /publicRooms includes avatar URLs",
       });
    };
 
+push our @EXPORT, qw( anonymous_user_fixture );
+
 sub anonymous_user_fixture
 {
    fixture(
@@ -880,7 +896,7 @@ sub anonymous_user_fixture
 
          $http->do_request_json(
             method  => "POST",
-            uri     => "/v2_alpha/register",
+            uri     => "/r0/register",
             content => {},
             params  => {
                kind => "guest",
@@ -889,12 +905,12 @@ sub anonymous_user_fixture
             my ( $body ) = @_;
             my $access_token = $body->{access_token};
 
-            Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, [], undef ) );
+            Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, undef, [], undef ) );
          });
    })
 }
 
-push our @EXPORT, qw( matrix_set_room_guest_access matrix_get_room_membership );
+push @EXPORT, qw( matrix_set_room_guest_access matrix_get_room_membership );
 
 sub matrix_set_room_guest_access
 {
@@ -961,5 +977,29 @@ sub expect_4xx_or_empty_chunk
       $response->code >= 400 and $response->code < 500 or die "want 4xx";
 
       Future->done( 1 );
+   });
+}
+
+push @EXPORT, qw( await_event_not_history_visibility_or_presence_for );
+
+sub await_event_not_history_visibility_or_presence_for
+{
+   my ( $user, $room_id, $allowed_users ) = @_;
+   await_event_for( $user,
+      room_id => $room_id,
+      filter  => sub {
+         my ( $event ) = @_;
+
+         return 0 if defined $event->{type} and $event->{type} eq "m.room.history_visibility";
+
+         # Include all events where the type is not m.presence.
+         # If the type is m.presence, then only include it if it is for one of
+         # the allowed users
+         return ((not $event->{type} eq "m.presence") or
+            any { $event->{content}{user_id} eq $_->user_id } @$allowed_users);
+      },
+   )->on_done( sub {
+      my ( $event ) = @_;
+      log_if_fail "event", $event
    });
 }

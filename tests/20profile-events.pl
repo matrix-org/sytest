@@ -13,7 +13,7 @@ test "Displayname change reports an event to myself",
       ->then( sub {
          do_request_json_for( $user,
             method => "PUT",
-            uri    => "/api/v1/profile/:user_id/displayname",
+            uri    => "/r0/profile/:user_id/displayname",
 
             content => { displayname => $displayname },
          )
@@ -43,7 +43,7 @@ test "Avatar URL change reports an event to myself",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/api/v1/profile/:user_id/avatar_url",
+         uri    => "/r0/profile/:user_id/avatar_url",
 
          content => { avatar_url => $avatar_url },
       )->then( sub {
@@ -86,6 +86,26 @@ test "Global /initialSync reports my own profile",
 
          assert_eq( $content->{displayname}, $displayname, 'displayname in presence event is correct' );
          assert_eq( $content->{avatar_url}, $avatar_url, 'avatar_url in presence event is correct' );
+
+         Future->done(1);
+      });
+   };
+
+test "Newly-registered users have a presence state",
+   requires => [ local_user_fixture() ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      matrix_get_presence_status( $user )->then( sub {
+         my ( $status ) = @_;
+         log_if_fail "Status", $status;
+
+         defined $status->{presence} or
+            die "Expected 'presence' to be defined";
+
+         !exists $status->{status_msg} or defined $status->{status_msg} or
+            die "Expected 'status_msg' to be defined if it is present";
 
          Future->done(1);
       });

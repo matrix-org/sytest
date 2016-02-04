@@ -163,9 +163,7 @@ test "Global initialSync with limit=0 gives no messages",
 
          $found or die "Failed to find room";
 
-         my $chunk = $found->{messages}{chunk};
-         scalar @$chunk == 0 or
-            die "Expected not to find any messages";
+         assert_json_empty_list( $found->{messages}{chunk} );
 
          Future->done(1);
       });
@@ -230,9 +228,7 @@ test "Room initialSync with limit=0 gives no messages",
       ->then( sub {
          my ( $body ) = @_;
 
-         my $chunk = $body->{messages}{chunk};
-         scalar @$chunk == 0 or
-            die "Expected not to find any messages";
+         assert_json_empty_list( $body->{messages}{chunk} );
 
          Future->done(1);
       });

@@ -35,7 +35,7 @@ test "GET /login yields a set of flows",
       my ( $http ) = @_;
 
       $http->do_request_json(
-         uri => "/api/v1/login",
+         uri => "/r0/login",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -75,11 +75,43 @@ test "POST /login can log in as a user",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/login",
+         uri    => "/r0/login",
 
          content => {
             type     => "m.login.password",
             user     => $user_id,
+            password => $password,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( access_token home_server ));
+
+         assert_eq( $body->{home_server}, $http->server_name,
+            'Response home_server' );
+
+         Future->done(1);
+      });
+   };
+
+test "POST /login can log in as a user with just the local part of the id",
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
+                 qw( can_login_password_flow )],
+
+   proves => [qw( can_login )],
+
+   do => sub {
+      my ( $http, $user_id ) = @_;
+
+      my ( $user_localpart ) = ( $user_id =~ m/@([^:]*):/ );
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/login",
+
+         content => {
+            type     => "m.login.password",
+            user     => $user_localpart,
             password => $password,
          },
       )->then( sub {
@@ -103,7 +135,7 @@ test "POST /login wrong password is rejected",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/login",
+         uri    => "/r0/login",
 
          content => {
             type     => "m.login.password",
@@ -136,7 +168,7 @@ test "POST /tokenrefresh invalidates old refresh token",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/login",
+         uri    => "/r0/login",
 
          content => {
             type     => "m.login.password",
