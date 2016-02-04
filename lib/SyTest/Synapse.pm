@@ -334,7 +334,7 @@ sub on_finish
    say $self->pid . " stopped";
 
    if( $exitcode > 0 ) {
-      print STDERR "Process failed ($exitcode)\n";
+      warn "Process failed ($exitcode)";
 
       print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
          for @{ $self->{stderr_lines} // [] };
