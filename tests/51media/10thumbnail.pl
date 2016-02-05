@@ -15,7 +15,7 @@ test "POSTed media can be thumbnailed",
       # Because we're POST'ing non-JSON
       $http->do_request(
          method => "POST",
-         full_uri => "/_matrix/media/v1/upload",
+         full_uri => "/_matrix/media/r0/upload",
          params => {
             access_token => $user->access_token,
          },
@@ -29,7 +29,7 @@ test "POSTed media can be thumbnailed",
 
          $http->do_request(
             method => "GET",
-            full_uri => "/_matrix/media/v1/thumbnail/" .
+            full_uri => "/_matrix/media/r0/thumbnail/" .
                join( "", $content_uri->authority, $content_uri->path ),
             params => {
                width  => 32,
