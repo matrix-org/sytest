@@ -73,12 +73,15 @@ sub matrix_register_user
 
    $http->do_request_json(
       method => "POST",
-      uri    => "/api/v1/register",
+      uri    => "/r0/register",
 
       content => {
-         type     => "m.login.password",
-         user     => $uid,
-         password => $opts{password} // "an0th3r s3kr1t",
+         auth => {
+            type => "m.login.dummy",
+         },
+         bind_email => JSON::false,
+         username   => $uid,
+         password   => $opts{password} // "an0th3r s3kr1t",
       },
    )->then( sub {
       my ( $body ) = @_;
