@@ -37,7 +37,7 @@ test "Outbound federation can send invites",
 
             $req->respond_json(
                # SYN-490
-               [ 200 => { event => $body } ]
+               [ 200, { event => $body } ]
             );
 
             Future->done;
