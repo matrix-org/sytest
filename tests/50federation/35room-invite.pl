@@ -28,8 +28,8 @@ test "Outbound federation can send invites",
 
             assert_json_keys( $body, qw( content state_key prev_state ));
 
-            assert_deeply_eq( $body->{content}, { membership => "invite" },
-               'event content' );
+            assert_eq( $body->{content}{membership}, "invite",
+               'event content membership' );
             assert_eq( $body->{state_key}, $invitee_id,
                'event state_key' );
 
@@ -92,8 +92,8 @@ test "Inbound federation can receive invites",
 
             assert_eq( $event->{state_key}, $user->user_id,
                'event state_key' );
-            assert_deeply_eq( $event->{content}, { membership => "invite" },
-               'event content' );
+            assert_eq( $event->{content}{membership}, "invite",
+               'event content membership' );
 
             Future->done(1);
          }),
