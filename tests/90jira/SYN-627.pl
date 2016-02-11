@@ -17,7 +17,7 @@ test "Events come down the correct room",
          matrix_sync( $user );
       })->then( sub {
          Future->needs_all( map {
-            my ( $room_id ) = $_;
+            my $room_id = $_;
 
             matrix_send_room_text_message( $user, $room_id, body => "$room_id" );
          } @rooms );
