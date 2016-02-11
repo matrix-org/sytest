@@ -308,11 +308,6 @@ sub _invite_users
          my $user = $_;
          matrix_invite_user_to_room( $creator, $user, $room_id );
       } @other_members)
-   );Future->needs_all(
-     ( map {
-         my $user = $_;
-         matrix_invite_user_to_room( $creator, $user, $room_id );
-      } @other_members)
    );
 }
 
