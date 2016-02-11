@@ -12,7 +12,7 @@ test "Events come down the correct room",
 
             push @rooms, $room_id;
          });
-      } 0 .. 30 )
+      } 1 .. 30 )
       ->then( sub {
          matrix_sync( $user );
       })->then( sub {
