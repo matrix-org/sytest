@@ -1,4 +1,4 @@
-test "Name/topic keys are corrct",
+test "Name/topic keys are correct",
    requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
 
    check => sub {
@@ -23,10 +23,10 @@ test "Name/topic keys are corrct",
          my $room = $rooms{$alias_local};
 
          matrix_create_room( $user,
-            visibility => "public",
+            visibility      => "public",
             room_alias_name => $alias_local,
-            name => $room->{name},
-            topic => $room->{topic},
+            name            => $room->{name},
+            topic           => $room->{topic},
          )
       } keys %rooms )
       ->then( sub {
@@ -65,8 +65,8 @@ test "Name/topic keys are corrct",
                   log_if_fail "Alias", $alias_local;
                   log_if_fail "Room", $room;
 
-                  assert_eq( $canonical_alias, $alias );
-                  assert_eq( $room->{num_joined_members}, 1 );
+                  assert_eq( $canonical_alias, $alias, "Incorrect canonical_alias" );
+                  assert_eq( $room->{num_joined_members}, 1, "Incorrect member count" );
 
                   if( defined $name ) {
                      assert_eq( $room_config->{name}, $name, 'room name' );
