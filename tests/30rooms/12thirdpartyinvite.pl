@@ -142,6 +142,7 @@ test "Can invite unbound 3pid over federation",
       matrix_create_and_join_room( [ $inviter ], visibility => "private" )
       ->then( sub {
          my ( $room_id ) = @_;
+
          can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
       });
    };
@@ -341,4 +342,3 @@ sub do_3pid_invite {
       }
    )
 }
-
