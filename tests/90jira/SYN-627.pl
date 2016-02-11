@@ -1,5 +1,3 @@
-use Future::Utils qw( try_repeat );
-
 test "Events come down the correct room",
    requires => [ local_user_fixture( with_events => 0 ), "can_sync" ],
 
