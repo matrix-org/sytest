@@ -68,8 +68,19 @@ test "Name/topic keys are corrct",
                   assert_eq( $canonical_alias, $alias );
                   assert_eq( $room->{num_joined_members}, 1 );
 
-                  $room_config->{name} eq $name or die "Unexpected name";
-                  $room_config->{topic} eq $topic or die "Unexpected name";
+                  if( defined $name ) {
+                     assert_eq( $room_config->{name}, $name, 'room name' );
+                  }
+                  else {
+                     defined $room_config->{name} and die "Expected not to find a name";
+                  }
+
+                  if( defined $topic ) {
+                     assert_eq( $room_config->{topic}, $topic, 'room topic' );
+                  }
+                  else {
+                     defined $room_config->{topic} and die "Expected not to find a topic";
+                  }
 
                   $seen{$alias_local} = 1;
                }
