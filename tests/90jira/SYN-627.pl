@@ -22,7 +22,7 @@ test "Events come down the correct room",
             matrix_send_room_text_message( $user, $room_id, body => "$room_id" );
          } @rooms );
       })->then( sub {
-         matrix_sync_again( $ user );
+         matrix_sync_again( $user );
       })->then( sub {
          my ( $body ) = @_;
          my $room_id;
