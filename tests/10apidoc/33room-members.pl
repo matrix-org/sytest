@@ -299,6 +299,23 @@ test "POST /rooms/:room_id/ban can ban a user",
 
 my $next_alias = 1;
 
+sub _invite_users
+{
+   my ( $creator, $room_id, @other_members ) = @_;
+
+   Future->needs_all(
+     ( map {
+         my $user = $_;
+         matrix_invite_user_to_room( $creator, $user, $room_id );
+      } @other_members)
+   );Future->needs_all(
+     ( map {
+         my $user = $_;
+         matrix_invite_user_to_room( $creator, $user, $room_id );
+      } @other_members)
+   );
+}
+
 push @EXPORT, qw( matrix_create_and_join_room );
 
 sub matrix_create_and_join_room
@@ -324,12 +341,9 @@ sub matrix_create_and_join_room
 
       log_if_fail "room_id=$room_id";
 
-      Future->needs_all(
-        ( map {
-            my $user = $_;
-            matrix_invite_user_to_room( $creator, $user, $room_id );
-         } @other_members)
-      );
+      ( $options{with_invite} ?
+         _invite_users( $creator, $room_id, @other_members ) :
+         Future->done() )
    })->then( sub {
       # Best not to join remote users concurrently because of
       #   https://matrix.org/jira/browse/SYN-318

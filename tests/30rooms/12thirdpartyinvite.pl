@@ -52,7 +52,7 @@ test "Can invite existing 3pid with no ops",
 
       $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
       ->then( sub {
-         matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private" )
+         matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private", with_invite => 1 )
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -139,7 +139,7 @@ test "Can invite unbound 3pid over federation",
       my ( $inviter, $invitee, $info, $id_server ) = @_;
       my $hs_uribase = $info->client_location;
 
-      matrix_create_and_join_room( [ $inviter ], visibility => "private" )
+      matrix_create_and_join_room( [ $inviter ], visibility => "private", with_invite => 1 )
       ->then( sub {
          my ( $room_id ) = @_;
 
@@ -158,7 +158,7 @@ test "Can invite unbound 3pid with no ops",
       my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;
       my $hs_uribase = $info->client_location;
 
-      matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private" )
+      matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private", with_invite => 1 )
       ->then( sub {
          my ( $room_id ) = @_;
          can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
@@ -175,7 +175,7 @@ test "Can invite unbound 3pid over federation with no ops",
       my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;
       my $hs_uribase = $info->client_location;
 
-      matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private" )
+      matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private", with_invite => 1 )
       ->then( sub {
          my ( $room_id ) = @_;
          can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
