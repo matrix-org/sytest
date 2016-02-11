@@ -31,11 +31,11 @@ test "Events come down the correct room",
             my $room = $body->{rooms}{join}{$room_id};
 
             assert_json_keys( $room, qw( timeline ));
-            @{ $room->{timeline}->{events} } == 1 or die "Expected exactly one event";
+            @{ $room->{timeline}{events} } == 1 or die "Expected exactly one event";
 
-            my $event = $room->{timeline}->{events}[0];
+            my $event = $room->{timeline}{events}[0];
 
-            assert_eq( $event->{content}->{body}, $room_id, "Event in the wrong room" );
+            assert_eq( $event->{content}{body}, $room_id, "Event in the wrong room" );
          }
 
          Future->done(1);
