@@ -20,7 +20,7 @@ test "Name/topic keys are corrct",
 
       Future->needs_all( map {
          my $alias_local = $_;
-         my $room = %rooms->{$alias_local};
+         my $room = $rooms{$alias_local};
 
          matrix_create_room( $user,
             visibility => "public",
@@ -58,26 +58,26 @@ test "Name/topic keys are corrct",
             my $aliases = $room->{aliases};
             foreach my $alias ( @{$aliases} ) {
                foreach my $alias_local ( keys %rooms ) {
-                  if ( $alias =~ m/^\Q#$alias_local:\E/ ) {
-                     my $room_config = %rooms->{$alias_local};
+                  $alias =~ m/^\Q#$alias_local:\E/ or next;
 
-                     log_if_fail "Alias", $alias_local;
-                     log_if_fail "Room", $room;
+                  my $room_config = $rooms{$alias_local};
 
-                     assert_eq( $canonical_alias, $alias );
-                     assert_eq( $room->{num_joined_members}, 1 );
+                  log_if_fail "Alias", $alias_local;
+                  log_if_fail "Room", $room;
 
-                     $room_config->{name} eq $name or die "Unexpected name";
-                     $room_config->{topic} eq $topic or die "Unexpected name";
+                  assert_eq( $canonical_alias, $alias );
+                  assert_eq( $room->{num_joined_members}, 1 );
 
-                     $seen{$alias_local} = 1;
-                  }
+                  $room_config->{name} eq $name or die "Unexpected name";
+                  $room_config->{topic} eq $topic or die "Unexpected name";
+
+                  $seen{$alias_local} = 1;
                }
             }
          }
 
-         foreach my $key (keys %seen ) {
-            $seen{$key} or die "Wrong for $key";
+         foreach my $key ( keys %seen ) {
+            $seen{$key} or die "Did not find a /publicRooms result for $key";
          }
 
          Future->done(1);
