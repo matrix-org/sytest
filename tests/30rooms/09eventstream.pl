@@ -57,20 +57,17 @@ test "Event stream catches up fully after many messages",
          ( $room_id ) = @_;
 
          flush_events_for( $user )
-      })
-      ->then( sub {
+      })->then( sub {
          repeat( sub {
             my ( $msgnum ) = @_;
 
             matrix_send_room_text_message( $user, $room_id,
                body => "Message number $msgnum"
-            )
-            ->on_done( sub {
+            )->on_done( sub {
                push @expected_event_ids, @_;
             })
          }, foreach => [ 0 .. 19 ] )
-      })
-      ->then( sub {
+      })->then( sub {
          try_repeat( sub {
             matrix_get_events( $user,
                from    => $user->eventstream_token,
@@ -97,7 +94,7 @@ test "Event stream catches up fully after many messages",
             })
          }, foreach => [ 0 .. 10 ], while => sub {
             @expected_event_ids > 0
-         } )
+         })
       })->then( sub {
          @expected_event_ids == 0 or die "Did not see all events.";
 
