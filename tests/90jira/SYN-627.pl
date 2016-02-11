@@ -3,7 +3,7 @@ test "Events come down the correct room",
 
    check => sub {
       my ( $user ) = @_;
-      my ( @rooms );
+      my @rooms;
 
       Future->needs_all( map {
          matrix_create_room( $user )
@@ -25,7 +25,7 @@ test "Events come down the correct room",
          matrix_sync_again( $ user );
       })->then( sub {
          my ( $body ) = @_;
-         my ( $room_id );
+         my $room_id;
 
          foreach $room_id ( @rooms ) {
             my $room = $body->{rooms}{join}{$room_id};
