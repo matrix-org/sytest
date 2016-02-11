@@ -80,14 +80,10 @@ sub GET_new_events_for
    my ( $user, %params ) = @_;
 
    return $user->pending_get_events //=
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/r0/events",
-         params => {
-            %params,
-            from    => $user->eventstream_token,
-            timeout => 500,
-         },
+      matrix_get_events( $user,
+         %params,
+         from    => $user->eventstream_token,
+         timeout => 500,
       )->on_ready( sub {
          undef $user->pending_get_events;
       })->then( sub {
@@ -104,21 +100,36 @@ sub GET_new_events_for
 # Some Matrix protocol helper functions
 
 push our @EXPORT, qw(
-   matrix_initialsync matrix_sync matrix_sync_again
+   matrix_initialsync matrix_get_events matrix_sync matrix_sync_again
    flush_events_for await_event_for
 );
+
+=head2 matrix_get_events
+
+   $response = matrix_get_events( $user )
+
+Returns a response body which should contain the start and end tokens, and a
+chunk of data as an ARRAY reference.
+
+=cut
+
+sub matrix_get_events
+{
+   my ( $user, %params ) = @_;
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/r0/events",
+      params => \%params,
+   );
+}
 
 sub flush_events_for
 {
    my ( $user ) = @_;
 
-   do_request_json_for( $user,
-      method => "GET",
-      uri    => "/r0/events",
-      params => {
-         timeout => 0,
-      }
-   )->then( sub {
+   matrix_get_events( $user, timeout => 0 )
+   ->then( sub {
       my ( $body ) = @_;
       $user->eventstream_token = $body->{end};
       @{ $user->saved_events } = ();

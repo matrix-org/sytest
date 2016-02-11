@@ -59,6 +59,9 @@ test "Newly left rooms appear in the leave section of incremental sync",
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));
 
+         @{ $room->{state}{events} } == 0
+            or die "Expected no state events";
+
          Future->done(1);
       });
    };
@@ -219,7 +222,7 @@ test "Archived rooms only contain history from before the user left",
 
       my $filter = {
          room => {
-            timeline => { types => [ "m.room.message" ] },
+            timeline => { types => [ "m.room.message", "a.madeup.test.state" ] },
             state => { types => [ "a.madeup.test.state" ] },
             include_leave => JSON::true,
          },
@@ -267,14 +270,10 @@ test "Archived rooms only contain history from before the user left",
 
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));
-         @{ $room->{state}{events} } == 1
-            or die "Expected a single state event";
-         @{ $room->{timeline}{events} } == 1
-            or die "Expected a single timeline event";
-
-         my $state_event = $room->{state}{events}[0];
-         $state_event->{content}{my_key} eq "before"
-            or die "Expected only events from before leaving";
+         @{ $room->{state}{events} } == 0
+            or die "Expected no state events";
+         @{ $room->{timeline}{events} } == 2
+            or die "Expected two timeline events";
 
          my $timeline_event = $room->{timeline}{events}[0];
          $timeline_event->{content}{body} eq "before"
@@ -286,14 +285,10 @@ test "Archived rooms only contain history from before the user left",
 
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));
-         @{ $room->{state}{events} } == 1
-            or die "Expected a single state event";
-         @{ $room->{timeline}{events} } == 1
-            or die "Expected a single timeline event";
-
-         my $state_event = $room->{state}{events}[0];
-         $state_event->{content}{my_key} eq "before"
-            or die "Expected only events from before leaving";
+         @{ $room->{state}{events} } == 0
+            or die "Expected no state events";
+         @{ $room->{timeline}{events} } == 2
+            or die "Expected two timeline events";
 
          my $timeline_event = $room->{timeline}{events}[0];
          $timeline_event->{content}{body} eq "before"

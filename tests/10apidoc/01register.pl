@@ -73,12 +73,15 @@ sub matrix_register_user
 
    $http->do_request_json(
       method => "POST",
-      uri    => "/api/v1/register",
+      uri    => "/r0/register",
 
       content => {
-         type     => "m.login.password",
-         user     => $uid,
-         password => "an0th3r s3kr1t",
+         auth => {
+            type => "m.login.dummy",
+         },
+         bind_email => JSON::false,
+         username   => $uid,
+         password   => $opts{password} // "an0th3r s3kr1t",
       },
    )->then( sub {
       my ( $body ) = @_;
@@ -123,6 +126,7 @@ sub local_user_fixture
 
          matrix_register_user( $http, undef,
             with_events => $args{with_events} // 1,
+            password => $args{password},
          )->then_with_f( sub {
             my $f = shift;
             return $f unless defined( my $displayname = $args{displayname} );

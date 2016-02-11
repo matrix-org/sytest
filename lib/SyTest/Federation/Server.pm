@@ -370,7 +370,7 @@ sub mk_await_request_pair
 
    no strict 'refs';
    no warnings 'redefine';
-   *{"${class}::await_$shortname"} = $awaitfunc;
+   *{"${class}::await_request_$shortname"} = $awaitfunc;
    *{"${class}::on_request_federation_v1_$shortname"} = $on_requestfunc;
 }
 
@@ -396,6 +396,10 @@ __PACKAGE__->mk_await_request_pair(
 
 __PACKAGE__->mk_await_request_pair(
    backfill => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   invite => [qw( :room_id )],
 );
 
 sub on_request_federation_v1_send

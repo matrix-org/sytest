@@ -73,13 +73,7 @@ foreach my $i (
 
             matrix_send_room_text_message( $creator_user, $room_id, body => "mice" )
          })->then( sub {
-            do_request_json_for( $nonjoined_user,
-               method => "GET",
-               uri    => "/r0/events",
-               params => {
-                  room_id => $room_id,
-               },
-            );
+            matrix_get_events( $nonjoined_user, room_id => $room_id );
          })->followed_by( \&expect_4xx_or_empty_chunk );
       },
    );
@@ -99,6 +93,8 @@ foreach my $i (
             ( $room_id ) = @_;
 
             matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+         })->then( sub {
+            matrix_initialsync_room( $nonjoined_user, $room_id )
          })->then( sub {
             Future->needs_all(
                matrix_send_room_text_message( $user, $room_id, body => "mice" )
@@ -386,33 +382,9 @@ test "Anonymous user cannot call /events globally",
    do => sub {
       my ( $anonymous_user ) = @_;
 
-      do_request_json_for( $anonymous_user,
-         method => "GET",
-         uri    => "/r0/events",
-      )->followed_by( \&expect_4xx_or_empty_chunk );
+      matrix_get_events( $anonymous_user )
+         ->followed_by( \&expect_4xx_or_empty_chunk );
    };
-
-sub await_event_not_history_visibility_or_presence_for
-{
-   my ( $user, $room_id, $allowed_users ) = @_;
-   await_event_for( $user,
-      room_id => $room_id,
-      filter  => sub {
-         my ( $event ) = @_;
-
-         return 0 if defined $event->{type} and $event->{type} eq "m.room.history_visibility";
-
-         # Include all events where the type is not m.presence.
-         # If the type is m.presence, then only include it if it is for one of
-         # the allowed users
-         return ((not $event->{type} eq "m.presence") or
-            any { $event->{content}{user_id} eq $_->user_id } @$allowed_users);
-      },
-   )->on_done( sub {
-      my ( $event ) = @_;
-      log_if_fail "event", $event
-   });
-}
 
 test "Anonymous users can join guest_access rooms",
    requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
@@ -495,7 +467,11 @@ test "Annonymous user calling /events doesn't tightloop",
 
             log_if_fail "Events body", $f ? $f->get : undef;
 
-            get_events_no_timeout( $anonymous_user, $room_id, $end_token );
+            matrix_get_events( $anonymous_user,
+               room_id => $room_id,
+               timeout => 0,
+               from    => $end_token,
+            );
          }, foreach => [ 0 .. 5 ], until => sub {
             my ( $res ) = @_;
             $res->failure or not @{ $res->get->{chunk} };
@@ -512,35 +488,12 @@ test "Annonymous user calling /events doesn't tightloop",
    };
 
 
-sub get_events_no_timeout
-{
-   my ( $user, $room_id, $from_token ) = @_;
-
-   do_request_json_for( $user,
-      method => "GET",
-      uri    => "/r0/events",
-      params => {
-         room_id => $room_id,
-         timeout => 0,
-         from => $from_token,
-      },
-   );
-}
-
-
 sub check_events
 {
    my ( $user, $room_id ) = @_;
 
-   do_request_json_for( $user,
-      method => "GET",
-      uri    => "/r0/events",
-      params => {
-         limit   => "3",
-         dir     => "b",
-         room_id => $room_id,
-      },
-   )->then( sub {
+   matrix_get_events( $user, limit => 3, dir => "b", room_id => $room_id )
+   ->then( sub {
       my ( $body ) = @_;
 
       log_if_fail "Body", $body;
@@ -931,6 +884,8 @@ test "GET /publicRooms includes avatar URLs",
       });
    };
 
+push our @EXPORT, qw( anonymous_user_fixture );
+
 sub anonymous_user_fixture
 {
    fixture(
@@ -955,7 +910,7 @@ sub anonymous_user_fixture
    })
 }
 
-push our @EXPORT, qw( matrix_set_room_guest_access matrix_get_room_membership );
+push @EXPORT, qw( matrix_set_room_guest_access matrix_get_room_membership );
 
 sub matrix_set_room_guest_access
 {
@@ -1022,5 +977,29 @@ sub expect_4xx_or_empty_chunk
       $response->code >= 400 and $response->code < 500 or die "want 4xx";
 
       Future->done( 1 );
+   });
+}
+
+push @EXPORT, qw( await_event_not_history_visibility_or_presence_for );
+
+sub await_event_not_history_visibility_or_presence_for
+{
+   my ( $user, $room_id, $allowed_users ) = @_;
+   await_event_for( $user,
+      room_id => $room_id,
+      filter  => sub {
+         my ( $event ) = @_;
+
+         return 0 if defined $event->{type} and $event->{type} eq "m.room.history_visibility";
+
+         # Include all events where the type is not m.presence.
+         # If the type is m.presence, then only include it if it is for one of
+         # the allowed users
+         return ((not $event->{type} eq "m.presence") or
+            any { $event->{content}{user_id} eq $_->user_id } @$allowed_users);
+      },
+   )->on_done( sub {
+      my ( $event ) = @_;
+      log_if_fail "event", $event
    });
 }
