@@ -78,16 +78,14 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
             log_if_fail "Event", $event;
 
-            assert_json_keys( $event, qw( room_id user_id membership state_key ));
+            assert_json_keys( $event, qw( content room_id user_id state_key ));
 
-            $event->{room_id} eq $room_id or
-               die "Expected room_id to be $room_id";
-            $event->{user_id} eq $local_user->user_id or
-               die "Expected user_id to be ${\ $local_user->user_id }";
-            $event->{membership} eq "join" or
-               die "Expected membership to be 'join'";
-            $event->{state_key} eq $local_user->user_id or
-               die "Expected state_key to be ${\ $local_user->user_id }";
+            assert_eq($event->{room_id}, $room_id, "Event room_id");
+            assert_eq($event->{user_id}, $local_user->user_id, "Event user_id");
+            assert_eq($event->{state_key}, $local_user->user_id, "Event state_key");
+
+            assert_json_keys( $event->{content}, qw( membership ));
+            assert_eq($event->{content}{membership}, "join", "Event membership");
 
             Future->done;
          }),
