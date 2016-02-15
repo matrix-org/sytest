@@ -118,6 +118,10 @@ sub _assert_deeply_eq
             croak "Got a value for '$key' that was not expected at $outerkeystr for $name";
       }
    }
+   elsif( $wanttype eq ref JSON::true ) {
+      $got == $want or
+         croak "Got ${\ pp $got }, expected ${\ pp $want } at $outerkeystr for $name";
+   }
    else {
       die "TODO: not sure how to deeply check a $wanttype reference";
    }
