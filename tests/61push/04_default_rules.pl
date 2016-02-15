@@ -1,5 +1,3 @@
-
-
 sub default_global_rules
 {
    my ( $user_id ) = @_;
@@ -181,8 +179,7 @@ sub default_global_rules
 }
 
 
-
-test "Check that the default rules are correct",
+test "The predefined push rules are correct for a new user",
    requires => [ local_user_fixture() ],
 
    do => sub {
@@ -196,6 +193,7 @@ test "Check that the default rules are correct",
          my $expected_rules = default_global_rules( $user->user_id );
 
          assert_deeply_eq( $body->{global}, $expected_rules );
+         assert_deeply_eq( $body->{device}, {} );
 
          Future->done(1);
       });
