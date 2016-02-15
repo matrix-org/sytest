@@ -32,6 +32,8 @@ our %EXPORT_TAGS = (
    all => \@EXPORT_OK,
 );
 
+use constant JSON_BOOLEAN_CLASS => ref( JSON::true );
+
 =head2 assert_ok
 
    assert_ok( $ok, $name )
@@ -117,6 +119,10 @@ sub _assert_deeply_eq
          exists $want->{$key} or
             croak "Got a value for '$key' that was not expected at $outerkeystr for $name";
       }
+   }
+   elsif( $wanttype eq JSON_BOOLEAN_CLASS ) {
+      ref $got eq JSON_BOOLEAN_CLASS and $got eq $want or
+         croak "Got ${\ pp $got }, expected ${\ pp $want } at $outerkeystr for $name";
    }
    else {
       die "TODO: not sure how to deeply check a $wanttype reference";
@@ -253,8 +259,6 @@ sub assert_json_nonempty_string
    my ( $str ) = @_;
    !ref $str and length $str or croak "Expected a non-empty JSON string";
 }
-
-use constant JSON_BOOLEAN_CLASS => ref( JSON::true );
 
 =head2 assert_json_boolean
 
