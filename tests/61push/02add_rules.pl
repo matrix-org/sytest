@@ -317,3 +317,34 @@ test "Can disable a push rule",
          Future->done(1);
       });
    };
+
+
+test "Adding the same push rule twice is idempotent",
+   requires => [ local_user_fixture() ],
+
+   bug => "SYN-391",
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_add_push_rule( $user, "global", "sender", '@bob:example.com', {
+         actions => [ "notify" ]
+      })->then( sub {
+         matrix_add_push_rule( $user, "global", "sender", '@bob:example.com', {
+            actions => [ "notify" ]
+         });
+      })->then( sub {
+         matrix_get_push_rules( $user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( my $global = $body->{global}, qw( sender ) );
+         assert_json_list( my $sender = $global->{sender} );
+
+         assert_eq( $sender->[0]{rule_id}, '@bob:example.com' );
+
+         @$sender == 1 or die "Expected only one rule";
+
+         Future->done(1);
+      });
+   };
