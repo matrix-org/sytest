@@ -198,3 +198,37 @@ test "The predefined push rules are correct for a new user",
          Future->done(1);
       });
    };
+
+
+test "Adding a rule after a default rule fails with a 400",
+
+   requires => [ local_user_fixture() ],
+
+   do => sub {
+       my ( $user ) = @_;
+
+      matrix_add_push_rule( $user, "global", "underride", "my_underride_rule",
+         {
+            conditions => [],
+            actions    => [ "notify" ]
+         },
+         after => ".m.rule.message"
+      )->main::expect_http_400;
+   };
+
+
+test "Adding a rule before a default rule fails with a 400",
+
+   requires => [ local_user_fixture() ],
+
+   do => sub {
+       my ( $user ) = @_;
+
+      matrix_add_push_rule( $user, "global", "underride", "my_underride_rule",
+         {
+            conditions => [],
+            actions    => [ "notify" ]
+         },
+         before => ".m.rule.message"
+      )->main::expect_http_400;
+   };
