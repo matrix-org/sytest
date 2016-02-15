@@ -121,6 +121,10 @@ sub matrix_create_room
             ( invite_3pid => $opts{invite_3pid} ) : () ),
          ( defined $opts{creation_content} ?
             ( creation_content => $opts{creation_content} ) : () ),
+         ( defined $opts{name} ?
+            ( name => $opts{name} ) : () ),
+         ( defined $opts{topic} ?
+            ( topic => $opts{topic} ) : () ),
       }
    )->then( sub {
       my ( $body ) = @_;

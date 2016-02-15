@@ -28,7 +28,7 @@ test "Outbound federation can backfill events",
       ) for 1 .. 10;
 
       Future->needs_all(
-         $inbound_server->await_backfill( $room->room_id )->then( sub {
+         $inbound_server->await_request_backfill( $room->room_id )->then( sub {
             my ( $req ) = @_;
 
             # The helpfully-named 'v' parameter gives the "versions", i.e. the

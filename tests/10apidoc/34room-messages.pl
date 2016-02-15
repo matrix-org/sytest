@@ -21,6 +21,8 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
       });
    };
 
+my $global_txn_id = 0;
+
 push our @EXPORT, qw( matrix_send_room_message matrix_send_room_text_message );
 
 sub matrix_send_room_message
@@ -33,16 +35,12 @@ sub matrix_send_room_message
 
    my $type = $opts{type} // "m.room.message";
 
-   my $method = "POST";
    my $uri = "/r0/rooms/$room_id/send/$type";
-
-   if( defined $opts{txn_id} ) {
-      $method = "PUT";
-      $uri = "$uri/$opts{txn_id}";
-   }
+   $opts{txn_id} //= $global_txn_id++;
+   $uri = "$uri/$opts{txn_id}";
 
    do_request_json_for( $user,
-      method => $method,
+      method => "PUT",
       uri    => $uri,
       content => $opts{content},
    )->then( sub {
