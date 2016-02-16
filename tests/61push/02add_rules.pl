@@ -322,8 +322,6 @@ test "Can disable a push rule",
 test "Adding the same push rule twice is idempotent",
    requires => [ local_user_fixture() ],
 
-   bug => "SYN-391",
-
    do => sub {
       my ( $user ) = @_;
 
