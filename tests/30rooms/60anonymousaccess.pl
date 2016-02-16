@@ -575,7 +575,7 @@ test "Anonymous user can set display names",
                uri    => $displayname_uri,
             )->then( sub {
                my ( $body ) = @_;
-               $body->{displayname} eq "creeper" or die "Wrong displayname";
+               assert_eq( $body->{displayname}, "creeper", "Profile displayname" );
                Future->done( 1 );
             }),
             do_request_json_for( $anonymous_user,
@@ -583,7 +583,7 @@ test "Anonymous user can set display names",
                uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
             )->then( sub {
                my ( $body ) = @_;
-               $body->{displayname} eq "creeper" or die "Wrong displayname";
+               assert_eq( $body->{displayname}, "creeper", "Room displayname" );
                Future->done( 1 );
             }),
          );
