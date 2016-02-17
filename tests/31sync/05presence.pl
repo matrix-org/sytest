@@ -104,6 +104,9 @@ test "User sees updates to presence from other users in the incremental sync.",
       })->then( sub {
          matrix_sync( $user_a, filter => $filter_id_a );
       })->then( sub {
+         # We sync again so that we get our own presence down.
+         matrix_sync_again( $user_a, filter => $filter_id_a );
+      })->then( sub {
          # Set user B's presence to online by syncing.
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
