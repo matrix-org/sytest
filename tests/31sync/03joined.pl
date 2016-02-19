@@ -196,6 +196,7 @@ test "Newly joined room includes presence in incremental sync",
       matrix_create_room( $user_a )
       ->then( sub {
          ( $room_id ) = @_;
+
          matrix_sync( $user_b );
       })->then( sub {
          matrix_join_room( $user_b, $room_id );
@@ -246,6 +247,7 @@ test "Get presence for newly joined members in incremental sync",
       matrix_create_room( $user_a )
       ->then( sub {
          ( $room_id ) = @_;
+
          matrix_sync( $user_a );
       })->then( sub {
          matrix_join_room( $user_b, $room_id );
