@@ -10,7 +10,7 @@ test "Can sync a joined room",
       my $filter = { room => { timeline => { limit => 10 } } };
 
       matrix_create_filter( $user, $filter )->then( sub {
-         ( $filter ) = @_;
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
@@ -50,7 +50,7 @@ test "Full state sync includes joined rooms",
       my $filter = { room => { timeline => { limit => 10 } } };
 
       matrix_create_filter( $user, $filter )->then( sub {
-         ( $filter ) = @_;
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
