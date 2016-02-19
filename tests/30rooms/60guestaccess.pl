@@ -2,7 +2,7 @@ use Future::Utils qw( try_repeat_until_success repeat );
 use JSON qw( encode_json );
 
 foreach my $i (
-   [ "Anonymous", sub { anonymous_user_fixture() } ],
+   [ "Guest", sub { guest_user_fixture() } ],
    [ "Real", sub { local_user_fixture() } ]
 ) {
    my ( $name, $fixture ) = @$i;
@@ -272,7 +272,7 @@ foreach my $i (
    test(
       "$name non-joined users cannot room initalSync for non-world_readable rooms",
 
-      requires => [ anonymous_user_fixture(), local_user_fixture() ],
+      requires => [ guest_user_fixture(), local_user_fixture() ],
 
       do => sub {
          my ( $non_joined_user, $creating_user ) = @_;
@@ -294,7 +294,7 @@ foreach my $i (
    test(
       "$name non-joined users can room initialSync for world_readable rooms",
 
-      requires => [ anonymous_user_fixture(), local_user_fixture() ],
+      requires => [ guest_user_fixture(), local_user_fixture() ],
 
       do => sub {
          my ( $syncing_user, $creating_user ) = @_;
@@ -376,18 +376,18 @@ foreach my $i (
    );
 }
 
-test "Anonymous user cannot call /events globally",
-   requires => [ anonymous_user_fixture() ],
+test "Guest user cannot call /events globally",
+   requires => [ guest_user_fixture() ],
 
    do => sub {
-      my ( $anonymous_user ) = @_;
+      my ( $guest_user ) = @_;
 
-      matrix_get_events( $anonymous_user )
+      matrix_get_events( $guest_user )
          ->followed_by( \&expect_4xx_or_empty_chunk );
    };
 
-test "Anonymous users can join guest_access rooms",
-   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
+test "Guest users can join guest_access rooms",
+   requires => [ local_user_and_room_fixtures(), guest_user_fixture() ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
@@ -396,22 +396,22 @@ test "Anonymous users can join guest_access rooms",
    },
 
    check => sub {
-      my ( undef, $room_id, $anonymous_user ) = @_;
+      my ( undef, $room_id, $guest_user ) = @_;
 
-      matrix_join_room( $anonymous_user, $room_id );
+      matrix_join_room( $guest_user, $room_id );
    };
 
-test "Anonymous users can send messages to guest_access rooms if joined",
-   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
+test "Guest users can send messages to guest_access rooms if joined",
+   requires => [ local_user_and_room_fixtures(), guest_user_fixture() ],
 
    do => sub {
-      my ( $user, $room_id, $anonymous_user ) = @_;
+      my ( $user, $room_id, $guest_user ) = @_;
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )
       ->then( sub {
-         matrix_join_room( $anonymous_user, $room_id )
+         matrix_join_room( $guest_user, $room_id )
       })->then( sub {
-         matrix_send_room_text_message( $anonymous_user, $room_id, body => "sup" );
+         matrix_send_room_text_message( $guest_user, $room_id, body => "sup" );
       })->then(sub {
          matrix_get_room_messages( $user, $room_id, limit => 1 )->then( sub {
             my ( $body ) = @_;
@@ -427,8 +427,8 @@ test "Anonymous users can send messages to guest_access rooms if joined",
 
             assert_json_keys( $event, qw( type room_id user_id content ));
 
-            $event->{user_id} eq $anonymous_user->user_id or
-               die "expected user_id to be ".$anonymous_user->user_id;
+            $event->{user_id} eq $guest_user->user_id or
+               die "expected user_id to be ".$guest_user->user_id;
 
             $event->{content}->{body} eq "sup" or
                die "content to be sup";
@@ -438,11 +438,11 @@ test "Anonymous users can send messages to guest_access rooms if joined",
       })
    };
 
-test "Annonymous user calling /events doesn't tightloop",
-   requires => [ anonymous_user_fixture(), local_user_fixture() ],
+test "Guest user calling /events doesn't tightloop",
+   requires => [ guest_user_fixture(), local_user_fixture() ],
 
    do => sub {
-      my ( $anonymous_user, $user ) = @_;
+      my ( $guest_user, $user ) = @_;
 
       my ( $room_id );
 
@@ -452,7 +452,7 @@ test "Annonymous user calling /events doesn't tightloop",
 
          matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
       })->then( sub {
-         do_request_json_for( $anonymous_user,
+         do_request_json_for( $guest_user,
             method => "GET",
             uri    => "/r0/rooms/$room_id/initialSync",
          );
@@ -467,7 +467,7 @@ test "Annonymous user calling /events doesn't tightloop",
 
             log_if_fail "Events body", $f ? $f->get : undef;
 
-            matrix_get_events( $anonymous_user,
+            matrix_get_events( $guest_user,
                room_id => $room_id,
                timeout => 0,
                from    => $end_token,
@@ -515,17 +515,17 @@ sub check_events
    }),
 }
 
-test "Anonymous users are kicked from guest_access rooms on revocation of guest_access",
-   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture() ],
+test "Guest users are kicked from guest_access rooms on revocation of guest_access",
+   requires => [ local_user_and_room_fixtures(), guest_user_fixture() ],
 
    do => sub {
-      my ( $user, $room_id, $anonymous_user ) = @_;
+      my ( $user, $room_id, $guest_user ) = @_;
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )
       ->then( sub {
-         matrix_join_room( $anonymous_user, $room_id );
+         matrix_join_room( $guest_user, $room_id );
       })->then( sub {
-         matrix_get_room_membership( $user, $room_id, $anonymous_user );
+         matrix_get_room_membership( $user, $room_id, $guest_user );
       })->then( sub {
          my ( $membership ) = @_;
 
@@ -533,7 +533,7 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
 
          matrix_set_room_guest_access( $user, $room_id, "forbidden" );
       })->then( sub {
-         matrix_get_room_membership( $user, $room_id, $anonymous_user );
+         matrix_get_room_membership( $user, $room_id, $guest_user );
       })->then( sub {
          my ( $membership ) = @_;
 
@@ -543,18 +543,18 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
       });
    };
 
-test "Anonymous user can set display names",
-   requires => [ anonymous_user_fixture(), local_user_and_room_fixtures() ],
+test "Guest user can set display names",
+   requires => [ guest_user_fixture(), local_user_and_room_fixtures() ],
 
    do => sub {
-      my ( $anonymous_user, $user, $room_id ) = @_;
+      my ( $guest_user, $user, $room_id ) = @_;
 
       my $displayname_uri = "/r0/profile/:user_id/displayname";
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )->then( sub {
-         matrix_join_room( $anonymous_user, $room_id );
+         matrix_join_room( $guest_user, $room_id );
       })->then( sub {
-         do_request_json_for( $anonymous_user,
+         do_request_json_for( $guest_user,
             method => "GET",
             uri    => $displayname_uri,
       )})->then( sub {
@@ -562,7 +562,7 @@ test "Anonymous user can set display names",
 
          defined $body->{displayname} and die "Didn't expect displayname";
 
-         do_request_json_for( $anonymous_user,
+         do_request_json_for( $guest_user,
             method  => "PUT",
             uri     => $displayname_uri,
             content => {
@@ -570,7 +570,7 @@ test "Anonymous user can set display names",
             },
       )})->then( sub {
          Future->needs_all(
-            do_request_json_for( $anonymous_user,
+            do_request_json_for( $guest_user,
                method => "GET",
                uri    => $displayname_uri,
             )->then( sub {
@@ -578,7 +578,7 @@ test "Anonymous user can set display names",
                assert_eq( $body->{displayname}, "creeper", "Profile displayname" );
                Future->done( 1 );
             }),
-            do_request_json_for( $anonymous_user,
+            do_request_json_for( $guest_user,
                method => "GET",
                uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
             )->then( sub {
@@ -590,11 +590,11 @@ test "Anonymous user can set display names",
       });
    };
 
-test "Anonymous users are kicked from guest_access rooms on revocation of guest_access over federation",
-   requires => [ local_user_fixture(), remote_user_fixture(), anonymous_user_fixture() ],
+test "Guest users are kicked from guest_access rooms on revocation of guest_access over federation",
+   requires => [ local_user_fixture(), remote_user_fixture(), guest_user_fixture() ],
 
    do => sub {
-      my ( $local_user, $remote_user, $anonymous_user ) = @_;
+      my ( $local_user, $remote_user, $guest_user ) = @_;
 
       my $room_id;
 
@@ -610,9 +610,9 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
          })->then( sub {
             matrix_join_room( $remote_user, $room_id );
          })->then( sub {
-            matrix_join_room( $anonymous_user, $room_id );
+            matrix_join_room( $guest_user, $room_id );
          })->then( sub {
-            matrix_get_room_membership( $local_user, $room_id, $anonymous_user );
+            matrix_get_room_membership( $local_user, $room_id, $guest_user );
          })->then( sub {
             my ( $membership ) = @_;
 
@@ -631,7 +631,7 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
                }),
             );
          })->then( sub {
-            matrix_get_room_membership( $local_user, $room_id, $anonymous_user );
+            matrix_get_room_membership( $local_user, $room_id, $guest_user );
          })->then( sub {
             my ( $membership ) = @_;
 
@@ -642,20 +642,20 @@ test "Anonymous users are kicked from guest_access rooms on revocation of guest_
       })
    };
 
-test "Anonymous user can upgrade to fully featured user",
-   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture(), $main::API_CLIENTS[0] ],
+test "Guest user can upgrade to fully featured user",
+   requires => [ local_user_and_room_fixtures(), guest_user_fixture(), $main::API_CLIENTS[0] ],
 
    do => sub {
-      my ( $creator, $room_id, $anonymous_user, $http ) = @_;
+      my ( $creator, $room_id, $guest_user, $http ) = @_;
 
-      my ( $local_part ) = $anonymous_user->user_id =~ m/^@([^:]+):/g;
+      my ( $local_part ) = $guest_user->user_id =~ m/^@([^:]+):/g;
       $http->do_request_json(
          method  => "POST",
          uri     => "/r0/register",
          content => {
             username => $local_part,
             password => "SIR_Arthur_David",
-            guest_access_token => $anonymous_user->access_token,
+            guest_access_token => $guest_user->access_token,
          },
       )->followed_by( sub {
          $http->do_request_json(
@@ -664,7 +664,7 @@ test "Anonymous user can upgrade to fully featured user",
             content => {
                username     => $local_part,
                password     => "SIR_Arthur_David",
-               guest_access_token => $anonymous_user->access_token,
+               guest_access_token => $guest_user->access_token,
                auth         => {
                   type => "m.login.dummy",
                },
@@ -672,30 +672,30 @@ test "Anonymous user can upgrade to fully featured user",
          )
       })->on_done( sub {
          my ( $body ) = @_;
-         $anonymous_user->access_token = $body->{access_token};
+         $guest_user->access_token = $body->{access_token};
       })
    },
 
    check => sub {
-      my ( undef, $room_id, $anonymous_user ) = @_;
+      my ( undef, $room_id, $guest_user ) = @_;
 
-      matrix_join_room( $anonymous_user, $room_id );
+      matrix_join_room( $guest_user, $room_id );
    };
 
-test "Anonymous user cannot upgrade other users",
-   requires => [ local_user_and_room_fixtures(), anonymous_user_fixture(), anonymous_user_fixture(), $main::API_CLIENTS[0] ],
+test "Guest user cannot upgrade other users",
+   requires => [ local_user_and_room_fixtures(), guest_user_fixture(), guest_user_fixture(), $main::API_CLIENTS[0] ],
 
    do => sub {
-      my ( $creator, $room_id, $anonymous_user1, $anonymous_user2, $http ) = @_;
+      my ( $creator, $room_id, $guest_user1, $guest_user2, $http ) = @_;
 
-      my ( $local_part1 ) = $anonymous_user1->user_id =~ m/^@([^:]+):/g;
+      my ( $local_part1 ) = $guest_user1->user_id =~ m/^@([^:]+):/g;
       $http->do_request_json(
          method  => "POST",
          uri     => "/r0/register",
          content => {
             username => $local_part1,
             password => "SIR_Arthur_David",
-            guest_access_token => $anonymous_user2->access_token,
+            guest_access_token => $guest_user2->access_token,
          },
       )->main::expect_http_4xx;
    };
@@ -884,9 +884,9 @@ test "GET /publicRooms includes avatar URLs",
       });
    };
 
-push our @EXPORT, qw( anonymous_user_fixture );
+push our @EXPORT, qw( guest_user_fixture );
 
-sub anonymous_user_fixture
+sub guest_user_fixture
 {
    fixture(
       requires => [ $main::API_CLIENTS[0] ],
