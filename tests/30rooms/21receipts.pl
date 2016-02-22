@@ -158,7 +158,6 @@ test "Read receipts are sent as events",
       });
    };
 
-
 test "Receipts must be m.read",
    requires => [ local_user_and_room_fixtures(),
                  qw( can_post_room_receipts )],
