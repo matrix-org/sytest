@@ -104,11 +104,12 @@ sub on_request
       my $token = "".$next_token++;
       my $key = join "\0", $medium, $address;
       push @{ $self->{invites}->{$key} }, {
-         address => $address,
-         medium  => $medium,
-         room_id => $room_id,
-         sender  => $sender,
-         token   => $token,
+         address            => $address,
+         medium             => $medium,
+         room_id            => $room_id,
+         sender             => $sender,
+         token              => $token,
+         guest_access_token => $body->{guest_access_token},
       };
       $resp{token} = $token;
       $resp{display_name} = "Bob";
@@ -177,7 +178,7 @@ sub bind_identity
       mxid    => $user->user_id,
    );
 
-   my $invites = $self->{invites}->{ join "\0", $medium, $address };
+   my $invites = $self->invites_for( $medium, $address );
    if( defined $invites ) {
       foreach my $invite ( @$invites ) {
          $invite->{mxid} = $user->user_id;
@@ -214,6 +215,14 @@ sub sign
       origin     => $self->name,
       key_id     => "ed25519:0",
    );
+}
+
+sub invites_for
+{
+   my $self = shift;
+   my ( $medium, $address ) = @_;
+
+   return $self->{invites}{ join "\0", $medium, $address };
 }
 
 sub name
