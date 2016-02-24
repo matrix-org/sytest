@@ -125,7 +125,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
       })->then( sub {
          my ( $membership ) = @_;
 
-         $membership eq "join" or die("want membership to be join but is $membership");
+         assert_eq( $membership, "join", "membership" );
 
          matrix_set_room_guest_access( $user, $room_id, "forbidden" );
       })->then( sub {
@@ -133,7 +133,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
       })->then( sub {
          my ( $membership ) = @_;
 
-         $membership eq "leave" or die("want membership to be leave but is $membership");
+         assert_eq( $membership, "leave", "membership" );
 
          Future->done( 1 );
       });
@@ -212,7 +212,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
          })->then( sub {
             my ( $membership ) = @_;
 
-            $membership eq "join" or die("want membership to be join but is $membership");
+            assert_eq( $membership, "join", "membership" );
 
             Future->needs_all(
                await_event_for( $local_user, filter => sub {
@@ -231,7 +231,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
          })->then( sub {
             my ( $membership ) = @_;
 
-            $membership eq "leave" or die("want membership to be leave but is $membership");
+            assert_eq( $membership, "leave", "membership" );
 
             Future->done( 1 );
          });
