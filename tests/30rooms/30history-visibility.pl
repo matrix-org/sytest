@@ -108,10 +108,8 @@ foreach my $i (
    # /events
 
    foreach my $visibility (qw( shared invited joined default )) {
-      my $vis_string = $visibility || "default";
-
       test(
-         "$name non-joined user cannot call /events on $vis_string room",
+         "$name non-joined user cannot call /events on $visibility room",
 
          requires => [ $fixture->(), local_user_and_room_fixtures() ],
 
