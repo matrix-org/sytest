@@ -205,7 +205,7 @@ sub sign
 {
    my $self = shift;
 
-   my ( $to_sign, $ephemeral, %opts ) = @_;
+   my ( $to_sign, %opts ) = @_;
 
    my $key = $opts{ephemeral} ? $self->{ephemeral_private_key} : $self->{private_key};
 
