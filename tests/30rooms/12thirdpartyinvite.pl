@@ -163,6 +163,50 @@ test "Can accept unbound 3pid invite after inviter leaves",
       })->followed_by( assert_membership( "join" ) );
    };
 
+test "Can accept third party invite with /join",
+   requires => [ local_user_fixture(), local_user_fixture(),
+                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
+
+   do => sub {
+      my ( $inviter, $invitee, $info, $id_server ) = @_;
+      my $hs_uribase = $info->client_location;
+
+      my $room_id;
+
+      matrix_create_room( $inviter, visibility => "private" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id, )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $invite_event = first { $_->{type} eq "m.room.third_party_invite" } @$body or
+            die "Could not find m.room.third_party_invite event";
+
+         my $token = $invite_event->{state_key};
+
+         my %req = (
+            mxid   => $invitee->user_id,
+            sender => $inviter->user_id,
+            token  => $token,
+         );
+
+         $id_server->sign( \%req, ephemeral => 1 );
+
+         matrix_join_room( $invitee, $room_id,
+            third_party_signed => \%req
+         );
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )
+      })->followed_by( assert_membership( "join" ) );
+   };
+
 test "3pid invite join with wrong but valid signature are rejected",
    requires => [ local_user_fixtures( 2 ), $main::HOMESERVER_INFO[0],
                     id_server_fixture() ],

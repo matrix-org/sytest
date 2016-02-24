@@ -42,9 +42,11 @@ sub rotate_keys
    my $self = shift;
 
    ( $self->{public_key}, $self->{private_key} ) = $crypto_sign->keypair;
+   ( $self->{ephemeral_public_key}, $self->{ephemeral_private_key} ) = $crypto_sign->keypair;
 
    $self->{keys} = {
       "ed25519:0" => encode_base64_unpadded( $self->{public_key} ),
+      "ed25519:ephemeral" => encode_base64_unpadded( $self->{ephemeral_public_key} ),
    };
 }
 
@@ -111,6 +113,19 @@ sub on_request
       $resp{token} = $token;
       $resp{display_name} = "Bob";
       $resp{public_key} = $self->{keys}{"ed25519:0"};
+
+      my $key_validity_url = "https://" . $self->name . "/_matrix/identity/api/v1/pubkey/isvalid";
+
+      $resp{public_keys} = [
+         {
+            public_key => $self->{keys}{"ed25519:0"},
+            key_validity_url => $key_validity_url,
+         },
+         {
+            public_key => $self->{keys}{"ed25519:ephemeral"},
+            key_validity_url => $key_validity_url,
+         },
+      ];
       $req->respond_json( \%resp );
    }
    elsif( $path eq "/_matrix/identity/api/v1/3pid/getValidated3pid" ) {
@@ -170,20 +185,12 @@ sub bind_identity
             mxid  => $user->user_id,
             token => $invite->{token},
          };
-         sign_json( $invite->{signed},
-            secret_key => $self->{private_key},
-            origin     => $self->name,
-            key_id     => "ed25519:0",
-         );
+         $self->sign( $invite->{signed} );
       }
       $resp{invites} = $invites;
    }
 
-   sign_json( \%resp,
-      secret_key => $self->{private_key},
-      origin     => $self->name,
-      key_id     => "ed25519:0",
-   );
+   $self->sign( \%resp );
 
    $before_resp->() if defined $before_resp;
 
@@ -191,6 +198,21 @@ sub bind_identity
       uri     => URI->new( "$hs_uribase/_matrix/federation/v1/3pid/onbind" ),
       method  => "POST",
       content => \%resp,
+   );
+}
+
+sub sign
+{
+   my $self = shift;
+
+   my ( $to_sign, $ephemeral, %opts ) = @_;
+
+   my $key = $opts{ephemeral} ? $self->{ephemeral_private_key} : $self->{private_key};
+
+   sign_json( $to_sign,
+      secret_key => $key,
+      origin     => $self->name,
+      key_id     => "ed25519:0",
    );
 }
 
