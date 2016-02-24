@@ -172,7 +172,8 @@ test "Guest user can set display names",
             )->then( sub {
                my ( $body ) = @_;
                assert_eq( $body->{displayname}, "creeper", "Profile displayname" );
-               Future->done( 1 );
+
+               Future->done(1);
             }),
             do_request_json_for( $guest_user,
                method => "GET",
@@ -180,7 +181,8 @@ test "Guest user can set display names",
             )->then( sub {
                my ( $body ) = @_;
                assert_eq( $body->{displayname}, "creeper", "Room displayname" );
-               Future->done( 1 );
+
+               Future->done(1);
             }),
          );
       });
@@ -233,7 +235,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
 
             assert_eq( $membership, "leave", "membership" );
 
-            Future->done( 1 );
+            Future->done(1);
          });
       })
    };
@@ -391,7 +393,7 @@ test "GET /publicRooms lists rooms",
             }
          }
 
-         foreach my $key (keys %seen ) {
+         foreach my $key ( keys %seen ) {
             $seen{$key} or die "Wrong for $key";
          }
 
@@ -472,7 +474,7 @@ test "GET /publicRooms includes avatar URLs",
             }
          }
 
-         foreach my $key (keys %seen ) {
+         foreach my $key ( keys %seen ) {
             $seen{$key} or die "Didn't see $key";
          }
 
@@ -571,7 +573,7 @@ sub expect_4xx_or_empty_chunk
       assert_json_list( $body->{chunk} );
       die "Want list to be empty" if @{ $body->{chunk} };
 
-      Future->done( 1 );
+      Future->done(1);
    },
    http => sub {
       my ( undef, undef, $response ) = @_;
@@ -580,7 +582,7 @@ sub expect_4xx_or_empty_chunk
 
       $response->code >= 400 and $response->code < 500 or die "want 4xx";
 
-      Future->done( 1 );
+      Future->done(1);
    });
 }
 

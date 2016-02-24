@@ -54,7 +54,7 @@ sub test_history_visibility
                ->on_done( sub { ( $before_join_event_id ) = @_ } )
          })->then( sub {
             my $rq = matrix_get_room_messages( $joiner, $room_id, limit => 10 );
-            if($permitted->{see_without_join}) {
+            if( $permitted->{see_without_join} ) {
                 $rq->then( sub {
                     my ( $body ) = @_;
                     my %visible_events = map { $_->{event_id} => $_ } @{ $body->{chunk} };
@@ -101,14 +101,14 @@ foreach my $i (
 
    # /messages
 
-   foreach my $visibility ( qw( world_readable shared invited joined default )) {
+   foreach my $visibility (qw( world_readable shared invited joined default )) {
       test_history_visibility( $fixture, $name, $visibility, $PERMITTED_ACTIONS{$visibility} );
   }
 
    # /events
 
-   foreach my $visibility ( qw( shared invited joined default )) {
-      my $vis_string = ($visibility || "default");
+   foreach my $visibility (qw( shared invited joined default )) {
+      my $vis_string = $visibility || "default";
 
       test(
          "$name non-joined user cannot call /events on $vis_string room",
@@ -161,7 +161,7 @@ foreach my $i (
                   assert_json_keys( $content, qw( body ) );
                   assert_eq( $content->{body}, "mice", "content body" );
 
-                  Future->done( 1 );
+                  Future->done(1);
                }),
             )->then( sub {
                my ( $stream_token ) = @_;
@@ -182,7 +182,7 @@ foreach my $i (
                      assert_eq( $event->{content}{user_id}, $user->user_id,
                         "event content.user_id" );
 
-                     Future->done( 1 );
+                     Future->done(1);
                   }),
                ),
             })->then( sub {
@@ -203,7 +203,7 @@ foreach my $i (
                      assert_ok( $event->{content}{$sent_event_id}{"m.read"}{ $user->user_id },
                         "receipt event ID for user" );
 
-                     Future->done( 1 );
+                     Future->done(1);
                   }),
                );
             })->then( sub {
@@ -229,7 +229,7 @@ foreach my $i (
                      assert_eq( $event->{content}{user_ids}[0], $user->user_id,
                         "event content user_ids[0]" );
 
-                     Future->done( 1 );
+                     Future->done(1);
                   }),
                );
             });
@@ -264,7 +264,7 @@ foreach my $i (
                # /events, so we try at most two times to get the events we expect.
                check_events( $nonjoined_user, $room_id )
                ->then( sub {
-                  Future->done( 1 );
+                  Future->done(1);
                }, sub {
                   check_events( $nonjoined_user, $room_id );
                }),
@@ -374,13 +374,13 @@ foreach my $i (
 
             my $chunk = $body->{messages}{chunk};
 
-            @{ $chunk } == 2 or die "Wrong number of chunks";
+            @$chunk == 2 or die "Wrong number of chunks";
             assert_eq( $chunk->[0]->{type}, "m.room.history_visibility", "event 0 type" );
             assert_eq( $chunk->[0]->{content}->{history_visibility}, "world_readable", "history_visibility content" );
             assert_eq( $chunk->[1]->{type}, "m.room.message", "event 1 type" );
             assert_eq( $chunk->[1]->{content}->{body}, "public", "message content body" );
 
-            Future->done( 1 );
+            Future->done(1);
          });
       },
    );
@@ -437,7 +437,7 @@ foreach my $i (
                matrix_send_room_text_message( $user, $room_id, body => "shared" );
             })->then( sub {
                matrix_set_room_history_visibility( $user, $room_id, $visibility );
-            })->then(sub {
+            })->then( sub {
                matrix_send_room_text_message( $user, $room_id, body => "pre_join" );
             })->then( sub {
                matrix_join_room( $joining_user, $room_id );
@@ -454,7 +454,7 @@ foreach my $i (
 
                # look at the last three events
                my @chunk = @{ $room->{timeline}->{events} };
-               splice(@chunk, 0, -3);
+               splice @chunk, 0, -3;
 
                log_if_fail "messages", \@chunk;
 
@@ -464,7 +464,8 @@ foreach my $i (
                if( $PERMITTED_ACTIONS{$visibility}->{see_before_join} ) {
                   assert_eq( $chunk[0]->{type}, "m.room.message", "event 0 type" );
                   assert_eq( $chunk[0]->{content}->{body}, "pre_join", "message 0 content body" );
-               } else {
+               }
+               else {
                   assert_eq( $chunk[0]->{type}, "m.room.message", "event 0 type" );
                   assert_eq( $chunk[0]->{content}->{body}, "shared", "message 0 content body" );
                }
