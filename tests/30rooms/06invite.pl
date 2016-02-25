@@ -190,7 +190,8 @@ test "Invited user can see room metadata",
 
          foreach my $event_type ( keys %state_by_type ) {
             push @futures, matrix_get_room_state( $creator, $room_id,
-               type => $event_type
+               type      => $event_type,
+               state_key => $state_by_type{$event_type}{state_key},
             )->then( sub {
                my ( $room_content ) = @_;
 
