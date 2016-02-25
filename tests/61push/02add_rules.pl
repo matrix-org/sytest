@@ -167,6 +167,17 @@ sub check_add_push_rule
          assert_json_keys( $body->{$scope}, $kind );
          $check_rule_list->( $body->{$scope}{$kind} );
       });
+   })->then( sub {
+      do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/$kind/$rule_id/enabled",
+      )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( enabled ) );
+
+         assert_eq( $body->{enabled}, JSON::true );
+      });
    });
 }
 
