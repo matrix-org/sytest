@@ -5,6 +5,7 @@ push our @EXPORT, qw(
    matrix_add_push_rule matrix_delete_push_rule
    matrix_get_push_rule matrix_get_push_rules
    matrix_set_push_rule_enabled
+   matrix_set_push_rule_actions
 );
 
 =head2 matrix_add_push_rule
@@ -70,6 +71,28 @@ sub matrix_set_push_rule_enabled
       method  => "PUT",
       uri     => "/r0/pushrules/$scope/$kind/$rule_id/enabled",
       content => { enabled => $enabled },
+   );
+}
+
+=head2 matrix_set_push_rule_actions
+
+   matrix_set_push_rule_actions( $user, $scope, $kind, $rule_id, $actions )->get
+
+scope: Either "global" or "device/<profile_tag>"
+kind: Either "override", "underride", "sender", "room", or "content"
+rule_id: String id for the rule.
+enabled: array of actions.
+
+=cut
+
+sub matrix_set_push_rule_actions
+{
+   my ( $user, $scope, $kind, $rule_id, $actions ) = @_;
+
+   do_request_json_for( $user,
+      method  => "PUT",
+      uri     => "/r0/pushrules/$scope/$kind/$rule_id/actions",
+      content => { actions => $actions },
    );
 }
 
@@ -168,17 +191,26 @@ sub check_add_push_rule
          $check_rule_list->( $body->{$scope}{$kind} );
       });
    })->then( sub {
+      # Check that the rule is enabled.
       do_request_json_for( $user,
          method  => "GET",
          uri     => "/r0/pushrules/$scope/$kind/$rule_id/enabled",
       )->on_done( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( enabled ) );
-
-         assert_eq( $body->{enabled}, JSON::true );
+         assert_deeply_eq( $body, { enabled => JSON::true } );
       });
-   });
+   })->then( sub {
+      # Check that the actions match.
+      do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/$kind/$rule_id/actions",
+      )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_deeply_eq( $body, { actions => $rule_body->{actions} } );
+      });
+   })
 }
 
 
