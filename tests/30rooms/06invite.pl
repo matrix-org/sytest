@@ -143,6 +143,36 @@ sub invited_user_can_reject_invite
    });
 }
 
+test "Invited user can reject local invite after originator leaves",
+   requires => [ local_user_fixture(),
+      do {
+         my $creator = local_user_fixture();
+         $creator, inviteonly_room_fixture( creator => $creator );
+   } ],
+   do => sub {
+      my ( $invitee, $creator, $room_id ) = @_;
+
+
+      matrix_invite_user_to_room( $creator, $invitee, $room_id )
+      ->then( sub {
+         matrix_leave_room( $creator, $room_id );
+      })->then( sub {
+         matrix_leave_room( $invitee, $room_id );
+      })->then( sub {
+         # there's nobody left who can look at the room state, but the
+         # important thing is that a /sync for the invitee should not include
+         # the invite any more.
+         matrix_sync( $invitee );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Sync body", $body;
+         assert_json_object( $body->{rooms}{invite} );
+         keys %{$body->{rooms}{invite}} and die "Expected empty dictionary";
+         Future->done(1);
+      });
+   };
+
 test "Invited user can see room metadata",
    requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
 
