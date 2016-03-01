@@ -152,7 +152,6 @@ test "Invited user can reject local invite after originator leaves",
    do => sub {
       my ( $invitee, $creator, $room_id ) = @_;
 
-
       matrix_invite_user_to_room( $creator, $invitee, $room_id )
       ->then( sub {
          matrix_leave_room( $creator, $room_id );
@@ -168,7 +167,7 @@ test "Invited user can reject local invite after originator leaves",
 
          log_if_fail "Sync body", $body;
          assert_json_object( $body->{rooms}{invite} );
-         keys %{$body->{rooms}{invite}} and die "Expected empty dictionary";
+         keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
          Future->done(1);
       });
    };
