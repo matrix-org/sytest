@@ -23,6 +23,7 @@ use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any maxstr );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
+use Time::HiRes qw( time );
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
@@ -277,12 +278,14 @@ sub delay
 }
 
 my @log_if_fail_lines;
+my $test_start_time;
 
 sub log_if_fail
 {
    my ( $message, $structure ) = @_;
 
-   push @log_if_fail_lines, $message;
+   my $elapsed_time = time() - $test_start_time;
+   push @log_if_fail_lines, sprintf("%.06f: %s", $elapsed_time, $message);
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
@@ -406,6 +409,7 @@ sub _run_test
    my ( $t, $test ) = @_;
 
    undef @log_if_fail_lines;
+   $test_start_time = time();
 
    local $MORE_STUBS = [];
 
