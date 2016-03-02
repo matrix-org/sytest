@@ -103,15 +103,14 @@ multi_test "Canonical alias can be set",
    };
 
 test "Creators can delete alias",
-   requires => [ $creator_fixture, $room_fixture,
+   requires => [ $creator_fixture, $room_fixture, room_alias_fixture(),
                  qw( can_create_room_alias )],
 
    bug => "SYN-83",
 
    do => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, $room_alias ) = @_;
       my $server_name = $user->http->server_name;
-      $room_alias = "#Kuke9aic:$server_name";
 
       do_request_json_for( $user,
          method => "PUT",
@@ -129,13 +128,12 @@ test "Creators can delete alias",
    };
 
 test "Users can't delete other's aliases",
-   requires => [ $creator_fixture, $room_fixture, local_user_fixture(),
+   requires => [ $creator_fixture, $room_fixture, local_user_fixture(), room_alias_fixture(),
                  qw( can_create_room_alias )],
 
    do => sub {
-      my ( $user, $room_id, $other_user ) = @_;
+      my ( $user, $room_id, $other_user, $room_alias ) = @_;
       my $server_name = $user->http->server_name;
-      $room_alias = "#ta8Shu3z:$server_name";
 
       do_request_json_for( $user,
          method => "PUT",
