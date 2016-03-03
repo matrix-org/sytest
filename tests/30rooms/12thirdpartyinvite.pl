@@ -147,7 +147,6 @@ test "Can invite unbound 3pid over federation",
       });
    };
 
-
 test "Can invite unbound 3pid with no ops",
    requires => [ local_user_fixtures( 3 ), $main::HOMESERVER_INFO[0],
                  id_server_fixture() ],
