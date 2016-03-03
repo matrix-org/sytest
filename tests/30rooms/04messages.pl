@@ -60,13 +60,9 @@ test "Fetching eventstream a second time doesn't yield the message again",
       Future->needs_all( map {
          my $recvuser = $_;
 
-         do_request_json_for( $recvuser,
-            method => "GET",
-            uri    => "/api/v1/events",
-            params => {
-               from    => $recvuser->eventstream_token,
-               timeout => 0,
-            },
+         matrix_get_events( $recvuser,
+            from    => $recvuser->eventstream_token,
+            timeout => 0,
          )->then( sub {
             my ( $body ) = @_;
 

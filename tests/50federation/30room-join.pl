@@ -27,7 +27,7 @@ test "Outbound federation can send room-join requests",
       # service first, because we can't join a remote room by room ID alone
 
       my $room_alias = "#50fed-room-alias:$local_server_name";
-      require_stub $inbound_server->await_query_directory( $room_alias )
+      require_stub $inbound_server->await_request_query_directory( $room_alias )
          ->on_done( sub {
             my ( $req ) = @_;
 
@@ -42,7 +42,7 @@ test "Outbound federation can send room-join requests",
       Future->needs_all(
          # Await PDU?
 
-         $inbound_server->await_make_join( $room_id, $user->user_id )->then( sub {
+         $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
             my ( $req, $room_id, $user_id ) = @_;
 
             my $proto = $room->make_join_protoevent(
@@ -59,7 +59,7 @@ test "Outbound federation can send room-join requests",
             Future->done;
          }),
 
-         $inbound_server->await_send_join( $room_id )->then( sub {
+         $inbound_server->await_request_send_join( $room_id )->then( sub {
             my ( $req, $room_id, $event_id ) = @_;
 
             $req->method eq "PUT" or
@@ -87,7 +87,7 @@ test "Outbound federation can send room-join requests",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/api/v1/join/$room_alias",
+            uri    => "/r0/join/$room_alias",
 
             content => {},
          )->then( sub {

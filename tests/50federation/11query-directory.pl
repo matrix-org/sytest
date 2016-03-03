@@ -8,7 +8,7 @@ test "Outbound federation can query room alias directory",
       my $local_server_name = $inbound_server->server_name;
       my $room_alias = "#test:$local_server_name";
 
-      require_stub $inbound_server->await_query_directory( $room_alias )
+      require_stub $inbound_server->await_request_query_directory( $room_alias )
          ->on_done( sub {
             my ( $req ) = @_;
 
@@ -22,7 +22,7 @@ test "Outbound federation can query room alias directory",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/directory/room/$room_alias",
+         uri    => "/r0/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
@@ -60,7 +60,7 @@ test "Inbound federation can query room alias directory",
 
          do_request_json_for( $user,
             method => "PUT",
-            uri    => "/api/v1/directory/room/$room_alias",
+            uri    => "/r0/directory/room/$room_alias",
 
             content => {
                room_id => $room_id,

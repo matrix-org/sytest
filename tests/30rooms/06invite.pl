@@ -1,4 +1,4 @@
-use List::Util qw( all first );
+use List::Util qw( first );
 
 sub inviteonly_room_fixture
 {
@@ -190,17 +190,15 @@ test "Invited user can see room metadata",
 
          foreach my $event_type ( keys %state_by_type ) {
             push @futures, matrix_get_room_state( $creator, $room_id,
-               type => $event_type
+               type      => $event_type,
+               state_key => $state_by_type{$event_type}{state_key},
             )->then( sub {
                my ( $room_content ) = @_;
 
                my $invite_content = $state_by_type{$event_type}{content};
 
-               # TODO: This would be a lot neater with is_deeply()
-               all {
-                  $room_content->{$_} eq $invite_content->{$_}
-               } keys %$room_content, keys %$invite_content or
-                  die "Content does not match for event type $event_type";
+               assert_deeply_eq( $room_content, $invite_content,
+                  'invite content' );
 
                Future->done();
             });

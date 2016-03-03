@@ -113,7 +113,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $event_id, $next_batch );
+      my ( $filter_id, $room_id, $event_id );
 
       my $filter = {
          room => {
@@ -134,14 +134,13 @@ test "A message sent after an initial sync appears in the timeline of an increme
       })->then( sub {
          my ( $body ) = @_;
 
-         $next_batch = $body->{next_batch};
          matrix_send_room_text_message( $user, $room_id,
             body => "A test message", txn_id => "my_transaction_id"
          );
       })->then( sub {
          ( $event_id ) = @_;
 
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -267,7 +266,7 @@ test "A full_state incremental update returns only recent timeline",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next_batch );
+      my ( $filter_id, $room_id );
 
       my $filter = { room => { timeline => { limit => 1 } } };
 
@@ -282,7 +281,6 @@ test "A full_state incremental update returns only recent timeline",
       })->then( sub {
          my ( $body ) = @_;
 
-         $next_batch = $body->{next_batch};
          Future->needs_all( map {
             matrix_send_room_message( $user, $room_id,
                content => { "filler" => $_ },
@@ -295,8 +293,7 @@ test "A full_state incremental update returns only recent timeline",
                type    => "another.filler.type",
              );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch,
-             full_state => 'true');
+         matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -370,6 +367,63 @@ test "A prev_batch token can be used in the v1 messages API",
             or die "Unexpected event";
          $body->{chunk}[0]{content}{body} eq "1"
             or die "Unexpected message body.";
+
+         Future->done(1);
+      })
+   };
+
+
+test "A next_batch token can be used in the v1 messages API",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      my ( $filter_id, $room_id, $next_batch, $event_id_1, $event_id_2 );
+
+      my $filter = { room => { timeline => { limit => 1 } } };
+
+      # we send an event, then sync, then send another event,
+      # and check that we can paginate forward from the sync.
+
+      matrix_create_filter( $user, $filter )->then( sub {
+         ( $filter_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_send_room_text_message( $user, $room_id, body => "1" );
+      })->then( sub {
+         ( $event_id_1 ) = @_;
+
+         matrix_sync( $user, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_eq( $room->{timeline}{events}[0]{event_id}, $event_id_1,
+                    "Event ID 1" );
+
+         $next_batch = $body->{next_batch};
+
+         matrix_send_room_text_message( $user, $room_id, body => "2" );
+      })->then( sub {
+         ( $event_id_2 ) = @_;
+
+         matrix_get_room_messages( $user, $room_id,
+                                   from => $next_batch,
+                                   dir => 'f' );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( chunk start end ) );
+         assert_eq( scalar @{ $body->{chunk} }, 1, "event count" );
+         assert_eq( $body->{chunk}[0]{event_id}, $event_id_2,
+                    "Event ID 2" );
+         assert_eq( $body->{chunk}[0]{content}{body}, "2",
+                    "Message body" );
 
          Future->done(1);
       })

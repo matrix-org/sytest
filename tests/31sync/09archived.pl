@@ -37,7 +37,7 @@ test "Newly left rooms appear in the leave section of incremental sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id );
 
      matrix_create_filter( $user,
          { room => { include_leave => JSON::true } }
@@ -50,18 +50,17 @@ test "Newly left rooms appear in the leave section of incremental sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_leave_room( $user, $room_id );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));
+
+         @{ $room->{state}{events} } == 0
+            or die "Expected no state events";
 
          Future->done(1);
       });
@@ -75,7 +74,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id_1, $room_id_2, $next );
+      my ( $filter_id, $room_id_1, $room_id_2 );
 
       my $filter = {
          room => { timeline => { limit => 1 }, include_leave => JSON::true }
@@ -91,10 +90,6 @@ test "Newly left rooms appear in the leave section of gapped sync",
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_leave_room( $user, $room_id_1 );
       })->then( sub {
          # Pad out the timeline with filler messages to create a "gap" between
@@ -109,7 +104,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
             )
          } 0 .. 20 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -128,7 +123,7 @@ test "Previously left rooms don't appear in the leave section of sync",
    check => sub {
       my ( $user, $user2 ) = @_;
 
-      my ( $filter_id, $room_id_1, $room_id_2, $next );
+      my ( $filter_id, $room_id_1, $room_id_2 );
 
       my $filter = {
          room => { timeline => { limit => 1 }, include_leave => JSON::true }
@@ -148,18 +143,10 @@ test "Previously left rooms don't appear in the leave section of sync",
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_leave_room( $user, $room_id_1 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_put_room_state( $user2, $room_id_1,
             content  => { "filler" => $_, membership => "join" },
             type      => "m.room.member",
@@ -175,7 +162,7 @@ test "Previously left rooms don't appear in the leave section of sync",
             )
          }  0 .. 5 );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next );
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -197,7 +184,7 @@ test "Left rooms appear in the leave section of full state sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id, $next );
+      my ( $filter_id, $room_id );
 
       matrix_create_filter( $user,
          { room => { include_leave => JSON::true } }
@@ -210,14 +197,9 @@ test "Left rooms appear in the leave section of full state sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next = $body->{next_batch};
-
          matrix_leave_room( $user, $room_id );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id,
-             since => $next, full_state => 'true');
+         matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -240,7 +222,7 @@ test "Archived rooms only contain history from before the user left",
 
       my $filter = {
          room => {
-            timeline => { types => [ "m.room.message" ] },
+            timeline => { types => [ "m.room.message", "a.madeup.test.state" ] },
             state => { types => [ "a.madeup.test.state" ] },
             include_leave => JSON::true,
          },
@@ -288,14 +270,10 @@ test "Archived rooms only contain history from before the user left",
 
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));
-         @{ $room->{state}{events} } == 1
-            or die "Expected a single state event";
-         @{ $room->{timeline}{events} } == 1
-            or die "Expected a single timeline event";
-
-         my $state_event = $room->{state}{events}[0];
-         $state_event->{content}{my_key} eq "before"
-            or die "Expected only events from before leaving";
+         @{ $room->{state}{events} } == 0
+            or die "Expected no state events";
+         @{ $room->{timeline}{events} } == 2
+            or die "Expected two timeline events";
 
          my $timeline_event = $room->{timeline}{events}[0];
          $timeline_event->{content}{body} eq "before"
@@ -307,14 +285,10 @@ test "Archived rooms only contain history from before the user left",
 
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));
-         @{ $room->{state}{events} } == 1
-            or die "Expected a single state event";
-         @{ $room->{timeline}{events} } == 1
-            or die "Expected a single timeline event";
-
-         my $state_event = $room->{state}{events}[0];
-         $state_event->{content}{my_key} eq "before"
-            or die "Expected only events from before leaving";
+         @{ $room->{state}{events} } == 0
+            or die "Expected no state events";
+         @{ $room->{timeline}{events} } == 2
+            or die "Expected two timeline events";
 
          my $timeline_event = $room->{timeline}{events}[0];
          $timeline_event->{content}{body} eq "before"

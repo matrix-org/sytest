@@ -8,7 +8,7 @@ test "Can upload without a file name",
 
       $http->do_request(
          method       => "POST",
-         full_uri     => "/_matrix/media/v1/upload",
+         full_uri     => "/_matrix/media/r0/upload",
          content      => "Test media file",
          content_type => "text/plain",
 
@@ -39,7 +39,7 @@ sub test_using_client
 
    $client->do_request(
       method   => "GET",
-      full_uri => "/_matrix/media/v1/download/$content_id",
+      full_uri => "/_matrix/media/r0/download/$content_id",
    )->then( sub {
       my ( $body, $response ) = @_;
 

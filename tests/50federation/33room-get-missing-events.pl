@@ -51,7 +51,7 @@ test "Outbound federation can request missing events",
          );
 
          Future->needs_all(
-            $inbound_server->await_get_missing_events( $room_id )
+            $inbound_server->await_request_get_missing_events( $room_id )
             ->then( sub {
                my ( $req ) = @_;
                my $body = $req->body_from_json;

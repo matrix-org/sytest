@@ -5,17 +5,17 @@ my $room_fixture = room_fixture(
 );
 
 multi_test "Inviting an AS-hosted user asks the AS server",
-   requires => [ $main::AS_USER, $user_fixture, $room_fixture,
+   requires => [ $main::AS_USER[0], $main::APPSERV[0], $user_fixture, $room_fixture,
                  qw( can_invite_room )],
 
    do => sub {
-      my ( $as_user, $creator, $room_id ) = @_;
+      my ( $as_user, $appserv, $creator, $room_id ) = @_;
       my $server_name = $as_user->http->server_name;
 
       my $localpart = "astest-03passive-1";
       my $user_id = "\@$localpart:$server_name";
 
-      require_stub await_http_request( "/appserv/users/$user_id", sub { 1 } )
+      require_stub $appserv->await_http_request( "/users/$user_id", sub { 1 } )
          ->then( sub {
             my ( $request ) = @_;
 
@@ -27,7 +27,7 @@ multi_test "Inviting an AS-hosted user asks the AS server",
       matrix_invite_user_to_room( $creator, $user_id, $room_id )
          ->SyTest::pass_on_done( "Sent invite" )
       ->then( sub {
-         await_as_event( "m.room.member" )
+         $appserv->await_event( "m.room.member" )
       })->then( sub {
          my ( $event ) = @_;
 
@@ -45,15 +45,15 @@ multi_test "Inviting an AS-hosted user asks the AS server",
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
-   requires => [ $main::AS_USER, local_user_fixture(), $room_fixture,
+   requires => [ $main::AS_USER[0], $main::APPSERV[0], local_user_fixture(), $room_fixture,
                  room_alias_fixture( prefix => "astest-" ),
 
                 qw( can_join_room_by_alias )],
 
    do => sub {
-      my ( $as_user, $local_user, $room_id, $room_alias ) = @_;
+      my ( $as_user, $appserv, $local_user, $room_id, $room_alias ) = @_;
 
-      require_stub await_http_request( "/appserv/rooms/$room_alias", sub { 1 } )
+      require_stub $appserv->await_http_request( "/rooms/$room_alias", sub { 1 } )
          ->then( sub {
             my ( $request ) = @_;
 
@@ -61,7 +61,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
             do_request_json_for( $as_user,
                method => "PUT",
-               uri    => "/api/v1/directory/room/$room_alias",
+               uri    => "/r0/directory/room/$room_alias",
 
                content => {
                   room_id => $room_id,
@@ -73,26 +73,24 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
          });
 
       Future->needs_all(
-         await_as_event( "m.room.member" )->then( sub {
+         $appserv->await_event( "m.room.member" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "Event", $event;
 
-            assert_json_keys( $event, qw( room_id user_id membership state_key ));
+            assert_json_keys( $event, qw( content room_id user_id state_key ));
 
-            $event->{room_id} eq $room_id or
-               die "Expected room_id to be $room_id";
-            $event->{user_id} eq $local_user->user_id or
-               die "Expected user_id to be ${\ $local_user->user_id }";
-            $event->{membership} eq "join" or
-               die "Expected membership to be 'join'";
-            $event->{state_key} eq $local_user->user_id or
-               die "Expected state_key to be ${\ $local_user->user_id }";
+            assert_eq($event->{room_id}, $room_id, "Event room_id");
+            assert_eq($event->{user_id}, $local_user->user_id, "Event user_id");
+            assert_eq($event->{state_key}, $local_user->user_id, "Event state_key");
+
+            assert_json_keys( $event->{content}, qw( membership ));
+            assert_eq($event->{content}{membership}, "join", "Event membership");
 
             Future->done;
          }),
 
-         await_as_event( "m.room.aliases" )->then( sub {
+         $appserv->await_event( "m.room.aliases" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "Event", $event;
@@ -115,7 +113,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
          do_request_json_for( $local_user,
             method => "POST",
-            uri    => "/api/v1/join/$room_alias",
+            uri    => "/r0/join/$room_alias",
 
             content => {},
          )
@@ -123,14 +121,14 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
    };
 
 test "Events in rooms with AS-hosted room aliases are sent to AS server",
-   requires => [ $user_fixture, $room_fixture,
+   requires => [ $user_fixture, $room_fixture, $main::APPSERV[0],
                  qw( can_join_room_by_alias can_send_message )],
 
    do => sub {
-      my ( $creator, $room_id ) = @_;
+      my ( $creator, $room_id, $appserv ) = @_;
 
       Future->needs_all(
-         await_as_event( "m.room.message" )->then( sub {
+         $appserv->await_event( "m.room.message" )->then( sub {
             my ( $event ) = @_;
 
             log_if_fail "Event", $event;

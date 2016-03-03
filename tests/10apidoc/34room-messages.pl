@@ -8,7 +8,7 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/api/v1/rooms/$room_id/send/m.room.message",
+         uri    => "/r0/rooms/$room_id/send/m.room.message",
 
          content => { msgtype => "m.message", body => "Here is the message content" },
       )->then( sub {
@@ -21,6 +21,8 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
       });
    };
 
+my $global_txn_id = 0;
+
 push our @EXPORT, qw( matrix_send_room_message matrix_send_room_text_message );
 
 sub matrix_send_room_message
@@ -28,21 +30,20 @@ sub matrix_send_room_message
    my ( $user, $room_id, %opts ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
 
+   defined $room_id or
+      croak "Cannot matrix_send_room_message() with no room_id";
+
    defined $opts{content} or
       croak "Cannot matrix_send_room_message() with no content";
 
    my $type = $opts{type} // "m.room.message";
 
-   my $method = "POST";
-   my $uri = "/api/v1/rooms/$room_id/send/$type";
-
-   if( defined $opts{txn_id} ) {
-      $method = "PUT";
-      $uri = "$uri/$opts{txn_id}";
-   }
+   my $uri = "/r0/rooms/$room_id/send/$type";
+   $opts{txn_id} //= $global_txn_id++;
+   $uri = "$uri/$opts{txn_id}";
 
    do_request_json_for( $user,
-      method => $method,
+      method => "PUT",
       uri    => $uri,
       content => $opts{content},
    )->then( sub {
@@ -84,7 +85,7 @@ test "GET /rooms/:room_id/messages returns a message",
       )->then( sub {
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
+            uri    => "/r0/rooms/$room_id/messages",
 
             # With no params this does "forwards from END"; i.e. nothing useful
             params => { dir => "b" },
@@ -113,7 +114,7 @@ sub matrix_get_room_messages
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/api/v1/rooms/$room_id/messages",
+      uri    => "/r0/rooms/$room_id/messages",
 
       params => \%params,
    );

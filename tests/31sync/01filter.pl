@@ -14,7 +14,7 @@ sub matrix_create_filter
 
    do_request_json_for( $user,
       method  => "POST",
-      uri     => "/v2_alpha/user/:user_id/filter",
+      uri     => "/r0/user/:user_id/filter",
       content => $filter,
    )->then( sub {
       my ( $body ) = @_;
@@ -56,7 +56,7 @@ test "Can download filter",
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/v2_alpha/user/:user_id/filter/$filter_id",
+            uri     => "/r0/user/:user_id/filter/$filter_id",
          )
       })->then( sub {
          my ( $body ) = @_;
