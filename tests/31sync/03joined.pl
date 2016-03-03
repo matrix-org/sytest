@@ -10,7 +10,7 @@ test "Can sync a joined room",
       my $filter = { room => { timeline => { limit => 10 } } };
 
       matrix_create_filter( $user, $filter )->then( sub {
-         ( $filter ) = @_;
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
@@ -50,7 +50,7 @@ test "Full state sync includes joined rooms",
       my $filter = { room => { timeline => { limit => 10 } } };
 
       matrix_create_filter( $user, $filter )->then( sub {
-         ( $filter ) = @_;
+         ( $filter_id ) = @_;
 
          matrix_create_room( $user )
       })->then( sub {
@@ -178,6 +178,109 @@ test "Newly joined room has correct timeline in incremental sync",
             $timeline->{limited} or
                die "Timeline doesn't have all the events so should be limited";
          }
+
+         Future->done(1);
+      });
+   };
+
+
+test "Newly joined room includes presence in incremental sync",
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync )],
+
+   check => sub {
+      my ( $user_a, $user_b ) = @_;
+
+      my $room_id;
+
+      matrix_create_room( $user_a )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user_b );
+      })->then( sub {
+         matrix_join_room( $user_b, $room_id );
+      })->then( sub {
+         matrix_sync_again( $user_b );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( presence ));
+         assert_json_keys( $body->{presence}, qw( events ));
+         assert_json_list( $body->{presence}{events} );
+
+         my $presence = $body->{presence}{events};
+
+         assert_eq( scalar @$presence, 1, "number of presence events" );
+
+         my $presence_event = $presence->[0];
+
+         assert_json_keys( $presence_event, qw( type sender content ) );
+         assert_eq( $presence_event->{type}, "m.presence" );
+         assert_eq( $presence_event->{sender}, $user_a->user_id );
+
+         matrix_sync_again( $user_b );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( presence ));
+         assert_json_keys( $body->{presence}, qw( events ));
+         assert_json_list( $body->{presence}{events} );
+
+         my $presence = $body->{presence}{events};
+
+         assert_eq( scalar @$presence, 0, "number of presence events" );
+
+         Future->done(1);
+      });
+   };
+
+test "Get presence for newly joined members in incremental sync",
+   requires => [ local_user_fixtures( 2, with_events => 0 ),
+                 qw( can_sync )],
+
+   check => sub {
+      my ( $user_a, $user_b ) = @_;
+
+      my $room_id;
+
+      matrix_create_room( $user_a )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user_a );
+      })->then( sub {
+         matrix_join_room( $user_b, $room_id );
+      })->then( sub {
+         matrix_sync_again( $user_a );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( presence ));
+         assert_json_keys( $body->{presence}, qw( events ));
+         assert_json_list( $body->{presence}{events} );
+
+         my $presence = $body->{presence}{events};
+
+         assert_eq( scalar @$presence, 1, "number of presence events" );
+
+         my $presence_event = $presence->[0];
+
+         assert_json_keys( $presence_event, qw( type sender content ) );
+         assert_eq( $presence_event->{type}, "m.presence" );
+         assert_eq( $presence_event->{sender}, $user_b->user_id );
+
+         matrix_sync_again( $user_a );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( presence ));
+         assert_json_keys( $body->{presence}, qw( events ));
+         assert_json_list( $body->{presence}{events} );
+
+         my $presence = $body->{presence}{events};
+
+         assert_eq( scalar @$presence, 0, "number of presence events" );
 
          Future->done(1);
       });

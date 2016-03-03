@@ -54,14 +54,18 @@ push our @EXPORT, qw( matrix_join_room );
 
 sub matrix_join_room
 {
-   my ( $user, $room ) = @_;
+   my ( $user, $room, %opts ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
+
+   my %content;
+
+   defined $opts{third_party_signed} and $content{third_party_signed} = $opts{third_party_signed};
 
    do_request_json_for( $user,
       method => "POST",
       uri    => "/r0/join/$room",
 
-      content => {},
+      content => \%content,
    )->then_done(1);
 }
 

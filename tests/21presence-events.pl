@@ -76,6 +76,8 @@ test "Friends presence changes reports events",
             invite => [ $friend->user_id ],
          }
       )->then( sub {
+         flush_events_for( $user )
+      })->then( sub {
          matrix_set_presence_status( $friend, "online",
             status_msg => $friend_status,
          );

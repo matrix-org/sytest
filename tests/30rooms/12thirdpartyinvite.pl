@@ -241,6 +241,72 @@ test "Can accept unbound 3pid invite after inviter leaves",
       })->followed_by( assert_membership( "join" ) );
    };
 
+test "Can accept third party invite with /join",
+   requires => [ local_user_fixture(), local_user_fixture(),
+                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
+
+   do => sub {
+      my ( $inviter, $invitee, $info, $id_server ) = @_;
+      my $hs_uribase = $info->client_location;
+
+      my $room_id;
+
+      matrix_create_room( $inviter, visibility => "private" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id, )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $invite_event = first { $_->{type} eq "m.room.third_party_invite" } @$body or
+            die "Could not find m.room.third_party_invite event";
+
+         my $token = $invite_event->{state_key};
+
+         my %req = (
+            mxid   => $invitee->user_id,
+            sender => $inviter->user_id,
+            token  => $token,
+         );
+
+         $id_server->sign( \%req, ephemeral => 1 );
+
+         matrix_join_room( $invitee, $room_id,
+            third_party_signed => \%req
+         );
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )
+      })->followed_by( assert_membership( "join" ) );
+   };
+
+test "Uses consistent guest_access_token across requests",
+   requires => [ local_user_and_room_fixtures(), local_user_and_room_fixtures(),
+                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
+
+   do => sub {
+      my ( $inviter1, $room1, $inviter2, $room2, $info, $id_server ) = @_;
+      my $hs_uribase = $info->client_location;
+
+      Future->needs_all(
+         do_3pid_invite( $inviter1, $room1, $id_server->name, $invitee_email ),
+         do_3pid_invite( $inviter2, $room2, $id_server->name, $invitee_email ),
+      )->then( sub {
+         my $invites = $id_server->invites_for( "email", $invitee_email );
+
+         log_if_fail "invites", $invites;
+         assert_eq( scalar( @$invites ), 2, "Invite count" );
+         assert_eq( $invites->[0]{guest_access_token}, $invites->[1]{guest_access_token}, "guest_access_tokens" );
+
+         Future->done( 1 );
+      });
+   };
+
 test "3pid invite join with wrong but valid signature are rejected",
    requires => [ local_user_fixtures( 2 ), $main::HOMESERVER_INFO[0],
                     id_server_fixture() ],
