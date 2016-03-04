@@ -197,7 +197,7 @@ test "Latest account data appears in v2 /sync",
       my ( $user, $room_id ) = @_;
 
       setup_account_data( $user, $room_id )->then( sub {
-         matrix_sync( $user );
+         matrix_sync( $user, filter => '{"account_data":{"types":["my.test.type"]}}' );
       })->then( sub {
          my ( $body ) = @_;
 
