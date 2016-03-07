@@ -459,6 +459,7 @@ foreach my $i (
                # if the history visibility was shared or world_readable, we
                # expect to see the event before we joined; if not, we expect to
                # see the event before the history visibility was changed.
+               # We always expect to see the history visibility change.
                if( $PERMITTED_ACTIONS{$visibility}->{see_before_join} ) {
                   if ( $visibility eq "shared" || $visibility eq "default" ) {
                      assert_eq( $chunk[0]->{type}, "m.room.message", "event 0 type" );
