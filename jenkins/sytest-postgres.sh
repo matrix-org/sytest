@@ -8,12 +8,12 @@ set -ex
 
 cd "`dirname $0`/.."
 
-if [[ -z "$POSTGRES_DB_1" ]]; then
+if [ -z "$POSTGRES_DB_1" ]; then
     echo >&2 "Variable POSTGRES_DB_1 not set"
     exit 1
 fi
 
-if [[ -z "$POSTGRES_DB_2" ]]; then
+if [ -z "$POSTGRES_DB_2" ]; then
     echo >&2 "Variable POSTGRES_DB_2 not set"
     exit 1
 fi
