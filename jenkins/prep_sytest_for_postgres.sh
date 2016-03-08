@@ -4,6 +4,8 @@
 # by both the sytest builds and the synapse ones.
 #
 
+set -e
+
 cd "`dirname $0`/.."
 
 if [ -z "$POSTGRES_DB_1" ]; then
@@ -40,4 +42,3 @@ name: psycopg2
 args:
     database: $POSTGRES_DB_2
 EOF
-

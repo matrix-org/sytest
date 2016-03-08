@@ -9,6 +9,7 @@ set -ex
 cd "`dirname $0`/.."
 
 ./jenkins/prep_synapse.sh
+./jenkins/prep_sytest_for_postgres.sh
 
 TOX_BIN="`pwd`/synapse/.tox/py27/bin"
 $TOX_BIN/pip install psycopg2
