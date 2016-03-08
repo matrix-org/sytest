@@ -4,7 +4,7 @@
 
 set -ex
 
-: ${PORT_BASE=8040}
+: ${PORT_BASE=8000}
 
 cd "`dirname $0`/.."
 
