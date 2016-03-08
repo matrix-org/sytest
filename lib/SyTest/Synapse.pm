@@ -433,7 +433,7 @@ sub clear_db_pg
    my $self = shift;
    my %args = @_;
 
-   my $host = $args{host} || '';
+   my $host = $args{host} // '';
    $self->{output}->diag( "Clearing Pg database $args{database} on '$host'" );
 
    require DBI;
