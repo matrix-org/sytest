@@ -116,7 +116,7 @@ sub start
 
    if( defined $db_type ) {
       my $clear_meth = "clear_db_${db_type}";
-      $self->${\$clear_meth}( %db_args );
+      $self->$clear_meth( %db_args );
    }
 
    # Clean up the media_store directory each time, or else it fills up with
@@ -162,16 +162,13 @@ sub start
    my $cert_file = "$self->{hs_dir}/cert.pem";
    my $key_file = "$self->{hs_dir}/key.pem";
    my $log_config_file = "$self->{hs_dir}/log.config";
-   if( ! -f $log_config_file) {
-      $log_config_file = undef;
-   }
 
    my $macaroon_secret_key = "secret_$self->{port}";
 
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
-        "log_config" => $log_config_file,
+        (-f $log_config_file) ? ("log_config" => $log_config_file) : (),
         "tls_certificate_path" => $cert_file,
         "tls_private_key_path" => $key_file,
         "tls_dh_params_path" => "$cwd/keys/tls.dh",
