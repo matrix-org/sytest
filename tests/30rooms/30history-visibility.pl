@@ -450,7 +450,7 @@ foreach my $i (
                assert_json_keys( $room, qw( timeline state ephemeral ));
                assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
 
-               # look at the last three events
+               # look at the last four events
                my @chunk = @{ $room->{timeline}->{events} };
                splice @chunk, 0, -4;
 
@@ -514,7 +514,7 @@ test "Only see history_visibility changes on boundaries",
          assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
 
-         # look at the last three events
+         # look at the last four events
          my @chunk = @{ $room->{timeline}->{events} };
          splice @chunk, 0, -4;
 
