@@ -433,12 +433,13 @@ sub clear_db_pg
    my $self = shift;
    my %args = @_;
 
-   $self->{output}->diag( "Clearing Pg database $args{database} on $args{host}" );
+   my $host = $args{host} // '';
+   $self->{output}->diag( "Clearing Pg database $args{database} on '$host'" );
 
    require DBI;
    require DBD::Pg;
 
-   my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$args{host}", $args{user}, $args{password} )
+   my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$host", $args{user}, $args{password} )
       or die DBI->errstr;
 
    foreach my $row ( @{ $dbh->selectall_arrayref( "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" ) } ) {
