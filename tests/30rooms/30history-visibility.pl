@@ -450,26 +450,33 @@ foreach my $i (
                assert_json_keys( $room, qw( timeline state ephemeral ));
                assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
 
-               # look at the last three events
+               # look at the last four events
                my @chunk = @{ $room->{timeline}->{events} };
-               splice @chunk, 0, -3;
+               splice @chunk, 0, -4;
 
                log_if_fail "messages", \@chunk;
 
                # if the history visibility was shared or world_readable, we
                # expect to see the event before we joined; if not, we expect to
                # see the event before the history visibility was changed.
+               # We always expect to see the history visibility change.
                if( $PERMITTED_ACTIONS{$visibility}->{see_before_join} ) {
-                  assert_eq( $chunk[0]->{type}, "m.room.message", "event 0 type" );
-                  assert_eq( $chunk[0]->{content}->{body}, "pre_join", "message 0 content body" );
+                  if ( $visibility eq "shared" || $visibility eq "default" ) {
+                     assert_eq( $chunk[0]->{type}, "m.room.message", "event 0 type" );
+                  } else {
+                     assert_eq( $chunk[0]->{type}, "m.room.history_visibility", "event 0 type" );
+                  }
+                  assert_eq( $chunk[1]->{type}, "m.room.message", "event 1 type" );
+                  assert_eq( $chunk[1]->{content}->{body}, "pre_join", "message 1 content body" );
                }
                else {
                   assert_eq( $chunk[0]->{type}, "m.room.message", "event 0 type" );
                   assert_eq( $chunk[0]->{content}->{body}, "shared", "message 0 content body" );
+                  assert_eq( $chunk[1]->{type}, "m.room.history_visibility", "event 1 type" );
                }
-               assert_eq( $chunk[1]->{type}, "m.room.member", "event 1 type" );
-               assert_eq( $chunk[2]->{type}, "m.room.message", "event 2 type" );
-               assert_eq( $chunk[2]->{content}->{body}, "post_join", "message 2 content body" );
+               assert_eq( $chunk[2]->{type}, "m.room.member", "event 1 type" );
+               assert_eq( $chunk[3]->{type}, "m.room.message", "event 2 type" );
+               assert_eq( $chunk[3]->{content}->{body}, "post_join", "message 2 content body" );
 
                Future->done(1);
             });
@@ -477,6 +484,53 @@ foreach my $i (
       );
    }
 }
+
+
+test "Only see history_visibility changes on boundaries",
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+
+   do => sub {
+      my ( $user, $room_id, $joining_user ) = @_;
+
+      matrix_set_room_history_visibility( $user, $room_id, "joined" )
+      ->then( sub {
+         matrix_send_room_text_message( $user, $room_id, body => "1" );
+      })->then( sub {
+         matrix_set_room_history_visibility( $user, $room_id, "invited" )
+      })->then( sub {
+         matrix_send_room_text_message( $user, $room_id, body => "2" );
+      })->then( sub {
+         matrix_set_room_history_visibility( $user, $room_id, "shared" )
+      })->then( sub {
+         matrix_send_room_text_message( $user, $room_id, body => "3" );
+      })->then( sub {
+         matrix_join_room( $joining_user, $room_id );
+      })->then( sub {
+         matrix_sync( $joining_user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+
+         # look at the last four events
+         my @chunk = @{ $room->{timeline}->{events} };
+         splice @chunk, 0, -4;
+
+         log_if_fail "messages", \@chunk;
+
+         assert_eq( $chunk[0]->{type}, "m.room.history_visibility", "event 0 type" );
+         assert_eq( $chunk[0]->{content}->{history_visibility}, "joined", "event 0 content body" );
+         assert_eq( $chunk[1]->{type}, "m.room.history_visibility", "event 1 type" );
+         assert_eq( $chunk[1]->{content}->{history_visibility}, "shared", "event 1 content body" );
+         assert_eq( $chunk[2]->{type}, "m.room.message", "event 2 type" );
+         assert_eq( $chunk[2]->{content}->{body}, "3", "message 2 content body" );
+         assert_eq( $chunk[3]->{type}, "m.room.member", "event 3 type" );
+
+         Future->done(1);
+      });
+   };
 
 sub check_events
 {
