@@ -106,8 +106,6 @@ test "Creators can delete alias",
    requires => [ $creator_fixture, $room_fixture, room_alias_fixture(),
                  qw( can_create_room_alias )],
 
-   bug => "SYN-83",
-
    do => sub {
       my ( $user, $room_id, $room_alias ) = @_;
       my $server_name = $user->http->server_name;
