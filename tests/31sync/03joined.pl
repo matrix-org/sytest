@@ -211,13 +211,15 @@ test "Newly joined room includes presence in incremental sync",
 
          my $presence = $body->{presence}{events};
 
-         assert_eq( scalar @$presence, 1, "number of presence events" );
+         my @filtered_presence = grep {
+            $_->{sender} ne $user_b->user_id
+         } @$presence;
 
-         my $presence_event = $presence->[0];
+         assert_eq( scalar @filtered_presence, 1, "number of presence events" );
 
-         assert_json_keys( $presence_event, qw( type sender content ) );
-         assert_eq( $presence_event->{type}, "m.presence" );
-         assert_eq( $presence_event->{sender}, $user_a->user_id );
+         assert_json_keys( $filtered_presence[0], qw( type sender content ) );
+         assert_eq( $filtered_presence[0]->{type}, "m.presence" );
+         assert_eq( $filtered_presence[0]->{sender}, $user_a->user_id );
 
          matrix_sync_again( $user_b );
       })->then( sub {

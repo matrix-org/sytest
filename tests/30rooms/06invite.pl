@@ -143,6 +143,35 @@ sub invited_user_can_reject_invite
    });
 }
 
+test "Invited user can reject invite for empty room",
+   requires => [ local_user_fixture(),
+      do {
+         my $creator = local_user_fixture();
+         $creator, inviteonly_room_fixture( creator => $creator );
+   } ],
+   do => \&invited_user_can_reject_invite_for_empty_room;
+
+test "Invited user can reject invite over federation for empty room",
+   requires => [ remote_user_fixture(),
+      do {
+         my $creator = local_user_fixture();
+         $creator, inviteonly_room_fixture( creator => $creator );
+   } ],
+   do => \&invited_user_can_reject_invite_for_empty_room;
+
+sub invited_user_can_reject_invite_for_empty_room
+{
+   my ( $invitee, $creator, $room_id ) = @_;
+
+   matrix_invite_user_to_room( $creator, $invitee, $room_id )
+   ->then( sub {
+      matrix_leave_room( $creator, $room_id )
+   })
+   ->then( sub {
+      matrix_leave_room( $invitee, $room_id )
+   });
+}
+
 test "Invited user can reject local invite after originator leaves",
    requires => [ local_user_fixture(),
       do {

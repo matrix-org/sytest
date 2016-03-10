@@ -40,6 +40,46 @@ test "Can invite existing 3pid",
       });
    };
 
+test "Can invite existing 3pid with no ops",
+   requires => [ local_user_fixtures( 3 ), id_server_fixture() ],
+
+   do => sub {
+      my ( $creator, $inviter, $invitee, $id_server ) = @_;
+
+      my $invitee_mxid = $invitee->user_id;
+
+      my $room_id;
+
+      $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
+      ->then( sub {
+         matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private", with_invite => 1 )
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $inviter,
+            method => "POST",
+            uri    => "/api/v1/rooms/$room_id/invite",
+
+            content => {
+               id_server    => $id_server->name,
+               medium       => "email",
+               address      => $invitee_email,
+            },
+         );
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee_mxid,
+         );
+      })->on_done( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+         assert_eq( $body->{membership}, "invite",
+            'invited user membership' );
+      });
+   };
+
 test "Can invite existing 3pid in createRoom",
    requires => [ local_user_fixtures( 2 ), id_server_fixture() ],
 
@@ -83,7 +123,12 @@ test "Can invite unbound 3pid",
       my ( $inviter, $invitee, $info, $id_server ) = @_;
       my $hs_uribase = $info->client_location;
 
-      can_invite_unbound_3pid( $inviter, $invitee, $hs_uribase, $id_server );
+      matrix_create_and_join_room( [ $inviter ], visibility => "private" )
+      ->then( sub {
+         my ( $room_id ) = @_;
+
+         can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
+      });
    };
 
 test "Can invite unbound 3pid over federation",
@@ -94,21 +139,54 @@ test "Can invite unbound 3pid over federation",
       my ( $inviter, $invitee, $info, $id_server ) = @_;
       my $hs_uribase = $info->client_location;
 
-      can_invite_unbound_3pid( $inviter, $invitee, $hs_uribase, $id_server );
+      matrix_create_and_join_room( [ $inviter ], visibility => "private", with_invite => 1 )
+      ->then( sub {
+         my ( $room_id ) = @_;
+
+         can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
+      });
+   };
+
+test "Can invite unbound 3pid with no ops",
+   requires => [ local_user_fixtures( 3 ), $main::HOMESERVER_INFO[0],
+                 id_server_fixture() ],
+
+   bug => "SYN-611",
+
+   do => sub {
+      my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;
+      my $hs_uribase = $info->client_location;
+
+      matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private", with_invite => 1 )
+      ->then( sub {
+         my ( $room_id ) = @_;
+         can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
+      });
+   };
+
+test "Can invite unbound 3pid over federation with no ops",
+   requires => [ local_user_fixtures( 2 ), remote_user_fixture(),
+                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
+
+   bug => "SYN-611",
+
+   do => sub {
+      my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;
+      my $hs_uribase = $info->client_location;
+
+      matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private", with_invite => 1 )
+      ->then( sub {
+         my ( $room_id ) = @_;
+         can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
+      });
    };
 
 sub can_invite_unbound_3pid
 {
-   my ( $inviter, $invitee, $hs_uribase, $id_server ) = @_;
+   my ( $room_id, $inviter, $invitee, $hs_uribase, $id_server ) = @_;
 
-   my $room_id;
-
-   matrix_create_room( $inviter, visibility => "private" )
+   do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
    ->then( sub {
-      ( $room_id ) = @_;
-
-      do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
-   })->then( sub {
       $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
    })->then( sub {
       matrix_get_room_state( $inviter, $room_id,
@@ -329,4 +407,3 @@ sub do_3pid_invite {
       }
    )
 }
-
