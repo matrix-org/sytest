@@ -123,6 +123,13 @@ arguments::
 
     ./run-tests.pl tests/20profile-events.pl
 
+To run synapse with a specific logging configuration, create a YAML file
+suitable for dictConfig_ called ``log.config`` (it can be copied from a running
+synapse) and place it within the homeserver configuration directory
+(``localhost-<port>``).
+
+.. _dictConfig: https://docs.python.org/2/library/logging.config.html#logging.config.dictConfig
+
 Developing
 ----------
 
