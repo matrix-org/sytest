@@ -92,3 +92,6 @@ test "After changing password, existing session still works",
          matrix_sync( $user );
       })->then_done(1);
    };
+
+# TODO: Test that an existing, different session does not work after changing password
+# TODO: Also possibly test that pushers are deleted iff they were created with different access token
