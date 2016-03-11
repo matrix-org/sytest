@@ -181,7 +181,8 @@ test "Invited user can reject local invite after originator leaves",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-   } ],
+      }
+   ],
    do => sub {
       my ( $invitee, $creator, $room_id ) = @_;
 
