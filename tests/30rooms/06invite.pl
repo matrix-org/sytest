@@ -109,7 +109,8 @@ test "Invited user can reject invite",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-   } ],
+      }
+   ],
    do => \&invited_user_can_reject_invite;
 
 test "Invited user can reject invite over federation",
@@ -117,7 +118,8 @@ test "Invited user can reject invite over federation",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-   } ],
+      }
+   ],
    do => \&invited_user_can_reject_invite;
 
 sub invited_user_can_reject_invite
@@ -148,7 +150,8 @@ test "Invited user can reject invite for empty room",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-   } ],
+      }
+   ],
    do => \&invited_user_can_reject_invite_for_empty_room;
 
 test "Invited user can reject invite over federation for empty room",
@@ -156,7 +159,8 @@ test "Invited user can reject invite over federation for empty room",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-   } ],
+      }
+   ],
    do => \&invited_user_can_reject_invite_for_empty_room;
 
 sub invited_user_can_reject_invite_for_empty_room
