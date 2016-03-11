@@ -244,13 +244,13 @@ sub matrix_invite_user_to_room
 {
    my ( $user, $invitee, $room_id ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
-   ref $room_id and croak "Expected a room ID; got $room_id";
+   ( defined $room_id and !ref $room_id ) or croak "Expected a room ID; got $room_id";
 
    my $invitee_id;
    if( is_User( $invitee ) ) {
       $invitee_id = $invitee->user_id;
    }
-   elsif( !ref $invitee ) {
+   elsif( defined $invitee and !ref $invitee ) {
       $invitee_id = $invitee;
    }
    else {
