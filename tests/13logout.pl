@@ -16,8 +16,8 @@ test "Can logout current device",
             content => {},
          )
       })->then( sub {
-         matrix_sync( $user );
-      })->main::expect_http_401->then( sub {
+         matrix_sync( $user )->main::expect_http_401;
+      })->then( sub {
          matrix_sync( $other_login );
       });
    };
@@ -41,8 +41,8 @@ test "Can logout all devices",
             content => {},
          )
       })->then( sub {
-         matrix_sync( $user );
-      })->main::expect_http_401->then( sub {
-         matrix_sync( $other_login );
-      })->main::expect_http_401;
+         matrix_sync( $user )->main::expect_http_401;
+      })->then( sub {
+         matrix_sync( $other_login )->main::expect_http_401;
+      });
    };

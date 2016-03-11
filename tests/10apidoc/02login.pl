@@ -207,11 +207,11 @@ test "POST /tokenrefresh invalidates old refresh token",
       );
    };
 
-
 our @EXPORT = qw( matrix_login_again_with_user );
 
 
-sub matrix_login_again_with_user {
+sub matrix_login_again_with_user
+{
    my ( $user ) = @_;
 
    $user->http->do_request_json(
