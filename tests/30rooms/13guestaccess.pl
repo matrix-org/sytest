@@ -503,7 +503,7 @@ sub guest_user_fixture
             my ( $body ) = @_;
             my $access_token = $body->{access_token};
 
-            Future->done( User( $http, $body->{user_id}, $access_token, undef, undef, undef, [], undef ) );
+            Future->done( User( $http, $body->{user_id}, undef, $access_token, undef, undef, undef, [], undef ) );
          });
    })
 }
@@ -585,4 +585,3 @@ sub expect_4xx_or_empty_chunk
       Future->done(1);
    });
 }
-

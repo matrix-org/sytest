@@ -69,6 +69,8 @@ sub matrix_register_user
 {
    my ( $http, $uid, %opts ) = @_;
 
+   my $password = $opts{password} // "an0th3r s3kr1t";
+
    $uid //= sprintf "_ANON_-%d", $next_anon_uid++;
 
    $http->do_request_json(
@@ -81,13 +83,13 @@ sub matrix_register_user
          },
          bind_email => JSON::false,
          username   => $uid,
-         password   => $opts{password} // "an0th3r s3kr1t",
+         password   => $password,
       },
    )->then( sub {
       my ( $body ) = @_;
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $access_token, undef, undef, undef, [], undef );
+      my $user = User( $http, $body->{user_id}, $password, $access_token, undef, undef, undef, [], undef );
 
       my $f = Future->done;
 
