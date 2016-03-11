@@ -206,3 +206,29 @@ test "POST /tokenrefresh invalidates old refresh token",
          }
       );
    };
+
+
+our @EXPORT = qw( matrix_login_again_with_user );
+
+
+sub matrix_login_again_with_user {
+   my ( $user ) = @_;
+
+   $user->http->do_request_json(
+      method  => "POST",
+      uri     => "/r0/login",
+      content  => {
+         type     => "m.login.password",
+         user     => $user->user_id,
+         password => $user->password,
+      },
+   )->then( sub {
+      my ( $body ) = @_;
+
+      assert_json_keys( $body, qw( access_token home_server refresh_token ));
+
+      my $new_user = User( $user->http, $user->user_id, $user->password, $body->{access_token}, $body->{refresh_token}, undef, undef, [], undef );
+
+      Future->done( $new_user );
+   });
+}
