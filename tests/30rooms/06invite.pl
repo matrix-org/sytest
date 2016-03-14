@@ -282,7 +282,7 @@ test "Users cannot invite themselves to a room",
          ->main::expect_http_403;
    };
 
-test "Users cannot invite others to a room they're already in",
+test "Users cannot invite a user that is already in the room",
    requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
 
    do => sub {
