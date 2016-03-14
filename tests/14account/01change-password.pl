@@ -30,6 +30,10 @@ test "After changing password, can't log in with old password",
                user     => $user->user_id,
                password => $password,
             }
+         # We don't mandate the exact failure code here
+         # (that should be done in the login test if
+         # anywhere), any 4xx code is fine as far as
+         # this test is concerned.
          )->main::expect_http_4xx;
       }
       )->then_done(1);
