@@ -7,8 +7,6 @@ test "After changing password, can't log in with old password",
    check => sub {
       my ( $user, ) = @_;
 
-      my $http = $user->http;
-
       do_request_json_for( $user,
          method => "POST",
          uri    => "/r0/account/password",
@@ -21,7 +19,7 @@ test "After changing password, can't log in with old password",
             new_password => "my new password",
          },
       )->then( sub {
-         $http->do_request_json(
+         do_request_json_for( $user,
             method => "POST",
             uri    => "/r0/login",
 
@@ -45,8 +43,6 @@ test "After changing password, can log in with new password",
    check => sub {
       my ( $user, ) = @_;
 
-      my $http = $user->http;
-
       do_request_json_for( $user,
          method => "POST",
          uri    => "/r0/account/password",
@@ -59,7 +55,7 @@ test "After changing password, can log in with new password",
             new_password => "my new password",
          },
       )->then( sub {
-         $http->do_request_json(
+         do_request_json_for( $user,
             method => "POST",
             uri    => "/r0/login",
 
