@@ -166,7 +166,7 @@ sub matrix_register_as_ghost
 
       # TODO: user has no event stream yet. Should they?
       Future->done(
-         User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, undef, undef, [], undef )
+         User( $as_user->http, $body->{user_id}, undef, $body->{access_token}, undef, undef, undef, [], undef )
       );
    });
 }
