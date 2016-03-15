@@ -179,6 +179,8 @@ sub start
         "database_config" => $db_config_path,
         "macaroon_secret_key" => $macaroon_secret_key,
 
+        "invite_3pid_guest" => "true",
+
         # Metrics are always useful
         "enable_metrics" => 1,
         "metrics_port" => ( $port - 8000 + 9090 ),
