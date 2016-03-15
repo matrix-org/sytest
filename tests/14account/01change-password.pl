@@ -68,8 +68,7 @@ test "After changing password, can log in with new password",
                password => "my new password",
             }
          );
-      }
-      )->then_done(1);
+      })->then_done(1);
    };
 
 test "After changing password, existing session still works",
