@@ -147,6 +147,8 @@ sub invited_user_can_reject_invite
    })->then( sub {
       my ( $body ) = @_;
 
+      # Check that invitee no longer sees the invite
+
       assert_json_object( $body->{rooms}{invite} );
       keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
       Future->done(1);
@@ -185,6 +187,8 @@ sub invited_user_can_reject_invite_for_empty_room
       matrix_sync( $invitee )
    })->then( sub {
       my ( $body ) = @_;
+
+      # Check that invitee no longer sees the invite
 
       assert_json_object( $body->{rooms}{invite} );
       keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
