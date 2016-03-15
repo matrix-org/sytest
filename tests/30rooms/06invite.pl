@@ -271,3 +271,25 @@ test "Invited user can see room metadata",
             ->then_done(1);
       });
    };
+
+test "Users cannot invite themselves to a room",
+   requires => [ local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      matrix_invite_user_to_room( $creator, $creator, $room_id )
+         ->main::expect_http_403;
+   };
+
+test "Users cannot invite a user that is already in the room",
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+
+   do => sub {
+      my ( $creator, $room_id, $invitee ) = @_;
+
+      matrix_join_room( $invitee, $room_id )->then( sub {
+         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+            ->main::expect_http_403;
+      });
+   };
