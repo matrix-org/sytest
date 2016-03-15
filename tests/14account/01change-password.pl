@@ -1,5 +1,31 @@
 my $password = "my secure password";
 
+=head2 matrix_set_password
+
+   matrix_set_password( $user, $old_password, $new_pasword )->get
+
+old_password: The user's current password
+new_password: The desired new password
+
+=cut
+
+sub matrix_set_password
+{
+   my ( $user, $old_password, $new_password ) = @_;
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/r0/account/password",
+      content => {
+         auth => {
+            type => "m.login.password",
+            user     => $user->user_id,
+            password => $old_password,
+         },
+         new_password => $new_password,
+      },
+   );
+}
 
 test "After changing password, can't log in with old password",
    requires => [ local_user_fixture( password => $password ) ],
@@ -7,18 +33,7 @@ test "After changing password, can't log in with old password",
    check => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/account/password",
-         content => {
-            auth => {
-               type => "m.login.password",
-               user     => $user->user_id,
-               password => $password,
-            },
-            new_password => "my new password",
-         },
-      )->then( sub {
+      matrix_set_password( $user, $password, "my new password" )->then( sub {
          do_request_json_for( $user,
             method => "POST",
             uri    => "/r0/login",
@@ -42,18 +57,7 @@ test "After changing password, can log in with new password",
    check => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/account/password",
-         content => {
-            auth => {
-               type => "m.login.password",
-               user     => $user->user_id,
-               password => $password,
-            },
-            new_password => "my new password",
-         },
-      )->then( sub {
+      matrix_set_password( $user, $password, "my new password" )->then( sub {
          do_request_json_for( $user,
             method => "POST",
             uri    => "/r0/login",
@@ -74,18 +78,7 @@ test "After changing password, existing session still works",
    check => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/account/password",
-         content => {
-            auth => {
-               type => "m.login.password",
-               user     => $user->user_id,
-               password => $password,
-            },
-            new_password => "my new password",
-         },
-      )->then( sub {
+      matrix_set_password( $user, $password, "my new password" )->then( sub {
          matrix_sync( $user );
       })->then_done(1);
    };
@@ -103,17 +96,7 @@ test "After changing password, a different session no longer works",
          # ensure other login works to start with
          matrix_sync( $other_login );
       })->then( sub {
-         do_request_json_for( $user,
-            method => "POST",
-            uri    => "/r0/account/password",
-            content => {
-               auth => {
-                  type => "m.login.password",
-                  user     => $user->user_id,
-                  password => $password,
-               },
-               new_password => "my new password",
-            });
+         matrix_set_password( $user, $password, "my new password" )
       })->then( sub {
          matrix_sync( $other_login )->main::expect_http_401;
       })->then_done(1);
@@ -145,17 +128,7 @@ test "Pushers created with a different access token are deleted on password chan
             },
          );
       })->then( sub {
-         do_request_json_for( $user,
-            method => "POST",
-            uri    => "/r0/account/password",
-            content => {
-               auth => {
-                  type => "m.login.password",
-                  user     => $user->user_id,
-                  password => $password,
-               },
-               new_password => "my new password",
-            });
+         matrix_set_password( $user, $password, "my new password" );
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
@@ -191,17 +164,7 @@ test "Pushers created with a the same access token are not deleted on password c
             },
          },
       )->then( sub {
-         do_request_json_for( $user,
-            method => "POST",
-            uri    => "/r0/account/password",
-            content => {
-               auth => {
-                  type => "m.login.password",
-                  user     => $user->user_id,
-                  password => $password,
-               },
-               new_password => "my new password",
-            });
+         matrix_set_password( $user, $password, "my new password");
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
