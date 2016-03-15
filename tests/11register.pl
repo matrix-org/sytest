@@ -1,6 +1,12 @@
 use JSON qw( decode_json );
 use URI;
 
+# See also 10apidoc/01register.pl
+
+# This test only tests the recaptcha validation stage, and not
+# and actual registration. It also abuses the fact the Synapse
+# permits validation of a recaptcha stage even if it's not actually
+# required in any of the given auth flows.
 multi_test "Register with a recaptcha",
    requires => [ $main::API_CLIENTS[0] ],
 
