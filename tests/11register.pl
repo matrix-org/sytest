@@ -140,3 +140,56 @@ test "registration is idempotent",
          Future->done( 1 );
       });
    };
+
+test "registration remembers parameters",
+   requires => [ $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      my $desired_localpart = "11register_remember";
+
+      my $session;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            username => $desired_localpart,
+            password => "s3kr1t",
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session ));
+
+         $session = $body->{session};
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+
+         my $actual_user_id = $body->{user_id};
+         my $home_server = $body->{home_server};
+
+         assert_eq( $actual_user_id, "\@$desired_localpart:$home_server",
+            "registered user ID" );
+
+         Future->done( 1 );
+      });
+   };
