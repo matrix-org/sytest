@@ -187,8 +187,8 @@ test "registration remembers parameters",
          my $actual_user_id = $body->{user_id};
          my $home_server = $body->{home_server};
 
-         assert_eq(
-            $actual_user_id, "\@$desired_localpart:$home_server", "registered user ID" );
+         assert_eq( $actual_user_id, "\@$desired_localpart:$home_server",
+            "registered user ID" );
 
          Future->done( 1 );
       });
