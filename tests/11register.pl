@@ -194,7 +194,7 @@ test "registration is idempotent, with username specified",
             uri    => "/r0/register",
 
             content => {
-	       username => $desired_localpart,
+               username => $desired_localpart,
                password => "s3kr1t",
                auth     => {
                   session => $session,
