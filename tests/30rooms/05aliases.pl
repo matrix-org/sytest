@@ -1,5 +1,6 @@
 use 5.014;  # So we can use the /r flag to s///
 use utf8;
+use List::Util qw( any none );
 
 # [U+2615] - HOT BEVERAGE
 my $alias_localpart = "#☕";
@@ -148,7 +149,6 @@ test "Users can't delete other's aliases",
       })
    };
 
-
 test "Can delete canonical alias",
    requires => [ local_user_fixture( with_events => 0 ), room_alias_fixture(),
                  qw( can_create_room_alias )],
@@ -184,7 +184,7 @@ test "Can delete canonical alias",
          assert_json_keys( $body, qw( aliases ) );
          assert_json_list( my $aliases = $body->{aliases} );
 
-         $room_alias ~~ @$aliases or die "Expected alias to be in list";
+         any { $_ eq $room_alias } @$aliases or die "Expected alias to be in list";
 
          do_request_json_for( $creator,
            method => "DELETE",
@@ -203,7 +203,7 @@ test "Can delete canonical alias",
          assert_json_keys( $body, qw( aliases ) );
          assert_json_list( my $aliases = $body->{aliases} );
 
-         not $room_alias ~~ @$aliases or die "Expected alias to not be in list";
+         none { $_ eq $room_alias } @$aliases or die "Expected alias to not be in list";
 
          matrix_get_room_state( $creator, $room_id,
             type      => "m.room.canonical_alias",
@@ -246,7 +246,7 @@ test "Alias creators can delete alias with no ops",
          assert_json_keys( $body, qw( aliases ) );
          assert_json_list( my $aliases = $body->{aliases} );
 
-         $room_alias ~~ @$aliases or die "Expected alias to be in list";
+         any { $_ eq $room_alias } @$aliases or die "Expected alias to be in list";
 
          do_request_json_for( $other_user,
            method => "DELETE",
@@ -265,7 +265,7 @@ test "Alias creators can delete alias with no ops",
          assert_json_keys( $body, qw( aliases ) );
          assert_json_list( my $aliases = $body->{aliases} );
 
-         not $room_alias ~~ @$aliases or die "Expected alias to not be in list";
+         none { $_ eq $room_alias } @$aliases or die "Expected alias to not be in list";
 
          Future->done(1);
       })
@@ -305,7 +305,7 @@ test "Alias creators can delete canonical alias with no ops",
          assert_json_keys( $body, qw( aliases ) );
          assert_json_list( my $aliases = $body->{aliases} );
 
-         $room_alias ~~ @$aliases or die "Expected alias to be in list";
+         any { $_ eq $room_alias } @$aliases or die "Expected alias to be in list";
 
          do_request_json_for( $other_user,
            method => "DELETE",
@@ -324,7 +324,7 @@ test "Alias creators can delete canonical alias with no ops",
          assert_json_keys( $body, qw( aliases ) );
          assert_json_list( my $aliases = $body->{aliases} );
 
-         not $room_alias ~~ @$aliases or die "Expected alias to not be in list";
+         none { $_ eq $room_alias } @$aliases or die "Expected alias to not be in list";
 
          Future->done(1);
       })
