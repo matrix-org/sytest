@@ -291,7 +291,7 @@ test "Alias creators can delete canonical alias with no ops",
          )
       })->then( sub {
          matrix_put_room_state( $creator, $room_id,
-            type => "m.room.canonical_alias",
+            type    => "m.room.canonical_alias",
             content => { alias => $room_alias }
          )
       })->then( sub {
