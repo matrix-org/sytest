@@ -204,7 +204,7 @@ our $SPYGLASS_USER = fixture(
    setup => sub {
       my ( $http ) = @_;
 
-      matrix_register_user( $http )
+      matrix_register_user( $http, "spyglass" )
       ->on_done( sub {
          my ( $user ) = @_;
 
