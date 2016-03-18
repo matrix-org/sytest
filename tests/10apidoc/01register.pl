@@ -61,9 +61,20 @@ test "POST /register can create a user",
       });
    };
 
-push our @EXPORT, qw( matrix_register_user );
+push our @EXPORT, qw( localpart_fixture );
 
 my $next_anon_uid = 1;
+
+sub localpart_fixture
+{
+   fixture(
+      setup => sub {
+         Future->done( sprintf "_ANON_-%d", $next_anon_uid++ );
+      },
+   );
+}
+
+push @EXPORT, qw( matrix_register_user );
 
 sub matrix_register_user
 {
@@ -71,7 +82,8 @@ sub matrix_register_user
 
    my $password = $opts{password} // "an0th3r s3kr1t";
 
-   $uid //= sprintf "_ANON_-%d", $next_anon_uid++;
+   defined $uid or
+      croak "Require UID for matrix_register_user";
 
    $http->do_request_json(
       method => "POST",
@@ -121,12 +133,12 @@ sub local_user_fixture
    my %args = @_;
 
    fixture(
-      requires => [ $main::API_CLIENTS[0] ],
+      requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
       setup => sub {
-         my ( $http ) = @_;
+         my ( $http, $localpart ) = @_;
 
-         matrix_register_user( $http, undef,
+         matrix_register_user( $http, $localpart,
             with_events => $args{with_events} // 1,
             password => $args{password},
          )->then_with_f( sub {
@@ -182,12 +194,12 @@ push @EXPORT, qw( remote_user_fixture );
 sub remote_user_fixture
 {
    fixture(
-      requires => [ $main::API_CLIENTS[1] ],
+      requires => [ $main::API_CLIENTS[1], localpart_fixture() ],
 
       setup => sub {
-         my ( $http ) = @_;
+         my ( $http, $localpart ) = @_;
 
-         matrix_register_user( $http )
+         matrix_register_user( $http, $localpart )
       }
    );
 }
