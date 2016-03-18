@@ -142,6 +142,16 @@ sub invited_user_can_reject_invite
          die "Expected membership to be 'leave'";
 
       Future->done(1);
+   })->then( sub {
+      matrix_sync( $invitee )
+   })->then( sub {
+      my ( $body ) = @_;
+
+      # Check that invitee no longer sees the invite
+
+      assert_json_object( $body->{rooms}{invite} );
+      keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+      Future->done(1);
    });
 }
 
@@ -173,6 +183,16 @@ sub invited_user_can_reject_invite_for_empty_room
    })
    ->then( sub {
       matrix_leave_room( $invitee, $room_id )
+   })->then( sub {
+      matrix_sync( $invitee )
+   })->then( sub {
+      my ( $body ) = @_;
+
+      # Check that invitee no longer sees the invite
+
+      assert_json_object( $body->{rooms}{invite} );
+      keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+      Future->done(1);
    });
 }
 
