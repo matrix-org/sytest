@@ -4,7 +4,7 @@ my $banned_user_fixture = local_user_fixture();
 
 test "Banned user is kicked and may not rejoin until unbanned",
    requires => [ $creator_fixture, $banned_user_fixture,
-                     room_fixture( requires_users => [ $creator_fixture, $banned_user_fixture ] ),
+                     magic_room_fixture( requires_users => [ $creator_fixture, $banned_user_fixture ] ),
                 qw( can_ban_room )],
 
    do => sub {

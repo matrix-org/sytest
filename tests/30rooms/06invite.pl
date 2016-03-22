@@ -227,7 +227,7 @@ test "Invited user can reject local invite after originator leaves",
    };
 
 test "Invited user can see room metadata",
-   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+   requires => [ magic_local_user_and_room_fixtures(), local_user_fixture() ],
 
    do => sub {
       my ( $creator, $room_id, $invitee ) = @_;
