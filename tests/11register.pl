@@ -8,10 +8,10 @@ use URI;
 # permits validation of a recaptcha stage even if it's not actually
 # required in any of the given auth flows.
 multi_test "Register with a recaptcha",
-   requires => [ $main::API_CLIENTS[0] ],
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $http, $localpart ) = @_;
 
       Future->needs_all(
          await_http_request( "/recaptcha/api/siteverify", sub {1} )
@@ -38,7 +38,7 @@ multi_test "Register with a recaptcha",
             method  => "POST",
             uri     => "/r0/register",
             content => {
-               username => "SYT-8-username",
+               username => $localpart,
                password => "my secret",
                auth     => {
                   type     => "m.login.recaptcha",
@@ -142,13 +142,12 @@ test "registration is idempotent, without username specified",
    };
 
 test "registration is idempotent, with username specified",
-   requires => [ $main::API_CLIENTS[0] ],
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $http, $localpart ) = @_;
 
       my $session;
-      my $desired_localpart = "11register_idemp_withusername";
 
       # Start a session
       $http->do_request_json(
@@ -156,7 +155,7 @@ test "registration is idempotent, with username specified",
          uri    => "/r0/register",
 
          content => {
-            username => $desired_localpart,
+            username => $localpart,
             password => "s3kr1t",
          },
       )->main::expect_http_401->then( sub {
@@ -174,7 +173,7 @@ test "registration is idempotent, with username specified",
             uri    => "/r0/register",
 
             content => {
-	       username => $desired_localpart,
+               username => $localpart,
                password => "s3kr1t",
                auth     => {
                   session => $session,
@@ -194,7 +193,7 @@ test "registration is idempotent, with username specified",
             uri    => "/r0/register",
 
             content => {
-               username => $desired_localpart,
+               username => $localpart,
                password => "s3kr1t",
                auth     => {
                   session => $session,
@@ -212,7 +211,7 @@ test "registration is idempotent, with username specified",
          my $actual_user_id = $body->{user_id};
          my $home_server = $body->{home_server};
 
-         assert_eq( $actual_user_id, "\@$desired_localpart:$home_server",
+         assert_eq( $actual_user_id, "\@$localpart:$home_server",
             "registered user ID" );
 
          Future->done( 1 );
@@ -220,12 +219,10 @@ test "registration is idempotent, with username specified",
    };
 
 test "registration remembers parameters",
-   requires => [ $main::API_CLIENTS[0] ],
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
    do => sub {
-      my ( $http ) = @_;
-
-      my $desired_localpart = "11register_remember";
+      my ( $http, $localpart ) = @_;
 
       my $session;
 
@@ -234,7 +231,7 @@ test "registration remembers parameters",
          uri    => "/r0/register",
 
          content => {
-            username => $desired_localpart,
+            username => $localpart,
             password => "s3kr1t",
          },
       )->main::expect_http_401->then( sub {
@@ -265,7 +262,7 @@ test "registration remembers parameters",
          my $actual_user_id = $body->{user_id};
          my $home_server = $body->{home_server};
 
-         assert_eq( $actual_user_id, "\@$desired_localpart:$home_server",
+         assert_eq( $actual_user_id, "\@$localpart:$home_server",
             "registered user ID" );
 
          Future->done( 1 );
