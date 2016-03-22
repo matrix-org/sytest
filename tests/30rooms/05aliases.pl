@@ -8,9 +8,7 @@ my $room_alias;
 
 my $creator_fixture = local_user_fixture();
 
-my $room_fixture = room_fixture(
-   requires_users => [ $creator_fixture ],
-);
+my $room_fixture = room_fixture( $creator_fixture );
 
 test "Room aliases can contain Unicode",
    requires => [ $creator_fixture, $room_fixture,

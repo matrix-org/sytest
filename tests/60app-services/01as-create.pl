@@ -1,8 +1,6 @@
 my $user_fixture = local_user_fixture();
 
-my $room_fixture = room_fixture(
-   requires_users => [ $user_fixture ],
-);
+my $room_fixture = room_fixture( $user_fixture );
 
 test "AS can create a user",
    requires => [ $main::AS_USER[0], $room_fixture ],

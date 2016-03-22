@@ -1,8 +1,6 @@
 my $user_fixture = local_user_fixture();
 
-my $room_fixture = room_fixture(
-   requires_users => [ $user_fixture ],
-);
+my $room_fixture = room_fixture( $user_fixture );
 
 multi_test "Inviting an AS-hosted user asks the AS server",
    requires => [ $main::AS_USER[0], $main::APPSERV[0], $user_fixture, $room_fixture,

@@ -408,6 +408,30 @@ push @EXPORT, qw( room_fixture );
 
 sub room_fixture
 {
+   my ( $user_fixture, %args ) = @_;
+
+   fixture(
+      requires => [ $user_fixture ],
+
+      setup => sub {
+         my ( $user ) = @_;
+
+         matrix_create_room( $user, %args )->then( sub {
+            my ( $room_id ) = @_;
+            # matrix_create_room returns the room_id and the room_alias if
+            #  one was set. However we only want to return the room_id
+            #  because our callers only expect the room_id to be passed to
+            #  their setup code.
+            Future->done( $room_id );
+         });
+      }
+   );
+}
+
+push @EXPORT, qw( magic_room_fixture );
+
+sub magic_room_fixture
+{
    my %args = @_;
 
    fixture(
@@ -416,7 +440,7 @@ sub room_fixture
       setup => sub {
          my @members = @_;
 
-         matrix_create_and_join_room( \@members, %args )
+         matrix_create_and_join_room( \@members, %args );
       }
    );
 }
@@ -425,10 +449,26 @@ push @EXPORT, qw( local_user_and_room_fixtures );
 
 sub local_user_and_room_fixtures
 {
+   my %args = @_;
+
    my $user_fixture = local_user_fixture();
 
    return (
       $user_fixture,
-      room_fixture( requires_users => [ $user_fixture ] ),
+      room_fixture( $user_fixture, %args ),
+   );
+}
+
+push @EXPORT, qw( magic_local_user_and_room_fixtures );
+
+sub magic_local_user_and_room_fixtures
+{
+   my %args = @_;
+
+   my $user_fixture = local_user_fixture();
+
+   return (
+      $user_fixture,
+      magic_room_fixture( requires_users => [ $user_fixture ], %args ),
    );
 }

@@ -6,7 +6,7 @@ my $local_user_fixture = local_user_fixture();
 
 my $remote_fixture = remote_user_fixture();
 
-my $room_fixture = room_fixture(
+my $room_fixture = magic_room_fixture(
    requires_users => [ $senduser_fixture, $local_user_fixture, $remote_fixture ],
 );
 
@@ -190,7 +190,7 @@ test "Remote room members can get room messages",
    };
 
 test "Message history can be paginated",
-   requires => [ local_user_and_room_fixtures() ],
+   requires => [ magic_local_user_and_room_fixtures() ],
 
    proves => [qw( can_paginate_room )],
 
@@ -241,7 +241,7 @@ test "Message history can be paginated over federation",
       my $local_user_fixture = local_user_fixture();
 
       [ $local_user_fixture,
-        room_fixture( requires_users => [ $local_user_fixture ], with_alias => 1 ),
+        magic_room_fixture( requires_users => [ $local_user_fixture ], with_alias => 1 ),
         remote_user_fixture(),
 
         qw( can_paginate_room ),

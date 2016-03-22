@@ -28,7 +28,7 @@ my $local_user_fixture = local_user_fixture();
 
 my $remote_user_fixture = remote_user_fixture();
 
-my $room_fixture = room_fixture(
+my $room_fixture = magic_room_fixture(
    requires_users => [
       $typing_user_fixture, $local_user_fixture, $remote_user_fixture
    ],
