@@ -48,7 +48,7 @@ test "Name/topic keys are correct",
 
          foreach my $room ( @{ $body->{chunk} } ) {
             assert_json_keys( $room,
-               qw( world_readable guest_can_join num_joined_members aliases )
+               qw( world_readable guest_can_join num_joined_members )
             );
 
             my $name = $room->{name};
@@ -56,6 +56,10 @@ test "Name/topic keys are correct",
             my $canonical_alias = $room->{canonical_alias};
 
             my $aliases = $room->{aliases};
+            if( not defined $aliases ) {
+               next;
+            }
+
             foreach my $alias ( @{$aliases} ) {
                foreach my $alias_local ( keys %rooms ) {
                   $alias =~ m/^\Q#$alias_local:\E/ or next;
