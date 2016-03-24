@@ -264,7 +264,9 @@ if( $CLIENT_LOG ) {
 
 my $loop = IO::Async::Loop->new;
 
-$SIG{INT} = sub { exit 1 };
+# Be polite to any existing SIGINT handler (e.g. in case of Devel::MAT et.al.)
+my $old_SIGINT = $SIG{INT};
+$SIG{INT} = sub { $old_SIGINT->( "INT" ) if ref $old_SIGINT; exit 1 };
 
 
 # We need two servers; a "local" and a "remote" one for federation-based tests
