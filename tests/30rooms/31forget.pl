@@ -119,7 +119,7 @@ test "Can't forget room you're still in",
       ->then( sub {
          matrix_send_room_text_message( $creator, $room_id, body => "sup" );
       })->then( sub {
-          matrix_forget_room( $user, $room_id )
+         matrix_forget_room( $user, $room_id )
       })->main::expect_http_4xx;
    };
 
