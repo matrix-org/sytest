@@ -48,6 +48,19 @@ sub respond_json
    $self->respond( $response );
 }
 
+sub respond_error_json
+{
+   my $self = shift;
+   my ( $error_code, $json ) = @_;
+
+   my $response = HTTP::Response->new( $error_code );
+   $response->add_content( encode_json $json );
+   $response->content_type( JSON_MIME_TYPE );
+   $response->content_length( length $response->content );
+
+   $self->respond( $response );
+}
+
 sub body_from_form
 {
    my $self = shift;

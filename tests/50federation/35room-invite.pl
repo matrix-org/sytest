@@ -67,68 +67,125 @@ test "Inbound federation can receive invites",
          creator => $creator_id,
       );
 
+      invite_server( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server );
+   };
+
+
+sub invite_server
+{
+   my ( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server ) = @_;
+
+   my $room_id = $room->room_id;
+
+   my $invitation = $room->create_event(
+     type => "m.room.member",
+
+     content   => { membership => "invite" },
+     sender    => $creator_id,
+     state_key => $user->user_id,
+   );
+
+   exists $invitation->{signatures}{ $inbound_server->server_name } or
+     die "ARGH: I forgot to sign my own event";
+
+   Future->needs_all(
+     await_event_for( $user, filter => sub {
+         my ( $event ) = @_;
+         return $event->{type} eq "m.room.member" &&
+                $event->{room_id} eq $room_id;
+         }
+     )->then( sub {
+         my ( $event ) = @_;
+         log_if_fail "Invitation event", $event;
+
+         assert_eq( $event->{state_key}, $user->user_id,
+            'event state_key' );
+         assert_eq( $event->{content}{membership}, "invite",
+            'event content membership' );
+
+         Future->done(1);
+     }),
+
+     $outbound_client->do_request_json(
+         method   => "PUT",
+         hostname => $first_home_server,
+         uri      => "/invite/$room_id/$invitation->{event_id}",
+
+         content => $invitation,
+     )->then( sub {
+         my ( $response ) = @_;
+
+         # $response seems to arrive with an extraneous layer of wrapping as
+         # the result of a synapse implementation bug (SYN-490).
+         if( ref $response eq "ARRAY" ) {
+            $response->[0] == 200 or
+               die "Expected first response element to be 200";
+
+            $response = $response->[1];
+         }
+
+         log_if_fail "send invite response", $response;
+
+         my $event = $response->{event};
+
+         # Response should be the same event reflected back
+         assert_eq( $event->{$_}, $invitation->{$_},
+            "response $_" ) for qw( event_id origin room_id sender state_key type );
+
+         # server should have signed it
+         exists $event->{signatures}{$first_home_server} or
+            die "Expected server to sign invitation";
+
+         Future->done(1);
+     }),
+   );
+}
+
+
+test "Inbound federation can receive invite and reject when remote errors",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $user, $inbound_server, $outbound_client, $creator_id ) = @_;
+
+      my $first_home_server = $user->http->server_name;
+
+      my $datastore = $inbound_server->datastore;
+
+      my $room = SyTest::Federation::Room->new(
+         datastore => $datastore,
+      );
+
+      $room->create_initial_events(
+         server  => $inbound_server,
+         creator => $creator_id,
+      );
+
       my $room_id = $room->room_id;
 
-      my $invitation = $room->create_event(
-         type => "m.room.member",
+      invite_server( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server )
+      ->then( sub {
+         Future->needs_all(
+            $inbound_server->await_request_make_leave( $room_id, $user->user_id )->then( sub {
+               my ( $req, undef ) = @_;
 
-         content   => { membership => "invite" },
-         sender    => $creator_id,
-         state_key => $user->user_id,
-      );
+               assert_eq( $req->method, "GET", 'request method' );
 
-      exists $invitation->{signatures}{ $inbound_server->server_name } or
-         die "ARGH: I forgot to sign my own event";
+               $req->respond_error_json(403, {});
 
-      Future->needs_all(
-         await_event_for( $user, filter => sub {
-            my ( $event ) = @_;
-            return $event->{type} eq "m.room.member" &&
-                   $event->{room_id} eq $room_id;
-            }
-         )->then( sub {
-            my ( $event ) = @_;
-            log_if_fail "Invitation event", $event;
+               Future->done;
+            }),
+            matrix_leave_room( $user, $room_id )
+         )
+      })->then( sub {
+         matrix_sync( $user );
+      })->then( sub {
+         my ( $body ) = @_;
 
-            assert_eq( $event->{state_key}, $user->user_id,
-               'event state_key' );
-            assert_eq( $event->{content}{membership}, "invite",
-               'event content membership' );
-
-            Future->done(1);
-         }),
-
-         $outbound_client->do_request_json(
-            method   => "PUT",
-            hostname => $first_home_server,
-            uri      => "/invite/$room_id/$invitation->{event_id}",
-
-            content => $invitation,
-         )->then( sub {
-            my ( $response ) = @_;
-
-            # $response seems to arrive with an extraneous layer of wrapping as
-            # the result of a synapse implementation bug (SYN-490).
-            if( ref $response eq "ARRAY" ) {
-               $response->[0] == 200 or
-                  die "Expected first response element to be 200";
-
-               $response = $response->[1];
-            }
-
-            log_if_fail "send invite response", $response;
-
-            my $event = $response->{event};
-
-            # Response should be the same event reflected back
-            assert_eq( $event->{$_}, $invitation->{$_},
-               "response $_" ) for qw( event_id origin room_id sender state_key type );
-
-            # server should have signed it
-            exists $event->{signatures}{$first_home_server} or
-               die "Expected server to sign invitation";
-
-            Future->done(1);
-         }),
-      );
+         log_if_fail "Sync body", $body;
+         assert_json_object( $body->{rooms}{invite} );
+         keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+         Future->done(1);
+      });
    };

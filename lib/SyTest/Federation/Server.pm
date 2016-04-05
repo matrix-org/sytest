@@ -387,6 +387,10 @@ __PACKAGE__->mk_await_request_pair(
 );
 
 __PACKAGE__->mk_await_request_pair(
+   make_leave => [qw( :room_id :user_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
    send_join => [qw( :room_id )],
 );
 
