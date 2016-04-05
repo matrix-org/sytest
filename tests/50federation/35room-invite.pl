@@ -172,7 +172,7 @@ test "Inbound federation can receive invite and reject when remote errors",
 
                assert_eq( $req->method, "GET", 'request method' );
 
-               $req->respond_error_json(403, {});
+               $req->respond_json( {}, code => 403 );
 
                Future->done;
             }),

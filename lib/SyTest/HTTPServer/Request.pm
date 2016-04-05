@@ -38,22 +38,9 @@ sub body_from_json
 sub respond_json
 {
    my $self = shift;
-   my ( $json ) = @_;
+   my ( $json, %opts ) = @_;
 
-   my $response = HTTP::Response->new( 200 );
-   $response->add_content( encode_json $json );
-   $response->content_type( JSON_MIME_TYPE );
-   $response->content_length( length $response->content );
-
-   $self->respond( $response );
-}
-
-sub respond_error_json
-{
-   my $self = shift;
-   my ( $error_code, $json ) = @_;
-
-   my $response = HTTP::Response->new( $error_code );
+   my $response = HTTP::Response->new( $opts{code} // 200 );
    $response->add_content( encode_json $json );
    $response->content_type( JSON_MIME_TYPE );
    $response->content_length( length $response->content );
