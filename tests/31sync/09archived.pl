@@ -47,6 +47,7 @@ test "Newly left rooms appear in the leave section of incremental sync",
          matrix_create_room( $user );
       })->then( sub {
          ( $room_id ) = @_;
+
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          matrix_leave_room( $user, $room_id );
@@ -55,20 +56,11 @@ test "Newly left rooms appear in the leave section of incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         log_if_fail "sync result", $body;
-
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));
 
          @{ $room->{state}{events} } == 0
             or die "Expected no state events";
-
-         # we should see our own leave event
-         assert_eq(scalar @{ $room->{timeline}{events} }, 1,
-                   "timeline events");
-         my $ev = $room->{timeline}{events}[0];
-         assert_eq($ev->{type}, "m.room.member", "event type");
-         assert_eq($ev->{content}{membership}, "leave", "membership");
 
          Future->done(1);
       });
@@ -107,11 +99,15 @@ test "We should see our own leave event, even if history_visibility is " .
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));
 
-         @{ $room->{state}{events} } == 0
-            or die "Expected no state events";
+         assert_eq( scalar @{ $room->{state}{events} }, 0,
+                    "state events" );
 
-         assert_eq(scalar @{ $room->{timeline}{events} }, 1,
-                   "timeline events");
+         # we should see our own leave event
+         assert_eq( scalar @{ $room->{timeline}{events} }, 1,
+                    "timeline events");
+         my $ev = $room->{timeline}{events}[0];
+         assert_eq( $ev->{type}, "m.room.member", "event type" );
+         assert_eq( $ev->{content}{membership}, "leave", "membership" );
 
          Future->done(1);
       });
