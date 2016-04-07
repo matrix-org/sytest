@@ -40,10 +40,20 @@ multi_test "Test that a message is pushed",
             })->SyTest::pass_on_done( "Bob received invite" ),
 
             matrix_invite_user_to_room( $alice, $bob, $room_id ),
+            flush_events_for( $alice ),
          )
       })->then( sub {
          # Bob accepts the invite by joining the room
          matrix_join_room( $bob, $room_id )
+      })->then( sub {
+         await_event_for( $alice, filter => sub {
+            my ( $event ) = @_;
+            pass "got event";
+            matrix_advance_room_receipt( $alice, $room_id,
+               "m.read" => $event->{event_id}
+            );
+            return 1;
+         });
       })->then( sub {
          # Now that Bob has joined the room, we will create a pusher for
          # Alice. This may race with Bob joining the room. So the first
@@ -101,6 +111,7 @@ multi_test "Test that a message is pushed",
          assert_json_keys( $notification->{counts}, qw(
             unread
          ));
+         assert_eq( $notification->{counts}->{unread}, 1, "unread count");
          assert_json_keys( $notification->{devices}[0], qw(
             app_id pushkey pushkey_ts data tweaks
          ));
@@ -112,6 +123,38 @@ multi_test "Test that a message is pushed",
             die "Unexpected message body";
 
          pass "Alice was pushed";  # Alice has gone down the stairs
+
+         Future->needs_all(
+            await_http_request( "/alice_push", sub {
+               my ( $request ) = @_;
+               my $body = $request->body_from_json;
+
+               return unless $body->{notification}{counts};
+               return 1;
+            })->then( sub {
+               my ( $request ) = @_;
+
+               $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
+               Future->done( $request );
+            }),
+
+            # Now send a read receipt for that message
+            matrix_advance_room_receipt( $alice, $notification->{room_id},
+               "m.read" => $notification->{event_id}
+            )->SyTest::pass_on_done( "Receipt sent" ),
+         )
+      })->then( sub {
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
+         my $notification = $body->{notification};
+
+         assert_json_keys( $notification->{counts}, qw(
+            unread
+         ));
+         assert_eq( $notification->{counts}->{unread}, 1, "unread count");
+
+         pass "Zero badge push received";
+
          Future->done(1);
       });
    };
