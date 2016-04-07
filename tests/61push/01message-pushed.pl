@@ -48,7 +48,6 @@ multi_test "Test that a message is pushed",
       })->then( sub {
          await_event_for( $alice, filter => sub {
             my ( $event ) = @_;
-            pass "got event";
             matrix_advance_room_receipt( $alice, $room_id,
                "m.read" => $event->{event_id}
             );
