@@ -8,7 +8,10 @@ my $creator_fixture = local_user_fixture(
    avatar_url => "mxc://foo/bar",
 );
 
-my $remote_user_fixture = remote_user_fixture();
+my $remote_user_fixture = remote_user_fixture(
+   displayname => "My remote name here",
+   avatar_url => "mxc://foo/remote",
+);
 
 my $room_fixture = fixture(
    requires => [ $creator_fixture, room_alias_name_fixture() ],
@@ -53,6 +56,8 @@ test "Remote users can join room by alias",
          $body->{membership} eq "join" or
             die "Expected membership to be 'join'";
 
+         assert_json_keys( $body, qw( displayname avatar_url ) );
+
          Future->done(1);
       });
    };
@@ -72,7 +77,7 @@ test "New room members see their own join event",
          return unless $event->{room_id} eq $room_id;
          return unless $event->{user_id} eq $user->user_id;
 
-         assert_json_keys( my $content = $event->{content}, qw( membership ));
+         assert_json_keys( my $content = $event->{content}, qw( membership displayname avatar_url ));
 
          $content->{membership} eq "join" or
             die "Expected user membership as 'join'";
@@ -123,7 +128,7 @@ test "Existing members see new members' join events",
          return unless $event->{room_id} eq $room_id;
          return unless $event->{user_id} eq $user->user_id;
 
-         assert_json_keys( my $content = $event->{content}, qw( membership ));
+         assert_json_keys( my $content = $event->{content}, qw( membership displayname avatar_url ));
 
          $content->{membership} eq "join" or
             die "Expected user membership as 'join'";
