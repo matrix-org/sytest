@@ -47,11 +47,12 @@ multi_test "Test that a message is pushed",
          matrix_join_room( $bob, $room_id )
       })->then( sub {
          await_event_for( $alice, filter => sub {
+            return 1;
+         })->then( sub {
             my ( $event ) = @_;
             matrix_advance_room_receipt( $alice, $room_id,
                "m.read" => $event->{event_id}
             );
-            return 1;
          });
       })->then( sub {
          # Now that Bob has joined the room, we will create a pusher for
@@ -102,7 +103,7 @@ multi_test "Test that a message is pushed",
          my ( $request ) = @_;
          my $body = $request->body_from_json;
 
-         log_if_fail "Request body", $body;
+         log_if_fail "Message push request body", $body;
 
          assert_json_keys( my $notification = $body->{notification}, qw(
             id room_id type sender content devices counts
@@ -147,10 +148,12 @@ multi_test "Test that a message is pushed",
          my $body = $request->body_from_json;
          my $notification = $body->{notification};
 
+         log_if_fail "Zero badge push request body", $body;
+
          assert_json_keys( $notification->{counts}, qw(
             unread
          ));
-         assert_eq( $notification->{counts}->{unread}, 1, "unread count");
+         assert_eq( $notification->{counts}{unread}, 0, "unread count");
 
          pass "Zero badge push received";
 
