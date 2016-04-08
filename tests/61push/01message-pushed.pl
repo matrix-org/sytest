@@ -47,6 +47,8 @@ multi_test "Test that a message is pushed",
          matrix_join_room( $bob, $room_id )
       })->then( sub {
          await_event_for( $alice, filter => sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.member";
             return 1;
          })->then( sub {
             my ( $event ) = @_;
