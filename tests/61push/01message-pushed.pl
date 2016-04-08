@@ -93,7 +93,7 @@ multi_test "Test that a message is pushed",
             })->then( sub {
                my ( $request ) = @_;
 
-               $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
+               $request->respond_json( {} );
                Future->done( $request );
             }),
 
@@ -136,7 +136,7 @@ multi_test "Test that a message is pushed",
             })->then( sub {
                my ( $request ) = @_;
 
-               $request->respond( HTTP::Response->new( 200, "OK", [], "" ) );
+               $request->respond_json( {} );
                Future->done( $request );
             }),
 
