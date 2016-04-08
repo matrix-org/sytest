@@ -162,3 +162,67 @@ multi_test "Test that a message is pushed",
          Future->done(1);
       });
    };
+
+test "Invites are pushed",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $test_server_info ) = @_;
+      my $room_id;
+
+      do_request_json_for( $alice,
+         method  => "POST",
+         uri     => "/r0/pushers/set",
+         content => {
+            profile_tag         => "tag",
+            kind                => "http",
+            app_id              => "sytest",
+            app_display_name    => "sytest_display_name",
+            device_display_name => "device_display_name",
+            pushkey             => "a_push_key",
+            lang                => "en",
+            data                => {
+               url => $test_server_info->client_location . "/alice_push",
+            },
+         },
+      )->then( sub {
+         matrix_create_room( $bob, visibility => "private" );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         Future->needs_all(
+            await_http_request( "/alice_push", sub {
+               my ( $request ) = @_;
+               my $body = $request->body_from_json;
+
+               return unless $body->{notification}{type};
+               return unless $body->{notification}{type} eq "m.room.member";
+               return 1;
+            })->then( sub {
+               my ( $request ) = @_;
+
+               $request->respond_json( {} );
+               Future->done( $request );
+            }),
+            matrix_invite_user_to_room( $bob, $alice, $room_id ),
+         );
+      })->then( sub {
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
+
+         log_if_fail "Message push request body", $body;
+
+         assert_json_keys( my $notification = $body->{notification}, qw(
+            id room_id type sender content devices counts
+         ));
+         assert_eq( $notification->{membership}, "invite", "membership");
+         assert_eq( $notification->{user_is_target}, JSON::true, "user_is_target");
+         assert_eq( $notification->{room_id}, $room_id, "room_id");
+         assert_eq( $notification->{sender}, $bob->user_id, "sender");
+
+         Future->done(1);
+      });
+   };
