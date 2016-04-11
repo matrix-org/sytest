@@ -58,7 +58,7 @@ test "Can enable/disable default rules",
 test "Enabling an unknown default rule fails with 404",
    requires => [ local_user_fixture() ],
 
-   bug => "SYN-?",
+   bug => "SYN-676",
 
    check => sub  {
       my ( $user ) = @_;
