@@ -8,6 +8,8 @@ my $check_for_push_rules = sub {
    my $push_rule_event = first { $_->{type} eq "m.push_rules" } @$account_data;
 
    assert_json_keys( $push_rule_event->{content}, qw( global ) );
+
+   Future->done(1);
 };
 
 test "Push rules come down in an initial /sync",
@@ -16,7 +18,7 @@ test "Push rules come down in an initial /sync",
    check => sub {
       my ( $user ) = @_;
 
-      matrix_sync( $user )->on_done( $check_for_push_rules );
+      matrix_sync( $user )->then( $check_for_push_rules );
    };
 
 test "Adding a push rule wakes up an incremental /sync",
@@ -28,7 +30,7 @@ test "Adding a push rule wakes up an incremental /sync",
       matrix_sync( $user )->then( sub {
          Future->needs_all(
             matrix_sync_again( $user, timeout => 10000 )
-               ->on_done( $check_for_push_rules ),
+               ->then( $check_for_push_rules ),
             matrix_add_push_rule( $user, "global", "room", "!foo:example.com",
                { actions => [ "notify" ] }
             )
@@ -49,7 +51,7 @@ test "Disabling a push rule wakes up an incremental /sync",
       })->then( sub {
          Future->needs_all(
             matrix_sync_again( $user, timeout => 10000 )
-               ->on_done( $check_for_push_rules ),
+               ->then( $check_for_push_rules ),
             matrix_set_push_rule_enabled(
                $user,  "global", "room", "!foo:example.com", JSON::false
             )
@@ -74,7 +76,7 @@ test "Enabling a push rule wakes up an incremental /sync",
       })->then( sub {
          Future->needs_all(
             matrix_sync_again( $user, timeout => 10000 )
-               ->on_done( $check_for_push_rules ),
+               ->then( $check_for_push_rules ),
             matrix_set_push_rule_enabled(
                $user,  "global", "room", "!foo:example.com", JSON::true
             )
@@ -95,13 +97,10 @@ test "Setting actions for a push rule wakes up an incremental /sync",
       })->then( sub {
          Future->needs_all(
             matrix_sync_again( $user, timeout => 10000 )
-               ->on_done( $check_for_push_rules ),
+               ->then( $check_for_push_rules ),
             matrix_set_push_rule_actions(
                $user,  "global", "room", "!foo:example.com", [ "dont_notify" ]
             )
          );
       });
    };
-
-
-
