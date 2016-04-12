@@ -1,6 +1,7 @@
 use Future::Utils qw( repeat );
 
-sub check_change_enabled {
+sub check_change_enabled
+{
    my ( $user, $scope, $kind, $rule_id, $enabled ) = @_;
 
    matrix_set_push_rule_enabled( $user, $scope, $kind, $rule_id, $enabled )
@@ -50,7 +51,7 @@ test "Can enable/disable default rules",
 
             my ( $kind, $rule_id ) = @$to_check;
 
-            check_enable_disable_rule( $user, "global", $kind, $rule_id);
+            check_enable_disable_rule( $user, "global", $kind, $rule_id );
          } foreach => \@to_check;
       });
    };
@@ -60,7 +61,7 @@ test "Enabling an unknown default rule fails with 404",
 
    bug => "SYN-676",
 
-   check => sub  {
+   check => sub {
       my ( $user ) = @_;
       matrix_set_push_rule_enabled(
          $user, "global", "override", ".not.a.default.rule", JSON::true
