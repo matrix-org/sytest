@@ -154,7 +154,7 @@ sub start
          bind_address => "127.0.0.1",
          tls => 0,
          resources => [{
-            names => [ "client", "federation" ], compress => 0
+            names => [ "client", "federation", "replication" ], compress => 0
          }]
       }
    }
@@ -193,8 +193,18 @@ sub start
         "listeners" => $listeners,
 
         "bcrypt_rounds" => 0,
+        "start_pushers" => 0,
 
         %{ $self->{config} },
+   } );
+
+   my $pusher_config_path = $self->write_yaml_file( pusher => {
+      "server_name"              => "localhost:$port",
+      "log_file"                 => "$log.pusher",
+      "database"                 => $db_config,
+      "database_config"          => $db_config_path,
+      "replication_url"          => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "full_twisted_stacktraces" => "true",
    } );
 
    $self->{logpath} = $log;
@@ -247,6 +257,7 @@ sub start
          "--cert-file" => $cert_file,
          "--key-file" => $key_file,
          "--addr" => "127.0.0.1:$port",
+         "--pusher-config" => $pusher_config_path,
       )
    }
    else {
