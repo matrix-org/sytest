@@ -126,6 +126,27 @@ test "POST /login can log in as a user with just the local part of the id",
       });
    };
 
+test "POST /login as non-existing user is rejected",
+   requires => [ $main::API_CLIENTS[0],
+                 qw( can_login_password_flow )],
+
+   bug => "SYN-680",
+
+   do => sub {
+      my ( $http ) = @_;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/login",
+
+         content => {
+            type     => "m.login.password",
+            user     => "i-ought-not-to-exist",
+            password => "XXX",
+         },
+      )->main::expect_http_403;
+   };
+
 test "POST /login wrong password is rejected",
    requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
                  qw( can_login_password_flow )],
