@@ -194,6 +194,9 @@ sub start
 
         "bcrypt_rounds" => 0,
 
+        "url_preview_enabled" => "true",
+        "url_preview_ip_range_blacklist" => [],
+
         %{ $self->{config} },
    } );
 
