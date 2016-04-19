@@ -52,7 +52,8 @@ multi_test "Test that rejected pushers are removed.",
 
       matrix_create_room( $alice, visibility => "private" )->then( sub {
          ( $room_id ) = @_;
-         matrix_invite_user_to_room( $alice, $bob, $room_id ),
+
+         matrix_invite_user_to_room( $alice, $bob, $room_id );
       })->then( sub {
          matrix_join_room( $bob, $room_id);
       })->then( sub {
