@@ -74,7 +74,7 @@ multi_test "Test that a message is pushed",
          ),
       )->SyTest::pass_on_done( "Preview returned successfully" )
       ->then( sub {
-         my ( $_, $_, $preview_body ) = @_;
+         my ( undef, undef, $preview_body ) = @_;
 
          log_if_fail "Preview body", $preview_body;
 
@@ -91,5 +91,4 @@ multi_test "Test that a message is pushed",
 
          Future->done( 1 );
       })->SyTest::pass_on_done( "Preview API returned expected values" )
-
    };
