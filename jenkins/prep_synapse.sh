@@ -20,6 +20,8 @@ git clone .synapse-base synapse --shared
 
 mkdir -p .tox
 
+tox_dir="`pwd`/.tox"
+
 cd synapse
 
 # check out the relevant branch of synapse
@@ -29,7 +31,7 @@ git checkout "${GIT_BRANCH}" || (
 )
 git clean -df .
 
-ln -s ../.tox .tox
+ln -s "$tox_dir" .tox
 
 # set up the virtualenv
 tox -e py27 --notest -v
