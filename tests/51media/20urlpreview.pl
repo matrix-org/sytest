@@ -44,7 +44,7 @@ multi_test "Test that a message is pushed",
 
             $request->respond( $response );
 
-            Future->done( $request );
+            Future->done( );
          })->SyTest::pass_on_done( "URL was fetched" ),
 
          await_http_request( "/test.png", sub {
@@ -61,7 +61,7 @@ multi_test "Test that a message is pushed",
 
             $request->respond( $response );
 
-            Future->done( $request );
+            Future->done( );
          })->SyTest::pass_on_done( "Image was fetched" ),
 
          $user->http->do_request(
@@ -74,7 +74,7 @@ multi_test "Test that a message is pushed",
          ),
       )->SyTest::pass_on_done( "Preview returned successfully" )
       ->then( sub {
-         my ( undef, undef, $preview_body ) = @_;
+         my ( $preview_body ) = @_;
 
          log_if_fail "Preview body", $preview_body;
 
