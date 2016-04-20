@@ -44,7 +44,7 @@ multi_test "Test that a message is pushed",
 
             $request->respond( $response );
 
-            Future->done( );
+            Future->done();
          })->SyTest::pass_on_done( "URL was fetched" ),
 
          await_http_request( "/test.png", sub {
@@ -61,7 +61,7 @@ multi_test "Test that a message is pushed",
 
             $request->respond( $response );
 
-            Future->done( );
+            Future->done();
          })->SyTest::pass_on_done( "Image was fetched" ),
 
          $user->http->do_request(
