@@ -110,6 +110,8 @@ multi_test "Test that rejected pushers are removed.",
             assert_json_keys( $body, qw( pushers ) );
             @{ $body->{pushers} } == 1 or die "Expected one pusher";
 
+            assert_eq( $body->{pushers}[0]{pushkey}, "key_2" );
+
             Future->done(1);
          });
       });
