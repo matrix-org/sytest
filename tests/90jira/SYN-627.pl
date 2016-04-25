@@ -2,7 +2,7 @@ test "Events come down the correct room",
    requires => [ local_user_fixture( with_events => 0 ), "can_sync" ],
 
    # creating all those rooms is quite slow.
-   timeout => 20,
+   timeout => 100,
 
    check => sub {
       my ( $user ) = @_;
