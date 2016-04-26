@@ -139,6 +139,8 @@ multi_test "Typing notifications timeout and can be resent",
    requires => [ $typing_user_fixture, $room_fixture,
                 qw( can_set_room_typing )],
 
+   timeout => 100,
+
    do => sub {
       my ( $user, $room_id ) = @_;
 
