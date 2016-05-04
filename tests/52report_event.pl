@@ -23,10 +23,9 @@ test "Can report event",
          my ( $event_id ) = @_;
 
          do_request_json_for( $user1,
-            method => "POST",
-            uri => "/r0/rooms/$room_id/report",
+            method  => "POST",
+            uri     => "/r0/rooms/$room_id/report/$event_id",
             content => {
-               event_id => $event_id,
                reason => "Because I said so",
             }
          )
