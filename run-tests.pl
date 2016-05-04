@@ -49,6 +49,7 @@ our %SYNAPSE_ARGS = (
    log_filter => [],
    coverage   => 0,
    dendron    => "",
+   pusher     => 0
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
@@ -79,6 +80,8 @@ GetOptions(
    'coverage+' => \$SYNAPSE_ARGS{coverage},
 
    'dendron=s' => \$SYNAPSE_ARGS{dendron},
+
+   'pusher+' => \$SYNAPSE_ARGS{pusher},
 
    'p|port-base=i' => \(my $PORT_BASE = 8000),
 
