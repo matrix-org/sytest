@@ -6,7 +6,7 @@ test "Can generate a openid access_token that can be exchanged for information a
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/r0/user/:user_id/openid/token",
+         uri     => "/r0/user/:user_id/openid/request_token",
          content => {},
       )->then( sub {
          my ( $body ) = @_;
