@@ -1,8 +1,8 @@
 test "Can generate a openid access_token that can be exchanged for information about a user",
-   requires => [ local_user_fixture(), $main::HOMESERVER_INFO[0] ],
+   requires => [ local_user_fixture(), $main::HTTP_CLIENT, $main::HOMESERVER_INFO[0] ],
 
    check => sub {
-      my ( $user, $info ) = @_;
+      my ( $user, $http, $info ) = @_;
 
       do_request_json_for( $user,
          method  => "POST",
@@ -16,9 +16,9 @@ test "Can generate a openid access_token that can be exchanged for information a
 
          my $token = $body->{access_token};
 
-         $user->http->do_request_json(
+         $http->do_request_json(
             method   => "GET",
-            full_uri => $info->client_location . "/_matrix/federation/v1/openid/userinfo",
+            uri => $info->client_location . "/_matrix/federation/v1/openid/userinfo",
             params   => { access_token => $token },
          );
       })->then( sub {
@@ -29,4 +29,29 @@ test "Can generate a openid access_token that can be exchanged for information a
 
          Future->done(1);
       });
+   };
+
+test "Invalid openid access tokens are rejected",
+   requires => [ $main::HTTP_CLIENT, $main::HOMESERVER_INFO[0] ],
+
+   check => sub {
+      my ( $http, $info ) = @_;
+
+      $http->do_request_json(
+         method   => "GET",
+         uri => $info->client_location . "/_matrix/federation/v1/openid/userinfo",
+         params   => { access_token => "an/invalid/token" },
+      )->main::expect_http_401;
+   };
+
+test "Requests to userinfo without access tokens are rejected",
+   requires => [ $main::HTTP_CLIENT, $main::HOMESERVER_INFO[0] ],
+
+   check => sub {
+      my ( $http, $info ) = @_;
+
+      $http->do_request_json(
+         method   => "GET",
+         uri => $info->client_location . "/_matrix/federation/v1/openid/userinfo",
+      )->main::expect_http_401;
    };
