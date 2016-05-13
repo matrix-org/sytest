@@ -209,6 +209,7 @@ sub start
       "replication_url"          => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
       "full_twisted_stacktraces" => "true",
       "use_insecure_ssl_client_just_for_testing_do_not_use" => "true",
+      "public_baseurl"           => "http://127.0.0.1:$port",
       "listeners" => [
          {
             type      => "http",
