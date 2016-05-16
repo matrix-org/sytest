@@ -49,7 +49,8 @@ our %SYNAPSE_ARGS = (
    log_filter => [],
    coverage   => 0,
    dendron    => "",
-   pusher     => 0
+   pusher     => 0,
+   synchrotron => 0,
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
@@ -82,6 +83,8 @@ GetOptions(
    'dendron=s' => \$SYNAPSE_ARGS{dendron},
 
    'pusher+' => \$SYNAPSE_ARGS{pusher},
+
+   'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
 
    'p|port-base=i' => \(my $PORT_BASE = 8000),
 
