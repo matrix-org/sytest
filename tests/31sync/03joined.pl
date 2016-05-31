@@ -1,3 +1,5 @@
+use Future::Utils qw( repeat );
+
 test "Can sync a joined room",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
@@ -12,7 +14,7 @@ test "Can sync a joined room",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user )
+         matrix_create_room_and_wait_for_sync( $user )
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -52,7 +54,7 @@ test "Full state sync includes joined rooms",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user )
+         matrix_create_room_and_wait_for_sync( $user )
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -92,11 +94,11 @@ test "Newly joined room is included in an incremental sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_create_room( $user );
+         matrix_create_room_and_wait_for_sync( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_sync_again( $user, filter => $filter_id );
+         matrix_sync_again( $user, filter => $filter_id);
       })->then( sub {
          my ( $body ) = @_;
 
