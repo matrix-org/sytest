@@ -16,7 +16,7 @@ test "Left rooms appear in the leave section of sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_leave_room( $user, $room_id );
+         matrix_leave_room_and_wait_for_sync( $user, $room_id );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
@@ -44,13 +44,13 @@ test "Newly left rooms appear in the leave section of incremental sync",
      )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_and_wait_for_sync( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_leave_room( $user, $room_id );
+         matrix_leave_room_and_wait_for_sync( $user, $room_id );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
@@ -84,11 +84,15 @@ test "We should see our own leave event, even if history_visibility is " .
          matrix_create_room( $user );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_set_room_history_visibility( $user, $room_id, "joined" );
+
+         matrix_put_room_state_and_wait_for_sync( $user, $room_id,
+            type    => "m.room.history_visibility",
+            content => { history_visibility => "joined" },
+         );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_leave_room( $user, $room_id );
+         matrix_leave_room_and_wait_for_sync( $user, $room_id );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
@@ -129,9 +133,10 @@ test "Newly left rooms appear in the leave section of gapped sync",
       matrix_create_filter( $user, {} )->then( sub {
          ( $filter_id ) = @_;
 
-         Future->needs_all(
-            matrix_create_room( $user )->on_done( sub { ( $room_id_1 ) = @_; } ),
-            matrix_create_room( $user )->on_done( sub { ( $room_id_2 ) = @_; } ),
+         matrix_create_room( $user )->on_done( sub { ( $room_id_1 ) = @_; } );
+      })->then( sub {
+         matrix_create_room_and_wait_for_sync($user )->on_done( sub {
+            ( $room_id_2 ) = @_; }
          );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
@@ -148,7 +153,12 @@ test "Newly left rooms appear in the leave section of gapped sync",
                content => { "filler" => $_ },
                type    => "a.made.up.filler.type",
             )
-         } 0 .. 20 );
+         } 0 .. 19 );
+      })->then( sub {
+         matrix_send_room_message_and_wait_for_sync( $user, $room_id_2,
+            content => { "filler" => 20 },
+            type    => "a.made.up.filler.type",
+         );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
@@ -185,11 +195,11 @@ test "Previously left rooms don't appear in the leave section of sync",
       })->then( sub {
          matrix_join_room( $user2, $room_id_1 );
       })->then( sub {
-         matrix_join_room( $user2, $room_id_2 );
+         matrix_join_room_and_wait_for_sync( $user2, $room_id_2 );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_leave_room( $user, $room_id_1 );
+         matrix_leave_room_and_wait_for_sync( $user, $room_id_1 );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
@@ -206,7 +216,13 @@ test "Previously left rooms don't appear in the leave section of sync",
                content => { "filler" => $_ },
                type    => "a.made.up.filler.type",
             )
-         }  0 .. 5 );
+         }  0 .. 4 );
+
+      })->then( sub {
+         matrix_send_room_message_and_wait_for_sync( $user2, $room_id_2,
+            content => { "filler" => 5 },
+            type    => "a.made.up.filler.type",
+         );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
@@ -237,13 +253,13 @@ test "Left rooms appear in the leave section of full state sync",
       )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_and_wait_for_sync( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_leave_room( $user, $room_id );
+         matrix_leave_room_and_wait_for_sync( $user, $room_id );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
@@ -284,7 +300,7 @@ test "Archived rooms only contain history from before the user left",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user_b, $room_id );
+         matrix_join_room_and_wait_for_sync( $user_b, $room_id );
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -304,7 +320,7 @@ test "Archived rooms only contain history from before the user left",
       })->then( sub {
          matrix_send_room_text_message( $user_a, $room_id, body => "after" );
       })->then( sub {
-         matrix_put_room_state( $user_a, $room_id,
+         matrix_put_room_state_and_wait_for_sync( $user_a, $room_id,
             type      => "a.madeup.test.state",
             content   => { "my_key" => "after" },
             state_key => "",
