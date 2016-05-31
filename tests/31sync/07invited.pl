@@ -19,7 +19,9 @@ test "Rooms a user is invited to appear in an initial sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id );
+         matrix_invite_user_to_room_and_wait_for_sync(
+            $user_a, $user_b, $room_id
+         );
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -66,7 +68,9 @@ test "Rooms a user is invited to appear in an incremental sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id );
+         matrix_invite_user_to_room_and_wait_for_sync(
+            $user_a, $user_b, $room_id
+         );
       })->then( sub {
          matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
