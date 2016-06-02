@@ -9,26 +9,9 @@ push our @EXPORT, qw(
    matrix_leave_room_and_wait_for_sync
    matrix_invite_user_to_room_and_wait_for_sync
    matrix_put_room_state_and_wait_for_sync
+   matrix_advance_room_receipt_and_wait_for_sync
    sync_timeline_contains
 );
-
-=head2 matrix_sync_until
-
-   my ( $sync_body ) = matrix_sync_until( $user, %query_params, until => sub {
-      my ( $sync_body ) = @_;
-
-      if acceptable( $sync_body ) {
-         return 1;
-      } else {
-         return 0;
-      }
-   )->get;
-
-A convenient wrapper around L</matrix_again> which repeatedly calls /sync
-until the contents of the response are acceptable.
-
-=cut
-
 
 sub matrix_do_and_wait_for_sync
 {
@@ -73,19 +56,26 @@ sub matrix_do_and_wait_for_sync
    });
 }
 
-sub sync_timeline_contains
+sub sync_room_contains
 {
-   my ( $sync_body, $room_id, $check ) = @_;
+   my ( $sync_body, $room_id, $section, $check ) = @_;
 
    my $room =  $sync_body->{rooms}{join}{$room_id};
 
-   foreach my $event ( @{ $room->{timeline}{events} } ) {
+   foreach my $event ( @{ $room->{$section}{events} } ) {
       if ( $check->( $event ) ) {
          return 1;
       }
    }
 
    return 0;
+}
+
+sub sync_timeline_contains
+{
+   my ( $sync_body, $room_id, $check ) = @_;
+
+   sync_room_contains( $sync_body, $room_id, "timeline", $check );
 }
 
 sub matrix_send_room_text_message_and_wait_for_sync
@@ -199,6 +189,26 @@ sub matrix_invite_user_to_room_and_wait_for_sync
             $_[0]->{type} eq "m.room.member"
                and $_[0]->{state_key} eq $invitee->user_id
                and $_[0]->{content}{membership} eq "invite"
+         });
+      },
+   );
+}
+
+sub matrix_advance_room_receipt_and_wait_for_sync
+{
+   my ( $user, $room_id, $type, $event_id ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+          matrix_advance_room_receipt( $user, $room_id, $type, $event_id );
+      },
+      check => sub {
+         sync_room_contains( $_[0], $room_id, "ephemeral", sub {
+            my ( $receipt ) = @_;
+
+            log_if_fail "Receipt", $receipt;
+            $receipt->{type} eq "m.receipt" and
+               defined $receipt->{content}{$event_id}{$type}{ $user->user_id };
          });
       },
    );
