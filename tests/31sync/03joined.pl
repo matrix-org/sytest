@@ -154,7 +154,7 @@ test "Newly joined room has correct timeline in incremental sync",
             matrix_send_room_text_message( $user_a, $room_id, body => "test" );
          } 0 .. 3 );
       })->then( sub {
-         matrix_join_room( $user_b, $room_id );
+         matrix_join_room_and_wait_for_sync( $user_b, $room_id );
       })->then( sub {
          matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -201,7 +201,7 @@ test "Newly joined room includes presence in incremental sync",
 
          matrix_sync( $user_b );
       })->then( sub {
-         matrix_join_room( $user_b, $room_id );
+         matrix_join_room_and_wait_for_sync( $user_b, $room_id );
       })->then( sub {
          matrix_sync_again( $user_b );
       })->then( sub {
@@ -254,7 +254,13 @@ test "Get presence for newly joined members in incremental sync",
 
          matrix_sync( $user_a );
       })->then( sub {
-         matrix_join_room( $user_b, $room_id );
+         matrix_send_room_text_message_and_wait_for_sync( $user_a, $room_id,
+            body => "Wait for presence changes cause by the first sync to trickle through",
+         );
+      })->then( sub {
+         matrix_sync_again( $user_a );
+      })->then( sub {
+         matrix_join_room_and_wait_for_sync( $user_b, $room_id );
       })->then( sub {
          matrix_sync_again( $user_a );
       })->then( sub {
@@ -265,6 +271,7 @@ test "Get presence for newly joined members in incremental sync",
          assert_json_list( $body->{presence}{events} );
 
          my $presence = $body->{presence}{events};
+         log_if_fail "Presence", $presence;
 
          assert_eq( scalar @$presence, 1, "number of presence events" );
 
