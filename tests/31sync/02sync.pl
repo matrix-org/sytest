@@ -24,8 +24,9 @@ sub matrix_do_and_wait_for_sync
    my $next_batch;
 
    matrix_sync( $user,
-      filter => '{"room":{"rooms":[]},"account_data":{"types":[]},"presence":{"types":[]}}',
+      filter            => '{"room":{"rooms":[]},"account_data":{"types":[]},"presence":{"types":[]}}',
       update_next_batch => 0,
+      set_presence      => "offline",
    )->then( sub {
       my ( $body ) = @_;
 
@@ -40,6 +41,7 @@ sub matrix_do_and_wait_for_sync
                %params,
                since             => $next_batch,
                update_next_batch => 0,
+               set_presence      => "offline",
             )->then( sub {
                my ( $body ) = @_;
 
