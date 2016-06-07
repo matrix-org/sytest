@@ -305,14 +305,13 @@ sub start
       );
 
       if ( $self->{pusher} ) {
-         @command = ( @command, "--pusher-config" => $pusher_config_path );
+         push @command, "--pusher-config" => $pusher_config_path;
       }
 
       if ( $self->{synchrotron} ) {
-         @command = ( @command,
+         push @command,
             "--synchrotron-config" => $synchrotron_config_path,
-            "--synchrotron-url" => "http://127.0.0.1:$synchrotron_port",
-         );
+            "--synchrotron-url" => "http://127.0.0.1:$synchrotron_port";
       }
    }
    else {
