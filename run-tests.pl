@@ -331,6 +331,10 @@ sub fixture
       }
    }
 
+   # If there's no requirements, we still want to wait for $f_start before we
+   # actually invoke $setup
+   @req_futures or push @req_futures, $f_start;
+
    return Fixture(
       \@requires,
 
