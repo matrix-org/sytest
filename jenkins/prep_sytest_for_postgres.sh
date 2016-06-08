@@ -44,4 +44,8 @@ cat > localhost-$(($PORT_BASE + 2))/database.yaml << EOF
 name: psycopg2
 args:
     database: $POSTGRES_DB_2
+    user: $PGUSER
+    password: $PGPASSWORD
+    host: localhost
+    sslmode: disable
 EOF
