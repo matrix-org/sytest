@@ -32,9 +32,9 @@ cat > localhost-$(($PORT_BASE + 1))/database.yaml << EOF
 name: psycopg2
 args:
     database: $POSTGRES_DB_1
-    user: $POSTGRES_USER_1
-    password: $POSTGRES_PASS_1
-    host: $POSTGRES_HOST_1
+    user: $PGUSER
+    password: $PGPASSWORD
+    host: $PGHOST
     sslmode: disable
 EOF
 
@@ -42,5 +42,8 @@ cat > localhost-$(($PORT_BASE + 2))/database.yaml << EOF
 name: psycopg2
 args:
     database: $POSTGRES_DB_2
+    user: $PGUSER
+    password: $PGPASSWORD
+    host: $PGHOST
     sslmode: disable
 EOF
