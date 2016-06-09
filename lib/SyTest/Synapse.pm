@@ -25,7 +25,7 @@ sub _init
 
    $self->{$_} = delete $args->{$_} for qw(
       port unsecure_port output synapse_dir extra_args python config coverage
-      dendron pusher
+      dendron pusher synchrotron
    );
 
    $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
@@ -223,6 +223,35 @@ sub start
       ],
    } );
 
+   my $synchrotron_port = $port - 8000 + 11000;
+   my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
+      "server_name"              => "localhost:$port",
+      "log_file"                 => "$log.synchrotron",
+      "database"                 => $db_config,
+      "database_config"          => $db_config_path,
+      "replication_url"          => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "macaroon_secret_key"      => $macaroon_secret_key,
+      "full_twisted_stacktraces" => "true",
+      "use_insecure_ssl_client_just_for_testing_do_not_use" => "true",
+      "listeners" => [
+         {
+            type      => "http",
+            resources => [{ names => ["client"] }],
+            port      => $synchrotron_port,
+         },
+         {
+            type => "manhole",
+            port => ( $port - 8000 + 11080 ),
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => ( $port - 8000 + 11090 ),
+         },
+      ],
+   } );
+
+
    $self->{logpath} = $log;
 
    {
@@ -276,7 +305,13 @@ sub start
       );
 
       if ( $self->{pusher} ) {
-         @command = ( @command, "--pusher-config" => $pusher_config_path );
+         push @command, "--pusher-config" => $pusher_config_path;
+      }
+
+      if ( $self->{synchrotron} ) {
+         push @command,
+            "--synchrotron-config" => $synchrotron_config_path,
+            "--synchrotron-url" => "http://127.0.0.1:$synchrotron_port";
       }
    }
    else {
