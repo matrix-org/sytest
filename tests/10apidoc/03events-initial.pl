@@ -100,7 +100,8 @@ sub GET_new_events_for
 # Some Matrix protocol helper functions
 
 push our @EXPORT, qw(
-   matrix_initialsync matrix_get_events matrix_sync matrix_sync_again
+   matrix_initialsync matrix_get_events
+   matrix_sync matrix_sync_again
    flush_events_for await_event_for
 );
 
@@ -190,6 +191,8 @@ sub matrix_sync
 {
    my ( $user, %params ) = @_;
 
+   my $update_next_batch = delete $params{update_next_batch} // 1;
+
    do_request_json_for( $user,
       method  => "GET",
       uri     => "/r0/sync",
@@ -201,7 +204,9 @@ sub matrix_sync
       assert_json_keys( $body->{presence}, qw( events ));
       assert_json_keys( $body->{rooms}, qw( join invite leave ) );
 
-      $user->sync_next_batch = $body->{next_batch};
+      if ( $update_next_batch ) {
+         $user->sync_next_batch = $body->{next_batch};
+      }
    });
 }
 

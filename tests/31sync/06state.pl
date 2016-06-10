@@ -50,7 +50,7 @@ test "State is included in the timeline in the initial sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_put_room_state( $user, $room_id,
+         matrix_put_room_state_synced( $user, $room_id,
             type    => "a.madeup.test.state",
             content => { "my_key" => 1 },
          );
@@ -109,9 +109,11 @@ test "State from remote users is included in the state in the initial sync",
                                    type    => "a.madeup.test.state",
                                    content => { "my_key" => 1 });
         })->then( sub {
-            matrix_invite_user_to_room( $remote_user, $user, $room_id );
+            matrix_invite_user_to_room_synced(
+               $remote_user, $user, $room_id
+            );
         })->then( sub {
-            matrix_join_room( $user, $room_id );
+            matrix_join_room_synced( $user, $room_id );
         })->then( sub {
             matrix_sync( $user, filter => $filter_id );
         })->then( sub {
@@ -167,7 +169,7 @@ test "Changes to state are included in an incremental sync",
             state_key => "this_state_changes"
          );
       })->then( sub {
-         matrix_put_room_state( $user, $room_id,
+         matrix_put_room_state_synced( $user, $room_id,
             type      => "a.madeup.test.state",
             content   => { "my_key" => 1 },
             state_key => "this_state_does_not_change"
@@ -175,7 +177,7 @@ test "Changes to state are included in an incremental sync",
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_put_room_state( $user, $room_id,
+         matrix_put_room_state_synced( $user, $room_id,
             type      => "a.madeup.test.state",
             content   => { "my_key" => 2 },
             state_key => "this_state_changes",
@@ -234,7 +236,7 @@ test "Changes to state are included in an gapped incremental sync",
             state_key => "this_state_changes"
          )
       })->then( sub {
-         matrix_put_room_state( $user, $room_id,
+         matrix_put_room_state_synced( $user, $room_id,
             type      => "a.madeup.test.state",
             content   => { "my_key" => 1 },
             state_key => "this_state_does_not_change"
@@ -258,7 +260,12 @@ test "Changes to state are included in an gapped incremental sync",
                content => { "filler" => $_ },
                type    => "a.made.up.filler.type",
             )
-         } 0 .. 20 );
+         } 0 .. 19 );
+      })->then( sub {
+         matrix_send_room_message_synced( $user, $room_id,
+            content => { "filler" => 20 },
+            type    => "a.made.up.filler.type",
+         );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
@@ -304,20 +311,29 @@ test "State from remote users is included in the timeline in an incremental sync
             matrix_create_room( $remote_user );
         })->then( sub {
             ( $room_id ) = @_;
-            matrix_invite_user_to_room( $remote_user, $user, $room_id );
+            matrix_invite_user_to_room_synced(
+               $remote_user, $user, $room_id
+            );
         })->then( sub {
-            matrix_join_room( $user, $room_id );
+            matrix_join_room_synced( $user, $room_id );
         })->then( sub {
             matrix_sync( $user, filter => $filter_id );
         })->then( sub {
-            matrix_put_room_state( $remote_user, $room_id,
-                                   type    => "a.madeup.test.state",
-                                   content => { "my_key" => 1 });
-        })->then( sub {
-            # wait for the event to turn up on the other side
-            wait_for_event_in_room( $user, $room_id,
-               sync_params => { filter => $filter_id, since => $user->sync_next_batch },
+            matrix_do_and_wait_for_sync( $user,
+               do => sub {
+                  matrix_put_room_state( $remote_user, $room_id,
+                     type    => "a.madeup.test.state",
+                     content => { "my_key" => 1 }
+                  );
+               },
+               check => sub {
+                  sync_timeline_contains( $_[0], $room_id, sub {
+                     $_[0]->{type} eq "a.madeup.test.state";
+                  });
+               },
             );
+        })->then( sub {
+            matrix_sync_again( $user, filter => $filter_id );
         })->then( sub {
             my ( $body ) = @_;
 
@@ -367,7 +383,7 @@ test "A full_state incremental update returns all state",
             state_key => "this_state_changes"
          );
       })->then( sub {
-         matrix_put_room_state( $user, $room_id,
+         matrix_put_room_state_synced( $user, $room_id,
             type      => "a.madeup.test.state",
             content   => { "my_key" => 1 },
             state_key => "this_state_does_not_change"
@@ -389,7 +405,7 @@ test "A full_state incremental update returns all state",
          );
       })->then( sub {
          Future->needs_all( map {
-            matrix_send_room_message( $user, $room_id,
+            matrix_send_room_message_synced( $user, $room_id,
                content => { "filler" => $_ },
                type    => "a.made.up.filler.type",
             )
@@ -472,11 +488,13 @@ test "When user joins a room the state is included in the next sync",
             state_key => "",
          );
       })->then( sub {
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id );
+         matrix_invite_user_to_room_synced(
+            $user_a, $user_b, $room_id
+         );
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         matrix_join_room( $user_b, $room_id );
+         matrix_join_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -522,7 +540,7 @@ test "A change to displayname should not result in a full state sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_put_room_state( $user, $room_id,
+         matrix_put_room_state_synced( $user, $room_id,
             type      => "a.madeup.test.state",
             content   => { "my_key" => 1 },
             state_key => ""
@@ -542,6 +560,10 @@ test "A change to displayname should not result in a full state sync",
             state_key => $user->user_id,
          );
       })->then( sub {
+         matrix_send_room_text_message_synced( $user, $room_id,
+            body => "A message to wait on because the m.room.member doesn't come down /sync"
+         );
+      })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
@@ -553,6 +575,60 @@ test "A change to displayname should not result in a full state sync",
 
          Future->done(1);
       })
+   };
+
+
+test "A change to displayname should appear in incremental /sync",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
+
+   bug => "SYN-707",
+
+   check => sub {
+      my ( $user ) = @_;
+
+      my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
+
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
+
+         matrix_create_room_synced( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user, filter => $filter_id );
+      })->then( sub {
+
+         matrix_put_room_state( $user, $room_id,
+            type      => "m.room.member",
+            content   => { "membership" => "join",
+                           "displayname" => "boris" },
+            state_key => $user->user_id,
+         );
+      })->then( sub {
+         ( $event_id_1 ) = @_;
+
+         matrix_send_room_text_message_synced( $user, $room_id,
+            body => "A message to wait on because the m.room.member might not come down /sync"
+          );
+      })->then( sub {
+         ( $event_id_2 ) = @_;
+
+         matrix_sync_again( $user, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{join}{$room_id};
+         my $timeline = $room->{timeline}{events};
+
+         log_if_fail "Room", $room;
+
+         assert_eq( scalar @{ $timeline }, 2, "Expected 2 events");
+         assert_eq( $timeline->[0]{event_id}, $event_id_1 );
+         assert_eq( $timeline->[1]{event_id}, $event_id_2 );
+
+         Future->done(1);
+      });
    };
 
 
@@ -589,7 +665,9 @@ test "When user joins a room the state is included in a gapped sync",
             state_key => ""
          )
       })->then( sub {
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id )
+         matrix_invite_user_to_room_synced(
+            $user_a, $user_b, $room_id
+         );
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b);
       })->then( sub {
@@ -600,7 +678,12 @@ test "When user joins a room the state is included in a gapped sync",
                content => { "filler" => $_ },
                type    => "a.made.up.filler.type",
             )
-         } 0 .. 20 );
+         } 0 .. 19 );
+      })->then( sub {
+         matrix_send_room_message_synced( $user_a, $room_id,
+            content => { "filler" => 20 },
+            type    => "a.made.up.filler.type",
+         );
       })->then( sub {
          matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -659,13 +742,15 @@ test "When user joins and leaves a room in the same batch, the full state is sti
             state_key => "",
          );
       })->then( sub {
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id );
+         matrix_invite_user_to_room_synced(
+            $user_a, $user_b, $room_id
+         );
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
-         matrix_leave_room( $user_b, $room_id );
+         matrix_leave_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
