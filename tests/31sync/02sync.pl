@@ -34,9 +34,9 @@ push our @EXPORT, qw(
 Does something and waits for the result to appear in an incremental sync.
 Doesn't affect the next_batch token used by matrix_sync_again.
 
-The do parameter is a subroutine with the action to perform that returns
+The C<do> parameter is a subroutine with the action to perform that returns
 a future.
-The check parameter is a subroutine that receives the body of an incremental
+The C<check> parameter is a subroutine that receives the body of an incremental
 sync and the result of performing the action. The check subroutine returns
 a true value if the incremental sync contains the result of the action, or a
 false value if the incremental sync does not.
