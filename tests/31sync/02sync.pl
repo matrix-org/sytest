@@ -13,6 +13,36 @@ push our @EXPORT, qw(
    sync_timeline_contains
 );
 
+=head2 matrix_do_and_wait_for_sync
+
+   my ( $action_result ) = matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         return some_action_that_returns_a_future();
+      },
+      check => sub {
+         my ( $sync_body, $action_result ) = @_
+
+         # return a true value if the sync contains the action.
+         # return a false value if the sync isn't ready yet.
+         return check_that_action_result_appears_in_sync_body(
+            $sync_body, $action_result
+         );
+      },
+   )->get;
+
+
+Does something and waits for the result to appear in an incremental sync.
+Doesn't affect the next_batch token used by matrix_sync_again.
+
+The do parameter is the a subroutine with the action to perform that returns
+a future.
+The check parameter is a subroutine that receives the body of an incremental
+sync and the result of performing the action. The check subroutine returns
+a true value if the incremental sync contains the result of the action, or a
+false value if the incremental sync does not.
+
+=cut
+
 sub matrix_do_and_wait_for_sync
 {
    my ( $user, %params ) = @_;
@@ -34,7 +64,7 @@ sub matrix_do_and_wait_for_sync
 
       $do->();
    })->then( sub {
-      my ( $action_result ) = @_;
+      my @action_result = @_;
 
       my $finished = repeat {
             matrix_sync( $user,
@@ -47,14 +77,14 @@ sub matrix_do_and_wait_for_sync
 
                $next_batch = $body->{next_batch};
 
-               Future->done( $check->( $body, $action_result ) );
+               Future->done( $check->( $body, @action_result ) );
             });
          }
          until => sub {
             $_[0]->failure or $_[0]->get
          };
 
-      $finished->then( sub { Future->done( $action_result ); } );
+      $finished->then( sub { Future->done( @action_result ); } );
    });
 }
 
@@ -64,13 +94,7 @@ sub sync_room_contains
 
    my $room =  $sync_body->{rooms}{join}{$room_id};
 
-   foreach my $event ( @{ $room->{$section}{events} } ) {
-      if ( $check->( $event ) ) {
-         return 1;
-      }
-   }
-
-   return 0;
+   return any { $check->( $_ ) } @{ $room->{$section}{events} };
 }
 
 sub sync_timeline_contains

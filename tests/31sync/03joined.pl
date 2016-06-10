@@ -255,7 +255,7 @@ test "Get presence for newly joined members in incremental sync",
          matrix_sync( $user_a );
       })->then( sub {
          matrix_send_room_text_message_and_wait_for_sync( $user_a, $room_id,
-            body => "Wait for presence changes cause by the first sync to trickle through",
+            body => "Wait for presence changes caused by the first sync to trickle through",
          );
       })->then( sub {
          matrix_sync_again( $user_a );
