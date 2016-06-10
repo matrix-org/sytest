@@ -561,7 +561,7 @@ test "A change to displayname should not result in a full state sync",
          );
       })->then( sub {
          matrix_send_room_text_message_and_wait_for_sync( $user, $room_id,
-            body => "Waiting because matrix_put_room_state_and_wait for sync doesn't seem to work"
+            body => "A message to wait on because the m.room.member doesn't come down /sync"
          );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
@@ -575,6 +575,60 @@ test "A change to displayname should not result in a full state sync",
 
          Future->done(1);
       })
+   };
+
+
+test "A change to displayname should appear in incremental /sync",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
+
+   bug => "SYN-?",
+
+   check => sub {
+      my ( $user ) = @_;
+
+      my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
+
+      matrix_create_filter( $user, {} )->then( sub {
+         ( $filter_id ) = @_;
+
+         matrix_create_room_and_wait_for_sync( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user, filter => $filter_id );
+      })->then( sub {
+
+         matrix_put_room_state( $user, $room_id,
+            type      => "m.room.member",
+            content   => { "membership" => "join",
+                           "displayname" => "boris" },
+            state_key => $user->user_id,
+         );
+      })->then( sub {
+         ( $event_id_1 ) = @_;
+
+         matrix_send_room_text_message_and_wait_for_sync( $user, $room_id,
+            body => "A message to wait on because the m.room.member might not come down /sync"
+          );
+      })->then( sub {
+         ( $event_id_2 ) = @_;
+
+         matrix_sync_again( $user, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{join}{$room_id};
+         my $timeline = $room->{timeline}{events};
+
+         log_if_fail "Room", $room;
+
+         assert_eq( scalar @{ $timeline }, 2, "Expected 2 events");
+         assert_eq( $timeline->[0]{event_id}, $event_id_1 );
+         assert_eq( $timeline->[1]{event_id}, $event_id_2 );
+
+         Future->done(1);
+      });
    };
 
 
