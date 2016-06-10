@@ -132,11 +132,9 @@ test "Newly left rooms appear in the leave section of gapped sync",
 
       matrix_create_filter( $user, {} )->then( sub {
          ( $filter_id ) = @_;
-
-         matrix_create_room( $user )->on_done( sub { ( $room_id_1 ) = @_; } );
-      })->then( sub {
-         matrix_create_room_and_wait_for_sync($user )->on_done( sub {
-            ( $room_id_2 ) = @_; }
+         Future->needs_all(
+            matrix_create_room_and_wait_for_sync( $user )->on_done( sub { ( $room_id_1 ) = @_; } ),
+            matrix_create_room_and_wait_for_sync( $user )->on_done( sub { ( $room_id_2 ) = @_; } ),
          );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
