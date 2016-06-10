@@ -582,7 +582,7 @@ test "A change to displayname should appear in incremental /sync",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
 
-   bug => "SYN-?",
+   bug => "SYN-707",
 
    check => sub {
       my ( $user ) = @_;
