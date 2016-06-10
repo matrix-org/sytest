@@ -10,7 +10,7 @@ test "Sync can be polled for updates",
       matrix_create_filter( $user, {} )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room_and_wait_for_sync( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -56,7 +56,7 @@ test "Sync is woken up for leaves",
       matrix_create_filter( $user, {} )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room_and_wait_for_sync( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 

@@ -1,4 +1,4 @@
-sub ban_user_and_wait_for_sync
+sub ban_user_synced
 {
    my ( $banner, $bannee, $room_id ) = @_;
 
@@ -43,7 +43,7 @@ test "Banned rooms appear in the leave section of sync",
 
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
-         ban_user_and_wait_for_sync( $user_a, $user_b, $room_id );
+         ban_user_synced( $user_a, $user_b, $room_id );
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -82,7 +82,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         ban_user_and_wait_for_sync( $user_a, $user_b, $room_id );
+         ban_user_synced( $user_a, $user_b, $room_id );
       })->then( sub {
          matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -134,7 +134,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
             )
          } 0 .. 19 );
       })->then( sub {
-         matrix_send_room_message_and_wait_for_sync( $user_a, $room_id,
+         matrix_send_room_message_synced( $user_a, $room_id,
             content => { "filler" => 20 },
             type    => "a.made.up.filler.type",
          );

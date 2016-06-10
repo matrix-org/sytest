@@ -8,7 +8,7 @@ test "Can pass a JSON filter as a query parameter",
 
       my ( $room_id );
 
-      matrix_create_room_and_wait_for_sync( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_sync( $user, filter => encode_json( {

@@ -2,14 +2,14 @@ use Future::Utils qw( repeat );
 
 push our @EXPORT, qw(
    matrix_do_and_wait_for_sync
-   matrix_send_room_text_message_and_wait_for_sync
-   matrix_send_room_message_and_wait_for_sync
-   matrix_create_room_and_wait_for_sync
-   matrix_join_room_and_wait_for_sync
-   matrix_leave_room_and_wait_for_sync
-   matrix_invite_user_to_room_and_wait_for_sync
-   matrix_put_room_state_and_wait_for_sync
-   matrix_advance_room_receipt_and_wait_for_sync
+   matrix_send_room_text_message_synced
+   matrix_send_room_message_synced
+   matrix_create_room_synced
+   matrix_join_room_synced
+   matrix_leave_room_synced
+   matrix_invite_user_to_room_synced
+   matrix_put_room_state_synced
+   matrix_advance_room_receipt_synced
    sync_timeline_contains
 );
 
@@ -104,7 +104,7 @@ sub sync_timeline_contains
    sync_room_contains( $sync_body, $room_id, "timeline", $check );
 }
 
-sub matrix_send_room_text_message_and_wait_for_sync
+sub matrix_send_room_text_message_synced
 {
    my ( $user, $room_id, %params ) = @_;
 
@@ -122,7 +122,7 @@ sub matrix_send_room_text_message_and_wait_for_sync
    );
 }
 
-sub matrix_send_room_message_and_wait_for_sync
+sub matrix_send_room_message_synced
 {
    my ( $user, $room_id, %params ) = @_;
 
@@ -140,7 +140,7 @@ sub matrix_send_room_message_and_wait_for_sync
    );
 }
 
-sub matrix_create_room_and_wait_for_sync
+sub matrix_create_room_synced
 {
    my ( $user, %params ) = @_;
 
@@ -152,7 +152,7 @@ sub matrix_create_room_and_wait_for_sync
    );
 }
 
-sub matrix_join_room_and_wait_for_sync
+sub matrix_join_room_synced
 {
    my ( $user, $room_id, %params ) = @_;
 
@@ -164,7 +164,7 @@ sub matrix_join_room_and_wait_for_sync
    );
 }
 
-sub matrix_leave_room_and_wait_for_sync
+sub matrix_leave_room_synced
 {
    my ( $user, $room_id, %params ) = @_;
 
@@ -176,7 +176,7 @@ sub matrix_leave_room_and_wait_for_sync
    );
 }
 
-sub matrix_put_room_state_and_wait_for_sync
+sub matrix_put_room_state_synced
 {
    my ( $user, $room_id, %params ) = @_;
 
@@ -195,7 +195,7 @@ sub matrix_put_room_state_and_wait_for_sync
    );
 }
 
-sub matrix_invite_user_to_room_and_wait_for_sync
+sub matrix_invite_user_to_room_synced
 {
    my ( $inviter, $invitee, $room_id, %params ) = @_;
 
@@ -220,7 +220,7 @@ sub matrix_invite_user_to_room_and_wait_for_sync
    );
 }
 
-sub matrix_advance_room_receipt_and_wait_for_sync
+sub matrix_advance_room_receipt_synced
 {
    my ( $user, $room_id, $type, $event_id ) = @_;
 

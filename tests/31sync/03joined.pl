@@ -14,7 +14,7 @@ test "Can sync a joined room",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room_and_wait_for_sync( $user )
+         matrix_create_room_synced( $user )
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -54,7 +54,7 @@ test "Full state sync includes joined rooms",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room_and_wait_for_sync( $user )
+         matrix_create_room_synced( $user )
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -94,7 +94,7 @@ test "Newly joined room is included in an incremental sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_create_room_and_wait_for_sync( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -154,7 +154,7 @@ test "Newly joined room has correct timeline in incremental sync",
             matrix_send_room_text_message( $user_a, $room_id, body => "test" );
          } 0 .. 3 );
       })->then( sub {
-         matrix_join_room_and_wait_for_sync( $user_b, $room_id );
+         matrix_join_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -201,7 +201,7 @@ test "Newly joined room includes presence in incremental sync",
 
          matrix_sync( $user_b );
       })->then( sub {
-         matrix_join_room_and_wait_for_sync( $user_b, $room_id );
+         matrix_join_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_sync_again( $user_b );
       })->then( sub {
@@ -254,13 +254,13 @@ test "Get presence for newly joined members in incremental sync",
 
          matrix_sync( $user_a );
       })->then( sub {
-         matrix_send_room_text_message_and_wait_for_sync( $user_a, $room_id,
+         matrix_send_room_text_message_synced( $user_a, $room_id,
             body => "Wait for presence changes caused by the first sync to trickle through",
          );
       })->then( sub {
          matrix_sync_again( $user_a );
       })->then( sub {
-         matrix_join_room_and_wait_for_sync( $user_b, $room_id );
+         matrix_join_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_sync_again( $user_a );
       })->then( sub {
