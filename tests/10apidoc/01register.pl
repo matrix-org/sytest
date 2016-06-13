@@ -61,6 +61,30 @@ test "POST /register can create a user",
       });
    };
 
+test "POST /createUser can get or create a user",
+   requires => [ $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/unstable/createUser",
+
+         content => {
+            localpart     => "01register-user"
+            displayname     => "01register_user x",
+            duration_seconds => 200,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id access_token ));
+
+         Future->done( 1 );
+      });
+   };
+
 push our @EXPORT, qw( localpart_fixture );
 
 my $next_anon_uid = 1;
