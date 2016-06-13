@@ -405,11 +405,16 @@ test "A full_state incremental update returns all state",
          );
       })->then( sub {
          Future->needs_all( map {
-            matrix_send_room_message_synced( $user, $room_id,
+            matrix_send_room_message( $user, $room_id,
                content => { "filler" => $_ },
                type    => "a.made.up.filler.type",
-            )
-         } 0 .. 10 );
+            );
+         } 0 .. 9 );
+      })->then( sub {
+         matrix_send_room_message_synced( $user, $room_id,
+            content => { "filler" => 10 },
+            type    => "a.made.up.filler.type",
+         );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
