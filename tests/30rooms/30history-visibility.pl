@@ -440,7 +440,7 @@ foreach my $i (
             })->then( sub {
                matrix_join_room( $joining_user, $room_id );
             })->then( sub {
-               matrix_send_room_text_message( $user, $room_id, body => "post_join" );
+               matrix_send_room_text_message_synced( $user, $room_id, body => "post_join" );
             })->then( sub {
                matrix_sync( $joining_user );
             })->then( sub {
@@ -504,7 +504,7 @@ test "Only see history_visibility changes on boundaries",
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "3" );
       })->then( sub {
-         matrix_join_room( $joining_user, $room_id );
+         matrix_join_room_synced( $joining_user, $room_id );
       })->then( sub {
          matrix_sync( $joining_user );
       })->then( sub {

@@ -127,17 +127,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
             content => { user_id => $user_b->user_id, reason => "testing" },
          );
       })->then( sub {
-         Future->needs_all( map {
-            matrix_send_room_message( $user_a, $room_id,
-               content => { "filler" => $_ },
-               type    => "a.made.up.filler.type",
-            )
-         } 0 .. 19 );
-      })->then( sub {
-         matrix_send_room_message_synced( $user_a, $room_id,
-            content => { "filler" => 20 },
-            type    => "a.made.up.filler.type",
-         );
+         matrix_send_filler_messages_synced( $user_a, $room_id, 20 );
       })->then( sub {
          matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {

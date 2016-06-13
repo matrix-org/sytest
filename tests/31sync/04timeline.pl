@@ -178,6 +178,7 @@ test "A filtered timeline reaches its limit",
             timeline => { limit => 1, types => ["m.room.message"] },
             state    => { types => [] },
          },
+         account_data => { types => [] },
          presence => { types => [] },
       };
 
@@ -194,12 +195,7 @@ test "A filtered timeline reaches its limit",
       })->then( sub {
          ( $event_id ) = @_;
 
-         Future->needs_all( map {
-            matrix_send_room_message_synced( $user, $room_id,
-               content => { "filler" => $_ },
-               type    => "a.made.up.filler.type",
-            )
-         } 0 .. 10 );
+         matrix_send_filler_messages_synced( $user, $room_id, 12 );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
