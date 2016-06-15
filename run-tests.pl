@@ -86,7 +86,7 @@ GetOptions(
 
    'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
 
-   'p|port-base=i' => \(my $PORT_BASE = 8000),
+   'p|port-range=s' => \(my $PORT_RANGE = "8000:8009"),
 
    'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
@@ -274,9 +274,18 @@ my $loop = IO::Async::Loop->new;
 my $old_SIGINT = $SIG{INT};
 $SIG{INT} = sub { $old_SIGINT->( "INT" ) if ref $old_SIGINT; exit 1 };
 
+( my ( $port_next, $port_max ) = split m/:/, $PORT_RANGE ) == 2 or
+   die "Expected a --port-range expressed as START:MAX\n";
+
+## TODO: better name here
+sub alloc_port
+{
+   die "No more free ports\n" if $port_next >= $port_max;
+   return $port_next++;
+}
 
 # We need two servers; a "local" and a "remote" one for federation-based tests
-our @HOMESERVER_PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
+our @HOMESERVER_PORTS = ( alloc_port(), alloc_port() );
 
 # Util. function for tests
 sub delay
