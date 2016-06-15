@@ -306,7 +306,8 @@ test "Message history can be paginated over federation",
       })->then( sub {
          my ( $event_id ) = @_;
 
-         # Wait for the message we just sent.
+         # Wait for the message we just sent, ensuring that we don't see any
+         # of the backfilled events.
          await_event_for( $remote_user, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
