@@ -149,7 +149,7 @@ multi_test "Typing notifications timeout and can be resent",
       flush_events_for( $user )->then( sub {
          matrix_typing( $user, $room_id,
             typing => 1,
-            timeout => 100, # msec; i.e. very short
+            timeout => 10000, # msec; i.e. very long
          );
       })->then( sub {
          pass( "Sent typing notification" );
@@ -165,6 +165,11 @@ multi_test "Typing notifications timeout and can be resent",
             pass( "Received start notification" );
             return 1;
          });
+      })->then( sub {
+         matrix_typing( $user, $room_id,
+            typing => 1,
+            timeout => 100, # msec; i.e. very short
+         );
       })->then( sub {
          # stop typing
          await_event_for( $user, filter => sub {

@@ -146,17 +146,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
          # implementations of matrix are likely to take different code paths
          # if there were many messages between a since that if there were only
          # a few.
-         Future->needs_all( map {
-            matrix_send_room_message( $user, $room_id_2,
-               content => { "filler" => $_ },
-               type    => "a.made.up.filler.type",
-            )
-         } 0 .. 19 );
-      })->then( sub {
-         matrix_send_room_message_synced( $user, $room_id_2,
-            content => { "filler" => 20 },
-            type    => "a.made.up.filler.type",
-         );
+         matrix_send_filler_messages_synced( $user, $room_id_2, 20 );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
@@ -209,18 +199,7 @@ test "Previously left rooms don't appear in the leave section of sync",
       })->then( sub {
          # Pad out the timeline with filler messages to create a "gap" between
          # this sync and the next.
-         Future->needs_all( map {
-            matrix_send_room_message( $user2, $room_id_2,
-               content => { "filler" => $_ },
-               type    => "a.made.up.filler.type",
-            )
-         }  0 .. 4 );
-
-      })->then( sub {
-         matrix_send_room_message_synced( $user2, $room_id_2,
-            content => { "filler" => 5 },
-            type    => "a.made.up.filler.type",
-         );
+         matrix_send_filler_messages_synced( $user2, $room_id_2, 5 );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {

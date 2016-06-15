@@ -255,17 +255,7 @@ test "Changes to state are included in an gapped incremental sync",
             state_key => "this_state_changes",
          )
       })->then( sub {
-         Future->needs_all( map {
-            matrix_send_room_message( $user, $room_id,
-               content => { "filler" => $_ },
-               type    => "a.made.up.filler.type",
-            )
-         } 0 .. 19 );
-      })->then( sub {
-         matrix_send_room_message_synced( $user, $room_id,
-            content => { "filler" => 20 },
-            type    => "a.made.up.filler.type",
-         );
+         matrix_send_filler_messages_synced( $user, $room_id, 20 );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
@@ -404,17 +394,7 @@ test "A full_state incremental update returns all state",
             state_key => "this_state_changes",
          );
       })->then( sub {
-         Future->needs_all( map {
-            matrix_send_room_message( $user, $room_id,
-               content => { "filler" => $_ },
-               type    => "a.made.up.filler.type",
-            );
-         } 0 .. 9 );
-      })->then( sub {
-         matrix_send_room_message_synced( $user, $room_id,
-            content => { "filler" => 10 },
-            type    => "a.made.up.filler.type",
-         );
+         matrix_send_filler_messages_synced( $user, $room_id, 10 );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
@@ -678,17 +658,7 @@ test "When user joins a room the state is included in a gapped sync",
       })->then( sub {
          matrix_join_room( $user_b, $room_id );
       })->then( sub {
-         Future->needs_all( map {
-            matrix_send_room_message( $user_a, $room_id,
-               content => { "filler" => $_ },
-               type    => "a.made.up.filler.type",
-            )
-         } 0 .. 19 );
-      })->then( sub {
-         matrix_send_room_message_synced( $user_a, $room_id,
-            content => { "filler" => 20 },
-            type    => "a.made.up.filler.type",
-         );
+         matrix_send_filler_messages_synced( $user_a, $room_id, 20 );
       })->then( sub {
          matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
