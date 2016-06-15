@@ -133,7 +133,7 @@ sub start
    if( $self->{dendron} ) {
       # If we are running synapse behind dendron then only bind the unsecure
       # port for synapse.
-      $self->{unsecure_port} = $port + 9000 - 8000;
+      $self->{unsecure_port} = main::alloc_port();
    }
    else {
       push @$listeners, {
@@ -183,7 +183,7 @@ sub start
 
         # Metrics are always useful
         "enable_metrics" => 1,
-        "metrics_port" => ( $port - 8000 + 9090 ),
+        "metrics_port" => main::alloc_port(),
 
         "perspectives" => { servers => {} },
 
@@ -214,16 +214,16 @@ sub start
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
-            port      => ( $port - 8000 + 10090 ),
+            port      => main::alloc_port(),
          },
          {
             type => "manhole",
-            port => ( $port - 8000 + 10080 ),
+            port => main::alloc_port(),
          },
       ],
    } );
 
-   my $synchrotron_port = $port - 8000 + 11000;
+   my $synchrotron_port = main::alloc_port();
    my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
       "server_name"              => "localhost:$port",
       "log_file"                 => "$log.synchrotron",
@@ -241,12 +241,12 @@ sub start
          },
          {
             type => "manhole",
-            port => ( $port - 8000 + 11080 ),
+            port => main::alloc_port(),
          },
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
-            port      => ( $port - 8000 + 11090 ),
+            port      => main::alloc_port(),
          },
       ],
    } );

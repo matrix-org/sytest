@@ -38,7 +38,7 @@ our @HOMESERVER_INFO = map {
          my ( $test_server_info, @as_infos ) = @_;
 
          my $secure_port = $HOMESERVER_PORTS[$idx];
-         my $unsecure_port = $WANT_TLS ? 0 : $secure_port + 1000;
+         my $unsecure_port = $WANT_TLS ? 0 : main::alloc_port();
 
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
 
