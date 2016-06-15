@@ -165,6 +165,8 @@ sub start
 
    my $macaroon_secret_key = "secret_$self->{port}";
 
+   my $synchrotron_port = $port - 8000 + 11000;
+
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
@@ -198,6 +200,31 @@ sub start
         "url_preview_enabled" => "true",
         "url_preview_ip_range_blacklist" => [],
 
+        "workers" => {
+            synchrotron => {
+               app             => "synapse.app.synchrotron",
+               daemonize       => 0,
+               log_file        => "$log.synchrotron",
+               replication_url => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+               listeners       => [
+                  {
+                     type      => "http",
+                     resources => [{ names => ["client"] }],
+                     port      => $synchrotron_port,
+                  },
+                  {
+                     type => "manhole",
+                     port => ( $port - 8000 + 11080 ),
+                  },
+                  {
+                     type      => "http",
+                     resources => [{ names => ["metrics"] }],
+                     port      => ( $port - 8000 + 11090 ),
+                  },
+               ],
+            },
+        },
+
         %{ $self->{config} },
    } );
 
@@ -219,34 +246,6 @@ sub start
          {
             type => "manhole",
             port => ( $port - 8000 + 10080 ),
-         },
-      ],
-   } );
-
-   my $synchrotron_port = $port - 8000 + 11000;
-   my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
-      "server_name"              => "localhost:$port",
-      "log_file"                 => "$log.synchrotron",
-      "database"                 => $db_config,
-      "database_config"          => $db_config_path,
-      "replication_url"          => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
-      "macaroon_secret_key"      => $macaroon_secret_key,
-      "full_twisted_stacktraces" => "true",
-      "use_insecure_ssl_client_just_for_testing_do_not_use" => "true",
-      "listeners" => [
-         {
-            type      => "http",
-            resources => [{ names => ["client"] }],
-            port      => $synchrotron_port,
-         },
-         {
-            type => "manhole",
-            port => ( $port - 8000 + 11080 ),
-         },
-         {
-            type      => "http",
-            resources => [{ names => ["metrics"] }],
-            port      => ( $port - 8000 + 11090 ),
          },
       ],
    } );
@@ -310,7 +309,7 @@ sub start
 
       if ( $self->{synchrotron} ) {
          push @command,
-            "--synchrotron-config" => $synchrotron_config_path,
+            "--synchrotron-worker" => "synchrotron",
             "--synchrotron-url" => "http://127.0.0.1:$synchrotron_port";
       }
    }
