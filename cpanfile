@@ -15,7 +15,6 @@ requires 'IO::Socket::IP', '>= 0.04';
 requires 'IO::Socket::SSL';
 requires 'JSON';
 requires 'List::MoreUtils';
-requires 'List::Slice';
 requires 'List::Util', '>= 1.33';
 requires 'List::UtilsBy', '>= 0.10';
 requires 'MIME::Base64';

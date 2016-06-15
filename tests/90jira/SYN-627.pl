@@ -1,5 +1,3 @@
-use List::Slice qw( head );
-
 test "Events come down the correct room",
    requires => [ local_user_fixture( with_events => 0 ), "can_sync" ],
 
@@ -25,8 +23,9 @@ test "Events come down the correct room",
             my $room_id = $_;
 
             matrix_send_room_text_message( $user, $room_id, body => "$room_id" );
-         } ( head -1, @rooms) );
+         } @rooms[0 .. 28] ); # send messages into all but the last room.
       })->then( sub {
+         # send a message into the last room
          matrix_send_room_text_message_synced( $user, $rooms[-1], body => $rooms[-1] );
       })->then( sub {
          matrix_sync_again( $user );
