@@ -24,7 +24,7 @@ test "Events come down the correct room",
             my $room_id = $_;
 
             matrix_send_room_text_message( $user, $room_id, body => "$room_id" );
-         } @rooms[0 .. scalar @rooms - 2] );
+         } @rooms[0 .. @rooms - 2] );
       })->then( sub {
          # send a message into the last room
          matrix_send_room_text_message_synced( $user, $rooms[-1], body => $rooms[-1] );
