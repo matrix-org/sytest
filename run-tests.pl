@@ -86,7 +86,7 @@ GetOptions(
 
    'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
 
-   'p|port-range=s' => \(my $PORT_RANGE = "8000:8009"),
+   'p|port-range=s' => \(my $PORT_RANGE = "8000:8019"),
 
    'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
