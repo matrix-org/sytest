@@ -165,8 +165,6 @@ sub start
 
    my $macaroon_secret_key = "secret_$self->{port}";
 
-   my $synchrotron_port = $port - 8000 + 11000;
-
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
@@ -200,50 +198,49 @@ sub start
         "url_preview_enabled" => "true",
         "url_preview_ip_range_blacklist" => [],
 
-        "workers" => {
-            synchrotron => {
-               app             => "synapse.app.synchrotron",
-               daemonize       => 0,
-               log_file        => "$log.synchrotron",
-               replication_url => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
-               listeners       => [
-                  {
-                     type      => "http",
-                     resources => [{ names => ["client"] }],
-                     port      => $synchrotron_port,
-                  },
-                  {
-                     type => "manhole",
-                     port => ( $port - 8000 + 11080 ),
-                  },
-                  {
-                     type      => "http",
-                     resources => [{ names => ["metrics"] }],
-                     port      => ( $port - 8000 + 11090 ),
-                  },
-               ],
-            },
-            pusher => {
-               app             => "synapse.app.pusher",
-               daemonize       => 0,
-               log_file        => "$log.pusher",
-               replication_url => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
-               listeners       => [
-                  {
-                     type => "manhole",
-                     port => ( $port - 8000 + 10080 ),
-                  },
-                  {
-                     type      => "http",
-                     resources => [{ names => ["metrics"] }],
-                     port      => ( $port - 8000 + 10090 ),
-                  },
-               ],
-            }
-        },
-
         %{ $self->{config} },
    } );
+
+   my $pusher_config_path = $self->write_yaml_file( pusher => {
+      "worker_app"             => "synapse.app.pusher",
+      "worker_log_file"        => "$log.pusher",
+      "worker_replication_url" => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => ( $port - 8000 + 10090 ),
+         },
+         {
+            type => "manhole",
+            port => ( $port - 8000 + 10080 ),
+         },
+      ],
+   } );
+
+   my $synchrotron_port = $port - 8000 + 11000;
+   my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
+      "worker_app"             => "synapse.app.synchrotron",
+      "worker_log_file"        => "$log.synchrotron",
+      "worker_replication_url" => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["client"] }],
+            port      => $synchrotron_port,
+         },
+         {
+            type => "manhole",
+            port => ( $port - 8000 + 11080 ),
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => ( $port - 8000 + 11090 ),
+         },
+      ],
+   } );
+
 
    $self->{logpath} = $log;
 
@@ -298,12 +295,12 @@ sub start
       );
 
       if ( $self->{pusher} ) {
-         push @command, "--pusher-worker" => "pusher";
+         push @command, "--pusher-config" => $pusher_config_path;
       }
 
       if ( $self->{synchrotron} ) {
          push @command,
-            "--synchrotron-worker" => "synchrotron",
+            "--synchrotron-config" => $synchrotron_config_path,
             "--synchrotron-url" => "http://127.0.0.1:$synchrotron_port";
       }
    }
