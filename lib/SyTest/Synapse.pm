@@ -223,33 +223,27 @@ sub start
                   },
                ],
             },
+            pusher => {
+               app             => "synapse.app.pusher",
+               daemonize       => 0,
+               log_file        => "$log.pusher",
+               replication_url => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+               listeners       => [
+                  {
+                     type => "manhole",
+                     port => ( $port - 8000 + 10080 ),
+                  },
+                  {
+                     type      => "http",
+                     resources => [{ names => ["metrics"] }],
+                     port      => ( $port - 8000 + 10090 ),
+                  },
+               ],
+            }
         },
 
         %{ $self->{config} },
    } );
-
-   my $pusher_config_path = $self->write_yaml_file( pusher => {
-      "server_name"              => "localhost:$port",
-      "log_file"                 => "$log.pusher",
-      "database"                 => $db_config,
-      "database_config"          => $db_config_path,
-      "replication_url"          => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
-      "full_twisted_stacktraces" => "true",
-      "use_insecure_ssl_client_just_for_testing_do_not_use" => "true",
-      "public_baseurl"           => "http://127.0.0.1:$port",
-      "listeners" => [
-         {
-            type      => "http",
-            resources => [{ names => ["metrics"] }],
-            port      => ( $port - 8000 + 10090 ),
-         },
-         {
-            type => "manhole",
-            port => ( $port - 8000 + 10080 ),
-         },
-      ],
-   } );
-
 
    $self->{logpath} = $log;
 
@@ -304,7 +298,7 @@ sub start
       );
 
       if ( $self->{pusher} ) {
-         push @command, "--pusher-config" => $pusher_config_path;
+         push @command, "--pusher-worker" => "pusher";
       }
 
       if ( $self->{synchrotron} ) {
