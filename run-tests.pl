@@ -284,9 +284,6 @@ sub alloc_port
    return $port_next++;
 }
 
-# We need two servers; a "local" and a "remote" one for federation-based tests
-our @HOMESERVER_PORTS = ( alloc_port(), alloc_port() );
-
 # Util. function for tests
 sub delay
 {

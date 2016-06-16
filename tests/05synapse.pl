@@ -1,5 +1,7 @@
 use SyTest::Synapse;
 
+my $N_HOMESERVERS = 2;
+
 sub extract_extra_args
 {
    my ( $idx, $args ) = @_;
@@ -37,7 +39,7 @@ our @HOMESERVER_INFO = map {
       setup => sub {
          my ( $test_server_info, @as_infos ) = @_;
 
-         my $secure_port = $HOMESERVER_PORTS[$idx];
+         my $secure_port = main::alloc_port();
          my $unsecure_port = $WANT_TLS ? 0 : main::alloc_port();
 
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
@@ -127,4 +129,4 @@ our @HOMESERVER_INFO = map {
          )->then_done( $info );
       },
    );
-} 0 .. $#HOMESERVER_PORTS;
+} 0 .. $N_HOMESERVERS-1;
