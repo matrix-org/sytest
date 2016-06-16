@@ -104,6 +104,10 @@ our @HOMESERVER_INFO = map {
                } );
 
                push @confs, $appserv_conf;
+
+               # Now we can fill in the AS info's user_id
+               $as_info->user_id = sprintf "@%s:localhost:%d",
+                  $as_info->localpart, $secure_port;
             }
 
             $synapse->append_config(
