@@ -179,6 +179,8 @@ sub start
         "database_config" => $db_config_path,
         "macaroon_secret_key" => $macaroon_secret_key,
 
+        "use_frozen_events" => "true",
+
         "invite_3pid_guest" => "true",
 
         # Metrics are always useful
