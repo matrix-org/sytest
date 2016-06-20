@@ -31,7 +31,7 @@ sub _init
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( client client_unsecure );
+      for qw( client client_unsecure metrics );
 
    my $port = $self->{ports}{client};
    $self->{hs_dir} = abs_path( "localhost-$port" );
@@ -139,7 +139,8 @@ sub start
    if( $self->{dendron} ) {
       # If we are running synapse behind dendron then only bind the unsecure
       # port for synapse.
-      $self->{ports}{client_unsecure} = main::alloc_port();
+      $self->{ports}{client_unsecure} or
+         croak "Need an unsecure client port if running synapse behind dendron";
    }
    else {
       push @$listeners, {
@@ -189,7 +190,7 @@ sub start
 
         # Metrics are always useful
         "enable_metrics" => 1,
-        "metrics_port" => main::alloc_port(),
+        "metrics_port" => $self->{ports}{metrics},
 
         "perspectives" => { servers => {} },
 
@@ -220,16 +221,15 @@ sub start
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
-            port      => main::alloc_port(),
+            port      => $self->{ports}{pusher_metrics},
          },
          {
             type => "manhole",
-            port => main::alloc_port(),
+            port => $self->{ports}{pusher_manhole},,
          },
       ],
    } );
 
-   my $synchrotron_port = main::alloc_port();
    my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
       "server_name"              => "localhost:$port",
       "log_file"                 => "$log.synchrotron",
@@ -243,16 +243,16 @@ sub start
          {
             type      => "http",
             resources => [{ names => ["client"] }],
-            port      => $synchrotron_port,
+            port      => $self->{ports}{synchrotron},
          },
          {
             type => "manhole",
-            port => main::alloc_port(),
+            port => $self->{ports}{synchrotron_manhole},
          },
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
-            port      => main::alloc_port(),
+            port      => $self->{ports}{synchrotron_metrics},
          },
       ],
    } );
@@ -317,7 +317,7 @@ sub start
       if ( $self->{synchrotron} ) {
          push @command,
             "--synchrotron-config" => $synchrotron_config_path,
-            "--synchrotron-url" => "http://127.0.0.1:$synchrotron_port";
+            "--synchrotron-url" => "http://127.0.0.1:$self->{ports}{synchrotron}";
       }
    }
    else {

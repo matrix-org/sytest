@@ -55,6 +55,14 @@ our @HOMESERVER_INFO = map {
             ports         => {
                client          => $secure_port,
                client_unsecure => $unsecure_port,
+               metrics         => main::alloc_port(),
+
+               pusher_metrics => main::alloc_port(),
+               pusher_manhole => main::alloc_port(),
+
+               synchrotron         => main::alloc_port(),
+               synchrotron_metrics => main::alloc_port(),
+               synchrotron_manhole => main::alloc_port(),
             },
             output        => $OUTPUT,
             print_output  => $SYNAPSE_ARGS{log},
