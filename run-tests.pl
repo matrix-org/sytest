@@ -20,7 +20,7 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
-use List::Util 1.33 qw( first all any maxstr );
+use List::Util 1.33 qw( first all any maxstr max );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
 use Time::HiRes qw( time );
@@ -277,11 +277,20 @@ $SIG{INT} = sub { $old_SIGINT->( "INT" ) if ref $old_SIGINT; exit 1 };
 ( my ( $port_next, $port_max ) = split m/:/, $PORT_RANGE ) == 2 or
    die "Expected a --port-range expressed as START:MAX\n";
 
+my %port_desc;
+
 ## TODO: better name here
 sub alloc_port
 {
+   my ( $desc ) = @_;
+   defined $desc or croak "alloc_port() without description";
+
    die "No more free ports\n" if $port_next >= $port_max;
-   return $port_next++;
+   my $port = $port_next++;
+
+   $port_desc{$port} = $desc;
+
+   return $port;
 }
 
 # Util. function for tests
@@ -663,6 +672,13 @@ foreach my $test ( @TESTS ) {
 $OUTPUT->status();
 
 if( $WAIT_AT_END ) {
+   ## It's likely someone wants to interact with a running system. Lets print all
+   #    the port descriptions to be useful
+   my $width = max map { length } values %port_desc;
+
+   print STDERR "\n";
+   printf STDERR "%-*s: %d\n", $width, $port_desc{$_}, $_ for sort keys %port_desc;
+
    print STDERR "Waiting... (hit ENTER to end)\n";
    $loop->add( my $stdin = IO::Async::Stream->new_for_stdin( on_read => sub {} ) );
    $stdin->read_until( "\n" )->get;

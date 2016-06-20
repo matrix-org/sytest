@@ -39,8 +39,8 @@ our @HOMESERVER_INFO = map {
       setup => sub {
          my ( $test_server_info, @as_infos ) = @_;
 
-         my $secure_port = main::alloc_port();
-         my $unsecure_port = $WANT_TLS ? 0 : main::alloc_port();
+         my $secure_port = main::alloc_port( "synapse[$idx]" );
+         my $unsecure_port = $WANT_TLS ? 0 : main::alloc_port( "synapse[$idx].unsecure" );
 
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
 
@@ -55,14 +55,14 @@ our @HOMESERVER_INFO = map {
             ports         => {
                client          => $secure_port,
                client_unsecure => $unsecure_port,
-               metrics         => main::alloc_port(),
+               metrics         => main::alloc_port( "synapse[$idx].metrics" ),
 
-               pusher_metrics => main::alloc_port(),
-               pusher_manhole => main::alloc_port(),
+               pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
+               pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
 
-               synchrotron         => main::alloc_port(),
-               synchrotron_metrics => main::alloc_port(),
-               synchrotron_manhole => main::alloc_port(),
+               synchrotron         => main::alloc_port( "synchrotron[$idx]" ),
+               synchrotron_metrics => main::alloc_port( "synchrotron[$idx].metrics" ),
+               synchrotron_manhole => main::alloc_port( "synchrotron[$idx].manhole" ),
             },
             output        => $OUTPUT,
             print_output  => $SYNAPSE_ARGS{log},
