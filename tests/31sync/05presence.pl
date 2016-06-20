@@ -9,11 +9,19 @@ test "User sees their own presence in a sync",
 
       my $filter_id;
 
-      my $filter = { presence => { types => [ "m.presence" ] } };
+      my $filter = {
+         presence     => { types => [ "m.presence" ] },
+         account_data => { types => [] },
+      };
 
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
+         matrix_do_and_wait_for_sync( $user,
+            do => sub { matrix_sync( $user, filter => $filter_id ) },
+            check => sub { $_[0]->{presence}{events}[0] },
+         );
+      })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;

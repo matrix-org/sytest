@@ -186,6 +186,8 @@ sub start
         "database_config" => $db_config_path,
         "macaroon_secret_key" => $macaroon_secret_key,
 
+        "use_frozen_events" => "true",
+
         "invite_3pid_guest" => "true",
 
         # Metrics are always useful
@@ -209,15 +211,10 @@ sub start
    } );
 
    my $pusher_config_path = $self->write_yaml_file( pusher => {
-      "server_name"              => "localhost:$port",
-      "log_file"                 => "$log.pusher",
-      "database"                 => $db_config,
-      "database_config"          => $db_config_path,
-      "replication_url"          => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
-      "full_twisted_stacktraces" => "true",
-      "use_insecure_ssl_client_just_for_testing_do_not_use" => "true",
-      "public_baseurl"           => "http://127.0.0.1:$port",
-      "listeners" => [
+      "worker_app"             => "synapse.app.pusher",
+      "worker_log_file"        => "$log.pusher",
+      "worker_replication_url" => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
@@ -231,15 +228,10 @@ sub start
    } );
 
    my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
-      "server_name"              => "localhost:$port",
-      "log_file"                 => "$log.synchrotron",
-      "database"                 => $db_config,
-      "database_config"          => $db_config_path,
-      "replication_url"          => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
-      "macaroon_secret_key"      => $macaroon_secret_key,
-      "full_twisted_stacktraces" => "true",
-      "use_insecure_ssl_client_just_for_testing_do_not_use" => "true",
-      "listeners" => [
+      "worker_app"             => "synapse.app.synchrotron",
+      "worker_log_file"        => "$log.synchrotron",
+      "worker_replication_url" => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
          {
             type      => "http",
             resources => [{ names => ["client"] }],
