@@ -32,6 +32,7 @@ mkdir -p "localhost-$(($PORT_BASE + 2))"
 # local auth)
 cat > localhost-$(($PORT_BASE + 1))/database.yaml << EOF
 name: psycopg2
+synchronous_commit: False
 args:
     database: $POSTGRES_DB_1
     user: $PGUSER
@@ -42,6 +43,7 @@ EOF
 
 cat > localhost-$(($PORT_BASE + 2))/database.yaml << EOF
 name: psycopg2
+synchronous_commit: False
 args:
     database: $POSTGRES_DB_2
     user: $PGUSER
