@@ -5,6 +5,8 @@ use warnings;
 use 5.010;
 use base qw( IO::Async::Notifier );
 
+use Carp;
+
 use Future::Utils qw( try_repeat );
 
 use IO::Async::Process;
@@ -24,11 +26,15 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port unsecure_port output synapse_dir extra_args python config coverage
+      ports output synapse_dir extra_args python config coverage
       dendron pusher synchrotron
    );
 
-   $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
+   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
+      for qw( client client_unsecure );
+
+   my $port = $self->{ports}{client};
+   $self->{hs_dir} = abs_path( "localhost-$port" );
 
    $self->SUPER::_init( $args );
 }
@@ -85,7 +91,7 @@ sub start
 {
    my $self = shift;
 
-   my $port = $self->{port};
+   my $port = $self->{ports}{client};
    my $output = $self->{output};
 
    my $db_config_path = "database.yaml";
@@ -133,7 +139,7 @@ sub start
    if( $self->{dendron} ) {
       # If we are running synapse behind dendron then only bind the unsecure
       # port for synapse.
-      $self->{unsecure_port} = main::alloc_port();
+      $self->{ports}{client_unsecure} = main::alloc_port();
    }
    else {
       push @$listeners, {
@@ -147,10 +153,10 @@ sub start
       };
    }
 
-   if( $self->{unsecure_port} ) {
+   if( my $unsecure_port = $self->{ports}{client_unsecure} ) {
       push @$listeners, {
          type => "http",
-         port => $self->{unsecure_port},
+         port => $unsecure_port,
          bind_address => "127.0.0.1",
          tls => 0,
          resources => [{
@@ -163,7 +169,7 @@ sub start
    my $key_file = "$self->{hs_dir}/key.pem";
    my $log_config_file = "$self->{hs_dir}/log.config";
 
-   my $macaroon_secret_key = "secret_$self->{port}";
+   my $macaroon_secret_key = "secret_$port";
 
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
@@ -206,7 +212,7 @@ sub start
       "log_file"                 => "$log.pusher",
       "database"                 => $db_config,
       "database_config"          => $db_config_path,
-      "replication_url"          => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "replication_url"          => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
       "full_twisted_stacktraces" => "true",
       "use_insecure_ssl_client_just_for_testing_do_not_use" => "true",
       "public_baseurl"           => "http://127.0.0.1:$port",
@@ -229,7 +235,7 @@ sub start
       "log_file"                 => "$log.synchrotron",
       "database"                 => $db_config,
       "database_config"          => $db_config_path,
-      "replication_url"          => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "replication_url"          => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
       "macaroon_secret_key"      => $macaroon_secret_key,
       "full_twisted_stacktraces" => "true",
       "use_insecure_ssl_client_just_for_testing_do_not_use" => "true",
@@ -295,7 +301,7 @@ sub start
          $self->{dendron},
          "--synapse-python" => $self->{python},
          "--synapse-config" => $config_path,
-         "--synapse-url" => "http://127.0.0.1:$self->{unsecure_port}",
+         "--synapse-url" => "http://127.0.0.1:$self->{ports}{client_unsecure}",
          "--synapse-postgres" => join( " ", @db_arg_pairs ),
          "--macaroon-secret" => $macaroon_secret_key,
          "--server-name" => "localhost:$port",
@@ -357,11 +363,11 @@ sub start
                addr => {
                   family   => "inet",
                   socktype => "stream",
-                  port     => $self->{port},
+                  port     => $port,
                   ip       => "127.0.0.1",
                }
             )->then( sub {
-               $output->diag( "Connected to server $self->{port}" );
+               $output->diag( "Connected to server $port" );
                my ( $connection ) = @_;
 
                $connection->close;
@@ -372,7 +378,7 @@ sub start
             });
          };
 
-         $output->diag( "Connecting to server $self->{port}" );
+         $output->diag( "Connecting to server $port" );
          $self->adopt_future( $poll->() );
 
          $self->open_logfile;
