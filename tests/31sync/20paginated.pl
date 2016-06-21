@@ -1,4 +1,4 @@
-use Future::Utils qw( repeat );
+use Future::Utils qw( repeat try_repeat );
 
 test "Can ask for paginated sync",
    requires => [ local_user_fixture() ],
@@ -19,11 +19,16 @@ test "Can ask for paginated sync",
 multi_test "Paginated sync",
    requires => [ local_user_fixture() ],
 
+   timeout => 100,
+
    check => sub {
       my ( $user ) = @_;
       my @rooms;
 
-      repeat( sub {
+      my $num_rooms = 5;
+      my $pagination_limit = 3;
+
+      try_repeat( sub {
          matrix_create_room_synced( $user )
          ->then( sub {
             my ( $room_id ) = @_;
@@ -34,12 +39,12 @@ multi_test "Paginated sync",
                body => "First message",
             )
          });
-      }, foreach => [ 0 .. 10 ])
+      }, foreach => [ 0 .. $num_rooms ])
       ->then( sub {
          matrix_sync_post( $user,
             content => {
                pagination_config => {
-                  limit => 5,
+                  limit => $pagination_limit,
                   order => "o",
                }
             }
@@ -49,7 +54,7 @@ multi_test "Paginated sync",
 
          assert_json_keys( $body, qw( pagination_info ) );
 
-         assert_eq( scalar keys $body->{rooms}{join}, 5, "correct number of rooms");
+         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
          $body->{pagination_info}{limited} or die "Limited flag is not set";
          not exists ($body->{rooms}{join}{$rooms[0]}) or die "Unexpected room";
 
@@ -115,6 +120,63 @@ multi_test "Paginated sync",
          assert_eq( scalar @{$room->{state}{events}}, 0, "no new state");
 
          pass "Previously seen rooms do not have state.";
+
+         my @roomssss_why_leo_why = @rooms;
+
+         try_repeat( sub {
+            my ( $room_id ) = @_;
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "New message",
+            )
+         }, foreach => \@roomssss_why_leo_why )
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } }
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+         $body->{pagination_info}{limited} or die "Limited flag is not set";
+         not exists ($body->{rooms}{join}{$rooms[0]}) or die "Unexpected room";
+
+         pass "Incremental sync correctly limited.";
+
+         matrix_send_room_text_message_synced( $user, $rooms[0],
+            body => "Fourth message",
+         )
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } }
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "correct number of rooms");
+         not $body->{pagination_info}{limited} or die "Limited flag is set";
+         exists ($body->{rooms}{join}{$rooms[0]}) or die "Room is not in entry";
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         first {
+            $_->{content}{body} eq "Fourth message"
+         } @{$room->{timeline}{events}} or die "Expected new message";
+
+         assert_eq( $room->{timeline}{limited}, JSON::true, "room is limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 2, "two messages in timeline");
+
+         first {
+            $_->{type} eq "m.room.create"
+         } @{$room->{state}{events}} or die "Expected creation event";
+
+         pass "Got full state for room that had been seen but was then limited";
 
          Future->done( 1 );
       });
