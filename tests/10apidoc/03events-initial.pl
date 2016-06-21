@@ -102,6 +102,7 @@ sub GET_new_events_for
 push our @EXPORT, qw(
    matrix_initialsync matrix_get_events
    matrix_sync matrix_sync_again
+   matrix_sync_post matrix_sync_post_again
    flush_events_for await_event_for
 );
 
@@ -225,4 +226,38 @@ sub matrix_sync_again
    my ( $user, %params ) = @_;
 
    matrix_sync( $user, since => $user->sync_next_batch, %params );
+}
+
+sub matrix_sync_post
+{
+   my ( $user, %params ) = @_;
+
+   my $update_next_batch = delete $params{update_next_batch} // 1;
+
+   $params{content} = $params{content} // {};
+
+   do_request_json_for( $user,
+      method  => "POST",
+      uri     => "/r0/sync",
+      %params,
+   )->on_done( sub {
+      my ( $body ) = @_;
+
+      assert_json_keys( $body, qw( account_data rooms presence next_batch ) );
+      assert_json_keys( $body->{presence}, qw( events ));
+      assert_json_keys( $body->{rooms}, qw( join invite leave ) );
+
+      if ( $update_next_batch ) {
+         $user->sync_next_batch = $body->{next_batch};
+      }
+   });
+}
+
+sub matrix_sync_post_again
+{
+   my ( $user, %params ) = @_;
+
+   $params{content}{since} = $user->sync_next_batch;
+
+   matrix_sync_post( $user, %params );
 }
