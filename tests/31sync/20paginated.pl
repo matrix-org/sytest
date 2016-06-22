@@ -38,7 +38,7 @@ test "Requesting unknown room results in error",
       });
    };
 
-multi_test "Paginated sync",
+multi_test "Basic paginated sync",
    requires => [ local_user_fixture( with_events => 0 ) ],
 
    timeout => 100,
@@ -435,6 +435,74 @@ multi_test "Synced flag is correctly set when peeking",
          assert_eq( scalar @{$room->{timeline}{events}}, 1, "one message in timeline");
 
          pass "Synced flag set on room when received message while peeking";
+
+         Future->done( 1 );
+      });
+   };
+
+test "Can paginate paginated sync",
+   requires => [ local_user_fixture( with_events => 0 ) ],
+
+   timeout => 100,
+
+   check => sub {
+      my ( $user ) = @_;
+      my @rooms;
+
+      my $num_rooms = 5;
+      my $pagination_limit = 3;
+
+      try_repeat( sub {
+         matrix_create_room_synced( $user )
+         ->then( sub {
+            my ( $room_id ) = @_;
+
+            push @rooms, $room_id;
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "First message",
+            )
+         });
+      }, foreach => [ 1 .. $num_rooms ])
+      ->then( sub {
+         matrix_sync_post( $user,
+            content => {
+               pagination_config => {
+                  limit => $pagination_limit,
+                  order => "o",
+               }
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         $body->{pagination_info}{limited} or die "Limited flag is not set";
+
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+               extras => { paginate => { limit => 10 } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         not $body->{pagination_info}{limited} or die "Limited flag is set";
+
+         assert_eq( scalar keys $body->{rooms}{join}, $num_rooms - $pagination_limit, "number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[0 .. $num_rooms - $pagination_limit - 1] );
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::true );
+         assert_eq( $room->{timeline}{limited}, JSON::true, "room is limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 2, "two messages in timeline");
+
+         first {
+            $_->{type} eq "m.room.create"
+         } @{$room->{state}{events}} or die "Expected creation event";
 
          Future->done( 1 );
       });
