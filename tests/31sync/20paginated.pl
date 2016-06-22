@@ -107,6 +107,8 @@ multi_test "Paginated sync",
 
          my $room = $body->{rooms}{join}{$rooms[0]};
 
+         assert_eq( $room->{synced}, JSON::true );
+
          first {
             $_->{content}{body} eq "Second message"
          } @{$room->{timeline}{events}} or die "Expected new message";
@@ -140,6 +142,8 @@ multi_test "Paginated sync",
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::true );
 
          assert_eq( $room->{timeline}{limited}, JSON::false, "room is not limited");
          assert_eq( scalar @{$room->{timeline}{events}}, 1, "one new messages in timeline");
@@ -193,6 +197,8 @@ multi_test "Paginated sync",
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::true );
 
          first {
             $_->{content}{body} eq "Fourth message"
@@ -336,6 +342,99 @@ multi_test "Can request unsen room",
          assert_eq( scalar @{$room->{timeline}{events}}, 2, "two messages in timeline");
 
          pass "Room that was being peeked in gets fully synced";
+
+         Future->done( 1 );
+      });
+   };
+
+multi_test "Synced flag is correctly set when peeking",
+   requires => [ local_user_fixture( with_events => 0 ) ],
+
+   timeout => 100,
+
+   check => sub {
+      my ( $user ) = @_;
+      my @rooms;
+
+      my $num_rooms = 5;
+      my $pagination_limit = 3;
+
+      try_repeat( sub {
+         matrix_create_room_synced( $user )
+         ->then( sub {
+            my ( $room_id ) = @_;
+
+            push @rooms, $room_id;
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "First message",
+            )
+         });
+      }, foreach => [ 1 .. $num_rooms ])
+      ->then( sub {
+         matrix_sync_post( $user,
+            content => {
+               pagination_config => {
+                  limit => $pagination_limit,
+                  order => "o",
+               }
+            }
+         );
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+               extras => { peek => { $rooms[0] => {} } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body->{rooms}{join}, $rooms[0] );
+
+         pass "Unseen room is in incremental sync";
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::false );
+
+         pass "Synced flag in peeked room is false";
+
+         matrix_send_room_text_message_synced( $user, $rooms[-1],
+            body => "Another message",
+         )
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+               extras => { peek => { $rooms[0] => { since => $user->sync_next_batch } } },
+            }
+         );
+      })->then( sub {
+         matrix_send_room_text_message_synced( $user, $rooms[0],
+            body => "Yet another message",
+         )
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+               extras => { peek => { $rooms[0] => { since => $user->sync_next_batch } } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[0] );
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::true );
+
+         assert_eq( $room->{timeline}{limited}, JSON::false, "room isn't limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 1, "one message in timeline");
+
+         pass "Synced flag set on room when received message while peeking";
 
          Future->done( 1 );
       });
