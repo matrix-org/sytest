@@ -507,3 +507,133 @@ test "Can paginate paginated sync",
          Future->done( 1 );
       });
    };
+
+multi_test "Paginated sync inlcude tags",
+   requires => [ local_user_fixture( with_events => 0 ) ],
+
+   timeout => 100,
+
+   check => sub {
+      my ( $user ) = @_;
+      my @rooms;
+
+      my $num_rooms = 5;
+      my $pagination_limit = 3;
+
+      try_repeat( sub {
+         matrix_create_room_synced( $user )
+         ->then( sub {
+            my ( $room_id ) = @_;
+
+            push @rooms, $room_id;
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "First message",
+            )
+         });
+      }, foreach => [ 1 .. $num_rooms ])
+      ->then( sub {
+         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+      })->then( sub {
+         matrix_sync_post( $user,
+            content => {
+               pagination_config => {
+                  limit => $pagination_limit,
+                  order => "o",
+                  tags => "include_all",
+               }
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         $body->{pagination_info}{limited} or die "Limited flag is not set";
+
+         # Check that the newest rooms are in the sync
+         assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1, 0] );
+         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit + 1, "correct number of rooms");
+
+         pass "Tagged room is in initial sync";
+
+         matrix_send_room_text_message_synced( $user, $rooms[0],
+            body => "Second message",
+         )
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         not $body->{pagination_info}{limited} or die "Limited flag is set";
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[0] );
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::true );
+         assert_eq( $room->{timeline}{limited}, JSON::false, "room is not limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 1, "one message in timeline");
+         assert_eq( scalar @{$room->{state}{events}}, 0, "no state");
+
+         pass "Tagged room does not have full state in incremental sync";
+
+         Future->done( 1 );
+      });
+   };
+
+
+test "Paginated sync ignore tags",
+   requires => [ local_user_fixture( with_events => 0 ) ],
+
+   timeout => 100,
+
+   check => sub {
+      my ( $user ) = @_;
+      my @rooms;
+
+      my $num_rooms = 5;
+      my $pagination_limit = 3;
+
+      try_repeat( sub {
+         matrix_create_room_synced( $user )
+         ->then( sub {
+            my ( $room_id ) = @_;
+
+            push @rooms, $room_id;
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "First message",
+            )
+         });
+      }, foreach => [ 1 .. $num_rooms ])
+      ->then( sub {
+         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+      })->then( sub {
+         matrix_sync_post( $user,
+            content => {
+               pagination_config => {
+                  limit => $pagination_limit,
+                  order => "o",
+                  tags => "ignore",
+               }
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         $body->{pagination_info}{limited} or die "Limited flag is not set";
+
+         # Check that the newest rooms are in the sync
+         assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
+         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+
+         Future->done( 1 );
+      });
+   };
