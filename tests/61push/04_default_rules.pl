@@ -30,6 +30,34 @@ sub default_global_rules
             enabled    => JSON::true,
             rule_id    => ".m.rule.suppress_notices",
          },
+         {
+            actions    => [
+                "notify",
+                { set_tweak => "sound", value => "default" },
+                { set_tweak => "highlight", value => JSON::false },
+            ],
+            conditions => [
+               { key => "type", kind => "event_match", pattern => "m.room.member" },
+               { key => "content.membership", kind => "event_match", pattern => "invite" },
+               {
+                  key => "state_key",
+                  kind => "event_match",
+                  pattern => "$user_id",
+               },
+            ],
+            default    => JSON::true,
+            enabled    => JSON::true,
+            rule_id    => ".m.rule.invite_for_me",
+         },
+         {
+            actions    => ["dont_notify"],
+            conditions => [
+               { key => "type", kind => "event_match", pattern => "m.room.member" },
+            ],
+            default    => JSON::true,
+            enabled    => JSON::true,
+            rule_id    => ".m.rule.member_event",
+         },
       ],
       room => [],
       sender => [],
@@ -121,39 +149,6 @@ sub default_global_rules
             default    => JSON::true,
             enabled    => JSON::true,
             rule_id    => ".m.rule.room_one_to_one",
-         },
-         {
-            actions    => [
-               "notify",
-               {
-                  set_tweak => "sound",
-                  value     => "default"
-               },
-               {
-                  set_tweak => "highlight",
-                  value     => JSON::false
-               },
-            ],
-            conditions => [
-               {
-                  kind      => "event_match",
-                  key       => "type",
-                  pattern   => "m.room.member",
-               },
-               {
-                  kind      => "event_match",
-                  key       => "content.membership",
-                  pattern   => "invite",
-               },
-               {
-                  key      => "state_key",
-                  kind     => "event_match",
-                  pattern  => $user_id,
-               },
-            ],
-            default    => JSON::true,
-            enabled    => JSON::true,
-            rule_id    => ".m.rule.invite_for_me",
          },
          {
             actions    => [
