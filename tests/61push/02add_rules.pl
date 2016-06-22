@@ -1,9 +1,11 @@
 use Future::Utils qw( repeat );
+use List::Util qw( first );
 
 push our @EXPORT, qw(
    matrix_add_push_rule matrix_delete_push_rule
    matrix_get_push_rule matrix_get_push_rules
    matrix_set_push_rule_enabled
+   matrix_set_push_rule_actions
 );
 
 =head2 matrix_add_push_rule
@@ -72,6 +74,28 @@ sub matrix_set_push_rule_enabled
    );
 }
 
+=head2 matrix_set_push_rule_actions
+
+   matrix_set_push_rule_actions( $user, $scope, $kind, $rule_id, $actions )->get
+
+scope: Either "global" or "device/<profile_tag>"
+kind: Either "override", "underride", "sender", "room", or "content"
+rule_id: String id for the rule.
+enabled: array of actions.
+
+=cut
+
+sub matrix_set_push_rule_actions
+{
+   my ( $user, $scope, $kind, $rule_id, $actions ) = @_;
+
+   do_request_json_for( $user,
+      method  => "PUT",
+      uri     => "/r0/pushrules/$scope/$kind/$rule_id/actions",
+      content => { actions => $actions },
+   );
+}
+
 =head2 matrix_get_push_rule
 
    my $rule = matrix_get_push_rule( $user, $scope, $kind, $rule_id )->get
@@ -112,7 +136,7 @@ sub matrix_get_push_rules
    )->on_done( sub {
       my ( $body ) = @_;
 
-      assert_json_keys( $body, qw( global device ) );
+      assert_json_keys( $body, qw( global ) );
    });
 }
 
@@ -120,20 +144,73 @@ sub check_add_push_rule
 {
    my ( $user, $scope, $kind, $rule_id, $rule_body, %params ) = @_;
 
-   matrix_add_push_rule( $user, $scope, $kind, $rule_id, $rule_body, %params )
-   ->then( sub {
-      matrix_get_push_rule( $user, $scope, $kind, $rule_id );
-   })->then( sub {
+   my $check_rule = sub {
       my ( $rule ) = @_;
 
       log_if_fail "Rule", $rule;
 
       assert_json_keys( $rule, qw( rule_id actions enabled ) );
 
-      assert_eq( $rule->{rule_id}, $rule_id );
+      assert_json_boolean( $rule->{enabled} );
 
-      Future->done(1);
-   });
+      assert_eq( $rule->{rule_id}, $rule_id );
+   };
+
+   my $check_rule_list = sub {
+      my ( $rules ) = @_;
+
+      my ( $rule ) = first { $_->{rule_id} eq $rule_id } @$rules;
+
+      $check_rule->( $rule );
+   };
+
+   matrix_add_push_rule( $user, $scope, $kind, $rule_id, $rule_body, %params )
+   ->then( sub {
+      matrix_get_push_rule( $user, $scope, $kind, $rule_id )
+      ->on_done( $check_rule );
+   })->then( sub {
+      do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/$kind/",
+      )->on_done( $check_rule_list );
+   })->then( sub {
+       do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/",
+      )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, $kind );
+         $check_rule_list->( $body->{$kind} );
+      });
+   })->then( sub {
+      matrix_get_push_rules( $user )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body->{$scope}, $kind );
+         $check_rule_list->( $body->{$scope}{$kind} );
+      });
+   })->then( sub {
+      # Check that the rule is enabled.
+      do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/$kind/$rule_id/enabled",
+      )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_deeply_eq( $body, { enabled => JSON::true } );
+      });
+   })->then( sub {
+      # Check that the actions match.
+      do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/$kind/$rule_id/actions",
+      )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_deeply_eq( $body, { actions => $rule_body->{actions} } );
+      });
+   })
 }
 
 
@@ -321,8 +398,6 @@ test "Can disable a push rule",
 
 test "Adding the same push rule twice is idempotent",
    requires => [ local_user_fixture() ],
-
-   bug => "SYN-391",
 
    do => sub {
       my ( $user ) = @_;

@@ -1,5 +1,5 @@
 foreach my $i (
-   [ "Anonymous", sub { anonymous_user_fixture() } ],
+   [ "Guest", sub { guest_user_fixture() } ],
    [ "Real", sub { local_user_fixture() } ]
 ) {
    my ( $name, $fixture ) = @$i;

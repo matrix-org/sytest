@@ -6,7 +6,7 @@ my $remote_user_fixture = remote_user_fixture();
 
 # Ensure all the users are members of a shared room, so that we know presence
 # messages can be shared between them all
-my $room_fixture = room_fixture(
+my $room_fixture = magic_room_fixture(
    requires_users => [
       $senduser_fixture, $local_user_fixture, $remote_user_fixture
    ],
@@ -69,21 +69,18 @@ test "Presence changes are also reported to remote room members",
          # right one
          $content->{user_id} eq $senduser->user_id or return;
 
-         $content->{status_msg} and $content->{status_msg} eq $status_msg
-            or return;
-
          return 1;
       });
    };
 
-test "Presence changes to OFFLINE are reported to local room members",
+test "Presence changes to UNAVAILABLE are reported to local room members",
    requires => [ $senduser_fixture, $local_user_fixture, $room_fixture,
                  qw( can_set_presence )],
 
    do => sub {
       my ( $senduser, $local_user, undef ) = @_;
 
-      matrix_set_presence_status( $senduser, "offline" )->then( sub {
+      matrix_set_presence_status( $senduser, "unavailable" )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
 
@@ -94,7 +91,7 @@ test "Presence changes to OFFLINE are reported to local room members",
                my $content = $event->{content};
                return unless $content->{user_id} eq $senduser->user_id;
 
-               return unless $content->{presence} eq "offline";
+               return unless $content->{presence} eq "unavailable";
 
                return 1;
             })
@@ -102,7 +99,7 @@ test "Presence changes to OFFLINE are reported to local room members",
       });
    };
 
-test "Presence changes to OFFLINE are reported to remote room members",
+test "Presence changes to UNAVAILABLE are reported to remote room members",
    requires => [ $senduser_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_set_presence can_join_remote_room_by_alias )],
 
@@ -117,7 +114,7 @@ test "Presence changes to OFFLINE are reported to remote room members",
          my $content = $event->{content};
          return unless $content->{user_id} eq $senduser->user_id;
 
-         return unless $content->{presence} eq "offline";
+         return unless $content->{presence} eq "unavailable";
 
          return 1;
       });

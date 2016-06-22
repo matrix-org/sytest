@@ -28,7 +28,7 @@ my $local_user_fixture = local_user_fixture();
 
 my $remote_user_fixture = remote_user_fixture();
 
-my $room_fixture = room_fixture(
+my $room_fixture = magic_room_fixture(
    requires_users => [
       $typing_user_fixture, $local_user_fixture, $remote_user_fixture
    ],
@@ -139,6 +139,8 @@ multi_test "Typing notifications timeout and can be resent",
    requires => [ $typing_user_fixture, $room_fixture,
                 qw( can_set_room_typing )],
 
+   timeout => 100,
+
    do => sub {
       my ( $user, $room_id ) = @_;
 
@@ -147,7 +149,7 @@ multi_test "Typing notifications timeout and can be resent",
       flush_events_for( $user )->then( sub {
          matrix_typing( $user, $room_id,
             typing => 1,
-            timeout => 100, # msec; i.e. very short
+            timeout => 10000, # msec; i.e. very long
          );
       })->then( sub {
          pass( "Sent typing notification" );
@@ -163,6 +165,11 @@ multi_test "Typing notifications timeout and can be resent",
             pass( "Received start notification" );
             return 1;
          });
+      })->then( sub {
+         matrix_typing( $user, $room_id,
+            typing => 1,
+            timeout => 100, # msec; i.e. very short
+         );
       })->then( sub {
          # stop typing
          await_event_for( $user, filter => sub {

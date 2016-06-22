@@ -197,7 +197,10 @@ test "Latest account data appears in v2 /sync",
       my ( $user, $room_id ) = @_;
 
       setup_account_data( $user, $room_id )->then( sub {
-         matrix_sync( $user );
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced");
+      })->then( sub {
+         matrix_sync( $user, filter => '{"account_data":{"types":["my.test.type"]}}' );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -242,11 +245,17 @@ test "New account data appears in incremental v2 /sync",
             $user, $room_id, "my.changing.type", "dogs", "frogs"
          ),
       )->then( sub {
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced");
+      })->then( sub {
          matrix_sync( $user );
       })->then( sub {
          setup_incremental_account_data(
             $user, $room_id, "my.changing.type", "cats", "rats"
          ),
+      })->then( sub {
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced");
       })->then( sub {
          matrix_sync_again( $user );
       })->then( sub {

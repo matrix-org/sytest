@@ -10,7 +10,7 @@ test "/whois",
       # tightly control the actions taken by that user.
       # Conceivably this API may change based on the number of API calls the
       # user made, for instance.
-      matrix_register_user( $http )
+      matrix_register_user( $http, "admin" )
       ->then( sub {
          ( $user ) = @_;
 

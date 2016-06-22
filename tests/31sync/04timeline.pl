@@ -21,8 +21,7 @@ test "Can sync a room with a single message",
          );
       })->then( sub {
          ( $event_id_1 ) = @_;
-
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "Test message 2",
          );
       })->then( sub {
@@ -77,7 +76,7 @@ test "Can sync a room with a message with a transaction id",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "A test message", txn_id => "my_transaction_id"
          );
       })->then( sub {
@@ -126,7 +125,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -134,7 +133,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
       })->then( sub {
          my ( $body ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "A test message", txn_id => "my_transaction_id"
          );
       })->then( sub {
@@ -179,6 +178,7 @@ test "A filtered timeline reaches its limit",
             timeline => { limit => 1, types => ["m.room.message"] },
             state    => { types => [] },
          },
+         account_data => { types => [] },
          presence => { types => [] },
       };
 
@@ -195,12 +195,7 @@ test "A filtered timeline reaches its limit",
       })->then( sub {
          ( $event_id ) = @_;
 
-         Future->needs_all( map {
-            matrix_send_room_message( $user, $room_id,
-               content => { "filler" => $_ },
-               type    => "a.made.up.filler.type",
-            )
-         } 0 .. 10 );
+         matrix_send_filler_messages_synced( $user, $room_id, 12 );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
@@ -239,7 +234,7 @@ test "Syncing a new room with a large timeline limit isn't limited",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -273,7 +268,7 @@ test "A full_state incremental update returns only recent timeline",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -288,10 +283,10 @@ test "A full_state incremental update returns only recent timeline",
             )
          } 0 .. 10 );
       })->then( sub {
-         matrix_send_room_message( $user, $room_id,
-               content => { "filler" => $_ },
-               type    => "another.filler.type",
-             );
+         matrix_send_room_message_synced( $user, $room_id,
+            content => { "filler" => 11 },
+            type    => "another.filler.type",
+         );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id, full_state => 'true' );
       })->then( sub {
@@ -333,7 +328,9 @@ test "A prev_batch token can be used in the v1 messages API",
       })->then( sub {
          ( $event_id_1 ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id, body => "2" );
+         matrix_send_room_text_message_synced( $user, $room_id,
+            body => "2"
+         );
       })->then( sub {
          ( $event_id_2 ) = @_;
 
@@ -394,7 +391,9 @@ test "A next_batch token can be used in the v1 messages API",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id, body => "1" );
+         matrix_send_room_text_message_synced( $user, $room_id,
+            body => "1"
+         );
       })->then( sub {
          ( $event_id_1 ) = @_;
 

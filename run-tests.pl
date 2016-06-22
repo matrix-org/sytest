@@ -23,6 +23,7 @@ use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any maxstr );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
+use Time::HiRes qw( time );
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
@@ -48,6 +49,8 @@ our %SYNAPSE_ARGS = (
    log_filter => [],
    coverage   => 0,
    dendron    => "",
+   pusher     => 0,
+   synchrotron => 0,
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
@@ -78,6 +81,10 @@ GetOptions(
    'coverage+' => \$SYNAPSE_ARGS{coverage},
 
    'dendron=s' => \$SYNAPSE_ARGS{dendron},
+
+   'pusher+' => \$SYNAPSE_ARGS{pusher},
+
+   'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
 
    'p|port-base=i' => \(my $PORT_BASE = 8000),
 
@@ -263,7 +270,9 @@ if( $CLIENT_LOG ) {
 
 my $loop = IO::Async::Loop->new;
 
-$SIG{INT} = sub { exit 1 };
+# Be polite to any existing SIGINT handler (e.g. in case of Devel::MAT et.al.)
+my $old_SIGINT = $SIG{INT};
+$SIG{INT} = sub { $old_SIGINT->( "INT" ) if ref $old_SIGINT; exit 1 };
 
 
 # We need two servers; a "local" and a "remote" one for federation-based tests
@@ -277,12 +286,14 @@ sub delay
 }
 
 my @log_if_fail_lines;
+my $test_start_time;
 
 sub log_if_fail
 {
    my ( $message, $structure ) = @_;
 
-   push @log_if_fail_lines, $message;
+   my $elapsed_time = time() - $test_start_time;
+   push @log_if_fail_lines, sprintf("%.06f: %s", $elapsed_time, $message);
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
@@ -322,6 +333,10 @@ sub fixture
          });
       }
    }
+
+   # If there's no requirements, we still want to wait for $f_start before we
+   # actually invoke $setup
+   @req_futures or push @req_futures, $f_start;
 
    return Fixture(
       \@requires,
@@ -406,6 +421,7 @@ sub _run_test
    my ( $t, $test ) = @_;
 
    undef @log_if_fail_lines;
+   $test_start_time = time();
 
    local $MORE_STUBS = [];
 

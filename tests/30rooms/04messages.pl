@@ -6,7 +6,7 @@ my $local_user_fixture = local_user_fixture();
 
 my $remote_fixture = remote_user_fixture();
 
-my $room_fixture = room_fixture(
+my $room_fixture = magic_room_fixture(
    requires_users => [ $senduser_fixture, $local_user_fixture, $remote_fixture ],
 );
 
@@ -190,7 +190,7 @@ test "Remote room members can get room messages",
    };
 
 test "Message history can be paginated",
-   requires => [ local_user_and_room_fixtures() ],
+   requires => [ magic_local_user_and_room_fixtures() ],
 
    proves => [qw( can_paginate_room )],
 
@@ -241,7 +241,7 @@ test "Message history can be paginated over federation",
       my $local_user_fixture = local_user_fixture();
 
       [ $local_user_fixture,
-        room_fixture( requires_users => [ $local_user_fixture ], with_alias => 1 ),
+        magic_room_fixture( requires_users => [ $local_user_fixture ], with_alias => 1 ),
         remote_user_fixture(),
 
         qw( can_paginate_room ),
@@ -259,6 +259,8 @@ test "Message history can be paginated over federation",
          )
       } foreach => [ 1 .. 20 ] )->then( sub {
          matrix_join_room( $remote_user, $room_alias );
+      })->then( sub {
+         flush_events_for( $remote_user )
       })->then( sub {
          # The member event is likely to arrive first
          matrix_get_room_messages( $remote_user, $room_id, limit => 5+1 )
@@ -298,6 +300,23 @@ test "Message history can be paginated over federation",
          assert_eq( $chunk->[4]{content}{body}, "Message number 11",
             'chunk[4] content body' );
 
-         Future->done(1);
+         matrix_send_room_text_message( $creator, $room_id,
+            body => "Marker message"
+         )
+      })->then( sub {
+         my ( $event_id ) = @_;
+
+         # Wait for the message we just sent, ensuring that we don't see any
+         # of the backfilled events.
+         await_event_for( $remote_user, filter => sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.message";
+
+            log_if_fail "Received event", $event;
+
+            assert_eq( $event->{event_id}, $event_id, "Got unexpected event");
+
+            return 1;
+         })
       });
    };

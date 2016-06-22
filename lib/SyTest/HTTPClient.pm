@@ -23,6 +23,17 @@ use SyTest::JSONSensible;
 
 use constant MIME_TYPE_JSON => "application/json";
 
+sub _init
+{
+   my $self = shift;
+   my ( $params ) = @_;
+
+   # Turn off pipelining because it gets in the way of longpolls
+   $params->{pipeline} = 0;
+
+   $self->SUPER::_init( $params );
+}
+
 sub configure
 {
    my $self = shift;

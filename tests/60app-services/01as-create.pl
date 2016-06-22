@@ -1,8 +1,6 @@
 my $user_fixture = local_user_fixture();
 
-my $room_fixture = room_fixture(
-   requires_users => [ $user_fixture ],
-);
+my $room_fixture = room_fixture( $user_fixture );
 
 test "AS can create a user",
    requires => [ $main::AS_USER[0], $room_fixture ],
@@ -166,7 +164,7 @@ sub matrix_register_as_ghost
 
       # TODO: user has no event stream yet. Should they?
       Future->done(
-         User( $as_user->http, $body->{user_id}, $body->{access_token}, undef, undef, undef, [], undef )
+         User( $as_user->http, $body->{user_id}, undef, $body->{access_token}, undef, undef, undef, [], undef )
       );
    });
 }

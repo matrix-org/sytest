@@ -1,11 +1,17 @@
 use JSON qw( decode_json );
 use URI;
 
+# See also 10apidoc/01register.pl
+
+# This test only tests the recaptcha validation stage, and not
+# and actual registration. It also abuses the fact the Synapse
+# permits validation of a recaptcha stage even if it's not actually
+# required in any of the given auth flows.
 multi_test "Register with a recaptcha",
-   requires => [ $main::API_CLIENTS[0] ],
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
    do => sub {
-      my ( $http ) = @_;
+      my ( $http, $localpart ) = @_;
 
       Future->needs_all(
          await_http_request( "/recaptcha/api/siteverify", sub {1} )
@@ -32,7 +38,7 @@ multi_test "Register with a recaptcha",
             method  => "POST",
             uri     => "/r0/register",
             content => {
-               username => "SYT-8-username",
+               username => $localpart,
                password => "my secret",
                auth     => {
                   type     => "m.login.recaptcha",
@@ -60,4 +66,205 @@ multi_test "Register with a recaptcha",
             Future->done(1);
          }),
       )
+   };
+
+test "registration is idempotent, without username specified",
+   requires => [ $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      my $session;
+      my $user_id;
+
+      # Start a session
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            password => "s3kr1t",
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session ));
+
+         $session = $body->{session};
+
+         # Now register a user
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               password => "s3kr1t",
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         # check that worked okay...
+         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+
+         $user_id = $body->{user_id};
+
+         # now try to register again with the same session
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               password => "s3kr1t",
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         # we should have got an equivalent response
+         # (ie. success, and the same user id)
+         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+
+         assert_eq( $body->{user_id}, $user_id );
+
+         Future->done( 1 );
+      });
+   };
+
+test "registration is idempotent, with username specified",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   do => sub {
+      my ( $http, $localpart ) = @_;
+
+      my $session;
+
+      # Start a session
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            username => $localpart,
+            password => "s3kr1t",
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session ));
+
+         $session = $body->{session};
+
+         # Now register a user
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               username => $localpart,
+               password => "s3kr1t",
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         # check that worked okay...
+         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+
+         # now try to register again with the same session
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               username => $localpart,
+               password => "s3kr1t",
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         # we should have got an equivalent response
+         # (ie. success, and the same user id)
+         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+
+         my $actual_user_id = $body->{user_id};
+         my $home_server = $body->{home_server};
+
+         assert_eq( $actual_user_id, "\@$localpart:$home_server",
+            "registered user ID" );
+
+         Future->done( 1 );
+      });
+   };
+
+test "registration remembers parameters",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   do => sub {
+      my ( $http, $localpart ) = @_;
+
+      my $session;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            username => $localpart,
+            password => "s3kr1t",
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session ));
+
+         $session = $body->{session};
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+
+         my $actual_user_id = $body->{user_id};
+         my $home_server = $body->{home_server};
+
+         assert_eq( $actual_user_id, "\@$localpart:$home_server",
+            "registered user ID" );
+
+         Future->done( 1 );
+      });
    };

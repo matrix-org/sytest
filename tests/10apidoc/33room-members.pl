@@ -54,14 +54,18 @@ push our @EXPORT, qw( matrix_join_room );
 
 sub matrix_join_room
 {
-   my ( $user, $room ) = @_;
+   my ( $user, $room, %opts ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
+
+   my %content;
+
+   defined $opts{third_party_signed} and $content{third_party_signed} = $opts{third_party_signed};
 
    do_request_json_for( $user,
       method => "POST",
       uri    => "/r0/join/$room",
 
-      content => {},
+      content => \%content,
    )->then_done(1);
 }
 
@@ -240,13 +244,13 @@ sub matrix_invite_user_to_room
 {
    my ( $user, $invitee, $room_id ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
-   ref $room_id and croak "Expected a room ID; got $room_id";
+   ( defined $room_id and !ref $room_id ) or croak "Expected a room ID; got $room_id";
 
    my $invitee_id;
    if( is_User( $invitee ) ) {
       $invitee_id = $invitee->user_id;
    }
-   elsif( !ref $invitee ) {
+   elsif( defined $invitee and !ref $invitee ) {
       $invitee_id = $invitee;
    }
    else {
@@ -299,6 +303,18 @@ test "POST /rooms/:room_id/ban can ban a user",
 
 my $next_alias = 1;
 
+sub _invite_users
+{
+   my ( $creator, $room_id, @other_members ) = @_;
+
+   Future->needs_all(
+     ( map {
+         my $user = $_;
+         matrix_invite_user_to_room( $creator, $user, $room_id );
+      } @other_members)
+   );
+}
+
 push @EXPORT, qw( matrix_create_and_join_room );
 
 sub matrix_create_and_join_room
@@ -324,6 +340,10 @@ sub matrix_create_and_join_room
 
       log_if_fail "room_id=$room_id";
 
+      ( $options{with_invite} ?
+         _invite_users( $creator, $room_id, @other_members ) :
+         Future->done() )
+   })->then( sub {
       # Best not to join remote users concurrently because of
       #   https://matrix.org/jira/browse/SYN-318
       my %members_by_server = partition_by { $_->http } @other_members;
@@ -388,6 +408,30 @@ push @EXPORT, qw( room_fixture );
 
 sub room_fixture
 {
+   my ( $user_fixture, %args ) = @_;
+
+   fixture(
+      requires => [ $user_fixture ],
+
+      setup => sub {
+         my ( $user ) = @_;
+
+         matrix_create_room( $user, %args )->then( sub {
+            my ( $room_id ) = @_;
+            # matrix_create_room returns the room_id and the room_alias if
+            #  one was set. However we only want to return the room_id
+            #  because our callers only expect the room_id to be passed to
+            #  their setup code.
+            Future->done( $room_id );
+         });
+      }
+   );
+}
+
+push @EXPORT, qw( magic_room_fixture );
+
+sub magic_room_fixture
+{
    my %args = @_;
 
    fixture(
@@ -396,7 +440,7 @@ sub room_fixture
       setup => sub {
          my @members = @_;
 
-         matrix_create_and_join_room( \@members, %args )
+         matrix_create_and_join_room( \@members, %args );
       }
    );
 }
@@ -405,10 +449,26 @@ push @EXPORT, qw( local_user_and_room_fixtures );
 
 sub local_user_and_room_fixtures
 {
+   my %args = @_;
+
    my $user_fixture = local_user_fixture();
 
    return (
       $user_fixture,
-      room_fixture( requires_users => [ $user_fixture ] ),
+      room_fixture( $user_fixture, %args ),
+   );
+}
+
+push @EXPORT, qw( magic_local_user_and_room_fixtures );
+
+sub magic_local_user_and_room_fixtures
+{
+   my %args = @_;
+
+   my $user_fixture = local_user_fixture();
+
+   return (
+      $user_fixture,
+      magic_room_fixture( requires_users => [ $user_fixture ], %args ),
    );
 }

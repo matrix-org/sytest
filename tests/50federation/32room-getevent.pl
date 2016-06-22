@@ -1,10 +1,10 @@
 test "Inbound federation can return events",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 room_fixture( requires_users => [ local_user_fixture() ] ),
+                 local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
       my $first_home_server = $info->server_name;
 
       my $local_server_name = $outbound_client->server_name;

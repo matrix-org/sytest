@@ -83,7 +83,9 @@ test "New read receipts appear in incremental v2 /sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_advance_room_receipt( $user, $room_id, "m.read", $event_id );
+         matrix_advance_room_receipt_synced(
+            $user, $room_id, "m.read", $event_id
+         );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {

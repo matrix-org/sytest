@@ -9,11 +9,19 @@ test "User sees their own presence in a sync",
 
       my $filter_id;
 
-      my $filter = { presence => { types => [ "m.presence" ] } };
+      my $filter = {
+         presence     => { types => [ "m.presence" ] },
+         account_data => { types => [] },
+      };
 
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
+         matrix_do_and_wait_for_sync( $user,
+            do => sub { matrix_sync( $user, filter => $filter_id ) },
+            check => sub { $_[0]->{presence}{events}[0] },
+         );
+      })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
@@ -103,6 +111,9 @@ test "User sees updates to presence from other users in the incremental sync.",
          });
       })->then( sub {
          matrix_sync( $user_a, filter => $filter_id_a );
+      })->then( sub {
+         # We sync again so that we get our own presence down.
+         matrix_sync_again( $user_a, filter => $filter_id_a );
       })->then( sub {
          # Set user B's presence to online by syncing.
          matrix_sync( $user_b, filter => $filter_id_b );

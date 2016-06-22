@@ -30,6 +30,9 @@ sub matrix_send_room_message
    my ( $user, $room_id, %opts ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
 
+   defined $room_id or
+      croak "Cannot matrix_send_room_message() with no room_id";
+
    defined $opts{content} or
       croak "Cannot matrix_send_room_message() with no content";
 

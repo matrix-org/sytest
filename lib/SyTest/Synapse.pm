@@ -25,7 +25,7 @@ sub _init
 
    $self->{$_} = delete $args->{$_} for qw(
       port unsecure_port output synapse_dir extra_args python config coverage
-      dendron
+      dendron pusher synchrotron
    );
 
    $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
@@ -115,7 +115,8 @@ sub start
    }
 
    if( defined $db_type ) {
-      $self->${\"clear_db_$db_type"}( %db_args );
+      my $clear_meth = "clear_db_${db_type}";
+      $self->$clear_meth( %db_args );
    }
 
    # Clean up the media_store directory each time, or else it fills up with
@@ -141,7 +142,7 @@ sub start
          bind_address => "127.0.0.1",
          tls => 1,
          resources => [{
-            names => [ "client", "federation" ], compress => 0
+            names => [ "client", "federation", "replication" ], compress => 0
          }]
       };
    }
@@ -153,19 +154,21 @@ sub start
          bind_address => "127.0.0.1",
          tls => 0,
          resources => [{
-            names => [ "client", "federation" ], compress => 0
+            names => [ "client", "federation", "replication" ], compress => 0
          }]
       }
    }
 
    my $cert_file = "$self->{hs_dir}/cert.pem";
    my $key_file = "$self->{hs_dir}/key.pem";
+   my $log_config_file = "$self->{hs_dir}/log.config";
 
    my $macaroon_secret_key = "secret_$self->{port}";
 
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
         "log_file" => "$log",
+        (-f $log_config_file) ? ("log_config" => $log_config_file) : (),
         "tls_certificate_path" => $cert_file,
         "tls_private_key_path" => $key_file,
         "tls_dh_params_path" => "$cwd/keys/tls.dh",
@@ -175,6 +178,10 @@ sub start
         "database" => $db_config,
         "database_config" => $db_config_path,
         "macaroon_secret_key" => $macaroon_secret_key,
+
+        "use_frozen_events" => "true",
+
+        "invite_3pid_guest" => "true",
 
         # Metrics are always useful
         "enable_metrics" => 1,
@@ -188,9 +195,54 @@ sub start
         "listeners" => $listeners,
 
         "bcrypt_rounds" => 0,
+        "start_pushers" => (not $self->{pusher}),
+
+        "url_preview_enabled" => "true",
+        "url_preview_ip_range_blacklist" => [],
 
         %{ $self->{config} },
    } );
+
+   my $pusher_config_path = $self->write_yaml_file( pusher => {
+      "worker_app"             => "synapse.app.pusher",
+      "worker_log_file"        => "$log.pusher",
+      "worker_replication_url" => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => ( $port - 8000 + 10090 ),
+         },
+         {
+            type => "manhole",
+            port => ( $port - 8000 + 10080 ),
+         },
+      ],
+   } );
+
+   my $synchrotron_port = $port - 8000 + 11000;
+   my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
+      "worker_app"             => "synapse.app.synchrotron",
+      "worker_log_file"        => "$log.synchrotron",
+      "worker_replication_url" => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["client"] }],
+            port      => $synchrotron_port,
+         },
+         {
+            type => "manhole",
+            port => ( $port - 8000 + 11080 ),
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => ( $port - 8000 + 11090 ),
+         },
+      ],
+   } );
+
 
    $self->{logpath} = $log;
 
@@ -242,7 +294,17 @@ sub start
          "--cert-file" => $cert_file,
          "--key-file" => $key_file,
          "--addr" => "127.0.0.1:$port",
-      )
+      );
+
+      if ( $self->{pusher} ) {
+         push @command, "--pusher-config" => $pusher_config_path;
+      }
+
+      if ( $self->{synchrotron} ) {
+         push @command,
+            "--synchrotron-config" => $synchrotron_config_path,
+            "--synchrotron-url" => "http://127.0.0.1:$synchrotron_port";
+      }
    }
    else {
       @command = @synapse_command
@@ -433,12 +495,13 @@ sub clear_db_pg
    my $self = shift;
    my %args = @_;
 
-   $self->{output}->diag( "Clearing Pg database $args{database} on $args{host}" );
+   my $host = $args{host} // '';
+   $self->{output}->diag( "Clearing Pg database $args{database} on '$host'" );
 
    require DBI;
    require DBD::Pg;
 
-   my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$args{host}", $args{user}, $args{password} )
+   my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$host", $args{user}, $args{password} )
       or die DBI->errstr;
 
    foreach my $row ( @{ $dbh->selectall_arrayref( "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" ) } ) {

@@ -58,6 +58,8 @@ our @HOMESERVER_INFO = map {
             python        => $SYNAPSE_ARGS{python},
             coverage      => $SYNAPSE_ARGS{coverage},
             dendron       => $SYNAPSE_ARGS{dendron},
+            pusher        => $SYNAPSE_ARGS{pusher},
+            synchrotron   => $SYNAPSE_ARGS{synchrotron},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
