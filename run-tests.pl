@@ -151,7 +151,7 @@ Options:
 
        --coverage               - generate code coverage stats for synapse
 
-   -p, --port-base NUMBER       - initial port number to run server under test
+   -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
    -F, --fixed BUGS             - bug names that are expected to be fixed
                                   (ignores 'bug' declarations with these names)
