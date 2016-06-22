@@ -210,3 +210,133 @@ multi_test "Paginated sync",
          Future->done( 1 );
       });
    };
+
+
+multi_test "Can request unsen room",
+   requires => [ local_user_fixture( with_events => 0 ) ],
+
+   timeout => 100,
+
+   check => sub {
+      my ( $user ) = @_;
+      my @rooms;
+
+      my $num_rooms = 5;
+      my $pagination_limit = 3;
+
+      try_repeat( sub {
+         matrix_create_room_synced( $user )
+         ->then( sub {
+            my ( $room_id ) = @_;
+
+            push @rooms, $room_id;
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "First message",
+            )
+         });
+      }, foreach => [ 1 .. $num_rooms ])
+      ->then( sub {
+         matrix_sync_post( $user,
+            content => {
+               pagination_config => {
+                  limit => $pagination_limit,
+                  order => "o",
+               }
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+
+         $body->{pagination_info}{limited} or die "Limited flag is not set";
+
+         # Check that the newest rooms are in the sync
+         assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
+         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+
+         pass "Correct initial sync response";
+
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+               extras => { peek => { $rooms[0] => {} } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+
+         not $body->{pagination_info}{limited} or die "Limited flag is set";
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "correct number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[0] );
+
+         pass "Unseen room is in incremental sync";
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         first {
+            $_->{type} eq "m.room.message" && $_->{content}{body} eq "First message"
+         } @{$room->{timeline}{events}} or die "Expected new message";
+
+         assert_eq( $room->{timeline}{limited}, JSON::true, "room is limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 2, "two messages in timeline");
+
+         pass "Got some historic data in newly seen room";
+
+         first {
+            $_->{type} eq "m.room.create"
+         } @{$room->{state}{events}} or die "Expected creation event";
+
+         pass "Got full state";
+
+         matrix_send_room_text_message_synced( $user, $rooms[-1],
+            body => "Another message",
+         )
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+               extras => { peek => { $rooms[0] => { since => $user->sync_next_batch } } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[-1] );
+
+         pass "Didn't get room again when peeking";
+
+         matrix_send_room_text_message_synced( $user, $rooms[0],
+            body => "Yet another message",
+         )
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[0] );
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         first {
+            $_->{type} eq "m.room.create"
+         } @{$room->{state}{events}} or die "Expected creation event";
+
+         assert_eq( $room->{timeline}{limited}, JSON::true, "room is limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 2, "two messages in timeline");
+
+         pass "Room that was being peeked in gets fully synced";
+
+         Future->done( 1 );
+      });
+   };
