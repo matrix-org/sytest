@@ -637,3 +637,219 @@ test "Paginated sync ignore tags",
          Future->done( 1 );
       });
    };
+
+multi_test "Paginated sync with tags handles tag changes correctly",
+   requires => [ local_user_fixture( with_events => 0 ) ],
+
+   timeout => 100,
+
+   check => sub {
+      my ( $user ) = @_;
+      my @rooms;
+
+      my $num_rooms = 5;
+      my $pagination_limit = 3;
+
+      try_repeat( sub {
+         matrix_create_room_synced( $user )
+         ->then( sub {
+            my ( $room_id ) = @_;
+
+            push @rooms, $room_id;
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "First message",
+            )
+         });
+      }, foreach => [ 1 .. $num_rooms ])
+      ->then( sub {
+         matrix_sync_post( $user,
+            content => {
+               pagination_config => {
+                  limit => $pagination_limit,
+                  order => "o",
+                  tags => "include_all",
+               }
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         $body->{pagination_info}{limited} or die "Limited flag is not set";
+
+         # Check that the newest rooms are in the sync
+         assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
+         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+
+         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         not $body->{pagination_info}{limited} or die "Limited flag is set";
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[0] );
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::true );
+         assert_eq( $room->{timeline}{limited}, JSON::true, "room is limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 2, "two messages in timeline");
+
+         first {
+            $_->{type} eq "m.room.create"
+         } @{$room->{state}{events}} or die "Expected creation event";
+
+         pass "Newly tagged room has full state in incremental sync";
+
+         matrix_remove_tag( $user, $rooms[0], "test_tag" );
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         not $body->{pagination_info}{limited} or die "Limited flag is set";
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[0] );
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::false );
+         assert_eq( $room->{timeline}{limited}, JSON::false, "room is limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 0, "no messages in timeline");
+         assert_eq( scalar @{$room->{state}{events}}, 0, "no state");
+
+         pass "Untagged room gets unsynced";
+
+         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+      })->then( sub {
+         matrix_remove_tag( $user, $rooms[0], "test_tag" );
+      })->then( sub {
+         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         not $body->{pagination_info}{limited} or die "Limited flag is set";
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[0] );
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::true );
+         assert_eq( $room->{timeline}{limited}, JSON::true, "room is limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 2, "two messages in timeline");
+
+         first {
+            $_->{type} eq "m.room.create"
+         } @{$room->{state}{events}} or die "Expected creation event";
+
+         pass "Newly retagged room has full state in incremental sync";
+
+         Future->done( 1 );
+      });
+   };
+
+test "Removed room tag includes message",
+   requires => [ local_user_fixture( with_events => 0 ) ],
+
+   timeout => 100,
+
+   check => sub {
+      my ( $user ) = @_;
+      my @rooms;
+
+      my $num_rooms = 5;
+      my $pagination_limit = 3;
+
+      try_repeat( sub {
+         matrix_create_room_synced( $user )
+         ->then( sub {
+            my ( $room_id ) = @_;
+
+            push @rooms, $room_id;
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "First message",
+            )
+         });
+      }, foreach => [ 1 .. $num_rooms ])
+      ->then( sub {
+         matrix_sync_post( $user,
+            content => {
+               pagination_config => {
+                  limit => $pagination_limit,
+                  order => "o",
+                  tags => "include_all",
+               }
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         $body->{pagination_info}{limited} or die "Limited flag is not set";
+
+         # Check that the newest rooms are in the sync
+         assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
+         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+
+         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+            }
+         );
+      })->then( sub {
+         matrix_remove_tag( $user, $rooms[0], "test_tag" );
+      })->then( sub {
+         matrix_send_room_text_message_synced( $user, $rooms[0],
+            body => "Second message",
+         )
+      })->then( sub {
+         matrix_sync_post_again( $user,
+            content => {
+               filter => { room => { timeline => { limit => 2 } } },
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pagination_info ) );
+         not $body->{pagination_info}{limited} or die "Limited flag is set";
+
+         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_json_keys( $body->{rooms}{join}, $rooms[0] );
+
+         my $room = $body->{rooms}{join}{$rooms[0]};
+
+         assert_eq( $room->{synced}, JSON::false );
+         assert_eq( $room->{timeline}{limited}, JSON::false, "room is limited");
+         assert_eq( scalar @{$room->{timeline}{events}}, 1, "one message in timeline");
+         assert_eq( scalar @{$room->{state}{events}}, 0, "no state");
+
+         Future->done( 1 );
+      });
+   };
