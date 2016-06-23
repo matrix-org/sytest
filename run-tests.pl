@@ -20,7 +20,7 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
-use List::Util 1.33 qw( first all any maxstr );
+use List::Util 1.33 qw( first all any maxstr max );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
 use Time::HiRes qw( time );
@@ -86,7 +86,7 @@ GetOptions(
 
    'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
 
-   'p|port-base=i' => \(my $PORT_BASE = 8000),
+   'p|port-range=s' => \(my $PORT_RANGE = "8800:8819"),
 
    'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
@@ -151,7 +151,7 @@ Options:
 
        --coverage               - generate code coverage stats for synapse
 
-   -p, --port-base NUMBER       - initial port number to run server under test
+   -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
    -F, --fixed BUGS             - bug names that are expected to be fixed
                                   (ignores 'bug' declarations with these names)
@@ -274,9 +274,24 @@ my $loop = IO::Async::Loop->new;
 my $old_SIGINT = $SIG{INT};
 $SIG{INT} = sub { $old_SIGINT->( "INT" ) if ref $old_SIGINT; exit 1 };
 
+( my ( $port_next, $port_max ) = split m/:/, $PORT_RANGE ) == 2 or
+   die "Expected a --port-range expressed as START:MAX\n";
 
-# We need two servers; a "local" and a "remote" one for federation-based tests
-our @HOMESERVER_PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
+my %port_desc;
+
+## TODO: better name here
+sub alloc_port
+{
+   my ( $desc ) = @_;
+   defined $desc or croak "alloc_port() without description";
+
+   die "No more free ports\n" if $port_next >= $port_max;
+   my $port = $port_next++;
+
+   $port_desc{$port} = $desc;
+
+   return $port;
+}
 
 # Util. function for tests
 sub delay
@@ -657,6 +672,13 @@ foreach my $test ( @TESTS ) {
 $OUTPUT->status();
 
 if( $WAIT_AT_END ) {
+   ## It's likely someone wants to interact with a running system. Lets print all
+   #    the port descriptions to be useful
+   my $width = max map { length } values %port_desc;
+
+   print STDERR "\n";
+   printf STDERR "%-*s: %d\n", $width, $port_desc{$_}, $_ for sort keys %port_desc;
+
    print STDERR "Waiting... (hit ENTER to end)\n";
    $loop->add( my $stdin = IO::Async::Stream->new_for_stdin( on_read => sub {} ) );
    $stdin->read_until( "\n" )->get;

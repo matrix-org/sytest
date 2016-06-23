@@ -18,19 +18,14 @@ if [ -z "$POSTGRES_DB_2" ]; then
     exit 1
 fi
 
-if [ -z "$PORT_BASE" ]; then
-    echo >&2 "Variable PORT_BASE not set"
-    exit 1
-fi
-
-mkdir -p "localhost-$(($PORT_BASE + 1))"
-mkdir -p "localhost-$(($PORT_BASE + 2))"
+mkdir -p "localhost-0"
+mkdir -p "localhost-1"
 
 : PGUSER=${PGUSER:=$USER}
 
 # We leave user, password, host blank to use the defaults (unix socket and
 # local auth)
-cat > localhost-$(($PORT_BASE + 1))/database.yaml << EOF
+cat > "localhost-0/database.yaml" << EOF
 name: psycopg2
 args:
     database: $POSTGRES_DB_1
@@ -40,7 +35,7 @@ args:
     sslmode: disable
 EOF
 
-cat > localhost-$(($PORT_BASE + 2))/database.yaml << EOF
+cat > "localhost-1/database.yaml" << EOF
 name: psycopg2
 args:
     database: $POSTGRES_DB_2

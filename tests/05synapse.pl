@@ -1,5 +1,9 @@
 use SyTest::Synapse;
 
+use Cwd qw( abs_path );
+
+my $N_HOMESERVERS = 2;
+
 sub extract_extra_args
 {
    my ( $idx, $args ) = @_;
@@ -37,8 +41,8 @@ our @HOMESERVER_INFO = map {
       setup => sub {
          my ( $test_server_info, @as_infos ) = @_;
 
-         my $secure_port = $HOMESERVER_PORTS[$idx];
-         my $unsecure_port = $WANT_TLS ? 0 : $secure_port + 1000;
+         my $secure_port   = main::alloc_port( "synapse[$idx]" );
+         my $unsecure_port = main::alloc_port( "synapse[$idx].unsecure" );
 
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
 
@@ -50,8 +54,19 @@ our @HOMESERVER_INFO = map {
 
          my $synapse = SyTest::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
-            port          => $secure_port,
-            unsecure_port => $unsecure_port,
+            hs_dir        => abs_path( "localhost-$idx" ),
+            ports         => {
+               client          => $secure_port,
+               client_unsecure => $unsecure_port,
+               metrics         => main::alloc_port( "synapse[$idx].metrics" ),
+
+               pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
+               pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
+
+               synchrotron         => main::alloc_port( "synchrotron[$idx]" ),
+               synchrotron_metrics => main::alloc_port( "synchrotron[$idx].metrics" ),
+               synchrotron_manhole => main::alloc_port( "synchrotron[$idx].manhole" ),
+            },
             output        => $OUTPUT,
             print_output  => $SYNAPSE_ARGS{log},
             extra_args    => \@extra_args,
@@ -104,6 +119,10 @@ our @HOMESERVER_INFO = map {
                } );
 
                push @confs, $appserv_conf;
+
+               # Now we can fill in the AS info's user_id
+               $as_info->user_id = sprintf "@%s:localhost:%d",
+                  $as_info->localpart, $secure_port;
             }
 
             $synapse->append_config(
@@ -123,4 +142,4 @@ our @HOMESERVER_INFO = map {
          )->then_done( $info );
       },
    );
-} 0 .. $#HOMESERVER_PORTS;
+} 0 .. $N_HOMESERVERS-1;
