@@ -54,7 +54,7 @@ our @HOMESERVER_INFO = map {
 
          my $synapse = SyTest::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
-            hs_dir        => abs_path( "localhost-$secure_port" ),
+            hs_dir        => abs_path( "localhost-$idx" ),
             ports         => {
                client          => $secure_port,
                client_unsecure => $unsecure_port,
