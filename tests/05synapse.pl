@@ -41,8 +41,8 @@ our @HOMESERVER_INFO = map {
       setup => sub {
          my ( $test_server_info, @as_infos ) = @_;
 
-         my $secure_port = main::alloc_port( "synapse[$idx]" );
-         my $unsecure_port = $WANT_TLS ? 0 : main::alloc_port( "synapse[$idx].unsecure" );
+         my $secure_port   = main::alloc_port( "synapse[$idx]" );
+         my $unsecure_port = main::alloc_port( "synapse[$idx].unsecure" );
 
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
 
