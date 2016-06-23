@@ -12,7 +12,7 @@ use Future::Utils qw( try_repeat );
 use IO::Async::Process;
 use IO::Async::FileStream;
 
-use Cwd qw( getcwd abs_path );
+use Cwd qw( getcwd );
 use File::Basename qw( dirname );
 use File::Path qw( make_path remove_tree );
 use List::Util qw( any pairmap );
@@ -26,15 +26,12 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      ports output synapse_dir extra_args python config coverage
+      ports output hs_dir synapse_dir extra_args python config coverage
       dendron pusher synchrotron
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
       for qw( client client_unsecure metrics );
-
-   my $port = $self->{ports}{client};
-   $self->{hs_dir} = abs_path( "localhost-$port" );
 
    $self->SUPER::_init( $args );
 }

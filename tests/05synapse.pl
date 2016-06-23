@@ -1,5 +1,7 @@
 use SyTest::Synapse;
 
+use Cwd qw( abs_path );
+
 my $N_HOMESERVERS = 2;
 
 sub extract_extra_args
@@ -52,6 +54,7 @@ our @HOMESERVER_INFO = map {
 
          my $synapse = SyTest::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
+            hs_dir        => abs_path( "localhost-$secure_port" ),
             ports         => {
                client          => $secure_port,
                client_unsecure => $unsecure_port,
