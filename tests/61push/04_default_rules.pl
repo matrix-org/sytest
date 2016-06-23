@@ -4,6 +4,8 @@ sub default_global_rules
 
    my ( $user_localpart ) = ( $user_id =~ m/@([^:]*):/ );
 
+   # Taken from https://matrix.org/speculator/spec/HEAD/client_server/unstable.html#predefined-rules
+
    return {
       override => [
          {
