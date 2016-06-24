@@ -5,12 +5,14 @@ use warnings;
 use 5.010;
 use base qw( IO::Async::Notifier );
 
+use Carp;
+
 use Future::Utils qw( try_repeat );
 
 use IO::Async::Process;
 use IO::Async::FileStream;
 
-use Cwd qw( getcwd abs_path );
+use Cwd qw( getcwd );
 use File::Basename qw( dirname );
 use File::Path qw( make_path remove_tree );
 use List::Util qw( any pairmap );
@@ -24,11 +26,12 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port unsecure_port output synapse_dir extra_args python config coverage
+      ports output hs_dir synapse_dir extra_args python config coverage
       dendron pusher synchrotron
    );
 
-   $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
+   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
+      for qw( client client_unsecure metrics );
 
    $self->SUPER::_init( $args );
 }
@@ -85,7 +88,7 @@ sub start
 {
    my $self = shift;
 
-   my $port = $self->{port};
+   my $port = $self->{ports}{client};
    my $output = $self->{output};
 
    my $db_config_path = "database.yaml";
@@ -133,7 +136,8 @@ sub start
    if( $self->{dendron} ) {
       # If we are running synapse behind dendron then only bind the unsecure
       # port for synapse.
-      $self->{unsecure_port} = $port + 9000 - 8000;
+      $self->{ports}{client_unsecure} or
+         croak "Need an unsecure client port if running synapse behind dendron";
    }
    else {
       push @$listeners, {
@@ -147,10 +151,10 @@ sub start
       };
    }
 
-   if( $self->{unsecure_port} ) {
+   if( my $unsecure_port = $self->{ports}{client_unsecure} ) {
       push @$listeners, {
          type => "http",
-         port => $self->{unsecure_port},
+         port => $unsecure_port,
          bind_address => "127.0.0.1",
          tls => 0,
          resources => [{
@@ -163,7 +167,7 @@ sub start
    my $key_file = "$self->{hs_dir}/key.pem";
    my $log_config_file = "$self->{hs_dir}/log.config";
 
-   my $macaroon_secret_key = "secret_$self->{port}";
+   my $macaroon_secret_key = "secret_$port";
 
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
@@ -185,7 +189,7 @@ sub start
 
         # Metrics are always useful
         "enable_metrics" => 1,
-        "metrics_port" => ( $port - 8000 + 9090 ),
+        "metrics_port" => $self->{ports}{metrics},
 
         "perspectives" => { servers => {} },
 
@@ -206,39 +210,38 @@ sub start
    my $pusher_config_path = $self->write_yaml_file( pusher => {
       "worker_app"             => "synapse.app.pusher",
       "worker_log_file"        => "$log.pusher",
-      "worker_replication_url" => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "worker_replication_url" => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
       "worker_listeners"       => [
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
-            port      => ( $port - 8000 + 10090 ),
+            port      => $self->{ports}{pusher_metrics},
          },
          {
             type => "manhole",
-            port => ( $port - 8000 + 10080 ),
+            port => $self->{ports}{pusher_manhole},,
          },
       ],
    } );
 
-   my $synchrotron_port = $port - 8000 + 11000;
    my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
       "worker_app"             => "synapse.app.synchrotron",
       "worker_log_file"        => "$log.synchrotron",
-      "worker_replication_url" => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
+      "worker_replication_url" => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
       "worker_listeners"       => [
          {
             type      => "http",
             resources => [{ names => ["client"] }],
-            port      => $synchrotron_port,
+            port      => $self->{ports}{synchrotron},
          },
          {
             type => "manhole",
-            port => ( $port - 8000 + 11080 ),
+            port => $self->{ports}{synchrotron_manhole},
          },
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
-            port      => ( $port - 8000 + 11090 ),
+            port      => $self->{ports}{synchrotron_metrics},
          },
       ],
    } );
@@ -287,7 +290,7 @@ sub start
          $self->{dendron},
          "--synapse-python" => $self->{python},
          "--synapse-config" => $config_path,
-         "--synapse-url" => "http://127.0.0.1:$self->{unsecure_port}",
+         "--synapse-url" => "http://127.0.0.1:$self->{ports}{client_unsecure}",
          "--synapse-postgres" => join( " ", @db_arg_pairs ),
          "--macaroon-secret" => $macaroon_secret_key,
          "--server-name" => "localhost:$port",
@@ -303,7 +306,7 @@ sub start
       if ( $self->{synchrotron} ) {
          push @command,
             "--synchrotron-config" => $synchrotron_config_path,
-            "--synchrotron-url" => "http://127.0.0.1:$synchrotron_port";
+            "--synchrotron-url" => "http://127.0.0.1:$self->{ports}{synchrotron}";
       }
    }
    else {
@@ -349,11 +352,11 @@ sub start
                addr => {
                   family   => "inet",
                   socktype => "stream",
-                  port     => $self->{port},
+                  port     => $port,
                   ip       => "127.0.0.1",
                }
             )->then( sub {
-               $output->diag( "Connected to server $self->{port}" );
+               $output->diag( "Connected to server $port" );
                my ( $connection ) = @_;
 
                $connection->close;
@@ -364,7 +367,7 @@ sub start
             });
          };
 
-         $output->diag( "Connecting to server $self->{port}" );
+         $output->diag( "Connecting to server $port" );
          $self->adopt_future( $poll->() );
 
          $self->open_logfile;
