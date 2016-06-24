@@ -96,6 +96,8 @@ multi_test "Basic paginated sync",
       })->then( sub {
          my ( $body ) = @_;
 
+         log_if_fail "Body of incremental sync", $body;
+
          assert_json_keys( $body, qw( pagination_info ) );
 
          not $body->{pagination_info}{limited} or die "Limited flag is set";
