@@ -11,6 +11,8 @@ push our @EXPORT, qw(
    matrix_put_room_state_synced
    matrix_advance_room_receipt_synced
    matrix_send_filler_messages_synced
+   matrix_add_tag_synced
+   matrix_remove_tag_synced
    sync_timeline_contains
 );
 
@@ -259,4 +261,40 @@ sub matrix_send_filler_messages_synced
          type    => $type,
       );
    });
+}
+
+sub matrix_add_tag_synced
+{
+   my ( $user, $room_id, $tag, $content ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_add_tag( $user, $room_id, $tag, $content );
+      },
+      check => sub {
+         my ( $sync_body ) = @_;
+
+         sync_room_contains( $sync_body, $room_id, "account_data", sub {
+            $_[0]->{type} eq "m.tag"
+         });
+      },
+   );
+}
+
+sub matrix_remove_tag_synced
+{
+   my ( $user, $room_id, $tag ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_remove_tag( $user, $room_id, $tag );
+      },
+      check => sub {
+         my ( $sync_body ) = @_;
+
+         sync_room_contains( $sync_body, $room_id, "account_data", sub {
+            $_[0]->{type} eq "m.tag"
+         });
+      },
+   );
 }

@@ -535,7 +535,7 @@ multi_test "Paginated sync inlcude tags",
          });
       }, foreach => [ 1 .. $num_rooms ])
       ->then( sub {
-         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+         matrix_add_tag_synced( $user, $rooms[0], "test_tag", {} );
       })->then( sub {
          matrix_sync_post( $user,
             content => {
@@ -615,7 +615,7 @@ test "Paginated sync ignore tags",
          });
       }, foreach => [ 1 .. $num_rooms ])
       ->then( sub {
-         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+         matrix_add_tag_synced( $user, $rooms[0], "test_tag", {} );
       })->then( sub {
          matrix_sync_post( $user,
             content => {
@@ -684,7 +684,7 @@ multi_test "Paginated sync with tags handles tag changes correctly",
          assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
          assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
 
-         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+         matrix_add_tag_synced( $user, $rooms[0], "test_tag", {} );
       })->then( sub {
          matrix_sync_post_again( $user,
             content => {
@@ -712,7 +712,7 @@ multi_test "Paginated sync with tags handles tag changes correctly",
 
          pass "Newly tagged room has full state in incremental sync";
 
-         matrix_remove_tag( $user, $rooms[0], "test_tag" );
+         matrix_remove_tag_synced( $user, $rooms[0], "test_tag" );
       })->then( sub {
          matrix_sync_post_again( $user,
             content => {
@@ -737,11 +737,11 @@ multi_test "Paginated sync with tags handles tag changes correctly",
 
          pass "Untagged room gets unsynced";
 
-         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+         matrix_add_tag_synced( $user, $rooms[0], "test_tag", {} );
       })->then( sub {
-         matrix_remove_tag( $user, $rooms[0], "test_tag" );
+         matrix_remove_tag_synced( $user, $rooms[0], "test_tag" );
       })->then( sub {
-         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+         matrix_add_tag_synced( $user, $rooms[0], "test_tag", {} );
       })->then( sub {
          matrix_sync_post_again( $user,
             content => {
@@ -817,7 +817,7 @@ test "Removed room tag includes message",
          assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
          assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
 
-         matrix_add_tag( $user, $rooms[0], "test_tag", {} );
+         matrix_add_tag_synced( $user, $rooms[0], "test_tag", {} );
       })->then( sub {
          matrix_sync_post_again( $user,
             content => {
@@ -825,7 +825,7 @@ test "Removed room tag includes message",
             }
          );
       })->then( sub {
-         matrix_remove_tag( $user, $rooms[0], "test_tag" );
+         matrix_remove_tag_synced( $user, $rooms[0], "test_tag" );
       })->then( sub {
          matrix_send_room_text_message_synced( $user, $rooms[0],
             body => "Second message",
