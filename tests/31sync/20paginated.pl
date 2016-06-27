@@ -10,7 +10,7 @@ test "Can ask for paginated sync",
          content => {
             pagination_config => {
                limit => 10,
-               order => "o",
+               order => "m.origin_server_ts",
             }
          }
       );
@@ -67,7 +67,7 @@ multi_test "Basic paginated sync",
             content => {
                pagination_config => {
                   limit => $pagination_limit,
-                  order => "o",
+                  order => "m.origin_server_ts",
                }
             }
          );
@@ -249,7 +249,7 @@ multi_test "Can request unsen room",
             content => {
                pagination_config => {
                   limit => $pagination_limit,
-                  order => "o",
+                  order => "m.origin_server_ts",
                }
             }
          );
@@ -378,7 +378,7 @@ multi_test "Synced flag is correctly set when peeking",
             content => {
                pagination_config => {
                   limit => $pagination_limit,
-                  order => "o",
+                  order => "m.origin_server_ts",
                }
             }
          );
@@ -471,7 +471,7 @@ test "Can paginate paginated sync",
             content => {
                pagination_config => {
                   limit => $pagination_limit,
-                  order => "o",
+                  order => "m.origin_server_ts",
                }
             }
          );
@@ -541,8 +541,8 @@ multi_test "Paginated sync inlcude tags",
             content => {
                pagination_config => {
                   limit => $pagination_limit,
-                  order => "o",
-                  tags => "include_all",
+                  order => "m.origin_server_ts",
+                  tags => "m.include_all",
                }
             }
          );
@@ -621,8 +621,8 @@ test "Paginated sync ignore tags",
             content => {
                pagination_config => {
                   limit => $pagination_limit,
-                  order => "o",
-                  tags => "ignore",
+                  order => "m.origin_server_ts",
+                  tags => "m.ignore",
                }
             }
          );
@@ -669,8 +669,8 @@ multi_test "Paginated sync with tags handles tag changes correctly",
             content => {
                pagination_config => {
                   limit => $pagination_limit,
-                  order => "o",
-                  tags => "include_all",
+                  order => "m.origin_server_ts",
+                  tags => "m.include_all",
                }
             }
          );
@@ -802,8 +802,8 @@ test "Removed room tag includes message",
             content => {
                pagination_config => {
                   limit => $pagination_limit,
-                  order => "o",
-                  tags => "include_all",
+                  order => "m.origin_server_ts",
+                  tags => "m.include_all",
                }
             }
          );
