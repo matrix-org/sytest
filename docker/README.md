@@ -26,3 +26,15 @@ docker run --rm sytest <command>
 ```
 
 Where `<command>` is `./run-tests.pl` or similar.
+
+
+To use sytest and synapse from the host, so that you can iterate on test
+implementation and execute the tests in the container, you can do as follows:
+
+```
+docker run --rm -it -v /path/to/sytest:/src/sytest -v /path/to/synapse:/src/synapse sytest bash
+```
+
+Then at the prompt, `cd /src/sytest` and then you can run `./run-tests.pl` and
+iterate developing a new test or modifying an existing test using your
+favourite editor on your host.
