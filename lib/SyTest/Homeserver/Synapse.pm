@@ -334,31 +334,15 @@ sub start
             )
          );
 
-         my $polling_period = 0.1;
+         $output->diag( "Connecting to server $port" );
 
-         my $poll;
-         $poll = sub {
-            $loop->connect(
-               addr => {
-                  family   => "inet",
-                  socktype => "stream",
-                  port     => $port,
-                  ip       => "127.0.0.1",
-               }
-            )->then( sub {
+         $self->adopt_future(
+            $self->await_connectable( $port )->then( sub {
                $output->diag( "Connected to server $port" );
-               my ( $connection ) = @_;
-
-               $connection->close;
 
                $self->started_future->done;
-            }, sub {
-               $loop->delay_future( after => $polling_period )->then( $poll );
-            });
-         };
-
-         $output->diag( "Connecting to server $port" );
-         $self->adopt_future( $poll->() );
+            })
+         );
 
          $self->open_logfile;
       }

@@ -5,6 +5,8 @@ use warnings;
 use 5.010;
 use base qw( IO::Async::Notifier );
 
+use Future::Utils qw( repeat );
+
 use YAML ();
 
 sub _init
@@ -63,6 +65,37 @@ sub clear_db_pg
       $dbh->do( "DROP TABLE $tablename CASCADE" ) or
          die $dbh->errstr;
    }
+}
+
+sub await_connectable
+{
+   my $self = shift;
+   my ( $port ) = @_;
+
+   my $loop = $self->loop;
+
+   my $attempts = 20;
+
+   repeat {
+      $loop->connect(
+         addr => {
+            family   => "inet",
+            socktype => "stream",
+            port     => $port,
+            ip       => "127.0.0.1",
+         }
+      )->then_done(1)
+       ->else( sub {
+         if( !$attempts ) {
+            return Future->fail( "Failed to connect to $port" )
+         }
+
+         $attempts--;
+
+         $loop->delay_future( after => 0.1 )
+              ->then_done(0);
+      })
+   } while => sub { !$_[0]->failure and !$_[0]->get }
 }
 
 1;
