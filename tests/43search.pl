@@ -66,13 +66,13 @@ test "Can get context around search results",
       my $search_query = {
          search_categories => {
             room_events => {
-               keys => [ "content.body" ],
-               search_term => "Message 4",
-               order_by => "recent",
-               filter => { limit => 1},
+               keys          => [ "content.body" ],
+               search_term   => "Message 4",
+               order_by      => "recent",
+               filter        => { limit => 1},
                event_context => {
                   before_limit => 2,
-                  after_limit => 2,
+                  after_limit  => 2,
                }
             }
          }
@@ -80,9 +80,10 @@ test "Can get context around search results",
 
       repeat( sub {
          my $msgnum = $_[0];
+
          matrix_send_room_text_message( $user, $room_id,
-                                 body => "Message number $msgnum" )
-            ->on_done( sub { ( $event_ids[$msgnum] ) = @_ } )
+            body => "Message number $msgnum"
+         )->on_done( sub { ( $event_ids[$msgnum] ) = @_ } );
       }, foreach => [ 1 .. 7 ] )->then( sub {
          do_request_json_for( $user,
             method  => "POST",
