@@ -8,6 +8,8 @@ use base qw( IO::Async::Notifier );
 use Future::Utils qw( repeat );
 
 use YAML ();
+use JSON ();
+use File::Slurper qw( write_binary );
 
 sub _init
 {
@@ -29,6 +31,18 @@ sub write_yaml_file
    my $hs_dir = $self->{hs_dir};
 
    YAML::DumpFile( my $abspath = "$hs_dir/$relpath", $content );
+
+   return $abspath;
+}
+
+sub write_json_file
+{
+   my $self = shift;
+   my ( $relpath, $content ) = @_;
+
+   my $hs_dir = $self->{hs_dir};
+
+   write_binary( my $abspath = "$hs_dir/$relpath", JSON::encode_json( $content ) );
 
    return $abspath;
 }
