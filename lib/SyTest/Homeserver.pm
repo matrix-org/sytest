@@ -89,6 +89,7 @@ sub await_connectable
    my $loop = $self->loop;
 
    my $attempts = 20;
+   my $delay    = 0.1;
 
    repeat {
       $loop->connect(
@@ -105,8 +106,9 @@ sub await_connectable
          }
 
          $attempts--;
+         $delay *= 1.5;
 
-         $loop->delay_future( after => 0.1 )
+         $loop->delay_future( after => $delay )
               ->then_done(0);
       })
    } while => sub { !$_[0]->failure and !$_[0]->get }
