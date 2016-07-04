@@ -1,4 +1,4 @@
-package SyTest::Synapse;
+package SyTest::Homeserver::Synapse;
 
 use strict;
 use warnings;
