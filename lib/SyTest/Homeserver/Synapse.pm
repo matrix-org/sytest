@@ -3,7 +3,7 @@ package SyTest::Homeserver::Synapse;
 use strict;
 use warnings;
 use 5.010;
-use base qw( IO::Async::Notifier );
+use base qw( SyTest::Homeserver );
 
 use Carp;
 
@@ -26,7 +26,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      ports output hs_dir synapse_dir extra_args python config coverage
+      ports synapse_dir extra_args python config coverage
       dendron pusher synchrotron
    );
 
@@ -71,19 +71,6 @@ sub append_config
    _append( $self->{config}, \%more );
 }
 
-sub write_yaml_file
-{
-   my $self = shift;
-   my ( $relpath, $content ) = @_;
-
-   my $hs_dir = $self->{hs_dir};
-   -d $hs_dir or make_path $hs_dir;
-
-   YAML::DumpFile( my $abspath = "$hs_dir/$relpath", $content );
-
-   return $abspath;
-}
-
 sub start
 {
    my $self = shift;
@@ -91,8 +78,11 @@ sub start
    my $port = $self->{ports}{client};
    my $output = $self->{output};
 
+   my $hs_dir = $self->{hs_dir};
+   -d $hs_dir or make_path $hs_dir;
+
    my $db_config_path = "database.yaml";
-   my $db_config_abs_path = "$self->{hs_dir}/${db_config_path}";
+   my $db_config_abs_path = "$hs_dir/${db_config_path}";
    my $db  = ":memory:"; #"$hs_dir/homeserver.db";
 
    my ( $db_type, %db_args, $db_config );
@@ -129,7 +119,7 @@ sub start
    }
 
    my $cwd = getcwd;
-   my $log = "$self->{hs_dir}/homeserver.log";
+   my $log = "$hs_dir/homeserver.log";
 
    my $listeners = [];
 
@@ -163,9 +153,9 @@ sub start
       }
    }
 
-   my $cert_file = "$self->{hs_dir}/cert.pem";
-   my $key_file = "$self->{hs_dir}/key.pem";
-   my $log_config_file = "$self->{hs_dir}/log.config";
+   my $cert_file = "$hs_dir/cert.pem";
+   my $key_file = "$hs_dir/key.pem";
+   my $log_config_file = "$hs_dir/log.config";
 
    my $macaroon_secret_key = "secret_$port";
 
@@ -479,40 +469,6 @@ sub print_output
    }
 
    undef @{ $self->{stderr_lines} };
-}
-
-sub clear_db_sqlite
-{
-   my $self = shift;
-   my %args = @_;
-
-   my $db = $args{path};
-
-   $self->{output}->diag( "Clearing SQLite database at $db" );
-
-   unlink $db if -f $db;
-}
-
-sub clear_db_pg
-{
-   my $self = shift;
-   my %args = @_;
-
-   my $host = $args{host} // '';
-   $self->{output}->diag( "Clearing Pg database $args{database} on '$host'" );
-
-   require DBI;
-   require DBD::Pg;
-
-   my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$host", $args{user}, $args{password} )
-      or die DBI->errstr;
-
-   foreach my $row ( @{ $dbh->selectall_arrayref( "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" ) } ) {
-      my ( $tablename ) = @$row;
-
-      $dbh->do( "DROP TABLE $tablename CASCADE" ) or
-         die $dbh->errstr;
-   }
 }
 
 sub rotate_logfile
