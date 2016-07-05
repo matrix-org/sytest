@@ -14,7 +14,7 @@ use IO::Async::FileStream;
 
 use Cwd qw( getcwd );
 use File::Basename qw( dirname );
-use File::Path qw( make_path remove_tree );
+use File::Path qw( remove_tree );
 use List::Util qw( any pairmap );
 use POSIX qw( strftime );
 
@@ -79,7 +79,6 @@ sub start
    my $output = $self->{output};
 
    my $hs_dir = $self->{hs_dir};
-   -d $hs_dir or make_path $hs_dir;
 
    my $db_config_path = "database.yaml";
    my $db_config_abs_path = "$hs_dir/${db_config_path}";

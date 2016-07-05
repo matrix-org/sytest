@@ -9,6 +9,7 @@ use Future::Utils qw( repeat );
 
 use YAML ();
 use JSON ();
+use File::Path qw( make_path );
 use File::Slurper qw( write_binary );
 
 sub _init
@@ -19,6 +20,9 @@ sub _init
    $self->{$_} = delete $args->{$_} for qw(
       output hs_dir
    );
+
+   my $hs_dir = $self->{hs_dir};
+   -d $hs_dir or make_path $hs_dir;
 
    $self->SUPER::_init( $args );
 }
