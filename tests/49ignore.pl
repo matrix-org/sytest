@@ -95,7 +95,7 @@ test "Ignore user in existing room",
 
          log_if_fail "Fourth Body", $body;
 
-          my $timeline_events = $body->{rooms}{join}{$room_id}{timeline}{events};
+         my $timeline_events = $body->{rooms}{join}{$room_id}{timeline}{events};
 
          assert_eq( scalar @$timeline_events, 1, "Expected only 1 message" );
 
