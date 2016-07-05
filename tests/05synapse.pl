@@ -1,4 +1,4 @@
-use SyTest::Synapse;
+use SyTest::Homeserver::Synapse;
 
 use Cwd qw( abs_path );
 
@@ -52,7 +52,7 @@ our @HOMESERVER_INFO = map {
 
          my $info = ServerInfo( "localhost:$secure_port", $location );
 
-         my $synapse = SyTest::Synapse->new(
+         my $synapse = SyTest::Homeserver::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
             hs_dir        => abs_path( "localhost-$idx" ),
             ports         => {
