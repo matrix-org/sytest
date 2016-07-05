@@ -35,7 +35,7 @@ test "Ignore user in existing room",
          matrix_send_room_message( $user2, $room_id,
             content => { msgtype => "m.text", body => "Message" }
          ),
-         matrix_send_room_message( $user3, $room_id,
+         matrix_send_room_message_synced( $user3, $room_id,
             content => { msgtype => "m.text", body => "Message" }
          )
       )->then( sub {
@@ -59,6 +59,9 @@ test "Ignore user in existing room",
             { "ignored_users" => { $user2->user_id => {} } }
          )
       })->then( sub {
+         # Hack to get around not having a "matrix_add_account_data" synced.
+         matrix_send_filler_messages_synced( $user1, $room_id, 1);
+      })->then( sub {
          matrix_sync( $user1, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
@@ -71,7 +74,7 @@ test "Ignore user in existing room",
          assert_eq( scalar @$timeline_events, 2, "Expected only 2 messages" );
          assert_eq( scalar @$state_events, 3, "Expected 3 member state events" );
 
-         matrix_send_room_message( $user2, $room_id,
+         matrix_send_room_message_synced( $user2, $room_id,
             content => { msgtype => "m.text", body => "Message2" }
          )
       })->then ( sub {
@@ -85,7 +88,7 @@ test "Ignore user in existing room",
 
          assert_eq( scalar keys %$joined_rooms, 0, "Expected no messages" );
 
-         matrix_send_room_message( $user3, $room_id,
+         matrix_send_room_message_synced( $user3, $room_id,
             content => { msgtype => "m.text", body => "Message3" }
          )
       })->then ( sub {
@@ -137,11 +140,14 @@ test "Ignore invite in full sync",
       ->then( sub {
          ( $filter_id ) = @_;
 
+         matrix_invite_user_to_room_synced( $user2, $user1, $room_id )
+      })->then( sub {
          matrix_add_account_data( $user1, "m.ignored_user_list",
             { "ignored_users" => { $user2->user_id => {} } }
          )
       })->then( sub {
-         matrix_invite_user_to_room( $user2, $user1, $room_id )
+         # Hack to get around not having a matrix_add_account_data_synced
+         matrix_send_filler_messages_synced( $user2, $room_id, 1 );
       })->then( sub {
          matrix_sync( $user1, filter => $filter_id );
       })->then( sub {
@@ -189,10 +195,6 @@ test "Ignore invite in incremental sync",
       ->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_add_account_data( $user1, "m.ignored_user_list",
-            { "ignored_users" => { $user2->user_id => {} } }
-         )
-      })->then( sub {
          matrix_sync( $user1, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
@@ -202,6 +204,13 @@ test "Ignore invite in incremental sync",
          assert_eq( scalar keys %$invite_rooms, 0, "Expected zero invites" );
 
          matrix_invite_user_to_room( $user2, $user1, $room_id )
+      })->then( sub {
+         matrix_add_account_data( $user1, "m.ignored_user_list",
+            { "ignored_users" => { $user2->user_id => {} } }
+         )
+      })->then( sub {
+         # Hack to get around not having a matrix_add_account_data_synced
+         matrix_send_filler_messages_synced( $user2, $room_id, 1 );
       })->then( sub {
          matrix_sync_again( $user1, filter => $filter_id );
       })->then( sub {
