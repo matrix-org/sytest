@@ -57,7 +57,10 @@ test "Can download with ASCII file name locally",
 
    check => sub {
       my ( $http ) = @_;
-      test_using_client( $http );
+      test_using_client( $http )
+      ->then( sub {
+         test_using_client( $http )
+      });
    };
 
 test "Can download with ASCII file name over federation",
@@ -65,7 +68,10 @@ test "Can download with ASCII file name over federation",
 
    check => sub {
       my ( $http ) = @_;
-      test_using_client( $http );
+      test_using_client( $http )
+      ->then( sub {
+         test_using_client( $http )
+      });
    };
 
 test "Can download specifying a different ASCII file name",
