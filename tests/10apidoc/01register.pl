@@ -196,7 +196,7 @@ test "POST /register admin with shared secret",
        matrix_register_user_via_secret( $http, $uid, admin => 1 );
    };
 
-push @EXPORT, qw( local_user_fixture local_user_fixtures );
+push @EXPORT, qw( local_user_fixture local_user_fixtures local_admin_fixture );
 
 sub local_user_fixture
 {
@@ -209,6 +209,21 @@ sub local_user_fixture
          my ( $http, $localpart ) = @_;
 
          setup_user( $http, $localpart, %args );
+      },
+   );
+}
+
+sub local_admin_fixture
+{
+   my %args = @_;
+
+   fixture(
+      requires => [ $main::API_CLIENTS[0], localpart_fixture(), qw( can_register_with_secret ) ],
+
+      setup => sub {
+         my ( $http, $localpart ) = @_;
+
+         matrix_register_user_via_secret( $http, $localpart, admin => 1, %args );
       },
    );
 }
