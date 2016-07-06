@@ -142,7 +142,9 @@ sub matrix_register_user_via_secret
 
    my $hmac = Digest::HMAC_SHA1->new("reg_secret");
    $hmac->add( $uid );
+   $hmac->add( "\0" );
    $hmac->add( $password );
+   $hmac->add( "\0" );
    $hmac->add( $admin ? "admin" : "notadmin" );
 
    my $mac = $hmac->hexdigest;
