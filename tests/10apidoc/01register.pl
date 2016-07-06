@@ -1,4 +1,4 @@
-use Digest::HMAC_SHA1;
+use Digest::HMAC_SHA1 qw( hmac_sha1_hex );
 
 test "GET /register yields a set of flows",
    requires => [ $main::API_CLIENTS[0] ],
@@ -135,19 +135,15 @@ sub matrix_register_user_via_secret
    my ( $http, $uid, %opts ) = @_;
 
    my $password = $opts{password} // "an0th3r s3kr1t";
-   my $admin = $opts{admin} // 0;
+   my $is_admin = $opts{is_admin} // 0;
 
    defined $uid or
       croak "Require UID for matrix_register_user_via_secret";
 
-   my $hmac = Digest::HMAC_SHA1->new("reg_secret");
-   $hmac->add( $uid );
-   $hmac->add( "\0" );
-   $hmac->add( $password );
-   $hmac->add( "\0" );
-   $hmac->add( $admin ? "admin" : "notadmin" );
-
-   my $mac = $hmac->hexdigest;
+   my $mac = hmac_sha1_hex(
+      join( "\0", $uid, $password, $is_admin ? "admin" : "notadmin" ),
+      "reg_secret"
+   );
 
    $http->do_request_json(
       method => "POST",
@@ -157,7 +153,7 @@ sub matrix_register_user_via_secret
         type     => "org.matrix.login.shared_secret",
         user     => $uid,
         password => $password,
-        admin    => $admin ? JSON::true : JSON::false,
+        admin    => $is_admin ? JSON::true : JSON::false,
         mac      => $mac,
       },
    )->then( sub {
@@ -184,7 +180,7 @@ test "POST /register with shared secret",
    do => sub {
        my ( $http, $uid ) = @_;
 
-       matrix_register_user_via_secret( $http, $uid, admin => 0 );
+       matrix_register_user_via_secret( $http, $uid, is_admin => 0 );
    };
 
 test "POST /register admin with shared secret",
@@ -193,7 +189,7 @@ test "POST /register admin with shared secret",
    do => sub {
        my ( $http, $uid ) = @_;
 
-       matrix_register_user_via_secret( $http, $uid, admin => 1 );
+       matrix_register_user_via_secret( $http, $uid, is_admin => 1 );
    };
 
 push @EXPORT, qw( local_user_fixture local_user_fixtures local_admin_fixture );
