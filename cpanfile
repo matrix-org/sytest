@@ -3,8 +3,8 @@
 requires 'Class::Method::Modifiers';
 requires 'Data::Dump';
 requires 'DBD::Pg';
-requires 'Digest::SHA';
 requires 'Digest::HMAC_SHA1';
+requires 'Digest::SHA';
 requires 'File::Basename';
 requires 'File::Path';
 requires 'File::Slurper';

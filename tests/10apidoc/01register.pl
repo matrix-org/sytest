@@ -138,7 +138,7 @@ sub matrix_register_user_via_secret
    my $admin = $opts{admin} // 0;
 
    defined $uid or
-      croak "Require UID for matrix_register_user";
+      croak "Require UID for matrix_register_user_via_secret";
 
    my $hmac = Digest::HMAC_SHA1->new("reg_secret");
    $hmac->add($uid);
