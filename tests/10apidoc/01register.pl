@@ -141,9 +141,9 @@ sub matrix_register_user_via_secret
       croak "Require UID for matrix_register_user_via_secret";
 
    my $hmac = Digest::HMAC_SHA1->new("reg_secret");
-   $hmac->add($uid);
-   $hmac->add($password);
-   $hmac->add($admin ? "admin" : "notadmin");
+   $hmac->add( $uid );
+   $hmac->add( $password );
+   $hmac->add( $admin ? "admin" : "notadmin" );
 
    my $mac = $hmac->hexdigest;
 
