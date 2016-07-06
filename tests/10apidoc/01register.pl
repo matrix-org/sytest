@@ -1,3 +1,5 @@
+use Digest::HMAC_SHA1;
+
 test "GET /register yields a set of flows",
    requires => [ $main::API_CLIENTS[0] ],
 
@@ -125,6 +127,74 @@ sub matrix_register_user
          });
    });
 }
+
+push @EXPORT, qw( matrix_register_user_via_secret );
+
+sub matrix_register_user_via_secret
+{
+   my ( $http, $uid, %opts ) = @_;
+
+   my $password = $opts{password} // "an0th3r s3kr1t";
+   my $admin = $opts{admin} // 0;
+
+   defined $uid or
+      croak "Require UID for matrix_register_user";
+
+   my $hmac = Digest::HMAC_SHA1->new("reg_secret");
+   $hmac->add($uid);
+   $hmac->add($password);
+   $hmac->add($admin ? "admin" : "notadmin");
+
+   my $mac = $hmac->hexdigest;
+
+   $http->do_request_json(
+      method => "POST",
+      uri    => "/api/v1/register",
+
+      content => {
+        type     => "org.matrix.login.shared_secret",
+        user     => $uid,
+        password => $password,
+        admin    => $admin ? JSON::true : JSON::false,
+        mac      => $mac,
+      },
+   )->then( sub {
+      my ( $body ) = @_;
+
+      assert_json_keys( $body, qw( user_id access_token ));
+
+      my $access_token = $body->{access_token};
+
+      my $user = User( $http, $body->{user_id}, $password, $access_token, undef, undef, undef, [], undef );
+
+      my $f = Future->done;
+
+      return $f->then_done( $user )
+        ->on_done( sub {
+           log_if_fail "Registered new user (via secret) $uid";
+        });
+   });
+}
+
+test "POST /register with shared secret",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   proves => [qw( can_register_with_secret )],
+
+   do => sub {
+       my ( $http, $uid ) = @_;
+
+       matrix_register_user_via_secret( $http, $uid, admin => 0 );
+   };
+
+test "POST /register admin with shared secret",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   do => sub {
+       my ( $http, $uid ) = @_;
+
+       matrix_register_user_via_secret( $http, $uid, admin => 1 );
+   };
 
 push @EXPORT, qw( local_user_fixture local_user_fixtures );
 
