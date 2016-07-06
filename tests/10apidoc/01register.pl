@@ -219,7 +219,7 @@ sub local_admin_fixture
       setup => sub {
          my ( $http, $localpart ) = @_;
 
-         matrix_register_user_via_secret( $http, $localpart, admin => 1, %args );
+         matrix_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
       },
    );
 }
