@@ -1,3 +1,5 @@
+use Digest::HMAC_SHA1 qw( hmac_sha1_hex );
+
 test "GET /register yields a set of flows",
    requires => [ $main::API_CLIENTS[0] ],
 
@@ -126,7 +128,71 @@ sub matrix_register_user
    });
 }
 
-push @EXPORT, qw( local_user_fixture local_user_fixtures );
+push @EXPORT, qw( matrix_register_user_via_secret );
+
+sub matrix_register_user_via_secret
+{
+   my ( $http, $uid, %opts ) = @_;
+
+   my $password = $opts{password} // "an0th3r s3kr1t";
+   my $is_admin = $opts{is_admin} // 0;
+
+   defined $uid or
+      croak "Require UID for matrix_register_user_via_secret";
+
+   my $mac = hmac_sha1_hex(
+      join( "\0", $uid, $password, $is_admin ? "admin" : "notadmin" ),
+      "reg_secret"
+   );
+
+   $http->do_request_json(
+      method => "POST",
+      uri    => "/api/v1/register",
+
+      content => {
+        type     => "org.matrix.login.shared_secret",
+        user     => $uid,
+        password => $password,
+        admin    => $is_admin ? JSON::true : JSON::false,
+        mac      => $mac,
+      },
+   )->then( sub {
+      my ( $body ) = @_;
+
+      assert_json_keys( $body, qw( user_id access_token ));
+
+      my $access_token = $body->{access_token};
+
+      my $user = User( $http, $body->{user_id}, $password, $access_token, undef, undef, undef, [], undef );
+
+      return Future->done( $user )
+        ->on_done( sub {
+           log_if_fail "Registered new user (via secret) $uid";
+        });
+   });
+}
+
+test "POST /register with shared secret",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   proves => [qw( can_register_with_secret )],
+
+   do => sub {
+       my ( $http, $uid ) = @_;
+
+       matrix_register_user_via_secret( $http, $uid, is_admin => 0 );
+   };
+
+test "POST /register admin with shared secret",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   do => sub {
+       my ( $http, $uid ) = @_;
+
+       matrix_register_user_via_secret( $http, $uid, is_admin => 1 );
+   };
+
+push @EXPORT, qw( local_user_fixture local_user_fixtures local_admin_fixture );
 
 sub local_user_fixture
 {
@@ -139,6 +205,21 @@ sub local_user_fixture
          my ( $http, $localpart ) = @_;
 
          setup_user( $http, $localpart, %args );
+      },
+   );
+}
+
+sub local_admin_fixture
+{
+   my %args = @_;
+
+   fixture(
+      requires => [ $main::API_CLIENTS[0], localpart_fixture(), qw( can_register_with_secret ) ],
+
+      setup => sub {
+         my ( $http, $localpart ) = @_;
+
+         matrix_register_user_via_secret( $http, $localpart, admin => 1, %args );
       },
    );
 }

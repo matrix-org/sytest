@@ -157,6 +157,7 @@ sub start
    my $log_config_file = "$hs_dir/log.config";
 
    my $macaroon_secret_key = "secret_$port";
+   my $registration_shared_secret = "reg_secret";
 
    my $config_path = $self->write_yaml_file( config => {
         "server_name" => "localhost:$port",
@@ -171,6 +172,7 @@ sub start
         "database" => $db_config,
         "database_config" => $db_config_path,
         "macaroon_secret_key" => $macaroon_secret_key,
+        "registration_shared_secret" => $registration_shared_secret,
 
         "use_frozen_events" => "true",
 
