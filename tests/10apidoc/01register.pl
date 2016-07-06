@@ -167,9 +167,7 @@ sub matrix_register_user_via_secret
 
       my $user = User( $http, $body->{user_id}, $password, $access_token, undef, undef, undef, [], undef );
 
-      my $f = Future->done;
-
-      return $f->then_done( $user )
+      return Future->done( $user )
         ->on_done( sub {
            log_if_fail "Registered new user (via secret) $uid";
         });
