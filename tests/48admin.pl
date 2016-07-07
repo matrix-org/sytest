@@ -130,7 +130,7 @@ test "Can backfill purged history",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message_synced( $user, $room_id,
+            matrix_send_room_text_message( $user, $room_id,
                body => "Message $msgnum",
             )->on_done( sub { push @event_ids, @_[0]; } )
          }, foreach => [ 0 .. 4 ])
