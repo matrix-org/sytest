@@ -150,7 +150,7 @@ test "Can backfill purged history",
          # Wait until the remote server has received the last message, so that
          # we know we can later backfill from the remote to get all the events.
          repeat( sub {
-            matrix_sync_again( $remote_user )
+            matrix_sync_again( $remote_user, timeout => 1000 )
             ->on_done( sub {
                my ( $body ) = @_;
 
