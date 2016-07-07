@@ -129,6 +129,7 @@ test "Can backfill purged history",
       })->then( sub {
          matrix_sync( $remote_user )
       })->then( sub {
+         # Send half the messages as the local user...
          repeat( sub {
             my $msgnum = $_[0];
 
@@ -137,6 +138,8 @@ test "Can backfill purged history",
             )->on_done( sub { push @event_ids, @_[0]; } )
          }, foreach => [ 0 .. 4 ])
       })->then( sub {
+         # ... and half as the remote. This is useful to esnre that both local
+         # and remote events are handled correctly.
          repeat( sub {
             my $msgnum = $_[0];
 
