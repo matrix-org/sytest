@@ -51,16 +51,20 @@ test "/purge_history",
          type    => "m.room.name",
          content => { name => "A room name" },
       )->then( sub {
+         matrix_sync( $user )
+      })->then( sub {
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message_synced( $user, $room_id,
+            matrix_send_room_text_message( $user, $room_id,
                body => "Message $msgnum",
             )
          }, foreach => [ 1 .. 10 ])
       })->then( sub {
          ( $last_event_id ) = @_;
 
+         await_message_in_room( $user, $room_id, $last_event_id ),
+      })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
             uri     => "/r0/admin/purge_history/$room_id/$last_event_id",
