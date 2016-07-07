@@ -127,7 +127,10 @@ test "Can backfill purged history",
             content => { name => "A room name" },
          )
       })->then( sub {
-         matrix_sync( $remote_user )
+         Future->needs_all(
+            matrix_sync( $user ),
+            matrix_sync( $remote_user )
+         )
       })->then( sub {
          # Send half the messages as the local user...
          repeat( sub {
@@ -135,37 +138,36 @@ test "Can backfill purged history",
 
             matrix_send_room_text_message( $user, $room_id,
                body => "Message $msgnum",
-            )->on_done( sub { push @event_ids, @_[0]; } )
+            )->on_done( sub { push @event_ids, $_[0]; } )
          }, foreach => [ 0 .. 4 ])
+      })->then( sub {
+         my ( $last_local_id ) = @_;
+
+         # Wait until both users see the last event
+         Future->needs_all(
+            await_message_in_room( $user, $room_id, $last_local_id ),
+            await_message_in_room( $remote_user, $room_id, $last_local_id )
+         )
       })->then( sub {
          # ... and half as the remote. This is useful to esnre that both local
          # and remote events are handled correctly.
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message_synced( $remote_user, $room_id,
+            matrix_send_room_text_message( $remote_user, $room_id,
                body => "Message $msgnum",
-            )->on_done( sub { push @event_ids, @_[0]; } )
+            )->on_done( sub { push @event_ids, $_[0]; } )
          }, foreach => [ 5 .. 9 ])
       })->then( sub {
          ( $last_event_id ) = @_;
 
-         # Wait until the remote server has received the last message, so that
-         # we know we can later backfill from the remote to get all the events.
-         repeat( sub {
-            matrix_sync_again( $remote_user, timeout => 1000 )
-            ->on_done( sub {
-               my ( $body ) = @_;
+         log_if_fail "last_event_id", $last_event_id;
 
-               log_if_fail "Remote sync", $body;
-
-               Future->done( any {
-                  $_->{event_id} eq $last_event_id
-               } @{ $body->{rooms}{join}{$room_id}{timeline}{events} } )
-            })
-         }, until => sub {
-            $_[0]->failure or $_[0]->get
-         })
+         # Wait until both users see the last event
+         Future->needs_all(
+            await_message_in_room( $user, $room_id, $last_event_id ),
+            await_message_in_room( $remote_user, $room_id, $last_event_id )
+         )
       })->then( sub {
          do_request_json_for( $admin,
             method  => "POST",
@@ -228,3 +230,28 @@ test "Can backfill purged history",
          }, while => sub { scalar @missing_event_ids > 0 });
       });
    };
+
+
+sub await_message_in_room
+{
+   my ( $user, $room_id, $event_id ) = @_;
+
+   my $user_id = $user->user_id;
+
+   repeat( sub {
+      matrix_sync_again( $user, timeout => 500 )
+      ->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Sync for $user_id", $body;
+
+         Future->done( any {
+            $_->{event_id} eq $event_id
+         } @{ $body->{rooms}{join}{$room_id}{timeline}{events} } )
+      })
+   }, until => sub {
+      $_[0]->failure or $_[0]->get
+   })->on_done( sub {
+      log_if_fail "Found event $event_id for $user_id";
+   })
+}
