@@ -71,8 +71,6 @@ test "/purge_history",
             content => {}
          )->main::expect_http_403;  # Must be server admin
       })->then( sub {
-         matrix_sync( $user )
-      })->then( sub {
          do_request_json_for( $admin,
             method  => "POST",
             uri     => "/r0/admin/purge_history/$room_id/$last_event_id",
