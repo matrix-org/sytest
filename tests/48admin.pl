@@ -75,8 +75,10 @@ test "/purge_history",
             content => {}
          )
       })->then( sub {
+         # Test that /sync with an existing token still works.
          matrix_sync_again( $user )
       })->then( sub {
+         # Test that an initial /sync has the correct data.
          matrix_sync( $user )
       })->then( sub {
          my ( $body ) = @_;
