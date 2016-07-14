@@ -1,3 +1,5 @@
+use Future::Utils qw( fmap_void );
+
 use SyTest::Homeserver::Synapse;
 
 use Cwd qw( abs_path );
@@ -25,9 +27,12 @@ my @synapses;
 END {
    $OUTPUT->diag( "Killing synapse servers " ) if @synapses;
 
-   foreach my $synapse ( values @synapses ) {
+   ( fmap_void {
+      my $synapse = $_;
+
       $synapse->kill( 'INT' );
-   }
+      $synapse->await_finish;
+   } foreach => \@synapses, concurrent => scalar @synapses )->get;
 }
 
 push our @EXPORT, qw( HOMESERVER_INFO );
