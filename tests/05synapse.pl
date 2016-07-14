@@ -31,7 +31,16 @@ END {
       my $synapse = $_;
 
       $synapse->kill( 'INT' );
-      $synapse->await_finish;
+
+      Future->needs_any(
+         $synapse->await_finish,
+
+         $loop->delay_future( after => 15 )->then( sub {
+            print STDERR "Timed out waiting for ${\ $synapse->pid }; sending SIGKILL\n";
+            $synapse->kill( 'KILL' );
+            Future->done;
+         }),
+      )
    } foreach => \@synapses, concurrent => scalar @synapses )->get;
 }
 
