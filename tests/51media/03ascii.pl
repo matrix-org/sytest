@@ -109,3 +109,37 @@ test "Can send image in room message",
          )
       });
    };
+
+test "Can fetch images in room",
+   requires => [ $main::API_CLIENTS[0], local_user_and_room_fixtures() ],
+
+   check => sub {
+      my ( $http, $user, $room_id ) = @_;
+      test_using_client( $http )
+      ->then( sub {
+         matrix_send_room_message_synced( $user, $room_id,
+            content => { msgtype => "m.text", body => "test" }
+         )
+      })->then( sub {
+         matrix_send_room_message_synced( $user, $room_id,
+            content => { msgtype => "m.file", body => "test.txt", url => $content_uri }
+         )
+      })->then( sub {
+         do_request_json_for( $user,
+            method => "GET",
+            uri => "/api/v1/rooms/$room_id/messages",
+            params => {
+               filter => '{"contains_url":true}',
+               dir => 'b',
+            }
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( start end chunk ));
+
+         assert_eq( scalar @{ $body->{chunk} }, 1, "Expected 1 message" );
+
+         Future->done( 1 );
+      });
+   };
