@@ -5,11 +5,11 @@ sub matrix_deactivate_account
    my ( $user, $password ) = @_;
 
    do_request_json_for( $user,
-      method => "POST",
-      uri    => "/r0/account/deactivate",
+      method  => "POST",
+      uri     => "/r0/account/deactivate",
       content => {
          auth => {
-            type => "m.login.password",
+            type     => "m.login.password",
             user     => $user->user_id,
             password => $password,
          },
@@ -45,9 +45,8 @@ test "After deactivating account, can't log in with password",
       matrix_deactivate_account( $user, $password )
       ->then( sub {
          do_request_json_for( $user,
-            method => "POST",
-            uri    => "/r0/login",
-
+            method  => "POST",
+            uri     => "/r0/login",
             content => {
                type     => "m.login.password",
                user     => $user->user_id,
