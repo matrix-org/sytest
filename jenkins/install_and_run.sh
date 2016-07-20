@@ -14,4 +14,6 @@ cd "`dirname $0`/.."
 
 ./install-deps.pl
 
+./jenkins/kill_old_listeners.sh
+
 ./run-tests.pl -O tap --all "$@" > results.tap
