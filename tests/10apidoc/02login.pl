@@ -233,7 +233,7 @@ our @EXPORT = qw( matrix_login_again_with_user );
 
 sub matrix_login_again_with_user
 {
-   my ( $user ) = @_;
+   my ( $user, %args ) = @_;
 
    $user->http->do_request_json(
       method  => "POST",
@@ -242,6 +242,7 @@ sub matrix_login_again_with_user
          type     => "m.login.password",
          user     => $user->user_id,
          password => $user->password,
+         %args,
       },
    )->then( sub {
       my ( $body ) = @_;
