@@ -1,12 +1,12 @@
 our @EXPORT = qw( matrix_get_device );
 
 sub matrix_get_device {
-   my ($user, $device_id) = @_;
+   my ( $user, $device_id ) = @_;
 
    return do_request_json_for(
       $user,
       method => "GET",
-      uri => "/unstable/devices/${device_id}",
+      uri    => "/unstable/devices/${device_id}",
    );
 }
 
@@ -75,26 +75,21 @@ test "GET /devices",
             $devices,
             qw( devices ),
            );
-         assert_json_list($devices->{devices});
+         assert_json_list( $devices->{devices} );
 
          # check each of the devices we logged in with is returned
-         for my $id ( keys( %DEVICES )) {
-            my $matched = 0;
-            RESULT: foreach my $result ( @{ $devices->{devices}} ) {
-               if ( $result->{device_id} ne $id ) {
-                  next RESULT;
-               }
+         foreach my $id ( keys( %DEVICES )) {
+            my $result = first { $_->{device_id} eq $id }
+               @{ $devices->{devices}};
 
-               $matched = 1;
-               assert_json_keys(
-                  $result,
-                  qw( device_id user_id display_name ),
-               );
-               assert_eq( $result->{user_id}, $user->user_id, "user_id" );
-               assert_eq( $result->{display_name}, $DEVICES{$id}, "display_name" );
-               last RESULT;
-            }
-            assert_ok( $matched, "device $id" );
+            assert_ok( $result, "device $id" );
+
+            assert_json_keys(
+               $result,
+               qw( device_id user_id display_name ),
+            );
+            assert_eq( $result->{user_id}, $user->user_id, "user_id" );
+            assert_eq( $result->{display_name}, $DEVICES{$id}, "display_name" );
          }
          Future->done( 1 );
       });
