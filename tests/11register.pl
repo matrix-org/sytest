@@ -233,6 +233,8 @@ test "registration remembers parameters",
          content => {
             username => $localpart,
             password => "s3kr1t",
+            device_id => "xyzzy",
+            initial_device_display_name => "display_name",
          },
       )->main::expect_http_401->then( sub {
          my ( $response ) = @_;
@@ -265,6 +267,16 @@ test "registration remembers parameters",
          assert_eq( $actual_user_id, "\@$localpart:$home_server",
             "registered user ID" );
 
+         my $user = User( $http, $actual_user_id, undef,
+                          $body->{access_token},
+                          $body->{refresh_token},
+                          undef, undef, [], undef );
+
+         # check that the right device_id was registered
+         matrix_get_device( $user, "xyzzy" );
+      })->then( sub {
+         my ( $device ) = @_;
+         assert_eq( $device->{display_name}, "display_name");
          Future->done( 1 );
       });
    };
