@@ -47,7 +47,7 @@ test "GET /device/{deviceId} gives a 404 for unknown devices",
          $user,
          method => "GET",
          uri    => "/unstable/devices/unknown_device",
-        )->main::expect_http_404;
+      )->main::expect_http_404;
    };
 
 
@@ -158,7 +158,7 @@ test "PUT /device/{deviceId} gives a 404 for unknown devices",
          content => {
             display_name => "new display name",
          },
-        )->main::expect_http_404;
+      )->main::expect_http_404;
    };
 
 test "DELETE /device/{deviceId}",
@@ -189,7 +189,7 @@ test "DELETE /device/{deviceId}",
             $user,
             method => "DELETE",
             uri    => "/unstable/devices/${DEVICE_ID}",
-           );
+         );
       })->then( sub {
          # the device should be deleted
          matrix_get_device( $user, $DEVICE_ID )
@@ -209,6 +209,6 @@ test "DELETE /device/{deviceId}",
             content => {
                refresh_token => $other_login->refresh_token,
             },
-          )->main::expect_http_403;
+        )->main::expect_http_403;
       });
    };
