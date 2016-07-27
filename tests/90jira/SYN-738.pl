@@ -1,8 +1,6 @@
 test "User signups are forbidden from starting with '_'",
    requires => [ $main::API_CLIENTS[0] ],
 
-   bug => "SYN-738",
-
    do => sub {
       my ( $http ) = @_;
 
