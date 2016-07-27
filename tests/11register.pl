@@ -267,7 +267,9 @@ test "registration remembers parameters",
          assert_eq( $actual_user_id, "\@$localpart:$home_server",
             "registered user ID" );
 
-         my $user = User( $http, $actual_user_id, undef,
+         my $user = User( $http, $actual_user_id,
+                          $body->{device_id},
+                          undef,
                           $body->{access_token},
                           $body->{refresh_token},
                           undef, undef, [], undef );
