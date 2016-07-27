@@ -2,7 +2,7 @@ our @EXPORT = qw( User is_User do_request_json_for );
 
 # A handy little structure for other scripts to find in 'user' and 'more_users'
 struct User =>
-   [qw( http user_id password access_token refresh_token eventstream_token
+   [qw( http user_id device_id password access_token refresh_token eventstream_token
         sync_next_batch saved_events pending_get_events )],
    predicate => 'is_User';
 

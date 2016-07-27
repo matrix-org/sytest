@@ -249,7 +249,8 @@ sub matrix_login_again_with_user
 
       assert_json_keys( $body, qw( access_token home_server refresh_token ));
 
-      my $new_user = User( $user->http, $user->user_id, $user->password, $body->{access_token}, $body->{refresh_token}, undef, undef, [], undef );
+      my $new_user = User( $user->http, $user->user_id, $body->{device_id},
+                           $user->password, $body->{access_token}, $body->{refresh_token}, undef, undef, [], undef );
 
       Future->done( $new_user );
    });
