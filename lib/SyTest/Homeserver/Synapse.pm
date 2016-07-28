@@ -27,7 +27,7 @@ sub _init
 
    $self->{$_} = delete $args->{$_} for qw(
       ports synapse_dir extra_args python config coverage
-      dendron pusher synchrotron
+      dendron pusher synchrotron federation_reader
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
@@ -237,6 +237,29 @@ sub start
       ],
    } );
 
+   my $federation_reader_config_path = $self->write_yaml_file( federation_reader => {
+      "worker_app"             => "synapse.app.federation_reader",
+      "worker_log_file"        => "$log.federation_reader",
+      "worker_replication_url" => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["federation"] }],
+            port      => $self->{ports}{federation_reader},
+         },
+         {
+            type => "manhole",
+            port => $self->{ports}{federation_reader_manhole},
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => $self->{ports}{federation_reader_metrics},
+         },
+      ],
+   } );
+
+
 
    $self->{logpath} = $log;
 
@@ -298,6 +321,12 @@ sub start
          push @command,
             "--synchrotron-config" => $synchrotron_config_path,
             "--synchrotron-url" => "http://127.0.0.1:$self->{ports}{synchrotron}";
+      }
+
+      if ( $self->{federation_reader} ) {
+         push @command,
+            "--federation-reader-config" => $federation_reader_config_path,
+            "--federation-reader-url" => "http://127.0.0.1:$self->{ports}{federation_reader}";
       }
    }
    else {

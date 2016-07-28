@@ -50,7 +50,9 @@ our %SYNAPSE_ARGS = (
    coverage   => 0,
    dendron    => "",
    pusher     => 0,
-   synchrotron => 0,
+
+   synchrotron       => 0,
+   federation_reader => 0,
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
@@ -85,6 +87,8 @@ GetOptions(
    'pusher+' => \$SYNAPSE_ARGS{pusher},
 
    'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
+
+   'federation-reader+' => \$SYNAPSE_ARGS{federation_reader},
 
    'p|port-range=s' => \(my $PORT_RANGE = "8800:8819"),
 
