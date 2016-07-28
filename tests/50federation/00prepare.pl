@@ -21,7 +21,7 @@ our $INBOUND_SERVER = fixture(
       require IO::Async::SSL;
 
       $inbound_server->listen(
-         host    => "localhost",
+         host    => "$BIND_HOST",
          service => "",
          extensions => [qw( SSL )],
          # Synapse currently only talks IPv4

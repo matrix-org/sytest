@@ -88,7 +88,7 @@ sub clear_db_pg
 sub await_connectable
 {
    my $self = shift;
-   my ( $port ) = @_;
+   my ( $host, $port ) = @_;
 
    my $loop = $self->loop;
 
@@ -97,12 +97,9 @@ sub await_connectable
 
    repeat {
       $loop->connect(
-         addr => {
-            family   => "inet",
-            socktype => "stream",
-            port     => $port,
-            ip       => "127.0.0.1",
-         }
+         host => $host,
+         service => $port,
+         socktype => "stream",
       )->then_done(1)
        ->else( sub {
          if( !$attempts ) {
