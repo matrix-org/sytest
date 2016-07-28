@@ -1,4 +1,4 @@
-test "Inbound federation can get state for a room",
+test "Inbound federation can get public room list",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
