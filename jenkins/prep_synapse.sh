@@ -35,4 +35,7 @@ ln -s "$tox_dir" .tox
 
 # set up the virtualenv
 tox -e py27 --notest -v
-./.tox/py27/bin/pip install lxml
+
+TOX_BIN=$WORKSPACE/.tox/py27/bin
+python synapse/python_dependencies.py | xargs -n1 $TOX_BIN/pip install
+$TOX_BIN/pip install lxml
