@@ -16,4 +16,4 @@ cd "`dirname $0`/.."
 
 ./jenkins/kill_old_listeners.sh
 
-./run-tests.pl --bind-host ${BIND_HOST:localhost} -O tap --all "$@" > results.tap
+./run-tests.pl --bind-host ${BIND_HOST:-localhost} -O tap --all "$@" > results.tap
