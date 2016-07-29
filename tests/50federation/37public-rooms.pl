@@ -30,17 +30,17 @@ test "Inbound federation can get public room list",
           method   => "GET",
           hostname => $first_home_server,
           uri      => "/publicRooms",
-       )->then( sub {
-          my ( $body ) = @_;
+       )
+     })->then( sub {
+        my ( $body ) = @_;
 
-           log_if_fail "Body", $body;
+         log_if_fail "Body", $body;
 
-          assert_json_keys( $body, qw( chunk start end ) );
+        assert_json_keys( $body, qw( chunk start end ) );
 
-          any { $_->{room_id} eq $room_id } @{ $body->{chunk} }
-            or die "Room not in returned list";
+        any { $_->{room_id} eq $room_id } @{ $body->{chunk} }
+          or die "Room not in returned list";
 
-          Future->done( 1 );
-       });
+        Future->done( 1 );
      });
    };
