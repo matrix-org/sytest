@@ -125,6 +125,7 @@ our @HOMESERVER_INFO = map {
                   namespaces => {
                      users => [
                         { regex => '@astest-.*', exclusive => "true" },
+                        { regex => '@_.*:' . $info->server_name, exclusive => "false" },
                      ],
                      aliases => [
                         { regex => '#astest-.*', exclusive => "true" },

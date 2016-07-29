@@ -71,7 +71,7 @@ sub localpart_fixture
 {
    fixture(
       setup => sub {
-         Future->done( sprintf "_ANON_-%d", $next_anon_uid++ );
+         Future->done( sprintf "ANON-%d", $next_anon_uid++ );
       },
    );
 }
