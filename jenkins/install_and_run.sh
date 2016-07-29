@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Installs the dependencies, and then runs the tests. This is used by both
 # the sytest builds and the synapse ones.
