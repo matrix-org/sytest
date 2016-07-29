@@ -21,13 +21,13 @@ our $INBOUND_SERVER = fixture(
       require IO::Async::SSL;
 
       $inbound_server->listen(
-         host    => "$BIND_HOST",
-         service => "",
-         extensions => [qw( SSL )],
+         host          => $BIND_HOST,
+         service       => "",
+         extensions    => [qw( SSL )],
          # Synapse currently only talks IPv4
-         family => "inet",
+         family        => "inet",
 
-         SSL_key_file => "$DIR/server.key",
+         SSL_key_file  => "$DIR/server.key",
          SSL_cert_file => "$DIR/server.crt",
       )->on_done( sub {
          my ( $inbound_server ) = @_;

@@ -97,8 +97,8 @@ sub await_connectable
 
    repeat {
       $loop->connect(
-         host => $host,
-         service => $port,
+         host     => $host,
+         service  => $port,
          socktype => "stream",
       )->then_done(1)
        ->else( sub {
