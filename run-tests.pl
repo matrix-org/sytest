@@ -55,6 +55,8 @@ our %SYNAPSE_ARGS = (
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
 
+our $BIND_HOST = "localhost";
+
 my %FIXED_BUGS;
 
 my $STOP_ON_FAIL;
@@ -85,6 +87,8 @@ GetOptions(
    'pusher+' => \$SYNAPSE_ARGS{pusher},
 
    'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
+
+   'bind-host=s' => \$BIND_HOST,
 
    'p|port-range=s' => \(my $PORT_RANGE = "8800:8819"),
 
