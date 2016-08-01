@@ -688,6 +688,16 @@ if( $WAIT_AT_END ) {
    $stdin->read_until( "\n" )->get;
 }
 
+# A workaround for
+#   https://rt.perl.org/Public/Bug/Display.html?id=128774
+my @AT_END;
+sub AT_END
+{
+   push @AT_END, @_;
+}
+
+$_->() for @AT_END;
+
 if( $failed_count ) {
    $OUTPUT->final_fail( $failed_count );
 
