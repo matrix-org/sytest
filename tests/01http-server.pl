@@ -17,7 +17,7 @@ our $TEST_SERVER_INFO = fixture(
    requires => [],
 
    setup => sub {
-      my $listen_host = "localhost";
+      my $listen_host = $BIND_HOST;
 
       my $http_server = SyTest::HTTPServer->new;
       $loop->add( $http_server );
@@ -26,11 +26,8 @@ our $TEST_SERVER_INFO = fixture(
       my $server_info;
 
       $http_server->listen(
-         addr => {
-            family   => "inet",
-            socktype => "stream",
-            port     => 0,
-         },
+         host => $BIND_HOST,
+         service => 0,
          extensions => ["SSL"],
          SSL_cert_file => "$DIR/../keys/tls-selfsigned.crt",
          SSL_key_file => "$DIR/../keys/tls-selfsigned.key",

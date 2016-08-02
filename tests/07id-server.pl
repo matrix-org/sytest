@@ -15,14 +15,14 @@ sub id_server_fixture
          $loop->add( $id_server );
 
          $id_server->listen(
-            host    => "localhost",
-            service => "",
-            extensions => [qw( SSL )],
+            host          => $BIND_HOST,
+            service       => "",
+            extensions    => [qw( SSL )],
             # Synapse currently only talks IPv4
-            family => "inet",
+            family        => "inet",
 
             SSL_cert_file => "$DIR/../keys/tls-selfsigned.crt",
-            SSL_key_file => "$DIR/../keys/tls-selfsigned.key",
+            SSL_key_file  => "$DIR/../keys/tls-selfsigned.key",
          )->then_done( $id_server );
       },
 

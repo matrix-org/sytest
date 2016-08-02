@@ -61,14 +61,14 @@ our @HOMESERVER_INFO = map {
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
 
          my $location = $WANT_TLS ?
-            "https://localhost:$secure_port" :
-            "http://localhost:$unsecure_port";
+            "https://$BIND_HOST:$secure_port" :
+            "http://$BIND_HOST:$unsecure_port";
 
-         my $info = ServerInfo( "localhost:$secure_port", $location );
+         my $info = ServerInfo( "$BIND_HOST:$secure_port", $location );
 
          my $synapse = SyTest::Homeserver::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
-            hs_dir        => abs_path( "localhost-$idx" ),
+            hs_dir        => abs_path( "server-$idx" ),
             ports         => {
                client          => $secure_port,
                client_unsecure => $unsecure_port,
@@ -86,6 +86,7 @@ our @HOMESERVER_INFO = map {
                federation_reader_manhole => main::alloc_port( "federation_reader[$idx].manhole" ),
 
             },
+            bind_host           => $BIND_HOST,
             output              => $OUTPUT,
             print_output        => $SYNAPSE_ARGS{log},
             extra_args          => \@extra_args,
@@ -130,6 +131,7 @@ our @HOMESERVER_INFO = map {
                   namespaces => {
                      users => [
                         { regex => '@astest-.*', exclusive => "true" },
+                        { regex => '@_.*:' . $info->server_name, exclusive => "false" },
                      ],
                      aliases => [
                         { regex => '#astest-.*', exclusive => "true" },
@@ -141,7 +143,7 @@ our @HOMESERVER_INFO = map {
                push @confs, $appserv_conf;
 
                # Now we can fill in the AS info's user_id
-               $as_info->user_id = sprintf "@%s:localhost:%d",
+               $as_info->user_id = sprintf "@%s:$BIND_HOST:%d",
                   $as_info->localpart, $secure_port;
             }
 
