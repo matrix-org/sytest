@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -x
+
 # Kill any stray processes that left over from a previous test run
 # that are holding onto one of the ports we want to use.
 : ${PORT_COUNT=100}
