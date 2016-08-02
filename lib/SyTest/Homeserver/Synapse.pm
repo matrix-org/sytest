@@ -338,7 +338,7 @@ sub start
       if ( $self->{federation_reader} ) {
          push @command,
             "--federation-reader-config" => $federation_reader_config_path,
-            "--federation-reader-url" => "http://127.0.0.1:$self->{ports}{federation_reader}";
+            "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
       }
    }
    else {
