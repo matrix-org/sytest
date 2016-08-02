@@ -5,7 +5,7 @@
 set -ex
 
 : ${PORT_BASE=8000}
-: ${PORT_COUNT=20}
+: ${PORT_COUNT=100}
 
 cd "`dirname $0`/.."
 
