@@ -14,6 +14,21 @@ cd "`dirname $0`/.."
 
 ./install-deps.pl
 
+: ${PORT_BASE=20000}
+: ${PORT_COUNT=100}
+: ${BIND_HOST=localhost}
+
+export PORT_BASE
+export PORT_COUNT
+export BIND_HOST
+
 ./jenkins/kill_old_listeners.sh
 
-./run-tests.pl --bind-host ${BIND_HOST:-localhost} -O tap --all "$@" > results.tap
+export TOX_BIN=$WORKSPACE/.tox/py27/bin
+./run-tests.pl \
+    --python="$TOX_BIN/python" \
+    --port-range ${PORT_BASE}:$((PORT_BASE+PORT_COUNT-1)) \
+    --bind-host ${BIND_HOST} \
+    -O tap \
+    --all "$@" \
+    > results.tap
