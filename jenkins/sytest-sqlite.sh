@@ -6,6 +6,6 @@ set -ex
 
 cd "`dirname $0`/.."
 
-./jenkins/prep_synapse.sh
-
+./jenkins/clone.sh synapse https://github.com/matrix-org/synapse.git
+./synapse/jenkins/prepare_synapse.sh
 ./jenkins/install_and_run.sh
