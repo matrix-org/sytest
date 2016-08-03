@@ -122,6 +122,39 @@ test "Can query device keys using GET",
       })
    };
 
+test "query for user with no keys returns empty key dict",
+   requires => [ local_user_fixture() ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for( $user,
+         method  => "POST",
+         uri     => "/unstable/keys/query/",
+         content => {
+            device_keys => {
+               $user->user_id => {}
+            }
+         }
+      )->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail( "/query response", $content );
+
+         assert_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         assert_json_keys( $device_keys, $user->user_id );
+
+         my $alice_keys = $device_keys->{ $user->user_id };
+
+         assert_json_object( $alice_keys );
+         assert_ok( !%{$alice_keys}, "unexpected keys" );
+
+         Future->done(1)
+      })
+   };
+
 push our @EXPORT, qw( matrix_put_e2e_keys );
 
 sub matrix_put_e2e_keys
