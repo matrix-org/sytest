@@ -414,6 +414,10 @@ __PACKAGE__->mk_await_request_pair(
    invite => [qw( :room_id )],
 );
 
+__PACKAGE__->mk_await_request_pair(
+   event => [qw( :event_id )],
+);
+
 sub on_request_federation_v1_send
 {
    my $self = shift;
