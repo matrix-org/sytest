@@ -395,6 +395,14 @@ __PACKAGE__->mk_await_request_pair(
 );
 
 __PACKAGE__->mk_await_request_pair(
+   state_ids => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   state => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
    get_missing_events => [qw( :room_id )],
 );
 
