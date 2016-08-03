@@ -252,21 +252,24 @@ sub start
    my $federation_reader_config_path = $self->write_yaml_file( federation_reader => {
       "worker_app"             => "synapse.app.federation_reader",
       "worker_log_file"        => "$log.federation_reader",
-      "worker_replication_url" => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
       "worker_listeners"       => [
          {
             type      => "http",
             resources => [{ names => ["federation"] }],
             port      => $self->{ports}{federation_reader},
+            bind_address => $bind_host,
          },
          {
             type => "manhole",
             port => $self->{ports}{federation_reader_manhole},
+            bind_address => $bind_host,
          },
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
             port      => $self->{ports}{federation_reader_metrics},
+            bind_address => $bind_host,
          },
       ],
    } );

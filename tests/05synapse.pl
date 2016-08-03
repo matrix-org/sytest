@@ -24,7 +24,10 @@ sub extract_extra_args
 
 my @synapses;
 
-END {
+# Almost like an END block, but we can't use END because we need SIGCHLD, and
+# see
+#   https://rt.perl.org/Public/Bug/Display.html?id=128774
+main::AT_END sub {
    $OUTPUT->diag( "Killing synapse servers " ) if @synapses;
 
    ( fmap_void {
@@ -42,7 +45,7 @@ END {
          }),
       )
    } foreach => \@synapses, concurrent => scalar @synapses )->get;
-}
+};
 
 push our @EXPORT, qw( HOMESERVER_INFO );
 
