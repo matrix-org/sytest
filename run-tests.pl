@@ -94,7 +94,7 @@ GetOptions(
 
    'bind-host=s' => \$BIND_HOST,
 
-   'p|port-range=s' => \(my $PORT_RANGE = "8800:8819"),
+   'p|port-range=s' => \(my $PORT_RANGE = "8800:8900"),
 
    'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
