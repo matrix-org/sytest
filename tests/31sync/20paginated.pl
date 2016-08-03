@@ -80,7 +80,7 @@ multi_test "Basic paginated sync",
 
          # Check that the newest rooms are in the sync
          assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
-         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, $pagination_limit, "correct number of rooms");
 
          pass "Correct initial sync response";
 
@@ -102,7 +102,7 @@ multi_test "Basic paginated sync",
 
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "correct number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          pass "Unseen room is in incremental sync";
@@ -140,7 +140,7 @@ multi_test "Basic paginated sync",
 
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "correct number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
@@ -175,7 +175,7 @@ multi_test "Basic paginated sync",
 
          # Check that the newest rooms are in the sync
          assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
-         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, $pagination_limit, "correct number of rooms");
 
          pass "Incremental sync correctly limited.";
 
@@ -195,7 +195,7 @@ multi_test "Basic paginated sync",
 
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "correct number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
@@ -262,7 +262,7 @@ multi_test "Can request unsen room",
 
          # Check that the newest rooms are in the sync
          assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
-         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, $pagination_limit, "correct number of rooms");
 
          pass "Correct initial sync response";
 
@@ -279,7 +279,7 @@ multi_test "Can request unsen room",
 
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "correct number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          pass "Unseen room is in incremental sync";
@@ -314,7 +314,7 @@ multi_test "Can request unsen room",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[-1] );
 
          pass "Didn't get room again when peeking";
@@ -331,7 +331,7 @@ multi_test "Can request unsen room",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
@@ -426,7 +426,7 @@ multi_test "Synced flag is correctly set when peeking",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
@@ -493,7 +493,7 @@ test "Can paginate paginated sync",
          assert_json_keys( $body, qw( pagination_info ) );
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, $num_rooms - $pagination_limit, "number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, $num_rooms - $pagination_limit, "number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0 .. $num_rooms - $pagination_limit - 1] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
@@ -554,7 +554,7 @@ multi_test "Paginated sync inlcude tags",
 
          # Check that the newest rooms are in the sync
          assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1, 0] );
-         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit + 1, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, $pagination_limit + 1, "correct number of rooms");
 
          pass "Tagged room is in initial sync";
 
@@ -573,7 +573,7 @@ multi_test "Paginated sync inlcude tags",
          assert_json_keys( $body, qw( pagination_info ) );
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
@@ -634,7 +634,7 @@ test "Paginated sync ignore tags",
 
          # Check that the newest rooms are in the sync
          assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
-         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, $pagination_limit, "correct number of rooms");
 
          Future->done( 1 );
       });
@@ -682,7 +682,7 @@ multi_test "Paginated sync with tags handles tag changes correctly",
 
          # Check that the newest rooms are in the sync
          assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
-         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, $pagination_limit, "correct number of rooms");
 
          matrix_add_tag_synced( $user, $rooms[0], "test_tag", {} );
       })->then( sub {
@@ -697,7 +697,7 @@ multi_test "Paginated sync with tags handles tag changes correctly",
          assert_json_keys( $body, qw( pagination_info ) );
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
@@ -725,7 +725,7 @@ multi_test "Paginated sync with tags handles tag changes correctly",
          assert_json_keys( $body, qw( pagination_info ) );
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
@@ -754,7 +754,7 @@ multi_test "Paginated sync with tags handles tag changes correctly",
          assert_json_keys( $body, qw( pagination_info ) );
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
@@ -815,7 +815,7 @@ test "Removed room tag includes message",
 
          # Check that the newest rooms are in the sync
          assert_json_keys( $body->{rooms}{join}, @rooms[$num_rooms - $pagination_limit .. $num_rooms - 1] );
-         assert_eq( scalar keys $body->{rooms}{join}, $pagination_limit, "correct number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, $pagination_limit, "correct number of rooms");
 
          matrix_add_tag_synced( $user, $rooms[0], "test_tag", {} );
       })->then( sub {
@@ -842,7 +842,7 @@ test "Removed room tag includes message",
          assert_json_keys( $body, qw( pagination_info ) );
          not $body->{pagination_info}{limited} or die "Limited flag is set";
 
-         assert_eq( scalar keys $body->{rooms}{join}, 1, "number of rooms");
+         assert_eq( scalar keys %{ $body->{rooms}{join} }, 1, "number of rooms");
          assert_json_keys( $body->{rooms}{join}, $rooms[0] );
 
          my $room = $body->{rooms}{join}{$rooms[0]};
