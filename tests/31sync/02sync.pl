@@ -1,3 +1,6 @@
+use Future::Utils qw( repeat );
+
+
 test "Can sync",
     requires => [ local_user_fixture( with_events => 0 ),
                   qw( can_create_filter )],

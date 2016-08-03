@@ -20,7 +20,7 @@ use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
-use List::Util 1.33 qw( first all any maxstr );
+use List::Util 1.33 qw( first all any maxstr max );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
 use Time::HiRes qw( time );
@@ -49,10 +49,15 @@ our %SYNAPSE_ARGS = (
    log_filter => [],
    coverage   => 0,
    dendron    => "",
-   pusher     => 0
+   pusher     => 0,
+
+   synchrotron       => 0,
+   federation_reader => 0,
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
+
+our $BIND_HOST = "localhost";
 
 my %FIXED_BUGS;
 
@@ -83,7 +88,13 @@ GetOptions(
 
    'pusher+' => \$SYNAPSE_ARGS{pusher},
 
-   'p|port-base=i' => \(my $PORT_BASE = 8000),
+   'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
+
+   'federation-reader+' => \$SYNAPSE_ARGS{federation_reader},
+
+   'bind-host=s' => \$BIND_HOST,
+
+   'p|port-range=s' => \(my $PORT_RANGE = "8800:8899"),
 
    'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
@@ -148,7 +159,7 @@ Options:
 
        --coverage               - generate code coverage stats for synapse
 
-   -p, --port-base NUMBER       - initial port number to run server under test
+   -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
    -F, --fixed BUGS             - bug names that are expected to be fixed
                                   (ignores 'bug' declarations with these names)
@@ -271,9 +282,24 @@ my $loop = IO::Async::Loop->new;
 my $old_SIGINT = $SIG{INT};
 $SIG{INT} = sub { $old_SIGINT->( "INT" ) if ref $old_SIGINT; exit 1 };
 
+( my ( $port_next, $port_max ) = split m/:/, $PORT_RANGE ) == 2 or
+   die "Expected a --port-range expressed as START:MAX\n";
 
-# We need two servers; a "local" and a "remote" one for federation-based tests
-our @HOMESERVER_PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
+my %port_desc;
+
+## TODO: better name here
+sub alloc_port
+{
+   my ( $desc ) = @_;
+   defined $desc or croak "alloc_port() without description";
+
+   die "No more free ports\n" if $port_next >= $port_max;
+   my $port = $port_next++;
+
+   $port_desc{$port} = $desc;
+
+   return $port;
+}
 
 # Util. function for tests
 sub delay
@@ -330,6 +356,10 @@ sub fixture
          });
       }
    }
+
+   # If there's no requirements, we still want to wait for $f_start before we
+   # actually invoke $setup
+   @req_futures or push @req_futures, $f_start;
 
    return Fixture(
       \@requires,
@@ -650,10 +680,27 @@ foreach my $test ( @TESTS ) {
 $OUTPUT->status();
 
 if( $WAIT_AT_END ) {
+   ## It's likely someone wants to interact with a running system. Lets print all
+   #    the port descriptions to be useful
+   my $width = max map { length } values %port_desc;
+
+   print STDERR "\n";
+   printf STDERR "%-*s: %d\n", $width, $port_desc{$_}, $_ for sort keys %port_desc;
+
    print STDERR "Waiting... (hit ENTER to end)\n";
    $loop->add( my $stdin = IO::Async::Stream->new_for_stdin( on_read => sub {} ) );
    $stdin->read_until( "\n" )->get;
 }
+
+# A workaround for
+#   https://rt.perl.org/Public/Bug/Display.html?id=128774
+my @AT_END;
+sub AT_END
+{
+   push @AT_END, @_;
+}
+
+$_->() for @AT_END;
 
 if( $failed_count ) {
    $OUTPUT->final_fail( $failed_count );
