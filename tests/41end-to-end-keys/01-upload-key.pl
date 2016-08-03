@@ -123,9 +123,9 @@ test "Can query device keys using GET",
    };
 
 test "query for user with no keys returns empty key dict",
-  requires => [ local_user_fixture() ],
+   requires => [ local_user_fixture() ],
 
-  check => sub {
+   check => sub {
       my ( $user ) = @_;
 
       do_request_json_for( $user,
