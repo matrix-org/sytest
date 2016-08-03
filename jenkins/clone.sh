@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# This clones a project from github into named subdirectory
+# This clones a project from github into a named subdirectory
 # If the project has a branch with the same name as this branch
 # then it will checkout that branch after cloning.
 # Otherwise it will checkout "origin/develop."
