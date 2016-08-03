@@ -96,7 +96,7 @@ test "Inbound federation can get state_ids for a room",
       });
    };
 
-test "Outbound federation sends /state_ids",
+test "Outbound federation requests /state_ids and correctly handles 404",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
@@ -151,6 +151,8 @@ test "Outbound federation sends /state_ids",
 
                log_if_fail "Got /state_ids";
 
+               # We 404 to simulate old servers to test that the remote will
+               # fall back to asking for /state
                $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
 
                Future->done(1);
@@ -161,6 +163,7 @@ test "Outbound federation sends /state_ids",
 
                log_if_fail "Got /state";
 
+               # Just send anything back, synapse handles this gracefully.
                $req->respond_json( {
                   pdus => [],
                   auth_chain => [],
@@ -172,6 +175,7 @@ test "Outbound federation sends /state_ids",
             ->then( sub {
                my ( $req ) = @_;
 
+               # We return no events to force the remote to ask for state
                $req->respond_json( {
                   events => [],
                } );
@@ -191,5 +195,5 @@ test "Outbound federation sends /state_ids",
             return $event->{type} eq "m.room.message" &&
                    $event->{event_id} eq $sent_event->{event_id};
          });
-      });
+      })->then_done(1);
    };
