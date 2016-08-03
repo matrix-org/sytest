@@ -15,13 +15,12 @@ our @AS_INFO = map {
 
    fixture(
       setup => sub {
-         my $port = $HOMESERVER_PORTS[0];
-
          my $localpart = "as-user-$idx";
 
          Future->done( ASInfo(
             $localpart,
-            "\@${localpart}:localhost:${port}",
+            undef,  # user_id field will be filled in later when we know what
+                    # the homeserver location actually is
             gen_token( 32 ),
             gen_token( 32 ),
             "/appservs/$idx",

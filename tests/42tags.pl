@@ -306,6 +306,9 @@ test "Tags appear in an initial v2 /sync",
 
          matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced" );
+      })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
@@ -342,6 +345,9 @@ test "Newly updated tags appear in an incremental v2 /sync",
       })->then( sub {
          matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced" );
+      })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
@@ -377,9 +383,15 @@ test "Deleted tags appear in an incremental v2 /sync",
       })->then( sub {
          matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced" );
+      })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          matrix_remove_tag( $user, $room_id, "test_tag" );
+      })->then( sub {
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced" );
       })->then( sub {
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {

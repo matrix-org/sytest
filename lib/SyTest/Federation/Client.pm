@@ -169,7 +169,7 @@ sub join_room
          origin_server_ts => $self->time_ms,
       );
 
-      # TODO: really ought to sign it...
+      $store->sign_event( \%member_event );
 
       $self->do_request_json(
          method   => "PUT",

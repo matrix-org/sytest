@@ -151,8 +151,6 @@ test "Can invite unbound 3pid with no ops",
    requires => [ local_user_fixtures( 3 ), $main::HOMESERVER_INFO[0],
                  id_server_fixture() ],
 
-   bug => "SYN-611",
-
    do => sub {
       my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;
       my $hs_uribase = $info->client_location;
@@ -167,8 +165,6 @@ test "Can invite unbound 3pid with no ops",
 test "Can invite unbound 3pid over federation with no ops",
    requires => [ local_user_fixtures( 2 ), remote_user_fixture(),
                  $main::HOMESERVER_INFO[1], id_server_fixture() ],
-
-   bug => "SYN-611",
 
    do => sub {
       my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;

@@ -1,18 +1,20 @@
-package SyTest::Synapse;
+package SyTest::Homeserver::Synapse;
 
 use strict;
 use warnings;
 use 5.010;
-use base qw( IO::Async::Notifier );
+use base qw( SyTest::Homeserver );
+
+use Carp;
 
 use Future::Utils qw( try_repeat );
 
 use IO::Async::Process;
 use IO::Async::FileStream;
 
-use Cwd qw( getcwd abs_path );
+use Cwd qw( getcwd );
 use File::Basename qw( dirname );
-use File::Path qw( make_path remove_tree );
+use File::Path qw( remove_tree );
 use List::Util qw( any pairmap );
 use POSIX qw( strftime );
 
@@ -24,11 +26,12 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      port unsecure_port output synapse_dir extra_args python config coverage
-      dendron pusher
+      ports synapse_dir extra_args python config coverage
+      dendron pusher synchrotron federation_reader bind_host
    );
 
-   $self->{hs_dir} = abs_path( "localhost-$self->{port}" );
+   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
+      for qw( client client_unsecure metrics );
 
    $self->SUPER::_init( $args );
 }
@@ -68,28 +71,17 @@ sub append_config
    _append( $self->{config}, \%more );
 }
 
-sub write_yaml_file
-{
-   my $self = shift;
-   my ( $relpath, $content ) = @_;
-
-   my $hs_dir = $self->{hs_dir};
-   -d $hs_dir or make_path $hs_dir;
-
-   YAML::DumpFile( my $abspath = "$hs_dir/$relpath", $content );
-
-   return $abspath;
-}
-
 sub start
 {
    my $self = shift;
 
-   my $port = $self->{port};
+   my $port = $self->{ports}{client};
    my $output = $self->{output};
 
+   my $hs_dir = $self->{hs_dir};
+
    my $db_config_path = "database.yaml";
-   my $db_config_abs_path = "$self->{hs_dir}/${db_config_path}";
+   my $db_config_abs_path = "$hs_dir/${db_config_path}";
    my $db  = ":memory:"; #"$hs_dir/homeserver.db";
 
    my ( $db_type, %db_args, $db_config );
@@ -126,20 +118,22 @@ sub start
    }
 
    my $cwd = getcwd;
-   my $log = "$self->{hs_dir}/homeserver.log";
+   my $log = "$hs_dir/homeserver.log";
 
    my $listeners = [];
+   my $bind_host = $self->{bind_host};
 
    if( $self->{dendron} ) {
       # If we are running synapse behind dendron then only bind the unsecure
       # port for synapse.
-      $self->{unsecure_port} = $port + 9000 - 8000;
+      $self->{ports}{client_unsecure} or
+         croak "Need an unsecure client port if running synapse behind dendron";
    }
    else {
       push @$listeners, {
          type => "http",
          port => $port,
-         bind_address => "127.0.0.1",
+         bind_address => $bind_host,
          tls => 1,
          resources => [{
             names => [ "client", "federation", "replication" ], compress => 0
@@ -147,11 +141,11 @@ sub start
       };
    }
 
-   if( $self->{unsecure_port} ) {
+   if( my $unsecure_port = $self->{ports}{client_unsecure} ) {
       push @$listeners, {
          type => "http",
-         port => $self->{unsecure_port},
-         bind_address => "127.0.0.1",
+         port => $unsecure_port,
+         bind_address => $bind_host,
          tls => 0,
          resources => [{
             names => [ "client", "federation", "replication" ], compress => 0
@@ -159,14 +153,22 @@ sub start
       }
    }
 
-   my $cert_file = "$self->{hs_dir}/cert.pem";
-   my $key_file = "$self->{hs_dir}/key.pem";
-   my $log_config_file = "$self->{hs_dir}/log.config";
+   push @$listeners, {
+      type => "metrics",
+      port => $self->{ports}{metrics},
+      bind_address => $bind_host,
+      tls => 0,
+   };
 
-   my $macaroon_secret_key = "secret_$self->{port}";
+   my $cert_file = "$hs_dir/cert.pem";
+   my $key_file = "$hs_dir/key.pem";
+   my $log_config_file = "$hs_dir/log.config";
+
+   my $macaroon_secret_key = "secret_$port";
+   my $registration_shared_secret = "reg_secret";
 
    my $config_path = $self->write_yaml_file( config => {
-        "server_name" => "localhost:$port",
+        "server_name" => "$bind_host:$port",
         "log_file" => "$log",
         (-f $log_config_file) ? ("log_config" => $log_config_file) : (),
         "tls_certificate_path" => $cert_file,
@@ -178,12 +180,14 @@ sub start
         "database" => $db_config,
         "database_config" => $db_config_path,
         "macaroon_secret_key" => $macaroon_secret_key,
+        "registration_shared_secret" => $registration_shared_secret,
+
+        "use_frozen_events" => "true",
 
         "invite_3pid_guest" => "true",
 
         # Metrics are always useful
         "enable_metrics" => 1,
-        "metrics_port" => ( $port - 8000 + 9090 ),
 
         "perspectives" => { servers => {} },
 
@@ -202,26 +206,75 @@ sub start
    } );
 
    my $pusher_config_path = $self->write_yaml_file( pusher => {
-      "server_name"              => "localhost:$port",
-      "log_file"                 => "$log.pusher",
-      "database"                 => $db_config,
-      "database_config"          => $db_config_path,
-      "replication_url"          => "http://127.0.0.1:$self->{unsecure_port}/_synapse/replication",
-      "full_twisted_stacktraces" => "true",
-      "use_insecure_ssl_client_just_for_testing_do_not_use" => "true",
-      "public_baseurl"           => "http://127.0.0.1:$port",
-      "listeners" => [
+      "worker_app"             => "synapse.app.pusher",
+      "worker_log_file"        => "$log.pusher",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
-            port      => ( $port - 8000 + 10090 ),
+            bind_address => $bind_host,
+            port      => $self->{ports}{pusher_metrics},
          },
          {
             type => "manhole",
-            port => ( $port - 8000 + 10080 ),
+            port => $self->{ports}{pusher_manhole},
+            bind_address => $bind_host,
          },
       ],
    } );
+
+   my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
+      "worker_app"             => "synapse.app.synchrotron",
+      "worker_log_file"        => "$log.synchrotron",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["client"] }],
+            port      => $self->{ports}{synchrotron},
+            bind_address => $bind_host,
+         },
+         {
+            type => "manhole",
+            port => $self->{ports}{synchrotron_manhole},
+            bind_address => $bind_host,
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => $self->{ports}{synchrotron_metrics},
+            bind_address => $bind_host,
+         },
+      ],
+   } );
+
+   my $federation_reader_config_path = $self->write_yaml_file( federation_reader => {
+      "worker_app"             => "synapse.app.federation_reader",
+      "worker_log_file"        => "$log.federation_reader",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["federation"] }],
+            port      => $self->{ports}{federation_reader},
+            bind_address => $bind_host,
+         },
+         {
+            type => "manhole",
+            port => $self->{ports}{federation_reader_manhole},
+            bind_address => $bind_host,
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => $self->{ports}{federation_reader_metrics},
+            bind_address => $bind_host,
+         },
+      ],
+   } );
+
+
 
    $self->{logpath} = $log;
 
@@ -247,7 +300,7 @@ sub start
    push @synapse_command,
       "-m", "synapse.app.homeserver",
       "--config-path" => $config_path,
-      "--server-name" => "localhost:$port";
+      "--server-name" => "$bind_host:$port";
 
    $output->diag( "Generating config for port $port" );
 
@@ -266,17 +319,29 @@ sub start
          $self->{dendron},
          "--synapse-python" => $self->{python},
          "--synapse-config" => $config_path,
-         "--synapse-url" => "http://127.0.0.1:$self->{unsecure_port}",
+         "--synapse-url" => "http://$bind_host:$self->{ports}{client_unsecure}",
          "--synapse-postgres" => join( " ", @db_arg_pairs ),
          "--macaroon-secret" => $macaroon_secret_key,
-         "--server-name" => "localhost:$port",
+         "--server-name" => "$bind_host:$port",
          "--cert-file" => $cert_file,
          "--key-file" => $key_file,
-         "--addr" => "127.0.0.1:$port",
+         "--addr" => "$bind_host:$port",
       );
 
       if ( $self->{pusher} ) {
-         @command = ( @command, "--pusher-config" => $pusher_config_path );
+         push @command, "--pusher-config" => $pusher_config_path;
+      }
+
+      if ( $self->{synchrotron} ) {
+         push @command,
+            "--synchrotron-config" => $synchrotron_config_path,
+            "--synchrotron-url" => "http://$bind_host:$self->{ports}{synchrotron}";
+      }
+
+      if ( $self->{federation_reader} ) {
+         push @command,
+            "--federation-reader-config" => $federation_reader_config_path,
+            "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
       }
    }
    else {
@@ -314,31 +379,15 @@ sub start
             )
          );
 
-         my $polling_period = 0.1;
+         $output->diag( "Connecting to server $port" );
 
-         my $poll;
-         $poll = sub {
-            $loop->connect(
-               addr => {
-                  family   => "inet",
-                  socktype => "stream",
-                  port     => $self->{port},
-                  ip       => "127.0.0.1",
-               }
-            )->then( sub {
-               $output->diag( "Connected to server $self->{port}" );
-               my ( $connection ) = @_;
-
-               $connection->close;
+         $self->adopt_future(
+            $self->await_connectable( $bind_host, $port )->then( sub {
+               $output->diag( "Connected to server $port" );
 
                $self->started_future->done;
-            }, sub {
-               $loop->delay_future( after => $polling_period )->then( $poll );
-            });
-         };
-
-         $output->diag( "Connecting to server $self->{port}" );
-         $self->adopt_future( $poll->() );
+            })
+         );
 
          $self->open_logfile;
       }
@@ -449,40 +498,6 @@ sub print_output
    }
 
    undef @{ $self->{stderr_lines} };
-}
-
-sub clear_db_sqlite
-{
-   my $self = shift;
-   my %args = @_;
-
-   my $db = $args{path};
-
-   $self->{output}->diag( "Clearing SQLite database at $db" );
-
-   unlink $db if -f $db;
-}
-
-sub clear_db_pg
-{
-   my $self = shift;
-   my %args = @_;
-
-   my $host = $args{host} // '';
-   $self->{output}->diag( "Clearing Pg database $args{database} on '$host'" );
-
-   require DBI;
-   require DBD::Pg;
-
-   my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$host", $args{user}, $args{password} )
-      or die DBI->errstr;
-
-   foreach my $row ( @{ $dbh->selectall_arrayref( "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" ) } ) {
-      my ( $tablename ) = @$row;
-
-      $dbh->do( "DROP TABLE $tablename CASCADE" ) or
-         die $dbh->errstr;
-   }
 }
 
 sub rotate_logfile
