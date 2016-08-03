@@ -53,6 +53,8 @@ test "Can query device keys using POST",
       )->then( sub {
          my ( $content ) = @_;
 
+         log_if_fail( "/query response", $content );
+
          assert_json_keys( $content, "device_keys" );
 
          my $device_keys = $content->{device_keys};
@@ -60,7 +62,20 @@ test "Can query device keys using POST",
 
          my $alice_keys = $device_keys->{ $user->user_id };
          assert_json_keys( $alice_keys, $user->device_id );
+
+         my $alice_device_keys = $alice_keys->{ $user->device_id };
+         assert_json_keys( $alice_device_keys, "unsigned" );
+
+         my $unsigned = $alice_device_keys->{unsigned};
+
+         # display_name should be null by default
+         exists $unsigned->{device_display_name} or
+           die "Expected to get a (null) device_display_name";
+         defined $unsigned->{device_display_name} and
+           die "Device display name was unexpectedly defined.";
+
          # TODO: Check that the content matches what we uploaded.
+
          Future->done(1)
       })
    };
