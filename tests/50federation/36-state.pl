@@ -79,8 +79,8 @@ test "Inbound federation can get state_ids for a room",
          my ( $body ) = @_;
          log_if_fail "Body", $body;
 
-         assert_json_keys( $body, qw( pdus auth_chain ));
-         assert_json_list( my $state = $body->{pdus} );
+         assert_json_keys( $body, qw( pdu_ids auth_chain_ids ));
+         assert_json_list( my $state = $body->{pdu_ids} );
 
          my $create_event = $room->get_current_state_event( "m.room.create", "" );
          my $power_event = $room->get_current_state_event( "m.room.power_levels", "" );
@@ -272,8 +272,8 @@ test "Outbound federation requests /state_ids and asks for missing state",
 
                # Don't need to be exact, synapse handles failure gracefully
                $req->respond_json( {
-                  pdus => [ $missing_state->{event_id}, @auth_event_ids ],
-                  auth_chain => [ @auth_event_ids ],
+                  pdu_ids => [ $missing_state->{event_id}, @auth_event_ids ],
+                  auth_chain_ids => [ @auth_event_ids ],
                } );
 
                Future->done(1);
