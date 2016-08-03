@@ -27,6 +27,41 @@ test "AS can create a user",
       });
    };
 
+test "AS can get or create user and return an access_token",
+   requires => [ $main::AS_USER[0], $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $as_user, $http ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
+         uri    => "/unstable/createUser",
+
+         content => {
+            localpart        => "user_localpart",
+            displayname      => "user_displayname",
+            duration_seconds => 200,
+         }
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( access_token user_id  home_server ));
+
+         my $user =User( $http , $body->{user_id}, undef, "", $body->{access_token}, undef, undef, undef, [], undef );
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/profile/:user_id/displayname",
+         )}
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_eq( $body->{displayname}, qw( user_displayname ));
+
+         Future->done(1);
+      });
+   };
+
 test "AS cannot create users outside its own namespace",
    requires => [ $main::AS_USER[0] ],
 
@@ -164,7 +199,7 @@ sub matrix_register_as_ghost
 
       # TODO: user has no event stream yet. Should they?
       Future->done(
-         User( $as_user->http, $body->{user_id}, undef, $body->{access_token}, undef, undef, undef, [], undef )
+         User( $as_user->http, $body->{user_id}, undef, undef, $body->{access_token}, undef, undef, undef, [], undef )
       );
    });
 }

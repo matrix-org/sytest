@@ -1,4 +1,6 @@
-use SyTest::Synapse;
+use Future::Utils qw( fmap_void );
+
+use SyTest::Homeserver::Synapse;
 
 use Cwd qw( abs_path );
 
@@ -22,13 +24,28 @@ sub extract_extra_args
 
 my @synapses;
 
-END {
+# Almost like an END block, but we can't use END because we need SIGCHLD, and
+# see
+#   https://rt.perl.org/Public/Bug/Display.html?id=128774
+main::AT_END sub {
    $OUTPUT->diag( "Killing synapse servers " ) if @synapses;
 
-   foreach my $synapse ( values @synapses ) {
+   ( fmap_void {
+      my $synapse = $_;
+
       $synapse->kill( 'INT' );
-   }
-}
+
+      Future->needs_any(
+         $synapse->await_finish,
+
+         $loop->delay_future( after => 15 )->then( sub {
+            print STDERR "Timed out waiting for ${\ $synapse->pid }; sending SIGKILL\n";
+            $synapse->kill( 'KILL' );
+            Future->done;
+         }),
+      )
+   } foreach => \@synapses, concurrent => scalar @synapses )->get;
+};
 
 push our @EXPORT, qw( HOMESERVER_INFO );
 
@@ -47,14 +64,14 @@ our @HOMESERVER_INFO = map {
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
 
          my $location = $WANT_TLS ?
-            "https://localhost:$secure_port" :
-            "http://localhost:$unsecure_port";
+            "https://$BIND_HOST:$secure_port" :
+            "http://$BIND_HOST:$unsecure_port";
 
-         my $info = ServerInfo( "localhost:$secure_port", $location );
+         my $info = ServerInfo( "$BIND_HOST:$secure_port", $location );
 
-         my $synapse = SyTest::Synapse->new(
+         my $synapse = SyTest::Homeserver::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
-            hs_dir        => abs_path( "localhost-$idx" ),
+            hs_dir        => abs_path( "server-$idx" ),
             ports         => {
                client          => $secure_port,
                client_unsecure => $unsecure_port,
@@ -66,15 +83,22 @@ our @HOMESERVER_INFO = map {
                synchrotron         => main::alloc_port( "synchrotron[$idx]" ),
                synchrotron_metrics => main::alloc_port( "synchrotron[$idx].metrics" ),
                synchrotron_manhole => main::alloc_port( "synchrotron[$idx].manhole" ),
+
+               federation_reader         => main::alloc_port( "federation_reader[$idx]" ),
+               federation_reader_metrics => main::alloc_port( "federation_reader[$idx].metrics" ),
+               federation_reader_manhole => main::alloc_port( "federation_reader[$idx].manhole" ),
+
             },
-            output        => $OUTPUT,
-            print_output  => $SYNAPSE_ARGS{log},
-            extra_args    => \@extra_args,
-            python        => $SYNAPSE_ARGS{python},
-            coverage      => $SYNAPSE_ARGS{coverage},
-            dendron       => $SYNAPSE_ARGS{dendron},
-            pusher        => $SYNAPSE_ARGS{pusher},
-            synchrotron   => $SYNAPSE_ARGS{synchrotron},
+            bind_host           => $BIND_HOST,
+            output              => $OUTPUT,
+            print_output        => $SYNAPSE_ARGS{log},
+            extra_args          => \@extra_args,
+            python              => $SYNAPSE_ARGS{python},
+            coverage            => $SYNAPSE_ARGS{coverage},
+            dendron             => $SYNAPSE_ARGS{dendron},
+            pusher              => $SYNAPSE_ARGS{pusher},
+            synchrotron         => $SYNAPSE_ARGS{synchrotron},
+            federation_reader   => $SYNAPSE_ARGS{federation_reader},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
@@ -110,6 +134,7 @@ our @HOMESERVER_INFO = map {
                   namespaces => {
                      users => [
                         { regex => '@astest-.*', exclusive => "true" },
+                        { regex => '@_.*:' . $info->server_name, exclusive => "false" },
                      ],
                      aliases => [
                         { regex => '#astest-.*', exclusive => "true" },
@@ -121,7 +146,7 @@ our @HOMESERVER_INFO = map {
                push @confs, $appserv_conf;
 
                # Now we can fill in the AS info's user_id
-               $as_info->user_id = sprintf "@%s:localhost:%d",
+               $as_info->user_id = sprintf "@%s:$BIND_HOST:%d",
                   $as_info->localpart, $secure_port;
             }
 

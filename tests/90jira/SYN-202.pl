@@ -24,7 +24,7 @@ multi_test "Left room members do not cause problems for presence",
          #   Impossible currently for this unit test to detect it, but the
          #   log should hopefully *not* contain a message like this:
          #
-         #      synapse.handlers.message - 395 - WARNING -  - Failed to get member presence of u'@SYN-202-user2:localhost:8001'
+         #      synapse.handlers.message - 395 - WARNING -  - Failed to get member presence of u'@SYN-202-user2:$BIND_HOST:8001'
 
          Future->done(1);
       });

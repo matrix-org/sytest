@@ -10,11 +10,11 @@ test "Can upload device keys",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/v2_alpha/keys/upload/alices_first_device",
+         uri     => "/unstable/keys/upload",
          content => {
             device_keys => {
                user_id => $user->user_id,
-               device_id => "alices_first_device",
+               device_id => $user->device_id,
             },
             one_time_keys => {
                "my_algorithm:my_id_1", "my+base64+key"
@@ -44,7 +44,7 @@ test "Can query device keys using POST",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/v2_alpha/keys/query/",
+         uri     => "/unstable/keys/query/",
          content => {
             device_keys => {
                $user->user_id => {}
@@ -59,7 +59,7 @@ test "Can query device keys using POST",
          assert_json_keys( $device_keys, $user->user_id );
 
          my $alice_keys = $device_keys->{ $user->user_id };
-         assert_json_keys( $alice_keys, "alices_first_device" );
+         assert_json_keys( $alice_keys, $user->device_id );
          # TODO: Check that the content matches what we uploaded.
          Future->done(1)
       })
@@ -72,12 +72,14 @@ test "Can query specific device keys using POST",
    check => sub {
       my ( $user ) = @_;
 
+      my $device_id = $user->device_id;
+
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/v2_alpha/keys/query/",
+         uri     => "/unstable/keys/query/",
          content => {
             device_keys => {
-               $user->user_id => [ "alices_first_device" ]
+               $user->user_id => [ $device_id ]
             }
          }
       )->then( sub {
@@ -89,7 +91,7 @@ test "Can query specific device keys using POST",
          assert_json_keys( $device_keys, $user->user_id );
 
          my $alice_keys = $device_keys->{ $user->user_id };
-         assert_json_keys( $alice_keys, "alices_first_device" );
+         assert_json_keys( $alice_keys, $device_id );
          # TODO: Check that the content matches what we uploaded.
          Future->done(1)
       })
@@ -104,7 +106,7 @@ test "Can query device keys using GET",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/v2_alpha/keys/query/${\$user->user_id}"
+         uri    => "/unstable/keys/query/${\$user->user_id}"
       )->then( sub {
          my ( $content ) = @_;
 
@@ -114,7 +116,7 @@ test "Can query device keys using GET",
          assert_json_keys( $device_keys, $user->user_id );
 
          my $alice_keys = $device_keys->{ $user->user_id };
-         assert_json_keys( $alice_keys, "alices_first_device" );
+         assert_json_keys( $alice_keys, $user->device_id );
          # TODO: Check that the content matches what we uploaded.
          Future->done(1)
       })
@@ -125,16 +127,16 @@ push our @EXPORT, qw( matrix_put_e2e_keys );
 sub matrix_put_e2e_keys
 {
    # TODO(paul): I don't really know what's parametric about this
-   my ( $user, $device_id ) = @_;
+   my ( $user ) = @_;
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/v2_alpha/keys/upload/$device_id",
+      uri    => "/unstable/keys/upload",
 
       content => {
          device_keys => {
             user_id => $user->user_id,
-            device_id => $device_id,
+            device_id => $user->device_id,
          },
          one_time_keys => {
             "my_algorithm:my_id_1" => "my+base64+key",
