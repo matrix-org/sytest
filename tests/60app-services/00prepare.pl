@@ -11,8 +11,10 @@ our @AS_USER = map {
       setup => sub {
          my ( $http, $as_user_info ) = @_;
 
-         Future->done( User( $http, $as_user_info->user_id, undef, $as_user_info->as2hs_token,
-               undef, undef, undef, [], undef ) );
+         Future->done( User( $http, $as_user_info->user_id,
+                             undef,
+                             undef, $as_user_info->as2hs_token,
+                             undef, undef, undef, [], undef ) );
       },
    );
 } @main::AS_INFO;

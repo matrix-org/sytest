@@ -5,9 +5,11 @@ multi_test "Can claim remote one time key using POST",
    check => sub {
       my ( $user, $remote_user ) = @_;
 
+      my $device_id = $user->device_id;
+
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/v2_alpha/keys/upload/alices_first_device",
+         uri     => "/unstable/keys/upload",
          content => {
             one_time_keys => {
                "test_algorithm:test_id", "test+base64+key"
@@ -15,29 +17,13 @@ multi_test "Can claim remote one time key using POST",
          }
       )->SyTest::pass_on_done( "Uploaded one-time keys" )
       ->then( sub {
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/v2_alpha/keys/upload/alices_first_device"
-         )
-      })->then( sub {
-         my ( $content ) = @_;
-         log_if_fail "First device content", $content;
-
-         assert_json_keys( $content, "one_time_key_counts" );
-         assert_json_keys( $content->{one_time_key_counts}, "test_algorithm" );
-
-         $content->{one_time_key_counts}{test_algorithm} eq "1" or
-            die "Expected 1 one time key";
-
-         pass "Counted one time keys";
-
          do_request_json_for( $remote_user,
             method  => "POST",
-            uri     => "/v2_alpha/keys/claim",
+            uri     => "/unstable/keys/claim",
             content => {
                one_time_keys => {
                   $user->user_id => {
-                     alices_first_device => "test_algorithm"
+                     $device_id => "test_algorithm"
                   }
                }
             }
@@ -52,9 +38,9 @@ multi_test "Can claim remote one time key using POST",
          assert_json_keys( $one_time_keys, $user->user_id );
 
          my $alice_keys = $one_time_keys->{ $user->user_id };
-         assert_json_keys( $alice_keys, "alices_first_device" );
+         assert_json_keys( $alice_keys, $device_id );
 
-         my $alice_device_keys = $alice_keys->{alices_first_device};
+         my $alice_device_keys = $alice_keys->{$device_id};
          assert_json_keys( $alice_device_keys, "test_algorithm:test_id" );
 
          "test+base64+key" eq $alice_device_keys->{"test_algorithm:test_id"} or
@@ -62,18 +48,24 @@ multi_test "Can claim remote one time key using POST",
 
          pass "Took one time key";
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/v2_alpha/keys/upload/alices_first_device"
+         # a second claim should give no keys
+         do_request_json_for( $remote_user,
+            method  => "POST",
+            uri     => "/unstable/keys/claim",
+            content => {
+               one_time_keys => {
+                  $user->user_id => {
+                     $device_id => "test_algorithm"
+                  }
+               }
+            }
          )
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "First device content", $content;
+         log_if_fail "Second claim response", $content;
 
-         assert_json_keys( $content, "one_time_key_counts" );
-
-         exists $content->{one_time_key_counts}{test_algorithm} and
-            die "Expected that the key would be removed from the counts";
+         assert_json_keys( $content, "one_time_keys" );
+         assert_deeply_eq( $content->{one_time_keys}, {}, "Second claim result" );
 
          Future->done(1)
       });

@@ -50,10 +50,14 @@ our %SYNAPSE_ARGS = (
    coverage   => 0,
    dendron    => "",
    pusher     => 0,
-   synchrotron => 0,
+
+   synchrotron       => 0,
+   federation_reader => 0,
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
+
+our $BIND_HOST = "localhost";
 
 my %FIXED_BUGS;
 
@@ -86,7 +90,11 @@ GetOptions(
 
    'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
 
-   'p|port-range=s' => \(my $PORT_RANGE = "8800:8819"),
+   'federation-reader+' => \$SYNAPSE_ARGS{federation_reader},
+
+   'bind-host=s' => \$BIND_HOST,
+
+   'p|port-range=s' => \(my $PORT_RANGE = "8800:8899"),
 
    'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
@@ -683,6 +691,16 @@ if( $WAIT_AT_END ) {
    $loop->add( my $stdin = IO::Async::Stream->new_for_stdin( on_read => sub {} ) );
    $stdin->read_until( "\n" )->get;
 }
+
+# A workaround for
+#   https://rt.perl.org/Public/Bug/Display.html?id=128774
+my @AT_END;
+sub AT_END
+{
+   push @AT_END, @_;
+}
+
+$_->() for @AT_END;
 
 if( $failed_count ) {
    $OUTPUT->final_fail( $failed_count );

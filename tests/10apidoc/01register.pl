@@ -71,7 +71,7 @@ sub localpart_fixture
 {
    fixture(
       setup => sub {
-         Future->done( sprintf "_ANON_-%d", $next_anon_uid++ );
+         Future->done( sprintf "ANON-%d", $next_anon_uid++ );
       },
    );
 }
@@ -103,7 +103,8 @@ sub matrix_register_user
       my ( $body ) = @_;
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $password, $access_token, undef, undef, undef, [], undef );
+      my $user = User( $http, $body->{user_id}, $body->{device_id},
+                       $password, $access_token, undef, undef, undef, [], undef );
 
       my $f = Future->done;
 
@@ -163,7 +164,8 @@ sub matrix_register_user_via_secret
 
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $password, $access_token, undef, undef, undef, [], undef );
+      my $user = User( $http, $body->{user_id}, $body->{device_id},
+                       $password, $access_token, undef, undef, undef, [], undef );
 
       return Future->done( $user )
         ->on_done( sub {

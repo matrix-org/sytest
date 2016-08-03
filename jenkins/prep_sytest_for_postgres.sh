@@ -18,14 +18,14 @@ if [ -z "$POSTGRES_DB_2" ]; then
     exit 1
 fi
 
-mkdir -p "localhost-0"
-mkdir -p "localhost-1"
+mkdir -p "server-0"
+mkdir -p "server-1"
 
 : PGUSER=${PGUSER:=$USER}
 
 # We leave user, password, host blank to use the defaults (unix socket and
 # local auth)
-cat > "localhost-0/database.yaml" << EOF
+cat > "server-0/database.yaml" << EOF
 name: psycopg2
 args:
     database: $POSTGRES_DB_1
@@ -35,7 +35,7 @@ args:
     sslmode: disable
 EOF
 
-cat > "localhost-1/database.yaml" << EOF
+cat > "server-1/database.yaml" << EOF
 name: psycopg2
 args:
     database: $POSTGRES_DB_2

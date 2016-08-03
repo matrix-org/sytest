@@ -27,7 +27,7 @@ sub _init
 
    $self->{$_} = delete $args->{$_} for qw(
       ports synapse_dir extra_args python config coverage
-      dendron pusher synchrotron
+      dendron pusher synchrotron federation_reader bind_host
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
@@ -121,6 +121,7 @@ sub start
    my $log = "$hs_dir/homeserver.log";
 
    my $listeners = [];
+   my $bind_host = $self->{bind_host};
 
    if( $self->{dendron} ) {
       # If we are running synapse behind dendron then only bind the unsecure
@@ -132,7 +133,7 @@ sub start
       push @$listeners, {
          type => "http",
          port => $port,
-         bind_address => "127.0.0.1",
+         bind_address => $bind_host,
          tls => 1,
          resources => [{
             names => [ "client", "federation", "replication" ], compress => 0
@@ -144,13 +145,20 @@ sub start
       push @$listeners, {
          type => "http",
          port => $unsecure_port,
-         bind_address => "127.0.0.1",
+         bind_address => $bind_host,
          tls => 0,
          resources => [{
             names => [ "client", "federation", "replication" ], compress => 0
          }]
       }
    }
+
+   push @$listeners, {
+      type => "metrics",
+      port => $self->{ports}{metrics},
+      bind_address => $bind_host,
+      tls => 0,
+   };
 
    my $cert_file = "$hs_dir/cert.pem";
    my $key_file = "$hs_dir/key.pem";
@@ -160,7 +168,7 @@ sub start
    my $registration_shared_secret = "reg_secret";
 
    my $config_path = $self->write_yaml_file( config => {
-        "server_name" => "localhost:$port",
+        "server_name" => "$bind_host:$port",
         "log_file" => "$log",
         (-f $log_config_file) ? ("log_config" => $log_config_file) : (),
         "tls_certificate_path" => $cert_file,
@@ -180,7 +188,6 @@ sub start
 
         # Metrics are always useful
         "enable_metrics" => 1,
-        "metrics_port" => $self->{ports}{metrics},
 
         "perspectives" => { servers => {} },
 
@@ -201,16 +208,18 @@ sub start
    my $pusher_config_path = $self->write_yaml_file( pusher => {
       "worker_app"             => "synapse.app.pusher",
       "worker_log_file"        => "$log.pusher",
-      "worker_replication_url" => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
       "worker_listeners"       => [
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
+            bind_address => $bind_host,
             port      => $self->{ports}{pusher_metrics},
          },
          {
             type => "manhole",
-            port => $self->{ports}{pusher_manhole},,
+            port => $self->{ports}{pusher_manhole},
+            bind_address => $bind_host,
          },
       ],
    } );
@@ -218,24 +227,53 @@ sub start
    my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
       "worker_app"             => "synapse.app.synchrotron",
       "worker_log_file"        => "$log.synchrotron",
-      "worker_replication_url" => "http://127.0.0.1:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
       "worker_listeners"       => [
          {
             type      => "http",
             resources => [{ names => ["client"] }],
             port      => $self->{ports}{synchrotron},
+            bind_address => $bind_host,
          },
          {
             type => "manhole",
             port => $self->{ports}{synchrotron_manhole},
+            bind_address => $bind_host,
          },
          {
             type      => "http",
             resources => [{ names => ["metrics"] }],
             port      => $self->{ports}{synchrotron_metrics},
+            bind_address => $bind_host,
          },
       ],
    } );
+
+   my $federation_reader_config_path = $self->write_yaml_file( federation_reader => {
+      "worker_app"             => "synapse.app.federation_reader",
+      "worker_log_file"        => "$log.federation_reader",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["federation"] }],
+            port      => $self->{ports}{federation_reader},
+            bind_address => $bind_host,
+         },
+         {
+            type => "manhole",
+            port => $self->{ports}{federation_reader_manhole},
+            bind_address => $bind_host,
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => $self->{ports}{federation_reader_metrics},
+            bind_address => $bind_host,
+         },
+      ],
+   } );
+
 
 
    $self->{logpath} = $log;
@@ -262,7 +300,7 @@ sub start
    push @synapse_command,
       "-m", "synapse.app.homeserver",
       "--config-path" => $config_path,
-      "--server-name" => "localhost:$port";
+      "--server-name" => "$bind_host:$port";
 
    $output->diag( "Generating config for port $port" );
 
@@ -281,13 +319,13 @@ sub start
          $self->{dendron},
          "--synapse-python" => $self->{python},
          "--synapse-config" => $config_path,
-         "--synapse-url" => "http://127.0.0.1:$self->{ports}{client_unsecure}",
+         "--synapse-url" => "http://$bind_host:$self->{ports}{client_unsecure}",
          "--synapse-postgres" => join( " ", @db_arg_pairs ),
          "--macaroon-secret" => $macaroon_secret_key,
-         "--server-name" => "localhost:$port",
+         "--server-name" => "$bind_host:$port",
          "--cert-file" => $cert_file,
          "--key-file" => $key_file,
-         "--addr" => "127.0.0.1:$port",
+         "--addr" => "$bind_host:$port",
       );
 
       if ( $self->{pusher} ) {
@@ -297,7 +335,13 @@ sub start
       if ( $self->{synchrotron} ) {
          push @command,
             "--synchrotron-config" => $synchrotron_config_path,
-            "--synchrotron-url" => "http://127.0.0.1:$self->{ports}{synchrotron}";
+            "--synchrotron-url" => "http://$bind_host:$self->{ports}{synchrotron}";
+      }
+
+      if ( $self->{federation_reader} ) {
+         push @command,
+            "--federation-reader-config" => $federation_reader_config_path,
+            "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
       }
    }
    else {
@@ -338,7 +382,7 @@ sub start
          $output->diag( "Connecting to server $port" );
 
          $self->adopt_future(
-            $self->await_connectable( $port )->then( sub {
+            $self->await_connectable( $bind_host, $port )->then( sub {
                $output->diag( "Connected to server $port" );
 
                $self->started_future->done;
