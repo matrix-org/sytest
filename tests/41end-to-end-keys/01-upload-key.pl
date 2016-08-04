@@ -68,11 +68,9 @@ test "Can query device keys using POST",
 
          my $unsigned = $alice_device_keys->{unsigned};
 
-         # display_name should be null by default
-         exists $unsigned->{device_display_name} or
-           die "Expected to get a (null) device_display_name";
-         defined $unsigned->{device_display_name} and
-           die "Device display name was unexpectedly defined.";
+         # display_name should not be present by default
+         exists $unsigned->{device_display_name} and
+           die "Expected to get no device_display_name";
 
          # TODO: Check that the content matches what we uploaded.
 
