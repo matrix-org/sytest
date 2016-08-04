@@ -9,6 +9,8 @@
 # The second argument is the URL of the remote repository to checkout.
 # Usually something like https://github.com/matrix-org/sytest.git
 
+set -eux
+
 NAME=$1
 PROJECT=$2
 BASE=".$NAME-base"
