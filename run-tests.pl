@@ -197,6 +197,17 @@ if( $CLIENT_LOG ) {
 
          my $request_user = $args{request_user};
 
+         my $original_on_redirect = $args{on_redirect};
+         $args{on_redirect} = sub {
+             my ( $response, $to ) = @_;
+             print STDERR "\e[1;33mRedirect\e[m from ${ \$request->method } ${ \$request->uri->path }:\n";
+             print STDERR "  $_\n" for split m/\n/, $response->as_string;
+             print STDERR "-- \n";
+             if ( $original_on_redirect ) {
+                 $original_on_redirect->( $response, $to );
+             }
+         };
+
          if( $request_uri->path =~ m{/events$} ) {
             my %params = $request_uri->query_form;
             my $request_for = defined $request_user ? "user=$request_user" : "token=$params{access_token}";
