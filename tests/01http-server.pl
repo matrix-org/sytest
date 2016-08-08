@@ -131,7 +131,8 @@ package SyTest::HTTPServer {
       my $qs = $request->query_string;
       if ( defined $qs ) {
          $qs = "?" . $qs;
-      } else {
+      }
+      else {
          $qs = "";
       }
 

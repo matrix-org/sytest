@@ -6,6 +6,7 @@ sub wait_for_cas_request
       return 1;
    })->then( sub {
       my ( $request ) = @_;
+
       my $response = HTTP::Response->new( 200 );
       $response->add_content( $params{response} // "" );
       $response->content_type( "text/plain" );
@@ -47,7 +48,7 @@ test "Can login with new user via CAS",
       # step 1: client sends request to /login/cas/redirect
       # step 2: synapse should redirect to the cas server.
       Future->needs_all(
-         wait_for_cas_request("/cas"),
+         wait_for_cas_request( "/cas" ),
          $http->do_request(
             method => "GET",
             uri    => "/api/v1/login/cas/redirect",
@@ -87,7 +88,7 @@ test "Can login with new user via CAS",
                method   => "GET",
                full_uri => $login_uri,
                max_redirects => 0, # don't follow the redirect
-              )->followed_by( \&main::expect_http_302 ),
+            )->followed_by( \&main::expect_http_302 ),
          );
       })->then( sub {
          my ( $cas_validate_request, $ticket_response ) = @_;
@@ -102,15 +103,15 @@ test "Can login with new user via CAS",
                     "Service supplied to /cas/proxyValidate" );
 
          my $redirect_uri = URI->new($ticket_response->header( "Location" ));
-         log_if_fail("Redirect from /login/cas/ticket",
-                     $redirect_uri);
-         assert_eq( index($redirect_uri, "https://client?"), 0,
-                    "Location returned by /login/cas/ticket");
+         log_if_fail( "Redirect from /login/cas/ticket",
+                      $redirect_uri);
+         assert_ok( $redirect_uri =~ m#^https://client\?#,
+                    "Location returned by /login/cas/ticket did not match" );
 
          # the original query param should have been preserved
          assert_eq( $redirect_uri->query_param( "p" ),
                     "http://server",
-                    "Location returned by /login/cas/ticket");
+                    "Location returned by /login/cas/ticket" );
 
          # a 'loginToken' should be added.
          my $login_token = $redirect_uri->query_param( "loginToken" );
@@ -128,7 +129,7 @@ test "Can login with new user via CAS",
       })->then( sub {
          my ( $body ) = @_;
 
-         log_if_fail("Response from /login", $body);
+         log_if_fail( "Response from /login", $body );
 
          assert_json_keys( $body, qw( access_token home_server user_id device_id ));
 
