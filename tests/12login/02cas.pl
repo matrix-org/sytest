@@ -102,16 +102,16 @@ test "Can login with new user via CAS",
                     $HS_URI,
                     "Service supplied to /cas/proxyValidate" );
 
-         my $redirect_uri = URI->new($ticket_response->header( "Location" ));
-         log_if_fail( "Redirect from /login/cas/ticket",
-                      $redirect_uri);
-         assert_ok( $redirect_uri =~ m#^https://client\?#,
+         my $redirect = $ticket_response->header( "Location" );
+         log_if_fail( "Redirect from /login/cas/ticket", $redirect);
+         assert_ok( $redirect =~ m#^https://client\?#,
                     "Location returned by /login/cas/ticket did not match" );
 
          # the original query param should have been preserved
-         assert_eq( $redirect_uri->query_param( "p" ),
+         my $redirect_uri = URI->new($redirect);
+         assert_eq( $redirect_uri->query_param( "p" ) // undef,
                     "http://server",
-                    "Location returned by /login/cas/ticket" );
+                    "Query param on redirect from /login/cas/ticket" );
 
          # a 'loginToken' should be added.
          my $login_token = $redirect_uri->query_param( "loginToken" );
