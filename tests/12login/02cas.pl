@@ -28,10 +28,10 @@ EOF
 
 
 test "Can login with new user via CAS",
-  requires => [
+   requires => [
       $main::API_CLIENTS[0],
       $main::HOMESERVER_INFO[0],
-     ],
+   ],
 
    do => sub {
       my ( $http, $homeserver_info ) = @_;
