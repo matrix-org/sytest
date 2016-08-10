@@ -114,6 +114,11 @@ our @HOMESERVER_INFO = map {
                report_stats => "False",
                user_agent_suffix => $location,
                allow_guest_access => "True",
+
+               cas_config => {
+                  server_url => $test_server_info->client_location . "/cas",
+                  service_url => $location,
+               },
             },
          );
          $loop->add( $synapse );
