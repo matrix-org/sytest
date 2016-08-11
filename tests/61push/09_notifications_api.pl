@@ -37,15 +37,14 @@ test "Notifications can be viewed with GET /notifications",
       })->then( sub {
          my ( $body ) = @_;
 
-         log_if_fail("first /notifications response", $body);
+         log_if_fail( "first /notifications response", $body );
 
          assert_json_keys( $body, "notifications" );
 
          my $notifs = $body->{notifications};
 
-         assert_json_keys( $notifs->[0], qw(room_id actions event read ts) );
-         # XXX: We can't assert that a key is present but null so can't test
-         # profile_tag
+         assert_json_keys( $notifs->[0], qw( room_id actions event read ts ) );
+         assert_ok( exists $notifs->{profile_tag}, "profile_tag defined" );
 
          my $notif = $notifs->[0];
          assert_eq( $notif->{read}, JSON::false );
@@ -59,7 +58,7 @@ test "Notifications can be viewed with GET /notifications",
       })->then( sub {
          my ( $body ) = @_;
 
-         log_if_fail("first /notifications response", $body);
+         log_if_fail( "first /notifications response", $body );
 
          assert_json_keys( $body, "notifications" );
 
