@@ -1,4 +1,4 @@
-our @EXPORT = qw( matrix_get_device );
+our @EXPORT = qw( matrix_get_device matrix_set_device_display_name );
 
 sub matrix_get_device {
    my ( $user, $device_id ) = @_;
@@ -8,6 +8,19 @@ sub matrix_get_device {
       method => "GET",
       uri    => "/unstable/devices/${device_id}",
    );
+}
+
+sub matrix_set_device_display_name {
+    my ( $user, $device_id, $display_name ) = @_;
+
+    return do_request_json_for(
+        $user,
+        method => "PUT",
+        uri    => "/unstable/devices/${device_id}",
+        content => {
+            display_name => $display_name,
+        },
+    );
 }
 
 test "GET /device/{deviceId}",

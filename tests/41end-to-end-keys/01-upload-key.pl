@@ -53,6 +53,8 @@ test "Can query device keys using POST",
       )->then( sub {
          my ( $content ) = @_;
 
+         log_if_fail( "/query response", $content );
+
          assert_json_keys( $content, "device_keys" );
 
          my $device_keys = $content->{device_keys};
@@ -60,7 +62,18 @@ test "Can query device keys using POST",
 
          my $alice_keys = $device_keys->{ $user->user_id };
          assert_json_keys( $alice_keys, $user->device_id );
+
+         my $alice_device_keys = $alice_keys->{ $user->device_id };
+         assert_json_keys( $alice_device_keys, "unsigned" );
+
+         my $unsigned = $alice_device_keys->{unsigned};
+
+         # display_name should not be present by default
+         exists $unsigned->{device_display_name} and
+           die "Expected to get no device_display_name";
+
          # TODO: Check that the content matches what we uploaded.
+
          Future->done(1)
       })
    };
@@ -118,6 +131,39 @@ test "Can query device keys using GET",
          my $alice_keys = $device_keys->{ $user->user_id };
          assert_json_keys( $alice_keys, $user->device_id );
          # TODO: Check that the content matches what we uploaded.
+         Future->done(1)
+      })
+   };
+
+test "query for user with no keys returns empty key dict",
+   requires => [ local_user_fixture() ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for( $user,
+         method  => "POST",
+         uri     => "/unstable/keys/query/",
+         content => {
+            device_keys => {
+               $user->user_id => {}
+            }
+         }
+      )->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail( "/query response", $content );
+
+         assert_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         assert_json_keys( $device_keys, $user->user_id );
+
+         my $alice_keys = $device_keys->{ $user->user_id };
+
+         assert_json_object( $alice_keys );
+         assert_ok( !%{$alice_keys}, "unexpected keys" );
+
          Future->done(1)
       })
    };

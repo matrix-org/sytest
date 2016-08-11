@@ -8,6 +8,8 @@ multi_test "Can query remote device keys using POST",
       matrix_put_e2e_keys( $user )
          ->SyTest::pass_on_done( "Uploaded key" )
       ->then( sub {
+         matrix_set_device_display_name( $user, $user->device_id, "test display name" ),
+      })->then( sub {
          do_request_json_for( $remote_user,
             method  => "POST",
             uri     => "/unstable/keys/query/",
@@ -27,7 +29,14 @@ multi_test "Can query remote device keys using POST",
 
          my $alice_keys = $device_keys->{ $user->user_id };
          assert_json_keys( $alice_keys, $user->device_id );
+
+         my $alice_device_keys = $alice_keys->{ $user->device_id };
+
          # TODO: Check that the content matches what we uploaded.
+
+         assert_eq( $alice_device_keys->{"unsigned"}->{"device_display_name"},
+                    "test display name" );
+
          Future->done(1)
       });
    };

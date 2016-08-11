@@ -128,11 +128,18 @@ package SyTest::HTTPServer {
 
       my $method = $request->method;
       my $path = uri_unescape $request->path;
+      my $qs = $request->query_string;
+      if ( defined $qs ) {
+         $qs = "?" . $qs;
+      }
+      else {
+         $qs = "";
+      }
 
       if( $CLIENT_LOG ) {
          my $green = -t STDOUT ? "\e[1;32m" : "";
          my $reset = -t STDOUT ? "\e[m" : "";
-         print "${green}Received Request${reset} for $method $path:\n";
+         print "${green}Received Request${reset} for $method ${path}${qs}:\n";
          #TODO log the HTTP Request headers
          print "  $_\n" for split m/\n/, $request->body;
          print "-- \n";
