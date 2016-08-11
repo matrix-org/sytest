@@ -44,7 +44,7 @@ test "Notifications can be viewed with GET /notifications",
          my $notifs = $body->{notifications};
 
          assert_json_keys( $notifs->[0], qw( room_id actions event read ts ) );
-         assert_ok( exists $notifs->{profile_tag}, "profile_tag defined" );
+         assert_ok( exists $notifs->[0]{profile_tag}, "profile_tag defined" );
 
          my $notif = $notifs->[0];
          assert_eq( $notif->{read}, JSON::false );
