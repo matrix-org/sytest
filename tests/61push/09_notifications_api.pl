@@ -1,6 +1,6 @@
 test "Notifications can be viewed with GET /notifications",
    requires => [ local_user_fixture( with_events => 0 ),
-		 local_user_fixture( with_events => 0 ),
+                 local_user_fixture( with_events => 0 ),
                ],
 
    check => sub {
