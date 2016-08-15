@@ -210,6 +210,7 @@ test "DELETE /device/{deviceId}",
          matrix_get_device( $user, $DEVICE_ID )
             ->main::expect_http_404;
       })->then( sub {
+         my $delay = 0.1;
          # our access token should be invalidated
          try_repeat_until_success {
             do_request_json_for(
@@ -218,7 +219,7 @@ test "DELETE /device/{deviceId}",
                uri     => "/r0/sync",
             )->main::expect_http_401
             ->else_with_f( sub {
-               my ( $f ) = @_; delay( 1 )->then( sub { $f } );
+               my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
             })
          };
       })->then( sub {
