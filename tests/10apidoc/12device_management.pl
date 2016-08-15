@@ -1,3 +1,5 @@
+use Future::Utils qw( try_repeat_until_success );
+
 our @EXPORT = qw( matrix_get_device matrix_set_device_display_name );
 
 sub matrix_get_device {
@@ -209,11 +211,16 @@ test "DELETE /device/{deviceId}",
             ->main::expect_http_404;
       })->then( sub {
          # our access token should be invalidated
-         do_request_json_for(
-            $other_login,
-            method  => "GET",
-            uri     => "/r0/sync",
-         )->main::expect_http_401;
+         try_repeat_until_success {
+            do_request_json_for(
+               $other_login,
+               method  => "GET",
+               uri     => "/r0/sync",
+            )->main::expect_http_401
+            ->else_with_f( sub {
+               my ( $f ) = @_; delay( 1 )->then( sub { $f } );
+            })
+         };
       })->then( sub {
          # so should our refresh token
          $user->http->do_request_json(
