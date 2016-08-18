@@ -18,7 +18,7 @@ test "HS will proxy request for 3PU mapping",
             $request->respond_json( [
                {
                   protocol => "protocol",
-                  fields => { TODO => "TODO" },
+                  fields => { field1 => "result" },
                   userid   => '@remote-user:bridged.example.com',
                }
             ] );
@@ -42,7 +42,7 @@ test "HS will proxy request for 3PU mapping",
             assert_deeply_eq( $body, [
                {
                   protocol => "protocol",
-                  fields   => { TODO => "TODO" },
+                  fields   => { field1 => "result" },
                   userid   => '@remote-user:bridged.example.com',
                }
             ], '3PU lookup result' );
