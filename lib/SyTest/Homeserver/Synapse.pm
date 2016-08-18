@@ -28,7 +28,7 @@ sub _init
    $self->{$_} = delete $args->{$_} for qw(
       ports synapse_dir extra_args python config coverage
       dendron pusher synchrotron federation_reader bind_host
-      media_repository
+      media_repository appservice
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
@@ -204,6 +204,8 @@ sub start
         "bcrypt_rounds" => 0,
         "start_pushers" => (not $self->{pusher}),
 
+        "notify_appservices" => (not $self->{appservice}),
+
         "url_preview_enabled" => "true",
         "url_preview_ip_range_blacklist" => [],
 
@@ -308,6 +310,26 @@ sub start
       ],
    } );
 
+
+   my $appservice_config_path = $self->write_yaml_file( appservice => {
+      "worker_app"             => "synapse.app.appservice",
+      "worker_log_file"        => "$log.appservice",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type => "manhole",
+            port => $self->{ports}{appservice_manhole},
+            bind_address => $bind_host,
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => $self->{ports}{appservice_metrics},
+            bind_address => $bind_host,
+         },
+      ],
+   } );
+
    $self->{logpath} = $log;
 
    {
@@ -362,6 +384,10 @@ sub start
 
       if ( $self->{pusher} ) {
          push @command, "--pusher-config" => $pusher_config_path;
+      }
+
+      if ( $self->{appservice} ) {
+         push @command, "--appservice-config" => $appservice_config_path;
       }
 
       if ( $self->{synchrotron} ) {
