@@ -150,7 +150,7 @@ our @HOMESERVER_INFO = map {
                      ],
                      rooms => [],
                   },
-                  protocols => [qw( protocol )],
+                  protocols => [qw( ymca )],
                } );
 
                push @confs, $appserv_conf;

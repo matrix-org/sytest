@@ -5,7 +5,7 @@ test "HS will proxy request for 3PU mapping",
       my ( $user, $appserv ) = @_;
 
       Future->needs_all(
-         $appserv->await_http_request( "/3pu/protocol", sub { 1 } )->then( sub {
+         $appserv->await_http_request( "/3pu/ymca", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
             assert_deeply_eq(
@@ -19,7 +19,7 @@ test "HS will proxy request for 3PU mapping",
 
             $request->respond_json( [
                {
-                  protocol => "protocol",
+                  protocol => "ymca",
                   fields   => { field1 => "result" },
                   userid   => '@remote-user:bridged.example.com',
                }
@@ -30,7 +30,7 @@ test "HS will proxy request for 3PU mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/3pu/protocol",
+            uri    => "/unstable/3pu/ymca",
 
             params => {
                field1 => "ONE",
@@ -45,7 +45,7 @@ test "HS will proxy request for 3PU mapping",
                $body,
                [
                   {
-                     protocol => "protocol",
+                     protocol => "ymca",
                      fields   => { field1 => "result" },
                      userid   => '@remote-user:bridged.example.com',
                   }
@@ -65,7 +65,7 @@ test "HS will proxy request for 3PL mapping",
       my ( $user, $appserv ) = @_;
 
       Future->needs_all(
-         $appserv->await_http_request( "/3pl/protocol", sub { 1 } )->then( sub {
+         $appserv->await_http_request( "/3pl/ymca", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
             assert_deeply_eq(
@@ -78,7 +78,7 @@ test "HS will proxy request for 3PL mapping",
 
             $request->respond_json( [
                {
-                  protocol => "protocol",
+                  protocol => "ymca",
                   fields   => { field3 => "result" },
                   alias    => '#remote-room:bridged.example.com',
                }
@@ -89,7 +89,7 @@ test "HS will proxy request for 3PL mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/3pl/protocol",
+            uri    => "/unstable/3pl/ymca",
 
             params => {
                field3 => "THREE",
@@ -103,7 +103,7 @@ test "HS will proxy request for 3PL mapping",
                $body,
                [
                   {
-                     protocol => "protocol",
+                     protocol => "ymca",
                      fields   => { field3 => "result" },
                      alias    => '#remote-room:bridged.example.com',
                   }
