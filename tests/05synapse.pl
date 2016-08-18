@@ -1,3 +1,5 @@
+return "SKIP" unless ($ENV{HOMESERVER}//"synapse") eq "synapse";
+
 use Future::Utils qw( fmap_void );
 
 use SyTest::Homeserver::Synapse;
