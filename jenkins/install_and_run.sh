@@ -24,7 +24,7 @@ export BIND_HOST
 
 ./jenkins/kill_old_listeners.sh
 
-# If running dendron the give it somewhere to write log files to
+# If running dendron then give it somewhere to write log files to
 mkdir -p var
 
 export TOX_BIN=$WORKSPACE/.tox/py27/bin

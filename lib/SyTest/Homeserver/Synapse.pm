@@ -28,6 +28,7 @@ sub _init
    $self->{$_} = delete $args->{$_} for qw(
       ports synapse_dir extra_args python config coverage
       dendron pusher synchrotron federation_reader bind_host
+      media_repository
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
@@ -113,8 +114,12 @@ sub start
 
    # Clean up the media_store directory each time, or else it fills up with
    # thousands of automatically-generated avatar images
-   if( -d "media_store" ) {
-      remove_tree( "media_store" );
+   if( -d "$hs_dir/media_store" ) {
+      remove_tree( "$hs_dir/media_store" );
+   }
+
+   if( -d "$hs_dir/uploads" ) {
+      remove_tree( "$hs_dir/uploads" );
    }
 
    my $cwd = getcwd;
@@ -202,6 +207,9 @@ sub start
         "url_preview_enabled" => "true",
         "url_preview_ip_range_blacklist" => [],
 
+        "media_store_path" => "$hs_dir/media_store",
+        "uploads_path" => "$hs_dir/uploads_path",
+
         %{ $self->{config} },
    } );
 
@@ -275,6 +283,30 @@ sub start
    } );
 
 
+   my $media_repository_config_path = $self->write_yaml_file( media_repository => {
+      "worker_app"             => "synapse.app.media_repository",
+      "worker_log_file"        => "$log.media_repository",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["media"] }],
+            port      => $self->{ports}{media_repository},
+            bind_address => $bind_host,
+         },
+         {
+            type => "manhole",
+            port => $self->{ports}{media_repository_manhole},
+            bind_address => $bind_host,
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => $self->{ports}{media_repository_metrics},
+            bind_address => $bind_host,
+         },
+      ],
+   } );
 
    $self->{logpath} = $log;
 
@@ -342,6 +374,12 @@ sub start
          push @command,
             "--federation-reader-config" => $federation_reader_config_path,
             "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
+      }
+
+      if ( $self->{media_repository} ) {
+         push @command,
+            "--media-repository-config" => $media_repository_config_path,
+            "--media-repository-url" => "http://$bind_host:$self->{ports}{media_repository}";
       }
    }
    else {
