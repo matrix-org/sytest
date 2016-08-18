@@ -8,17 +8,19 @@ test "HS will proxy request for 3PU mapping",
          $appserv->await_http_request( "/3pu/protocol", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
-            assert_deeply_eq( { $request->query_form },
+            assert_deeply_eq(
+               { $request->query_form },
                {
                   field1 => "ONE",
                   field2 => "TWO",
                },
-            'fields in received AS request' );
+               'fields in received AS request'
+            );
 
             $request->respond_json( [
                {
                   protocol => "protocol",
-                  fields => { field1 => "result" },
+                  fields   => { field1 => "result" },
                   userid   => '@remote-user:bridged.example.com',
                }
             ] );
@@ -39,13 +41,17 @@ test "HS will proxy request for 3PU mapping",
 
             log_if_fail "Lookup result", $body;
 
-            assert_deeply_eq( $body, [
-               {
-                  protocol => "protocol",
-                  fields   => { field1 => "result" },
-                  userid   => '@remote-user:bridged.example.com',
-               }
-            ], '3PU lookup result' );
+            assert_deeply_eq(
+               $body,
+               [
+                  {
+                     protocol => "protocol",
+                     fields   => { field1 => "result" },
+                     userid   => '@remote-user:bridged.example.com',
+                  }
+               ],
+               '3PU lookup result'
+            );
 
             Future->done(1);
          }),
@@ -62,11 +68,13 @@ test "HS will proxy request for 3PL mapping",
          $appserv->await_http_request( "/3pl/protocol", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
-            assert_deeply_eq( { $request->query_form },
+            assert_deeply_eq(
+               { $request->query_form },
                {
                   field3 => "THREE",
                },
-            'fields in received AS request' );
+               'fields in received AS request'
+            );
 
             $request->respond_json( [
                {
@@ -91,13 +99,17 @@ test "HS will proxy request for 3PL mapping",
 
             log_if_fail "Lookup result", $body;
 
-            assert_deeply_eq( $body, [
-               {
-                  protocol => "protocol",
-                  fields   => { field3 => "result" },
-                  alias    => '#remote-room:bridged.example.com',
-               }
-            ], '3PL lookup result' );
+            assert_deeply_eq(
+               $body,
+               [
+                  {
+                     protocol => "protocol",
+                     fields   => { field3 => "result" },
+                     alias    => '#remote-room:bridged.example.com',
+                  }
+               ],
+               '3PL lookup result'
+            );
 
             Future->done(1);
          }),
