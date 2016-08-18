@@ -53,6 +53,7 @@ our %SYNAPSE_ARGS = (
 
    synchrotron       => 0,
    federation_reader => 0,
+   media_repository  => 0,
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
@@ -91,6 +92,10 @@ GetOptions(
    'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
 
    'federation-reader+' => \$SYNAPSE_ARGS{federation_reader},
+
+   'media-repository+' => \$SYNAPSE_ARGS{media_repository},
+
+   'appservice+' => \$SYNAPSE_ARGS{appservice},
 
    'bind-host=s' => \$BIND_HOST,
 

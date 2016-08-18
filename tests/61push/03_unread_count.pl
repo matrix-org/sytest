@@ -86,7 +86,7 @@ test "Messages that highlight from another user increment unread highlight count
       })->then( sub {
          my ( $event_id ) = @_;
 
-         matrix_advance_room_receipt( $user1, $room_id, "m.read" => $event_id );
+         matrix_advance_room_receipt_synced( $user1, $room_id, "m.read" => $event_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -101,7 +101,7 @@ test "Messages that highlight from another user increment unread highlight count
          $unread->{highlight_count} == 0
             or die "Expected unread highlight count to be 0";
 
-         matrix_send_room_text_message( $user2, $room_id,
+         matrix_send_room_text_message_synced( $user2, $room_id,
             body => "Test message 2",
          );
       })->then( sub {
