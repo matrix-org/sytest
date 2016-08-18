@@ -95,6 +95,8 @@ GetOptions(
 
    'media-repository+' => \$SYNAPSE_ARGS{media_repository},
 
+   'appservice+' => \$SYNAPSE_ARGS{appservice},
+
    'bind-host=s' => \$BIND_HOST,
 
    'p|port-range=s' => \(my $PORT_RANGE = "8800:8899"),
