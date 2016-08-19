@@ -11,11 +11,13 @@ my $registered_user_fixture = fixture(
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type     => "m.login.password",
-            user     => "02login",
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "02login",
             password => $password,
          },
       )->then( sub {

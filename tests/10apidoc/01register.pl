@@ -1,17 +1,31 @@
 use Digest::HMAC_SHA1 qw( hmac_sha1_hex );
+use JSON qw( decode_json );
 
 test "GET /register yields a set of flows",
    requires => [ $main::API_CLIENTS[0] ],
 
-   proves => [qw( can_register_password_flow )],
+   proves => [qw( can_register_dummy_flow )],
 
    check => sub {
       my ( $http ) = @_;
 
       $http->do_request_json(
-         uri => "/api/v1/register",
-      )->then( sub {
-         my ( $body ) = @_;
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {},
+      )->main::expect_http_401
+      ->then( sub {
+         my ( $response ) = @_;
+
+         # Despite being an HTTP failure, the body is still JSON encoded and
+         # has useful information
+         assert_eq( $response->content_type, "application/json",
+            'POST /r0/register results in application/json 401 failure'
+         );
+
+         my $body = decode_json( $response->content );
+         log_if_fail "/r0/register flow information", $body;
 
          assert_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
@@ -28,8 +42,7 @@ test "GET /register yields a set of flows",
                die "Expected flow[$idx] to have 'stages' as a list or a 'type'";
 
             $has_register_flow++ if
-               $flow->{type} eq "m.login.password" or
-               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password";
+               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.dummy";
          }
 
          Future->done( $has_register_flow );
@@ -38,7 +51,7 @@ test "GET /register yields a set of flows",
 
 test "POST /register can create a user",
    requires => [ $main::API_CLIENTS[0],
-                 qw( can_register_password_flow ) ],
+                 qw( can_register_dummy_flow ) ],
 
    critical => 1,
 
@@ -47,11 +60,13 @@ test "POST /register can create a user",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type     => "m.login.password",
-            user     => "01register-user",
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "01register-user",
             password => "s3kr1t",
          },
       )->then( sub {
