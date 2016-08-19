@@ -36,7 +36,6 @@ our @HOMESERVER_INFO = map {
          my $info = ServerInfo( "localhost:$port", $location );
 
          my $db_config = YAML::LoadFile( "database.yaml" );
-         my %db_args = %{ $db_config->{args} };
 
          my $ruma = SyTest::Homeserver::Ruma->new(
             ruma_dir => "../ruma",
@@ -44,12 +43,12 @@ our @HOMESERVER_INFO = map {
 
             output => $OUTPUT,
 
+            db_args => $db_config->{args},
+
             config => {
                domain              => "localhost:$port",
                bind_port           => $port,
                macaroon_secret_key => "PBHIVfqSM5q8/jyameDVcxFhJrSEVxmyVggN/9dW0N4=",
-               postgres_url        => sprintf( "postgres://%s:%s@%s/%s",
-                  $db_args{user}, $db_args{password}, $db_args{host}, "ruma" ),
             },
          );
          $loop->add( $ruma );
