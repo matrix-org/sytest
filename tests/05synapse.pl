@@ -93,6 +93,9 @@ our @HOMESERVER_INFO = map {
                media_repository => main::alloc_port( "media_repository[$idx]" ),
                media_repository_metrics => main::alloc_port( "media_repository[$idx].metrics" ),
                media_repository_manhole => main::alloc_port( "media_repository[$idx].manhole" ),
+
+               appservice_metrics => main::alloc_port( "appservice[$idx].metrics" ),
+               appservice_manhole => main::alloc_port( "appservice[$idx].manhole" ),
             },
             bind_host           => $BIND_HOST,
             output              => $OUTPUT,
@@ -105,6 +108,7 @@ our @HOMESERVER_INFO = map {
             synchrotron         => $SYNAPSE_ARGS{synchrotron},
             federation_reader   => $SYNAPSE_ARGS{federation_reader},
             media_repository    => $SYNAPSE_ARGS{media_repository},
+            appservice          => $SYNAPSE_ARGS{appservice},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
@@ -151,7 +155,8 @@ our @HOMESERVER_INFO = map {
                         { regex => '#astest-.*', exclusive => "true" },
                      ],
                      rooms => [],
-                  }
+                  },
+                  protocols => [qw( ymca )],
                } );
 
                push @confs, $appserv_conf;
