@@ -153,7 +153,8 @@ our @HOMESERVER_INFO = map {
                         { regex => '#astest-.*', exclusive => "true" },
                      ],
                      rooms => [],
-                  }
+                  },
+                  protocols => [qw( ymca )],
                } );
 
                push @confs, $appserv_conf;
