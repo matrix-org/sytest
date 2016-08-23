@@ -163,9 +163,8 @@ test "POST /join/:room_id can join a room with custom content",
       )->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( room_id ));
-         $body->{room_id} eq $room_id or
-            die "Expected 'room_id' to be $room_id";
+         assert_json_keys( $body, qw( room_id ) );
+         assert_eq( $body->{room_id}, $room_id );
 
          matrix_get_room_state( $user, $room_id,
             type      => "m.room.member",
@@ -176,7 +175,7 @@ test "POST /join/:room_id can join a room with custom content",
 
          log_if_fail "body", $body;
 
-         assert_json_keys( $body, qw( foo membership ));
+         assert_json_keys( $body, qw( foo membership ) );
          assert_eq( $body->{foo}, "bar" );
          assert_eq( $body->{membership}, "join" );
 
@@ -199,9 +198,8 @@ test "POST /join/:room_alias can join a room with custom content",
       )->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( room_id ));
-         $body->{room_id} eq $room_id or
-            die "Expected 'room_id' to be $room_id";
+         assert_json_keys( $body, qw( room_id ) );
+         assert_eq( $body->{room_id}, $room_id );
 
          matrix_get_room_state( $user, $room_id,
             type      => "m.room.member",
@@ -212,7 +210,7 @@ test "POST /join/:room_alias can join a room with custom content",
 
          log_if_fail "body", $body;
 
-         assert_json_keys( $body, qw( foo membership ));
+         assert_json_keys( $body, qw( foo membership ) );
          assert_eq( $body->{foo}, "bar" );
          assert_eq( $body->{membership}, "join" );
 
