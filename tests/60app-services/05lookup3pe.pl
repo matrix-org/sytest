@@ -1,5 +1,29 @@
+test "HS provides query metadata",
+   requires => [ local_user_fixture() ],
+
+   proves => [qw( can_get_3pe_metadata )],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/unstable/thirdparty/protocols"
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "protocols", $body;
+
+         assert_json_object( $body );
+         assert_ok( defined $body->{ymca}, 'HS knows "ymca" protocol' );
+
+         Future->done(1);
+      });
+   };
+
 test "HS will proxy request for 3PU mapping",
-   requires => [ local_user_fixture(), $main::APPSERV[0] ],
+   requires => [ local_user_fixture(), $main::APPSERV[0],
+                 qw( can_get_3pe_metadata )],
 
    do => sub {
       my ( $user, $appserv ) = @_;
@@ -59,7 +83,8 @@ test "HS will proxy request for 3PU mapping",
    };
 
 test "HS will proxy request for 3PL mapping",
-   requires => [ local_user_fixture(), $main::APPSERV[0] ],
+   requires => [ local_user_fixture(), $main::APPSERV[0],
+                 qw( can_get_3pe_metadata )],
 
    do => sub {
       my ( $user, $appserv ) = @_;
