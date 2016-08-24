@@ -1,10 +1,10 @@
-test "Can recv direct messages until they are acknowledged",
-   requires => [ local_user_fixture(), qw( can_recv_direct_message ) ],
+test "Can recv to_device messages until they are acknowledged",
+   requires => [ local_user_fixture(), qw( can_recv_to_device_message ) ],
 
    check => sub {
       my ( $user ) = @_;
 
-      matrix_send_direct_message( $user,
+      matrix_send_to_device_message( $user,
          type     => "my.test.type",
          messages => {
             $user->user_id => {
@@ -15,7 +15,7 @@ test "Can recv direct messages until they are acknowledged",
          },
       )->then( sub {
          # Download the first message but don't acknowledge it.
-         matrix_recv_direct_message( $user );
+         matrix_recv_to_device_message( $user );
       })->then( sub {
          my ( $messages ) = @_;
 
@@ -28,7 +28,7 @@ test "Can recv direct messages until they are acknowledged",
          }]);
 
          # Download the first message again and acknowledge it.
-         matrix_recv_and_ack_direct_message( $user );
+         matrix_recv_and_ack_to_device_message( $user );
       })->then( sub {
          my ( $messages ) = @_;
 
@@ -40,7 +40,7 @@ test "Can recv direct messages until they are acknowledged",
             },
          }]);
 
-         matrix_send_direct_message( $user,
+         matrix_send_to_device_message( $user,
             type     => "my.test.type",
             messages => {
                $user->user_id => {
@@ -52,7 +52,7 @@ test "Can recv direct messages until they are acknowledged",
          );
       })->then( sub {
          # Download the second message and acknowledge it.
-         matrix_recv_and_ack_direct_message( $user );
+         matrix_recv_and_ack_to_device_message( $user );
       })->then( sub {
          my ( $messages ) = @_;
 
@@ -68,12 +68,12 @@ test "Can recv direct messages until they are acknowledged",
 
 
 test "Messages with the same txn_id are deduplicated",
-   requires => [ local_user_fixture(), qw( can_recv_direct_message ) ],
+   requires => [ local_user_fixture(), qw( can_recv_to_device_message ) ],
 
    check => sub {
       my ( $user ) = @_;
 
-      matrix_send_direct_message( $user,
+      matrix_send_to_device_message( $user,
          type     => "my.test.type",
          txn_id   => "my_transaction_id",
          messages => {
@@ -84,7 +84,7 @@ test "Messages with the same txn_id are deduplicated",
             },
          },
       )->then( sub {
-         matrix_recv_and_ack_direct_message( $user );
+         matrix_recv_and_ack_to_device_message( $user );
       })->then( sub {
          my ( $messages ) = @_;
 
@@ -98,7 +98,7 @@ test "Messages with the same txn_id are deduplicated",
       })->then( sub {
          # Send the first message again.
          # The server should ignore it because it has the same txn_id.
-         matrix_send_direct_message( $user,
+         matrix_send_to_device_message( $user,
             type     => "my.test.type",
             txn_id   => "my_transaction_id",
             messages => {
@@ -110,9 +110,9 @@ test "Messages with the same txn_id are deduplicated",
             },
          );
       })->then( sub {
-         # Send another direct message so that we can check that we receive it
+         # Send another to_device message so that we can check that we receive it
          # rather than a duplicate of the first message.
-         matrix_send_direct_message( $user,
+         matrix_send_to_device_message( $user,
             type     => "my.test.type",
             messages => {
                $user->user_id => {
@@ -124,7 +124,7 @@ test "Messages with the same txn_id are deduplicated",
          );
       })->then( sub {
          # Download the second message and acknowledge it.
-         matrix_recv_and_ack_direct_message( $user );
+         matrix_recv_and_ack_to_device_message( $user );
       })->then( sub {
          my ( $messages ) = @_;
 
