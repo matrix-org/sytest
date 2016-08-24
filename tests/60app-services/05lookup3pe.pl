@@ -5,7 +5,7 @@ test "HS will proxy request for 3PU mapping",
       my ( $user, $appserv ) = @_;
 
       Future->needs_all(
-         $appserv->await_http_request( "/3pu/ymca", sub { 1 } )->then( sub {
+         $appserv->await_http_request( "/thirdparty/user/ymca", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
             assert_deeply_eq(
@@ -30,7 +30,7 @@ test "HS will proxy request for 3PU mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/3pu/ymca",
+            uri    => "/unstable/thirdparty/user/ymca",
 
             params => {
                field1 => "ONE",
@@ -65,7 +65,7 @@ test "HS will proxy request for 3PL mapping",
       my ( $user, $appserv ) = @_;
 
       Future->needs_all(
-         $appserv->await_http_request( "/3pl/ymca", sub { 1 } )->then( sub {
+         $appserv->await_http_request( "/thirdparty/location/ymca", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
             assert_deeply_eq(
@@ -89,7 +89,7 @@ test "HS will proxy request for 3PL mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/3pl/ymca",
+            uri    => "/unstable/thirdparty/location/ymca",
 
             params => {
                field3 => "THREE",
