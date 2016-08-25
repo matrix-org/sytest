@@ -11,7 +11,7 @@ test "HS provides query metadata",
             my ( $request ) = @_;
 
             $request->respond_json( {
-               user_fields => [qw( field1 field2 )],
+               user_fields     => [qw( field1 field2 )],
                location_fields => [qw( field3 )],
             } );
 
