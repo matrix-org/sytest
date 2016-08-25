@@ -63,6 +63,8 @@ test "Can recv to_device messages until they are acknowledged",
                message => "second",
             },
          }]);
+
+         Future->done(1);
       });
    };
 
@@ -95,7 +97,7 @@ test "Messages with the same txn_id are deduplicated",
                message => "first",
             },
          }]);
-      })->then( sub {
+
          # Send the first message again.
          # The server should ignore it because it has the same txn_id.
          matrix_send_to_device_message( $user,
@@ -135,5 +137,7 @@ test "Messages with the same txn_id are deduplicated",
                message => "second",
             },
          }]);
+
+         Future->done(1);
       });
    };
