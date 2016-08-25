@@ -1,3 +1,5 @@
+use constant AS_PREFIX => "/_matrix/app/unstable";
+
 test "HS provides query metadata",
    requires => [ local_user_fixture(), $main::APPSERV[0] ],
 
@@ -7,7 +9,9 @@ test "HS provides query metadata",
       my ( $user, $appserv ) = @_;
 
       Future->needs_all(
-         $appserv->await_http_request( "/thirdparty/protocol/ymca", sub { 1 } )->then( sub {
+         $appserv->await_http_request( AS_PREFIX . "/thirdparty/protocol/ymca",
+            sub { 1 }
+         )->then( sub {
             my ( $request ) = @_;
 
             $request->respond_json( {
@@ -42,7 +46,9 @@ test "HS will proxy request for 3PU mapping",
       my ( $user, $appserv ) = @_;
 
       Future->needs_all(
-         $appserv->await_http_request( "/thirdparty/user/ymca", sub { 1 } )->then( sub {
+         $appserv->await_http_request( AS_PREFIX . "/thirdparty/user/ymca",
+            sub { 1 }
+         )->then( sub {
             my ( $request ) = @_;
 
             assert_deeply_eq(
@@ -103,7 +109,9 @@ test "HS will proxy request for 3PL mapping",
       my ( $user, $appserv ) = @_;
 
       Future->needs_all(
-         $appserv->await_http_request( "/thirdparty/location/ymca", sub { 1 } )->then( sub {
+         $appserv->await_http_request( AS_PREFIX . "/thirdparty/location/ymca",
+            sub { 1 }
+         )->then( sub {
             my ( $request ) = @_;
 
             assert_deeply_eq(
