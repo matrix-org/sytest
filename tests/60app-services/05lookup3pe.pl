@@ -1,11 +1,48 @@
-test "HS will proxy request for 3PU mapping",
+test "HS provides query metadata",
    requires => [ local_user_fixture(), $main::APPSERV[0] ],
+
+   proves => [qw( can_get_3pe_metadata )],
+
+   check => sub {
+      my ( $user, $appserv ) = @_;
+
+      Future->needs_all(
+         $appserv->await_http_request( "/thirdparty/protocol/ymca", sub { 1 } )->then( sub {
+            my ( $request ) = @_;
+
+            $request->respond_json( {
+               user_fields     => [qw( field1 field2 )],
+               location_fields => [qw( field3 )],
+            } );
+
+            Future->done(1);
+         }),
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/unstable/thirdparty/protocols"
+         )->then( sub {
+            my ( $body ) = @_;
+
+            log_if_fail "protocols", $body;
+
+            assert_json_object( $body );
+            assert_ok( defined $body->{ymca}, 'HS knows "ymca" protocol' );
+
+            Future->done(1);
+         }),
+      );
+   };
+
+test "HS will proxy request for 3PU mapping",
+   requires => [ local_user_fixture(), $main::APPSERV[0],
+                 qw( can_get_3pe_metadata )],
 
    do => sub {
       my ( $user, $appserv ) = @_;
 
       Future->needs_all(
-         $appserv->await_http_request( "/3pu/ymca", sub { 1 } )->then( sub {
+         $appserv->await_http_request( "/thirdparty/user/ymca", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
             assert_deeply_eq(
@@ -30,7 +67,7 @@ test "HS will proxy request for 3PU mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/3pu/ymca",
+            uri    => "/unstable/thirdparty/user/ymca",
 
             params => {
                field1 => "ONE",
@@ -59,13 +96,14 @@ test "HS will proxy request for 3PU mapping",
    };
 
 test "HS will proxy request for 3PL mapping",
-   requires => [ local_user_fixture(), $main::APPSERV[0] ],
+   requires => [ local_user_fixture(), $main::APPSERV[0],
+                 qw( can_get_3pe_metadata )],
 
    do => sub {
       my ( $user, $appserv ) = @_;
 
       Future->needs_all(
-         $appserv->await_http_request( "/3pl/ymca", sub { 1 } )->then( sub {
+         $appserv->await_http_request( "/thirdparty/location/ymca", sub { 1 } )->then( sub {
             my ( $request ) = @_;
 
             assert_deeply_eq(
@@ -89,7 +127,7 @@ test "HS will proxy request for 3PL mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/3pl/ymca",
+            uri    => "/unstable/thirdparty/location/ymca",
 
             params => {
                field3 => "THREE",
