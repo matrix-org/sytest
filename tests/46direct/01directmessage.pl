@@ -7,9 +7,8 @@ push our @EXPORT, qw( matrix_send_device_message );
 sub matrix_send_device_message
 {
    my ( $user, %params ) = @_;
-   exists $params{type} or die "Expected a type";
    exists $params{messages} or die "Expected messages";
-   my $type = delete $params{type};
+   my $type = delete $params{type} or die "Expected a type";
    my $txn_id = delete $params{txn_id} // $next_device_message_txn_id++;
 
    do_request_json_for( $user,
