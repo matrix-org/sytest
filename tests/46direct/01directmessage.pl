@@ -2,9 +2,9 @@ use Future::Utils qw( repeat );
 
 my $next_device_message_txn_id = 0;
 
-push our @EXPORT, qw( matrix_send_to_device_message );
+push our @EXPORT, qw( matrix_send_device_message );
 
-sub matrix_send_to_device_message
+sub matrix_send_device_message
 {
    my ( $user, %params ) = @_;
    exists $params{type} or die "Expected a type";
@@ -19,15 +19,15 @@ sub matrix_send_to_device_message
    );
 }
 
-test "Can send a to_device message using PUT",
+test "Can send a message directly to a device using PUT /sendToDevice",
    requires => [ local_user_fixture() ],
 
-   proves => [ qw( can_send_to_device_message ) ],
+   proves => [ qw( can_send_device_message ) ],
 
    check => sub {
       my ( $user ) = @_;
 
-      matrix_send_to_device_message( $user,
+      matrix_send_device_message( $user,
          type     => "my.test.type",
          messages => {
             $user->user_id => {
@@ -42,9 +42,9 @@ test "Can send a to_device message using PUT",
 
 my $FILTER_ONLY_DIRECT = '{"room":{"rooms":[]},"account_data":{"types":[]},"presence":{"types":[]}}';
 
-push @EXPORT, qw( matrix_recv_to_device_message );
+push @EXPORT, qw( matrix_recv_device_message );
 
-sub matrix_recv_to_device_message
+sub matrix_recv_device_message
 {
    my ( $user ) = @_;
 
@@ -78,9 +78,9 @@ sub matrix_recv_to_device_message
    });
 }
 
-push @EXPORT, qw( matrix_ack_to_device_message );
+push @EXPORT, qw( matrix_ack_device_message );
 
-sub matrix_ack_to_device_message
+sub matrix_ack_device_message
 {
    my ( $user, $next_batch ) = @_;
 
@@ -92,31 +92,31 @@ sub matrix_ack_to_device_message
    );
 }
 
-push @EXPORT, qw( matrix_recv_and_ack_to_device_message );
+push @EXPORT, qw( matrix_recv_and_ack_device_message );
 
-sub matrix_recv_and_ack_to_device_message
+sub matrix_recv_and_ack_device_message
 {
    my ( $user ) = @_;
 
-   matrix_recv_to_device_message( $user )->then( sub {
+   matrix_recv_device_message( $user )->then( sub {
       my ( $messages, $next_batch ) = @_;
 
-      matrix_ack_to_device_message( $user, $next_batch )->then( sub {
+      matrix_ack_device_message( $user, $next_batch )->then( sub {
          Future->done( $messages );
       });
    });
 }
 
 
-test "Can recv a to_device message using /sync",
-   requires => [ local_user_fixture(), qw( can_send_to_device_message ) ],
+test "Can recv a device message using /sync",
+   requires => [ local_user_fixture(), qw( can_send_device_message ) ],
 
-   proves => [ qw( can_recv_to_device_message ) ],
+   proves => [ qw( can_recv_device_message ) ],
 
    check => sub {
       my ( $user ) = @_;
 
-      matrix_send_to_device_message( $user,
+      matrix_send_device_message( $user,
          type     => "my.test.type",
          messages => {
             $user->user_id => {
@@ -126,7 +126,7 @@ test "Can recv a to_device message using /sync",
             },
          },
       )->then( sub {
-         matrix_recv_and_ack_to_device_message( $user );
+         matrix_recv_and_ack_device_message( $user );
       })->then( sub {
          my ( $messages ) = @_;
 
