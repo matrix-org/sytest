@@ -226,3 +226,158 @@ test "Invites are pushed",
          Future->done(1);
       });
    };
+
+
+sub setup_push
+{
+   my ( $alice, $bob, $test_server_info, $loc ) = @_;
+   my $room_id;
+
+   do_request_json_for( $alice,
+      method  => "POST",
+      uri     => "/r0/pushers/set",
+      content => {
+         profile_tag         => "tag",
+         kind                => "http",
+         app_id              => "sytest",
+         app_display_name    => "sytest_display_name",
+         device_display_name => "device_display_name",
+         pushkey             => "a_push_key",
+         lang                => "en",
+         data                => {
+            url => $test_server_info->client_location . $loc,
+         },
+      },
+   )->then( sub {
+      matrix_create_room( $bob );
+   })->then( sub {
+      ( $room_id ) = @_;
+
+      matrix_join_room( $alice, $room_id )
+   })->then( sub {
+      Future->done( $room_id )
+   })
+}
+
+sub check_received_push_with_name
+{
+   my ( $bob, $room_id, $loc, $room_name ) = @_;
+
+   Future->needs_all(
+      await_http_request( $loc, sub {
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
+
+         return unless $body->{notification}{type};
+         return unless $body->{notification}{type} eq "m.room.message";
+         return 1;
+      })->then( sub {
+         my ( $request ) = @_;
+
+         $request->respond_json( {} );
+         Future->done( $request );
+      }),
+      matrix_send_room_text_message( $bob, $room_id,
+         body => "Message",
+      ),
+   )->then( sub {
+      my ( $request ) = @_;
+      my $body = $request->body_from_json;
+
+      log_if_fail "Message push request body", $body;
+
+      assert_json_keys( my $notification = $body->{notification}, qw(
+         id room_id type sender content devices counts
+      ));
+
+      assert_eq( $notification->{room_id}, $room_id, "room_id");
+      assert_eq( $notification->{sender}, $bob->user_id, "sender");
+      assert_eq( $notification->{room_name}, $room_name, "room_name");
+
+      Future->done(1);
+   });
+}
+
+test "Rooms with aliases are correctly named in pushed",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ), room_alias_fixture(),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $room_alias, $test_server_info ) = @_;
+      my $room_id;
+
+      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $bob,
+            method => "PUT",
+            uri    => "/r0/directory/room/$room_alias",
+
+            content => { room_id => $room_id },
+         )
+      })->then( sub {
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
+      });
+   };
+
+test "Rooms with names are correctly named in pushed",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $test_server_info ) = @_;
+      my $room_id;
+
+      my $name = "Test Name";
+
+      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $bob,
+            method => "PUT",
+            uri    => "/r0/rooms/$room_id/state/m.room.name",
+
+            content => { name => $name },
+         );
+      })->then( sub {
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $name )
+      });
+   };
+
+test "Rooms with canonical alias are correctly named in pushed",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ), room_alias_fixture(),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $room_alias, $test_server_info ) = @_;
+      my $room_id;
+
+      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $bob,
+            method => "PUT",
+            uri    => "/r0/directory/room/$room_alias",
+
+            content => { room_id => $room_id },
+         )
+      })->then( sub {
+         do_request_json_for( $bob,
+            method => "PUT",
+            uri    => "/r0/rooms/$room_id/state/m.room.canonical_alias",
+
+            content => { alias => $room_alias },
+         );
+      })->then( sub {
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
+      });
+   };
