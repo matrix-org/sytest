@@ -396,4 +396,3 @@ sub matrix_initialsync_room
       params => \%params,
    );
 }
-
