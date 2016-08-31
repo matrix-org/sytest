@@ -228,6 +228,15 @@ test "Invites are pushed",
    };
 
 
+=head2 setup_push
+
+   setup_push( $alice, $bob, $test_server_info, $loc )
+
+Sets up push for $alice and creates a room with $alice and $bob. Returns a
+future with the room_id of the newly created room.
+
+=cut
+
 sub setup_push
 {
    my ( $alice, $bob, $test_server_info, $loc ) = @_;
@@ -339,10 +348,8 @@ test "Rooms with names are correctly named in pushed",
       ->then( sub {
          ( $room_id ) = @_;
 
-         do_request_json_for( $bob,
-            method => "PUT",
-            uri    => "/r0/rooms/$room_id/state/m.room.name",
-
+         matrix_put_room_state( $bob, $room_id,
+            type    => "m.room.name",
             content => { name => $name },
          );
       })->then( sub {
@@ -371,10 +378,8 @@ test "Rooms with canonical alias are correctly named in pushed",
             content => { room_id => $room_id },
          )
       })->then( sub {
-         do_request_json_for( $bob,
-            method => "PUT",
-            uri    => "/r0/rooms/$room_id/state/m.room.canonical_alias",
-
+         matrix_put_room_state( $bob, $room_id,
+            type    => "m.room.canonical_alias",
             content => { alias => $room_alias },
          );
       })->then( sub {
