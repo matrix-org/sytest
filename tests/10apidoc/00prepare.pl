@@ -2,7 +2,7 @@ our @EXPORT = qw( User is_User do_request_json_for new_User );
 
 my @KEYS = qw(
    http user_id device_id password access_token refresh_token eventstream_token
-   sync_next_batch saved_events pending_get_events
+   sync_next_batch saved_events pending_get_events device_message_next_batch
 );
 
 # A handy little structure for other scripts to find in 'user' and 'more_users'
