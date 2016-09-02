@@ -58,6 +58,7 @@ sub matrix_recv_device_message
             filter            => $FILTER_ONLY_DIRECT,
             update_next_batch => 0,
             set_presence      => "offline",
+            next_batch        => $user->device_message_next_batch,
          );
       });
    } until => sub {
@@ -88,7 +89,13 @@ sub matrix_ack_device_message
       since             => $next_batch,
       update_next_batch => 0,
       set_presence      => "offline",
-   );
+   )->then_with_f( sub {
+      my ( $f, $body ) = @_;
+
+      $user->device_message_next_batch = $body->{next_batch};
+
+      return $f;
+   })
 }
 
 push @EXPORT, qw( matrix_recv_and_ack_device_message );
