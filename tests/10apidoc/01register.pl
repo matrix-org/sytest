@@ -118,8 +118,13 @@ sub matrix_register_user
       my ( $body ) = @_;
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $body->{device_id},
-                       $password, $access_token, undef, undef, undef, [], undef );
+      my $user = new_User(
+         http         => $http,
+         user_id      => $body->{user_id},
+         device_id    => $body->{device_id},
+         password     => $password,
+         access_token => $access_token,
+      );
 
       my $f = Future->done;
 
@@ -179,8 +184,13 @@ sub matrix_register_user_via_secret
 
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $body->{device_id},
-                       $password, $access_token, undef, undef, undef, [], undef );
+      my $user = new_User(
+         http         => $http,
+         user_id      => $body->{user_id},
+         device_id    => $body->{device_id},
+         password     => $password,
+         access_token => $access_token,
+      );
 
       return Future->done( $user )
         ->on_done( sub {
