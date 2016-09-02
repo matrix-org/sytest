@@ -503,9 +503,12 @@ sub guest_user_fixture
             my ( $body ) = @_;
             my $access_token = $body->{access_token};
 
-            Future->done( User( $http, $body->{user_id},
-                                $body->{device_id},
-                                undef, $access_token, undef, undef, undef, [], undef ) );
+            Future->done( new_User(
+               http         => $http,
+               user_id      => $body->{user_id},
+               device_id    => $body->{device_id},
+               access_token => $access_token,
+            ));
          });
    })
 }
