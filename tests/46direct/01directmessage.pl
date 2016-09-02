@@ -54,12 +54,18 @@ sub matrix_recv_device_message
    my $f = repeat {
       delay( $delay )->then( sub {
          $delay = 0.1 + $delay * 1.5;
-         matrix_sync( $user,
+
+         my @params = (
             filter            => $FILTER_ONLY_DIRECT,
             update_next_batch => 0,
             set_presence      => "offline",
-            next_batch        => $user->device_message_next_batch,
          );
+
+         if( defined $user->device_message_next_batch ) {
+            push @params, since => $user->device_message_next_batch;
+         }
+
+         matrix_sync( $user, @params );
       });
    } until => sub {
       my ( $f ) = @_;
