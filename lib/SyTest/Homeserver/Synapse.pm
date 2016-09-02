@@ -335,6 +335,9 @@ sub start
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron ) ) {
+         open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
+      }
    }
 
    my $pythonpath = (
