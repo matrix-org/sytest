@@ -34,8 +34,6 @@ sub new_User
 {
    my ( %params ) = @_;
 
-   $params{saved_events} //= [];
-
    my $user = User( delete @params{ @KEYS } );
 
    if ( %params ) {
