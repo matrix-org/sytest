@@ -90,7 +90,7 @@ sub GET_new_events_for
          my ( $body ) = @_;
          $user->eventstream_token = $body->{end};
 
-         my @events = ( @{ $user->saved_events // [] }, @{ $body->{chunk} } );
+         my @events = ( @{ $user->saved_events //= [] }, @{ $body->{chunk} } );
          @{ $user->saved_events } = ();
 
          Future->done( @events );
@@ -152,7 +152,7 @@ sub await_event_for
 
    my $f = repeat {
       # Just replay saved ones the first time around, if there are any
-      my $replay_saved = !shift && scalar @{ $user->saved_events // [] };
+      my $replay_saved = !shift && scalar @{ $user->saved_events //= [] };
 
       ( $replay_saved
          ? Future->done( splice @{ $user->saved_events //= [] } )  # fetch-and-clear
@@ -163,7 +163,7 @@ sub await_event_for
          my $found = extract_first_by { $filter->( $_ ) } @events;
 
          # Save the rest for next time
-         push @{ $user->saved_events }, @events;
+         push @{ $user->saved_events //= [] }, @events;
 
          Future->done( $found );
       });
