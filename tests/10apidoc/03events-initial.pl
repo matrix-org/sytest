@@ -133,7 +133,7 @@ sub flush_events_for
    ->then( sub {
       my ( $body ) = @_;
       $user->eventstream_token = $body->{end};
-      @{ $user->saved_events } = ();
+      @{ $user->saved_events //= [] } = ();
 
       Future->done;
    });
