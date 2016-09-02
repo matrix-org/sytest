@@ -267,13 +267,13 @@ test "registration remembers parameters",
          assert_eq( $actual_user_id, "\@$localpart:$home_server",
             "registered user ID" );
 
-         my $user = User( $http, $actual_user_id,
-                          $body->{device_id},
-                          undef,
-                          $body->{access_token},
-                          $body->{refresh_token},
-                          undef, undef, [], undef );
-
+         my $user = new_User(
+            http          => $http,
+            user_id       => $actual_user_id,
+            device_id     => $body->{device_id},
+            access_token  => $body->{access_token},
+            refresh_token => $body->{refresh_token},
+         );
          # check that the right device_id was registered
          matrix_get_device( $user, "xyzzy" );
       })->then( sub {
