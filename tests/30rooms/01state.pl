@@ -235,7 +235,8 @@ test "Room initialSync with limit=0 gives no messages",
    };
 
 
-sub get_test_state {
+sub get_test_state
+{
    my ( $user, $room_id, $type ) = @_;
 
    matrix_initialsync_room( $user, $room_id, limit => 0 )->then( sub {
