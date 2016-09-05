@@ -235,6 +235,21 @@ test "Room initialSync with limit=0 gives no messages",
    };
 
 
+sub get_test_state
+{
+   my ( $user, $room_id, $type ) = @_;
+
+   matrix_initialsync_room( $user, $room_id, limit => 0 )->then( sub {
+      my ( $body ) = @_;
+
+      my %state_by_type = partition_by { $_->{type} } @{ $body->{state} };
+
+      my $event_id = $state_by_type{ $type }[0]{event_id};
+
+      Future->done( $event_id );
+   });
+}
+
 sub set_test_state
 {
    my ( $user, $room_id ) = @_;
@@ -244,18 +259,9 @@ sub set_test_state
          state_key => "",
          content   => { "a_key" => "a_value" },
    )->then( sub {
-      matrix_initialsync_room( $user, $room_id, limit => 0 );
-   })->then( sub {
-      my ( $body ) = @_;
-
-      my %state_by_type = partition_by { $_->{type} } @{ $body->{state} };
-
-      my $event_id = $state_by_type{"a.test.state.type"}[0]{event_id};
-
-      Future->done( $event_id );
+      get_test_state( $user, $room_id, "a.test.state.type" );
    });
 }
-
 
 test "Setting state twice is idempotent",
    requires => [ local_user_and_room_fixtures() ],
@@ -274,6 +280,33 @@ test "Setting state twice is idempotent",
 
          $event_id_1 eq $event_id_2 or
             die "Did not expect a new event when uploading the same state a second time";
+
+         Future->done(1);
+      });
+   };
+
+test "Joining room twice is idempotent",
+   requires => [ local_user_and_room_fixtures() ],
+
+   check => sub {
+      my ( $user, $room_id ) = @_;
+
+      my ( $event_id_1, $event_id_2 );
+
+      # Since there's only one member event in this room we can use
+      # get_test_state to fetch the first member event and be sure
+      # that the event is our own member event.
+      get_test_state( $user, $room_id, "m.room.member" )->then( sub {
+         ( $event_id_1 ) = @_;
+
+         matrix_join_room( $user, $room_id );
+      })->then( sub {
+         get_test_state( $user, $room_id, "m.room.member" );
+      })->then( sub {
+         ( $event_id_2 ) = @_;
+
+         $event_id_1 eq $event_id_2 or
+            die "Did not expect a new event when joining a room a second time";
 
          Future->done(1);
       });
