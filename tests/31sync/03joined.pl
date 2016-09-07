@@ -274,7 +274,7 @@ test "Get presence for newly joined members in incremental sync",
          log_if_fail "Presence", $presence;
 
          my @filtered_presence = grep {
-            $_->{sender} ne $user_b->user_id
+            $_->{sender} ne $user_a->user_id
          } @$presence;
 
          assert_eq( scalar @filtered_presence, 1, "number of presence events" );
