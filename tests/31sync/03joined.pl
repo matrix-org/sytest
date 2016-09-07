@@ -277,9 +277,9 @@ test "Get presence for newly joined members in incremental sync",
             $_->{sender} ne $user_b->user_id
          } @$presence;
 
-         assert_eq( scalar @$filtered_presence, 1, "number of presence events" );
+         assert_eq( scalar @filtered_presence, 1, "number of presence events" );
 
-         my $presence_event = $filtered_presence->[0];
+         my $presence_event = $filtered_presence[0];
 
          assert_json_keys( $presence_event, qw( type sender content ) );
          assert_eq( $presence_event->{type}, "m.presence" );
