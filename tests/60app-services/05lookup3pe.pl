@@ -17,6 +17,7 @@ test "HS provides query metadata",
             $request->respond_json( {
                user_fields     => [qw( field1 field2 )],
                location_fields => [qw( field3 )],
+               icon            => "mxc://1234/56/7",
             } );
 
             Future->done(1);
@@ -32,6 +33,15 @@ test "HS provides query metadata",
 
             assert_json_object( $body );
             assert_ok( defined $body->{ymca}, 'HS knows "ymca" protocol' );
+
+            assert_deeply_eq( $body->{ymca},
+               {
+                  user_fields     => [qw( field1 field2 )],
+                  location_fields => [qw( field3 )],
+                  icon            => "mxc://1234/56/7",
+               },
+               'fields in 3PE lookup metadata'
+            );
 
             Future->done(1);
          }),
