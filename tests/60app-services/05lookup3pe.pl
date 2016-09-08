@@ -18,6 +18,9 @@ test "HS provides query metadata",
                user_fields     => [qw( field1 field2 )],
                location_fields => [qw( field3 )],
                icon            => "mxc://1234/56/7",
+               instances       => [
+                  {},
+               ],
             } );
 
             Future->done(1);
@@ -39,6 +42,9 @@ test "HS provides query metadata",
                   user_fields     => [qw( field1 field2 )],
                   location_fields => [qw( field3 )],
                   icon            => "mxc://1234/56/7",
+                  instances       => [
+                     {},
+                  ],
                },
                'fields in 3PE lookup metadata'
             );
