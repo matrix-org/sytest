@@ -28,6 +28,8 @@ test "Can recv device messages over federation",
             },
          }]);
 
+         # Send another message so that we can check that the remote user
+         # doesn't receive the first message twice
          matrix_send_device_message( $local_user,
             type     => "my.test.type",
             messages => {
