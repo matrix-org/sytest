@@ -97,4 +97,40 @@ test "Name/topic keys are correct",
 
          Future->done(1);
       })
-   }
+   };
+
+test "Can get remote public room list",
+   requires => [ $main::HOMESERVER_INFO[0], local_user_fixture(), remote_user_fixture() ],
+
+   check => sub {
+      my ( $info, $local_user, $remote_user ) = @_;
+      my $first_home_server = $info->server_name;
+
+      my $room_id;
+
+      matrix_create_room( $local_user,
+         visibility      => "public",
+         name            => "Test Name",
+         topic           => "Test Topic",
+      )->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $remote_user,
+            method => "GET",
+            uri    => "/r0/publicRooms",
+
+            params => { server => $first_home_server },
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( chunk ) );
+
+         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+            or die "Remote room list did not include expected room";
+
+         Future->done( 1 );
+      })
+   };
