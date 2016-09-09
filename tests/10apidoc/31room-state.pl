@@ -33,8 +33,42 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
 
          assert_json_keys( $body, qw( membership ));
 
-         $body->{membership} eq "join" or
-            die "Expected membership as 'join'";
+         assert_eq( $body->{membership}, "join", 'body.membership' );
+
+         # This shouldn't look like an event
+         exists $body->{$_} and die "Did not expect to find a '$_' key"
+            for qw( sender event_id room_id );
+
+         Future->done(1);
+      });
+   };
+
+test "GET /rooms/:room_id/state/m.room.member/:user_id?format=event fetches my membership event",
+   requires => [ $user_fixture, $room_fixture ],
+
+   proves => [qw( can_get_room_membership )],
+
+   check => sub {
+      my ( $user, $room_id, undef ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
+         params => {
+            format => "event",
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( sender event_id room_id content ));
+
+         assert_eq( $body->{sender}, $user->user_id, 'event.sender' );
+         assert_eq( $body->{room_id}, $room_id,      'event.room_id' );
+
+         my $content = $body->{content};
+         assert_json_keys( $content, qw( membership ));
+
+         assert_eq( $content->{membership}, "join", 'content.membership' );
 
          Future->done(1);
       });
