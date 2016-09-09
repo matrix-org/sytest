@@ -48,7 +48,7 @@ test "Can login with new user via CAS",
       # step 1: client sends request to /login/cas/redirect
       # step 2: synapse should redirect to the cas server.
       Future->needs_all(
-         wait_for_cas_request( "/cas" ),
+         wait_for_cas_request( "/cas/login" ),
          $http->do_request(
             method => "GET",
             uri    => "/api/v1/login/cas/redirect",
