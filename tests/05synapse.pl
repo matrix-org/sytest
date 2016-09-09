@@ -146,15 +146,15 @@ our @HOMESERVER_INFO = map {
                   sender_localpart => $as_info->localpart,
                   namespaces => {
                      users => [
-                        { regex => '@astest-.*', exclusive => "true" },
                         { regex => '@_.*:' . $info->server_name, exclusive => "false" },
+                        map { { regex => $_, exclusive => "true" } } @{ $as_info->user_regexes },
                      ],
                      aliases => [
-                        { regex => '#astest-.*', exclusive => "true" },
+                        map { { regex => $_, exclusive => "true" } } @{ $as_info->alias_regexes },
                      ],
                      rooms => [],
                   },
-                  protocols => [qw( ymca )],
+                  protocols => $as_info->protocols,
                } );
 
                push @confs, $appserv_conf;
