@@ -33,8 +33,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
 
          assert_json_keys( $body, qw( membership ));
 
-         $body->{membership} eq "join" or
-            die "Expected membership as 'join'";
+         assert_eq( $body->{membership}, "join", 'body.membership' );
 
          # This shouldn't look like an event
          exists $body->{$_} and die "Did not expect to find a '$_' key"
@@ -69,8 +68,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id?format=event fetches my m
          my $content = $body->{content};
          assert_json_keys( $content, qw( membership ));
 
-         $content->{membership} eq "join" or
-            die "Expected membership as 'join'";
+         assert_eq( $content->{membership}, "join", 'content.membership' );
 
          Future->done(1);
       });
