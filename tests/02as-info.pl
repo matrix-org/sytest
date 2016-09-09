@@ -27,6 +27,18 @@ my @as_info = (
       alias_regexes => [ '#astest-.*' ],
       protocols     => [ 'ymca' ],
    ),
+
+   ASInfo(
+      localpart     => "as-user-2",
+      user_id       => undef,
+      as2hs_token   => gen_token( 32 ),
+      hs2as_token   => gen_token( 32 ),
+      path          => "/appservs/2",
+      id            => "AS-2",
+      user_regexes  => [],
+      alias_regexes => [],
+      protocols     => [ 'ymca' ],
+   ),
 );
 
 our @AS_INFO = map {
