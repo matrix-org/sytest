@@ -91,6 +91,48 @@ test "HS provides query metadata",
       );
    };
 
+test "HS can provide query metadata on a single protocol",
+   requires => [ local_user_fixture(), $main::APPSERV[0], $main::APPSERV[1] ],
+
+   proves => [qw( can_get_3pe_metadata )],
+
+   check => sub {
+      my ( $user, $appserv1, $appserv2 ) = @_;
+
+      # Awkwardly, this test relies on the caching within synapse of the
+      # results obtained in the previous test.
+
+      maybe_stub stub_empty_result( $appserv1, "/thirdparty/protocol/ymca" );
+      maybe_stub stub_empty_result( $appserv2, "/thirdparty/protocol/ymca" );
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/unstable/thirdparty/protocol/ymca"
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "protocol", $body;
+
+         assert_json_object( $body );
+
+         assert_deeply_eq( $body,
+            {
+               user_fields     => [qw( field1 field2 )],
+               location_fields => [qw( field3 )],
+               icon            => "mxc://1234/56/7",
+               instances       => [
+                  { desc => "instance 1" },
+                  { desc => "instance 2" },
+                  { desc => "instance 3" },
+               ],
+            },
+            'fields in 3PE lookup metadata for one protocol'
+         );
+
+         Future->done(1);
+      });
+   };
+
 test "HS will proxy request for 3PU mapping",
    requires => [ local_user_fixture(), $main::APPSERV[0], $main::APPSERV[1],
                  qw( can_get_3pe_metadata )],
