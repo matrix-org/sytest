@@ -68,8 +68,8 @@ test "Device messages over federation wake up /sync",
       my ( $local_user, $remote_user ) = @_;
 
       matrix_sync( $local_user,
-         filter => $FILTER_ONLY_DIRECT,
-         set_presence      => "offline",
+         filter       => $FILTER_ONLY_DIRECT,
+         set_presence => "offline",
       )->then( sub {
          Future->needs_all(
             matrix_sync_again( $local_user, filter => $FILTER_ONLY_DIRECT, timeout => 10000 ),
