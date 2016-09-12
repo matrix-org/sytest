@@ -33,9 +33,9 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
         })->then( sub {
             ( $message_event_id ) = @_;
 
-            matrix_advance_room_receipt( $user, $room_id,
-                                         "m.read" => $message_event_id )
-                ->SyTest::pass_on_done( "Updated read receipt" );
+            matrix_advance_room_receipt_synced( $user, $room_id,
+                "m.read" => $message_event_id
+            )->SyTest::pass_on_done( "Updated read receipt" );
         })->then( sub {
             matrix_sync( $user, filter => $filter_id )
                 ->SyTest::pass_on_done( "Completed first sync" );
