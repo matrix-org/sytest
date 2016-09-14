@@ -28,7 +28,7 @@ sub _init
    $self->{$_} = delete $args->{$_} for qw(
       ports synapse_dir extra_args python config coverage
       dendron pusher synchrotron federation_reader bind_host
-      media_repository appservice
+      media_repository appservice client_reader
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
@@ -330,6 +330,32 @@ sub start
       ],
    } );
 
+
+   my $client_reader_config_path = $self->write_yaml_file( client_reader => {
+      "worker_app"             => "synapse.app.client_reader",
+      "worker_log_file"        => "$log.client_reader",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type      => "http",
+            resources => [{ names => ["client"] }],
+            port      => $self->{ports}{client_reader},
+            bind_address => $bind_host,
+         },
+         {
+            type => "manhole",
+            port => $self->{ports}{client_reader_manhole},
+            bind_address => $bind_host,
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => $self->{ports}{client_reader_metrics},
+            bind_address => $bind_host,
+         },
+      ],
+   } );
+
    $self->{logpath} = $log;
 
    {
@@ -409,6 +435,12 @@ sub start
          push @command,
             "--media-repository-config" => $media_repository_config_path,
             "--media-repository-url" => "http://$bind_host:$self->{ports}{media_repository}";
+      }
+
+      if ( $self->{client_reader} ) {
+         push @command,
+            "--client-reader-config" => $client_reader_config_path,
+            "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}";
       }
    }
    else {

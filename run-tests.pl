@@ -97,6 +97,8 @@ GetOptions(
 
    'appservice+' => \$SYNAPSE_ARGS{appservice},
 
+   'client-reader+' => \$SYNAPSE_ARGS{client_reader},
+
    'bind-host=s' => \$BIND_HOST,
 
    'p|port-range=s' => \(my $PORT_RANGE = "8800:8899"),
