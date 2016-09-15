@@ -39,7 +39,7 @@ test "Name/topic keys are correct",
 
          log_if_fail "publicRooms", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( $body->{chunk} );
 
          my %seen = map {

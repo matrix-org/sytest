@@ -42,7 +42,7 @@ test "Guest users can send messages to guest_access rooms if joined",
          my ( $body ) = @_;
          log_if_fail "Body:", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( my $chunk = $body->{chunk} );
 
          scalar @$chunk == 1 or
@@ -358,7 +358,7 @@ test "GET /publicRooms lists rooms",
 
          log_if_fail "publicRooms", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( $body->{chunk} );
 
          my %seen = (
@@ -449,7 +449,7 @@ test "GET /publicRooms includes avatar URLs",
 
          log_if_fail "publicRooms", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( $body->{chunk} );
 
          my %seen = (

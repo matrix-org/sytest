@@ -136,7 +136,7 @@ test "GET /publicRooms lists newly-created room",
       )->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( $body->{chunk} );
 
          my $found;
