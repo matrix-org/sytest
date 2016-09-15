@@ -36,7 +36,7 @@ test "Inbound federation can get public room list",
 
          log_if_fail "Body", $body;
 
-        assert_json_keys( $body, qw( chunk start end ) );
+        assert_json_keys( $body, qw( chunk ) );
 
         any { $_->{room_id} eq $room_id } @{ $body->{chunk} }
           or die "Room not in returned list";
