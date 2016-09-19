@@ -298,8 +298,6 @@ test "Remote invited user can see room metadata",
    do => sub {
       my ( $creator, $room_id, $invitee ) = @_;
 
-      my $state_in_invite;
-
       Future->needs_all(
          matrix_put_room_state( $creator, $room_id,
             type => "m.room.name",
