@@ -7,7 +7,9 @@ test "Sync can be polled for updates",
 
       my ( $filter_id, $room_id );
 
-      matrix_create_filter( $user, {} )->then( sub {
+      matrix_create_filter( $user, {
+         presence => { not_types => ["m.presence"] }
+      } )->then( sub {
          ( $filter_id ) = @_;
 
          matrix_create_room_synced( $user );
@@ -53,7 +55,9 @@ test "Sync is woken up for leaves",
 
       my ( $filter_id, $room_id );
 
-      matrix_create_filter( $user, {} )->then( sub {
+      matrix_create_filter( $user, {
+         presence => { not_types => ["m.presence"] }
+      } )->then( sub {
          ( $filter_id ) = @_;
 
          matrix_create_room_synced( $user );
@@ -84,4 +88,3 @@ test "Sync is woken up for leaves",
          Future->done(1)
       })
    };
-
