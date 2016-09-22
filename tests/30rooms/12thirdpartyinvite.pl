@@ -204,6 +204,69 @@ sub can_invite_unbound_3pid
    })->followed_by( assert_membership( "join" ) );
 }
 
+test "Can invite unbound 3pid over federation with users from both servers",
+   requires => [ local_user_fixture(), remote_user_fixture(), remote_user_fixture(),
+                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
+
+   do => sub {
+      my ( $inviter, $invitee, $joiner, $info, $id_server ) = @_;
+      my $hs_uribase = $info->client_location;
+      my $room_id;
+
+      matrix_create_and_join_room( [ $inviter, $joiner ], visibility => "private", with_invite => 1 )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+      })->then( sub {
+         await_event_for( $joiner, filter => sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.third_party_invite";
+
+            return 1;
+         })
+      })->then( sub {
+         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
+      })->then( sub {
+         await_event_for( $inviter, filter => sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{state_key} eq $invitee->user_id;
+
+            assert_eq( $event->{content}{membership},  "invite" );
+
+            return 1;
+         })
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "m.room.member invite", $body;
+         assert_eq( $body->{third_party_invite}{display_name}, 'Bob', 'invite display name' );
+
+         matrix_join_room( $invitee, $room_id )
+      })->then( sub {
+         await_event_for( $inviter, filter => sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{state_key} eq $invitee->user_id;
+
+            assert_eq( $event->{content}{membership},  "join" );
+
+            return 1;
+         })
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )
+      })->followed_by( assert_membership( "join" ) );
+   };
+
 test "Can accept unbound 3pid invite after inviter leaves",
    requires => [ local_user_fixtures( 3 ), $main::HOMESERVER_INFO[0],
                     id_server_fixture() ],
