@@ -9,7 +9,12 @@ test "initialSync sees my presence status",
    check => sub {
       my ( $user ) = @_;
 
-      matrix_initialsync( $user )->then( sub {
+      # We add a filler account data entry to ensure that replication is up to
+      # date with account creation. Really this should be a synced presence
+      # set
+      matrix_add_filler_account_data_synced ( $user )->then( sub {
+         matrix_initialsync( $user )
+      })->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( presence ));

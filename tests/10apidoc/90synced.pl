@@ -11,6 +11,7 @@ push our @EXPORT, qw(
    matrix_put_room_state_synced
    matrix_advance_room_receipt_synced
    matrix_send_filler_messages_synced
+   matrix_add_filler_account_data_synced
    sync_timeline_contains
 );
 
@@ -55,7 +56,7 @@ sub matrix_do_and_wait_for_sync
    my $next_batch;
 
    matrix_sync( $user,
-      filter            => '{"room":{"rooms":[]},"account_data":{"types":[]},"presence":{"types":[]}}',
+      filter            => '{"room":{"rooms":[]},"account_data":{},"presence":{"types":[]}}',
       update_next_batch => 0,
       set_presence      => "offline",
    )->then( sub {
@@ -259,4 +260,29 @@ sub matrix_send_filler_messages_synced
          type    => $type,
       );
    });
+}
+
+sub matrix_add_filler_account_data_synced
+{
+   my ( $user ) = @_;
+
+   my $random_id = join "", map { chr 64 + rand 63 } 1 .. 20;
+   my $type = "a.made.up.filler.type";
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_add_account_data( $user, $type, {
+            "id" => $random_id,
+         } );
+      },
+      check => sub {
+         my ( $sync_body ) = @_;
+
+         my $global_account_data =  $sync_body->{account_data}{events};
+
+         return any {
+            $_->{type} eq $type && $_->{content}{id} eq $random_id
+         } @{ $global_account_data };
+      },
+   );
 }
