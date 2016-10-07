@@ -1,3 +1,5 @@
+use JSON qw( decode_json );
+
 my $password = "my secure password";
 
 sub matrix_deactivate_account
@@ -33,7 +35,20 @@ test "Can't deactivate account with wrong password",
       my ( $user ) = @_;
 
       matrix_deactivate_account( $user, "wrong password" )
-      ->main::expect_http_403;
+      ->main::expect_http_401->then( sub {
+         my ( $resp ) = @_;
+
+         my $body = decode_json $resp->content;
+
+         assert_json_keys( $body, qw( error errcode params completed flows ));
+
+         my $errcode = $body->{errcode};
+
+         $errcode eq "M_FORBIDDEN" or
+            die "Expected errcode to be M_FORBIDDEN but was $errcode";
+
+         Future->done(1);
+      });
    };
 
 test "After deactivating account, can't log in with password",
