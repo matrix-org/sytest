@@ -132,7 +132,7 @@ test "POST /login as non-existing user is rejected",
    requires => [ $main::API_CLIENTS[0],
                  qw( can_login_password_flow )],
 
-   bug => "SYN-680",
+   # bug => "SYN-680", # now fixed
 
    do => sub {
       my ( $http ) = @_;

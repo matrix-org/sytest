@@ -1,3 +1,4 @@
+use JSON qw( decode_json );
 use Future::Utils qw( try_repeat_until_success );
 
 our @EXPORT = qw( matrix_get_device matrix_set_device_display_name );
@@ -22,6 +23,17 @@ sub matrix_set_device_display_name {
         content => {
             display_name => $display_name,
         },
+    );
+}
+
+sub matrix_delete_device {
+    my ($user, $device_id, $request_body) = @_;
+
+    return do_request_json_for(
+        $user,
+        method  => "DELETE",
+        uri     => "/unstable/devices/${device_id}",
+        content => $request_body,
     );
 }
 
@@ -199,12 +211,46 @@ test "DELETE /device/{deviceId}",
             uri     => "/r0/sync",
          );
       })->then( sub {
-         # delete the device
-         do_request_json_for(
-            $user,
-            method => "DELETE",
-            uri    => "/unstable/devices/${DEVICE_ID}",
-         );
+         # attempt request with empty auth dict
+         matrix_delete_device($user, $DEVICE_ID, {});
+      })->main::expect_http_401->then( sub {
+         my ( $resp ) = @_;
+
+         my $body = decode_json $resp->content;
+
+         log_if_fail("Response to empty body", $body);
+
+         assert_json_keys( $body, qw( session params flows ));
+
+         # do it again with the wrong password
+         matrix_delete_device($user, $DEVICE_ID, {
+             auth => {
+                 type     => "m.login.password",
+                 user     => $user->user_id,
+                 password => "cashewnuts",
+             }
+         });
+      })->main::expect_http_401->then( sub {
+         my ( $resp ) = @_;
+
+         my $body = decode_json $resp->content;
+         log_if_fail("Response to wrong password", $body);
+
+         assert_json_keys( $body, qw( error errcode session params flows ));
+
+         my $errcode = $body->{errcode};
+
+         $errcode eq "M_FORBIDDEN" or
+            die "Expected errcode to be M_FORBIDDEN but was $errcode";
+
+         # one more time with the right password
+         matrix_delete_device($user, $DEVICE_ID, {
+             auth => {
+                 type     => "m.login.password",
+                 user     => $user->user_id,
+                 password => $user->password,
+             }
+         });
       })->then( sub {
          # the device should be deleted
          matrix_get_device( $user, $DEVICE_ID )
@@ -233,3 +279,24 @@ test "DELETE /device/{deviceId}",
         )->main::expect_http_403;
       });
    };
+
+test "DELETE /device/{deviceId} with no body gives a 401",
+   requires => [ local_user_fixture( with_events => 0 ) ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      my $DEVICE_ID = "login_device";
+      my $other_login;
+
+      # create new device
+      matrix_login_again_with_user(
+         $user,
+         device_id => $DEVICE_ID,
+         initial_device_display_name => "device display",
+      )->then( sub {
+         # request with no body
+         matrix_delete_device($user, $DEVICE_ID, undef);
+      })->main::expect_http_401;
+  };
+
