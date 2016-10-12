@@ -1,6 +1,7 @@
 use List::Util qw( first );
 
-my $check_for_push_rules = sub {
+
+sub check_for_push_rules {
    my ( $sync_body ) = @_;
 
    my $account_data = $sync_body->{account_data}{events};
@@ -12,13 +13,28 @@ my $check_for_push_rules = sub {
    Future->done(1);
 };
 
+
+sub check_woken_up_by_push_rules {
+   my ( $user, $action ) = @_;
+
+   matrix_sync( $user )->then( sub {
+      Future->needs_all(
+         matrix_sync_again( $user,
+            timeout => 10000,
+            filter => '{"room":{"rooms":[]},"presence":{"types":[]}}',
+         )->then( sub { check_for_push_rules( @_ ) } ),
+         $action->(),
+      );
+   });
+}
+
 test "Push rules come down in an initial /sync",
    requires => [ local_user_fixture() ],
 
    check => sub {
       my ( $user ) = @_;
 
-      matrix_sync( $user )->then( $check_for_push_rules );
+      matrix_sync( $user )->then( sub { check_for_push_rules( @_ ) } );
    };
 
 test "Adding a push rule wakes up an incremental /sync",
@@ -27,14 +43,10 @@ test "Adding a push rule wakes up an incremental /sync",
    check => sub {
       my ( $user ) = @_;
 
-      matrix_sync( $user )->then( sub {
-         Future->needs_all(
-            matrix_sync_again( $user, timeout => 10000 )
-               ->then( $check_for_push_rules ),
-            matrix_add_push_rule( $user, "global", "room", "!foo:example.com",
-               { actions => [ "notify" ] }
-            )
-         );
+      check_woken_up_by_push_rules( $user, sub {
+          matrix_add_push_rule( $user, "global", "room", "!foo:example.com",
+            { actions => [ "notify" ] }
+         )
       });
    };
 
@@ -47,15 +59,11 @@ test "Disabling a push rule wakes up an incremental /sync",
       matrix_add_push_rule( $user, "global", "room", "!foo:example.com",
          { actions => [ "notify" ] }
       )->then( sub {
-         matrix_sync( $user );
-      })->then( sub {
-         Future->needs_all(
-            matrix_sync_again( $user, timeout => 10000 )
-               ->then( $check_for_push_rules ),
+         check_woken_up_by_push_rules( $user, sub {
             matrix_set_push_rule_enabled(
                $user,  "global", "room", "!foo:example.com", JSON::false
-            )
-         );
+            );
+         });
       });
    };
 
@@ -72,15 +80,11 @@ test "Enabling a push rule wakes up an incremental /sync",
             $user,  "global", "room", "!foo:example.com", JSON::false
          );
       })->then( sub {
-         matrix_sync( $user );
-      })->then( sub {
-         Future->needs_all(
-            matrix_sync_again( $user, timeout => 10000 )
-               ->then( $check_for_push_rules ),
+         check_woken_up_by_push_rules( $user, sub {
             matrix_set_push_rule_enabled(
                $user,  "global", "room", "!foo:example.com", JSON::true
-            )
-         );
+            );
+         });
       });
    };
 
@@ -93,14 +97,10 @@ test "Setting actions for a push rule wakes up an incremental /sync",
       matrix_add_push_rule( $user, "global", "room", "!foo:example.com",
          { actions => [ "notify" ] }
       )->then( sub {
-         matrix_sync( $user );
-      })->then( sub {
-         Future->needs_all(
-            matrix_sync_again( $user, timeout => 10000 )
-               ->then( $check_for_push_rules ),
+         check_woken_up_by_push_rules( $user, sub {
             matrix_set_push_rule_actions(
                $user,  "global", "room", "!foo:example.com", [ "dont_notify" ]
             )
-         );
+         });
       });
    };
