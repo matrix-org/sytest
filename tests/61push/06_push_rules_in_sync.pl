@@ -22,7 +22,7 @@ sub check_woken_up_by_push_rules {
          matrix_sync_again( $user,
             timeout => 10000,
             filter => '{"room":{"rooms":[]},"presence":{"types":[]}}',
-         )->then( sub { check_for_push_rules( @_ ) } ),
+         )->then( \&check_for_push_rules ),
          $action->(),
       );
    });
@@ -34,7 +34,7 @@ test "Push rules come down in an initial /sync",
    check => sub {
       my ( $user ) = @_;
 
-      matrix_sync( $user )->then( sub { check_for_push_rules( @_ ) } );
+      matrix_sync( $user )->then( \&check_for_push_rules );
    };
 
 test "Adding a push rule wakes up an incremental /sync",
