@@ -27,7 +27,7 @@ sub matrix_set_device_display_name {
 }
 
 sub matrix_delete_device {
-    my ($user, $device_id, $request_body) = @_;
+    my ( $user, $device_id, $request_body ) = @_;
 
     return do_request_json_for(
         $user,
@@ -212,18 +212,18 @@ test "DELETE /device/{deviceId}",
          );
       })->then( sub {
          # attempt request with empty auth dict
-         matrix_delete_device($user, $DEVICE_ID, {});
+         matrix_delete_device( $user, $DEVICE_ID, {} );
       })->main::expect_http_401->then( sub {
          my ( $resp ) = @_;
 
          my $body = decode_json $resp->content;
 
-         log_if_fail("Response to empty body", $body);
+         log_if_fail( "Response to empty body", $body );
 
          assert_json_keys( $body, qw( session params flows ));
 
          # do it again with the wrong password
-         matrix_delete_device($user, $DEVICE_ID, {
+         matrix_delete_device( $user, $DEVICE_ID, {
              auth => {
                  type     => "m.login.password",
                  user     => $user->user_id,
@@ -234,14 +234,11 @@ test "DELETE /device/{deviceId}",
          my ( $resp ) = @_;
 
          my $body = decode_json $resp->content;
-         log_if_fail("Response to wrong password", $body);
+         log_if_fail( "Response to wrong password", $body );
 
          assert_json_keys( $body, qw( error errcode session params flows ));
 
-         my $errcode = $body->{errcode};
-
-         $errcode eq "M_FORBIDDEN" or
-            die "Expected errcode to be M_FORBIDDEN but was $errcode";
+         assert_eq( $body->{errcode}, "M_FORBIDDEN", 'errcode' );
 
          # one more time with the right password
          matrix_delete_device($user, $DEVICE_ID, {
@@ -296,7 +293,7 @@ test "DELETE /device/{deviceId} with no body gives a 401",
          initial_device_display_name => "device display",
       )->then( sub {
          # request with no body
-         matrix_delete_device($user, $DEVICE_ID, undef);
+         matrix_delete_device( $user, $DEVICE_ID, undef );
       })->main::expect_http_401;
   };
 
