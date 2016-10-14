@@ -241,7 +241,7 @@ test "DELETE /device/{deviceId}",
          assert_eq( $body->{errcode}, "M_FORBIDDEN", 'errcode' );
 
          # one more time with the right password
-         matrix_delete_device($user, $DEVICE_ID, {
+         matrix_delete_device( $user, $DEVICE_ID, {
              auth => {
                  type     => "m.login.password",
                  user     => $user->user_id,
