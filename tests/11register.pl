@@ -289,8 +289,6 @@ test "registration accepts non-ascii passwords",
    do => sub {
       my ( $http, $localpart ) = @_;
 
-      my $session;
-
       $http->do_request_json(
          method => "POST",
          uri    => "/r0/register",
@@ -308,7 +306,7 @@ test "registration accepts non-ascii passwords",
 
          assert_json_keys( $body, qw( session ));
 
-         $session = $body->{session};
+         my $session = $body->{session};
 
          $http->do_request_json(
             method => "POST",
