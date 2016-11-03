@@ -282,3 +282,47 @@ test "registration remembers parameters",
          Future->done( 1 );
       });
    };
+
+test "registration accepts non-ascii passwords",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   do => sub {
+      my ( $http, $localpart ) = @_;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            username => $localpart,
+            password => "übers3kr1t",
+            device_id => "xyzzy",
+            initial_device_display_name => "display_name",
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session ));
+
+         my $session = $body->{session};
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         Future->done( 1 );
+      });
+   };
