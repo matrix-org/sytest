@@ -70,7 +70,7 @@ test "PUT /rooms/:room_id/send/:event_type/:txn_id deduplicates the same txn id"
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_equals( $event_id, $body->{event_id} );
+         assert_eq( $event_id, $body->{event_id} );
 
          Future->done(1);
       });
