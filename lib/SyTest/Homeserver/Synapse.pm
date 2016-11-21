@@ -141,7 +141,7 @@ sub start
          bind_address => $bind_host,
          tls => 1,
          resources => [{
-            names => [ "client", "federation", "replication" ], compress => 0
+            names => [ "client", "federation", "replication", "metrics" ], compress => 0
          }]
       };
    }
@@ -153,7 +153,7 @@ sub start
          bind_address => $bind_host,
          tls => 0,
          resources => [{
-            names => [ "client", "federation", "replication" ], compress => 0
+            names => [ "client", "federation", "replication", "metrics" ], compress => 0
          }]
       }
    }
