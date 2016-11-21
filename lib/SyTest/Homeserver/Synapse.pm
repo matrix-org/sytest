@@ -28,7 +28,7 @@ sub _init
    $self->{$_} = delete $args->{$_} for qw(
       ports synapse_dir extra_args python config coverage
       dendron pusher synchrotron federation_reader bind_host
-      media_repository appservice client_reader
+      media_repository appservice client_reader federation_sender
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
@@ -206,6 +206,8 @@ sub start
 
         "notify_appservices" => (not $self->{appservice}),
 
+        "send_federation" => (not $self->{federation_sender}),
+
         "url_preview_enabled" => "true",
         "url_preview_ip_range_blacklist" => [],
 
@@ -356,12 +358,31 @@ sub start
       ],
    } );
 
+   my $federation_sender_config_path = $self->write_yaml_file( federation_sender => {
+      "worker_app"             => "synapse.app.federation_sender",
+      "worker_log_file"        => "$log.federation_sender",
+      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+      "worker_listeners"       => [
+         {
+            type => "manhole",
+            port => $self->{ports}{federation_sender_manhole},
+            bind_address => $bind_host,
+         },
+         {
+            type      => "http",
+            resources => [{ names => ["metrics"] }],
+            port      => $self->{ports}{federation_sender_metrics},
+            bind_address => $bind_host,
+         },
+      ],
+   } );
+
    $self->{logpath} = $log;
 
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
-      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron ) ) {
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender ) ) {
          open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
       }
    }
@@ -414,6 +435,10 @@ sub start
 
       if ( $self->{appservice} ) {
          push @command, "--appservice-config" => $appservice_config_path;
+      }
+
+      if ( $self->{federation_sender} ) {
+         push @command, "--federation-sender-config" => $federation_sender_config_path;
       }
 
       if ( $self->{synchrotron} ) {
