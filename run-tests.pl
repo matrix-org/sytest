@@ -97,6 +97,8 @@ GetOptions(
 
    'appservice+' => \$SYNAPSE_ARGS{appservice},
 
+   'federation-sender+' => \$SYNAPSE_ARGS{federation_sender},
+
    'client-reader+' => \$SYNAPSE_ARGS{client_reader},
 
    'bind-host=s' => \$BIND_HOST,

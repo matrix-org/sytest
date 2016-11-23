@@ -95,6 +95,9 @@ our @HOMESERVER_INFO = map {
                appservice_metrics => main::alloc_port( "appservice[$idx].metrics" ),
                appservice_manhole => main::alloc_port( "appservice[$idx].manhole" ),
 
+               federation_sender_metrics => main::alloc_port( "federation_sender1[$idx].metrics" ),
+               federation_sender_manhole => main::alloc_port( "federation_sender[$idx].manhole" ),
+
                client_reader         => main::alloc_port( "client_reader[$idx]" ),
                client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
                client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
@@ -111,6 +114,7 @@ our @HOMESERVER_INFO = map {
             federation_reader   => $SYNAPSE_ARGS{federation_reader},
             media_repository    => $SYNAPSE_ARGS{media_repository},
             appservice          => $SYNAPSE_ARGS{appservice},
+            federation_sender   => $SYNAPSE_ARGS{federation_sender},
             client_reader       => $SYNAPSE_ARGS{client_reader},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
