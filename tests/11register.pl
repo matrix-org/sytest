@@ -111,7 +111,7 @@ test "registration is idempotent, without username specified",
          my ( $body ) = @_;
 
          # check that worked okay...
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          $user_id = $body->{user_id};
 
@@ -133,7 +133,7 @@ test "registration is idempotent, without username specified",
 
          # we should have got an equivalent response
          # (ie. success, and the same user id)
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          assert_eq( $body->{user_id}, $user_id );
 
@@ -185,7 +185,7 @@ test "registration is idempotent, with username specified",
          my ( $body ) = @_;
 
          # check that worked okay...
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          # now try to register again with the same session
          $http->do_request_json(
@@ -206,7 +206,7 @@ test "registration is idempotent, with username specified",
 
          # we should have got an equivalent response
          # (ie. success, and the same user id)
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          my $actual_user_id = $body->{user_id};
          my $home_server = $body->{home_server};
@@ -259,7 +259,7 @@ test "registration remembers parameters",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          my $actual_user_id = $body->{user_id};
          my $home_server = $body->{home_server};
@@ -272,7 +272,6 @@ test "registration remembers parameters",
             user_id       => $actual_user_id,
             device_id     => $body->{device_id},
             access_token  => $body->{access_token},
-            refresh_token => $body->{refresh_token},
          );
          # check that the right device_id was registered
          matrix_get_device( $user, "xyzzy" );
@@ -322,7 +321,7 @@ test "registration accepts non-ascii passwords",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
          Future->done( 1 );
       });
    };

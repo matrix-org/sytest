@@ -265,15 +265,6 @@ test "DELETE /device/{deviceId}",
                my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
             })
          };
-      })->then( sub {
-         # so should our refresh token
-         $user->http->do_request_json(
-            method => "POST",
-            uri    => "/r0/tokenrefresh",
-            content => {
-               refresh_token => $other_login->refresh_token,
-            },
-        )->main::expect_http_403;
       });
    };
 

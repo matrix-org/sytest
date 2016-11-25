@@ -179,54 +179,6 @@ test "POST /login wrong password is rejected",
       });
    };
 
-test "POST /tokenrefresh invalidates old refresh token",
-   requires => [ $main::API_CLIENTS[0], $registered_user_fixture ],
-
-   do => sub {
-      my ( $http, $user_id ) = @_;
-
-      my $first_body;
-
-      $http->do_request_json(
-         method => "POST",
-         uri    => "/r0/login",
-
-         content => {
-            type     => "m.login.password",
-            user     => $user_id,
-            password => $password,
-         },
-      )->then( sub {
-         ( $first_body ) = @_;
-
-         $http->do_request_json(
-            method => "POST",
-            uri    => "/v2_alpha/tokenrefresh",
-
-            content => {
-               refresh_token => $first_body->{refresh_token},
-            },
-         )
-      })->then(
-         sub {
-            my ( $second_body ) = @_;
-
-            assert_json_keys( $second_body, qw( access_token refresh_token ));
-
-            $second_body->{$_} ne $first_body->{$_} or
-               die "Expected new '$_'" for qw( access_token refresh_token );
-
-            $http->do_request_json(
-               method => "POST",
-               uri    => "/v2_alpha/tokenrefresh",
-
-               content => {
-                  refresh_token => $first_body->{refresh_token},
-               },
-            )->main::expect_http_403;
-         }
-      );
-   };
 
 our @EXPORT = qw( matrix_login_again_with_user );
 
@@ -247,7 +199,7 @@ sub matrix_login_again_with_user
    )->then( sub {
       my ( $body ) = @_;
 
-      assert_json_keys( $body, qw( access_token home_server refresh_token ));
+      assert_json_keys( $body, qw( access_token home_server ));
 
       my $new_user = new_User(
          http          => $user->http,
@@ -255,7 +207,6 @@ sub matrix_login_again_with_user
          device_id     => $body->{device_id},
          password      => $user->password,
          access_token  => $body->{access_token},
-         refresh_token => $body->{refresh_token},
       );
 
       Future->done( $new_user );
