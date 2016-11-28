@@ -128,7 +128,7 @@ package SyTest::Output::TAP::Test {
       }
       else {
          # for expected fails, theoretically all we need to do is write the
-         # TODO, but Jenkins' 'TAP Test results page is arse and doesn't distinguish
+         # TODO, but Jenkins' 'TAP Test results' page is arse and doesn't distinguish
          # between expected and unexpected fails, so stick it in the name too.
          print "not ok ${\$self->num} " .
             ( $self->expect_fail ? "(expected fail) " : "" ) .
