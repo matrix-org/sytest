@@ -167,7 +167,7 @@ sub await_event_for
       my $replay_saved = !shift && scalar @{ $user->saved_events //= [] };
 
       ( $replay_saved
-         ? Future->done( get_saved_events_for( $user ))
+         ? Future->done( get_saved_events_for( $user ) )
          : GET_new_events_for( $user, %params )
       )->then( sub {
          my @events = @_;
