@@ -146,9 +146,9 @@ sub flush_events_for
 sub get_saved_events_for
 {
    my ( $user ) = @_;
-   my $result = splice @{ $user->saved_events //= [] }; # fetch-and-clear
-   log_if_fail "get_saved_events_for ${\$user->user_id}:", $result;
-   return $result;
+   my @result = splice @{ $user->saved_events //= [] }; # fetch-and-clear
+   log_if_fail "get_saved_events_for ${\$user->user_id}:", @result;
+   return @result;
 }
 
 # Note that semantics are undefined if calls are interleaved with differing
