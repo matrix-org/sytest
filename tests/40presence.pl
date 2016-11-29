@@ -124,6 +124,9 @@ test "Newly created users see their own presence in /initialSync (SYT-34)",
    requires => [ local_user_fixture(),
                  qw( can_initial_sync )],
 
+   # this test fails sometimes. Disable it for now to avoid red-light fatigue.
+   bug => "synapse#1658",
+
    do => sub {
       my ( $user ) = @_;
 
