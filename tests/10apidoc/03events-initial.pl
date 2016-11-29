@@ -88,6 +88,9 @@ sub GET_new_events_for
          undef $user->pending_get_events;
       })->then( sub {
          my ( $body ) = @_;
+
+         log_if_fail "GET_new_events_for ${\$user->user_id}:", $body;
+
          $user->eventstream_token = $body->{end};
 
          my @events = ( @{ $user->saved_events //= [] }, @{ $body->{chunk} } );
@@ -139,6 +142,15 @@ sub flush_events_for
    });
 }
 
+# return any saved events for this user, and clear the store.
+sub get_saved_events_for
+{
+   my ( $user ) = @_;
+   my @result = splice @{ $user->saved_events //= [] }; # fetch-and-clear
+   log_if_fail "get_saved_events_for ${\$user->user_id}:", @result;
+   return @result;
+}
+
 # Note that semantics are undefined if calls are interleaved with differing
 # $room_ids for the same user.
 sub await_event_for
@@ -155,7 +167,7 @@ sub await_event_for
       my $replay_saved = !shift && scalar @{ $user->saved_events //= [] };
 
       ( $replay_saved
-         ? Future->done( splice @{ $user->saved_events //= [] } )  # fetch-and-clear
+         ? Future->done( get_saved_events_for( $user ) )
          : GET_new_events_for( $user, %params )
       )->then( sub {
          my @events = @_;
