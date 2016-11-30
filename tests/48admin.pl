@@ -114,6 +114,9 @@ test "Can backfill purged history",
    requires => [ local_admin_fixture(), local_user_and_room_fixtures(),
                  remote_user_fixture(), qw( can_paginate_room_remotely ) ],
 
+   # this test is a bit slow.
+   timeout => 50,
+
    do => sub {
       my ( $admin, $user, $room_id, $remote_user ) = @_;
 
