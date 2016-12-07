@@ -125,6 +125,8 @@ sub matrix_create_room
             ( name => $opts{name} ) : () ),
          ( defined $opts{topic} ?
             ( topic => $opts{topic} ) : () ),
+         ( defined $opts{preset} ?
+            ( preset => $opts{preset} ) : () ),
       }
    )->then( sub {
       my ( $body ) = @_;
