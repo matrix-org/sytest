@@ -1,4 +1,30 @@
+use Future::Utils qw( try_repeat_until_success );
+
+
 use constant AS_PREFIX => "/_matrix/app/unstable";
+
+
+sub matrix_get_room_list_synced
+{
+   my ( $user, %opts ) = @_;
+
+   my $content = $opts{content};
+
+   $content->{limit} //= 100000000;
+
+   my $check = $opts{check};
+
+   try_repeat_until_success( sub {
+      do_request_json_for( $user,
+         method => "POST",
+         uri    => "/r0/publicRooms",
+
+         content => $content,
+      )->then( sub {
+         Future->done( $check->( @_ ) )
+      })
+   });
+}
 
 
 test "AS can publish rooms in their own list",
@@ -34,67 +60,61 @@ test "AS can publish rooms in their own list",
             }
          )
       })->then( sub {
-         do_request_json_for( $local_user,
-            method => "GET",
-            uri    => "/r0/publicRooms",
+         matrix_get_room_list_synced( $local_user,
+            content => {},
+
+            check => sub {
+               my ( $body ) = @_;
+
+               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  and die "AS public room in main list";
+            },
          )
       })->then( sub {
-         my ( $body ) = @_;
+         log_if_fail "AS public room not in main list";
 
-         assert_json_keys( $body, qw( chunk ) );
+         matrix_get_room_list_synced( $local_user,
+            content => { third_party_instance_id => $instance_id },
 
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            and die "AS public room in main list";
+            check => sub {
+               my ( $body ) = @_;
 
-         do_request_json_for( $local_user,
-            method => "POST",
-            uri    => "/r0/publicRooms",
-
-            content => { third_party_instance_id => $instance_id, limit => 1000000 }
+               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "AS public room is not in the AS list";
+            },
          )
       })->then( sub {
-         my ( $body ) = @_;
+         log_if_fail "AS public room in AS list";
 
-         assert_json_keys( $body, qw( chunk ) );
+         matrix_get_room_list_synced( $local_user,
+            content => { include_all_networks => "true" },
 
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "AS public room is not in the AS list";
+            check => sub {
+               my ( $body ) = @_;
 
-         do_request_json_for( $local_user,
-            method => "POST",
-            uri    => "/r0/publicRooms",
-
-            content => { include_all_networks => "true", limit => 1000000 }
+               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "AS public room is not in the full room list";
+            },
          )
       })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( chunk ) );
-
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "AS public room is not in the full room list";
+         log_if_fail "AS public room in full list";
 
          do_request_json_for( $as_user,
             method => "DELETE",
             uri    => "/r0/directory/list/appservice/$network_id/$room_id",
          )
       })->then( sub {
-         do_request_json_for( $local_user,
-            method => "POST",
-            uri    => "/r0/publicRooms",
+         matrix_get_room_list_synced( $local_user,
+            content => { third_party_instance_id => $instance_id },
 
-            content => { third_party_instance_id => $instance_id, limit => 1000000 }
+            check => sub {
+               my ( $body ) = @_;
+
+               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  and die "AS public room in AS list after deletion";
+            },
          )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( chunk ) );
-
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            and die "AS public room in AS list after deletion";
-
-         Future->done( 1 );
-      })
+      });
    };
 
 
@@ -140,31 +160,31 @@ test "AS and main public room lists are separate",
             }
          )
       })->then( sub {
-         do_request_json_for( $local_user,
-            method => "GET",
-            uri    => "/r0/publicRooms",
+         matrix_get_room_list_synced( $local_user,
+            content => {},
+
+            check => sub {
+               my ( $body ) = @_;
+
+               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "Room not in main list";
+            },
          )
       })->then( sub {
-         my ( $body ) = @_;
+         log_if_fail "Room in main list";
 
-         assert_json_keys( $body, qw( chunk ) );
+         matrix_get_room_list_synced( $local_user,
+            content => { third_party_instance_id => $instance_id },
 
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "Room not in main list";
+            check => sub {
+               my ( $body ) = @_;
 
-         do_request_json_for( $local_user,
-            method => "POST",
-            uri    => "/r0/publicRooms",
-
-            content => { third_party_instance_id => $instance_id, limit => 1000000 }
+               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "Room is not in the AS list";
+            },
          )
       })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( chunk ) );
-
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "Room is not in the AS list";
+         log_if_fail "Room in AS list";
 
          do_request_json_for( $local_user,
             method => "POST",
@@ -173,60 +193,46 @@ test "AS and main public room lists are separate",
             content => { include_all_networks => "true", limit => 1000000 }
          )
       })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( chunk ) );
-
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "Public room is not in the full room list";
-
          do_request_json_for( $as_user,
             method => "DELETE",
             uri    => "/r0/directory/list/appservice/$network_id/$room_id",
          )
       })->then( sub {
-         do_request_json_for( $local_user,
-            method => "POST",
-            uri    => "/r0/publicRooms",
+         matrix_get_room_list_synced( $local_user,
+            content => { third_party_instance_id => $instance_id },
 
-            content => { third_party_instance_id => $instance_id, limit => 1000000 }
+            check => sub {
+               my ( $body ) = @_;
+
+               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  and die "Room in AS list after deletion";
+            },
          )
       })->then( sub {
-         my ( $body ) = @_;
+         log_if_fail "Room not in AS list after deletion";
 
-         assert_json_keys( $body, qw( chunk ) );
+         matrix_get_room_list_synced( $local_user,
+            content => {},
 
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            and die "Room in AS list after deletion";
+            check => sub {
+               my ( $body ) = @_;
 
-         do_request_json_for( $local_user,
-            method => "POST",
-            uri    => "/r0/publicRooms",
-
-            content => { limit => 1000000 }
+               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "Room not in main list after AS list deletion";
+            },
          )
       })->then( sub {
-         my ( $body ) = @_;
+         log_if_fail "Room in main list after deletion";
 
-         assert_json_keys( $body, qw( chunk ) );
+         matrix_get_room_list_synced( $local_user,
+            content => { include_all_networks => "true" },
 
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "Room not in main list after AS list deletion";
+            check => sub {
+               my ( $body ) = @_;
 
-         do_request_json_for( $local_user,
-            method => "POST",
-            uri    => "/r0/publicRooms",
-
-            content => { include_all_networks => "true", limit => 1000000 }
+               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "Room is not in the full room list after AS deletion";
+            },
          )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( chunk ) );
-
-         any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "Room is not in the full room list after AS deletion";
-
-         Future->done( 1 );
       })
    };
