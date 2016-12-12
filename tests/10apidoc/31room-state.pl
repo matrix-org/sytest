@@ -1,3 +1,4 @@
+use List::Util qw( any );
 use List::UtilsBy qw( partition_by );
 
 my $name = "room name here";
@@ -201,6 +202,31 @@ test "GET /directory/room/:room_alias yields room ID",
          assert_json_list( $body->{servers} );
 
          $body->{room_id} eq $room_id or die "Expected room_id";
+
+         Future->done(1);
+      });
+   };
+
+test "GET /joined_rooms lists newly-created room",
+   requires => [ $user_fixture, $room_fixture ],
+
+   check => sub {
+      my ( $user, $room_id ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/r0/joined_rooms",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "joined_rooms", $body;
+
+         assert_json_keys( $body, qw( joined_rooms ));
+         assert_json_list( my $roomlist = $body->{joined_rooms} );
+
+         assert_ok( ( any { $_ eq $room_id } @$roomlist ),
+            'room_id found in joined_rooms list'
+         );
 
          Future->done(1);
       });
