@@ -98,6 +98,34 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
       });
    };
 
+test "GET /rooms/:room_id/joined_members fetches my membership",
+   requires => [ $user_fixture, $room_fixture ],
+
+   check => sub {
+      my ( $user, $room_id, undef ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/r0/rooms/$room_id/joined_members",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "joined_members", $body;
+
+         assert_json_keys( $body, qw( joined ));
+
+         my $members = $body->{joined};
+         assert_json_object( $members->{ $user->user_id } );
+
+         my $myself = $members->{ $user->user_id };
+
+         # We always have these keys even if they're undef
+         assert_json_keys( $myself, qw( display_name avatar_url ));
+
+         Future->done(1);
+      });
+   };
+
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
    requires => [ $user_fixture, $room_fixture ],
 
