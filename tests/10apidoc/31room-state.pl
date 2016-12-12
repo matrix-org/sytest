@@ -101,6 +101,8 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
 test "GET /rooms/:room_id/joined_members fetches my membership",
    requires => [ $user_fixture, $room_fixture ],
 
+   proves => [qw( can_get_room_joined_members )],
+
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 

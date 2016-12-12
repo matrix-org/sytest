@@ -157,3 +157,41 @@ test "All room members see all room members' presence in global initialSync",
          });
       } @all_users );
    };
+
+test "All room members see all room members in joined_members",
+   requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
+                 qw( can_get_room_joined_members )],
+
+   check => sub {
+      my ( $first_user, $local_user, $room_id ) = @_;
+      my @all_users = ( $first_user, $local_user );
+
+      Future->needs_all( map {
+         my $user = $_;
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/joined_members"
+         )->then( sub {
+            my ( $body ) = @_;
+
+            assert_json_keys( $body, qw( joined ));
+            assert_json_object( my $members = $body->{joined} );
+
+            assert_ok( exists $members->{ $first_user->user_id },
+               'first_user exists in joined_members' );
+            assert_ok( exists $members->{ $local_user->user_id },
+               'local_user exists in joined_members' );
+
+            assert_deeply_eq( $members->{ $first_user->user_id },
+               {
+                  display_name => "My name here",
+                  avatar_url   => "mxc://foo/bar",
+               },
+               'local_user profile in joined_members'
+            );
+
+            Future->done(1);
+         });
+      } @all_users );
+   };
