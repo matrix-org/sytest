@@ -44,7 +44,7 @@ test "Can query device keys using POST",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/unstable/keys/query/",
+         uri     => "/unstable/keys/query",
          content => {
             device_keys => {
                $user->user_id => {}
@@ -89,7 +89,7 @@ test "Can query specific device keys using POST",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/unstable/keys/query/",
+         uri     => "/unstable/keys/query",
          content => {
             device_keys => {
                $user->user_id => [ $device_id ]
@@ -110,31 +110,6 @@ test "Can query specific device keys using POST",
       })
    };
 
-test "Can query device keys using GET",
-   requires => [ $fixture,
-                 qw( can_upload_e2e_keys )],
-
-   check => sub {
-      my ( $user ) = @_;
-
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/unstable/keys/query/${\$user->user_id}"
-      )->then( sub {
-         my ( $content ) = @_;
-
-         assert_json_keys( $content, "device_keys" );
-
-         my $device_keys = $content->{device_keys};
-         assert_json_keys( $device_keys, $user->user_id );
-
-         my $alice_keys = $device_keys->{ $user->user_id };
-         assert_json_keys( $alice_keys, $user->device_id );
-         # TODO: Check that the content matches what we uploaded.
-         Future->done(1)
-      })
-   };
-
 test "query for user with no keys returns empty key dict",
    requires => [ local_user_fixture() ],
 
@@ -143,7 +118,7 @@ test "query for user with no keys returns empty key dict",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/unstable/keys/query/",
+         uri     => "/unstable/keys/query",
          content => {
             device_keys => {
                $user->user_id => {}

@@ -12,7 +12,7 @@ multi_test "Can query remote device keys using POST",
       })->then( sub {
          do_request_json_for( $remote_user,
             method  => "POST",
-            uri     => "/unstable/keys/query/",
+            uri     => "/unstable/keys/query",
             content => {
                device_keys => {
                   $user->user_id => {}
