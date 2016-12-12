@@ -11,9 +11,7 @@ sub inviteonly_room_fixture
          my ( $creator ) = @_;
 
          matrix_create_room( $creator,
-            # visibility: "private" actually means join_rule: "invite"
-            # See SPEC-74
-            visibility => "private",
+            preset => "private_chat",
          )->then( sub {
             my ( $room_id ) = @_;
 
