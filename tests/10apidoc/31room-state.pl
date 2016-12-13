@@ -211,6 +211,8 @@ test "GET /directory/room/:room_alias yields room ID",
 test "GET /joined_rooms lists newly-created room",
    requires => [ $user_fixture, $room_fixture ],
 
+   proves => [qw( can_get_joined_rooms )],
+
    check => sub {
       my ( $user, $room_id ) = @_;
 

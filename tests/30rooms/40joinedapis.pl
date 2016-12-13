@@ -1,5 +1,6 @@
 test "/joined_rooms returns only joined rooms",
-   requires => [ local_user_fixture(), local_user_fixture(), ],
+   requires => [ local_user_fixture(), local_user_fixture(),
+                 qw( can_get_joined_rooms ) ],
 
    do => sub {
       my ( $user, $inviter ) = @_;
@@ -58,7 +59,8 @@ test "/joined_members return joined members",
          displayname => $display_name,
          avatar_url  => $avatar_url
       ),
-      local_user_fixtures( 3 )
+      local_user_fixtures( 3 ),
+      qw( can_get_room_joined_members )
    ],
 
    do => sub {
