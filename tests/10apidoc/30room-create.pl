@@ -112,7 +112,8 @@ sub matrix_create_room
       uri    => "/r0/createRoom",
 
       content => {
-         visibility => $opts{visibility} || "public",
+         visibility => $opts{visibility} || "private",
+         preset     => $opts{preset} || "public_chat",
          ( defined $opts{room_alias_name} ?
             ( room_alias_name => $opts{room_alias_name} ) : () ),
          ( defined $opts{invite} ?
