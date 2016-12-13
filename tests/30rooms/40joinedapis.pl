@@ -98,17 +98,18 @@ test "/joined_members return joined members",
 
                log_if_fail "Body", $body;
 
-               assert_deeply_eq( $body, {
-                  joined => {
-                     $creator->user_id => {
-                        display_name => $display_name,
-                        avatar_url   => $avatar_url,
-                     },
-                     $user_joined->user_id => {
-                        display_name => undef,
-                        avatar_url   => undef,
-                     },
-                  }
+               assert_json_keys( $body, qw( joined ));
+               assert_json_object( my $members = $body->{joined} );
+
+               assert_deeply_eq( $members, {
+                  $creator->user_id => {
+                     display_name => $display_name,
+                     avatar_url   => $avatar_url,
+                  },
+                  $user_joined->user_id => {
+                     display_name => undef,
+                     avatar_url   => undef,
+                  },
                } );
 
                Future->done(1);
