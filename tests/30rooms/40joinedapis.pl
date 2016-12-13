@@ -49,39 +49,27 @@ test "/joined_rooms returns only joined rooms",
    };
 
 
+my $display_name = "Display Name";
+my $avatar_url = "http://example.com/avatar.png";
+
 test "/joined_members return joined members",
-   requires => [ local_user_fixtures( 3 ) ],
+   requires => [
+      local_user_fixture(
+         displayname => $display_name,
+         avatar_url  => $avatar_url
+      ),
+      local_user_fixtures( 2 )
+   ],
 
    do => sub {
       my ( $user, $user_left, $user_invited ) = @_;
-
-      # Create three users; one joined, one joined-then-left, one only invited
+      # Three users; one joined, one joined-then-left, one only invited
 
       my $room_id;
 
-      my $display_name = "Display Name";
-      my $avatar_url = "http://example.com/avatar.png";
-
-      Future->needs_all(
-         do_request_json_for( $user,
-            method  => "PUT",
-            uri     => "/r0/profile/:user_id/displayname",
-            content => {
-               displayname => $display_name,
-            },
-         ),
-         do_request_json_for( $user,
-            method  => "PUT",
-            uri     => "/r0/profile/:user_id/avatar_url",
-            content => {
-               avatar_url => $avatar_url,
-            },
-         )
+      matrix_create_room( $user,
+         invite => [ $user_left->user_id, $user_invited->user_id ],
       )->then( sub {
-         matrix_create_room( $user,
-            invite => [ $user_left->user_id, $user_invited->user_id ],
-         )
-      })->then( sub {
          ( $room_id ) = @_;
 
          log_if_fail "room", $room_id;
