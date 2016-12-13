@@ -13,6 +13,7 @@ my $room_fixture = fixture(
 
       matrix_create_room( $user,
          room_alias_name => $room_alias_name,
+         visibility      => "public",
       );
    },
 );
