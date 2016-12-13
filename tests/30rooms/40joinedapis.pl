@@ -84,28 +84,35 @@ test "/joined_members return joined members",
             }),
          );
       })->then( sub {
-         do_request_json_for( $creator,
-            method => "GET",
-            uri => "/unstable/rooms/$room_id/joined_members",
-         )
-      })->then( sub {
-         my ( $body ) = @_;
+         # Test /rooms/:room_id/joined_members as both current room members
+         my @users = ( $creator, $user_joined );
 
-         log_if_fail "Body", $body;
+         Future->needs_all( map {
+            my $user = $_;
 
-         assert_deeply_eq( $body, {
-            joined => {
-               $creator->user_id => {
-                  display_name => $display_name,
-                  avatar_url   => $avatar_url,
-               },
-               $user_joined->user_id => {
-                  display_name => undef,
-                  avatar_url   => undef,
-               },
-            }
-         } );
+            do_request_json_for( $user,
+               method => "GET",
+               uri => "/unstable/rooms/$room_id/joined_members",
+            )->then( sub {
+               my ( $body ) = @_;
 
-         Future->done(1);
+               log_if_fail "Body", $body;
+
+               assert_deeply_eq( $body, {
+                  joined => {
+                     $creator->user_id => {
+                        display_name => $display_name,
+                        avatar_url   => $avatar_url,
+                     },
+                     $user_joined->user_id => {
+                        display_name => undef,
+                        avatar_url   => undef,
+                     },
+                  }
+               } );
+
+               Future->done(1);
+            });
+         } @users );
       })
    };
