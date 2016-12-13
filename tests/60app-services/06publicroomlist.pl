@@ -4,7 +4,7 @@ use Future::Utils qw( try_repeat_until_success );
 use constant AS_PREFIX => "/_matrix/app/unstable";
 
 
-sub matrix_get_room_list_synced
+sub get_room_list_synced
 {
    my ( $user, %opts ) = @_;
 
@@ -60,7 +60,7 @@ test "AS can publish rooms in their own list",
             }
          )
       })->then( sub {
-         matrix_get_room_list_synced( $local_user,
+         get_room_list_synced( $local_user,
             content => {},
 
             check => sub {
@@ -73,7 +73,7 @@ test "AS can publish rooms in their own list",
       })->then( sub {
          log_if_fail "AS public room not in main list";
 
-         matrix_get_room_list_synced( $local_user,
+         get_room_list_synced( $local_user,
             content => { third_party_instance_id => $instance_id },
 
             check => sub {
@@ -86,7 +86,7 @@ test "AS can publish rooms in their own list",
       })->then( sub {
          log_if_fail "AS public room in AS list";
 
-         matrix_get_room_list_synced( $local_user,
+         get_room_list_synced( $local_user,
             content => { include_all_networks => "true" },
 
             check => sub {
@@ -104,7 +104,7 @@ test "AS can publish rooms in their own list",
             uri    => "/r0/directory/list/appservice/$network_id/$room_id",
          )
       })->then( sub {
-         matrix_get_room_list_synced( $local_user,
+         get_room_list_synced( $local_user,
             content => { third_party_instance_id => $instance_id },
 
             check => sub {
@@ -160,7 +160,7 @@ test "AS and main public room lists are separate",
             }
          )
       })->then( sub {
-         matrix_get_room_list_synced( $local_user,
+         get_room_list_synced( $local_user,
             content => {},
 
             check => sub {
@@ -173,7 +173,7 @@ test "AS and main public room lists are separate",
       })->then( sub {
          log_if_fail "Room in main list";
 
-         matrix_get_room_list_synced( $local_user,
+         get_room_list_synced( $local_user,
             content => { third_party_instance_id => $instance_id },
 
             check => sub {
@@ -198,7 +198,7 @@ test "AS and main public room lists are separate",
             uri    => "/r0/directory/list/appservice/$network_id/$room_id",
          )
       })->then( sub {
-         matrix_get_room_list_synced( $local_user,
+         get_room_list_synced( $local_user,
             content => { third_party_instance_id => $instance_id },
 
             check => sub {
@@ -211,7 +211,7 @@ test "AS and main public room lists are separate",
       })->then( sub {
          log_if_fail "Room not in AS list after deletion";
 
-         matrix_get_room_list_synced( $local_user,
+         get_room_list_synced( $local_user,
             content => {},
 
             check => sub {
@@ -224,7 +224,7 @@ test "AS and main public room lists are separate",
       })->then( sub {
          log_if_fail "Room in main list after deletion";
 
-         matrix_get_room_list_synced( $local_user,
+         get_room_list_synced( $local_user,
             content => { include_all_networks => "true" },
 
             check => sub {
