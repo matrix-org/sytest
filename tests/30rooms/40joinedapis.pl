@@ -58,27 +58,31 @@ test "/joined_members return joined members",
          displayname => $display_name,
          avatar_url  => $avatar_url
       ),
-      local_user_fixtures( 2 )
+      local_user_fixtures( 3 )
    ],
 
    do => sub {
-      my ( $user, $user_left, $user_invited ) = @_;
+      my ( $creator, $user_joined, $user_left, $user_invited ) = @_;
       # Three users; one joined, one joined-then-left, one only invited
 
       my $room_id;
 
-      matrix_create_room( $user,
-         invite => [ $user_left->user_id, $user_invited->user_id ],
+      matrix_create_room( $creator,
+         invite => [ $user_joined->user_id, $user_left->user_id, $user_invited->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
 
          log_if_fail "room", $room_id;
 
-         matrix_join_room( $user_left, $room_id )
+         Future->needs_all(
+            matrix_join_room( $user_joined, $room_id ),
+
+            matrix_join_room( $user_left, $room_id )->then( sub {
+               matrix_leave_room( $user_left, $room_id );
+            }),
+         );
       })->then( sub {
-         matrix_leave_room( $user_left, $room_id )
-      })->then( sub {
-         do_request_json_for( $user,
+         do_request_json_for( $creator,
             method => "GET",
             uri => "/unstable/rooms/$room_id/joined_members",
          )
@@ -89,10 +93,14 @@ test "/joined_members return joined members",
 
          assert_deeply_eq( $body, {
             joined => {
-               $user->user_id => {
+               $creator->user_id => {
                   display_name => $display_name,
-                  avatar_url => $avatar_url,
-               }
+                  avatar_url   => $avatar_url,
+               },
+               $user_joined->user_id => {
+                  display_name => undef,
+                  avatar_url   => undef,
+               },
             }
          } );
 
