@@ -6,7 +6,7 @@ test "Inbound federation can get public room list",
                  local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
 
-  do => sub {
+   do => sub {
      my ( $outbound_client, $info, $creator, $room_id, $user_id ) = @_;
      my $first_home_server = $info->server_name;
 
