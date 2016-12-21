@@ -164,7 +164,7 @@ sub assert_json_keys
    my ( $obj, @keys ) = @_;
    assert_json_object( $obj );
    foreach ( @keys ) {
-      defined $obj->{$_} or croak "Expected a '$_' key";
+      exists $obj->{$_} or croak "Expected a '$_' key";
    }
 }
 
