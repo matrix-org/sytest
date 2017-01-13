@@ -38,7 +38,7 @@ main::AT_END sub {
       Future->needs_any(
          $synapse->await_finish,
 
-         $loop->delay_future( after => 15 )->then( sub {
+         $loop->delay_future( after => 30 )->then( sub {
             print STDERR "Timed out waiting for ${\ $synapse->pid }; sending SIGKILL\n";
             $synapse->kill( 'KILL' );
             Future->done;
