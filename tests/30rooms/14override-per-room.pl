@@ -1,6 +1,4 @@
 test "Room members can override their displayname on a room-specific basis",
-   bug => "#1382",
-
    requires => [ local_user_and_room_fixtures() ],
 
    do => sub {
@@ -31,8 +29,6 @@ test "Room members can override their displayname on a room-specific basis",
    };
 
 test "Room members can join a room with an overridden displayname",
-   bug => "#1382",
-
    requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
 
    do => sub {
