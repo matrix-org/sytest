@@ -591,7 +591,8 @@ test "A change to displayname should appear in incremental /sync",
             state_key => $user->user_id,
          );
       })->then( sub {
-         ( $event_id_1 ) = @_;
+         my ( $result ) = @_;
+         $event_id_1 = $result->{event_id};
 
          matrix_send_room_text_message_synced( $user, $room_id,
             body => "A message to wait on because the m.room.member might not come down /sync"
@@ -609,8 +610,8 @@ test "A change to displayname should appear in incremental /sync",
          log_if_fail "Room", $room;
 
          assert_eq( scalar @{ $timeline }, 2, "Expected 2 events");
-         assert_eq( $timeline->[0]{event_id}, $event_id_1 );
-         assert_eq( $timeline->[1]{event_id}, $event_id_2 );
+         assert_eq( $timeline->[0]{event_id}, $event_id_1, "First event ID" );
+         assert_eq( $timeline->[1]{event_id}, $event_id_2, "Second event ID" );
 
          Future->done(1);
       });
