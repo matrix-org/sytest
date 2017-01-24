@@ -33,6 +33,27 @@ test "Can upload device keys",
 
          Future->done(1)
       })
+  };
+
+test "Should reject keys claiming to belong to a different user",
+   requires => [ $fixture ],
+
+   bug => "synapse#1396",
+
+   do => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for(
+         $user,
+         method  => "POST",
+         uri     => "/unstable/keys/upload",
+         content => {
+            device_keys => {
+               user_id => "\@50-e2e-alice:localhost:8480",
+               device_id => "alices_first_device",
+            },
+         }
+      )->main::expect_http_4xx;
    };
 
 test "Can query device keys using POST",
