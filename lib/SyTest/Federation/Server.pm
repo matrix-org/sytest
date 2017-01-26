@@ -418,6 +418,10 @@ __PACKAGE__->mk_await_request_pair(
    event => [qw( :event_id )],
 );
 
+__PACKAGE__->mk_await_request_pair(
+   user_devices => [qw( :user_id )],
+);
+
 sub on_request_federation_v1_send
 {
    my $self = shift;
