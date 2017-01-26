@@ -242,3 +242,86 @@ test "Can query remote device keys using POST after notificaiton",
          Future->done(1)
       });
    };
+
+
+test "If remote user leaves room we no longer receive device updates",
+   requires => [ local_user_fixture(), remote_user_fixture(), remote_user_fixture(),
+                 qw( can_upload_e2e_keys )],
+
+   check => sub {
+      my ( $user1, $user2, $user3 ) = @_;
+
+      my $room_id;
+
+      my @device_users_changed = ();
+
+      matrix_create_room( $user1 )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_invite_user_to_room( $user1, $user2, $room_id )
+      })->then( sub {
+         matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         matrix_invite_user_to_room( $user1, $user3, $room_id )
+      })->then( sub {
+         matrix_join_room( $user3, $room_id );
+      })->then( sub {
+         matrix_sync( $user1 );
+      })->then( sub {
+         matrix_put_e2e_keys( $user2 )
+      })->then( sub {
+         matrix_put_e2e_keys( $user3 )
+      })->then( sub {
+         matrix_set_device_display_name( $user2, $user2->device_id, "test display name" ),
+      })->then( sub {
+         try_repeat_until_success( sub {
+            matrix_sync_again( $user1, timeout => 1000 )
+            ->then( sub {
+               my ( $body ) = @_;
+               my $device_lists = $body->{device_lists};
+
+               log_if_fail "device_lists 1", $device_lists;
+
+               my $changed = $device_lists->{changed};
+
+               any { $user2->user_id eq $_ } @{ $changed }
+                  or die "user not in changed list";
+
+               Future->done( 1 )
+            })
+         })
+      })->then( sub {
+         matrix_leave_room( $user2, $room_id )
+      })->then( sub {
+         matrix_put_e2e_keys( $user2 )
+      })->then( sub {
+         matrix_put_e2e_keys( $user3 )
+      })->then( sub {
+         try_repeat_until_success( sub {
+            matrix_sync_again( $user1, timeout => 1000 )
+            ->then( sub {
+               my ( $body ) = @_;
+
+               assert_json_keys( $body, "device_lists" );
+               my $device_lists = $body->{device_lists};
+
+               log_if_fail "device_lists 2", $device_lists;
+
+               assert_json_keys( $device_lists, "changed" );
+               my $changed = $device_lists->{changed};
+
+               push @device_users_changed, $changed;
+
+               any { $user3->user_id eq $_ } @{ $changed }
+                  or die "user not in changed list";
+
+               Future->done( 1 )
+            })
+         })
+      })->then( sub {
+         any { $user2->user_id eq $_ } @device_users_changed
+            and die "user2 in changed list after leaving";
+
+         Future->done( 1 )
+      });
+   };
