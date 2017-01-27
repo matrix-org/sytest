@@ -68,22 +68,25 @@ test "Local new device changes appear in v2 /sync",
       })->then( sub {
          matrix_login_again_with_user( $user2 )
       })->then( sub {
-         matrix_sync_again( $user1 );
-      })->then( sub {
-         my ( $body ) = @_;
+         try_repeat_until_success ( sub {
+            matrix_sync_again( $user1, timeout => 1000 )
+            ->then( sub {
+               my ( $body ) = @_;
 
-         assert_json_keys( $body, "device_lists" );
-         my $device_lists = $body->{device_lists};
+               assert_json_keys( $body, "device_lists" );
+               my $device_lists = $body->{device_lists};
 
-         log_if_fail "device_lists", $device_lists;
+               log_if_fail "device_lists", $device_lists;
 
-         assert_json_keys( $device_lists, "changed" );
-         my $changed = $device_lists->{changed};
+               assert_json_keys( $device_lists, "changed" );
+               my $changed = $device_lists->{changed};
 
-         any { $user2->user_id eq $_ } @{ $changed }
-            or die "user not in changed list";
+               any { $user2->user_id eq $_ } @{ $changed }
+                  or die "user not in changed list";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         })
       });
    };
 
@@ -111,22 +114,25 @@ test "Local delete device changes appear in v2 /sync",
              }
          });
       })->then( sub {
-         matrix_sync_again( $user1 );
-      })->then( sub {
-         my ( $body ) = @_;
+         try_repeat_until_success( sub {
+            matrix_sync_again( $user1, timeout => 1000 )
+            ->then( sub {
+               my ( $body ) = @_;
 
-         assert_json_keys( $body, "device_lists" );
-         my $device_lists = $body->{device_lists};
+               assert_json_keys( $body, "device_lists" );
+               my $device_lists = $body->{device_lists};
 
-         log_if_fail "device_lists", $device_lists;
+               log_if_fail "device_lists", $device_lists;
 
-         assert_json_keys( $device_lists, "changed" );
-         my $changed = $device_lists->{changed};
+               assert_json_keys( $device_lists, "changed" );
+               my $changed = $device_lists->{changed};
 
-         any { $user2->user_id eq $_ } @{ $changed }
-            or die "user not in changed list";
+               any { $user2->user_id eq $_ } @{ $changed }
+                  or die "user not in changed list";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         })
       });
    };
 
@@ -148,22 +154,25 @@ test "Local update device changes appear in v2 /sync",
       })->then( sub {
          matrix_set_device_display_name( $user2, $user2->device_id, "wibble");
       })->then( sub {
-         matrix_sync_again( $user1 );
-      })->then( sub {
-         my ( $body ) = @_;
+         try_repeat_until_success( sub {
+            matrix_sync_again( $user1, timeout => 1000 )
+            ->then( sub {
+               my ( $body ) = @_;
 
-         assert_json_keys( $body, "device_lists" );
-         my $device_lists = $body->{device_lists};
+               assert_json_keys( $body, "device_lists" );
+               my $device_lists = $body->{device_lists};
 
-         log_if_fail "device_lists", $device_lists;
+               log_if_fail "device_lists", $device_lists;
 
-         assert_json_keys( $device_lists, "changed" );
-         my $changed = $device_lists->{changed};
+               assert_json_keys( $device_lists, "changed" );
+               my $changed = $device_lists->{changed};
 
-         any { $user2->user_id eq $_ } @{ $changed }
-            or die "user not in changed list";
+               any { $user2->user_id eq $_ } @{ $changed }
+                  or die "user not in changed list";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         })
       });
    };
 
