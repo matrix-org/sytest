@@ -302,9 +302,9 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_leave_room( $user2, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $user2 )
+         matrix_put_e2e_keys( $user2, device_keys => { updated => "keys" } )
       })->then( sub {
-         matrix_put_e2e_keys( $user3 )
+         matrix_put_e2e_keys( $user3, device_keys => { updated => "keys" } )
       })->then( sub {
          try_repeat_until_success( sub {
             matrix_sync_again( $user1, timeout => 1000 )

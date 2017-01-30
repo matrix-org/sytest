@@ -38,19 +38,7 @@ test "Local device key changes get to remote servers",
 
                Future->done(1);
             }),
-            do_request_json_for( $user,
-               method  => "POST",
-               uri     => "/unstable/keys/upload",
-               content => {
-                  device_keys => {
-                     user_id => $user->user_id,
-                     device_id => $user->device_id,
-                  },
-                  one_time_keys => {
-                     "my_algorithm:my_id_1", "my+base64+key"
-                  }
-               }
-            )
+            matrix_put_e2e_keys( $user )
          )
       })->then( sub {
          Future->needs_all(
@@ -66,19 +54,7 @@ test "Local device key changes get to remote servers",
 
                Future->done(1);
             }),
-            do_request_json_for( $user,
-               method  => "POST",
-               uri     => "/unstable/keys/upload",
-               content => {
-                  device_keys => {
-                     user_id => $user->user_id,
-                     device_id => $user->device_id,
-                  },
-                  one_time_keys => {
-                     "my_algorithm:my_id_1", "my+second+base64+key"
-                  }
-               }
-            )
+            matrix_put_e2e_keys( $user, device_keys => { updated => "keys" } )
          )
       });
    };

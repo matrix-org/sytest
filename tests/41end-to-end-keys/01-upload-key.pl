@@ -148,7 +148,9 @@ push our @EXPORT, qw( matrix_put_e2e_keys );
 sub matrix_put_e2e_keys
 {
    # TODO(paul): I don't really know what's parametric about this
-   my ( $user ) = @_;
+   my ( $user, %params ) = @_;
+
+   my $device_keys = %params{device_keys} // {};
 
    do_request_json_for( $user,
       method => "POST",
@@ -158,6 +160,7 @@ sub matrix_put_e2e_keys
          device_keys => {
             user_id => $user->user_id,
             device_id => $user->device_id,
+            device_keys => $device_keys,
          },
          one_time_keys => {
             "my_algorithm:my_id_1" => "my+base64+key",
