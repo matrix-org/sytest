@@ -397,3 +397,51 @@ test "Local device key changes appear in /keys/changes",
          Future->done(1);
       });
    };
+
+test "New users appear in /keys/changes",
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $user1, $user2  ) = @_;
+
+      my ( $room_id, $from_token, $to_token );
+
+      matrix_create_room( $user1 )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_sync( $user1 );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         $from_token = $body->{next_batch};
+
+         matrix_join_room_synced( $user2, $room_id );
+      })->then( sub {
+         matrix_sync_again( $user1 );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         $to_token = $body->{next_batch};
+
+         do_request_json_for( $user1,
+            method => "GET",
+            uri => "/unstable/keys/changes",
+            params => {
+               from => $from_token,
+               to => $to_token,
+            }
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( changed) );
+
+         my $changed = $body->{changed};
+
+         any { $user2->user_id eq $_ } @{ $changed }
+            or die "user not in changed list";
+
+         Future->done(1);
+      });
+   };
