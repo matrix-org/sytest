@@ -177,7 +177,7 @@ test "Local update device changes appear in v2 /sync",
    };
 
 
-test "Can query remote device keys using POST after notificaiton",
+test "Can query remote device keys using POST after notification",
    requires => [ local_user_fixture(), remote_user_fixture(),
                  qw( can_upload_e2e_keys )],
 
