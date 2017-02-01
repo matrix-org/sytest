@@ -150,7 +150,7 @@ sub matrix_put_e2e_keys
    # TODO(paul): I don't really know what's parametric about this
    my ( $user, %params ) = @_;
 
-   my $device_keys = %params{device_keys} // {};
+   my $device_keys = $params{device_keys} // {};
 
    do_request_json_for( $user,
       method => "POST",
