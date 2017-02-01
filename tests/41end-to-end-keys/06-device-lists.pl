@@ -361,11 +361,11 @@ test "Local device key changes appear in /keys/changes",
             uri     => "/unstable/keys/upload",
             content => {
                device_keys => {
-                  user_id => $user2->user_id,
+                  user_id   => $user2->user_id,
                   device_id => $user2->device_id,
                },
                one_time_keys => {
-                  "my_algorithm:my_id_1", "my+base64+key"
+                  "my_algorithm:my_id_1" => "my+base64+key"
                }
             }
          )
