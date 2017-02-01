@@ -426,10 +426,11 @@ test "New users appear in /keys/changes",
 
          do_request_json_for( $user1,
             method => "GET",
-            uri => "/unstable/keys/changes",
+            uri    => "/unstable/keys/changes",
+
             params => {
                from => $from_token,
-               to => $to_token,
+               to   => $to_token,
             }
          )
       })->then( sub {
