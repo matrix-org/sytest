@@ -258,33 +258,33 @@ test "If remote user leaves room we no longer receive device updates",
                  qw( can_upload_e2e_keys )],
 
    check => sub {
-      my ( $user1, $user2, $user3 ) = @_;
+      my ( $creator, $remote_leaver, $remote2 ) = @_;
 
       my $room_id;
 
       my @device_users_changed = ();
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room( $creator )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user1, $user2, $room_id )
+         matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
       })->then( sub {
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room( $remote_leaver, $room_id );
       })->then( sub {
-         matrix_invite_user_to_room( $user1, $user3, $room_id )
+         matrix_invite_user_to_room( $creator, $remote2, $room_id )
       })->then( sub {
-         matrix_join_room( $user3, $room_id );
+         matrix_join_room( $remote2, $room_id );
       })->then( sub {
-         matrix_sync( $user1 );
+         matrix_sync( $creator );
       })->then( sub {
-         matrix_put_e2e_keys( $user2 )
+         matrix_put_e2e_keys( $remote_leaver )
       })->then( sub {
-         matrix_put_e2e_keys( $user3 )
+         matrix_put_e2e_keys( $remote2 )
       })->then( sub {
-         matrix_set_device_display_name( $user2, $user2->device_id, "test display name" ),
+         matrix_set_device_display_name( $remote_leaver, $remote_leaver->device_id, "test display name" ),
       })->then( sub {
          try_repeat_until_success( sub {
-            matrix_sync_again( $user1, timeout => 1000 )
+            matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
                my $device_lists = $body->{device_lists};
@@ -293,21 +293,21 @@ test "If remote user leaves room we no longer receive device updates",
 
                my $changed = $device_lists->{changed};
 
-               any { $user2->user_id eq $_ } @{ $changed }
+               any { $remote_leaver->user_id eq $_ } @{ $changed }
                   or die "user not in changed list";
 
                Future->done( 1 )
             })
          })
       })->then( sub {
-         matrix_leave_room( $user2, $room_id )
+         matrix_leave_room( $remote_leaver, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $user2, device_keys => { updated => "keys" } )
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { updated => "keys" } )
       })->then( sub {
-         matrix_put_e2e_keys( $user3, device_keys => { updated => "keys" } )
+         matrix_put_e2e_keys( $remote2, device_keys => { updated => "keys" } )
       })->then( sub {
          try_repeat_until_success( sub {
-            matrix_sync_again( $user1, timeout => 1000 )
+            matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
 
@@ -321,14 +321,14 @@ test "If remote user leaves room we no longer receive device updates",
 
                push @device_users_changed, $changed;
 
-               any { $user3->user_id eq $_ } @{ $changed }
+               any { $remote2->user_id eq $_ } @{ $changed }
                   or die "user not in changed list";
 
                Future->done( 1 )
             })
          })
       })->then( sub {
-         any { $user2->user_id eq $_ } @device_users_changed
+         any { $remote_leaver->user_id eq $_ } @device_users_changed
             and die "user2 in changed list after leaving";
 
          Future->done( 1 )
