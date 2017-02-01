@@ -7,7 +7,7 @@ test "Local device key changes appear in v2 /sync",
    check => sub {
       my ( $user1, $user2 ) = @_;
 
-      my ( $room_id );
+      my $room_id;
 
       matrix_create_room( $user1 )->then( sub {
          ( $room_id ) = @_;
