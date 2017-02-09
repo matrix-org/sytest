@@ -20,6 +20,21 @@ use POSIX qw( strftime );
 
 use YAML ();
 
+sub new
+{
+   my $class = shift;
+   my %args = @_;
+
+   if( $args{dendron} ) {
+      $class = "SyTest::Homeserver::Synapse::ViaDendron";
+   }
+   else {
+      $class = "SyTest::Homeserver::Synapse::Direct";
+   }
+
+   return $class->SUPER::new( %args );
+}
+
 sub _init
 {
    my $self = shift;
@@ -125,45 +140,8 @@ sub start
    my $cwd = getcwd;
    my $log = "$hs_dir/homeserver.log";
 
-   my $listeners = [];
+   my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-
-   if( $self->{dendron} ) {
-      # If we are running synapse behind dendron then only bind the unsecure
-      # port for synapse.
-      $self->{ports}{client_unsecure} or
-         croak "Need an unsecure client port if running synapse behind dendron";
-   }
-   else {
-      push @$listeners, {
-         type => "http",
-         port => $port,
-         bind_address => $bind_host,
-         tls => 1,
-         resources => [{
-            names => [ "client", "federation", "replication", "metrics" ], compress => 0
-         }]
-      };
-   }
-
-   if( my $unsecure_port = $self->{ports}{client_unsecure} ) {
-      push @$listeners, {
-         type => "http",
-         port => $unsecure_port,
-         bind_address => $bind_host,
-         tls => 0,
-         resources => [{
-            names => [ "client", "federation", "replication", "metrics" ], compress => 0
-         }]
-      }
-   }
-
-   push @$listeners, {
-      type => "metrics",
-      port => $self->{ports}{metrics},
-      bind_address => $bind_host,
-      tls => 0,
-   };
 
    my $cert_file = "$hs_dir/cert.pem";
    my $key_file = "$hs_dir/key.pem";
@@ -515,6 +493,35 @@ sub start
    );
 }
 
+sub generate_listeners
+{
+   my $self = shift;
+
+   my $bind_host = $self->{bind_host};
+
+   my @listeners;
+
+   if( my $unsecure_port = $self->{ports}{client_unsecure} ) {
+      push @listeners, {
+         type => "http",
+         port => $unsecure_port,
+         bind_address => $bind_host,
+         tls => 0,
+         resources => [{
+            names => [ "client", "federation", "replication", "metrics" ], compress => 0
+         }]
+      }
+   }
+
+   return @listeners,
+      {
+         type => "metrics",
+         port => $self->{ports}{metrics},
+         bind_address => $bind_host,
+         tls => 0,
+      };
+}
+
 sub pid
 {
    my $self = shift;
@@ -641,6 +648,43 @@ sub rotate_logfile
    } foreach => [ 1 .. 20 ],
      while => sub { !shift->get },
      otherwise => sub { die "Timed out waiting for synapse to recreate its log file" };
+}
+
+package SyTest::Homeserver::Synapse::Direct;
+use base qw( SyTest::Homeserver::Synapse );
+
+sub generate_listeners
+{
+   my $self = shift;
+
+   return
+      {
+         type => "http",
+         port => $self->{ports}{client},
+         bind_address => $self->{bind_host},
+         tls => 1,
+         resources => [{
+            names => [ "client", "federation", "replication", "metrics" ], compress => 0
+         }]
+      },
+      $self->SUPER::generate_listeners;
+}
+
+package SyTest::Homeserver::Synapse::ViaDendron;
+use base qw( SyTest::Homeserver::Synapse );
+
+use Carp;
+
+sub generate_listeners
+{
+   my $self = shift;
+
+   # If we are running synapse behind dendron then only bind the unsecure
+   # port for synapse.
+   $self->{ports}{client_unsecure} or
+      croak "Need an unsecure client port if running synapse behind dendron";
+
+   return $self->SUPER::generate_listeners;
 }
 
 1;
