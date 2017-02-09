@@ -15,7 +15,7 @@ use IO::Async::FileStream;
 use Cwd qw( getcwd );
 use File::Basename qw( dirname );
 use File::Path qw( remove_tree );
-use List::Util qw( any pairmap );
+use List::Util qw( any );
 use POSIX qw( strftime );
 
 use YAML ();
@@ -394,8 +394,6 @@ sub start
 
    if( $self->{dendron} ) {
       $db_type eq "pg" or die "Dendron can only run against postgres";
-
-      my @db_arg_pairs = pairmap { $a eq "database" ? "dbname=$b" : "$a=$b" } %db_args;
 
       @command = (
          $self->{dendron},
