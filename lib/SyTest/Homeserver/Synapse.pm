@@ -270,7 +270,7 @@ sub start
          $output->diag( "Connecting to server $port" );
 
          $self->adopt_future(
-            $self->await_connectable( $bind_host, $port )->then( sub {
+            $self->await_connectable( $bind_host, $self->server_listening_port )->then( sub {
                $output->diag( "Connected to server $port" );
 
                $self->started_future->done;
@@ -714,6 +714,43 @@ sub wrap_synapse_command
    }
 
    return @command;
+}
+
+package SyTest::Homeserver::Synapse::ViaSocat;
+# This isn't necessarily very useful but a good stepping-stone before trying the haproxy one
+use base qw( SyTest::Homeserver::Synapse::Direct );
+
+sub start
+{
+   my $self = shift;
+
+   $self->add_child( $self->{socat_proc} = IO::Async::Process->new(
+      command => [ "socat", "TCP-LISTEN:$self->{ports}{client},fork,reuseaddr", "TCP:localhost:$self->{ports}{synapse}" ],
+      on_finish => sub {
+         my ( undef, $exitcode ) = @_;
+         print STDERR "\n\nsocat died $exitcode\n\n";
+      },
+   ) );
+
+   return $self->SUPER::start;
+}
+
+sub kill
+{
+   my $self = shift;
+   my ( $signal ) = @_;
+
+   $self->SUPER::kill( @_ );
+
+   if( $self->{socat_proc} and my $pid = $self->{socat_proc}->pid ) {
+      kill $signal => $pid;
+   }
+}
+
+sub server_listening_port
+{
+   my $self = shift;
+   return $self->{ports}{synapse};
 }
 
 1;
