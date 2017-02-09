@@ -47,7 +47,7 @@ sub _init
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( client client_unsecure metrics );
+      for qw( client client_unsecure synapse_metrics );
 
    $self->{paths} = {};
 
@@ -316,7 +316,7 @@ sub generate_listeners
    return @listeners,
       {
          type => "metrics",
-         port => $self->{ports}{metrics},
+         port => $self->{ports}{synapse_metrics},
          bind_address => $bind_host,
          tls => 0,
       };
