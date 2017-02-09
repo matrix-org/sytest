@@ -195,166 +195,6 @@ sub start
         %{ $self->{config} },
    } );
 
-   my $pusher_config_path = $self->write_yaml_file( pusher => {
-      "worker_app"             => "synapse.app.pusher",
-      "worker_log_file"        => "$log.pusher",
-      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
-      "worker_listeners"       => [
-         {
-            type      => "http",
-            resources => [{ names => ["metrics"] }],
-            bind_address => $bind_host,
-            port      => $self->{ports}{pusher_metrics},
-         },
-         {
-            type => "manhole",
-            port => $self->{ports}{pusher_manhole},
-            bind_address => $bind_host,
-         },
-      ],
-   } );
-
-   my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
-      "worker_app"             => "synapse.app.synchrotron",
-      "worker_log_file"        => "$log.synchrotron",
-      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
-      "worker_listeners"       => [
-         {
-            type      => "http",
-            resources => [{ names => ["client"] }],
-            port      => $self->{ports}{synchrotron},
-            bind_address => $bind_host,
-         },
-         {
-            type => "manhole",
-            port => $self->{ports}{synchrotron_manhole},
-            bind_address => $bind_host,
-         },
-         {
-            type      => "http",
-            resources => [{ names => ["metrics"] }],
-            port      => $self->{ports}{synchrotron_metrics},
-            bind_address => $bind_host,
-         },
-      ],
-   } );
-
-   my $federation_reader_config_path = $self->write_yaml_file( federation_reader => {
-      "worker_app"             => "synapse.app.federation_reader",
-      "worker_log_file"        => "$log.federation_reader",
-      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
-      "worker_listeners"       => [
-         {
-            type      => "http",
-            resources => [{ names => ["federation"] }],
-            port      => $self->{ports}{federation_reader},
-            bind_address => $bind_host,
-         },
-         {
-            type => "manhole",
-            port => $self->{ports}{federation_reader_manhole},
-            bind_address => $bind_host,
-         },
-         {
-            type      => "http",
-            resources => [{ names => ["metrics"] }],
-            port      => $self->{ports}{federation_reader_metrics},
-            bind_address => $bind_host,
-         },
-      ],
-   } );
-
-
-   my $media_repository_config_path = $self->write_yaml_file( media_repository => {
-      "worker_app"             => "synapse.app.media_repository",
-      "worker_log_file"        => "$log.media_repository",
-      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
-      "worker_listeners"       => [
-         {
-            type      => "http",
-            resources => [{ names => ["media"] }],
-            port      => $self->{ports}{media_repository},
-            bind_address => $bind_host,
-         },
-         {
-            type => "manhole",
-            port => $self->{ports}{media_repository_manhole},
-            bind_address => $bind_host,
-         },
-         {
-            type      => "http",
-            resources => [{ names => ["metrics"] }],
-            port      => $self->{ports}{media_repository_metrics},
-            bind_address => $bind_host,
-         },
-      ],
-   } );
-
-
-   my $appservice_config_path = $self->write_yaml_file( appservice => {
-      "worker_app"             => "synapse.app.appservice",
-      "worker_log_file"        => "$log.appservice",
-      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
-      "worker_listeners"       => [
-         {
-            type => "manhole",
-            port => $self->{ports}{appservice_manhole},
-            bind_address => $bind_host,
-         },
-         {
-            type      => "http",
-            resources => [{ names => ["metrics"] }],
-            port      => $self->{ports}{appservice_metrics},
-            bind_address => $bind_host,
-         },
-      ],
-   } );
-
-
-   my $client_reader_config_path = $self->write_yaml_file( client_reader => {
-      "worker_app"             => "synapse.app.client_reader",
-      "worker_log_file"        => "$log.client_reader",
-      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
-      "worker_listeners"       => [
-         {
-            type      => "http",
-            resources => [{ names => ["client"] }],
-            port      => $self->{ports}{client_reader},
-            bind_address => $bind_host,
-         },
-         {
-            type => "manhole",
-            port => $self->{ports}{client_reader_manhole},
-            bind_address => $bind_host,
-         },
-         {
-            type      => "http",
-            resources => [{ names => ["metrics"] }],
-            port      => $self->{ports}{client_reader_metrics},
-            bind_address => $bind_host,
-         },
-      ],
-   } );
-
-   my $federation_sender_config_path = $self->write_yaml_file( federation_sender => {
-      "worker_app"             => "synapse.app.federation_sender",
-      "worker_log_file"        => "$log.federation_sender",
-      "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
-      "worker_listeners"       => [
-         {
-            type => "manhole",
-            port => $self->{ports}{federation_sender_manhole},
-            bind_address => $bind_host,
-         },
-         {
-            type      => "http",
-            resources => [{ names => ["metrics"] }],
-            port      => $self->{ports}{federation_sender_metrics},
-            bind_address => $bind_host,
-         },
-      ],
-   } );
-
    $self->{logpath} = $log;
 
    {
@@ -406,36 +246,193 @@ sub start
       );
 
       if ( $self->{pusher} ) {
+         my $pusher_config_path = $self->write_yaml_file( pusher => {
+            "worker_app"             => "synapse.app.pusher",
+            "worker_log_file"        => "$log.pusher",
+            "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+            "worker_listeners"       => [
+               {
+                  type      => "http",
+                  resources => [{ names => ["metrics"] }],
+                  bind_address => $bind_host,
+                  port      => $self->{ports}{pusher_metrics},
+               },
+               {
+                  type => "manhole",
+                  port => $self->{ports}{pusher_manhole},
+                  bind_address => $bind_host,
+               },
+            ],
+         } );
+
          push @command, "--pusher-config" => $pusher_config_path;
       }
 
       if ( $self->{appservice} ) {
+         my $appservice_config_path = $self->write_yaml_file( appservice => {
+            "worker_app"             => "synapse.app.appservice",
+            "worker_log_file"        => "$log.appservice",
+            "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+            "worker_listeners"       => [
+               {
+                  type => "manhole",
+                  port => $self->{ports}{appservice_manhole},
+                  bind_address => $bind_host,
+               },
+               {
+                  type      => "http",
+                  resources => [{ names => ["metrics"] }],
+                  port      => $self->{ports}{appservice_metrics},
+                  bind_address => $bind_host,
+               },
+            ],
+         } );
+
          push @command, "--appservice-config" => $appservice_config_path;
       }
 
       if ( $self->{federation_sender} ) {
+         my $federation_sender_config_path = $self->write_yaml_file( federation_sender => {
+            "worker_app"             => "synapse.app.federation_sender",
+            "worker_log_file"        => "$log.federation_sender",
+            "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+            "worker_listeners"       => [
+               {
+                  type => "manhole",
+                  port => $self->{ports}{federation_sender_manhole},
+                  bind_address => $bind_host,
+               },
+               {
+                  type      => "http",
+                  resources => [{ names => ["metrics"] }],
+                  port      => $self->{ports}{federation_sender_metrics},
+                  bind_address => $bind_host,
+               },
+            ],
+         } );
+
          push @command, "--federation-sender-config" => $federation_sender_config_path;
       }
 
       if ( $self->{synchrotron} ) {
+         my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
+            "worker_app"             => "synapse.app.synchrotron",
+            "worker_log_file"        => "$log.synchrotron",
+            "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+            "worker_listeners"       => [
+               {
+                  type      => "http",
+                  resources => [{ names => ["client"] }],
+                  port      => $self->{ports}{synchrotron},
+                  bind_address => $bind_host,
+               },
+               {
+                  type => "manhole",
+                  port => $self->{ports}{synchrotron_manhole},
+                  bind_address => $bind_host,
+               },
+               {
+                  type      => "http",
+                  resources => [{ names => ["metrics"] }],
+                  port      => $self->{ports}{synchrotron_metrics},
+                  bind_address => $bind_host,
+               },
+            ],
+         } );
+
          push @command,
             "--synchrotron-config" => $synchrotron_config_path,
             "--synchrotron-url" => "http://$bind_host:$self->{ports}{synchrotron}";
       }
 
       if ( $self->{federation_reader} ) {
+         my $federation_reader_config_path = $self->write_yaml_file( federation_reader => {
+            "worker_app"             => "synapse.app.federation_reader",
+            "worker_log_file"        => "$log.federation_reader",
+            "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+            "worker_listeners"       => [
+               {
+                  type      => "http",
+                  resources => [{ names => ["federation"] }],
+                  port      => $self->{ports}{federation_reader},
+                  bind_address => $bind_host,
+               },
+               {
+                  type => "manhole",
+                  port => $self->{ports}{federation_reader_manhole},
+                  bind_address => $bind_host,
+               },
+               {
+                  type      => "http",
+                  resources => [{ names => ["metrics"] }],
+                  port      => $self->{ports}{federation_reader_metrics},
+                  bind_address => $bind_host,
+               },
+            ],
+         } );
+
          push @command,
             "--federation-reader-config" => $federation_reader_config_path,
             "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
       }
 
       if ( $self->{media_repository} ) {
+         my $media_repository_config_path = $self->write_yaml_file( media_repository => {
+            "worker_app"             => "synapse.app.media_repository",
+            "worker_log_file"        => "$log.media_repository",
+            "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+            "worker_listeners"       => [
+               {
+                  type      => "http",
+                  resources => [{ names => ["media"] }],
+                  port      => $self->{ports}{media_repository},
+                  bind_address => $bind_host,
+               },
+               {
+                  type => "manhole",
+                  port => $self->{ports}{media_repository_manhole},
+                  bind_address => $bind_host,
+               },
+               {
+                  type      => "http",
+                  resources => [{ names => ["metrics"] }],
+                  port      => $self->{ports}{media_repository_metrics},
+                  bind_address => $bind_host,
+               },
+            ],
+         } );
+
          push @command,
             "--media-repository-config" => $media_repository_config_path,
             "--media-repository-url" => "http://$bind_host:$self->{ports}{media_repository}";
       }
 
       if ( $self->{client_reader} ) {
+         my $client_reader_config_path = $self->write_yaml_file( client_reader => {
+            "worker_app"             => "synapse.app.client_reader",
+            "worker_log_file"        => "$log.client_reader",
+            "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+            "worker_listeners"       => [
+               {
+                  type      => "http",
+                  resources => [{ names => ["client"] }],
+                  port      => $self->{ports}{client_reader},
+                  bind_address => $bind_host,
+               },
+               {
+                  type => "manhole",
+                  port => $self->{ports}{client_reader_manhole},
+                  bind_address => $bind_host,
+               },
+               {
+                  type      => "http",
+                  resources => [{ names => ["metrics"] }],
+                  port      => $self->{ports}{client_reader_metrics},
+                  bind_address => $bind_host,
+               },
+            ],
+         } );
+
          push @command,
             "--client-reader-config" => $client_reader_config_path,
             "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}";
