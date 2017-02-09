@@ -49,6 +49,8 @@ sub _init
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
       for qw( client client_unsecure metrics );
 
+   $self->{paths} = {};
+
    $self->SUPER::_init( $args );
 }
 
@@ -195,7 +197,7 @@ sub start
         %{ $self->{config} },
    } );
 
-   $self->{logpath} = $log;
+   $self->{paths}{log} = $log;
 
    {
       # create or truncate
@@ -560,7 +562,7 @@ sub open_logfile
 
    $self->add_child(
       $self->{log_stream} = IO::Async::FileStream->new(
-         filename => $self->{logpath},
+         filename => $self->{paths}{log},
          on_read => $self->_capture_weakself( 'on_synapse_read' ),
       )
    );
@@ -628,7 +630,7 @@ sub rotate_logfile
    my $self = shift;
    my ( $newname ) = @_;
 
-   my $logpath = $self->{logpath};
+   my $logpath = $self->{paths}{log};
 
    $newname //= dirname( $logpath ) . strftime( "/homeserver-%Y-%m-%dT%H:%M:%S.log", localtime );
 
