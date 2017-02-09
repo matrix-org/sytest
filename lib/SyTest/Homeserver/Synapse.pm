@@ -287,6 +287,12 @@ sub check_db_config
    # Normally don't care
 }
 
+sub server_listening_port
+{
+   my $self = shift;
+   return $self->{ports}{client};
+}
+
 sub generate_listeners
 {
    my $self = shift;
@@ -460,7 +466,7 @@ sub generate_listeners
    return
       {
          type => "http",
-         port => $self->{ports}{client},
+         port => $self->server_listening_port,
          bind_address => $self->{bind_host},
          tls => 1,
          resources => [{
@@ -511,10 +517,10 @@ sub wrap_synapse_command
       "--synapse-url" => "http://$bind_host:$self->{ports}{client_unsecure}",
       "--cert-file" => $self->{paths}{cert_file},
       "--key-file"  => $self->{paths}{key_file},
-      "--addr" => "$bind_host:$self->{ports}{client}",
+      "--addr" => "$bind_host:" . $self->server_listening_port,
    );
 
-   if ( $self->{pusher} ) {
+   if( $self->{pusher} ) {
       my $pusher_config_path = $self->write_yaml_file( pusher => {
          "worker_app"             => "synapse.app.pusher",
          "worker_log_file"        => "$log.pusher",
@@ -537,7 +543,7 @@ sub wrap_synapse_command
       push @command, "--pusher-config" => $pusher_config_path;
    }
 
-   if ( $self->{appservice} ) {
+   if( $self->{appservice} ) {
       my $appservice_config_path = $self->write_yaml_file( appservice => {
          "worker_app"             => "synapse.app.appservice",
          "worker_log_file"        => "$log.appservice",
@@ -560,7 +566,7 @@ sub wrap_synapse_command
       push @command, "--appservice-config" => $appservice_config_path;
    }
 
-   if ( $self->{federation_sender} ) {
+   if( $self->{federation_sender} ) {
       my $federation_sender_config_path = $self->write_yaml_file( federation_sender => {
          "worker_app"             => "synapse.app.federation_sender",
          "worker_log_file"        => "$log.federation_sender",
@@ -583,7 +589,7 @@ sub wrap_synapse_command
       push @command, "--federation-sender-config" => $federation_sender_config_path;
    }
 
-   if ( $self->{synchrotron} ) {
+   if( $self->{synchrotron} ) {
       my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
          "worker_app"             => "synapse.app.synchrotron",
          "worker_log_file"        => "$log.synchrotron",
@@ -614,7 +620,7 @@ sub wrap_synapse_command
          "--synchrotron-url" => "http://$bind_host:$self->{ports}{synchrotron}";
    }
 
-   if ( $self->{federation_reader} ) {
+   if( $self->{federation_reader} ) {
       my $federation_reader_config_path = $self->write_yaml_file( federation_reader => {
          "worker_app"             => "synapse.app.federation_reader",
          "worker_log_file"        => "$log.federation_reader",
@@ -645,7 +651,7 @@ sub wrap_synapse_command
          "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
    }
 
-   if ( $self->{media_repository} ) {
+   if( $self->{media_repository} ) {
       my $media_repository_config_path = $self->write_yaml_file( media_repository => {
          "worker_app"             => "synapse.app.media_repository",
          "worker_log_file"        => "$log.media_repository",
@@ -676,7 +682,7 @@ sub wrap_synapse_command
          "--media-repository-url" => "http://$bind_host:$self->{ports}{media_repository}";
    }
 
-   if ( $self->{client_reader} ) {
+   if( $self->{client_reader} ) {
       my $client_reader_config_path = $self->write_yaml_file( client_reader => {
          "worker_app"             => "synapse.app.client_reader",
          "worker_log_file"        => "$log.client_reader",
