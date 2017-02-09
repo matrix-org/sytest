@@ -124,6 +124,8 @@ sub start
       $self->write_yaml_file( $db_config_path, $db_config );
    }
 
+   $self->check_db_config( $db_type, $db_config, %db_args );
+
    if( defined $db_type ) {
       my $clear_meth = "clear_db_${db_type}";
       $self->$clear_meth( %db_args );
@@ -235,8 +237,6 @@ sub start
    my @command;
 
    if( $self->{dendron} ) {
-      $db_type eq "pg" or die "Dendron can only run against postgres";
-
       @command = (
          $self->{dendron},
          "--synapse-python" => $self->{python},
@@ -490,6 +490,11 @@ sub start
    );
 }
 
+sub check_db_config
+{
+   # Normally don't care
+}
+
 sub generate_listeners
 {
    my $self = shift;
@@ -682,6 +687,16 @@ sub generate_listeners
       croak "Need an unsecure client port if running synapse behind dendron";
 
    return $self->SUPER::generate_listeners;
+}
+
+sub check_db_config
+{
+   my $self = shift;
+   my ( $type, $config, %args ) = @_;
+
+   $type eq "pg" or die "Dendron can only run against postgres";
+
+   return $self->SUPER::check_db_config( @_ );
 }
 
 1;
