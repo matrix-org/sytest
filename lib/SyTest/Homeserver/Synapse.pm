@@ -718,23 +718,35 @@ sub wrap_synapse_command
 package SyTest::Homeserver::Synapse::ViaHaproxy;
 use base qw( SyTest::Homeserver::Synapse::Direct );
 
+use File::Slurper qw( read_binary );
+
 use constant HAPROXY_BIN => "/usr/sbin/haproxy";
 
 sub start
 {
    my $self = shift;
 
-   $self->{haproxy_config} = $self->write_file( "haproxy.conf", $self->generate_haproxy_config );
+   return $self->SUPER::start->then( sub {
+      # We know synapse has started, so lets steal its SSL keys
+      # haproxy wants a "combined" pemfile, which is just the cert and key concatenated together
 
-   $self->add_child( $self->{haproxy_proc} = IO::Async::Process->new(
-      command => [ HAPROXY_BIN, "-db", "-f", $self->{haproxy_config} ],
-      on_finish => sub {
-         my ( undef, $exitcode ) = @_;
-         print STDERR "\n\nhaproxy died $exitcode\n\n";
-      },
-   ) );
+      my $cert = read_binary( $self->{paths}{cert_file} );
+      my $key  = read_binary( $self->{paths}{key_file} );
 
-   return $self->SUPER::start;
+      $self->{paths}{pem_file} = $self->write_file( "combined.pem", $cert . $key );
+
+      $self->{haproxy_config} = $self->write_file( "haproxy.conf", $self->generate_haproxy_config );
+
+      $self->add_child( $self->{haproxy_proc} = IO::Async::Process->new(
+         command => [ HAPROXY_BIN, "-db", "-f", $self->{haproxy_config} ],
+         on_finish => sub {
+            my ( undef, $exitcode ) = @_;
+            print STDERR "\n\nhaproxy died $exitcode\n\n";
+         },
+      ) );
+
+      return $self->await_connectable( $self->{bind_host}, $self->{ports}{client} );
+   });
 }
 
 sub kill
@@ -763,16 +775,18 @@ sub generate_haproxy_config
 
    return <<"EOCONFIG";
 defaults
+    mode http
+
     timeout connect 5s
     timeout client 90s
     timeout server 90s
 
 frontend http-in
-    bind *:$ports->{client}
+    bind *:$ports->{client} ssl crt $self->{paths}{pem_file}
     default_backend synapse
 
 backend synapse
-    server synapse localhost:$ports->{synapse}
+    server synapse localhost:$ports->{client_unsecure}
 
 EOCONFIG
 }
