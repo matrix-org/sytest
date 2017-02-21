@@ -716,19 +716,22 @@ sub wrap_synapse_command
    return @command;
 }
 
-package SyTest::Homeserver::Synapse::ViaSocat;
-# This isn't necessarily very useful but a good stepping-stone before trying the haproxy one
+package SyTest::Homeserver::Synapse::ViaHaproxy;
 use base qw( SyTest::Homeserver::Synapse::Direct );
+
+use constant HAPROXY_BIN => "/usr/sbin/haproxy";
 
 sub start
 {
    my $self = shift;
 
-   $self->add_child( $self->{socat_proc} = IO::Async::Process->new(
-      command => [ "socat", "TCP-LISTEN:$self->{ports}{client},fork,reuseaddr", "TCP:localhost:$self->{ports}{synapse}" ],
+   $self->{haproxy_config} = $self->write_file( "haproxy.conf", $self->generate_haproxy_config );
+
+   $self->add_child( $self->{haproxy_proc} = IO::Async::Process->new(
+      command => [ HAPROXY_BIN, "-db", "-f", $self->{haproxy_config} ],
       on_finish => sub {
          my ( undef, $exitcode ) = @_;
-         print STDERR "\n\nsocat died $exitcode\n\n";
+         print STDERR "\n\nhaproxy died $exitcode\n\n";
       },
    ) );
 
@@ -742,7 +745,7 @@ sub kill
 
    $self->SUPER::kill( @_ );
 
-   if( $self->{socat_proc} and my $pid = $self->{socat_proc}->pid ) {
+   if( $self->{haproxy_proc} and my $pid = $self->{haproxy_proc}->pid ) {
       kill $signal => $pid;
    }
 }
@@ -751,6 +754,28 @@ sub server_listening_port
 {
    my $self = shift;
    return $self->{ports}{synapse};
+}
+
+sub generate_haproxy_config
+{
+   my $self = shift;
+
+   my $ports = $self->{ports};
+
+   return <<"EOCONFIG";
+defaults
+    timeout connect 5s
+    timeout client 90s
+    timeout server 90s
+
+frontend http-in
+    bind *:$ports->{client}
+    default_backend synapse
+
+backend synapse
+    server synapse localhost:$ports->{synapse}
+
+EOCONFIG
 }
 
 1;
