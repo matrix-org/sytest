@@ -180,12 +180,10 @@ our @HOMESERVER_INFO = map {
             );
          }
 
-         $synapse->start;
-
          push @synapses, $synapse;
 
          Future->wait_any(
-            $synapse->started_future,
+            $synapse->start,
 
             $loop->delay_future( after => 20 )
                ->then_fail( "Synapse server on port $secure_port failed to start" ),

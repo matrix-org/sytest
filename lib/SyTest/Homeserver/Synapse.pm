@@ -243,6 +243,9 @@ sub start
    };
 
    my $loop = $self->loop;
+
+   my $started_future = $loop->new_future;
+
    $loop->run_child(
       setup => [ env => $env ],
 
@@ -273,13 +276,15 @@ sub start
             $self->await_connectable( $bind_host, $self->server_listening_port )->then( sub {
                $output->diag( "Connected to server $port" );
 
-               $self->started_future->done;
+               $started_future->done;
             })
          );
 
          $self->open_logfile;
       }
    );
+
+   return $started_future;
 }
 
 sub check_db_config
@@ -404,12 +409,6 @@ sub on_synapse_read
    }
 
    return 0;
-}
-
-sub started_future
-{
-   my $self = shift;
-   return $self->{started_future} ||= $self->loop->new_future;
 }
 
 sub await_finish
