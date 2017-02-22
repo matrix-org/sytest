@@ -774,6 +774,12 @@ sub generate_haproxy_config
    my $ports = $self->{ports};
 
    return <<"EOCONFIG";
+global
+    tune.ssl.default-dh-param 2048
+
+    ssl-default-bind-ciphers "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL !eNULL !LOW !3DES !MD5 !EXP !PSK !SRP !DSS !RC4"
+    ssl-default-bind-options no-sslv3
+
 defaults
     mode http
 
@@ -781,12 +787,20 @@ defaults
     timeout client 90s
     timeout server 90s
 
+    compression algo gzip
+    compression type text/plain text/html text/xml application/json text/css
+
 frontend http-in
     bind *:$ports->{client} ssl crt $self->{paths}{pem_file}
+
+    option forwardfor
+
     default_backend synapse
 
 backend synapse
     server synapse localhost:$ports->{client_unsecure}
+
+    option forwardfor
 
 EOCONFIG
 }
