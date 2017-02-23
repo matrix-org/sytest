@@ -16,7 +16,7 @@ use Cwd qw( getcwd );
 use File::Basename qw( dirname );
 use File::Path qw( remove_tree );
 use List::Util qw( any );
-use POSIX qw( strftime );
+use POSIX qw( strftime WIFEXITED WEXITSTATUS );
 
 use YAML ();
 
@@ -357,7 +357,12 @@ sub on_finish
    say $self->pid . " stopped";
 
    if( $exitcode > 0 ) {
-      warn "Process failed ($exitcode)";
+      if( WIFEXITED($exitcode) ) {
+         warn "Main homeserver process exited " . WEXITSTATUS($exitcode) . "\n";
+      }
+      else {
+         warn "Main homeserver process failed - code=$exitcode\n";
+      }
 
       print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
          for @{ $self->{stderr_lines} // [] };
