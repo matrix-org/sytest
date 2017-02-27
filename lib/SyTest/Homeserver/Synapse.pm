@@ -161,6 +161,7 @@ sub start
         tls_certificate_path => $cert_file,
         tls_private_key_path => $key_file,
         tls_dh_params_path => "$cwd/keys/tls.dh",
+        use_insecure_ssl_client_just_for_testing_do_not_use => 1,
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
         enable_registration => "true",
@@ -171,10 +172,12 @@ sub start
 
         use_frozen_events => "true",
 
+        allow_guest_access => "True",
         invite_3pid_guest => "true",
 
         # Metrics are always useful
         enable_metrics => 1,
+        report_stats => "False",
 
         perspectives => { servers => {} },
 

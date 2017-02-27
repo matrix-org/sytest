@@ -129,10 +129,7 @@ our @HOMESERVER_INFO = map {
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
 
-               use_insecure_ssl_client_just_for_testing_do_not_use => 1,
-               report_stats => "False",
                user_agent_suffix => "homeserver[$idx]",
-               allow_guest_access => "True",
 
                cas_config => {
                   server_url => $test_server_info->client_location . "/cas",
