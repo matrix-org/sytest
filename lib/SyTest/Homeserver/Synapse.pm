@@ -41,7 +41,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      ports synapse_dir extra_args python config coverage
+      ports synapse_dir extra_args python coverage
       dendron pusher synchrotron federation_reader bind_host
       media_repository appservice client_reader federation_sender
    );
@@ -61,6 +61,7 @@ sub configure
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
       print_output filter_output
+      config
    );
 
    $self->SUPER::configure( %params );
@@ -299,6 +300,18 @@ sub server_listening_port
 {
    my $self = shift;
    return $self->{ports}{client};
+}
+
+sub secure_port
+{
+   my $self = shift;
+   return $self->{ports}{client};
+}
+
+sub unsecure_port
+{
+   my $self = shift;
+   return $self->{ports}{client_unsecure};
 }
 
 sub generate_listeners

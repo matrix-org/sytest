@@ -58,23 +58,14 @@ our @HOMESERVER_INFO = map {
       setup => sub {
          my ( $test_server_info, @as_infos ) = @_;
 
-         my $secure_port   = main::alloc_port( "CLIENT[$idx].secure" );
-         my $unsecure_port = main::alloc_port( "CLIENT[$idx].unsecure" );
-
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
-
-         my $location = $WANT_TLS ?
-            "https://$BIND_HOST:$secure_port" :
-            "http://$BIND_HOST:$unsecure_port";
-
-         my $info = ServerInfo( "$BIND_HOST:$secure_port", $location );
 
          my $synapse = SyTest::Homeserver::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
             hs_dir        => abs_path( "server-$idx" ),
             ports         => {
-               client          => $secure_port,
-               client_unsecure => $unsecure_port,
+               client          => main::alloc_port( "CLIENT[$idx].secure" ),
+               client_unsecure => main::alloc_port( "CLIENT[$idx].unsecure" ),
 
                synapse         => main::alloc_port( "synapse[$idx]" ),
                synapse_metrics => main::alloc_port( "synapse[$idx].metrics" ),
@@ -121,7 +112,14 @@ our @HOMESERVER_INFO = map {
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
+         );
+         $loop->add( $synapse );
 
+         my $location = $WANT_TLS ?
+            "https://$BIND_HOST:" . $synapse->secure_port :
+            "http://$BIND_HOST:" . $synapse->unsecure_port;
+
+         $synapse->configure(
             config => {
                # Config for testing recaptcha. 90jira/SYT-8.pl
                recaptcha_siteverify_api => $test_server_info->client_location .
@@ -135,9 +133,10 @@ our @HOMESERVER_INFO = map {
                   server_url => $test_server_info->client_location . "/cas",
                   service_url => $location,
                },
-            },
+            }
          );
-         $loop->add( $synapse );
+
+         my $info = ServerInfo( "$BIND_HOST:" . $synapse->secure_port, $location );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only
@@ -169,7 +168,7 @@ our @HOMESERVER_INFO = map {
 
                # Now we can fill in the AS info's user_id
                $as_info->user_id = sprintf "@%s:$BIND_HOST:%d",
-                  $as_info->localpart, $secure_port;
+                  $as_info->localpart, $synapse->secure_port;
             }
 
             $synapse->append_config(
@@ -183,7 +182,7 @@ our @HOMESERVER_INFO = map {
             $synapse->start,
 
             $loop->delay_future( after => 20 )
-               ->then_fail( "Synapse server on port $secure_port failed to start" ),
+               ->then_fail( "Synapse server number $idx (on port ${\$synapse->secure_port}) failed to start" ),
          )->then_done( $info );
       },
    );
