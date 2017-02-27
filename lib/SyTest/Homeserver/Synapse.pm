@@ -47,7 +47,7 @@ sub _init
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( client client_unsecure synapse_metrics );
+      for qw( synapse synapse_unsecure synapse_metrics );
 
    $self->{paths} = {};
 
@@ -94,7 +94,7 @@ sub start
 {
    my $self = shift;
 
-   my $port = $self->{ports}{client};
+   my $port = $self->{ports}{synapse};
    my $output = $self->{output};
 
    my $hs_dir = $self->{hs_dir};
@@ -147,6 +147,7 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
+   my $server_name = "$bind_host:" . $self->secure_port;
 
    my $cert_file = $self->{paths}{cert_file} = "$hs_dir/cert.pem";
    my $key_file  = $self->{paths}{key_file}  = "$hs_dir/key.pem";
@@ -156,7 +157,7 @@ sub start
    my $registration_shared_secret = "reg_secret";
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( config => {
-        server_name => "$bind_host:$port",
+        server_name => $server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
         tls_certificate_path => $cert_file,
@@ -277,7 +278,7 @@ sub start
          $output->diag( "Connecting to server $port" );
 
          $self->adopt_future(
-            $self->await_connectable( $bind_host, $self->server_listening_port )->then( sub {
+            $self->await_connectable( $bind_host, $self->_start_await_port )->then( sub {
                $output->diag( "Connected to server $port" );
 
                $started_future->done;
@@ -296,24 +297,6 @@ sub check_db_config
    # Normally don't care
 }
 
-sub server_listening_port
-{
-   my $self = shift;
-   return $self->{ports}{client};
-}
-
-sub secure_port
-{
-   my $self = shift;
-   return $self->{ports}{client};
-}
-
-sub unsecure_port
-{
-   my $self = shift;
-   return $self->{ports}{client_unsecure};
-}
-
 sub generate_listeners
 {
    my $self = shift;
@@ -322,7 +305,7 @@ sub generate_listeners
 
    my @listeners;
 
-   if( my $unsecure_port = $self->{ports}{client_unsecure} ) {
+   if( my $unsecure_port = $self->{ports}{synapse_unsecure} ) {
       push @listeners, {
          type => "http",
          port => $unsecure_port,
@@ -486,7 +469,7 @@ sub generate_listeners
    return
       {
          type => "http",
-         port => $self->server_listening_port,
+         port => $self->{ports}{synapse},
          bind_address => $self->{bind_host},
          tls => 1,
          resources => [{
@@ -496,21 +479,36 @@ sub generate_listeners
       $self->SUPER::generate_listeners;
 }
 
+sub _start_await_port
+{
+   my $self = shift;
+   return $self->{ports}{synapse};
+}
+
+sub secure_port
+{
+   my $self = shift;
+   return $self->{ports}{synapse};
+}
+
+sub unsecure_port
+{
+   my $self = shift;
+   return $self->{ports}{synapse_unsecure};
+}
+
 package SyTest::Homeserver::Synapse::ViaDendron;
 use base qw( SyTest::Homeserver::Synapse );
 
 use Carp;
 
-sub generate_listeners
+sub _init
 {
    my $self = shift;
+   $self->SUPER::_init( @_ );
 
-   # If we are running synapse behind dendron then only bind the unsecure
-   # port for synapse.
-   $self->{ports}{client_unsecure} or
-      croak "Need an unsecure client port if running synapse behind dendron";
-
-   return $self->SUPER::generate_listeners;
+   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
+      for qw( dendron );
 }
 
 sub check_db_config
@@ -534,17 +532,17 @@ sub wrap_synapse_command
       $self->{dendron},
       "--synapse-python" => $self->{python},
       "--synapse-config" => $self->{paths}{config},
-      "--synapse-url" => "http://$bind_host:$self->{ports}{client_unsecure}",
+      "--synapse-url" => "http://$bind_host:$self->{ports}{synapse_unsecure}",
       "--cert-file" => $self->{paths}{cert_file},
       "--key-file"  => $self->{paths}{key_file},
-      "--addr" => "$bind_host:" . $self->server_listening_port,
+      "--addr" => "$bind_host:" . $self->{ports}{dendron},
    );
 
    if( $self->{pusher} ) {
       my $pusher_config_path = $self->write_yaml_file( pusher => {
          "worker_app"             => "synapse.app.pusher",
          "worker_log_file"        => "$log.pusher",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
          "worker_listeners"       => [
             {
                type      => "http",
@@ -567,7 +565,7 @@ sub wrap_synapse_command
       my $appservice_config_path = $self->write_yaml_file( appservice => {
          "worker_app"             => "synapse.app.appservice",
          "worker_log_file"        => "$log.appservice",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
          "worker_listeners"       => [
             {
                type => "manhole",
@@ -590,7 +588,7 @@ sub wrap_synapse_command
       my $federation_sender_config_path = $self->write_yaml_file( federation_sender => {
          "worker_app"             => "synapse.app.federation_sender",
          "worker_log_file"        => "$log.federation_sender",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
          "worker_listeners"       => [
             {
                type => "manhole",
@@ -613,7 +611,7 @@ sub wrap_synapse_command
       my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
          "worker_app"             => "synapse.app.synchrotron",
          "worker_log_file"        => "$log.synchrotron",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
          "worker_listeners"       => [
             {
                type      => "http",
@@ -644,7 +642,7 @@ sub wrap_synapse_command
       my $federation_reader_config_path = $self->write_yaml_file( federation_reader => {
          "worker_app"             => "synapse.app.federation_reader",
          "worker_log_file"        => "$log.federation_reader",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
          "worker_listeners"       => [
             {
                type      => "http",
@@ -675,7 +673,7 @@ sub wrap_synapse_command
       my $media_repository_config_path = $self->write_yaml_file( media_repository => {
          "worker_app"             => "synapse.app.media_repository",
          "worker_log_file"        => "$log.media_repository",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
          "worker_listeners"       => [
             {
                type      => "http",
@@ -706,7 +704,7 @@ sub wrap_synapse_command
       my $client_reader_config_path = $self->write_yaml_file( client_reader => {
          "worker_app"             => "synapse.app.client_reader",
          "worker_log_file"        => "$log.client_reader",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{client_unsecure}/_synapse/replication",
+         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
          "worker_listeners"       => [
             {
                type      => "http",
@@ -736,12 +734,41 @@ sub wrap_synapse_command
    return @command;
 }
 
+sub _start_await_port
+{
+   my $self = shift;
+   return $self->{ports}{dendron};
+}
+
+sub secure_port
+{
+   my $self = shift;
+   return $self->{ports}{dendron};
+}
+
+sub unsecure_port
+{
+   my $self = shift;
+   die "dendron does not have an unsecure port mode\n";
+}
+
 package SyTest::Homeserver::Synapse::ViaHaproxy;
 use base qw( SyTest::Homeserver::Synapse::Direct );
+
+use Carp;
 
 use File::Slurper qw( read_binary );
 
 use constant HAPROXY_BIN => "/usr/sbin/haproxy";
+
+sub _init
+{
+   my $self = shift;
+   $self->SUPER::_init( @_ );
+
+   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
+      for qw( haproxy );
+}
 
 sub start
 {
@@ -766,7 +793,7 @@ sub start
          },
       ) );
 
-      return $self->await_connectable( $self->{bind_host}, $self->{ports}{client} );
+      return $self->await_connectable( $self->{bind_host}, $self->{ports}{haproxy} );
    });
 }
 
@@ -780,12 +807,6 @@ sub kill
    if( $self->{haproxy_proc} and my $pid = $self->{haproxy_proc}->pid ) {
       kill $signal => $pid;
    }
-}
-
-sub server_listening_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse};
 }
 
 sub generate_haproxy_config
@@ -812,18 +833,30 @@ defaults
     compression type text/plain text/html text/xml application/json text/css
 
 frontend http-in
-    bind *:$ports->{client} ssl crt $self->{paths}{pem_file}
+    bind *:$ports->{haproxy} ssl crt $self->{paths}{pem_file}
 
     option forwardfor
 
     default_backend synapse
 
 backend synapse
-    server synapse localhost:$ports->{client_unsecure}
+    server synapse localhost:$ports->{synapse_unsecure}
 
     option forwardfor
 
 EOCONFIG
+}
+
+sub secure_port
+{
+   my $self = shift;
+   return $self->{ports}{haproxy};
+}
+
+sub unsecure_port
+{
+   my $self = shift;
+   die "haproxy does not have an unsecure port mode\n";
 }
 
 1;

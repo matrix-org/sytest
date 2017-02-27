@@ -64,11 +64,9 @@ our @HOMESERVER_INFO = map {
             synapse_dir   => $SYNAPSE_ARGS{directory},
             hs_dir        => abs_path( "server-$idx" ),
             ports         => {
-               client          => main::alloc_port( "CLIENT[$idx].secure" ),
-               client_unsecure => main::alloc_port( "CLIENT[$idx].unsecure" ),
-
-               synapse         => main::alloc_port( "synapse[$idx]" ),
-               synapse_metrics => main::alloc_port( "synapse[$idx].metrics" ),
+               synapse          => main::alloc_port( "synapse[$idx]" ),
+               synapse_unsecure => main::alloc_port( "synapse[$idx].unsecure" ),
+               synapse_metrics  => main::alloc_port( "synapse[$idx].metrics" ),
 
                pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
                pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
@@ -94,6 +92,10 @@ our @HOMESERVER_INFO = map {
                client_reader         => main::alloc_port( "client_reader[$idx]" ),
                client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
                client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
+
+               dendron => main::alloc_port( "dendron[$idx]" ),
+
+               haproxy => main::alloc_port( "haproxy[$idx]" ),
             },
             bind_host           => $BIND_HOST,
             output              => $OUTPUT,
