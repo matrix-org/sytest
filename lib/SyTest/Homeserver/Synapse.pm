@@ -528,6 +528,9 @@ sub wrap_synapse_command
    my $bind_host = $self->{bind_host};
    my $log = $self->{paths}{log};
 
+   -x $self->{dendron} or
+      die "Cannot exec($self->{dendron}) - $!";
+
    my @command = (
       $self->{dendron},
       "--synapse-python" => $self->{python},
