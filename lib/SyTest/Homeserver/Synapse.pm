@@ -155,46 +155,46 @@ sub start
    my $registration_shared_secret = "reg_secret";
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( config => {
-        "server_name" => "$bind_host:$port",
-        "log_file" => "$log",
-        (-f $log_config_file) ? ("log_config" => $log_config_file) : (),
-        "tls_certificate_path" => $cert_file,
-        "tls_private_key_path" => $key_file,
-        "tls_dh_params_path" => "$cwd/keys/tls.dh",
-        "rc_messages_per_second" => 1000,
-        "rc_message_burst_count" => 1000,
-        "enable_registration" => "true",
-        "database" => $db_config,
-        "database_config" => $db_config_path,
-        "macaroon_secret_key" => $macaroon_secret_key,
-        "registration_shared_secret" => $registration_shared_secret,
+        server_name => "$bind_host:$port",
+        log_file => "$log",
+        ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
+        tls_certificate_path => $cert_file,
+        tls_private_key_path => $key_file,
+        tls_dh_params_path => "$cwd/keys/tls.dh",
+        rc_messages_per_second => 1000,
+        rc_message_burst_count => 1000,
+        enable_registration => "true",
+        database => $db_config,
+        database_config => $db_config_path,
+        macaroon_secret_key => $macaroon_secret_key,
+        registration_shared_secret => $registration_shared_secret,
 
-        "use_frozen_events" => "true",
+        use_frozen_events => "true",
 
-        "invite_3pid_guest" => "true",
+        invite_3pid_guest => "true",
 
         # Metrics are always useful
-        "enable_metrics" => 1,
+        enable_metrics => 1,
 
-        "perspectives" => { servers => {} },
+        perspectives => { servers => {} },
 
         # Stack traces are useful
-        "full_twisted_stacktraces" => "true",
+        full_twisted_stacktraces => "true",
 
-        "listeners" => $listeners,
+        listeners => $listeners,
 
-        "bcrypt_rounds" => 0,
-        "start_pushers" => (not $self->{pusher}),
+        bcrypt_rounds => 0,
+        start_pushers => ( not $self->{pusher} ),
 
-        "notify_appservices" => (not $self->{appservice}),
+        notify_appservices => ( not $self->{appservice} ),
 
-        "send_federation" => (not $self->{federation_sender}),
+        send_federation => ( not $self->{federation_sender} ),
 
-        "url_preview_enabled" => "true",
-        "url_preview_ip_range_blacklist" => [],
+        url_preview_enabled => "true",
+        url_preview_ip_range_blacklist => [],
 
-        "media_store_path" => "$hs_dir/media_store",
-        "uploads_path" => "$hs_dir/uploads_path",
+        media_store_path => "$hs_dir/media_store",
+        uploads_path => "$hs_dir/uploads_path",
 
         %{ $self->{config} },
    } );
