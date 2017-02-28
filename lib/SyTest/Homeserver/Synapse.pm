@@ -767,7 +767,7 @@ use Carp;
 
 use File::Slurper qw( read_binary );
 
-use constant HAPROXY_BIN => "/usr/sbin/haproxy";
+use constant HAPROXY_BIN => $ENV{HAPROXY_BIN} // "/usr/sbin/haproxy";
 
 sub _init
 {
