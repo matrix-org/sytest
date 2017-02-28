@@ -859,6 +859,8 @@ frontend http-in
     acl path_syncrotron path_beg /_matrix/client/api/v1/events
     acl path_syncrotron path_beg /_matrix/client/api/v1/initialSync
     acl path_syncrotron path_beg /_matrix/client/r0/initialSync
+    acl path_syncrotron path_reg ^/_matrix/client/api/v1/rooms/[^/]+/initialSync\$
+    acl path_syncrotron path_reg ^/_matrix/client/r0/rooms/[^/]+/initialSync\$
     use_backend synchrotrons if path_syncrotron
 
     acl path_federation_reader path_beg /_matrix/federation/v1/event/
