@@ -42,7 +42,7 @@ test "Guest users can send messages to guest_access rooms if joined",
          my ( $body ) = @_;
          log_if_fail "Body:", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( my $chunk = $body->{chunk} );
 
          scalar @$chunk == 1 or
@@ -229,13 +229,16 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
                }),
             );
          })->then( sub {
-            matrix_get_room_membership( $local_user, $room_id, $guest_user );
-         })->then( sub {
-            my ( $membership ) = @_;
+            try_repeat_until_success( sub {
+               matrix_get_room_membership( $local_user, $room_id, $guest_user )
+               ->then( sub {
+                  my ( $membership ) = @_;
 
-            assert_eq( $membership, "leave", "membership" );
+                  assert_eq( $membership, "leave", "membership" );
 
-            Future->done(1);
+                  Future->done(1);
+               })
+            })
          });
       })
    };
@@ -358,7 +361,7 @@ test "GET /publicRooms lists rooms",
 
          log_if_fail "publicRooms", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( $body->{chunk} );
 
          my %seen = (
@@ -449,7 +452,7 @@ test "GET /publicRooms includes avatar URLs",
 
          log_if_fail "publicRooms", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( $body->{chunk} );
 
          my %seen = (
@@ -503,7 +506,12 @@ sub guest_user_fixture
             my ( $body ) = @_;
             my $access_token = $body->{access_token};
 
-            Future->done( User( $http, $body->{user_id}, undef, $access_token, undef, undef, undef, [], undef ) );
+            Future->done( new_User(
+               http         => $http,
+               user_id      => $body->{user_id},
+               device_id    => $body->{device_id},
+               access_token => $access_token,
+            ));
          });
    })
 }

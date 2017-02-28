@@ -11,11 +11,13 @@ my $registered_user_fixture = fixture(
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type     => "m.login.password",
-            user     => "02login",
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "02login",
             password => $password,
          },
       )->then( sub {
@@ -130,8 +132,6 @@ test "POST /login as non-existing user is rejected",
    requires => [ $main::API_CLIENTS[0],
                  qw( can_login_password_flow )],
 
-   bug => "SYN-680",
-
    do => sub {
       my ( $http ) = @_;
 
@@ -179,61 +179,13 @@ test "POST /login wrong password is rejected",
       });
    };
 
-test "POST /tokenrefresh invalidates old refresh token",
-   requires => [ $main::API_CLIENTS[0], $registered_user_fixture ],
-
-   do => sub {
-      my ( $http, $user_id ) = @_;
-
-      my $first_body;
-
-      $http->do_request_json(
-         method => "POST",
-         uri    => "/r0/login",
-
-         content => {
-            type     => "m.login.password",
-            user     => $user_id,
-            password => $password,
-         },
-      )->then( sub {
-         ( $first_body ) = @_;
-
-         $http->do_request_json(
-            method => "POST",
-            uri    => "/v2_alpha/tokenrefresh",
-
-            content => {
-               refresh_token => $first_body->{refresh_token},
-            },
-         )
-      })->then(
-         sub {
-            my ( $second_body ) = @_;
-
-            assert_json_keys( $second_body, qw( access_token refresh_token ));
-
-            $second_body->{$_} ne $first_body->{$_} or
-               die "Expected new '$_'" for qw( access_token refresh_token );
-
-            $http->do_request_json(
-               method => "POST",
-               uri    => "/v2_alpha/tokenrefresh",
-
-               content => {
-                  refresh_token => $first_body->{refresh_token},
-               },
-            )->main::expect_http_403;
-         }
-      );
-   };
 
 our @EXPORT = qw( matrix_login_again_with_user );
 
 
 sub matrix_login_again_with_user
 {
-   my ( $user ) = @_;
+   my ( $user, %args ) = @_;
 
    $user->http->do_request_json(
       method  => "POST",
@@ -242,13 +194,20 @@ sub matrix_login_again_with_user
          type     => "m.login.password",
          user     => $user->user_id,
          password => $user->password,
+         %args,
       },
    )->then( sub {
       my ( $body ) = @_;
 
-      assert_json_keys( $body, qw( access_token home_server refresh_token ));
+      assert_json_keys( $body, qw( access_token home_server ));
 
-      my $new_user = User( $user->http, $user->user_id, $user->password, $body->{access_token}, $body->{refresh_token}, undef, undef, [], undef );
+      my $new_user = new_User(
+         http          => $user->http,
+         user_id       => $user->user_id,
+         device_id     => $body->{device_id},
+         password      => $user->password,
+         access_token  => $body->{access_token},
+      );
 
       Future->done( $new_user );
    });

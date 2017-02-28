@@ -1,16 +1,20 @@
 # Eventually this will be changed; see SPEC-53
 my $PRESENCE_LIST_URI = "/r0/presence/list/:user_id";
 
-my $fixture = local_user_fixture();
 
 test "initialSync sees my presence status",
-   requires => [ $fixture,
+   requires => [ local_user_fixture(),
                  qw( can_initial_sync )],
 
    check => sub {
       my ( $user ) = @_;
 
-      matrix_initialsync( $user )->then( sub {
+      # We add a filler account data entry to ensure that replication is up to
+      # date with account creation. Really this should be a synced presence
+      # set
+      matrix_add_filler_account_data_synced ( $user )->then( sub {
+         matrix_initialsync( $user )
+      })->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( presence ));
@@ -36,7 +40,7 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   requires => [ $fixture,
+   requires => [ local_user_fixture(),
                  qw( can_set_presence )],
 
    do => sub {
@@ -51,8 +55,7 @@ test "Presence change reports an event to myself",
             my $content = $event->{content};
             next unless $content->{user_id} eq $user->user_id;
 
-            $content->{status_msg} eq $status_msg or
-               die "Expected status_msg to be '$status_msg'";
+            next unless $content->{status_msg} eq $status_msg;
 
             return 1;
          });
@@ -62,7 +65,7 @@ test "Presence change reports an event to myself",
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
-   requires => [ $fixture, local_user_fixture(),
+   requires => [ local_user_fixture(), local_user_fixture(),
                  qw( can_set_presence can_invite_presence )],
 
    do => sub {

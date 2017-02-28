@@ -17,7 +17,7 @@ our $TEST_SERVER_INFO = fixture(
    requires => [],
 
    setup => sub {
-      my $listen_host = "localhost";
+      my $listen_host = $BIND_HOST;
 
       my $http_server = SyTest::HTTPServer->new;
       $loop->add( $http_server );
@@ -26,11 +26,8 @@ our $TEST_SERVER_INFO = fixture(
       my $server_info;
 
       $http_server->listen(
-         addr => {
-            family   => "inet",
-            socktype => "stream",
-            port     => 0,
-         },
+         host => $BIND_HOST,
+         service => 0,
          extensions => ["SSL"],
          SSL_cert_file => "$DIR/../keys/tls-selfsigned.crt",
          SSL_key_file => "$DIR/../keys/tls-selfsigned.key",
@@ -131,11 +128,18 @@ package SyTest::HTTPServer {
 
       my $method = $request->method;
       my $path = uri_unescape $request->path;
+      my $qs = $request->query_string;
+      if ( defined $qs ) {
+         $qs = "?" . $qs;
+      }
+      else {
+         $qs = "";
+      }
 
       if( $CLIENT_LOG ) {
          my $green = -t STDOUT ? "\e[1;32m" : "";
          my $reset = -t STDOUT ? "\e[m" : "";
-         print "${green}Received Request${reset} for $method $path:\n";
+         print "${green}Received Request${reset} for $method ${path}${qs}:\n";
          #TODO log the HTTP Request headers
          print "  $_\n" for split m/\n/, $request->body;
          print "-- \n";

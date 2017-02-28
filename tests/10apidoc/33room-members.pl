@@ -148,6 +148,76 @@ test "POST /join/:room_id can join a room",
       });
    };
 
+test "POST /join/:room_id can join a room with custom content",
+   requires => [ local_user_fixture(), $room_fixture,
+                 qw( can_get_room_membership )],
+
+   do => sub {
+      my ( $user, $room_id, undef ) = @_;
+
+      do_request_json_for( $user,
+         method => "POST",
+         uri    => "/r0/join/$room_id",
+
+         content => { "foo" => "bar" },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( room_id ) );
+         assert_eq( $body->{room_id}, $room_id );
+
+         matrix_get_room_state( $user, $room_id,
+            type      => "m.room.member",
+            state_key => $user->user_id,
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "body", $body;
+
+         assert_json_keys( $body, qw( foo membership ) );
+         assert_eq( $body->{foo}, "bar" );
+         assert_eq( $body->{membership}, "join" );
+
+         Future->done(1);
+      });
+   };
+
+test "POST /join/:room_alias can join a room with custom content",
+   requires => [ local_user_fixture(), $room_fixture,
+                 qw( can_get_room_membership )],
+
+   do => sub {
+      my ( $user, $room_id, $room_alias ) = @_;
+
+      do_request_json_for( $user,
+         method => "POST",
+         uri    => "/r0/join/$room_alias",
+
+         content => { "foo" => "bar" },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( room_id ) );
+         assert_eq( $body->{room_id}, $room_id );
+
+         matrix_get_room_state( $user, $room_id,
+            type      => "m.room.member",
+            state_key => $user->user_id,
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "body", $body;
+
+         assert_json_keys( $body, qw( foo membership ) );
+         assert_eq( $body->{foo}, "bar" );
+         assert_eq( $body->{membership}, "join" );
+
+         Future->done(1);
+      });
+   };
+
 test "POST /rooms/:room_id/leave can leave a room",
    requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],

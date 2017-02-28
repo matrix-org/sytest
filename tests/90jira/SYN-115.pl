@@ -4,6 +4,10 @@ multi_test "New federated private chats get full presence information (SYN-115)"
    requires => [ local_user_fixture(), remote_user_fixture(),
                  qw( can_create_private_room )],
 
+   # this test fails intermittently on dendron-fronted builds, for unknown
+   # reasons.
+   bug => 'synapse#1663',
+
    do => sub {
       my ( $alice, $bob ) = @_;
 

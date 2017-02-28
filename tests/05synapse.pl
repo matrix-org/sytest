@@ -1,3 +1,5 @@
+use Future::Utils qw( fmap_void );
+
 use SyTest::Homeserver::Synapse;
 
 use Cwd qw( abs_path );
@@ -22,13 +24,28 @@ sub extract_extra_args
 
 my @synapses;
 
-END {
+# Almost like an END block, but we can't use END because we need SIGCHLD, and
+# see
+#   https://rt.perl.org/Public/Bug/Display.html?id=128774
+main::AT_END sub {
    $OUTPUT->diag( "Killing synapse servers " ) if @synapses;
 
-   foreach my $synapse ( values @synapses ) {
+   ( fmap_void {
+      my $synapse = $_;
+
       $synapse->kill( 'INT' );
-   }
-}
+
+      Future->needs_any(
+         $synapse->await_finish,
+
+         $loop->delay_future( after => 30 )->then( sub {
+            print STDERR "Timed out waiting for ${\ $synapse->pid }; sending SIGKILL\n";
+            $synapse->kill( 'KILL' );
+            Future->done;
+         }),
+      )
+   } foreach => \@synapses, concurrent => scalar @synapses )->get;
+};
 
 push our @EXPORT, qw( HOMESERVER_INFO );
 
@@ -41,24 +58,15 @@ our @HOMESERVER_INFO = map {
       setup => sub {
          my ( $test_server_info, @as_infos ) = @_;
 
-         my $secure_port   = main::alloc_port( "synapse[$idx]" );
-         my $unsecure_port = main::alloc_port( "synapse[$idx].unsecure" );
-
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
-
-         my $location = $WANT_TLS ?
-            "https://localhost:$secure_port" :
-            "http://localhost:$unsecure_port";
-
-         my $info = ServerInfo( "localhost:$secure_port", $location );
 
          my $synapse = SyTest::Homeserver::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
-            hs_dir        => abs_path( "localhost-$idx" ),
+            hs_dir        => abs_path( "server-$idx" ),
             ports         => {
-               client          => $secure_port,
-               client_unsecure => $unsecure_port,
-               metrics         => main::alloc_port( "synapse[$idx].metrics" ),
+               synapse          => main::alloc_port( "synapse[$idx]" ),
+               synapse_unsecure => main::alloc_port( "synapse[$idx].unsecure" ),
+               synapse_metrics  => main::alloc_port( "synapse[$idx].metrics" ),
 
                pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
                pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
@@ -66,19 +74,48 @@ our @HOMESERVER_INFO = map {
                synchrotron         => main::alloc_port( "synchrotron[$idx]" ),
                synchrotron_metrics => main::alloc_port( "synchrotron[$idx].metrics" ),
                synchrotron_manhole => main::alloc_port( "synchrotron[$idx].manhole" ),
+
+               federation_reader         => main::alloc_port( "federation_reader[$idx]" ),
+               federation_reader_metrics => main::alloc_port( "federation_reader[$idx].metrics" ),
+               federation_reader_manhole => main::alloc_port( "federation_reader[$idx].manhole" ),
+
+               media_repository => main::alloc_port( "media_repository[$idx]" ),
+               media_repository_metrics => main::alloc_port( "media_repository[$idx].metrics" ),
+               media_repository_manhole => main::alloc_port( "media_repository[$idx].manhole" ),
+
+               appservice_metrics => main::alloc_port( "appservice[$idx].metrics" ),
+               appservice_manhole => main::alloc_port( "appservice[$idx].manhole" ),
+
+               federation_sender_metrics => main::alloc_port( "federation_sender1[$idx].metrics" ),
+               federation_sender_manhole => main::alloc_port( "federation_sender[$idx].manhole" ),
+
+               client_reader         => main::alloc_port( "client_reader[$idx]" ),
+               client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
+               client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
+
+               dendron => main::alloc_port( "dendron[$idx]" ),
+
+               haproxy => main::alloc_port( "haproxy[$idx]" ),
             },
-            output        => $OUTPUT,
-            print_output  => $SYNAPSE_ARGS{log},
-            extra_args    => \@extra_args,
-            python        => $SYNAPSE_ARGS{python},
-            coverage      => $SYNAPSE_ARGS{coverage},
-            dendron       => $SYNAPSE_ARGS{dendron},
-            pusher        => $SYNAPSE_ARGS{pusher},
-            synchrotron   => $SYNAPSE_ARGS{synchrotron},
+            bind_host           => $BIND_HOST,
+            output              => $OUTPUT,
+            print_output        => $SYNAPSE_ARGS{log},
+            extra_args          => \@extra_args,
+            python              => $SYNAPSE_ARGS{python},
+            coverage            => $SYNAPSE_ARGS{coverage},
+            dendron             => $SYNAPSE_ARGS{dendron},
+            haproxy             => $SYNAPSE_ARGS{haproxy},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
+         );
+         $loop->add( $synapse );
 
+         my $location = $WANT_TLS ?
+            "https://$BIND_HOST:" . $synapse->secure_port :
+            "http://$BIND_HOST:" . $synapse->unsecure_port;
+
+         $synapse->configure(
             config => {
                # Config for testing recaptcha. 90jira/SYT-8.pl
                recaptcha_siteverify_api => $test_server_info->client_location .
@@ -86,13 +123,16 @@ our @HOMESERVER_INFO = map {
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
 
-               use_insecure_ssl_client_just_for_testing_do_not_use => 1,
-               report_stats => "False",
-               user_agent_suffix => $location,
-               allow_guest_access => "True",
-            },
+               user_agent_suffix => "homeserver[$idx]",
+
+               cas_config => {
+                  server_url => $test_server_info->client_location . "/cas",
+                  service_url => $location,
+               },
+            }
          );
-         $loop->add( $synapse );
+
+         my $info = ServerInfo( "$BIND_HOST:" . $synapse->secure_port, $location );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only
@@ -109,20 +149,22 @@ our @HOMESERVER_INFO = map {
                   sender_localpart => $as_info->localpart,
                   namespaces => {
                      users => [
-                        { regex => '@astest-.*', exclusive => "true" },
+                        { regex => '@_.*:' . $info->server_name, exclusive => "false" },
+                        map { { regex => $_, exclusive => "true" } } @{ $as_info->user_regexes },
                      ],
                      aliases => [
-                        { regex => '#astest-.*', exclusive => "true" },
+                        map { { regex => $_, exclusive => "true" } } @{ $as_info->alias_regexes },
                      ],
                      rooms => [],
-                  }
+                  },
+                  protocols => $as_info->protocols,
                } );
 
                push @confs, $appserv_conf;
 
                # Now we can fill in the AS info's user_id
-               $as_info->user_id = sprintf "@%s:localhost:%d",
-                  $as_info->localpart, $secure_port;
+               $as_info->user_id = sprintf "@%s:$BIND_HOST:%d",
+                  $as_info->localpart, $synapse->secure_port;
             }
 
             $synapse->append_config(
@@ -130,15 +172,13 @@ our @HOMESERVER_INFO = map {
             );
          }
 
-         $synapse->start;
-
          push @synapses, $synapse;
 
          Future->wait_any(
-            $synapse->started_future,
+            $synapse->start,
 
             $loop->delay_future( after => 20 )
-               ->then_fail( "Synapse server on port $secure_port failed to start" ),
+               ->then_fail( "Synapse server number $idx (on port ${\$synapse->secure_port}) failed to start" ),
          )->then_done( $info );
       },
    );

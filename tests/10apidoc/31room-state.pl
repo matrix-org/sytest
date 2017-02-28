@@ -1,4 +1,6 @@
+use List::Util qw( any );
 use List::UtilsBy qw( partition_by );
+use Future::Utils qw( try_repeat_until_success );
 
 my $name = "room name here";
 
@@ -13,6 +15,7 @@ my $room_fixture = fixture(
 
       matrix_create_room( $user,
          room_alias_name => $room_alias_name,
+         visibility      => "public",
       );
    },
 );
@@ -33,8 +36,42 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
 
          assert_json_keys( $body, qw( membership ));
 
-         $body->{membership} eq "join" or
-            die "Expected membership as 'join'";
+         assert_eq( $body->{membership}, "join", 'body.membership' );
+
+         # This shouldn't look like an event
+         exists $body->{$_} and die "Did not expect to find a '$_' key"
+            for qw( sender event_id room_id );
+
+         Future->done(1);
+      });
+   };
+
+test "GET /rooms/:room_id/state/m.room.member/:user_id?format=event fetches my membership event",
+   requires => [ $user_fixture, $room_fixture ],
+
+   proves => [qw( can_get_room_membership )],
+
+   check => sub {
+      my ( $user, $room_id, undef ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
+         params => {
+            format => "event",
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( sender event_id room_id content ));
+
+         assert_eq( $body->{sender}, $user->user_id, 'event.sender' );
+         assert_eq( $body->{room_id}, $room_id,      'event.room_id' );
+
+         my $content = $body->{content};
+         assert_json_keys( $content, qw( membership ));
+
+         assert_eq( $content->{membership}, "join", 'content.membership' );
 
          Future->done(1);
       });
@@ -59,6 +96,36 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
 
          assert_json_object( $body->{users} );
          assert_json_object( $body->{events} );
+
+         Future->done(1);
+      });
+   };
+
+test "GET /rooms/:room_id/joined_members fetches my membership",
+   requires => [ $user_fixture, $room_fixture ],
+
+   proves => [qw( can_get_room_joined_members )],
+
+   check => sub {
+      my ( $user, $room_id, undef ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/unstable/rooms/$room_id/joined_members",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "joined_members", $body;
+
+         assert_json_keys( $body, qw( joined ));
+
+         my $members = $body->{joined};
+         assert_json_object( $members->{ $user->user_id } );
+
+         my $myself = $members->{ $user->user_id };
+
+         # We always have these keys even if they're undef
+         assert_json_keys( $myself, qw( display_name avatar_url ));
 
          Future->done(1);
       });
@@ -102,7 +169,7 @@ test "GET /publicRooms lists newly-created room",
       )->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( $body->{chunk} );
 
          my $found;
@@ -142,39 +209,68 @@ test "GET /directory/room/:room_alias yields room ID",
       });
    };
 
+test "GET /joined_rooms lists newly-created room",
+   requires => [ $user_fixture, $room_fixture ],
+
+   proves => [qw( can_get_joined_rooms )],
+
+   check => sub {
+      my ( $user, $room_id ) = @_;
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/unstable/joined_rooms",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "joined_rooms", $body;
+
+         assert_json_keys( $body, qw( joined_rooms ));
+         assert_json_list( my $roomlist = $body->{joined_rooms} );
+
+         assert_ok( ( any { $_ eq $room_id } @$roomlist ),
+            'room_id found in joined_rooms list'
+         );
+
+         Future->done(1);
+      });
+   };
+
 test "POST /rooms/:room_id/state/m.room.name sets name",
    requires => [ $user_fixture, $room_fixture,
                  qw( can_room_initial_sync )],
 
    proves => [qw( can_set_room_name )],
 
-   do => sub {
+   check => sub {
       my ( $user, $room_id, undef ) = @_;
+
+      my $delay = 0.1;
 
       do_request_json_for( $user,
          method => "PUT",
          uri    => "/r0/rooms/$room_id/state/m.room.name",
 
          content => { name => $name },
-      );
-   },
+      )->then( sub {
+         try_repeat_until_success( sub {
+            matrix_initialsync_room( $user, $room_id )->then( sub {
+               my ( $body ) = @_;
 
-   check => sub {
-      my ( $user, $room_id, undef ) = @_;
+               assert_json_keys( $body, qw( state ));
+               my $state = $body->{state};
 
-      matrix_initialsync_room( $user, $room_id )->then( sub {
-         my ( $body ) = @_;
+               my %state_by_type = partition_by { $_->{type} } @$state;
 
-         assert_json_keys( $body, qw( state ));
-         my $state = $body->{state};
+               $state_by_type{"m.room.name"} or
+                  die "Expected to find m.room.name state";
 
-         my %state_by_type = partition_by { $_->{type} } @$state;
-
-         $state_by_type{"m.room.name"} or
-            die "Expected to find m.room.name state";
-
-         Future->done(1);
-      });
+               Future->done(1);
+            })->else_with_f( sub {
+               my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
+            })
+         });
+      })
    };
 
 test "GET /rooms/:room_id/state/m.room.name gets name",
@@ -209,33 +305,35 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
    proves => [qw( can_set_room_topic )],
 
-   do => sub {
+   check => sub {
       my ( $user, $room_id, undef ) = @_;
+
+      my $delay = 0.1;
 
       do_request_json_for( $user,
          method => "PUT",
          uri    => "/r0/rooms/$room_id/state/m.room.topic",
 
          content => { topic => $topic },
-      );
-   },
+      )->then( sub {
+         try_repeat_until_success( sub {
+            matrix_initialsync_room( $user, $room_id )->then( sub {
+               my ( $body ) = @_;
 
-   check => sub {
-      my ( $user, $room_id, undef ) = @_;
+               assert_json_keys( $body, qw( state ));
+               my $state = $body->{state};
 
-      matrix_initialsync_room( $user, $room_id )->then( sub {
-         my ( $body ) = @_;
+               my %state_by_type = partition_by { $_->{type} } @$state;
 
-         assert_json_keys( $body, qw( state ));
-         my $state = $body->{state};
+               $state_by_type{"m.room.topic"} or
+                  die "Expected to find m.room.topic state";
 
-         my %state_by_type = partition_by { $_->{type} } @$state;
-
-         $state_by_type{"m.room.topic"} or
-            die "Expected to find m.room.topic state";
-
-         Future->done(1);
-      });
+               Future->done(1);
+            })->else_with_f( sub {
+               my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
+            })
+         })
+      })
    };
 
 test "GET /rooms/:room_id/state/m.room.topic gets topic",
@@ -396,4 +494,3 @@ sub matrix_initialsync_room
       params => \%params,
    );
 }
-

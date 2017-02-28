@@ -47,7 +47,11 @@ test "AS can get or create user and return an access_token",
 
          assert_json_keys( $body, qw( access_token user_id  home_server ));
 
-         my $user =User( $http , $body->{user_id}, "", $body->{access_token}, undef, undef, undef, [], undef );
+         my $user = new_User(
+            http         => $http,
+            user_id      => $body->{user_id},
+            access_token => $body->{access_token},
+         );
 
          do_request_json_for( $user,
             method => "GET",
@@ -198,9 +202,11 @@ sub matrix_register_as_ghost
       my ( $body ) = @_;
 
       # TODO: user has no event stream yet. Should they?
-      Future->done(
-         User( $as_user->http, $body->{user_id}, undef, $body->{access_token}, undef, undef, undef, [], undef )
-      );
+      Future->done( new_User(
+         http         => $as_user->http,
+         user_id      => $body->{user_id},
+         access_token => $body->{access_token},
+      ));
    });
 }
 

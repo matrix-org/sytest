@@ -141,8 +141,12 @@ multi_test "Typing notifications timeout and can be resent",
 
    timeout => 100,
 
+   bug => "DISABLED",
+
    do => sub {
       my ( $user, $room_id ) = @_;
+
+      die "This test has been disabled due to synapse no longer supporting small typing timeouts.";
 
       my $start_time = time();
 

@@ -1,8 +1,6 @@
 test "POST /rooms/:room_id/send/:event_type sends a message",
    requires => [ local_user_and_room_fixtures() ],
 
-   proves => [qw( can_send_message )],
-
    do => sub {
       my ( $user, $room_id ) = @_;
 
@@ -16,6 +14,63 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
 
          assert_json_keys( $body, qw( event_id ));
          assert_json_nonempty_string( $body->{event_id} );
+
+         Future->done(1);
+      });
+   };
+
+test "PUT /rooms/:room_id/send/:event_type/:txn_id sends a message",
+   requires => [ local_user_and_room_fixtures() ],
+
+   proves => [qw( can_send_message )],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+      my $txn_id = "1234";
+
+      do_request_json_for( $user,
+         method => "PUT",
+         uri    => "/r0/rooms/$room_id/send/m.room.message/$txn_id",
+
+         content => { msgtype => "m.message", body => "Here is the message content" },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( event_id ));
+         assert_json_nonempty_string( $body->{event_id} );
+
+         Future->done(1);
+      });
+   };
+
+test "PUT /rooms/:room_id/send/:event_type/:txn_id deduplicates the same txn id",
+   requires => [ local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+      my $txn_id = "abcdef";
+      my $event_id;
+
+      do_request_json_for( $user,
+         method => "PUT",
+         uri    => "/r0/rooms/$room_id/send/m.room.message/$txn_id",
+
+         content => { msgtype => "m.message", body => "Here is the message content" },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         $event_id = $body->{event_id};
+
+         do_request_json_for( $user,
+            method => "PUT",
+            uri    => "/r0/rooms/$room_id/send/m.room.message/$txn_id",
+
+            content => { msgtype => "m.message", body => "Here is the message content" },
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_eq( $event_id, $body->{event_id} );
 
          Future->done(1);
       });

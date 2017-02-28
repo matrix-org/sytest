@@ -79,7 +79,13 @@ Installing libsodium manually, eg.::
 
     $ brew install libsodium
 
-...and force installing Crypt::NaCl::Sodium::
+and confirm it is installed correctly and visible to pkg-config. It should give
+some configuration output, rather than an error::
+
+    $ pkg-config --libs libsodium
+    -L/usr/local/Cellar/libsodium/1.0.8/lib -lsodium
+
+Then force an install of Crypt::NaCl::Sodium::
 
     $ cpan
     cpan> force install Crypt::NaCl::Sodium

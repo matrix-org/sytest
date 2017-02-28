@@ -27,6 +27,18 @@ sub _init
    $self->SUPER::_init( $args );
 }
 
+sub write_file
+{
+   my $self = shift;
+   my ( $relpath, $content ) = @_;
+
+   my $hs_dir = $self->{hs_dir};
+
+   write_binary( my $abspath = "$hs_dir/$relpath", $content );
+
+   return $abspath;
+}
+
 sub write_yaml_file
 {
    my $self = shift;
@@ -44,11 +56,7 @@ sub write_json_file
    my $self = shift;
    my ( $relpath, $content ) = @_;
 
-   my $hs_dir = $self->{hs_dir};
-
-   write_binary( my $abspath = "$hs_dir/$relpath", JSON::encode_json( $content ) );
-
-   return $abspath;
+   return $self->write_file( $relpath, JSON::encode_json( $content ) );
 }
 
 sub clear_db_sqlite
@@ -88,7 +96,7 @@ sub clear_db_pg
 sub await_connectable
 {
    my $self = shift;
-   my ( $port ) = @_;
+   my ( $host, $port ) = @_;
 
    my $loop = $self->loop;
 
@@ -97,12 +105,9 @@ sub await_connectable
 
    repeat {
       $loop->connect(
-         addr => {
-            family   => "inet",
-            socktype => "stream",
-            port     => $port,
-            ip       => "127.0.0.1",
-         }
+         host     => $host,
+         service  => $port,
+         socktype => "stream",
       )->then_done(1)
        ->else( sub {
          if( !$attempts ) {

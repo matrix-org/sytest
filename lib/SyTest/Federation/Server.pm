@@ -395,6 +395,14 @@ __PACKAGE__->mk_await_request_pair(
 );
 
 __PACKAGE__->mk_await_request_pair(
+   state_ids => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   state => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
    get_missing_events => [qw( :room_id )],
 );
 
@@ -404,6 +412,14 @@ __PACKAGE__->mk_await_request_pair(
 
 __PACKAGE__->mk_await_request_pair(
    invite => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   event => [qw( :event_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   user_devices => [qw( :user_id )],
 );
 
 sub on_request_federation_v1_send

@@ -50,10 +50,15 @@ our %SYNAPSE_ARGS = (
    coverage   => 0,
    dendron    => "",
    pusher     => 0,
-   synchrotron => 0,
+
+   synchrotron       => 0,
+   federation_reader => 0,
+   media_repository  => 0,
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
+
+our $BIND_HOST = "localhost";
 
 my %FIXED_BUGS;
 
@@ -81,12 +86,21 @@ GetOptions(
    'coverage+' => \$SYNAPSE_ARGS{coverage},
 
    'dendron=s' => \$SYNAPSE_ARGS{dendron},
+   'haproxy'   => \$SYNAPSE_ARGS{haproxy},
 
    'pusher+' => \$SYNAPSE_ARGS{pusher},
 
-   'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
+   # These are now unused, but retaining arguments for commandline parsing support
+   'synchrotron+'       => sub {},
+   'federation-reader+' => sub {},
+   'media-repository+'  => sub {},
+   'appservice+'        => sub {},
+   'federation-sender+' => sub {},
+   'client-reader+'     => sub {},
 
-   'p|port-range=s' => \(my $PORT_RANGE = "8800:8819"),
+   'bind-host=s' => \$BIND_HOST,
+
+   'p|port-range=s' => \(my $PORT_RANGE = "8800:8899"),
 
    'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
@@ -188,6 +202,17 @@ if( $CLIENT_LOG ) {
          my $request_uri = $request->uri;
 
          my $request_user = $args{request_user};
+
+         my $original_on_redirect = $args{on_redirect};
+         $args{on_redirect} = sub {
+             my ( $response, $to ) = @_;
+             print STDERR "\e[1;33mRedirect\e[m from ${ \$request->method } ${ \$request->uri->path }:\n";
+             print STDERR "  $_\n" for split m/\n/, $response->as_string;
+             print STDERR "-- \n";
+             if ( $original_on_redirect ) {
+                 $original_on_redirect->( $response, $to );
+             }
+         };
 
          if( $request_uri->path =~ m{/events$} ) {
             my %params = $request_uri->query_form;
@@ -683,6 +708,16 @@ if( $WAIT_AT_END ) {
    $loop->add( my $stdin = IO::Async::Stream->new_for_stdin( on_read => sub {} ) );
    $stdin->read_until( "\n" )->get;
 }
+
+# A workaround for
+#   https://rt.perl.org/Public/Bug/Display.html?id=128774
+my @AT_END;
+sub AT_END
+{
+   push @AT_END, @_;
+}
+
+$_->() for @AT_END;
 
 if( $failed_count ) {
    $OUTPUT->final_fail( $failed_count );

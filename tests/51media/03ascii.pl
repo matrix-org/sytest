@@ -1,4 +1,5 @@
 my $content_id;
+my $content_uri;
 
 test "Can upload with ASCII file name",
    requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
@@ -21,9 +22,11 @@ test "Can upload with ASCII file name",
 
          assert_json_keys( $body, qw( content_uri ));
 
-         my $content_uri = URI->new( $body->{content_uri} );
-         my $server = $content_uri->authority;
-         my $path = $content_uri->path;
+         $content_uri = $body->{content_uri};
+
+         my $parsed_uri = URI->new( $body->{content_uri} );
+         my $server = $parsed_uri->authority;
+         my $path = $parsed_uri->path;
 
          $content_id = "$server$path";
 
@@ -91,5 +94,52 @@ test "Can download specifying a different ASCII file name",
             die "Expected a UTF-8 filename parameter";
 
          Future->done(1);
+      });
+   };
+
+test "Can send image in room message",
+   requires => [ $main::API_CLIENTS[0], local_user_and_room_fixtures() ],
+
+   check => sub {
+      my ( $http, $user, $room_id ) = @_;
+      test_using_client( $http )
+      ->then( sub {
+         matrix_send_room_message( $user, $room_id,
+            content => { msgtype => "m.file", body => "test.txt", url => $content_uri }
+         )
+      });
+   };
+
+test "Can fetch images in room",
+   requires => [ $main::API_CLIENTS[0], local_user_and_room_fixtures() ],
+
+   check => sub {
+      my ( $http, $user, $room_id ) = @_;
+      test_using_client( $http )
+      ->then( sub {
+         matrix_send_room_message_synced( $user, $room_id,
+            content => { msgtype => "m.text", body => "test" }
+         )
+      })->then( sub {
+         matrix_send_room_message_synced( $user, $room_id,
+            content => { msgtype => "m.file", body => "test.txt", url => $content_uri }
+         )
+      })->then( sub {
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/api/v1/rooms/$room_id/messages",
+            params => {
+               filter => '{"contains_url":true}',
+               dir    => 'b',
+            }
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( start end chunk ));
+
+         assert_eq( scalar @{ $body->{chunk} }, 1, "Expected 1 message" );
+
+         Future->done( 1 );
       });
    };

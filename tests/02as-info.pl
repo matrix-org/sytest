@@ -6,26 +6,45 @@ sub gen_token
    return join "", map { chr 64 + rand 63 } 1 .. $length;
 }
 
-struct ASInfo => [qw( localpart user_id as2hs_token hs2as_token path id )];
+struct ASInfo => [qw( localpart user_id as2hs_token hs2as_token path id
+                      user_regexes alias_regexes protocols )],
+   named_constructor => 1;
 
 my $n_appservers = 1;
+
+# The actual infos
+my @as_info = (
+   # user_id will be filled in later once the homeserver is started
+
+   ASInfo(
+      localpart     => "as-user-1",
+      user_id       => undef,
+      as2hs_token   => gen_token( 32 ),
+      hs2as_token   => gen_token( 32 ),
+      path          => "/appservs/1",
+      id            => "AS-1",
+      user_regexes  => [ '@astest-.*' ],
+      alias_regexes => [ '#astest-.*' ],
+      protocols     => [ 'ymca' ],
+   ),
+
+   ASInfo(
+      localpart     => "as-user-2",
+      user_id       => undef,
+      as2hs_token   => gen_token( 32 ),
+      hs2as_token   => gen_token( 32 ),
+      path          => "/appservs/2",
+      id            => "AS-2",
+      user_regexes  => [],
+      alias_regexes => [],
+      protocols     => [ 'ymca' ],
+   ),
+);
 
 our @AS_INFO = map {
    my $idx = $_;
 
    fixture(
-      setup => sub {
-         my $localpart = "as-user-$idx";
-
-         Future->done( ASInfo(
-            $localpart,
-            undef,  # user_id field will be filled in later when we know what
-                    # the homeserver location actually is
-            gen_token( 32 ),
-            gen_token( 32 ),
-            "/appservs/$idx",
-            "AS-$idx",
-         ));
-      },
+      setup => sub { Future->done( $as_info[$idx] ) },
    );
-} 1 .. $n_appservers;
+} 0 .. $#as_info;
