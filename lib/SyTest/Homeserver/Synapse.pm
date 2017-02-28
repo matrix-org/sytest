@@ -779,6 +779,8 @@ sub start
 {
    my $self = shift;
 
+   my $output = $self->{output};
+
    return $self->SUPER::start->then( sub {
       # We know synapse has started, so lets steal its SSL keys
       # haproxy wants a "combined" pemfile, which is just the cert and key concatenated together
@@ -790,6 +792,8 @@ sub start
 
       $self->{haproxy_config} = $self->write_file( "haproxy.conf", $self->generate_haproxy_config );
 
+      $output->diag( "Starting haproxy on port $self->{ports}{haproxy}" );
+
       $self->add_child( $self->{haproxy_proc} = IO::Async::Process->new(
          command => [ HAPROXY_BIN, "-db", "-f", $self->{haproxy_config} ],
          on_finish => sub {
@@ -798,7 +802,8 @@ sub start
          },
       ) );
 
-      return $self->await_connectable( $self->{bind_host}, $self->{ports}{haproxy} );
+      return $self->await_connectable( $self->{bind_host}, $self->{ports}{haproxy} )
+         ->on_done( sub { $output->diag( "haproxy started" ) } );
    });
 }
 
