@@ -41,9 +41,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      ports synapse_dir extra_args python coverage
-      dendron pusher synchrotron federation_reader bind_host
-      media_repository appservice client_reader federation_sender
+      ports synapse_dir extra_args python coverage dendron bind_host
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
@@ -189,11 +187,12 @@ sub start
         listeners => $listeners,
 
         bcrypt_rounds => 0,
-        start_pushers => ( not $self->{pusher} ),
 
-        notify_appservices => ( not $self->{appservice} ),
-
-        send_federation => ( not $self->{federation_sender} ),
+        # If we're using dendron-style split workers, we need to disable these
+        # things in the main process
+        start_pushers      => ( not $self->{dendron} ),
+        notify_appservices => ( not $self->{dendron} ),
+        send_federation    => ( not $self->{dendron} ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -541,7 +540,7 @@ sub wrap_synapse_command
       "--addr" => "$bind_host:" . $self->{ports}{dendron},
    );
 
-   if( $self->{pusher} ) {
+   {
       my $pusher_config_path = $self->write_yaml_file( pusher => {
          "worker_app"             => "synapse.app.pusher",
          "worker_log_file"        => "$log.pusher",
@@ -564,7 +563,7 @@ sub wrap_synapse_command
       push @command, "--pusher-config" => $pusher_config_path;
    }
 
-   if( $self->{appservice} ) {
+   {
       my $appservice_config_path = $self->write_yaml_file( appservice => {
          "worker_app"             => "synapse.app.appservice",
          "worker_log_file"        => "$log.appservice",
@@ -587,7 +586,7 @@ sub wrap_synapse_command
       push @command, "--appservice-config" => $appservice_config_path;
    }
 
-   if( $self->{federation_sender} ) {
+   {
       my $federation_sender_config_path = $self->write_yaml_file( federation_sender => {
          "worker_app"             => "synapse.app.federation_sender",
          "worker_log_file"        => "$log.federation_sender",
@@ -610,7 +609,7 @@ sub wrap_synapse_command
       push @command, "--federation-sender-config" => $federation_sender_config_path;
    }
 
-   if( $self->{synchrotron} ) {
+   {
       my $synchrotron_config_path = $self->write_yaml_file( synchrotron => {
          "worker_app"             => "synapse.app.synchrotron",
          "worker_log_file"        => "$log.synchrotron",
@@ -641,7 +640,7 @@ sub wrap_synapse_command
          "--synchrotron-url" => "http://$bind_host:$self->{ports}{synchrotron}";
    }
 
-   if( $self->{federation_reader} ) {
+   {
       my $federation_reader_config_path = $self->write_yaml_file( federation_reader => {
          "worker_app"             => "synapse.app.federation_reader",
          "worker_log_file"        => "$log.federation_reader",
@@ -672,7 +671,7 @@ sub wrap_synapse_command
          "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
    }
 
-   if( $self->{media_repository} ) {
+   {
       my $media_repository_config_path = $self->write_yaml_file( media_repository => {
          "worker_app"             => "synapse.app.media_repository",
          "worker_log_file"        => "$log.media_repository",
@@ -703,7 +702,7 @@ sub wrap_synapse_command
          "--media-repository-url" => "http://$bind_host:$self->{ports}{media_repository}";
    }
 
-   if( $self->{client_reader} ) {
+   {
       my $client_reader_config_path = $self->write_yaml_file( client_reader => {
          "worker_app"             => "synapse.app.client_reader",
          "worker_log_file"        => "$log.client_reader",

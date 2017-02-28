@@ -89,17 +89,13 @@ GetOptions(
 
    'pusher+' => \$SYNAPSE_ARGS{pusher},
 
-   'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
-
-   'federation-reader+' => \$SYNAPSE_ARGS{federation_reader},
-
-   'media-repository+' => \$SYNAPSE_ARGS{media_repository},
-
-   'appservice+' => \$SYNAPSE_ARGS{appservice},
-
-   'federation-sender+' => \$SYNAPSE_ARGS{federation_sender},
-
-   'client-reader+' => \$SYNAPSE_ARGS{client_reader},
+   # These are now unused, but retaining arguments for commandline parsing support
+   'synchrotron+'       => sub {},
+   'federation-reader+' => sub {},
+   'media-repository+'  => sub {},
+   'appservice+'        => sub {},
+   'federation-sender+' => sub {},
+   'client-reader+'     => sub {},
 
    'bind-host=s' => \$BIND_HOST,
 

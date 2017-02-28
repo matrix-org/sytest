@@ -1,7 +1,7 @@
 use JSON qw( decode_json );
 use Future::Utils qw( try_repeat_until_success );
 
-our @EXPORT = qw( matrix_get_device matrix_set_device_display_name );
+our @EXPORT = qw( matrix_get_device matrix_set_device_display_name matrix_delete_device );
 
 sub matrix_get_device {
    my ( $user, $device_id ) = @_;
@@ -287,4 +287,3 @@ test "DELETE /device/{deviceId} with no body gives a 401",
          matrix_delete_device( $user, $DEVICE_ID, undef );
       })->main::expect_http_401;
   };
-
