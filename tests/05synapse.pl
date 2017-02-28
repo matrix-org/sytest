@@ -177,7 +177,7 @@ our @HOMESERVER_INFO = map {
          Future->wait_any(
             $synapse->start,
 
-            $loop->delay_future( after => 20 )
+            $loop->delay_future( after => 60 )
                ->then_fail( "Synapse server number $idx (on port ${\$synapse->secure_port}) failed to start" ),
          )->then_done( $info );
       },
