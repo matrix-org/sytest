@@ -55,7 +55,7 @@ test "Presence change reports an event to myself",
             my $content = $event->{content};
             return 0 unless $content->{user_id} eq $user->user_id;
 
-            return 0 unless $content->{status_msg} eq $status_msg;
+            return 0 unless ( $content->{status_msg} // "" ) eq $status_msg;
 
             return 1;
          });
