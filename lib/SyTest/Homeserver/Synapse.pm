@@ -204,10 +204,10 @@ sub start
 
         # If we're using dendron-style split workers, we need to disable these
         # things in the main process
-        "start_pushers" => (not $self->{dendron}),
-        "notify_appservices" => (not $self->{dendron}),
-        "send_federation" => (not $self->{dendron}),
-        "notify_appservices" => (not $self->{dendron}),
+        "start_pushers"      => ( not $self->{dendron} ),
+        "notify_appservices" => ( not $self->{dendron} ),
+        "send_federation"    => ( not $self->{dendron} ),
+        "notify_appservices" => ( not $self->{dendron} ),
 
         "url_preview_enabled" => "true",
         "url_preview_ip_range_blacklist" => [],
