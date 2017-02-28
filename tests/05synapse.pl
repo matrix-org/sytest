@@ -58,24 +58,15 @@ our @HOMESERVER_INFO = map {
       setup => sub {
          my ( $test_server_info, @as_infos ) = @_;
 
-         my $secure_port   = main::alloc_port( "synapse[$idx]" );
-         my $unsecure_port = main::alloc_port( "synapse[$idx].unsecure" );
-
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
-
-         my $location = $WANT_TLS ?
-            "https://$BIND_HOST:$secure_port" :
-            "http://$BIND_HOST:$unsecure_port";
-
-         my $info = ServerInfo( "$BIND_HOST:$secure_port", $location );
 
          my $synapse = SyTest::Homeserver::Synapse->new(
             synapse_dir   => $SYNAPSE_ARGS{directory},
             hs_dir        => abs_path( "server-$idx" ),
             ports         => {
-               client          => $secure_port,
-               client_unsecure => $unsecure_port,
-               metrics         => main::alloc_port( "synapse[$idx].metrics" ),
+               synapse          => main::alloc_port( "synapse[$idx]" ),
+               synapse_unsecure => main::alloc_port( "synapse[$idx].unsecure" ),
+               synapse_metrics  => main::alloc_port( "synapse[$idx].metrics" ),
 
                pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
                pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
@@ -101,6 +92,10 @@ our @HOMESERVER_INFO = map {
                client_reader         => main::alloc_port( "client_reader[$idx]" ),
                client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
                client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
+
+               dendron => main::alloc_port( "dendron[$idx]" ),
+
+               haproxy => main::alloc_port( "haproxy[$idx]" ),
             },
             bind_host           => $BIND_HOST,
             output              => $OUTPUT,
@@ -109,10 +104,18 @@ our @HOMESERVER_INFO = map {
             python              => $SYNAPSE_ARGS{python},
             coverage            => $SYNAPSE_ARGS{coverage},
             dendron             => $SYNAPSE_ARGS{dendron},
+            haproxy             => $SYNAPSE_ARGS{haproxy},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
+         );
+         $loop->add( $synapse );
 
+         my $location = $WANT_TLS ?
+            "https://$BIND_HOST:" . $synapse->secure_port :
+            "http://$BIND_HOST:" . $synapse->unsecure_port;
+
+         $synapse->configure(
             config => {
                # Config for testing recaptcha. 90jira/SYT-8.pl
                recaptcha_siteverify_api => $test_server_info->client_location .
@@ -120,18 +123,16 @@ our @HOMESERVER_INFO = map {
                recaptcha_public_key     => "sytest_recaptcha_public_key",
                recaptcha_private_key    => "sytest_recaptcha_private_key",
 
-               use_insecure_ssl_client_just_for_testing_do_not_use => 1,
-               report_stats => "False",
-               user_agent_suffix => $location,
-               allow_guest_access => "True",
+               user_agent_suffix => "homeserver[$idx]",
 
                cas_config => {
                   server_url => $test_server_info->client_location . "/cas",
                   service_url => $location,
                },
-            },
+            }
          );
-         $loop->add( $synapse );
+
+         my $info = ServerInfo( "$BIND_HOST:" . $synapse->secure_port, $location );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only
@@ -163,7 +164,7 @@ our @HOMESERVER_INFO = map {
 
                # Now we can fill in the AS info's user_id
                $as_info->user_id = sprintf "@%s:$BIND_HOST:%d",
-                  $as_info->localpart, $secure_port;
+                  $as_info->localpart, $synapse->secure_port;
             }
 
             $synapse->append_config(
@@ -171,15 +172,13 @@ our @HOMESERVER_INFO = map {
             );
          }
 
-         $synapse->start;
-
          push @synapses, $synapse;
 
          Future->wait_any(
-            $synapse->started_future,
+            $synapse->start,
 
             $loop->delay_future( after => 20 )
-               ->then_fail( "Synapse server on port $secure_port failed to start" ),
+               ->then_fail( "Synapse server number $idx (on port ${\$synapse->secure_port}) failed to start" ),
          )->then_done( $info );
       },
    );

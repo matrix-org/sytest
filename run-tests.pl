@@ -86,6 +86,7 @@ GetOptions(
    'coverage+' => \$SYNAPSE_ARGS{coverage},
 
    'dendron=s' => \$SYNAPSE_ARGS{dendron},
+   'haproxy'   => \$SYNAPSE_ARGS{haproxy},
 
    'pusher+' => \$SYNAPSE_ARGS{pusher},
 
