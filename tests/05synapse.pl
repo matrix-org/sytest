@@ -109,13 +109,6 @@ our @HOMESERVER_INFO = map {
             python              => $SYNAPSE_ARGS{python},
             coverage            => $SYNAPSE_ARGS{coverage},
             dendron             => $SYNAPSE_ARGS{dendron},
-            pusher              => $SYNAPSE_ARGS{pusher},
-            synchrotron         => $SYNAPSE_ARGS{synchrotron},
-            federation_reader   => $SYNAPSE_ARGS{federation_reader},
-            media_repository    => $SYNAPSE_ARGS{media_repository},
-            appservice          => $SYNAPSE_ARGS{appservice},
-            federation_sender   => $SYNAPSE_ARGS{federation_sender},
-            client_reader       => $SYNAPSE_ARGS{client_reader},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),

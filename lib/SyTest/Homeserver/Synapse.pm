@@ -27,8 +27,7 @@ sub _init
 
    $self->{$_} = delete $args->{$_} for qw(
       ports synapse_dir extra_args python config coverage
-      dendron pusher synchrotron federation_reader bind_host
-      media_repository appservice client_reader federation_sender
+      dendron bind_host
    );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
@@ -202,11 +201,12 @@ sub start
         "listeners" => $listeners,
 
         "bcrypt_rounds" => 0,
-        "start_pushers" => (not $self->{pusher}),
 
-        "notify_appservices" => (not $self->{appservice}),
-
-        "send_federation" => (not $self->{federation_sender}),
+        # If we're using dendron-style split workers, we need to disable these
+        # things in the main process
+        "start_pushers"      => ( not $self->{dendron} ),
+        "notify_appservices" => ( not $self->{dendron} ),
+        "send_federation"    => ( not $self->{dendron} ),
 
         "url_preview_enabled" => "true",
         "url_preview_ip_range_blacklist" => [],
@@ -427,43 +427,19 @@ sub start
          "--cert-file" => $cert_file,
          "--key-file" => $key_file,
          "--addr" => "$bind_host:$port",
+
+         "--pusher-config" => $pusher_config_path,
+         "--appservice-config" => $appservice_config_path,
+         "--federation-sender-config" => $federation_sender_config_path,
+         "--synchrotron-config" => $synchrotron_config_path,
+         "--synchrotron-url" => "http://$bind_host:$self->{ports}{synchrotron}",
+         "--federation-reader-config" => $federation_reader_config_path,
+         "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}",
+         "--media-repository-config" => $media_repository_config_path,
+         "--media-repository-url" => "http://$bind_host:$self->{ports}{media_repository}",
+         "--client-reader-config" => $client_reader_config_path,
+         "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}",
       );
-
-      if ( $self->{pusher} ) {
-         push @command, "--pusher-config" => $pusher_config_path;
-      }
-
-      if ( $self->{appservice} ) {
-         push @command, "--appservice-config" => $appservice_config_path;
-      }
-
-      if ( $self->{federation_sender} ) {
-         push @command, "--federation-sender-config" => $federation_sender_config_path;
-      }
-
-      if ( $self->{synchrotron} ) {
-         push @command,
-            "--synchrotron-config" => $synchrotron_config_path,
-            "--synchrotron-url" => "http://$bind_host:$self->{ports}{synchrotron}";
-      }
-
-      if ( $self->{federation_reader} ) {
-         push @command,
-            "--federation-reader-config" => $federation_reader_config_path,
-            "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
-      }
-
-      if ( $self->{media_repository} ) {
-         push @command,
-            "--media-repository-config" => $media_repository_config_path,
-            "--media-repository-url" => "http://$bind_host:$self->{ports}{media_repository}";
-      }
-
-      if ( $self->{client_reader} ) {
-         push @command,
-            "--client-reader-config" => $client_reader_config_path,
-            "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}";
-      }
    }
    else {
       @command = @synapse_command
