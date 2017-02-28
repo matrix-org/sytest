@@ -755,7 +755,10 @@ sub unsecure_port
 }
 
 package SyTest::Homeserver::Synapse::ViaHaproxy;
-use base qw( SyTest::Homeserver::Synapse::Direct );
+# For now we'll base this on "ViaDendron" so that dendron manages the multiple
+# workers. Longer-term we'll want to have a specific worker management system
+# so we can avoid dendron itself.
+use base qw( SyTest::Homeserver::Synapse::ViaDendron );
 
 use Carp;
 
@@ -815,6 +818,7 @@ sub generate_haproxy_config
 {
    my $self = shift;
 
+   my $bind_host = $self->{bind_host};
    my $ports = $self->{ports};
 
    return <<"EOCONFIG";
@@ -834,17 +838,50 @@ defaults
     compression algo gzip
     compression type text/plain text/html text/xml application/json text/css
 
-frontend http-in
-    bind *:$ports->{haproxy} ssl crt $self->{paths}{pem_file}
-
     option forwardfor
+
+frontend http-in
+    bind ${bind_host}:$ports->{haproxy} ssl crt $self->{paths}{pem_file}
 
     default_backend synapse
 
-backend synapse
-    server synapse localhost:$ports->{synapse_unsecure}
+    acl path_syncrotron path_beg /_matrix/client/v2_alpha/sync
+    acl path_syncrotron path_beg /_matrix/client/r0/sync
+    acl path_syncrotron path_beg /_matrix/client/r0/events
+    acl path_syncrotron path_beg /_matrix/client/api/v1/events
+    acl path_syncrotron path_beg /_matrix/client/api/v1/initialSync
+    acl path_syncrotron path_beg /_matrix/client/r0/initialSync
+    use_backend synchrotrons if path_syncrotron
 
-    option forwardfor
+    acl path_federation_reader path_beg /_matrix/federation/v1/event/
+    acl path_federation_reader path_beg /_matrix/federation/v1/state/
+    acl path_federation_reader path_beg /_matrix/federation/v1/state_ids/
+    acl path_federation_reader path_beg /_matrix/federation/v1/backfill/
+    acl path_federation_reader path_beg /_matrix/federation/v1/get_missing_events/
+    acl path_federation_reader path_beg /_matrix/federation/v1/publicRooms
+    use_backend federation_reader if path_federation_reader
+
+    acl path_media_repository path_beg /_matrix/media/
+    use_backend media_repository if path_media_repository
+
+    acl path_client_reader path_beg /_matrix/client/r0/publicRooms
+    acl path_client_reader path_beg /_matrix/client/api/v1/publicRooms
+    use_backend client_reader if path_client_reader
+
+backend synapse
+    server synapse ${bind_host}:$ports->{synapse_unsecure}
+
+backend synchrotrons
+    server synchrotron ${bind_host}:$ports->{synchrotron}
+
+backend federation_reader
+    server federation_reader ${bind_host}:$ports->{federation_reader}
+
+backend media_repository
+    server media_repository ${bind_host}:$ports->{media_repository}
+
+backend client_reader
+    server client_reader ${bind_host}:$ports->{client_reader}
 
 EOCONFIG
 }
