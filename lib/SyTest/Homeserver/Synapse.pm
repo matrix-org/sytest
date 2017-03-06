@@ -874,11 +874,11 @@ EOCONFIG
 
 sub generate_haproxy_map
 {
-    return <<"EOCONFIG";
-^/_matrix/client/(v2_alpha|r0)/sync\$           synchrotron
-^/_matrix/client/(api/v1|v2_alpha|r0)/events\$  synchrotron
+    return <<'EOCONFIG';
+^/_matrix/client/(v2_alpha|r0)/sync$            synchrotron
+^/_matrix/client/(api/v1|v2_alpha|r0)/events$   synchrotron
 # We need to catch global and per room, so just match based on ending.
-^/_matrix/client/.*/initialSync\$               synchrotron
+^/_matrix/client/.*/initialSync$                synchrotron
 
 ^/_matrix/media/    media_repository
 
@@ -889,7 +889,7 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/get_missing_events/     federation_reader
 ^/_matrix/federation/v1/publicRooms             federation_reader
 
-^/_matrix/client/(api/v1|r0)/publicRooms\$   client_reader
+^/_matrix/client/(api/v1|r0)/publicRooms$    client_reader
 EOCONFIG
 }
 
