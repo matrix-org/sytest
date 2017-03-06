@@ -792,6 +792,7 @@ sub start
       my $key  = read_binary( $self->{paths}{key_file} );
 
       $self->{paths}{pem_file} = $self->write_file( "combined.pem", $cert . $key );
+      $self->{paths}{path_map_file} = $self->write_file( "path_map_file", $self->generate_haproxy_map );
 
       $self->{haproxy_config} = $self->write_file( "haproxy.conf", $self->generate_haproxy_config );
 
@@ -851,37 +852,12 @@ defaults
 frontend http-in
     bind ${bind_host}:$ports->{haproxy} ssl crt $self->{paths}{pem_file}
 
-    default_backend synapse
-
-    acl path_syncrotron path_beg /_matrix/client/v2_alpha/sync
-    acl path_syncrotron path_beg /_matrix/client/r0/sync
-    acl path_syncrotron path_beg /_matrix/client/r0/events
-    acl path_syncrotron path_beg /_matrix/client/api/v1/events
-    acl path_syncrotron path_beg /_matrix/client/api/v1/initialSync
-    acl path_syncrotron path_beg /_matrix/client/r0/initialSync
-    acl path_syncrotron path_reg ^/_matrix/client/api/v1/rooms/[^/]+/initialSync\$
-    acl path_syncrotron path_reg ^/_matrix/client/r0/rooms/[^/]+/initialSync\$
-    use_backend synchrotrons if path_syncrotron
-
-    acl path_federation_reader path_beg /_matrix/federation/v1/event/
-    acl path_federation_reader path_beg /_matrix/federation/v1/state/
-    acl path_federation_reader path_beg /_matrix/federation/v1/state_ids/
-    acl path_federation_reader path_beg /_matrix/federation/v1/backfill/
-    acl path_federation_reader path_beg /_matrix/federation/v1/get_missing_events/
-    acl path_federation_reader path_beg /_matrix/federation/v1/publicRooms
-    use_backend federation_reader if path_federation_reader
-
-    acl path_media_repository path_beg /_matrix/media/
-    use_backend media_repository if path_media_repository
-
-    acl path_client_reader path_beg /_matrix/client/r0/publicRooms
-    acl path_client_reader path_beg /_matrix/client/api/v1/publicRooms
-    use_backend client_reader if path_client_reader
+    use_backend %[path,map_reg($self->{paths}{path_map_file},synapse)]
 
 backend synapse
     server synapse ${bind_host}:$ports->{synapse_unsecure}
 
-backend synchrotrons
+backend synchrotron
     server synchrotron ${bind_host}:$ports->{synchrotron}
 
 backend federation_reader
@@ -893,6 +869,27 @@ backend media_repository
 backend client_reader
     server client_reader ${bind_host}:$ports->{client_reader}
 
+EOCONFIG
+}
+
+sub generate_haproxy_map
+{
+    return <<"EOCONFIG";
+^/_matrix/client/(v2_alpha|r0)/sync\$           synchrotron
+^/_matrix/client/(api/v1|v2_alpha|r0)/events\$  synchrotron
+# We need to catch global and per room, so just match based on ending.
+^/_matrix/client/.*/initialSync\$               synchrotron
+
+^/_matrix/media/    media_repository
+
+^/_matrix/federation/v1/event/                  federation_reader
+^/_matrix/federation/v1/state/                  federation_reader
+^/_matrix/federation/v1/state_ids/              federation_reader
+^/_matrix/federation/v1/backfill/               federation_reader
+^/_matrix/federation/v1/get_missing_events/     federation_reader
+^/_matrix/federation/v1/publicRooms             federation_reader
+
+^/_matrix/client/(api/v1|r0)/publicRooms\$   client_reader
 EOCONFIG
 }
 
