@@ -124,7 +124,9 @@ if( @ARGV ) {
    $stop_after = maxstr keys %only_files;
 }
 
-push @{ $SYNAPSE_ARGS{extra_args} }, "-v" if $VERBOSE;
+if( $VERBOSE ) {
+   push @{ $SYNAPSE_ARGS{extra_args} }, ( "-" . ( "v" x $VERBOSE ));
+}
 
 sub usage
 {
