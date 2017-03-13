@@ -44,11 +44,15 @@ test "Can upload with Unicode file name",
 
 sub test_using_client
 {
-   my ( $client ) = @_;
+   my ( $client, $content ) = @_;
+
+   if( ! defined( $content )) {
+       $content = $content_id;
+   }
 
    $client->do_request(
       method   => "GET",
-      full_uri => "/_matrix/media/r0/download/$content_id",
+      full_uri => "/_matrix/media/r0/download/$content",
    )->then( sub {
       my ( $body, $response ) = @_;
 
@@ -76,6 +80,20 @@ test "Can download with Unicode file name over federation",
    check => sub {
       my ( $http ) = @_;
       test_using_client( $http );
+   };
+
+test "Alternative server names do not cause a routing loop",
+   # https://github.com/matrix-org/synapse/issues/1991
+   requires => [ $main::API_CLIENTS[0],
+                 qw( can_upload_media_unicode )],
+
+   check => sub {
+      my ( $http ) = @_;
+      my $content = $content_id;
+      # make up another server name which will route to the same
+      # place.
+      $content =~ s/localhost/127.0.0.1/;
+      test_using_client( $http, $content )->main::expect_http_404;
    };
 
 test "Can download specifying a different Unicode file name",
