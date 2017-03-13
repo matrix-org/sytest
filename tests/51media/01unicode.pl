@@ -84,15 +84,15 @@ test "Can download with Unicode file name over federation",
 
 test "Alternative server names do not cause a routing loop",
    # https://github.com/matrix-org/synapse/issues/1991
-   requires => [ $main::API_CLIENTS[0],
-                 qw( can_upload_media_unicode )],
+   requires => [ $main::API_CLIENTS[0]],
 
    check => sub {
       my ( $http ) = @_;
-      my $content = $content_id;
       # make up another server name which will route to the same
       # place.
-      $content =~ s/localhost/127.0.0.1/;
+      my $loc = $http->server_name();
+      $loc =~ s/^.*:/127.255.255.255:/;
+      my $content = "$loc/test_content";
       test_using_client( $http, $content )->main::expect_http_404;
    };
 
