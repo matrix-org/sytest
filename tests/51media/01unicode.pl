@@ -1,9 +1,40 @@
 use URI::Escape qw( uri_escape );
+use SyTest::TCPProxy;
 
 my $FILENAME = "\xf0\x9f\x90\x94";
 my $FILENAME_ENCODED = uc uri_escape( $FILENAME );
 
 my $content_id;
+
+my $PROXY_SERVER = fixture(
+   requires => [ $main::HOMESERVER_INFO[0] ],
+
+   setup => sub {
+      my ($server_info) = @_;
+      my ($host, $port) = ($server_info->server_name =~ /^(.*):([^:]*)$/);
+      my $listener = SyTest::TCPProxy->new(
+         host => $host,
+         port => $port,
+         output => $OUTPUT,
+      );
+
+      $loop->add( $listener );
+
+      $listener->listen(
+         addr => { family => "inet" },
+      )->on_done( sub {
+         my $sock = $listener->read_handle;
+         $OUTPUT->diag("Proxy now listening at port " . $sock->sockport);
+         return $listener;
+      });
+   },
+
+   teardown => sub {
+      my ( $listener ) = @_;
+      $listener->close();
+   },
+);
+
 
 test "Can upload with Unicode file name",
    requires => [ $main::API_CLIENTS[0], local_user_fixture(),
@@ -84,15 +115,16 @@ test "Can download with Unicode file name over federation",
 
 test "Alternative server names do not cause a routing loop",
    # https://github.com/matrix-org/synapse/issues/1991
-   requires => [ $main::API_CLIENTS[0]],
+   requires => [ $main::API_CLIENTS[0], $PROXY_SERVER ],
 
    check => sub {
-      my ( $http ) = @_;
-      # make up another server name which will route to the same
-      # place.
-      my $loc = $http->server_name();
-      $loc =~ s/^.*:/127.255.255.255:/;
-      my $content = "$loc/test_content";
+      my ( $http, $proxy ) = @_;
+      # we use a proxy server which routes connections straight back to the
+      # homeserver, to mimic the behaviour when the remote server name points
+      # back to the homeserver.
+      my $sock = $proxy->read_handle;
+      my $proxy_address = "localhost:" . $proxy->read_handle->sockport;
+      my $content = "$proxy_address/test_content";
       test_using_client( $http, $content )->main::expect_http_404;
    };
 
