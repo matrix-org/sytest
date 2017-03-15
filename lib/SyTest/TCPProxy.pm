@@ -80,8 +80,8 @@ sub on_stream
             },
          );
          
-         $self->loop->add( $incoming );
-         $self->loop->add( $outgoing );
+         $self->add_child( $incoming );
+         $self->add_child( $outgoing );
       },
    );
 
