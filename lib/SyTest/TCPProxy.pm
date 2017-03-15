@@ -26,7 +26,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( host port )) {
+   foreach ( qw( host port ) ) {
       $self->{$_} = delete $params{$_} if $params{$_};
    }
    
@@ -42,14 +42,14 @@ sub on_stream
    my $socket1 = $incoming->read_handle;
    my $peeraddr = $socket1->peerhost . ":" . $socket1->peerport;
 
-   $self->{output}->diag("connection to proxy server from $peeraddr");
+   $self->{output}->diag( "connection to proxy server from $peeraddr" );
 
-   my ($host, $port) = ($self->{'host'}, $self->{'port'});
+   my ( $host, $port ) = ( $self->{'host'}, $self->{'port'} );
    
    my $fut = $self->loop->connect(
-      host => $host,
-      service => $port,
-      socktype => "stream",
+      host      => $host,
+      service   => $port,
+      socktype  => "stream",
 
       on_stream => sub {
          my ( $outgoing ) = @_;
@@ -57,7 +57,7 @@ sub on_stream
          $self->{output}->diag("connected to $host:$port");
 
          $outgoing->configure(
-            on_read => sub {
+            on_read   => sub {
                my ( $self, $buffref, $eof ) = @_;
                $incoming->write( $$buffref );
                $$buffref = "";
@@ -69,7 +69,7 @@ sub on_stream
          );
 
          $incoming->configure(
-            on_read => sub {
+            on_read   => sub {
                my ( $self, $buffref, $eof ) = @_;
                $outgoing->write( $$buffref );
                $$buffref = "";
@@ -85,7 +85,7 @@ sub on_stream
       },
    );
 
-   $self->adopt_future($fut);
+   $self->adopt_future( $fut );
 }
 
 1;

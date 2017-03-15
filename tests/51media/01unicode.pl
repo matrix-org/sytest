@@ -10,11 +10,11 @@ my $PROXY_SERVER = fixture(
    requires => [ $main::HOMESERVER_INFO[0] ],
 
    setup => sub {
-      my ($server_info) = @_;
-      my ($host, $port) = ($server_info->server_name =~ /^(.*):([^:]*)$/);
+      my ( $server_info ) = @_;
+      my ( $host, $port ) = ( $server_info->server_name =~ /^(.*):([^:]*)$/ );
       my $listener = SyTest::TCPProxy->new(
-         host => $host,
-         port => $port,
+         host   => $host,
+         port   => $port,
          output => $OUTPUT,
       );
 
@@ -24,7 +24,7 @@ my $PROXY_SERVER = fixture(
          addr => { family => "inet" },
       )->on_done( sub {
          my $sock = $listener->read_handle;
-         $OUTPUT->diag("Proxy now listening at port " . $sock->sockport);
+         $OUTPUT->diag( "Proxy now listening at port " . $sock->sockport );
          return $listener;
       });
    },
