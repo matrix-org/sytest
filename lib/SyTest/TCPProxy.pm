@@ -76,7 +76,7 @@ sub on_stream
                return 0;
             },
             on_closed => sub {
-               $outgoing->close();
+               $outgoing->close_when_empty;
             },
          );
          
