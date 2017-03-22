@@ -319,6 +319,15 @@ sub generate_listeners
       }
    }
 
+   if( my $replication_tcp_port = $self->{ports}{synapse_replication_tcp} ) {
+      push @listeners, {
+         type => "replication",
+         port => $replication_tcp_port,
+         bind_address => $bind_host,
+         tls => 0,
+      }
+   }
+
    return @listeners,
       {
          type => "metrics",
@@ -548,6 +557,8 @@ sub wrap_synapse_command
          "worker_app"             => "synapse.app.pusher",
          "worker_log_file"        => "$log.pusher",
          "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"       => [
             {
                type      => "http",
@@ -571,6 +582,8 @@ sub wrap_synapse_command
          "worker_app"             => "synapse.app.appservice",
          "worker_log_file"        => "$log.appservice",
          "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"       => [
             {
                type => "manhole",
@@ -594,6 +607,8 @@ sub wrap_synapse_command
          "worker_app"             => "synapse.app.federation_sender",
          "worker_log_file"        => "$log.federation_sender",
          "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"       => [
             {
                type => "manhole",
@@ -617,6 +632,8 @@ sub wrap_synapse_command
          "worker_app"             => "synapse.app.synchrotron",
          "worker_log_file"        => "$log.synchrotron",
          "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"       => [
             {
                type      => "http",
@@ -648,6 +665,8 @@ sub wrap_synapse_command
          "worker_app"             => "synapse.app.federation_reader",
          "worker_log_file"        => "$log.federation_reader",
          "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"       => [
             {
                type      => "http",
@@ -679,6 +698,8 @@ sub wrap_synapse_command
          "worker_app"             => "synapse.app.media_repository",
          "worker_log_file"        => "$log.media_repository",
          "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"       => [
             {
                type      => "http",
@@ -710,6 +731,8 @@ sub wrap_synapse_command
          "worker_app"             => "synapse.app.client_reader",
          "worker_log_file"        => "$log.client_reader",
          "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"       => [
             {
                type      => "http",

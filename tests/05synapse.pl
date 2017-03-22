@@ -67,6 +67,7 @@ our @HOMESERVER_INFO = map {
                synapse          => main::alloc_port( "synapse[$idx]" ),
                synapse_unsecure => main::alloc_port( "synapse[$idx].unsecure" ),
                synapse_metrics  => main::alloc_port( "synapse[$idx].metrics" ),
+               synapse_replication_tcp  => main::alloc_port( "synapse[$idx].replication_tcp" ),
 
                pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
                pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
