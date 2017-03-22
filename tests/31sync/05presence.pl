@@ -118,9 +118,11 @@ test "User sees updates to presence from other users in the incremental sync.",
          # Set user B's presence to online by syncing.
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         matrix_sync_again( $user_a, filter => $filter_id_a );
+         matrix_sync_again( $user_a, filter => $filter_id_a, timeout => 1000 );
       })->then( sub {
          my ( $body ) = @_;
+
+         log_if_fail "sync body", $body;
 
          my $events = $body->{presence}{events};
          my $presence = first { $_->{type} eq "m.presence" } @$events

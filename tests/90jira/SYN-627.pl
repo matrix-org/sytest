@@ -17,6 +17,9 @@ test "Events come down the correct room",
          });
       } 1 .. 30 )
       ->then( sub {
+         # To ensure that all the creation events have gone through
+         matrix_send_room_text_message_synced( $user, $rooms[-1], body => $rooms[-1] );
+      })->then( sub {
          matrix_sync( $user );
       })->then( sub {
          # send messages into all but the last room.
@@ -33,6 +36,8 @@ test "Events come down the correct room",
       })->then( sub {
          my ( $body ) = @_;
          my $room_id;
+
+         log_if_fail "sync body", $body;
 
          foreach $room_id ( @rooms ) {
             my $room = $body->{rooms}{join}{$room_id};
