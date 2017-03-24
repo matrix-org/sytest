@@ -485,6 +485,64 @@ test "GET /publicRooms includes avatar URLs",
       });
    };
 
+test "Guest users can accept invites to private rooms over federation",
+   requires => [ remote_user_fixture(), guest_user_fixture() ],
+
+   do => sub {
+      my ( $remote_user, $local_guest ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_room( $remote_user )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_put_room_state( $remote_user, $room_id,
+            type      => "m.room.join_rules",
+            state_key => "",
+            content   => {
+               join_rule => "invite",
+            }
+         )
+      })->then( sub {
+         matrix_set_room_guest_access( $remote_user, $room_id, "can_join" )
+      })->then( sub {
+         matrix_invite_user_to_room( $remote_user, $local_guest, $room_id )
+      })->then( sub {
+         matrix_join_room( $local_guest, $room_id );
+      })->then( sub {
+         Future->done( 1 );
+      });
+   };
+
+test "Guest users denied access over federation if guest access prohibited",
+   requires => [ remote_user_fixture(), guest_user_fixture() ],
+
+   do => sub {
+      my ( $remote_user, $local_guest ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_room( $remote_user )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_put_room_state( $remote_user, $room_id,
+            type      => "m.room.join_rules",
+            state_key => "",
+            content   => {
+               join_rule => "invite",
+            }
+         )
+      })->then( sub {
+         matrix_set_room_guest_access( $remote_user, $room_id, "forbidden" )
+      })->then( sub {
+         matrix_invite_user_to_room( $remote_user, $local_guest, $room_id )
+      })->then( sub {
+         matrix_join_room( $local_guest, $room_id )->main::expect_http_403
+      })->then( sub {
+         Future->done( 1 );
+      });
+   };
+
 push our @EXPORT, qw( guest_user_fixture );
 
 sub guest_user_fixture
