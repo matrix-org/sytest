@@ -118,37 +118,37 @@ test "We should see our own leave event, even if history_visibility is " .
    };
 
 test "We should see our own leave event when rejecting an invite, ".
-    "even if history_visibility is restricted ",
+    "even if history_visibility is restricted (riot-web/3462)",
    requires => [ local_user_fixture( with_events => 0 ),
                  local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
 
    check => sub {
-      my ( $user1, $user2 ) = @_;
+      my ( $invitee, $inviter ) = @_;
 
       my ( $filter_id, $room_id );
 
-     matrix_create_filter( $user1,
+     matrix_create_filter( $invitee,
          { room => { include_leave => JSON::true } }
      )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user2 );
+         matrix_create_room( $inviter );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_put_room_state_synced( $user2, $room_id,
+         matrix_put_room_state_synced( $inviter, $room_id,
             type    => "m.room.history_visibility",
             content => { history_visibility => "joined" },
          );
       })->then( sub {
-         matrix_sync( $user1, filter => $filter_id );
+         matrix_sync( $invitee, filter => $filter_id );
       })->then( sub {
          matrix_invite_user_to_room_synced(
-            $user2, $user1, $room_id
+            $inviter, $invitee, $room_id
          );
       })->then( sub {
-         matrix_sync_again( $user1, filter => $filter_id );
+         matrix_sync_again( $invitee, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -156,9 +156,9 @@ test "We should see our own leave event when rejecting an invite, ".
 
          assert_json_keys( $body->{rooms}{invite}, ( $room_id ));
 
-         matrix_leave_room_synced( $user1, $room_id );
+         matrix_leave_room_synced( $invitee, $room_id );
       })->then( sub {
-         matrix_sync_again( $user1, filter => $filter_id );
+         matrix_sync_again( $invitee, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
