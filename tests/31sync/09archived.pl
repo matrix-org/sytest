@@ -117,6 +117,59 @@ test "We should see our own leave event, even if history_visibility is " .
       });
    };
 
+test "We should see our own leave event when rejecting an invite, ".
+    "even if history_visibility is restricted ",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my ( $filter_id, $room_id );
+
+     matrix_create_filter( $user1,
+         { room => { include_leave => JSON::true } }
+     )->then( sub {
+         ( $filter_id ) = @_;
+
+         matrix_create_room( $user2 );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_put_room_state_synced( $user2, $room_id,
+            type    => "m.room.history_visibility",
+            content => { history_visibility => "joined" },
+         );
+      })->then( sub {
+         matrix_sync( $user1, filter => $filter_id );
+      })->then( sub {
+         matrix_invite_user_to_room_synced(
+            $user2, $user1, $room_id
+         );
+      })->then( sub {
+         matrix_sync_again( $user1, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "sync result (invite)", $body;
+
+         assert_json_keys( $body->{rooms}{invite}, ( $room_id ));
+
+         matrix_leave_room_synced( $user1, $room_id );
+      })->then( sub {
+         matrix_sync_again( $user1, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "sync result (reject)", $body;
+
+         assert_json_keys( $body->{rooms}{leave}, ( $room_id ));
+
+         Future->done(1);
+      });
+   };
+
 test "Newly left rooms appear in the leave section of gapped sync",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
