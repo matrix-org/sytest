@@ -488,6 +488,8 @@ test "GET /publicRooms includes avatar URLs",
 test "Guest users can accept invites to private rooms over federation",
    requires => [ remote_user_fixture(), guest_user_fixture() ],
 
+   bug => "synapse#2065",
+
    do => sub {
       my ( $remote_user, $local_guest ) = @_;
 
