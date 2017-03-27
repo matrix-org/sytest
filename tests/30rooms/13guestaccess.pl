@@ -539,7 +539,8 @@ test "Guest users denied access over federation if guest access prohibited",
       })->then( sub {
          matrix_invite_user_to_room( $remote_user, $local_guest, $room_id )
       })->then( sub {
-         matrix_join_room( $local_guest, $room_id )->main::expect_http_403
+         matrix_join_room( $local_guest, $room_id )
+         ->main::expect_http_403
       })->then( sub {
          Future->done( 1 );
       });
