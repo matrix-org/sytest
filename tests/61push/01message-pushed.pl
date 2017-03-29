@@ -386,3 +386,30 @@ test "Rooms with canonical alias are correctly named in pushed",
          check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
       });
    };
+
+test "Rooms with many users are correctly pushed",
+   requires => [
+      local_user_fixtures( 3, with_events => 0 ), room_alias_fixture(),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $charlie, $room_alias, $test_server_info ) = @_;
+      my $room_id;
+
+      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_join_room( $charlie, $room_id)
+      })->then( sub {
+         do_request_json_for( $bob,
+            method => "PUT",
+            uri    => "/r0/directory/room/$room_alias",
+
+            content => { room_id => $room_id },
+         )
+      })->then( sub {
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
+      });
+   };
