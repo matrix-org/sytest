@@ -357,7 +357,7 @@ foreach my $i (
          })->then( sub {
             matrix_set_room_history_visibility( $creating_user, $room_id, "world_readable" );
          })->then( sub {
-            matrix_send_room_text_message( $creating_user, $room_id, body => "public" );
+            matrix_send_room_text_message_synced( $creating_user, $room_id, body => "public" );
          })->then( sub {
             matrix_initialsync_room( $syncing_user, $room_id );
          })->then( sub {
