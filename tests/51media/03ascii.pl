@@ -48,7 +48,7 @@ sub test_using_client
       my ( $body, $response ) = @_;
 
       my $disposition = $response->header( "Content-Disposition" );
-      $disposition eq "inline; filename=ascii" or
+      $disposition eq "inline; filename*=utf-8''ascii" or
          die "Expected a UTF-8 filename parameter";
 
       Future->done(1);
@@ -90,7 +90,7 @@ test "Can download specifying a different ASCII file name",
          my ( $body, $response ) = @_;
 
          my $disposition = $response->header( "Content-Disposition" );
-         $disposition eq "inline; filename=also_ascii" or
+         $disposition eq "inline; filename*=utf-8''also_ascii" or
             die "Expected a UTF-8 filename parameter";
 
          Future->done(1);
