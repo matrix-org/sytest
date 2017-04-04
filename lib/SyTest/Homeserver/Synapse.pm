@@ -309,11 +309,11 @@ sub generate_listeners
 
    if( my $unsecure_port = $self->{ports}{synapse_unsecure} ) {
       push @listeners, {
-         type => "http",
-         port => $unsecure_port,
+         type         => "http",
+         port         => $unsecure_port,
          bind_address => $bind_host,
-         tls => 0,
-         resources => [{
+         tls          => 0,
+         resources    => [{
             names => [ "client", "federation", "replication", "metrics" ], compress => 0
          }]
       }
@@ -321,19 +321,19 @@ sub generate_listeners
 
    if( my $replication_tcp_port = $self->{ports}{synapse_replication_tcp} ) {
       push @listeners, {
-         type => "replication",
-         port => $replication_tcp_port,
+         type         => "replication",
+         port         => $replication_tcp_port,
          bind_address => $bind_host,
-         tls => 0,
+         tls          => 0,
       }
    }
 
    return @listeners,
       {
-         type => "metrics",
-         port => $self->{ports}{synapse_metrics},
+         type         => "metrics",
+         port         => $self->{ports}{synapse_metrics},
          bind_address => $bind_host,
-         tls => 0,
+         tls          => 0,
       };
 }
 
