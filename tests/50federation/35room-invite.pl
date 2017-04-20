@@ -142,49 +142,50 @@ sub invite_server
    );
 }
 
+foreach my $error_code (403, 500) {
+   test "Inbound federation can receive invite and reject when remote replies with a $error_code",
+         requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                    federation_user_id_fixture() ],
 
-test "Inbound federation can receive invite and reject when remote errors",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
-                 federation_user_id_fixture() ],
+      do => sub {
+         my ( $user, $inbound_server, $creator_id ) = @_;
 
-   do => sub {
-      my ( $user, $inbound_server, $creator_id ) = @_;
+         my $datastore = $inbound_server->datastore;
 
-      my $datastore = $inbound_server->datastore;
+         my $room = SyTest::Federation::Room->new(
+            datastore => $datastore,
+         );
 
-      my $room = SyTest::Federation::Room->new(
-         datastore => $datastore,
-      );
+         $room->create_initial_events(
+            server  => $inbound_server,
+            creator => $creator_id,
+         );
 
-      $room->create_initial_events(
-         server  => $inbound_server,
-         creator => $creator_id,
-      );
+         my $room_id = $room->room_id;
 
-      my $room_id = $room->room_id;
+         invite_server( $room, $creator_id, $user, $inbound_server )
+         ->then( sub {
+            Future->needs_all(
+               $inbound_server->await_request_make_leave( $room_id, $user->user_id )->then( sub {
+                  my ( $req, undef ) = @_;
 
-      invite_server( $room, $creator_id, $user, $inbound_server )
-      ->then( sub {
-         Future->needs_all(
-            $inbound_server->await_request_make_leave( $room_id, $user->user_id )->then( sub {
-               my ( $req, undef ) = @_;
+                  assert_eq( $req->method, "GET", 'request method' );
 
-               assert_eq( $req->method, "GET", 'request method' );
+                  $req->respond_json( {}, code => $error_code );
 
-               $req->respond_json( {}, code => 403 );
+                  Future->done;
+               }),
+               matrix_leave_room( $user, $room_id )
+            )
+         })->then( sub {
+            matrix_sync( $user );
+         })->then( sub {
+            my ( $body ) = @_;
 
-               Future->done;
-            }),
-            matrix_leave_room( $user, $room_id )
-         )
-      })->then( sub {
-         matrix_sync( $user );
-      })->then( sub {
-         my ( $body ) = @_;
-
-         log_if_fail "Sync body", $body;
-         assert_json_object( $body->{rooms}{invite} );
-         keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
-         Future->done(1);
-      });
-   };
+            log_if_fail "Sync body", $body;
+            assert_json_object( $body->{rooms}{invite} );
+            keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+            Future->done(1);
+         });
+      };
+}
