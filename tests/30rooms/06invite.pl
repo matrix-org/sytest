@@ -120,6 +120,29 @@ test "Invited user can reject invite over federation",
    ],
    do => \&invited_user_can_reject_invite;
 
+test "Invited user can reject invite over federation several times",
+   # https://github.com/matrix-org/synapse/issues/1987
+   requires => [ remote_user_fixture(),
+      do {
+         my $creator = local_user_fixture();
+         $creator, inviteonly_room_fixture( creator => $creator );
+      }
+   ],
+  do => sub {
+     my ( $invitee, $creator, $room_id ) = @_;
+
+     # we just do an invite/reject cycle three times
+     my $runner = sub {
+        return invited_user_can_reject_invite(
+           $invitee, $creator, $room_id
+        );
+     };
+
+     $runner->()
+     ->then( $runner )
+     ->then( $runner );
+  };
+
 sub invited_user_can_reject_invite
 {
    my ( $invitee, $creator, $room_id ) = @_;
