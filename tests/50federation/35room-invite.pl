@@ -48,13 +48,11 @@ test "Outbound federation can send invites",
    };
 
 test "Inbound federation can receive invites",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $user, $inbound_server, $outbound_client, $creator_id ) = @_;
-
-      my $first_home_server = $user->http->server_name;
+      my ( $user, $inbound_server, $creator_id ) = @_;
 
       my $datastore = $inbound_server->datastore;
 
@@ -67,13 +65,16 @@ test "Inbound federation can receive invites",
          creator => $creator_id,
       );
 
-      invite_server( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server );
+      invite_server( $room, $creator_id, $user, $inbound_server );
    };
 
 
 sub invite_server
 {
-   my ( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server ) = @_;
+   my ( $room, $creator_id, $user, $inbound_server) = @_;
+
+   my $outbound_client = $inbound_server->client;
+   my $first_home_server = $user->http->server_name;
 
    my $room_id = $room->room_id;
 
@@ -143,13 +144,11 @@ sub invite_server
 
 
 test "Inbound federation can receive invite and reject when remote errors",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $user, $inbound_server, $outbound_client, $creator_id ) = @_;
-
-      my $first_home_server = $user->http->server_name;
+      my ( $user, $inbound_server, $creator_id ) = @_;
 
       my $datastore = $inbound_server->datastore;
 
@@ -164,7 +163,7 @@ test "Inbound federation can receive invite and reject when remote errors",
 
       my $room_id = $room->room_id;
 
-      invite_server( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server )
+      invite_server( $room, $creator_id, $user, $inbound_server )
       ->then( sub {
          Future->needs_all(
             $inbound_server->await_request_make_leave( $room_id, $user->user_id )->then( sub {
