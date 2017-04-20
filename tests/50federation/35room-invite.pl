@@ -189,3 +189,55 @@ foreach my $error_code (403, 500) {
          });
       };
 }
+
+# a temporary federation server which is shut down at the end of the test.
+my $temp_federation_server_fixture = fixture(
+   setup => sub {
+      create_federation_server()
+   },
+   teardown => sub {
+      my ($server) = @_;
+      # in case the test failed early, shut down the server here anyway.
+      $server -> close();
+   }
+);
+
+test "Inbound federation can receive invite and reject when remote is unreachable",
+   requires => [ local_user_fixture(), $temp_federation_server_fixture ],
+
+   do => sub {
+      my ($user, $federation_server) = @_;
+
+      my $creator_id = '@__ANON__:' . $federation_server->server_name;
+
+      my $datastore = $federation_server->datastore;
+
+      my $room = SyTest::Federation::Room->new(
+         datastore => $datastore,
+      );
+
+      $room->create_initial_events(
+         server  => $federation_server,
+         creator => $creator_id,
+      );
+
+      my $room_id = $room->room_id;
+
+      invite_server( $room, $creator_id, $user, $federation_server )
+      ->then( sub {
+         # now shut down the remote server, so that we get an 'unreachable'
+         # error on make_leave
+         $federation_server->close();
+
+         matrix_leave_room( $user, $room_id );
+      })->then( sub {
+         matrix_sync( $user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Sync body", $body;
+         assert_json_object( $body->{rooms}{invite} );
+         keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+         Future->done(1);
+      });
+   };
