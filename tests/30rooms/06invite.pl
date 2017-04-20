@@ -128,20 +128,20 @@ test "Invited user can reject invite over federation several times",
          $creator, inviteonly_room_fixture( creator => $creator );
       }
    ],
-  do => sub {
-     my ( $invitee, $creator, $room_id ) = @_;
+   do => sub {
+      my ( $invitee, $creator, $room_id ) = @_;
 
-     # we just do an invite/reject cycle three times
-     my $runner = sub {
-        return invited_user_can_reject_invite(
-           $invitee, $creator, $room_id
-        );
-     };
+      # we just do an invite/reject cycle three times
+      my $runner = sub {
+         return invited_user_can_reject_invite(
+            $invitee, $creator, $room_id
+           );
+      };
 
-     $runner->()
-     ->then( $runner )
-     ->then( $runner );
-  };
+      $runner->()
+        ->then( $runner )
+        ->then( $runner );
+   };
 
 sub invited_user_can_reject_invite
 {
