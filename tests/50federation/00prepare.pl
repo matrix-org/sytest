@@ -3,21 +3,24 @@ use File::Basename qw( dirname );
 use IO::Socket::IP 0.04; # ->sockhostname
 Net::Async::HTTP->VERSION( '0.39' ); # ->GET with 'headers'
 
+require IO::Async::SSL;
+
 use Crypt::NaCl::Sodium;
 
 use SyTest::Federation::Datastore;
 use SyTest::Federation::Client;
 use SyTest::Federation::Server;
 
+
+
 my $DIR = dirname( __FILE__ );
 
 push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT create_federation_server );
 
-sub create_federation_server {
+sub create_federation_server
+{
    my $server = SyTest::Federation::Server->new;
    $loop->add( $server );
-
-   require IO::Async::SSL;
 
    $server->listen(
       host          => $BIND_HOST,

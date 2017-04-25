@@ -143,7 +143,7 @@ sub invite_server
 }
 
 
-foreach my $error_code (403, 500, -1) {
+foreach my $error_code ( 403, 500, -1 ) {
    # a temporary federation server which is shut down at the end of the test.
    # we use a temporary server because otherwise the remote server ends up on the
    # backoff list and subsequent tests fail.
@@ -153,12 +153,13 @@ foreach my $error_code (403, 500, -1) {
       },
       teardown => sub {
          my ($server) = @_;
-         $server -> close();
+         $server->close();
       }
    );
 
    test "Inbound federation can receive invite and reject when "
-         . ($error_code >= 0 ? "remote replies with a $error_code" : "is unreachable" ),
+         . ( $error_code >= 0 ? "remote replies with a $error_code" :
+             "is unreachable" ),
       requires => [ local_user_fixture(), $temp_federation_server_fixture ],
 
       do => sub {
@@ -181,13 +182,14 @@ foreach my $error_code (403, 500, -1) {
 
          invite_server( $room, $creator_id, $user, $federation_server )
          ->then( sub {
-            if ($error_code < 0) {
+            if( $error_code < 0 ) {
                # now shut down the remote server, so that we get an 'unreachable'
                # error on make_leave
                $federation_server->close();
 
                return matrix_leave_room( $user, $room_id );
-            } else {
+            }
+            else {
                Future->needs_all(
                   $federation_server->await_request_make_leave( $room_id, $user->user_id )->then( sub {
                      my ( $req, undef ) = @_;
