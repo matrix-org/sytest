@@ -3,59 +3,68 @@ use File::Basename qw( dirname );
 use IO::Socket::IP 0.04; # ->sockhostname
 Net::Async::HTTP->VERSION( '0.39' ); # ->GET with 'headers'
 
+require IO::Async::SSL;
+
 use Crypt::NaCl::Sodium;
 
 use SyTest::Federation::Datastore;
 use SyTest::Federation::Client;
 use SyTest::Federation::Server;
 
+
+
 my $DIR = dirname( __FILE__ );
 
-push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT );
+push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT create_federation_server );
+
+sub create_federation_server
+{
+   my $server = SyTest::Federation::Server->new;
+   $loop->add( $server );
+
+   $server->listen(
+      host          => $BIND_HOST,
+      service       => "",
+      extensions    => [qw( SSL )],
+      # Synapse currently only talks IPv4
+      family        => "inet",
+
+      SSL_key_file  => "$DIR/server.key",
+      SSL_cert_file => "$DIR/server.crt",
+   )->on_done( sub {
+      my ( $server ) = @_;
+      my $sock = $server->read_handle;
+
+      my $server_name = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
+
+      my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
+
+      my $datastore = SyTest::Federation::Datastore->new(
+         server_name => $server_name,
+         key_id      => "ed25519:1",
+         public_key  => $pkey,
+         secret_key  => $skey,
+      );
+
+      my $outbound_client = SyTest::Federation::Client->new(
+         datastore => $datastore,
+         uri_base  => "/_matrix/federation/v1",
+        );
+      $loop->add( $outbound_client );
+
+      $server->configure(
+         datastore => $datastore,
+         client    => $outbound_client,
+        );
+
+      Future->done($server)
+   });
+}
 
 our $INBOUND_SERVER = fixture(
    setup => sub {
-      my $inbound_server = SyTest::Federation::Server->new;
-      $loop->add( $inbound_server );
-
-      require IO::Async::SSL;
-
-      $inbound_server->listen(
-         host          => $BIND_HOST,
-         service       => "",
-         extensions    => [qw( SSL )],
-         # Synapse currently only talks IPv4
-         family        => "inet",
-
-         SSL_key_file  => "$DIR/server.key",
-         SSL_cert_file => "$DIR/server.crt",
-      )->on_done( sub {
-         my ( $inbound_server ) = @_;
-         my $sock = $inbound_server->read_handle;
-
-         my $server_name = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
-
-         my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
-
-         my $datastore = SyTest::Federation::Datastore->new(
-            server_name => $server_name,
-            key_id      => "ed25519:1",
-            public_key  => $pkey,
-            secret_key  => $skey,
-         );
-
-         my $outbound_client = SyTest::Federation::Client->new(
-            datastore => $datastore,
-            uri_base  => "/_matrix/federation/v1",
-         );
-         $loop->add( $outbound_client );
-
-         $inbound_server->configure(
-            datastore => $datastore,
-            client    => $outbound_client,
-         );
-      });
-   },
+      create_federation_server();
+   }
 );
 
 our $OUTBOUND_CLIENT = fixture(

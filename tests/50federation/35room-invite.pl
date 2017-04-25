@@ -48,13 +48,11 @@ test "Outbound federation can send invites",
    };
 
 test "Inbound federation can receive invites",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $user, $inbound_server, $outbound_client, $creator_id ) = @_;
-
-      my $first_home_server = $user->http->server_name;
+      my ( $user, $inbound_server, $creator_id ) = @_;
 
       my $datastore = $inbound_server->datastore;
 
@@ -67,13 +65,16 @@ test "Inbound federation can receive invites",
          creator => $creator_id,
       );
 
-      invite_server( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server );
+      invite_server( $room, $creator_id, $user, $inbound_server );
    };
 
 
 sub invite_server
 {
-   my ( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server ) = @_;
+   my ( $room, $creator_id, $user, $inbound_server) = @_;
+
+   my $outbound_client = $inbound_server->client;
+   my $first_home_server = $user->http->server_name;
 
    my $room_id = $room->room_id;
 
@@ -142,50 +143,75 @@ sub invite_server
 }
 
 
-test "Inbound federation can receive invite and reject when remote errors",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
-                 federation_user_id_fixture() ],
+foreach my $error_code ( 403, 500, -1 ) {
+   # a temporary federation server which is shut down at the end of the test.
+   # we use a temporary server because otherwise the remote server ends up on the
+   # backoff list and subsequent tests fail.
+   my $temp_federation_server_fixture = fixture(
+      setup => sub {
+         create_federation_server()
+      },
+      teardown => sub {
+         my ($server) = @_;
+         $server->close();
+      }
+   );
 
-   do => sub {
-      my ( $user, $inbound_server, $outbound_client, $creator_id ) = @_;
+   test "Inbound federation can receive invite and reject when "
+         . ( $error_code >= 0 ? "remote replies with a $error_code" :
+             "is unreachable" ),
+      requires => [ local_user_fixture(), $temp_federation_server_fixture ],
 
-      my $first_home_server = $user->http->server_name;
+      do => sub {
+         my ( $user, $federation_server ) = @_;
 
-      my $datastore = $inbound_server->datastore;
+         my $creator_id = '@__ANON__:' . $federation_server->server_name;
 
-      my $room = SyTest::Federation::Room->new(
-         datastore => $datastore,
-      );
+         my $datastore = $federation_server->datastore;
 
-      $room->create_initial_events(
-         server  => $inbound_server,
-         creator => $creator_id,
-      );
+         my $room = SyTest::Federation::Room->new(
+            datastore => $datastore,
+         );
 
-      my $room_id = $room->room_id;
+         $room->create_initial_events(
+            server  => $federation_server,
+            creator => $creator_id,
+         );
 
-      invite_server( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server )
-      ->then( sub {
-         Future->needs_all(
-            $inbound_server->await_request_make_leave( $room_id, $user->user_id )->then( sub {
-               my ( $req, undef ) = @_;
+         my $room_id = $room->room_id;
 
-               assert_eq( $req->method, "GET", 'request method' );
+         invite_server( $room, $creator_id, $user, $federation_server )
+         ->then( sub {
+            if( $error_code < 0 ) {
+               # now shut down the remote server, so that we get an 'unreachable'
+               # error on make_leave
+               $federation_server->close();
 
-               $req->respond_json( {}, code => 403 );
+               return matrix_leave_room( $user, $room_id );
+            }
+            else {
+               Future->needs_all(
+                  $federation_server->await_request_make_leave( $room_id, $user->user_id )->then( sub {
+                     my ( $req, undef ) = @_;
 
-               Future->done;
-            }),
-            matrix_leave_room( $user, $room_id )
-         )
-      })->then( sub {
-         matrix_sync( $user );
-      })->then( sub {
-         my ( $body ) = @_;
+                     assert_eq( $req->method, "GET", 'request method' );
 
-         log_if_fail "Sync body", $body;
-         assert_json_object( $body->{rooms}{invite} );
-         keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
-         Future->done(1);
-      });
-   };
+                     $req->respond_json( {}, code => $error_code );
+
+                     Future->done;
+                  }),
+                  matrix_leave_room( $user, $room_id )
+               );
+            }
+         })->then( sub {
+            matrix_sync( $user );
+         })->then( sub {
+            my ( $body ) = @_;
+
+            log_if_fail "Sync body", $body;
+            assert_json_object( $body->{rooms}{invite} );
+            keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+            Future->done(1);
+         });
+      };
+}
