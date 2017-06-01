@@ -82,7 +82,7 @@ push our @EXPORT, qw( localpart_fixture );
 
 my $next_anon_uid = 1;
 
-sub create_localpart
+sub sprintf_localpart
 {
    sprintf "ANON-%d", $next_anon_uid++
 }
@@ -91,7 +91,7 @@ sub localpart_fixture
 {
    fixture(
       setup => sub {
-         Future->done( create_localpart() );
+         Future->done( sprintf_localpart() );
       },
    );
 }
@@ -333,7 +333,7 @@ sub matrix_create_user_on_server
 {
    my ( $http, %args ) = @_;
 
-   setup_user( $http, create_localpart(), %args )
+   setup_user( $http, sprintf_localpart(), %args )
 }
 
 
