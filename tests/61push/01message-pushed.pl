@@ -423,6 +423,11 @@ test "Don't get pushed for rooms you've muted",
       my ( $alice, $bob, $test_server_info ) = @_;
       my $room_id;
 
+      # The idea is to set up push, send a message "1", then disable push,
+      # send "2" then enable and send "3", and assert that only messages 1 and 3
+      # are received by push. This is because its "impossible" to test for the
+      # absence of second push without doing a third.
+
       setup_push( $alice, $bob, $test_server_info, "/alice_push" )
       ->then( sub {
          ( $room_id ) = @_;
