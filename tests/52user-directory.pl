@@ -334,6 +334,53 @@ test "User in remote room don't appear in user directory after server left room"
       });
    };
 
+test "User directory correctly update on display name change",
+   requires => [ local_user_fixture() ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      my ( $room_id, $displayname );
+
+      create_and_set_random_displayname( $user )
+      ->then( sub {
+         ( $displayname ) = @_;
+
+         log_if_fail "First displayname", $displayname;
+
+         matrix_create_room( $user,
+            preset => "public_chat",
+         )
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         get_user_dir_synced( $user, $displayname )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+            or die "user not in list";
+
+         create_and_set_random_displayname( $user )
+      })->then( sub {
+         ( $displayname ) = @_;
+
+         log_if_fail "Second displayname", $displayname;
+
+         get_user_dir_synced( $user, $displayname )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Second Body", $body;
+
+         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+            or die "user not in list";
+
+         Future->done( 1 )
+      });
+   };
 
 sub create_and_set_random_displayname
 {
