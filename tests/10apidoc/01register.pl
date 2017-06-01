@@ -82,11 +82,16 @@ push our @EXPORT, qw( localpart_fixture );
 
 my $next_anon_uid = 1;
 
+sub create_localpart
+{
+   sprintf "ANON-%d", $next_anon_uid++
+}
+
 sub localpart_fixture
 {
    fixture(
       setup => sub {
-         Future->done( sprintf "ANON-%d", $next_anon_uid++ );
+         Future->done( create_localpart() );
       },
    );
 }
@@ -320,6 +325,17 @@ sub setup_user
       )->then_done( $user );
    });
 }
+
+
+push @EXPORT, qw( matrix_create_user_on_server );
+
+sub matrix_create_user_on_server
+{
+   my ( $http, %args ) = @_;
+
+   setup_user( $http, create_localpart(), %args )
+}
+
 
 push @EXPORT, qw( SPYGLASS_USER );
 
