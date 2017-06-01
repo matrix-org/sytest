@@ -352,6 +352,9 @@ sub create_and_set_random_displayname
 }
 
 
+# Get the user direectory after a change has been made. This creates a new user
+# and then polls the user directory until we see it. This is to get around the
+# fact that the user directory gets updated asynchronously.
 sub get_user_dir_synced
 {
    my ( $user, $search_term ) = @_;
