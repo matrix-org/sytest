@@ -22,7 +22,7 @@ test "User appears in user directory",
          try_repeat_until_success( sub {
             do_request_json_for( $user,
                method  => "POST",
-               uri     => "/r0/user_directory/search",
+               uri     => "/unstable/user_directory/search",
                content => {
                   search_term => $displayname,
                }
@@ -410,7 +410,7 @@ sub get_user_dir_synced
       try_repeat_until_success( sub {
          do_request_json_for( $new_user,
             method  => "POST",
-            uri     => "/r0/user_directory/search",
+            uri     => "/unstable/user_directory/search",
             content => {
                search_term => $random_id,
             }
@@ -427,7 +427,7 @@ sub get_user_dir_synced
       })->then( sub {
          do_request_json_for( $new_user,
             method  => "POST",
-            uri     => "/r0/user_directory/search",
+            uri     => "/unstable/user_directory/search",
             content => {
                search_term => $search_term,
             }
