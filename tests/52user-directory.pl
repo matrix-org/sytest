@@ -15,7 +15,7 @@ test "User appears in user directory",
 
          matrix_create_room( $user,
             preset => "public_chat",
-         )
+         );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -36,13 +36,13 @@ test "User appears in user directory",
                any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
                   or die "user not in list";
 
-               Future->done( 1 )
-            })
+               Future->done( 1 );
+            });
          })
       });
    };
 
-test "User in private room doesn't appears in user directory",
+test "User in private room doesn't appear in user directory",
    requires => [ local_user_fixture() ],
 
    check => sub {
@@ -56,11 +56,11 @@ test "User in private room doesn't appears in user directory",
 
          matrix_create_room( $user,
             preset => "private_chat",
-         )
+         );
       })->then( sub {
          ( $room_id ) = @_;
 
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -89,13 +89,13 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
          matrix_create_room( $creator,
             preset => "public_chat",
-         )
+         );
       })->then( sub {
          ( $room_id ) = @_;
 
          log_if_fail "Room interested in", $room_id;
 
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -104,9 +104,9 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
          pass "User initially not in directory";
 
-         matrix_join_room( $user, $room_id )
+         matrix_join_room( $user, $room_id );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -115,9 +115,9 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
          pass "User appears in directory after join";
 
-         matrix_leave_room( $user, $room_id )
+         matrix_leave_room( $user, $room_id );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -126,7 +126,7 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
          pass "User not in directory after leaving room";
 
-         Future->done( 1 )
+         Future->done( 1 );
       });
    };
 
@@ -145,13 +145,13 @@ foreach my $type (qw( join_rules history_visibility )) {
 
             matrix_create_room( $creator,
                preset => "private_chat", invite => [ $user->user_id ],
-            )
+            );
          })->then( sub {
             ( $room_id ) = @_;
 
-            matrix_join_room( $user, $room_id )
+            matrix_join_room( $user, $room_id );
          })->then( sub {
-            get_user_dir_synced( $user, $displayname )
+            get_user_dir_synced( $user, $displayname );
          })->then( sub {
             my ( $body ) = @_;
 
@@ -164,12 +164,12 @@ foreach my $type (qw( join_rules history_visibility )) {
                matrix_put_room_state( $creator, $room_id,
                   type    => "m.room.join_rules",
                   content => { join_rule => "public" },
-               )
+               );
             } else {
                matrix_put_room_state( $creator, $room_id,
                   type    => "m.room.history_visibility",
                   content => { history_visibility => "world_readable" },
-               )
+               );
             }
          })->then( sub {
             get_user_dir_synced( $user, $displayname )
@@ -185,12 +185,12 @@ foreach my $type (qw( join_rules history_visibility )) {
                matrix_put_room_state( $creator, $room_id,
                   type    => "m.room.join_rules",
                   content => { join_rule => "invite" },
-               )
+               );
             } else {
                matrix_put_room_state( $creator, $room_id,
                   type    => "m.room.history_visibility",
                   content => { history_visibility => "shared" },
-               )
+               );
             }
          })->then( sub {
             get_user_dir_synced( $user, $displayname )
@@ -202,7 +202,7 @@ foreach my $type (qw( join_rules history_visibility )) {
 
             pass "User not in directory after $type set to private";
 
-            Future->done( 1 )
+            Future->done( 1 );
          });
       };
 }
@@ -222,13 +222,13 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
 
          matrix_create_room( $creator,
             preset => "private_chat", invite => [ $user->user_id ],
-         )
+         );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user, $room_id )
+         matrix_join_room( $user, $room_id );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -240,12 +240,12 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
          matrix_put_room_state( $creator, $room_id,
             type    => "m.room.join_rules",
             content => { join_rule => "public" },
-         )
+         );
       })->then( sub {
          matrix_put_room_state( $creator, $room_id,
             type    => "m.room.history_visibility",
             content => { history_visibility => "world_readable" },
-         )
+         );
       })->then( sub {
          get_user_dir_synced( $user, $displayname )
       })->then( sub {
@@ -259,9 +259,9 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
          matrix_put_room_state( $creator, $room_id,
             type    => "m.room.join_rules",
             content => { join_rule => "invite" },
-         )
+         );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -273,9 +273,9 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
          matrix_put_room_state( $creator, $room_id,
             type    => "m.room.history_visibility",
             content => { history_visibility => "shared" },
-         )
+         );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -284,11 +284,11 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
 
          pass "User not in directory after history_visibility set to shared";
 
-         Future->done( 1 )
+         Future->done( 1 );
       });
    };
 
-test "User in remote room don't appear in user directory after server left room",
+test "User in remote room doesn't appear in user directory after server left room",
    requires => [ local_user_fixture(), remote_user_fixture() ],
 
    check => sub {
@@ -302,7 +302,7 @@ test "User in remote room don't appear in user directory after server left room"
 
          matrix_create_room( $creator,
             preset => "public_chat", invite => [ $remote->user_id ],
-         )
+         );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -310,7 +310,7 @@ test "User in remote room don't appear in user directory after server left room"
 
          matrix_join_room( $remote, $room_id );
       })->then( sub {
-         get_user_dir_synced( $remote, $displayname )
+         get_user_dir_synced( $remote, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -321,7 +321,7 @@ test "User in remote room don't appear in user directory after server left room"
 
          matrix_leave_room( $remote, $room_id );
       })->then( sub {
-         get_user_dir_synced( $remote, $displayname )
+         get_user_dir_synced( $remote, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -350,11 +350,11 @@ test "User directory correctly update on display name change",
 
          matrix_create_room( $user,
             preset => "public_chat",
-         )
+         );
       })->then( sub {
          ( $room_id ) = @_;
 
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -363,13 +363,13 @@ test "User directory correctly update on display name change",
          any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
             or die "user not in list";
 
-         create_and_set_random_displayname( $user )
+         create_and_set_random_displayname( $user );
       })->then( sub {
          ( $displayname ) = @_;
 
          log_if_fail "Second displayname", $displayname;
 
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -378,7 +378,7 @@ test "User directory correctly update on display name change",
          any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
             or die "user not in list";
 
-         Future->done( 1 )
+         Future->done( 1 );
       });
    };
 
@@ -394,8 +394,8 @@ sub create_and_set_random_displayname
 
       content => { displayname => $displayname },
    )->then( sub {
-      Future->done( $displayname )
-   })
+      Future->done( $displayname );
+   });
 }
 
 
@@ -417,7 +417,7 @@ sub get_user_dir_synced
 
       matrix_create_room( $new_user,
          preset => "public_chat",
-      )
+      );
    })->then( sub {
       try_repeat_until_success( sub {
          do_request_json_for( $new_user,
@@ -435,7 +435,7 @@ sub get_user_dir_synced
                or die "user not in list";
 
             Future->done( $body )
-         })
+         });
       })->then( sub {
          do_request_json_for( $new_user,
             method  => "POST",
@@ -443,7 +443,7 @@ sub get_user_dir_synced
             content => {
                search_term => $search_term,
             }
-         )
+         );
       })
    })
 }
