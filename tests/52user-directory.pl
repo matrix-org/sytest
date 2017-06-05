@@ -7,12 +7,12 @@ test "User appears in user directory",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $room_id, $displayname );
+      my $room_id;
 
-      create_and_set_random_displayname( $user )
+      my $displayname = generate_random_displayname();
+
+      matrix_set_displayname( $user, $displayname )
       ->then( sub {
-         ( $displayname ) = @_;
-
          matrix_create_room( $user,
             preset => "public_chat",
          );
@@ -48,12 +48,12 @@ test "User in private room doesn't appear in user directory",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $room_id, $displayname );
+      my $room_id;
 
-      create_and_set_random_displayname( $user )
+      my $displayname = generate_random_displayname();
+
+      matrix_set_displayname( $user, $displayname )
       ->then( sub {
-         ( $displayname ) = @_;
-
          matrix_create_room( $user,
             preset => "private_chat",
          );
@@ -81,12 +81,12 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
       log_if_fail "User interested in", $user->user_id;
 
-      my ( $room_id, $displayname );
+      my $room_id;
 
-      create_and_set_random_displayname( $user )
+      my $displayname = generate_random_displayname();
+
+      matrix_set_displayname( $user, $displayname )
       ->then( sub {
-         ( $displayname ) = @_;
-
          matrix_create_room( $creator,
             preset => "public_chat",
          );
@@ -137,12 +137,12 @@ foreach my $type (qw( join_rules history_visibility )) {
       check => sub {
          my ( $creator, $user ) = @_;
 
-         my ( $room_id, $displayname );
+         my $room_id;
 
-         create_and_set_random_displayname( $user )
+         my $displayname = generate_random_displayname();
+
+         matrix_set_displayname( $user, $displayname )
          ->then( sub {
-            ( $displayname ) = @_;
-
             matrix_create_room( $creator,
                preset => "private_chat", invite => [ $user->user_id ],
             );
@@ -214,12 +214,12 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
    check => sub {
       my ( $creator, $user ) = @_;
 
-      my ( $room_id, $displayname );
+      my $room_id;
 
-      create_and_set_random_displayname( $user )
+      my $displayname = generate_random_displayname();
+
+      matrix_set_displayname( $user, $displayname )
       ->then( sub {
-         ( $displayname ) = @_;
-
          matrix_create_room( $creator,
             preset => "private_chat", invite => [ $user->user_id ],
          );
@@ -294,12 +294,12 @@ test "User in remote room doesn't appear in user directory after server left roo
    check => sub {
       my ( $creator, $remote ) = @_;
 
-      my ( $room_id, $displayname );
+      my $room_id;
 
-      create_and_set_random_displayname( $creator )
+      my $displayname = generate_random_displayname();
+
+      matrix_set_displayname( $creator, $displayname )
       ->then( sub {
-         ( $displayname ) = @_;
-
          matrix_create_room( $creator,
             preset => "public_chat", invite => [ $remote->user_id ],
          );
@@ -340,12 +340,13 @@ test "User directory correctly update on display name change",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $room_id, $displayname );
+      my $room_id;
 
-      create_and_set_random_displayname( $user )
+      my $displayname = generate_random_displayname();
+      my $second_displayname = generate_random_displayname();
+
+      matrix_set_displayname( $user, $displayname )
       ->then( sub {
-         ( $displayname ) = @_;
-
          log_if_fail "First displayname", $displayname;
 
          matrix_create_room( $user,
@@ -363,13 +364,11 @@ test "User directory correctly update on display name change",
          any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
             or die "user not in list";
 
-         create_and_set_random_displayname( $user );
+         matrix_set_displayname( $user, $second_displayname )
       })->then( sub {
-         ( $displayname ) = @_;
+         log_if_fail "Second displayname", $second_displayname;
 
-         log_if_fail "Second displayname", $displayname;
-
-         get_user_dir_synced( $user, $displayname );
+         get_user_dir_synced( $user, $second_displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -382,20 +381,9 @@ test "User directory correctly update on display name change",
       });
    };
 
-sub create_and_set_random_displayname
+sub generate_random_displayname
 {
-   my ( $user ) = @_;
-
-   my $displayname = join "", map { chr 65 + rand 26 } 1 .. 20;
-
-   do_request_json_for( $user,
-      method => "PUT",
-      uri    => "/r0/profile/:user_id/displayname",
-
-      content => { displayname => $displayname },
-   )->then( sub {
-      Future->done( $displayname );
-   });
+   join "", map { chr 65 + rand 26 } 1 .. 20;
 }
 
 
