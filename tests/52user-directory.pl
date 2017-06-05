@@ -172,7 +172,7 @@ foreach my $type (qw( join_rules history_visibility )) {
                );
             }
          })->then( sub {
-            get_user_dir_synced( $user, $displayname )
+            get_user_dir_synced( $user, $displayname );
          })->then( sub {
             my ( $body ) = @_;
 
@@ -193,7 +193,7 @@ foreach my $type (qw( join_rules history_visibility )) {
                );
             }
          })->then( sub {
-            get_user_dir_synced( $user, $displayname )
+            get_user_dir_synced( $user, $displayname );
          })->then( sub {
             my ( $body ) = @_;
 
@@ -247,7 +247,7 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
             content => { history_visibility => "world_readable" },
          );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname )
+         get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -364,7 +364,7 @@ test "User directory correctly update on display name change",
          any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
             or die "user not in list";
 
-         matrix_set_displayname( $user, $second_displayname )
+         matrix_set_displayname( $user, $second_displayname );
       })->then( sub {
          log_if_fail "Second displayname", $second_displayname;
 
