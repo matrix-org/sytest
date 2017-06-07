@@ -82,14 +82,25 @@ sub clear_db_pg
    require DBI;
    require DBD::Pg;
 
-   my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$host", $args{user}, $args{password} )
-      or die DBI->errstr;
+   # If there is a DB called sytest_template use that as the template for the
+   # sytest databases. Otherwise initialise the DB from scratch (which can take
+   # a fair few seconds)
+   my $dbh = DBI->connect( "dbi:Pg:dbname=sytest_template;host=$host", $args{user}, $args{password} );
+   if ( $dbh ) {
+      $dbh->do( "DROP DATABASE $args{database}" );  # we don't mind if this dies
 
-   foreach my $row ( @{ $dbh->selectall_arrayref( "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" ) } ) {
-      my ( $tablename ) = @$row;
-
-      $dbh->do( "DROP TABLE $tablename CASCADE" ) or
+      $dbh->do( "CREATE DATABASE $args{database} WITH TEMPLATE sytest_template" ) or
          die $dbh->errstr;
+   } else {
+      my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$host", $args{user}, $args{password} )
+         or die DBI->errstr;
+
+      foreach my $row ( @{ $dbh->selectall_arrayref( "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" ) } ) {
+         my ( $tablename ) = @$row;
+
+         $dbh->do( "DROP TABLE $tablename CASCADE" ) or
+            die $dbh->errstr;
+      }
    }
 }
 
@@ -100,8 +111,8 @@ sub await_connectable
 
    my $loop = $self->loop;
 
-   my $attempts = 20;
-   my $delay    = 0.1;
+   my $attempts = 25;
+   my $delay    = 0.05;
 
    repeat {
       $loop->connect(
@@ -115,7 +126,7 @@ sub await_connectable
          }
 
          $attempts--;
-         $delay *= 1.5;
+         $delay *= 1.3;
 
          $loop->delay_future( after => $delay )
               ->then_done(0);
