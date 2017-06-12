@@ -2,7 +2,7 @@ test "Add remote users to group",
    requires => [ local_admin_fixture( with_events => 0 ), remote_user_fixture( with_events => 0 ) ],
 
    do => sub {
-      my ( $creator, $remote, $viewer ) = @_;
+      my ( $creator, $remote ) = @_;
 
       my $group_id;
 

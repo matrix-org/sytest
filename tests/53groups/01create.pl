@@ -63,7 +63,7 @@ test "Add group users",
    };
 
 
-push our @EXPORT, qw( matrix_create_group matrix_add_group_users matrix_add_group_rooms );
+push our @EXPORT, qw( matrix_create_group matrix_add_group_users matrix_add_group_rooms matrix_remove_group_users );
 
 sub matrix_create_group
 {
@@ -94,6 +94,20 @@ sub matrix_add_group_users
    do_request_json_for( $inviter,
       method  => "PUT",
       uri     => "/unstable/groups/$group_id/admin/users/invite/$invitee_id",
+      content => {},
+   );
+}
+
+
+sub matrix_remove_group_users
+{
+   my ( $inviter, $group_id, $invitee ) = @_;
+
+   my $invitee_id = $invitee->user_id;
+
+   do_request_json_for( $inviter,
+      method  => "PUT",
+      uri     => "/unstable/groups/$group_id/admin/users/kick/$invitee_id",
       content => {},
    );
 }
