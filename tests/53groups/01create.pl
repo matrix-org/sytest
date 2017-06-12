@@ -93,7 +93,7 @@ sub matrix_add_group_users
 
    do_request_json_for( $inviter,
       method  => "PUT",
-      uri     => "/unstable/groups/$group_id/admin/users/$invitee_id",
+      uri     => "/unstable/groups/$group_id/admin/users/invite/$invitee_id",
       content => {},
    );
 }
