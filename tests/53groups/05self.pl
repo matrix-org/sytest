@@ -40,6 +40,33 @@ foreach my $user_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
 }
 
 
+test "Newly joined group appears in /joined_groups",
+   requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
+
+   do => sub {
+      my ( $creator, $user ) = @_;
+
+      my $group_id;
+
+      matrix_create_group( $creator )
+      ->then( sub {
+         ( $group_id ) = @_;
+
+         matrix_add_group_users( $creator, $group_id, $user );
+      })->then( sub {
+         matrix_get_joined_groups( $user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( groups ) );
+         assert_json_list( my $group_ids = $body->{groups} );
+
+         assert_deeply_eq( $group_ids, [ $group_id ] );
+
+         Future->done( 1 );
+      });
+   };
+
 
 sub matrix_remove_group_self
 {
@@ -49,5 +76,16 @@ sub matrix_remove_group_self
       method  => "PUT",
       uri     => "/unstable/groups/$group_id/self/leave",
       content => {},
+   );
+}
+
+
+sub matrix_get_joined_groups
+{
+   my ( $user ) = @_;
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/unstable/joined_groups",
    );
 }
