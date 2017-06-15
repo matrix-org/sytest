@@ -94,6 +94,10 @@ our @HOMESERVER_INFO = map {
                client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
                client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
 
+               user_dir         => main::alloc_port( "user_dir[$idx]" ),
+               user_dir_metrics => main::alloc_port( "user_dir[$idx].metrics" ),
+               user_dir_manhole => main::alloc_port( "user_dir[$idx].manhole" ),
+
                dendron => main::alloc_port( "dendron[$idx]" ),
 
                haproxy => main::alloc_port( "haproxy[$idx]" ),

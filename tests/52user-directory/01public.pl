@@ -1,20 +1,6 @@
 use Future::Utils qw( try_repeat_until_success );
 
 
-sub try_repeat_until_success_backoff
-{
-   my ( $code ) = @_;
-
-   my $delay = 0.1;
-
-   try_repeat_until_success( sub {
-      $code->()
-      ->else_eith_f( sub {
-         my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
-      });
-   });
-}
-
 
 test "User appears in user directory",
    requires => [ local_user_fixture() ],
@@ -152,9 +138,14 @@ foreach my $type (qw( join_rules history_visibility )) {
       check => sub {
          my ( $creator, $user ) = @_;
 
+         log_if_fail "creator", $creator->user_id;
+         log_if_fail "user", $user->user_id;
+
          my $room_id;
 
          my $displayname = generate_random_displayname();
+
+         log_if_fail "display_name", $displayname;
 
          matrix_set_displayname( $user, $displayname )
          ->then( sub {
@@ -163,6 +154,8 @@ foreach my $type (qw( join_rules history_visibility )) {
             );
          })->then( sub {
             ( $room_id ) = @_;
+
+            log_if_fail "Room", $room_id;
 
             matrix_join_room( $user, $room_id );
          })->then( sub {
