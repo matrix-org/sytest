@@ -1,6 +1,21 @@
 use Future::Utils qw( try_repeat_until_success );
 
 
+sub try_repeat_until_success_backoff
+{
+   my ( $code ) = @_;
+
+   my $delay = 0.1;
+
+   try_repeat_until_success( sub {
+      $code->()
+      ->else_eith_f( sub {
+         my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
+      });
+   });
+}
+
+
 test "User appears in user directory",
    requires => [ local_user_fixture() ],
 
@@ -60,7 +75,7 @@ test "User in private room doesn't appear in user directory",
       })->then( sub {
          ( $room_id ) = @_;
 
-         get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -95,7 +110,7 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
          log_if_fail "Room interested in", $room_id;
 
-         get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -106,7 +121,7 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
          matrix_join_room( $user, $room_id );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -117,7 +132,7 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
          matrix_leave_room( $user, $room_id );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -151,7 +166,7 @@ foreach my $type (qw( join_rules history_visibility )) {
 
             matrix_join_room( $user, $room_id );
          })->then( sub {
-            get_user_dir_synced( $user, $displayname );
+            matrix_get_user_dir_synced( $user, $displayname );
          })->then( sub {
             my ( $body ) = @_;
 
@@ -172,7 +187,7 @@ foreach my $type (qw( join_rules history_visibility )) {
                );
             }
          })->then( sub {
-            get_user_dir_synced( $user, $displayname );
+            matrix_get_user_dir_synced( $user, $displayname );
          })->then( sub {
             my ( $body ) = @_;
 
@@ -193,7 +208,7 @@ foreach my $type (qw( join_rules history_visibility )) {
                );
             }
          })->then( sub {
-            get_user_dir_synced( $user, $displayname );
+            matrix_get_user_dir_synced( $user, $displayname );
          })->then( sub {
             my ( $body ) = @_;
 
@@ -228,7 +243,7 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
 
          matrix_join_room( $user, $room_id );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -247,7 +262,7 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
             content => { history_visibility => "world_readable" },
          );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -261,7 +276,7 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
             content => { join_rule => "invite" },
          );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -275,7 +290,7 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
             content => { history_visibility => "shared" },
          );
       })->then( sub {
-         get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -310,7 +325,7 @@ test "User in remote room doesn't appear in user directory after server left roo
 
          matrix_join_room( $remote, $room_id );
       })->then( sub {
-         get_user_dir_synced( $remote, $displayname );
+         matrix_get_user_dir_synced( $remote, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -321,7 +336,7 @@ test "User in remote room doesn't appear in user directory after server left roo
 
          matrix_leave_room( $remote, $room_id );
       })->then( sub {
-         get_user_dir_synced( $remote, $displayname );
+         matrix_get_user_dir_synced( $remote, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -355,7 +370,7 @@ test "User directory correctly update on display name change",
       })->then( sub {
          ( $room_id ) = @_;
 
-         get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -368,7 +383,7 @@ test "User directory correctly update on display name change",
       })->then( sub {
          log_if_fail "Second displayname", $second_displayname;
 
-         get_user_dir_synced( $user, $second_displayname );
+         matrix_get_user_dir_synced( $user, $second_displayname );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -381,6 +396,9 @@ test "User directory correctly update on display name change",
       });
    };
 
+
+push our @EXPORT, qw( generate_random_displayname matrix_get_user_dir_synced );
+
 sub generate_random_displayname
 {
    join "", map { chr 65 + rand 26 } 1 .. 20;
@@ -390,7 +408,7 @@ sub generate_random_displayname
 # Get the user direectory after a change has been made. This creates a new user
 # and then polls the user directory until we see it. This is to get around the
 # fact that the user directory gets updated asynchronously.
-sub get_user_dir_synced
+sub matrix_get_user_dir_synced
 {
    my ( $user, $search_term ) = @_;
 
@@ -425,7 +443,7 @@ sub get_user_dir_synced
             Future->done( $body )
          });
       })->then( sub {
-         do_request_json_for( $new_user,
+         do_request_json_for( $user,
             method  => "POST",
             uri     => "/unstable/user_directory/search",
             content => {
