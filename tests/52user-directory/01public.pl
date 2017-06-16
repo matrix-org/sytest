@@ -1,7 +1,6 @@
 use Future::Utils qw( try_repeat_until_success );
 
 
-
 test "User appears in user directory",
    requires => [ local_user_fixture() ],
 
