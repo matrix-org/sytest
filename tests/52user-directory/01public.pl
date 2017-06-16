@@ -1,21 +1,6 @@
 use Future::Utils qw( try_repeat_until_success );
 
 
-sub try_repeat_until_success_backoff
-{
-   my ( $code ) = @_;
-
-   my $delay = 0.1;
-
-   try_repeat_until_success( sub {
-      $code->()
-      ->else_eith_f( sub {
-         my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
-      });
-   });
-}
-
-
 test "User appears in user directory",
    requires => [ local_user_fixture() ],
 
