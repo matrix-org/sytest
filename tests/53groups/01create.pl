@@ -46,24 +46,8 @@ test "Add group rooms",
       });
    };
 
-test "Invite group users",
-   requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
-   do => sub {
-      my ( $creator, $user ) = @_;
-
-      my $group_id;
-
-      matrix_create_group( $creator )
-      ->then( sub {
-         ( $group_id ) = @_;
-
-         matrix_add_group_users( $creator, $group_id, $user );
-      });
-   };
-
-
-push our @EXPORT, qw( matrix_create_group matrix_add_group_users matrix_add_group_rooms matrix_remove_group_users );
+push our @EXPORT, qw( matrix_create_group matrix_invite_group_users matrix_add_group_rooms matrix_remove_group_users );
 
 sub matrix_create_group
 {
@@ -83,19 +67,6 @@ sub matrix_create_group
 
       Future->done( $body->{group_id} );
    });
-}
-
-sub matrix_add_group_users
-{
-   my ( $inviter, $group_id, $invitee ) = @_;
-
-   my $invitee_id = $invitee->user_id;
-
-   do_request_json_for( $inviter,
-      method  => "PUT",
-      uri     => "/unstable/groups/$group_id/admin/users/invite/$invitee_id",
-      content => {},
-   );
 }
 
 

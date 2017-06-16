@@ -84,33 +84,6 @@ foreach my $viewer_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
          });
       };
 
-   test "Add $test_name group users",
-      requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ), $viewer_fixture ],
-
-      do => sub {
-         my ( $creator, $user, $viewer ) = @_;
-
-         my $group_id;
-
-         matrix_create_group( $creator )
-         ->then( sub {
-            ( $group_id ) = @_;
-
-            matrix_add_group_users( $creator, $group_id, $user );
-         })->then( sub {
-            matrix_get_group_users( $viewer, $group_id );
-         })->then( sub {
-            my ( $body ) = @_;
-
-            assert_json_keys( $body, qw( chunk ) );
-
-            any { $_->{user_id} eq $user->user_id } @{ $body->{chunk} }
-               or die "New user not in group users list";
-
-            Future->done( 1 );
-         });
-      };
-
    test "Get $test_name group summary",
       requires => [ local_admin_fixture( with_events => 0 ), $viewer_fixture ],
 
