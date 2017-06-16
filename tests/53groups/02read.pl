@@ -49,9 +49,6 @@ foreach my $viewer_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
 
             assert_json_keys( $body, qw( chunk ) );
 
-            any { $_->{user_id} eq $user->user_id } @{ $body->{chunk} }
-               or die "Creator not in group users list";
-
             Future->done( 1 );
          });
       };

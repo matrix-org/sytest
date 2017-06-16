@@ -46,7 +46,7 @@ test "Add group rooms",
       });
    };
 
-test "Add group users",
+test "Invite group users",
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
