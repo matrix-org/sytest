@@ -63,6 +63,42 @@ test "Remove self from local group",
       });
    };
 
+test "Remove other from local group",
+   requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
+
+   do => sub {
+      my ( $creator, $user ) = @_;
+
+      my $group_id;
+
+      matrix_create_group( $creator )
+      ->then( sub {
+         ( $group_id ) = @_;
+
+         matrix_invite_group_users( $creator, $group_id, $user );
+      })->then( sub {
+         matrix_accept_group_invite( $group_id, $user );
+      })->then( sub {
+         matrix_get_joined_groups( $user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_list( my $group_ids = $body->{groups} );
+         assert_deeply_eq( $group_ids, [ $group_id ] );
+
+         matrix_remove_group_users( $creator, $group_id, $user );
+      })->then( sub {
+         matrix_get_joined_groups( $user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_list( my $group_ids = $body->{groups} );
+         assert_deeply_eq( $group_ids, [] );
+
+         Future->done( 1 );
+      });
+   };
+
 
 push our @EXPORT, qw( matrix_invite_group_users matrix_remove_group_users );
 
@@ -89,7 +125,7 @@ sub matrix_remove_group_users
 
    do_request_json_for( $inviter,
       method  => "PUT",
-      uri     => "/unstable/groups/$group_id/admin/users/kick/$invitee_id",
+      uri     => "/unstable/groups/$group_id/admin/users/remove/$invitee_id",
       content => {},
    );
 }
