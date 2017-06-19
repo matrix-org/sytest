@@ -238,10 +238,11 @@ test "Can backfill purged history",
 
 
 multi_test "Shutdown room",
-   requires => [ local_admin_fixture(), local_user_fixture(), remote_user_fixture(), room_alias_name_fixture() ],
+   requires => [ local_admin_fixture(), local_user_fixtures( 2 ), remote_user_fixture(),
+      room_alias_name_fixture() ],
 
    do => sub {
-      my ( $admin, $user, $remote_user, $room_alias_name ) = @_;
+      my ( $admin, $user, $dummy_user, $remote_user, $room_alias_name ) = @_;
 
       my $server_name = $user->http->server_name;
       my $room_alias = "#$room_alias_name:$server_name";
@@ -253,10 +254,6 @@ multi_test "Shutdown room",
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_create_room( $admin )
-      })->then( sub {
-         ( $new_room_id ) = @_;
-
          matrix_invite_user_to_room( $user, $remote_user, $room_id );
       })->then( sub {
          matrix_join_room( $remote_user, $room_id );
@@ -264,10 +261,14 @@ multi_test "Shutdown room",
          do_request_json_for( $admin,
             method  => "POST",
             uri     => "/r0/admin/shutdown_room/$room_id",
-            content => { "repoint_aliases_to_room_id" => $new_room_id },
+            content => { "new_room_user_id" => $dummy_user->user_id },
          );
       })->SyTest::pass_on_done( "Shutdown room returned success" )
       ->then( sub {
+         my ( $body ) = @_;
+
+         $new_room_id = $body->{new_room_id};
+
          matrix_send_room_text_message( $user, $room_id, body => "Hello" )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot post in room" )
@@ -293,8 +294,15 @@ multi_test "Shutdown room",
 
          pass( "Aliases were repointed" );
 
-         Future->done( 1 );
-      });
+         matrix_get_room_state( $user, $new_room_id,
+            type      => "m.room.name",
+            state_key => "",
+         );
+      })->SyTest::pass_on_done( "User was added to new room" )
+      ->then( sub {
+         matrix_send_room_text_message( $user, $new_room_id, body => "Hello" )
+         ->main::expect_http_403;
+      })->SyTest::pass_on_done( "User cannot send into new room" );
    };
 
 
