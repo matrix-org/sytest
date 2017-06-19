@@ -3,7 +3,7 @@ use File::Slurper qw( read_binary );
 
 my $dir = dirname __FILE__;
 
-multi_test "POSTed media can be thumbnailed",
+multi_test "Can quarantine media in rooms",
    requires => [ local_admin_fixture(), local_user_and_room_fixtures(), remote_user_fixture(),
                  qw( can_upload_media can_download_media )],
 
