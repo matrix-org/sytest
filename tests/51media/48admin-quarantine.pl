@@ -35,7 +35,7 @@ multi_test "Can quarantine media in rooms",
          $content_id = "$server$path";
 
          matrix_send_room_message( $user, $room_id,
-            content => { msgtype => "m.image", body => "test.png", url => $content_uri }
+            content => { msgtype => "m.image", body => "test.png", url => "$content_uri" }
          );
       })->then( sub {
          do_request_json_for( $admin,
