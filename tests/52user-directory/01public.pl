@@ -137,9 +137,14 @@ foreach my $type (qw( join_rules history_visibility )) {
       check => sub {
          my ( $creator, $user ) = @_;
 
+         log_if_fail "creator", $creator->user_id;
+         log_if_fail "user", $user->user_id;
+
          my $room_id;
 
          my $displayname = generate_random_displayname();
+
+         log_if_fail "display_name", $displayname;
 
          matrix_set_displayname( $user, $displayname )
          ->then( sub {
@@ -148,6 +153,8 @@ foreach my $type (qw( join_rules history_visibility )) {
             );
          })->then( sub {
             ( $room_id ) = @_;
+
+            log_if_fail "Room", $room_id;
 
             matrix_join_room( $user, $room_id );
          })->then( sub {

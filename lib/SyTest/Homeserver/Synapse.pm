@@ -193,9 +193,10 @@ sub start
 
         # If we're using dendron-style split workers, we need to disable these
         # things in the main process
-        start_pushers      => ( not $self->{dendron} ),
-        notify_appservices => ( not $self->{dendron} ),
-        send_federation    => ( not $self->{dendron} ),
+        start_pushers         => ( not $self->{dendron} ),
+        notify_appservices    => ( not $self->{dendron} ),
+        send_federation       => ( not $self->{dendron} ),
+        update_user_directory => ( not $self->{dendron} ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -211,7 +212,7 @@ sub start
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
-      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender ) ) {
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir ) ) {
          open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
       }
    }
@@ -752,6 +753,38 @@ sub wrap_synapse_command
          "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}";
    }
 
+   {
+      my $user_dir_config_path = $self->write_yaml_file( "user_dir.yaml" => {
+         "worker_app"              => "synapse.app.user_dir",
+         "worker_log_file"         => "$log.user_dir",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
+            {
+               type      => "http",
+               resources => [{ names => ["client"] }],
+               port      => $self->{ports}{user_dir},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{user_dir_manhole},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{user_dir_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      } );
+
+      push @command,
+         "--user-directory-config" => $user_dir_config_path,
+         "--user-directory-url" => "http://$bind_host:$self->{ports}{user_dir}";
+   }
+
    return @command;
 }
 
@@ -885,6 +918,9 @@ backend media_repository
 backend client_reader
     server client_reader ${bind_host}:$ports->{client_reader}
 
+backend user_dir
+    server user_dir ${bind_host}:$ports->{user_dir}
+
 EOCONFIG
 }
 
@@ -906,6 +942,8 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/publicRooms             federation_reader
 
 ^/_matrix/client/(api/v1|r0)/publicRooms$    client_reader
+
+^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
 EOCONFIG
 }
 
