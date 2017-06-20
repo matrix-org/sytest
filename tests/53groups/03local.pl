@@ -100,7 +100,7 @@ test "Remove other from local group",
    };
 
 
-push our @EXPORT, qw( matrix_invite_group_users matrix_remove_group_users );
+push our @EXPORT, qw( matrix_invite_group_users matrix_remove_group_users matrix_accept_group_invite );
 
 
 sub matrix_invite_group_users

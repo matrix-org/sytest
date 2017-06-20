@@ -47,7 +47,7 @@ test "Add group rooms",
    };
 
 
-push our @EXPORT, qw( matrix_create_group matrix_invite_group_users matrix_add_group_rooms matrix_remove_group_users );
+push our @EXPORT, qw( matrix_create_group matrix_invite_group_users matrix_add_group_rooms );
 
 sub matrix_create_group
 {
@@ -67,20 +67,6 @@ sub matrix_create_group
 
       Future->done( $body->{group_id} );
    });
-}
-
-
-sub matrix_remove_group_users
-{
-   my ( $inviter, $group_id, $invitee ) = @_;
-
-   my $invitee_id = $invitee->user_id;
-
-   do_request_json_for( $inviter,
-      method  => "PUT",
-      uri     => "/unstable/groups/$group_id/admin/users/kick/$invitee_id",
-      content => {},
-   );
 }
 
 
