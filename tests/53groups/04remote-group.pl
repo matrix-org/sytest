@@ -62,3 +62,6 @@ test "Remove self from remote group",
          Future->done( 1 );
       });
    };
+
+
+# TODO: Test kicks
