@@ -250,7 +250,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
 
          content => { name => $name },
       )->then( sub {
-         retry_until_success( sub {
+         retry_until_success {
             matrix_initialsync_room( $user, $room_id )->then( sub {
                my ( $body ) = @_;
 
@@ -264,7 +264,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
 
                Future->done(1);
             })
-         });
+         };
       })
    };
 
@@ -309,7 +309,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
          content => { topic => $topic },
       )->then( sub {
-         retry_until_success( sub {
+         retry_until_success {
             matrix_initialsync_room( $user, $room_id )->then( sub {
                my ( $body ) = @_;
 
@@ -323,7 +323,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
                Future->done(1);
             })
-         })
+         };
       })
    };
 

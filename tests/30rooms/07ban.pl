@@ -84,12 +84,12 @@ test "Remote banned user is kicked and may not rejoin until unbanned",
          $body->{membership} eq "ban" or
             die "Expected banned user membership to be 'ban'";
 
-         retry_until_success( sub {
+         retry_until_success {
             matrix_get_room_state( $banned_user, $room_id,
                type      => "m.room.member",
                state_key => $banned_user->user_id,
             )->main::expect_http_403;
-         })
+         };
       })->then( sub {
          matrix_join_room( $banned_user, $room_id )
             ->main::expect_http_403;  # Must be unbanned first

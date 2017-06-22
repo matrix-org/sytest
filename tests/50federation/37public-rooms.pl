@@ -26,7 +26,7 @@ test "Inbound federation can get public room list",
           },
         );
       })->then( sub {
-         retry_until_success( sub {
+         retry_until_success {
             $outbound_client->do_request_json(
                method   => "GET",
                hostname => $first_home_server,
@@ -43,6 +43,6 @@ test "Inbound federation can get public room list",
 
                Future->done( 1 );
             })
-         })
+         };
       });
    };

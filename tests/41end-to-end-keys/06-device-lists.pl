@@ -66,7 +66,7 @@ test "Local new device changes appear in v2 /sync",
       })->then( sub {
          matrix_login_again_with_user( $user2 )
       })->then( sub {
-         retry_until_success ( sub {
+         retry_until_success {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -84,7 +84,7 @@ test "Local new device changes appear in v2 /sync",
 
                Future->done(1);
             })
-         })
+         };
       });
    };
 
@@ -112,7 +112,7 @@ test "Local delete device changes appear in v2 /sync",
              }
          });
       })->then( sub {
-         retry_until_success( sub {
+         retry_until_success {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -130,7 +130,7 @@ test "Local delete device changes appear in v2 /sync",
 
                Future->done(1);
             })
-         })
+         };
       });
    };
 
@@ -152,7 +152,7 @@ test "Local update device changes appear in v2 /sync",
       })->then( sub {
          matrix_set_device_display_name( $user2, $user2->device_id, "wibble");
       })->then( sub {
-         retry_until_success( sub {
+         retry_until_success {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -170,7 +170,7 @@ test "Local update device changes appear in v2 /sync",
 
                Future->done(1);
             })
-         })
+         };
       });
    };
 
@@ -197,7 +197,7 @@ test "Can query remote device keys using POST after notification",
       })->then( sub {
          matrix_set_device_display_name( $user2, $user2->device_id, "test display name" ),
       })->then( sub {
-         retry_until_success( sub {
+         retry_until_success {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -215,7 +215,7 @@ test "Can query remote device keys using POST after notification",
 
                Future->done( 1 )
             })
-         })
+         };
       })->then( sub {
          do_request_json_for( $user1,
             method  => "POST",
@@ -281,7 +281,7 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_set_device_display_name( $remote_leaver, $remote_leaver->device_id, "test display name" ),
       })->then( sub {
-         retry_until_success( sub {
+         retry_until_success {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -296,7 +296,7 @@ test "If remote user leaves room we no longer receive device updates",
 
                Future->done( 1 )
             })
-         })
+         };
       })->then( sub {
          matrix_leave_room( $remote_leaver, $room_id )
       })->then( sub {
@@ -304,7 +304,7 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_put_e2e_keys( $remote2, device_keys => { updated => "keys" } )
       })->then( sub {
-         retry_until_success( sub {
+         retry_until_success {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -324,7 +324,7 @@ test "If remote user leaves room we no longer receive device updates",
 
                Future->done( 1 )
             })
-         })
+         };
       })->then( sub {
          any { $remote_leaver->user_id eq $_ } @device_users_changed
             and die "user2 in changed list after leaving";

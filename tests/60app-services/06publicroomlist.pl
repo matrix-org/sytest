@@ -11,7 +11,7 @@ sub get_room_list_synced
 
    my $check = $opts{check};
 
-   retry_until_success( sub {
+   retry_until_success {
       do_request_json_for( $user,
          method => "POST",
          uri    => "/r0/publicRooms",
@@ -20,7 +20,7 @@ sub get_room_list_synced
       )->then( sub {
          Future->done( $check->( @_ ) )
       })
-   });
+   };
 }
 
 
