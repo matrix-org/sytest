@@ -1,6 +1,3 @@
-use Future::Utils qw( try_repeat_until_success );
-
-
 test "Name/topic keys are correct",
    requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
 
@@ -33,7 +30,7 @@ test "Name/topic keys are correct",
          )
       } keys %rooms )
       ->then( sub {
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             $http->do_request_json(
                method => "GET",
                uri    => "/r0/publicRooms",

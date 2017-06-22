@@ -1,4 +1,4 @@
-use Future::Utils qw( try_repeat_until_success repeat );
+use Future::Utils qw( repeat );
 
 test "Guest user cannot call /events globally",
    requires => [ guest_user_fixture() ],
@@ -224,12 +224,12 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
 
                # This may fail a few times if the power level event hasn't federated yet.
                # So we retry.
-               try_repeat_until_success( sub {
+               retry_until_success( sub {
                   matrix_set_room_guest_access( $remote_user, $room_id, "forbidden" );
                }),
             );
          })->then( sub {
-            try_repeat_until_success( sub {
+            retry_until_success( sub {
                matrix_get_room_membership( $local_user, $room_id, $guest_user )
                ->then( sub {
                   my ( $membership ) = @_;
@@ -353,7 +353,7 @@ test "GET /publicRooms lists rooms",
             );
          }),
       )->then( sub {
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             $http->do_request_json(
                method => "GET",
                uri    => "/r0/publicRooms",
@@ -447,7 +447,7 @@ test "GET /publicRooms includes avatar URLs",
             );
          }),
       )->then( sub {
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             $http->do_request_json(
                method => "GET",
                uri    => "/r0/publicRooms",

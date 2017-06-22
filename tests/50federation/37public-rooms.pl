@@ -1,6 +1,3 @@
-use Future::Utils qw( try_repeat_until_success );
-
-
 test "Inbound federation can get public room list",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures(),
@@ -29,7 +26,7 @@ test "Inbound federation can get public room list",
           },
         );
       })->then( sub {
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             $outbound_client->do_request_json(
                method   => "GET",
                hostname => $first_home_server,

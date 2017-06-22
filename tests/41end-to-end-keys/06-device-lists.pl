@@ -1,5 +1,3 @@
-use Future::Utils qw( try_repeat_until_success );
-
 test "Local device key changes appear in v2 /sync",
    requires => [ local_user_fixtures( 2 ),
                  qw( can_sync ) ],
@@ -68,7 +66,7 @@ test "Local new device changes appear in v2 /sync",
       })->then( sub {
          matrix_login_again_with_user( $user2 )
       })->then( sub {
-         try_repeat_until_success ( sub {
+         retry_until_success ( sub {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -114,7 +112,7 @@ test "Local delete device changes appear in v2 /sync",
              }
          });
       })->then( sub {
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -154,7 +152,7 @@ test "Local update device changes appear in v2 /sync",
       })->then( sub {
          matrix_set_device_display_name( $user2, $user2->device_id, "wibble");
       })->then( sub {
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -199,7 +197,7 @@ test "Can query remote device keys using POST after notification",
       })->then( sub {
          matrix_set_device_display_name( $user2, $user2->device_id, "test display name" ),
       })->then( sub {
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -283,7 +281,7 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_set_device_display_name( $remote_leaver, $remote_leaver->device_id, "test display name" ),
       })->then( sub {
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -306,7 +304,7 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_put_e2e_keys( $remote2, device_keys => { updated => "keys" } )
       })->then( sub {
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;

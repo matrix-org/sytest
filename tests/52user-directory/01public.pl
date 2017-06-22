@@ -1,6 +1,3 @@
-use Future::Utils qw( try_repeat_until_success );
-
-
 test "User appears in user directory",
    requires => [ local_user_fixture() ],
 
@@ -19,7 +16,7 @@ test "User appears in user directory",
       })->then( sub {
          ( $room_id ) = @_;
 
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             do_request_json_for( $user,
                method  => "POST",
                uri     => "/unstable/user_directory/search",
@@ -461,7 +458,7 @@ sub matrix_get_user_dir_synced
          preset => "public_chat",
       );
    })->then( sub {
-      try_repeat_until_success( sub {
+      retry_until_success( sub {
          do_request_json_for( $new_user,
             method  => "POST",
             uri     => "/unstable/user_directory/search",

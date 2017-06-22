@@ -1,6 +1,3 @@
-use Future::Utils qw( try_repeat_until_success );
-
-
 use constant AS_PREFIX => "/_matrix/app/unstable";
 
 
@@ -14,7 +11,7 @@ sub get_room_list_synced
 
    my $check = $opts{check};
 
-   try_repeat_until_success( sub {
+   retry_until_success( sub {
       do_request_json_for( $user,
          method => "POST",
          uri    => "/r0/publicRooms",

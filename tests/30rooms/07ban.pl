@@ -1,5 +1,3 @@
-use Future::Utils qw( try_repeat_until_success );
-
 my $creator_fixture = local_user_fixture();
 
 my $banned_user_fixture = local_user_fixture();
@@ -86,7 +84,7 @@ test "Remote banned user is kicked and may not rejoin until unbanned",
          $body->{membership} eq "ban" or
             die "Expected banned user membership to be 'ban'";
 
-         try_repeat_until_success( sub {
+         retry_until_success( sub {
             matrix_get_room_state( $banned_user, $room_id,
                type      => "m.room.member",
                state_key => $banned_user->user_id,
