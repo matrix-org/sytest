@@ -1,5 +1,3 @@
-use Future::Utils qw( try_repeat_until_success );
-
 my $password = "my secure password";
 
 =head2 matrix_set_password
@@ -99,13 +97,9 @@ test "After changing password, a different session no longer works",
       })->then( sub {
          matrix_set_password( $user, $password, "my new password" )
       })->then( sub {
-         my $delay = 0.1;
          # our access token should be invalidated
-         try_repeat_until_success {
+         retry_until_success {
             matrix_sync( $other_login )->main::expect_http_401
-            ->else_with_f( sub {
-               my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
-            })
          };
       })->then_done(1);
    };
