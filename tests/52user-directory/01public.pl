@@ -167,12 +167,13 @@ foreach my $type (qw( join_rules history_visibility )) {
 
             pass "User initially not in directory";
 
-            if ( $type eq "join_rules" ) {
+            if( $type eq "join_rules" ) {
                matrix_put_room_state( $creator, $room_id,
                   type    => "m.room.join_rules",
                   content => { join_rule => "public" },
                );
-            } else {
+            }
+            else {
                matrix_put_room_state( $creator, $room_id,
                   type    => "m.room.history_visibility",
                   content => { history_visibility => "world_readable" },
@@ -188,12 +189,13 @@ foreach my $type (qw( join_rules history_visibility )) {
 
             pass "User appears in directory after $type set to public";
 
-            if ( $type eq "join_rules" ) {
+            if( $type eq "join_rules" ) {
                matrix_put_room_state( $creator, $room_id,
                   type    => "m.room.join_rules",
                   content => { join_rule => "invite" },
                );
-            } else {
+            }
+            else {
                matrix_put_room_state( $creator, $room_id,
                   type    => "m.room.history_visibility",
                   content => { history_visibility => "shared" },
