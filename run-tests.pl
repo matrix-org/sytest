@@ -337,12 +337,12 @@ sub retry_until_success(&)
    my $delay = 0.1;
 
    try_repeat {
-      $code->()
-      ->else_with_f( sub {
-         my ( $f ) = @_;
-         delay( $delay *= 1.5 )
-            ->then( sub { $f } );
-      });
+      my $prev_f = shift;
+
+      ( $prev_f ?
+            delay( $delay *= 1.5 ) :
+            Future->done )
+         ->then( $code );
    }  until => sub { !$_[0]->failure };
 }
 
