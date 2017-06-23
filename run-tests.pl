@@ -14,7 +14,7 @@ use SyTest::Assertions qw( :all );
 use SyTest::JSONSensible;
 
 use Future;
-use Future::Utils qw( try_repeat_until_success );
+use Future::Utils qw( try_repeat );
 use IO::Async::Loop;
 
 use Data::Dump qw( pp );
@@ -336,14 +336,14 @@ sub retry_until_success(&)
 
    my $delay = 0.1;
 
-   try_repeat_until_success {
+   try_repeat {
       $code->()
       ->else_with_f( sub {
          my ( $f ) = @_;
          delay( $delay *= 1.5 )
             ->then( sub { $f } );
       });
-   };
+   }  until => sub { !$_[0]->failure };
 }
 
 my @log_if_fail_lines;
