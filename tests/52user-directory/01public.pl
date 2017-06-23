@@ -32,8 +32,9 @@ test "User appears in user directory",
                log_if_fail "Body", $body;
 
                assert_json_keys( $body, qw( results ) );
+               assert_json_list( my $results = $body->{results} );
 
-               any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+               any { $_->{user_id} eq $user->user_id } @$results
                   or die "user not in list";
 
                Future->done( 1 );
@@ -63,10 +64,11 @@ test "User in private room doesn't appear in user directory",
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         log_if_fail "Body", $body;
+         log_if_fail "Results", $results;
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         any { $_->{user_id} eq $user->user_id } @$results
             and die "user in list";
 
          Future->done( 1 );
@@ -98,8 +100,11 @@ multi_test "User joining then leaving public room appears and dissappears from d
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         log_if_fail "Results", $results;
+
+         any { $_->{user_id} eq $user->user_id } @$results
             and die "user in list";
 
          pass "User initially not in directory";
@@ -109,8 +114,11 @@ multi_test "User joining then leaving public room appears and dissappears from d
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         log_if_fail "Results", $results;
+
+         any { $_->{user_id} eq $user->user_id } @$results
             or die "user not in list";
 
          pass "User appears in directory after join";
@@ -120,8 +128,11 @@ multi_test "User joining then leaving public room appears and dissappears from d
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         log_if_fail "Results", $results;
+
+         any { $_->{user_id} eq $user->user_id } @$results
             and die "user in list";
 
          pass "User not in directory after leaving room";
@@ -161,8 +172,11 @@ foreach my $type (qw( join_rules history_visibility )) {
             matrix_get_user_dir_synced( $user, $displayname );
          })->then( sub {
             my ( $body ) = @_;
+            my $results = $body->{results};
 
-            any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+            log_if_fail "Results", $results;
+
+            any { $_->{user_id} eq $user->user_id } @$results
                and die "user in list";
 
             pass "User initially not in directory";
@@ -183,8 +197,11 @@ foreach my $type (qw( join_rules history_visibility )) {
             matrix_get_user_dir_synced( $user, $displayname );
          })->then( sub {
             my ( $body ) = @_;
+            my $results = $body->{results};
 
-            any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+            log_if_fail "Results", $results;
+
+            any { $_->{user_id} eq $user->user_id } @$results
                or die "user not in list";
 
             pass "User appears in directory after $type set to public";
@@ -205,8 +222,11 @@ foreach my $type (qw( join_rules history_visibility )) {
             matrix_get_user_dir_synced( $user, $displayname );
          })->then( sub {
             my ( $body ) = @_;
+            my $results = $body->{results};
 
-            any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+            log_if_fail "Results", $results;
+
+            any { $_->{user_id} eq $user->user_id } @$results
                and die "user in list";
 
             pass "User not in directory after $type set to private";
@@ -240,8 +260,11 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         log_if_fail "Results", $results;
+
+         any { $_->{user_id} eq $user->user_id } @$results
             and die "user in list";
 
          pass "User initially not in directory";
@@ -259,8 +282,11 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         log_if_fail "Results", $results;
+
+         any { $_->{user_id} eq $user->user_id } @$results
             or die "user not in list";
 
          pass "User appears in directory after join_rules set to public";
@@ -273,8 +299,11 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         log_if_fail "Results", $results;
+
+         any { $_->{user_id} eq $user->user_id } @$results
             or die "user not in list";
 
          pass "User still in directory after join_rules set to invite";
@@ -287,8 +316,11 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         log_if_fail "Results", $results;
+
+         any { $_->{user_id} eq $user->user_id } @$results
             and die "user in list";
 
          pass "User not in directory after history_visibility set to shared";
@@ -322,10 +354,11 @@ test "User in remote room doesn't appear in user directory after server left roo
          matrix_get_user_dir_synced( $remote, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         log_if_fail "Body", $body;
+         log_if_fail "Results", $results;
 
-         any { $_->{user_id} eq $creator->user_id } @{ $body->{results} }
+         any { $_->{user_id} eq $creator->user_id } @$results
             or die "user not in list";
 
          matrix_leave_room( $remote, $room_id );
@@ -333,10 +366,11 @@ test "User in remote room doesn't appear in user directory after server left roo
          matrix_get_user_dir_synced( $remote, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         log_if_fail "Body", $body;
+         log_if_fail "Results", $results;
 
-         any { $_->{user_id} eq $creator->user_id } @{ $body->{results} }
+         any { $_->{user_id} eq $creator->user_id } @$results
             and die "user in list";
 
          Future->done( 1 );
@@ -367,10 +401,11 @@ test "User directory correctly update on display name change",
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         log_if_fail "Body", $body;
+         log_if_fail "Results", $results;
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         any { $_->{user_id} eq $user->user_id } @$results
             or die "user not in list";
 
          matrix_set_displayname( $user, $second_displayname );
@@ -380,10 +415,11 @@ test "User directory correctly update on display name change",
          matrix_get_user_dir_synced( $user, $second_displayname );
       })->then( sub {
          my ( $body ) = @_;
+         my $results = $body->{results};
 
-         log_if_fail "Second Body", $body;
+         log_if_fail "Results", $results;
 
-         any { $_->{user_id} eq $user->user_id } @{ $body->{results} }
+         any { $_->{user_id} eq $user->user_id } @$results
             or die "user not in list";
 
          Future->done( 1 );
@@ -430,8 +466,9 @@ sub matrix_get_user_dir_synced
             my ( $body ) = @_;
 
             assert_json_keys( $body, qw( results ) );
+            assert_json_list( my $results = $body->{results} );
 
-            any { $_->{user_id} eq $new_user->user_id } @{ $body->{results} }
+            any { $_->{user_id} eq $new_user->user_id } @$results
                or die "user not in list";
 
             Future->done( $body )
