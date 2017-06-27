@@ -1,4 +1,3 @@
-use Future::Utils 0.18 qw( try_repeat );
 use List::Util qw( first );
 use List::UtilsBy qw( partition_by );
 
@@ -93,7 +92,7 @@ test "New room members see existing members' presence in room initialSync",
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
-      try_repeat {
+      retry_until_success {
          matrix_initialsync_room( $user, $room_id )->then( sub {
             my ( $body ) = @_;
 
@@ -108,10 +107,8 @@ test "New room members see existing members' presence in room initialSync",
                qw( presence last_active_ago ));
 
             Future->done(1);
-         })->else_with_f( sub {
-            my ( $f ) = @_; delay( 0.2 )->then( sub { $f } );
          });
-      } until => sub { !$_[0]->failure };
+      };
    };
 
 test "Existing members see new members' join events",
