@@ -17,8 +17,11 @@ test "Can logout current device",
          )
       })->then( sub {
          # our access token should be invalidated
-         retry_until_success {
-            matrix_sync( $user )->main::expect_http_401
+         repeat_until_true {
+            matrix_sync( $user )->main::check_http_code(
+               401 => "ok",
+               200 => "redo",
+            );
          };
       })->then( sub {
          matrix_sync( $other_login );
@@ -45,13 +48,19 @@ test "Can logout all devices",
          )
       })->then( sub {
          # our access token should be invalidated
-         retry_until_success {
-            matrix_sync( $user )->main::expect_http_401
+         repeat_until_true {
+            matrix_sync( $user )->main::check_http_code(
+               401 => "ok",
+               200 => "redo",
+            );
          };
       })->then( sub {
          # our access token should be invalidated
-         retry_until_success {
-            matrix_sync( $other_login )->main::expect_http_401
+         repeat_until_true {
+            matrix_sync( $other_login )->main::check_http_code(
+               401 => "ok",
+               200 => "redo",
+            );
          };
       });
    };

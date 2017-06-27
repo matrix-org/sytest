@@ -253,12 +253,15 @@ test "DELETE /device/{deviceId}",
             ->main::expect_http_404;
       })->then( sub {
          # our access token should be invalidated
-         retry_until_success {
+         repeat_until_true {
             do_request_json_for(
                $other_login,
                method  => "GET",
                uri     => "/r0/sync",
-            )->main::expect_http_401
+            )->main::check_http_code(
+               401 => "ok",
+               200 => "redo",
+            );
          };
       });
    };
