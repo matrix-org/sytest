@@ -14,7 +14,7 @@ use SyTest::Assertions qw( :all );
 use SyTest::JSONSensible;
 
 use Future;
-use Future::Utils qw( try_repeat );
+use Future::Utils qw( try_repeat repeat );
 use IO::Async::Loop;
 
 use Data::Dump qw( pp );
@@ -344,6 +344,24 @@ sub retry_until_success(&)
             Future->done )
          ->then( $code );
    }  until => sub { !$_[0]->failure };
+}
+
+# Another wrapper which repeats (with delay) until the block returns a true
+# value. If the block fails entirely then it aborts, does not retry.
+sub repeat_until_true(&)
+{
+   my ( $code ) = @_;
+
+   my $delay = 0.1;
+
+   repeat {
+      my $prev_f = shift;
+
+      ( $prev_f ?
+            delay( $delay *= 1.5 ) :
+            Future->done )
+         ->then( $code );
+   }  until => sub { $_[0]->get };
 }
 
 my @log_if_fail_lines;
