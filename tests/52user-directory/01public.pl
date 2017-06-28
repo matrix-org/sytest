@@ -16,7 +16,7 @@ test "User appears in user directory",
       })->then( sub {
          ( $room_id ) = @_;
 
-         retry_until_success {
+         repeat_until_true {
             do_request_json_for( $user,
                method  => "POST",
                uri     => "/unstable/user_directory/search",
@@ -31,10 +31,7 @@ test "User appears in user directory",
                assert_json_keys( $body, qw( results ) );
                assert_json_list( my $results = $body->{results} );
 
-               any { $_->{user_id} eq $user->user_id } @$results
-                  or die "user not in list";
-
-               Future->done( 1 );
+               Future->done( any { $_->{user_id} eq $user->user_id } @$results );
             });
          };
       });
@@ -458,7 +455,7 @@ sub matrix_get_user_dir_synced
          preset => "public_chat",
       );
    })->then( sub {
-      retry_until_success {
+      repeat_until_true {
          do_request_json_for( $new_user,
             method  => "POST",
             uri     => "/unstable/user_directory/search",
@@ -471,10 +468,7 @@ sub matrix_get_user_dir_synced
             assert_json_keys( $body, qw( results ) );
             assert_json_list( my $results = $body->{results} );
 
-            any { $_->{user_id} eq $new_user->user_id } @$results
-               or die "user not in list";
-
-            Future->done( $body )
+            Future->done( any { $_->{user_id} eq $new_user->user_id } @$results );
          });
       };
    })->then( sub {
@@ -485,5 +479,5 @@ sub matrix_get_user_dir_synced
             search_term => $search_term,
          }
       );
-   })
+   });
 }
