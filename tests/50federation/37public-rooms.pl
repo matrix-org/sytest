@@ -26,7 +26,7 @@ test "Inbound federation can get public room list",
           },
         );
       })->then( sub {
-         retry_until_success {
+         repeat_until_true {
             $outbound_client->do_request_json(
                method   => "GET",
                hostname => $first_home_server,
@@ -38,10 +38,7 @@ test "Inbound federation can get public room list",
 
                assert_json_keys( $body, qw( chunk ) );
 
-               any { $_->{room_id} eq $room_id } @{ $body->{chunk} }
-                  or die "Room not in returned list";
-
-               Future->done( 1 );
+               Future->done( any { $_->{room_id} eq $room_id } @{ $body->{chunk} } );
             })
          };
       });
