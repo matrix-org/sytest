@@ -92,23 +92,27 @@ test "New room members see existing members' presence in room initialSync",
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
-      retry_until_success {
+      ( repeat_until_true {
          matrix_initialsync_room( $user, $room_id )->then( sub {
             my ( $body ) = @_;
 
             my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
             $presence{$first_user->user_id} or
-               die "Expected to find initial user's presence";
+               return Future->done( undef );  # try again
 
-            assert_json_keys( $presence{ $first_user->user_id },
-               qw( type content ));
-            assert_json_keys( $presence{ $first_user->user_id }{content},
-               qw( presence last_active_ago ));
+            return Future->done( \%presence );
+         })
+      })->then( sub {
+         my ( $presencemap ) = @_;
 
-            Future->done(1);
-         });
-      };
+         assert_json_keys( $presencemap->{ $first_user->user_id },
+            qw( type content ));
+         assert_json_keys( $presencemap->{ $first_user->user_id }{content},
+            qw( presence last_active_ago ));
+
+         Future->done(1);
+      });
    };
 
 test "Existing members see new members' join events",
