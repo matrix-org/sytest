@@ -229,14 +229,11 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
                }),
             );
          })->then( sub {
-            retry_until_success {
+            repeat_until_true {
                matrix_get_room_membership( $local_user, $room_id, $guest_user )
                ->then( sub {
                   my ( $membership ) = @_;
-
-                  assert_eq( $membership, "leave", "membership" );
-
-                  Future->done(1);
+                  Future->done( $membership eq "leave" );
                })
             };
          });
@@ -353,7 +350,7 @@ test "GET /publicRooms lists rooms",
             );
          }),
       )->then( sub {
-         retry_until_success {
+         repeat_until_true {
             $http->do_request_json(
                method => "GET",
                uri    => "/r0/publicRooms",
@@ -365,7 +362,7 @@ test "GET /publicRooms lists rooms",
                assert_json_keys( $body, qw( chunk ));
                assert_json_list( $body->{chunk} );
 
-               my %seen = (
+               my %isOK = (
                   listingtest0 => 0,
                   listingtest1 => 0,
                   listingtest2 => 0,
@@ -380,28 +377,24 @@ test "GET /publicRooms lists rooms",
 
                   foreach my $alias ( @{$aliases} ) {
                      if( $alias =~ m/^\Q#listingtest0:/ ) {
-                        $seen{listingtest0} = !$world_readable && !$guest_can_join;
+                        $isOK{listingtest0} = !$world_readable && !$guest_can_join;
                      }
                      elsif( $alias =~ m/^\Q#listingtest1:/ ) {
-                        $seen{listingtest1} = $world_readable && !$guest_can_join;
+                        $isOK{listingtest1} = $world_readable && !$guest_can_join;
                      }
                      elsif( $alias =~ m/^\Q#listingtest2:/ ) {
-                        $seen{listingtest2} = !$world_readable && !$guest_can_join;
+                        $isOK{listingtest2} = !$world_readable && !$guest_can_join;
                      }
                      elsif( $alias =~ m/^\Q#listingtest3:/ ) {
-                        $seen{listingtest3} = !$world_readable && $guest_can_join;
+                        $isOK{listingtest3} = !$world_readable && $guest_can_join;
                      }
                      elsif( $alias =~ m/^\Q#listingtest4:/ ) {
-                        $seen{listingtest4} = $world_readable && $guest_can_join;
+                        $isOK{listingtest4} = $world_readable && $guest_can_join;
                      }
                   }
                }
 
-               foreach my $key ( keys %seen ) {
-                  $seen{$key} or die "Wrong for $key";
-               }
-
-               Future->done(1);
+               Future->done( all { $isOK{$_} } keys %isOK );
             })
          };
       })
@@ -447,7 +440,7 @@ test "GET /publicRooms includes avatar URLs",
             );
          }),
       )->then( sub {
-         retry_until_success {
+         repeat_until_true {
             $http->do_request_json(
                method => "GET",
                uri    => "/r0/publicRooms",
@@ -459,7 +452,7 @@ test "GET /publicRooms includes avatar URLs",
                assert_json_keys( $body, qw( chunk ));
                assert_json_list( $body->{chunk} );
 
-               my %seen = (
+               my %isOK = (
                   worldreadable    => 0,
                   nonworldreadable => 0,
                );
@@ -470,23 +463,19 @@ test "GET /publicRooms includes avatar URLs",
                   foreach my $alias ( @{$aliases} ) {
                      if( $alias =~ m/^\Q#worldreadable:/ ) {
                         assert_json_keys( $room, qw( avatar_url ) );
-                        assert_eq( $room->{avatar_url}, "https://example.com/ringtails.jpg", "avatar_url" );
-                        $seen{worldreadable} = 1;
+                        $isOK{worldreadable} =
+                           ( $room->{avatar_url} eq "https://example.com/ringtails.jpg" );
                      }
                      elsif( $alias =~ m/^\Q#nonworldreadable:/ ) {
                         assert_json_keys( $room, qw( avatar_url ) );
-                        assert_eq( $room->{avatar_url}, "https://example.com/ruffed.jpg", "avatar_url" );
-                        $seen{nonworldreadable} = 1;
+                        $isOK{nonworldreadable} =
+                           ( $room->{avatar_url} eq "https://example.com/ruffed.jpg" );
                      }
                   }
                }
 
-               foreach my $key ( keys %seen ) {
-                  $seen{$key} or die "Didn't see $key";
-               }
-
-               Future->done(1);
-            })
+               Future->done( all { $isOK{$_} } keys %isOK );
+            });
          };
       });
    };
