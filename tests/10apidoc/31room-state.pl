@@ -250,7 +250,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
 
          content => { name => $name },
       )->then( sub {
-         retry_until_success {
+         repeat_until_true {
             matrix_initialsync_room( $user, $room_id )->then( sub {
                my ( $body ) = @_;
 
@@ -259,10 +259,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
 
                my %state_by_type = partition_by { $_->{type} } @$state;
 
-               $state_by_type{"m.room.name"} or
-                  die "Expected to find m.room.name state";
-
-               Future->done(1);
+               Future->done( defined $state_by_type{"m.room.name"} );
             })
          };
       })
@@ -309,7 +306,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
          content => { topic => $topic },
       )->then( sub {
-         retry_until_success {
+         repeat_until_true {
             matrix_initialsync_room( $user, $room_id )->then( sub {
                my ( $body ) = @_;
 
@@ -318,10 +315,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
                my %state_by_type = partition_by { $_->{type} } @$state;
 
-               $state_by_type{"m.room.topic"} or
-                  die "Expected to find m.room.topic state";
-
-               Future->done(1);
+               Future->done( defined $state_by_type{"m.room.topic"} );
             })
          };
       })
