@@ -1,3 +1,12 @@
+sub is_user_in_changed_list
+{
+   my ( $user, $body ) = @_;
+
+   return $body->{device_lists} &&
+          $body->{device_lists}{changed} &&
+          any { $_ eq $user->user_id } @{ $body->{device_lists}{changed} };
+}
+
 test "Local device key changes appear in v2 /sync",
    requires => [ local_user_fixtures( 2 ),
                  qw( can_sync ) ],
@@ -38,9 +47,8 @@ test "Local device key changes appear in v2 /sync",
          log_if_fail "device_lists", $device_lists;
 
          assert_json_keys( $device_lists, "changed" );
-         my $changed = $device_lists->{changed};
 
-         any { $user2->user_id eq $_ } @{ $changed }
+         is_user_in_changed_list( $user2, $body )
             or die "user not in changed list";
 
          Future->done(1);
@@ -66,24 +74,19 @@ test "Local new device changes appear in v2 /sync",
       })->then( sub {
          matrix_login_again_with_user( $user2 )
       })->then( sub {
-         retry_until_success {
+         repeat_until_true {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
 
-               assert_json_keys( $body, "device_lists" );
-               my $device_lists = $body->{device_lists};
+               log_if_fail "Body", $body;
 
-               log_if_fail "device_lists", $device_lists;
-
-               assert_json_keys( $device_lists, "changed" );
-               my $changed = $device_lists->{changed};
-
-               any { $user2->user_id eq $_ } @{ $changed }
-                  or die "user not in changed list";
-
-               Future->done(1);
-            })
+               Future->done(
+                  $body->{device_lists} &&
+                  $body->{device_lists}{changed} &&
+                  any { $_ eq $user2->user_id } @{ $body->{device_lists}{changed} }
+               );
+            });
          };
       });
    };
@@ -112,24 +115,15 @@ test "Local delete device changes appear in v2 /sync",
              }
          });
       })->then( sub {
-         retry_until_success {
+         repeat_until_true {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
 
-               assert_json_keys( $body, "device_lists" );
-               my $device_lists = $body->{device_lists};
+               log_if_fail "Body", $body;
 
-               log_if_fail "device_lists", $device_lists;
-
-               assert_json_keys( $device_lists, "changed" );
-               my $changed = $device_lists->{changed};
-
-               any { $user2->user_id eq $_ } @{ $changed }
-                  or die "user not in changed list";
-
-               Future->done(1);
-            })
+               Future->done( is_user_in_changed_list( $user2, $body ) );
+            });
          };
       });
    };
@@ -152,24 +146,15 @@ test "Local update device changes appear in v2 /sync",
       })->then( sub {
          matrix_set_device_display_name( $user2, $user2->device_id, "wibble");
       })->then( sub {
-         retry_until_success {
+         repeat_until_true {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
 
-               assert_json_keys( $body, "device_lists" );
-               my $device_lists = $body->{device_lists};
+               log_if_fail "Body", $body;
 
-               log_if_fail "device_lists", $device_lists;
-
-               assert_json_keys( $device_lists, "changed" );
-               my $changed = $device_lists->{changed};
-
-               any { $user2->user_id eq $_ } @{ $changed }
-                  or die "user not in changed list";
-
-               Future->done(1);
-            })
+               Future->done( is_user_in_changed_list( $user2, $body ) );
+            });
          };
       });
    };
@@ -197,24 +182,15 @@ test "Can query remote device keys using POST after notification",
       })->then( sub {
          matrix_set_device_display_name( $user2, $user2->device_id, "test display name" ),
       })->then( sub {
-         retry_until_success {
+         repeat_until_true {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
 
-               assert_json_keys( $body, "device_lists" );
-               my $device_lists = $body->{device_lists};
+               log_if_fail "Body", $body;
 
-               log_if_fail "device_lists", $device_lists;
-
-               assert_json_keys( $device_lists, "changed" );
-               my $changed = $device_lists->{changed};
-
-               any { $user2->user_id eq $_ } @{ $changed }
-                  or die "user not in changed list";
-
-               Future->done( 1 )
-            })
+               Future->done( is_user_in_changed_list( $user2, $body ) );
+            });
          };
       })->then( sub {
          do_request_json_for( $user1,
@@ -260,8 +236,6 @@ test "If remote user leaves room we no longer receive device updates",
 
       my $room_id;
 
-      my @device_users_changed = ();
-
       matrix_create_room( $creator )->then( sub {
          ( $room_id ) = @_;
 
@@ -281,20 +255,14 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_set_device_display_name( $remote_leaver, $remote_leaver->device_id, "test display name" ),
       })->then( sub {
-         retry_until_success {
+         repeat_until_true {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
-               my $device_lists = $body->{device_lists};
 
-               log_if_fail "device_lists 1", $device_lists;
+               log_if_fail "First body", $body;
 
-               my $changed = $device_lists->{changed};
-
-               any { $remote_leaver->user_id eq $_ } @{ $changed }
-                  or die "user not in changed list";
-
-               Future->done( 1 )
+               Future->done( is_user_in_changed_list( $remote_leaver, $body ) );
             })
          };
       })->then( sub {
@@ -304,32 +272,27 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_put_e2e_keys( $remote2, device_keys => { updated => "keys" } )
       })->then( sub {
-         retry_until_success {
+         repeat_until_true {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
 
-               assert_json_keys( $body, "device_lists" );
-               my $device_lists = $body->{device_lists};
+               log_if_fail "Second body", $body;
 
-               log_if_fail "device_lists 2", $device_lists;
-
-               assert_json_keys( $device_lists, "changed" );
-               my $changed = $device_lists->{changed};
-
-               push @device_users_changed, $changed;
-
-               any { $remote2->user_id eq $_ } @{ $changed }
-                  or die "user not in changed list";
-
-               Future->done( 1 )
+               Future->done(
+                  is_user_in_changed_list( $remote2, $body ) && $body
+               );
             })
          };
       })->then( sub {
-         any { $remote_leaver->user_id eq $_ } @device_users_changed
+         my ( $body ) = @_;
+
+         log_if_fail "Final body", $body;
+
+         any { $_ eq $remote_leaver->user_id } @{ $body->{device_lists}{changed} }
             and die "user2 in changed list after leaving";
 
-         Future->done( 1 )
+         Future->done(1);
       });
    };
 
