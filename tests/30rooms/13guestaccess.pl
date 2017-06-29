@@ -224,9 +224,9 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
 
                # This may fail a few times if the power level event hasn't federated yet.
                # So we retry.
-               retry_until_success( sub {
+               retry_until_success {
                   matrix_set_room_guest_access( $remote_user, $room_id, "forbidden" );
-               }),
+               },
             );
          })->then( sub {
             repeat_until_true {
