@@ -11,7 +11,7 @@ sub get_room_list_synced
 
    my $check = $opts{check};
 
-   retry_until_success {
+   repeat_until_true {
       do_request_json_for( $user,
          method => "POST",
          uri    => "/r0/publicRooms",
@@ -63,8 +63,7 @@ test "AS can publish rooms in their own list",
             check => sub {
                my ( $body ) = @_;
 
-               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-                  and die "AS public room in main list";
+               not any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
             },
          )
       })->then( sub {
@@ -77,7 +76,6 @@ test "AS can publish rooms in their own list",
                my ( $body ) = @_;
 
                any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-                  or die "AS public room is not in the AS list";
             },
          )
       })->then( sub {
@@ -90,7 +88,6 @@ test "AS can publish rooms in their own list",
                my ( $body ) = @_;
 
                any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-                  or die "AS public room is not in the full room list";
             },
          )
       })->then( sub {
@@ -107,8 +104,7 @@ test "AS can publish rooms in their own list",
             check => sub {
                my ( $body ) = @_;
 
-               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-                  and die "AS public room in AS list after deletion";
+               not any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
             },
          )
       });
@@ -164,7 +160,6 @@ test "AS and main public room lists are separate",
                my ( $body ) = @_;
 
                any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-                  or die "Room not in main list";
             },
          )
       })->then( sub {
@@ -177,7 +172,6 @@ test "AS and main public room lists are separate",
                my ( $body ) = @_;
 
                any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-                  or die "Room is not in the AS list";
             },
          )
       })->then( sub {
@@ -201,8 +195,7 @@ test "AS and main public room lists are separate",
             check => sub {
                my ( $body ) = @_;
 
-               any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-                  and die "Room in AS list after deletion";
+               not any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
             },
          )
       })->then( sub {
@@ -215,7 +208,6 @@ test "AS and main public room lists are separate",
                my ( $body ) = @_;
 
                any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-                  or die "Room not in main list after AS list deletion";
             },
          )
       })->then( sub {
@@ -228,7 +220,6 @@ test "AS and main public room lists are separate",
                my ( $body ) = @_;
 
                any { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-                  or die "Room is not in the full room list after AS deletion";
             },
          )
       })
