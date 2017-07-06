@@ -26,7 +26,9 @@ test "Add room to group summary",
 
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
-         assert_json_keys( $body->{rooms_section}{rooms}, $room_id );
+
+         any { $room_id eq $_->{room_id} } @{ $body->{rooms_section}{rooms} }
+            or die "room not in sumary";
 
          Future->done( 1 );
       });
@@ -70,8 +72,10 @@ test "Adding multiple rooms to group summary have correct order",
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
 
-         my $room1 = $body->{rooms_section}{rooms}{$room_id1};
-         my $room2 = $body->{rooms_section}{rooms}{$room_id2};
+         my $rooms = $body->{rooms_section}{rooms};
+
+         my $room1 = first { $room_id1 eq $_->{room_id} } @{ $rooms };
+         my $room2 = first { $room_id2 eq $_->{room_id} } @{ $rooms };
 
          $room1->{order} < $room2->{order} or die "orders are incorrect";
 
@@ -107,7 +111,9 @@ test "Remove room from group summary",
 
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
-         assert_json_keys( $body->{rooms_section}{rooms}, $room_id );
+
+         any { $room_id eq $_->{room_id} } @{ $body->{rooms_section}{rooms} }
+            or die "room not in sumary";
 
          matrix_remove_room_from_group_summary( $user, $group_id, $room_id );
       })->then( sub {
@@ -118,8 +124,8 @@ test "Remove room from group summary",
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
 
-         defined $body->{rooms_section}{rooms}{$room_id}
-            and die "room still in summary";
+         any { $room_id eq $_->{room_id} } @{ $body->{rooms_section}{rooms} }
+            and die "room still in sumary";
 
          Future->done( 1 );
       });
@@ -160,9 +166,9 @@ test "Add room to group summary with category",
 
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
-         assert_json_keys( $body->{rooms_section}{rooms}, $room_id );
 
-         my $room = $body->{rooms_section}{rooms}{$room_id};
+         my $rooms = $body->{rooms_section}{rooms};
+         my $room = first { $room_id eq $_->{room_id} } @{ $rooms };
 
          assert_json_keys( $room, qw( profile is_public category_id ) );
          assert_eq( $room->{category_id}, "some_cat" );
@@ -210,8 +216,8 @@ test "Remove room from group summary with category",
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
 
-         defined $body->{rooms_section}{rooms}{$room_id}
-            and die "room still in summary";
+         any { $room_id eq $_->{room_id} } @{ $body->{rooms_section}{rooms} }
+            and die "room still in sumary";
 
          Future->done( 1 );
       });
@@ -241,7 +247,9 @@ test "Add user to group summary",
 
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
-         assert_json_keys( $body->{users_section}{users}, $user->user_id );
+
+         any { $user->user_id eq $_->{user_id} } @{ $body->{users_section}{users} }
+            or die "user not in sumary";
 
          Future->done( 1 );
       });
@@ -272,8 +280,10 @@ test "Adding multiple users to group summary have correct order",
 
          log_if_fail "Summary Body", $body;
 
-         my $user1 = $body->{users_section}{users}{$user->user_id};
-         my $user2 = $body->{users_section}{users}{$viewer->user_id};
+         my $users = $body->{users_section}{users};
+
+         my $user1 = first { $user->user_id eq $_->{user_id} } @{ $users };
+         my $user2 = first { $viewer->user_id eq $_->{user_id} } @{ $users };
 
          $user1->{order} < $user2->{order} or die "orders are incorrect";
 
@@ -301,7 +311,8 @@ test "Remove user from group summary",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body->{users_section}{users}, $user->user_id );
+         any { $user->user_id eq $_->{user_id} } @{ $body->{users_section}{users} }
+            or die "user not in sumary";
 
          matrix_remove_user_from_group_summary( $user, $group_id, $user->user_id );
       })->then( sub {
@@ -309,8 +320,8 @@ test "Remove user from group summary",
       })->then( sub {
          my ( $body ) = @_;
 
-         defined $body->{users_section}{users}{$user->user_id}
-            and die "user still in summary";
+         any { $user->user_id eq $_->{user_id} } @{ $body->{users_section}{users} }
+            and die "user still in sumary";
 
          Future->done( 1 );
       });
@@ -345,9 +356,9 @@ test "Add user to group summary with role",
 
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
-         assert_json_keys( $body->{users_section}{users}, $user->user_id );
 
-         my $user = $body->{users_section}{users}{$user->user_id};
+         my $users = $body->{users_section}{users};
+         my $user = first { $user->user_id eq $_->{user_id} } @{ $users };
 
          assert_json_keys( $user, qw( is_public role_id ) );
          assert_eq( $user->{role_id}, "some_role" );
@@ -389,8 +400,8 @@ test "Remove user from group summary with role",
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
 
-         defined $body->{users_section}{users}{$user->user_id}
-            and die "user still in summary";
+         any { $user->user_id eq $_->{user_id} } @{ $body->{users_section}{users} }
+            and die "user still in sumary";
 
          Future->done( 1 );
       });
