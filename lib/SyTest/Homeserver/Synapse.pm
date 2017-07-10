@@ -752,6 +752,39 @@ sub wrap_synapse_command
          "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}";
    }
 
+   {
+      my $frontend_proxy_config_path = $self->write_yaml_file( "frontend_proxy.yaml" => {
+         "worker_app"              => "synapse.app.frontend_proxy",
+         "worker_log_file"         => "$log.frontend_proxy",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_main_http_uri"    => "http://$bind_host:$self->{ports}{synapse_unsecure}",
+         "worker_listeners"        => [
+            {
+               type      => "http",
+               resources => [{ names => ["client"] }],
+               port      => $self->{ports}{frontend_proxy},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{frontend_proxy_manhole},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{frontend_proxy_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      } );
+
+      push @command,
+         "--frontend-proxy-config" => $frontend_proxy_config_path,
+         "--frontend-proxy-url" => "http://$bind_host:$self->{ports}{frontend_proxy}";
+   }
+
    return @command;
 }
 
@@ -885,6 +918,9 @@ backend media_repository
 backend client_reader
     server client_reader ${bind_host}:$ports->{client_reader}
 
+backend frontend_proxy
+    server frontend_proxy ${bind_host}:$ports->{frontend_proxy}
+
 EOCONFIG
 }
 
@@ -906,6 +942,8 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/publicRooms             federation_reader
 
 ^/_matrix/client/(api/v1|r0)/publicRooms$    client_reader
+
+^/_matrix/client/(api/v1|r0|unstable)/keys/upload     frontend_proxy
 EOCONFIG
 }
 
