@@ -1,6 +1,5 @@
 use List::Util qw( any );
 use List::UtilsBy qw( partition_by );
-use Future::Utils qw( try_repeat_until_success );
 
 my $name = "room name here";
 
@@ -245,15 +244,13 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      my $delay = 0.1;
-
       do_request_json_for( $user,
          method => "PUT",
          uri    => "/r0/rooms/$room_id/state/m.room.name",
 
          content => { name => $name },
       )->then( sub {
-         try_repeat_until_success( sub {
+         repeat_until_true {
             matrix_initialsync_room( $user, $room_id )->then( sub {
                my ( $body ) = @_;
 
@@ -262,14 +259,9 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
 
                my %state_by_type = partition_by { $_->{type} } @$state;
 
-               $state_by_type{"m.room.name"} or
-                  die "Expected to find m.room.name state";
-
-               Future->done(1);
-            })->else_with_f( sub {
-               my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
+               Future->done( defined $state_by_type{"m.room.name"} );
             })
-         });
+         };
       })
    };
 
@@ -308,15 +300,13 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      my $delay = 0.1;
-
       do_request_json_for( $user,
          method => "PUT",
          uri    => "/r0/rooms/$room_id/state/m.room.topic",
 
          content => { topic => $topic },
       )->then( sub {
-         try_repeat_until_success( sub {
+         repeat_until_true {
             matrix_initialsync_room( $user, $room_id )->then( sub {
                my ( $body ) = @_;
 
@@ -325,14 +315,9 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
                my %state_by_type = partition_by { $_->{type} } @$state;
 
-               $state_by_type{"m.room.topic"} or
-                  die "Expected to find m.room.topic state";
-
-               Future->done(1);
-            })->else_with_f( sub {
-               my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
+               Future->done( defined $state_by_type{"m.room.topic"} );
             })
-         })
+         };
       })
    };
 
