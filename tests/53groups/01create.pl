@@ -47,7 +47,7 @@ test "Add group rooms",
    };
 
 
-push our @EXPORT, qw( matrix_create_group matrix_invite_group_users matrix_add_group_rooms );
+push our @EXPORT, qw( matrix_create_group matrix_add_group_rooms );
 
 sub matrix_create_group
 {
