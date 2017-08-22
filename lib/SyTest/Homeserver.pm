@@ -67,7 +67,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      output hs_dir
+      output hs_dir hs_index
    );
 
    my $hs_dir = $self->{hs_dir};
