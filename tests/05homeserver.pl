@@ -1,7 +1,5 @@
 use Future::Utils qw( fmap_void );
 
-use SyTest::Homeserver::Synapse;
-
 use Cwd qw( abs_path );
 
 my $N_HOMESERVERS = 2;
@@ -22,7 +20,7 @@ sub extract_extra_args
    } @$args;
 }
 
-my @synapses;
+my @servers;
 
 # Almost like an END block, but we can't use END because we need SIGCHLD, and
 # see
@@ -30,25 +28,25 @@ my @synapses;
 main::AT_END sub {
 
    ( fmap_void {
-      my $synapse = $_;
+      my $server = $_;
 
       # skip this if the process never got started.
-      return Future->done unless $synapse->pid;
+      return Future->done unless $server->pid;
 
-      $OUTPUT->diag( "Killing ${\ $synapse->pid }" );
+      $OUTPUT->diag( "Killing ${\ $server->pid }" );
 
-      $synapse->kill( 'INT' );
+      $server->kill( 'INT' );
 
       Future->needs_any(
-         $synapse->await_finish,
+         $server->await_finish,
 
          $loop->delay_future( after => 30 )->then( sub {
-            print STDERR "Timed out waiting for ${\ $synapse->pid }; sending SIGKILL\n";
-            $synapse->kill( 'KILL' );
+            print STDERR "Timed out waiting for ${\ $server->pid }; sending SIGKILL\n";
+            $server->kill( 'KILL' );
             Future->done;
          }),
       )
-   } foreach => \@synapses, concurrent => scalar @synapses )->get;
+   } foreach => \@servers, concurrent => scalar @servers )->get;
 };
 
 push our @EXPORT, qw( HOMESERVER_INFO );
@@ -64,7 +62,9 @@ our @HOMESERVER_INFO = map {
 
          my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
 
-         my $synapse = SyTest::Homeserver::Synapse->new(
+         $OUTPUT->diag( "Starting Homeserver using $HS_FACTORY" );
+
+         my $server = $HS_FACTORY->create_server(
             synapse_dir   => $SYNAPSE_ARGS{directory},
             hs_dir        => abs_path( "server-$idx" ),
             ports         => {
@@ -113,18 +113,17 @@ our @HOMESERVER_INFO = map {
             python              => $SYNAPSE_ARGS{python},
             coverage            => $SYNAPSE_ARGS{coverage},
             dendron             => $SYNAPSE_ARGS{dendron},
-            haproxy             => $SYNAPSE_ARGS{haproxy},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),
          );
-         $loop->add( $synapse );
+         $loop->add( $server );
 
          my $location = $WANT_TLS ?
-            "https://$BIND_HOST:" . $synapse->secure_port :
-            "http://$BIND_HOST:" . $synapse->unsecure_port;
+            "https://$BIND_HOST:" . $server->secure_port :
+            "http://$BIND_HOST:" . $server->unsecure_port;
 
-         $synapse->configure(
+         $server->configure(
             config => {
                # Config for testing recaptcha. 90jira/SYT-8.pl
                recaptcha_siteverify_api => $test_server_info->client_location .
@@ -141,7 +140,7 @@ our @HOMESERVER_INFO = map {
             }
          );
 
-         my $info = ServerInfo( "$BIND_HOST:" . $synapse->secure_port, $location );
+         my $info = ServerInfo( "$BIND_HOST:" . $server->secure_port, $location );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only
@@ -150,7 +149,7 @@ our @HOMESERVER_INFO = map {
             foreach my $idx ( 0 .. $#as_infos ) {
                my $as_info = $as_infos[$idx];
 
-               my $appserv_conf = $synapse->write_yaml_file( "appserv-$idx.yaml", {
+               my $appserv_conf = $server->write_yaml_file( "appserv-$idx.yaml", {
                   id       => $as_info->id,
                   url      => $test_server_info->client_location . $as_info->path,
                   as_token => $as_info->as2hs_token,
@@ -173,21 +172,21 @@ our @HOMESERVER_INFO = map {
 
                # Now we can fill in the AS info's user_id
                $as_info->user_id = sprintf "@%s:$BIND_HOST:%d",
-                  $as_info->localpart, $synapse->secure_port;
+                  $as_info->localpart, $server->secure_port;
             }
 
-            $synapse->append_config(
+            $server->append_config(
                app_service_config_files => \@confs,
             );
          }
 
-         push @synapses, $synapse;
+         push @servers, $server;
 
          Future->wait_any(
-            $synapse->start,
+            $server->start,
 
             $loop->delay_future( after => 60 )
-               ->then_fail( "Synapse server number $idx (on port ${\$synapse->secure_port}) failed to start" ),
+               ->then_fail( "Homeserver number $idx (on port ${\$server->secure_port}) failed to start" ),
          )->then_done( $info );
       },
    );
