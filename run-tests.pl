@@ -48,13 +48,10 @@ use Module::Pluggable
 # the way that the server is started by tests/05homeserver.pl. We'll collect
 # them all in one place for neatness
 our %SYNAPSE_ARGS = (
-   directory  => "../synapse",
-   python     => "python",
    extra_args => [],
 
    log        => 0,
    log_filter => [],
-   coverage   => 0,
    dendron    => "",
 );
 
@@ -71,12 +68,12 @@ my %FIXED_BUGS;
 my $STOP_ON_FAIL;
 my $SERVER_IMPL = undef;
 
+Getopt::Long::Configure('pass_through');
 GetOptions(
    'I|server-implementation=s' => \$SERVER_IMPL,
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \$SYNAPSE_ARGS{log},
    'server-grep=s' => \$SYNAPSE_ARGS{log_filter},
-   'd|synapse-directory=s' => \$SYNAPSE_ARGS{directory},
 
    's|stop-on-fail' => sub { $STOP_ON_FAIL = 1 },
    'a|all'          => sub { $STOP_ON_FAIL = 0 },
@@ -88,10 +85,6 @@ GetOptions(
    'v|verbose+' => \(my $VERBOSE = 0),
 
    'n|no-tls' => sub { $WANT_TLS = 0 },
-
-   'python=s' => \$SYNAPSE_ARGS{python},
-
-   'coverage+' => \$SYNAPSE_ARGS{coverage},
 
    # these two are superceded by -I, but kept for backwards compat
    'dendron=s' => sub {
@@ -130,17 +123,6 @@ GetOptions(
    'h|help' => sub { usage(0) },
 ) or usage(1);
 
-my %only_files;
-my $stop_after;
-if( @ARGV ) {
-   $only_files{$_}++ for @ARGV;
-
-   $stop_after = maxstr keys %only_files;
-}
-
-if( $VERBOSE ) {
-   push @{ $SYNAPSE_ARGS{extra_args} }, ( "-" . ( "v" x $VERBOSE ));
-}
 
 sub usage
 {
@@ -171,8 +153,6 @@ Options:
        --server-grep PATTERN    - additionally, filter the server passthrough
                                   for matches of this pattern
 
-   -d, --synapse-directory DIR  - path to the checkout directory of synapse
-
    -s, --stop-on-fail           - stop after the first failed test
 
    -a, --all                    - don't stop after the first failed test;
@@ -192,10 +172,6 @@ Options:
    -n, --no-tls                 - prefer plaintext client connections where
                                   possible
 
-       --python PATH            - path to the 'python' binary
-
-       --coverage               - generate code coverage stats for synapse
-
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
    -F, --fixed BUGS             - bug names that are expected to be fixed
@@ -204,8 +180,14 @@ Options:
    -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
 
 .
-
    write STDERR;
+
+   foreach my $hs (homeserver_factories()) {
+      print STDERR "Options for -I ", $hs->name(), "\n";
+      $hs -> print_usage();
+      print STDERR "\n";
+   }
+
    exit $exitcode;
 }
 
@@ -216,6 +198,21 @@ $SERVER_IMPL = 'Synapse' unless $SERVER_IMPL;
 my $hs_factory_class = first { $_->name() eq $SERVER_IMPL } homeserver_factories()
    or die "Unrecognised server implementation $SERVER_IMPL\n";
 our $HS_FACTORY = $hs_factory_class -> new();
+
+Getopt::Long::Configure("no_passthrough");
+GetOptions($HS_FACTORY->get_options()) or usage(1);
+
+my %only_files;
+my $stop_after;
+if( @ARGV ) {
+   $only_files{$_}++ for @ARGV;
+
+   $stop_after = maxstr keys %only_files;
+}
+
+if( $VERBOSE ) {
+   push @{ $SYNAPSE_ARGS{extra_args} }, ( "-" . ( "v" x $VERBOSE ));
+}
 
 # Turn warnings into $OUTPUT->diag calls
 $SIG{__WARN__} = sub {

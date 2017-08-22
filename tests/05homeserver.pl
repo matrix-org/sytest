@@ -67,15 +67,12 @@ our @HOMESERVER_INFO = map {
          $OUTPUT->diag( "Starting Homeserver using $HS_FACTORY" );
 
          my $server = $HS_FACTORY->create_server(
-            synapse_dir   => $SYNAPSE_ARGS{directory},
-            hs_dir        => abs_path( "server-$idx" ),
+            hs_dir              => abs_path( "server-$idx" ),
             hs_index            => $idx,
             bind_host           => $BIND_HOST,
             output              => $OUTPUT,
             print_output        => $SYNAPSE_ARGS{log},
             extra_args          => \@extra_args,
-            python              => $SYNAPSE_ARGS{python},
-            coverage            => $SYNAPSE_ARGS{coverage},
             dendron             => $SYNAPSE_ARGS{dendron},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :

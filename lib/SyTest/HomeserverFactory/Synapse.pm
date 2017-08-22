@@ -24,13 +24,44 @@ sub _init
 {
    my $self = shift;
    $self->{impl} = "SyTest::Homeserver::Synapse::Direct";
+
+   $self->{args} = {
+      synapse_dir   => "../synapse",
+      python        => "python",
+      coverage      => 0,
+   };
+
    $self->SUPER::_init( @_ );
+}
+
+sub get_options
+{
+   my $self = shift;
+
+   return (
+      'd|synapse-directory=s' => \$self->{args}{synapse_dir},
+      'python=s' => \$self->{args}{python},
+      'coverage+' => \$self->{args}{coverage},
+      $self->SUPER::get_options(),
+   );
+}
+
+sub print_usage
+{
+   print STDERR <<EOF
+   -d, --synapse-directory DIR  - path to the checkout directory of synapse
+
+       --python PATH            - path to the 'python' binary
+
+       --coverage               - generate code coverage stats for synapse
+EOF
 }
 
 sub create_server
 {
    my $self = shift;
-   return $self->{impl}->new( @_ );
+   my %params = ( @_, %{ $self->{args}} );
+   return $self->{impl}->new( %params );
 }
 
 

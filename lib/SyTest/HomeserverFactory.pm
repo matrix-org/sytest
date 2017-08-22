@@ -38,4 +38,17 @@ sub new
 
 sub _init {}
 
+# returns a list of (name => action) pairs suitable for
+# inclusion in the GetOptions argument list
+sub get_options
+{
+   return ();
+}
+
+# writes a help string to STDERR
+sub print_usage
+{
+   print STDERR "   (no options)\n";
+}
+
 1;
