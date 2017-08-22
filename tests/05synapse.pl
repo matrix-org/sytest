@@ -28,10 +28,14 @@ my @synapses;
 # see
 #   https://rt.perl.org/Public/Bug/Display.html?id=128774
 main::AT_END sub {
-   $OUTPUT->diag( "Killing synapse servers " ) if @synapses;
 
    ( fmap_void {
       my $synapse = $_;
+
+      # skip this if the process never got started.
+      return Future->done unless $synapse->{proc};
+
+      $OUTPUT->diag( "Killing ${\ $synapse->pid }" );
 
       $synapse->kill( 'INT' );
 

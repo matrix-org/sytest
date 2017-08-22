@@ -347,6 +347,7 @@ sub wrap_synapse_command
 sub pid
 {
    my $self = shift;
+   return 0 if !$self->{proc};
    return $self->{proc}->pid;
 }
 
