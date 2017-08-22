@@ -26,10 +26,11 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      synapse_dir extra_args python coverage dendron bind_host
+      synapse_dir extra_args python coverage bind_host
    );
 
    $self->{paths} = {};
+   $self->{dendron} = '';
 
    $self->SUPER::_init( $args );
 
@@ -525,7 +526,11 @@ use Carp;
 sub _init
 {
    my $self = shift;
+   my ( $args ) = @_;
+
    $self->SUPER::_init( @_ );
+
+   $self->{dendron} = delete $args->{dendron_binary};
 
    my $idx = $self->{hs_index};
    $self->{ports}{dendron} = main::alloc_port( "dendron[$idx]" );

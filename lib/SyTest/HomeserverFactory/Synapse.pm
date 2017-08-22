@@ -73,6 +73,30 @@ sub _init
    my $self = shift;
    $self->{impl} = "SyTest::Homeserver::Synapse::ViaDendron";
    $self->SUPER::_init( @_ );
+
+   $self->{args}{dendron_binary} = "";
+}
+
+sub get_options
+{
+   my $self = shift;
+
+   return (
+      'dendron-binary=s' => \$self->{args}{dendron_binary},
+      $self->SUPER::get_options(),
+   );
+}
+
+sub print_usage
+{
+   my $self = shift;
+
+   $self->SUPER::print_usage();
+
+   print STDERR <<EOF;
+
+       --dendron-binary PATH    - path to the 'dendron' binary
+EOF
 }
 
 

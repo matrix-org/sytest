@@ -73,7 +73,6 @@ our @HOMESERVER_INFO = map {
             output              => $OUTPUT,
             print_output        => $SYNAPSE_ARGS{log},
             extra_args          => \@extra_args,
-            dendron             => $SYNAPSE_ARGS{dendron},
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),

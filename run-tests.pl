@@ -52,7 +52,6 @@ our %SYNAPSE_ARGS = (
 
    log        => 0,
    log_filter => [],
-   dendron    => "",
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
@@ -89,7 +88,7 @@ GetOptions(
    # these two are superceded by -I, but kept for backwards compat
    'dendron=s' => sub {
       $SERVER_IMPL = 'Synapse::ViaDendron' unless $SERVER_IMPL;
-      $SYNAPSE_ARGS{dendron} = $_[1];
+      push @ARGV, "--dendron-binary", $_[1];
    },
    'haproxy'   => sub {
       $SERVER_IMPL = 'Synapse::ViaHaproxy' unless $SERVER_IMPL;
