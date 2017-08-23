@@ -370,6 +370,8 @@ sub on_finish
 
    say $self->pid . " stopped";
 
+   my $port = $self->{ports}{synapse};
+
    if( $exitcode > 0 ) {
       if( WIFEXITED($exitcode) ) {
          warn "Main homeserver process exited " . WEXITSTATUS($exitcode) . "\n";
@@ -378,7 +380,7 @@ sub on_finish
          warn "Main homeserver process failed - code=$exitcode\n";
       }
 
-      print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
+      print STDERR "\e[1;35m[server $port}]\e[m: $_\n"
          for @{ $self->{stderr_lines} // [] };
 
       # Now force all remaining output to be printed
@@ -412,6 +414,7 @@ sub on_synapse_read
 {
    my $self = shift;
    my ( $stream, $bufref, $eof ) = @_;
+   my $port = $self->{ports}{synapse};
 
    while( $$bufref =~ s/^(.*)\n// ) {
       my $line = $1;
@@ -422,7 +425,7 @@ sub on_synapse_read
       if( $self->{print_output} ) {
          my $filter = $self->{filter_output};
          if( !$filter or any { $line =~ m/$_/ } @$filter ) {
-            print STDERR "\e[1;35m[server $self->{port}]\e[m: $line\n";
+            print STDERR "\e[1;35m[server $port]\e[m: $line\n";
          }
       }
    }
@@ -445,7 +448,8 @@ sub print_output
    $self->configure( print_output => $on );
 
    if( $on ) {
-      print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
+      my $port = $self->{ports}{synapse};
+      print STDERR "\e[1;35m[server $port]\e[m: $_\n"
          for @{ $self->{stderr_lines} // [] };
    }
 
