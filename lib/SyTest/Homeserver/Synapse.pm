@@ -189,7 +189,10 @@ sub start
 
         listeners => $listeners,
 
-        bcrypt_rounds => 0,
+        # we reduce the number of bcrypt rounds to make generating users
+        # faster, but note that python's bcrypt complains if rounds < 4,
+        # so this is effectively the minimum.
+        bcrypt_rounds => 4,
 
         # If we're using dendron-style split workers, we need to disable these
         # things in the main process
