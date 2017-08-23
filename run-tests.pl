@@ -50,11 +50,6 @@ our %SYNAPSE_ARGS = (
    log_filter => [],
    coverage   => 0,
    dendron    => "",
-   pusher     => 0,
-
-   synchrotron       => 0,
-   federation_reader => 0,
-   media_repository  => 0,
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
@@ -89,9 +84,9 @@ GetOptions(
    'dendron=s' => \$SYNAPSE_ARGS{dendron},
    'haproxy'   => \$SYNAPSE_ARGS{haproxy},
 
-   'pusher+' => \$SYNAPSE_ARGS{pusher},
 
    # These are now unused, but retaining arguments for commandline parsing support
+   'pusher+'            => sub {},
    'synchrotron+'       => sub {},
    'federation-reader+' => sub {},
    'media-repository+'  => sub {},
