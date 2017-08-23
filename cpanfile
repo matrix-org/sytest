@@ -15,6 +15,15 @@ requires 'IO::Async::SSL';
 requires 'IO::Socket::IP', '>= 0.04';
 requires 'IO::Socket::SSL';
 requires 'JSON';
+
+# since List::MoreUtils 0.423 (or so), just installing 'List::MoreUtils'
+# doesn't give us a working version
+# (https://rt.cpan.org/Public/Bug/Display.html?id=122875 appears to relate to
+# this).
+#
+# Empirically installing List::MoreUtils::XS first seems to fix it.
+requires 'List::MoreUtils::XS';
+
 requires 'List::MoreUtils';
 requires 'List::Util', '>= 1.33';
 requires 'List::UtilsBy', '>= 0.10';
