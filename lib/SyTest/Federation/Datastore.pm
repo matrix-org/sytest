@@ -7,7 +7,7 @@ use Carp;
 
 use Protocol::Matrix qw( sign_event_json );
 
-use List::MoreUtils qw( uniq );
+use List::Util 1.45 qw( uniq );
 use Time::HiRes qw( time );
 
 use SyTest::Federation::Room;
