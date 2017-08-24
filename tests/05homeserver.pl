@@ -61,20 +61,16 @@ our @HOMESERVER_INFO = map {
             "http://$BIND_HOST:" . $server->unsecure_port;
 
          $server->configure(
-            config => {
-               # Config for testing recaptcha. 90jira/SYT-8.pl
-               recaptcha_siteverify_api => $test_server_info->client_location .
-                                              "/recaptcha/api/siteverify",
-               recaptcha_public_key     => "sytest_recaptcha_public_key",
-               recaptcha_private_key    => "sytest_recaptcha_private_key",
-
-               user_agent_suffix => "homeserver[$idx]",
-
-               cas_config => {
-                  server_url => $test_server_info->client_location . "/cas",
-                  service_url => $location,
-               },
-            }
+            # Config for testing recaptcha. 90jira/SYT-8.pl
+            recaptcha_config => {
+               siteverify_api   => $test_server_info->client_location .
+                                       "/recaptcha/api/siteverify",
+               public_key       => "sytest_recaptcha_public_key",
+               private_key      => "sytest_recaptcha_private_key",
+            }, cas_config    => {
+               server_url       => $test_server_info->client_location . "/cas",
+               service_url      => $location,
+            },
          );
 
          my $info = ServerInfo( "$BIND_HOST:" . $server->secure_port, $location );
@@ -112,7 +108,7 @@ our @HOMESERVER_INFO = map {
                   $as_info->localpart, $server->secure_port;
             }
 
-            $server->append_config(
+            $server->configure(
                app_service_config_files => \@confs,
             );
          }

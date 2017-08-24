@@ -81,33 +81,9 @@ sub configure
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
       print_output filter_output
-      config
    );
 
    $self->SUPER::configure( %params );
-}
-
-sub _append
-{
-   my ( $config, $more ) = @_;
-   if( ref $more eq "HASH" ) {
-      ref $config eq "HASH" or die "Cannot append HASH to non-HASH";
-      _append( $_[0]->{$_}, $more->{$_} ) for keys %$more;
-   }
-   elsif( ref $more eq "ARRAY" ) {
-      push @{ $_[0] }, @$more;
-   }
-   else {
-      die "Not sure how to append ${\ref $more} to config\n";
-   }
-}
-
-sub append_config
-{
-   my $self = shift;
-   my %more = @_;
-
-   _append( $self->{config}, \%more );
 }
 
 sub start
@@ -217,7 +193,20 @@ sub start
         media_store_path => "$hs_dir/media_store",
         uploads_path => "$hs_dir/uploads_path",
 
-        %{ $self->{config} },
+        user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
+
+        $self->{recaptcha_config} ? (
+           recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
+           recaptcha_public_key     => $self->{recaptcha_config}->{public_key},
+           recaptcha_private_key    => $self->{recaptcha_config}->{private_key},
+        ) : (),
+
+        map {
+           defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
+        } qw(
+           cas_config
+           app_service_config_files
+        ),
    } );
 
    $self->{paths}{log} = $log;

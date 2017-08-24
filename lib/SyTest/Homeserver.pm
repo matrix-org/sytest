@@ -40,6 +40,51 @@ directory to hold things like config files and logs.
 The index of this homeserver (starting from 0). Used to identify it in
 diagnostic messages etc.
 
+=head1 OPTIONAL PARAMETERS
+
+The folowing named parameters may be passed to C<new> or C<configure>:
+
+=head2 recaptcha_config => HASH
+
+Parameters for testing the server's recaptcha integration. Should include the
+following keys:
+
+=over
+
+=item C<siteverify_api>
+
+The URI of the mock recaptcha server which the homeserver should use to
+validate recaptcha submissions.
+
+=item C<public_key>
+
+=item C<private_key>
+
+=back
+
+=head2 cas_config => HASH
+
+Parameters for testing the server's CAS integration. Should include the
+following keys:
+
+=over
+
+=item C<server_url>
+
+The URI of the mock CAS server which the homeserver should redirect users
+to for the 'cas' login method.
+
+=item C<service_url>
+
+The 'Service' parameter that the homeserver should send to the mock CAS server.
+
+=back
+
+=head2 app_service_config_files => ARRAY
+
+An array of paths to appservice YAML files to ve included in the homeserver's
+configuration.
+
 =head1 SUBCLASS METHODS
 
 The folowing methods must be provided by any subclass which implements the
@@ -74,6 +119,19 @@ sub _init
    -d $hs_dir or make_path $hs_dir;
 
    $self->SUPER::_init( $args );
+}
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
+      recaptcha_config cas_config
+      app_service_config_files
+   );
+
+   $self->SUPER::configure( %params );
 }
 
 =head1 UTILITY METHODS
