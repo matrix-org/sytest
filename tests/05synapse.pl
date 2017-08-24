@@ -33,7 +33,7 @@ main::AT_END sub {
       my $synapse = $_;
 
       # skip this if the process never got started.
-      return Future->done unless $synapse->{pid};
+      return Future->done unless $synapse->pid;
 
       $OUTPUT->diag( "Killing ${\ $synapse->pid }" );
 
