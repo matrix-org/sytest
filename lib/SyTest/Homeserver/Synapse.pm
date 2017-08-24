@@ -135,7 +135,6 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $server_name = "$bind_host:" . $self->secure_port;
 
    my $cert_file = $self->{paths}{cert_file} = "$hs_dir/cert.pem";
    my $key_file  = $self->{paths}{key_file}  = "$hs_dir/key.pem";
@@ -145,7 +144,7 @@ sub start
    my $registration_shared_secret = "reg_secret";
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
-        server_name => $server_name,
+        server_name => $self->server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
         tls_certificate_path => $cert_file,
@@ -236,7 +235,7 @@ sub start
    push @synapse_command,
       "-m", "synapse.app.homeserver",
       "--config-path" => $config_path,
-      "--server-name" => "$bind_host:$port";
+      "--server-name" => $self->server_name;
 
    $output->diag( "Generating config for port $port" );
 
@@ -493,6 +492,12 @@ sub _start_await_port
 {
    my $self = shift;
    return $self->{ports}{synapse};
+}
+
+sub server_name
+{
+   my $self = shift;
+   return $self->{bind_host} . ":" . $self->secure_port;
 }
 
 sub secure_port

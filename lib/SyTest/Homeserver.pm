@@ -90,6 +90,13 @@ configuration.
 The folowing methods must be provided by any subclass which implements the
 Homeserver interface.
 
+=head2 server_name
+
+   $hs->server_name
+
+This method should return the server_name for the server (ie, the 'domain' part
+of any Matrix IDs it generates).
+
 =head2 secure_port
 
    $hs->secure_port

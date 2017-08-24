@@ -73,7 +73,7 @@ our @HOMESERVER_INFO = map {
             },
          );
 
-         my $info = ServerInfo( "$BIND_HOST:" . $server->secure_port, $location );
+         my $info = ServerInfo( $server->server_name, $location );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only
@@ -104,8 +104,8 @@ our @HOMESERVER_INFO = map {
                push @confs, $appserv_conf;
 
                # Now we can fill in the AS info's user_id
-               $as_info->user_id = sprintf "@%s:$BIND_HOST:%d",
-                  $as_info->localpart, $server->secure_port;
+               $as_info->user_id = sprintf "@%s:%s",
+                  $as_info->localpart, $server->server_name;
             }
 
             $server->configure(
