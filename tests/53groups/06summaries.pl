@@ -245,6 +245,8 @@ test "Add user to group summary",
       })->then( sub {
          my ( $body ) = @_;
 
+         log_if_fail "Body", $body;
+
          assert_json_keys( $body, qw( profile users_section rooms_section ) );
          assert_eq( $body->{profile}{name}, "Testing summaries" );
 
