@@ -91,8 +91,9 @@ sub clear_db_pg
 
       $dbh->do( "CREATE DATABASE $args{database} WITH TEMPLATE sytest_template" ) or
          die $dbh->errstr;
-   } else {
-      my $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$host", $args{user}, $args{password} )
+   }
+   else {
+      $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$host", $args{user}, $args{password} )
          or die DBI->errstr;
 
       foreach my $row ( @{ $dbh->selectall_arrayref( "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" ) } ) {

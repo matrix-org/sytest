@@ -1,6 +1,3 @@
-use Future::Utils qw( try_repeat_until_success );
-
-
 test "Name/topic keys are correct",
    requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
 
@@ -33,7 +30,7 @@ test "Name/topic keys are correct",
          )
       } keys %rooms )
       ->then( sub {
-         try_repeat_until_success( sub {
+         repeat_until_true {
             $http->do_request_json(
                method => "GET",
                uri    => "/r0/publicRooms",
@@ -45,7 +42,7 @@ test "Name/topic keys are correct",
                assert_json_keys( $body, qw( chunk ));
                assert_json_list( $body->{chunk} );
 
-               my %seen = map {
+               my %isOK = map {
                   $_ => 0,
                } keys ( %rooms );
 
@@ -75,6 +72,10 @@ test "Name/topic keys are correct",
                         assert_eq( $canonical_alias, $alias, "Incorrect canonical_alias" );
                         assert_eq( $room->{num_joined_members}, 1, "Incorrect member count" );
 
+                        # The rooms should get created "atomically", so we should never
+                        # see any out of the public rooms list in the wrong state. If
+                        # we see a room we expect it to already be in the right state.
+
                         if( defined $name ) {
                            assert_eq( $room_config->{name}, $name, 'room name' );
                         }
@@ -89,19 +90,15 @@ test "Name/topic keys are correct",
                            defined $room_config->{topic} and die "Expected not to find a topic";
                         }
 
-                        $seen{$alias_local} = 1;
+                        $isOK{$alias_local} = 1;
                      }
                   }
                }
 
-               foreach my $key ( keys %seen ) {
-                  $seen{$key} or die "Did not find a /publicRooms result for $key";
-               }
-
-               Future->done(1);
-            })
-         })
-      })
+               Future->done( all { $isOK{$_} } keys %isOK );
+            });
+         };
+      });
    };
 
 test "Can get remote public room list",

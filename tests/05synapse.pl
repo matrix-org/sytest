@@ -28,10 +28,14 @@ my @synapses;
 # see
 #   https://rt.perl.org/Public/Bug/Display.html?id=128774
 main::AT_END sub {
-   $OUTPUT->diag( "Killing synapse servers " ) if @synapses;
 
    ( fmap_void {
       my $synapse = $_;
+
+      # skip this if the process never got started.
+      return Future->done unless $synapse->pid;
+
+      $OUTPUT->diag( "Killing ${\ $synapse->pid }" );
 
       $synapse->kill( 'INT' );
 
@@ -93,6 +97,10 @@ our @HOMESERVER_INFO = map {
                client_reader         => main::alloc_port( "client_reader[$idx]" ),
                client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
                client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
+
+               user_dir         => main::alloc_port( "user_dir[$idx]" ),
+               user_dir_metrics => main::alloc_port( "user_dir[$idx].metrics" ),
+               user_dir_manhole => main::alloc_port( "user_dir[$idx].manhole" ),
 
                dendron => main::alloc_port( "dendron[$idx]" ),
 

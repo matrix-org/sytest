@@ -141,3 +141,15 @@ Developing
 
 For more information on developing SyTest itself (maintaining or writing new
 tests) see the `DEVELOP.rst` file.
+
+
+Postgres Template Database
+--------------------------
+
+When testing with postgres SyTest will check if there is a database named
+`sytest_template` and will create the test databases using that as a template.
+This can be used to greatly reduce the time to create databases as they don't
+need to be created from scratch.
+
+The easiest way to create the template database is to start a HS pointing at
+the database and stop it once the database has been created.

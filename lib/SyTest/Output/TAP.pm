@@ -6,9 +6,15 @@ use warnings;
 use constant FORMAT => "tap";
 
 STDOUT->autoflush(1);
+STDERR->autoflush(1);
 
 # File status
-sub run_file {}
+sub run_file {
+   shift;
+   my ( $filename ) = @_;
+
+   print STDERR "$filename:\n";
+}
 
 my $test_num;
 
@@ -78,7 +84,11 @@ package SyTest::Output::TAP::Test {
    sub failure :lvalue { shift->{failure}     }
    sub subnum :lvalue  { shift->{subnum}      }
 
-   sub start {}
+   sub start {
+      my $self = shift;
+
+      print STDERR "    Test ${\$self->num} ${\$self->name}...\n";
+   }
 
    sub pass { }
 

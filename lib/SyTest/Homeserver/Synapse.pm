@@ -189,13 +189,17 @@ sub start
 
         listeners => $listeners,
 
-        bcrypt_rounds => 0,
+        # we reduce the number of bcrypt rounds to make generating users
+        # faster, but note that python's bcrypt complains if rounds < 4,
+        # so this is effectively the minimum.
+        bcrypt_rounds => 4,
 
         # If we're using dendron-style split workers, we need to disable these
         # things in the main process
-        start_pushers      => ( not $self->{dendron} ),
-        notify_appservices => ( not $self->{dendron} ),
-        send_federation    => ( not $self->{dendron} ),
+        start_pushers         => ( not $self->{dendron} ),
+        notify_appservices    => ( not $self->{dendron} ),
+        send_federation       => ( not $self->{dendron} ),
+        update_user_directory => ( not $self->{dendron} ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -211,7 +215,7 @@ sub start
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
-      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender ) ) {
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir ) ) {
          open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
       }
    }
@@ -346,6 +350,7 @@ sub wrap_synapse_command
 sub pid
 {
    my $self = shift;
+   return 0 if !$self->{proc};
    return $self->{proc}->pid;
 }
 
@@ -366,6 +371,8 @@ sub on_finish
 
    say $self->pid . " stopped";
 
+   my $port = $self->{ports}{synapse};
+
    if( $exitcode > 0 ) {
       if( WIFEXITED($exitcode) ) {
          warn "Main homeserver process exited " . WEXITSTATUS($exitcode) . "\n";
@@ -374,7 +381,7 @@ sub on_finish
          warn "Main homeserver process failed - code=$exitcode\n";
       }
 
-      print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
+      print STDERR "\e[1;35m[server $port}]\e[m: $_\n"
          for @{ $self->{stderr_lines} // [] };
 
       # Now force all remaining output to be printed
@@ -408,6 +415,7 @@ sub on_synapse_read
 {
    my $self = shift;
    my ( $stream, $bufref, $eof ) = @_;
+   my $port = $self->{ports}{synapse};
 
    while( $$bufref =~ s/^(.*)\n// ) {
       my $line = $1;
@@ -418,7 +426,7 @@ sub on_synapse_read
       if( $self->{print_output} ) {
          my $filter = $self->{filter_output};
          if( !$filter or any { $line =~ m/$_/ } @$filter ) {
-            print STDERR "\e[1;35m[server $self->{port}]\e[m: $line\n";
+            print STDERR "\e[1;35m[server $port]\e[m: $line\n";
          }
       }
    }
@@ -441,7 +449,8 @@ sub print_output
    $self->configure( print_output => $on );
 
    if( $on ) {
-      print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
+      my $port = $self->{ports}{synapse};
+      print STDERR "\e[1;35m[server $port]\e[m: $_\n"
          for @{ $self->{stderr_lines} // [] };
    }
 
@@ -752,6 +761,38 @@ sub wrap_synapse_command
          "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}";
    }
 
+   {
+      my $user_dir_config_path = $self->write_yaml_file( "user_dir.yaml" => {
+         "worker_app"              => "synapse.app.user_dir",
+         "worker_log_file"         => "$log.user_dir",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
+            {
+               type      => "http",
+               resources => [{ names => ["client"] }],
+               port      => $self->{ports}{user_dir},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{user_dir_manhole},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{user_dir_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      } );
+
+      push @command,
+         "--user-directory-config" => $user_dir_config_path,
+         "--user-directory-url" => "http://$bind_host:$self->{ports}{user_dir}";
+   }
+
    return @command;
 }
 
@@ -885,6 +926,9 @@ backend media_repository
 backend client_reader
     server client_reader ${bind_host}:$ports->{client_reader}
 
+backend user_dir
+    server user_dir ${bind_host}:$ports->{user_dir}
+
 EOCONFIG
 }
 
@@ -906,6 +950,8 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/publicRooms             federation_reader
 
 ^/_matrix/client/(api/v1|r0)/publicRooms$    client_reader
+
+^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
 EOCONFIG
 }
 
