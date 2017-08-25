@@ -558,7 +558,7 @@ sub _run_test
       my @reqs;
       my $f_setup = Future->needs_all( map { without_cancel($_) } @req_futures )
          ->on_done( sub { @reqs = @_ } )
-         ->on_fail( sub { die "fixture failed - $_[0]\n" } );
+         ->else( sub { die "fixture failed - $_[0]\n" } );
 
       my $f_test = $f_setup;
 
