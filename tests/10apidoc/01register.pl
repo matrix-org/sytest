@@ -231,6 +231,8 @@ sub local_user_fixture
    my %args = @_;
 
    fixture(
+      name => 'local_user_fixture',
+
       requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
       setup => sub {
