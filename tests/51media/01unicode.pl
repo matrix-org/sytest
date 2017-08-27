@@ -11,10 +11,10 @@ my $PROXY_SERVER = fixture(
 
    setup => sub {
       my ( $server_info ) = @_;
-      my ( $host, $port ) = ( $server_info->server_name =~ /^(.*):([^:]*)$/ );
+
       my $listener = SyTest::TCPProxy->new(
-         host   => $host,
-         port   => $port,
+         host   => $server_info->federation_host,
+         port   => $server_info->federation_port,
          output => $OUTPUT,
       );
 

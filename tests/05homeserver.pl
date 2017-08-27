@@ -73,7 +73,8 @@ our @HOMESERVER_INFO = map {
             },
          );
 
-         my $info = ServerInfo( $server->server_name, $location );
+         my $info = ServerInfo( $server->server_name, $location,
+                                $BIND_HOST, $server->federation_port );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only
