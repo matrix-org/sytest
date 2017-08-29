@@ -56,9 +56,11 @@ our @HOMESERVER_INFO = map {
          );
          $loop->add( $server );
 
+         my $api_host = $server->http_api_host;
+
          my $location = $WANT_TLS ?
-            "https://$BIND_HOST:" . $server->secure_port :
-            "http://$BIND_HOST:" . $server->unsecure_port;
+            "https://$api_host:" . $server->secure_port :
+            "http://$api_host:" . $server->unsecure_port;
 
          $server->configure(
             # Config for testing recaptcha. 90jira/SYT-8.pl
@@ -74,7 +76,7 @@ our @HOMESERVER_INFO = map {
          );
 
          my $info = ServerInfo( $server->server_name, $location,
-                                $BIND_HOST, $server->federation_port );
+                                $api_host, $server->federation_port );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only

@@ -500,6 +500,12 @@ sub server_name
    return $self->{bind_host} . ":" . $self->secure_port;
 }
 
+sub http_api_host
+{
+   my $self = shift;
+   return $self->{bind_host};
+}
+
 sub federation_port
 {
    my $self = shift;

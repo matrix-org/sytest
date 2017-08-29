@@ -150,6 +150,10 @@ Options:
    -n, --no-tls                 - prefer plaintext client connections where
                                   possible
 
+       --bind-host HOST         - when starting listeners (eg homeservers or
+                                  test httpds), bind to this hostname instead of
+                                  'localhost'.
+
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
    -F, --fixed BUGS             - bug names that are expected to be fixed

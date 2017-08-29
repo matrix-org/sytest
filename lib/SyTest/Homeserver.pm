@@ -97,6 +97,11 @@ Homeserver interface.
 This method should return the server_name for the server (ie, the 'domain' part
 of any Matrix IDs it generates).
 
+=head2 http_api_host
+
+This method should return the hostname where the homeserver exposes the
+client-server and server-server APIs.
+
 =head2 federation_port
 
    $hs->federation_port
