@@ -535,12 +535,15 @@ sub _run_test
       }
    } @requires )->get;
 
-   if( $success ) {
+   if( !defined $success ) {
+      $t->fail( $reason );
+   }
+   elsif( $success ) {
       $proven{$_} = PROVEN for @{ $test->proves // [] };
       $t->pass;
    }
    else {
-      $t->fail( $reason );
+      $t->skip( $reason );
    }
 }
 
@@ -549,17 +552,29 @@ sub _run_test
 #
 # returns a pair [$res, $reason] where $res is one of:
 #  1 - success
+#  0 - skipped
 #  undef - failure
 #
 sub _run_test0
 {
    my ( $t, $test, $req_futures ) = @_;
+   my $skip_reason;
 
    my $success = eval {
       my @reqs;
       my $f_setup = Future->needs_all( @$req_futures )
          ->on_done( sub { @reqs = @_ } )
-         ->on_fail( sub { die "fixture failed - $_[0]\n" } );
+         ->on_fail( sub {
+            my ( $reason ) = @_;
+
+            # if any of the fixtures failed with a special 'SKIP' result, then skip
+            # the test rather than failing it.
+            if ( $reason =~ /^SKIP(: *(.*))?$/ ) {
+               my $r = ": $2" // '';
+               $skip_reason = "failing fixture$r";
+            }
+            die "fixture failed - $_[0]\n"
+         } );
 
       my $f_test = $f_setup;
 
@@ -614,6 +629,10 @@ sub _run_test0
 
       1;
    };
+
+   if( $skip_reason ) {
+      return ( 0, $skip_reason );
+   }
 
    my $e = $@; chomp $e;
    return ( $success, $e );

@@ -200,6 +200,14 @@ main kinds of fixtures:
   over the lifetime of the test. These are fixtures that have a ``teardown``
   block.
 
+In general, if the future returned by ``setup`` fails, then any tests which
+require that fixture will be marked as failures. However, if the future fails
+with a reason beginning with the special string ``SKIP``, then any tests which
+require it are instead skipped. This can be used to differentiate between tests
+which we were unable to run due to constraints when setting up the test
+environment, as opposeed to those where setup steps that should have succeeded
+did not.
+
 The intented use for fixtures is that test files will provide wrapper functions
 that create a new fixture object to encapsulate some common setup pattern that
 later tests may require. Later tests can then simply invoke that function as
