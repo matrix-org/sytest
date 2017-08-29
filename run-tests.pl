@@ -525,9 +525,40 @@ sub _run_test
    $t->start;
    $f_start->done;
 
+   my ( $success, $reason ) = _run_test0( $t, $test, \@req_futures );
+
+   Future->needs_all( map {
+      if( is_Fixture( $_ ) and $_->teardown ) {
+         $_->teardown->( $_ );
+      }
+      else {
+         ();
+      }
+   } @requires )->get;
+
+   if( $success ) {
+      $proven{$_} = PROVEN for @{ $test->proves // [] };
+      $t->pass;
+   }
+   else {
+      $t->fail( $reason );
+   }
+}
+
+# Helper for _run_test. Waits for the req_futures to become ready, then runs
+# the test itself and waits for the test to complete.
+#
+# returns a pair [$res, $reason] where $res is one of:
+#  1 - success
+#  undef - failure
+#
+sub _run_test0
+{
+   my ( $t, $test, $req_futures ) = @_;
+
    my $success = eval {
       my @reqs;
-      my $f_setup = Future->needs_all( @req_futures )
+      my $f_setup = Future->needs_all( @$req_futures )
          ->on_done( sub { @reqs = @_ } )
          ->on_fail( sub { die "fixture failed - $_[0]\n" } );
 
@@ -585,23 +616,8 @@ sub _run_test
       1;
    };
 
-   Future->needs_all( map {
-      if( is_Fixture( $_ ) and $_->teardown ) {
-         $_->teardown->( $_ );
-      }
-      else {
-         ();
-      }
-   } @requires )->get;
-
-   if( $success ) {
-      $proven{$_} = PROVEN for @{ $test->proves // [] };
-      $t->pass;
-   }
-   else {
-      my $e = $@; chomp $e;
-      $t->fail( $e );
-   }
+   my $e = $@; chomp $e;
+   return ( $success, $e );
 }
 
 our $RUNNING_TEST;
