@@ -404,7 +404,7 @@ sub matrix_create_and_join_room
 
    matrix_create_room( $creator,
       %options,
-      room_alias_name => sprintf( "test-%d", $next_alias++ ),
+      room_alias_name => sprintf( "test-%s-%d", $TEST_RUN_ID, $next_alias++ ),
    )->then( sub {
       ( $room_id, $room_alias_fullname ) = @_;
 
