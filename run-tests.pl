@@ -522,7 +522,6 @@ sub _run_test
       }
    }
 
-   $t->start;
    $f_start->done;
 
    my ( $success, $reason ) = _run_test0( $t, $test, \@req_futures );
@@ -712,6 +711,8 @@ foreach my $test ( @TESTS ) {
 
    my $t = $OUTPUT->$m( $test->name, $test->expect_fail );
    local $RUNNING_TEST = $t;
+
+   $t->start;
 
    _run_test( $t, $test );
 
