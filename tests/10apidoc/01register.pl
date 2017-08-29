@@ -272,6 +272,8 @@ sub remote_user_fixture
    my %args = @_;
 
    fixture(
+      name => "remote_user_fixture",
+
       requires => [ $main::API_CLIENTS[1], localpart_fixture() ],
 
       setup => sub {
