@@ -67,7 +67,7 @@ test "POST /register can create a user",
                type => "m.login.dummy",
             },
             username => "01register-user-".$TEST_RUN_ID,
-            password => "s3kr1t",
+            password => "sUp3rs3kr1t",
          },
       )->then( sub {
          my ( $body ) = @_;

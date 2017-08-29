@@ -1,7 +1,7 @@
 use JSON qw( decode_json );
 
 # Doesn't matter what this is, but later tests will use it.
-my $password = "s3kr1t";
+my $password = "sup3r s3kr1t";
 
 my $registered_user_fixture = fixture(
    requires => [ $main::API_CLIENTS[0] ],
