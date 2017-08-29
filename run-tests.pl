@@ -380,7 +380,7 @@ sub fixture
 
    # make up an id for later labelling etc
    my $count = $fixture_count++;
-   my $name = $args{name} || "FIXTURE-$count";
+   my $name = $args{name} // "FIXTURE-$count";
 
    my $setup = $args{setup} or croak "fixture needs a 'setup' block";
    ref( $setup ) eq "CODE" or croak "Expected fixture 'setup' block to be CODE";
