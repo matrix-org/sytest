@@ -31,6 +31,9 @@ sub _init
       coverage      => 0,
    };
 
+   $self->{extra_args} = [];
+   $self->{verbosity} = 0;
+
    $self->SUPER::_init( @_ );
 }
 
@@ -42,6 +45,16 @@ sub get_options
       'd|synapse-directory=s' => \$self->{args}{synapse_dir},
       'python=s' => \$self->{args}{python},
       'coverage+' => \$self->{args}{coverage},
+
+      'E=s' => sub { # process -Eoption=value
+         my @more = split m/=/, $_[1];
+
+         # Turn single-letter into -X but longer into --NAME
+         $_ = ( length > 1 ? "--$_" : "-$_" ) for $more[0];
+
+         push @{ $self->{extra_args} }, @more;
+      },
+
       $self->SUPER::get_options(),
    );
 }
@@ -54,13 +67,33 @@ sub print_usage
        --python PATH            - path to the 'python' binary
 
        --coverage               - generate code coverage stats for synapse
+
+   -ENAME, -ENAME=VALUE         - pass extra argument NAME or NAME=VALUE to the
+                                  homeserver.
+
 EOF
+}
+
+sub set_verbosity
+{
+   my ( $self, $verbosity ) = @_;
+   $self->{verbosity} = $verbosity;
 }
 
 sub create_server
 {
    my $self = shift;
-   my %params = ( @_, %{ $self->{args}} );
+   my @extra_args = @{ $self->{extra_args} };
+
+   if( $self->{verbosity} ) {
+      push @extra_args, ( "-" . ( "v" x $self->{verbosity} ));
+   }
+
+   my %params = (
+      @_,
+      %{ $self->{args}},
+      extra_args => \@extra_args,
+   );
    return $self->{impl}->new( %params );
 }
 

@@ -4,22 +4,6 @@ use Cwd qw( abs_path );
 
 my $N_HOMESERVERS = 2;
 
-sub extract_extra_args
-{
-   my ( $idx, $args ) = @_;
-
-   return map {
-      if( m/^\[(.*)\]$/ ) {
-         # Extract the $idx'th element from a comma-separated list, or use the final
-         my @choices = split m/,/, $1;
-         $idx < @choices ? $choices[$idx] : $choices[-1];
-      }
-      else {
-         $_;
-      }
-   } @$args;
-}
-
 my @servers;
 
 # Almost like an END block, but we can't use END because we need SIGCHLD, and
@@ -62,8 +46,6 @@ our @HOMESERVER_INFO = map {
       setup => sub {
          my ( $test_server_info, @as_infos ) = @_;
 
-         my @extra_args = extract_extra_args( $idx, $SYNAPSE_ARGS{extra_args} );
-
          $OUTPUT->diag( "Starting Homeserver using $HS_FACTORY" );
 
          my $server = $HS_FACTORY->create_server(
@@ -72,7 +54,6 @@ our @HOMESERVER_INFO = map {
             bind_host           => $BIND_HOST,
             output              => $OUTPUT,
             print_output        => $SYNAPSE_ARGS{log},
-            extra_args          => \@extra_args,
             ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
                ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
                () ),

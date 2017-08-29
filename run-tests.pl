@@ -48,8 +48,6 @@ use Module::Pluggable
 # the way that the server is started by tests/05homeserver.pl. We'll collect
 # them all in one place for neatness
 our %SYNAPSE_ARGS = (
-   extra_args => [],
-
    log        => 0,
    log_filter => [],
 );
@@ -110,15 +108,6 @@ GetOptions(
 
    'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
-   'E=s' => sub { # process -Eoption=value
-      my @more = split m/=/, $_[1];
-
-      # Turn single-letter into -X but longer into --NAME
-      $_ = ( length > 1 ? "--$_" : "-$_" ) for $more[0];
-
-      push @{ $SYNAPSE_ARGS{extra_args} }, @more;
-   },
-
    'h|help' => sub { usage(0) },
 ) or usage(1);
 
@@ -176,8 +165,6 @@ Options:
    -F, --fixed BUGS             - bug names that are expected to be fixed
                                   (ignores 'bug' declarations with these names)
 
-   -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
-
 .
    write STDERR;
 
@@ -209,8 +196,8 @@ if( @ARGV ) {
    $stop_after = maxstr keys %only_files;
 }
 
-if( $VERBOSE ) {
-   push @{ $SYNAPSE_ARGS{extra_args} }, ( "-" . ( "v" x $VERBOSE ));
+if( $VERBOSE && $HS_FACTORY->can( 'set_verbosity' )) {
+   $HS_FACTORY->set_verbosity( $VERBOSE );
 }
 
 # Turn warnings into $OUTPUT->diag calls
