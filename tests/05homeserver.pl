@@ -48,12 +48,24 @@ our @HOMESERVER_INFO = map {
 
          $OUTPUT->diag( "Starting Homeserver using $HS_FACTORY" );
 
-         my $server = $HS_FACTORY->create_server(
+         my $server = eval { $HS_FACTORY->create_server(
             hs_dir              => abs_path( "server-$idx" ),
             hs_index            => $idx,
             bind_host           => $BIND_HOST,
             output              => $OUTPUT,
-         );
+         ) };
+
+         if ( ! $server ) {
+            # if we couldn't create the first homeserver, fail hard. Otherwise
+            # skip the dependent tests.
+            if ( $idx == 0 ) {
+               return Future->fail($@);
+            }
+
+            my $r = $@; chomp $r;
+            return Future->fail("SKIP: $r");
+         }
+
          $loop->add( $server );
 
          my $api_host = $server->http_api_host;
