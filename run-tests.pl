@@ -25,6 +25,7 @@ use List::Util 1.33 qw( first all any maxstr max );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
 use Time::HiRes qw( time );
+use Date::Format qw( time2str );
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
@@ -55,6 +56,10 @@ our %SYNAPSE_ARGS = (
 our $WANT_TLS = 1;  # This is shared with the test scripts
 
 our $BIND_HOST = "localhost";
+
+# a unique ID for this test run. It is used in some tests to create user IDs
+# and the like.
+our $TEST_RUN_ID = time2str( '%Y%m%d%H%M%S', time() );
 
 my %FIXED_BUGS;
 
