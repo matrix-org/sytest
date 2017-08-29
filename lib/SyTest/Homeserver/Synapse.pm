@@ -26,7 +26,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      synapse_dir extra_args python coverage bind_host
+      synapse_dir extra_args python coverage
    );
 
    $self->{paths} = {};
