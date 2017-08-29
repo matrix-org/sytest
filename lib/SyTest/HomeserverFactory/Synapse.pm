@@ -29,6 +29,8 @@ sub _init
       synapse_dir   => "../synapse",
       python        => "python",
       coverage      => 0,
+      print_output  => 0,
+      filter_output => undef,
    };
 
    $self->{extra_args} = [];
@@ -45,6 +47,9 @@ sub get_options
       'd|synapse-directory=s' => \$self->{args}{synapse_dir},
       'python=s' => \$self->{args}{python},
       'coverage+' => \$self->{args}{coverage},
+
+      'S|server-log+' => \$self->{args}{print_output},
+      'server-grep=s' => \$self->{args}{filter_output},
 
       'E=s' => sub { # process -Eoption=value
          my @more = split m/=/, $_[1];

@@ -44,14 +44,6 @@ use Module::Pluggable
    search_path => [ "SyTest::HomeserverFactory" ],
    require     => 1;
 
-# A number of commandline arguments exist simply for passing values through to
-# the way that the server is started by tests/05homeserver.pl. We'll collect
-# them all in one place for neatness
-our %SYNAPSE_ARGS = (
-   log        => 0,
-   log_filter => [],
-);
-
 our $WANT_TLS = 1;  # This is shared with the test scripts
 
 our $BIND_HOST = "localhost";
@@ -69,8 +61,6 @@ Getopt::Long::Configure('pass_through');
 GetOptions(
    'I|server-implementation=s' => \$SERVER_IMPL,
    'C|client-log+' => \my $CLIENT_LOG,
-   'S|server-log+' => \$SYNAPSE_ARGS{log},
-   'server-grep=s' => \$SYNAPSE_ARGS{log_filter},
 
    's|stop-on-fail' => sub { $STOP_ON_FAIL = 1 },
    'a|all'          => sub { $STOP_ON_FAIL = 0 },

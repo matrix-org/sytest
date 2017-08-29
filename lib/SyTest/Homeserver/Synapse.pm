@@ -426,7 +426,7 @@ sub on_synapse_read
 
       if( $self->{print_output} ) {
          my $filter = $self->{filter_output};
-         if( !$filter or any { $line =~ m/$_/ } @$filter ) {
+         if( !$filter or $line =~ m/$filter/ ) {
             print STDERR "\e[1;35m[server $port]\e[m: $line\n";
          }
       }

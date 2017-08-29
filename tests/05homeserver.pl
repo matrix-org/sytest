@@ -53,10 +53,6 @@ our @HOMESERVER_INFO = map {
             hs_index            => $idx,
             bind_host           => $BIND_HOST,
             output              => $OUTPUT,
-            print_output        => $SYNAPSE_ARGS{log},
-            ( scalar @{ $SYNAPSE_ARGS{log_filter} } ?
-               ( filter_output => $SYNAPSE_ARGS{log_filter} ) :
-               () ),
          );
          $loop->add( $server );
 
