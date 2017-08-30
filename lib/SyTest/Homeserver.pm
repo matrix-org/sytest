@@ -115,7 +115,11 @@ sub await_connectable
    my $attempts = 25;
    my $delay    = 0.05;
 
-   repeat {
+   my $output = $self->{output};
+
+   $output->diag( "Connecting to server $port" );
+
+   my $fut = repeat {
       $loop->connect(
          host     => $host,
          service  => $port,
@@ -132,7 +136,13 @@ sub await_connectable
          $loop->delay_future( after => $delay )
               ->then_done(0);
       })
-   } while => sub { !$_[0]->failure and !$_[0]->get }
+   } while => sub { !$_[0]->failure and !$_[0]->get };
+
+   $fut -> on_done( sub {
+      $output->diag( "Connected to server $port" );
+   });
+
+   return $fut;
 }
 
 1;

@@ -281,12 +281,8 @@ sub start
             )
          );
 
-         $output->diag( "Connecting to server $port" );
-
          $self->adopt_future(
             $self->await_connectable( $bind_host, $self->_start_await_port )->then( sub {
-               $output->diag( "Connected to server $port" );
-
                $started_future->done;
             })
          );
