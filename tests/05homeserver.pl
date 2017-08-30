@@ -13,23 +13,7 @@ main::AT_END sub {
 
    ( fmap_void {
       my $server = $_;
-
-      # skip this if the process never got started.
-      return Future->done unless $server->pid;
-
-      $OUTPUT->diag( "Killing ${\ $server->pid }" );
-
-      $server->kill( 'INT' );
-
-      Future->needs_any(
-         $server->await_finish,
-
-         $loop->delay_future( after => 30 )->then( sub {
-            print STDERR "Timed out waiting for ${\ $server->pid }; sending SIGKILL\n";
-            $server->kill( 'KILL' );
-            Future->done;
-         }),
-      )
+      $server->kill_and_await_finish;
    } foreach => \@servers, concurrent => scalar @servers )->get;
 };
 

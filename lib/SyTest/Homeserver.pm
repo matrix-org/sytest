@@ -154,6 +154,25 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
+=head1 METHODS
+
+=head2 kill_and_await_finish
+
+   $hs->kill_and_await_finish
+
+Kill any processes started for the homeserver, and wait for them to exit.
+
+Returns a Future when the proceses have exited.
+
+It is expected that this will be overridden by subclasses.
+
+=cut
+
+sub kill_and_await_finish
+{
+   return Future->done;
+}
+
 =head1 UTILITY METHODS
 
 =cut

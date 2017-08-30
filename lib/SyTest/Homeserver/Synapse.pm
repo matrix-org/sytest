@@ -353,6 +353,31 @@ sub kill
    }
 }
 
+sub kill_and_await_finish
+{
+   my $self = shift;
+
+   return $self->SUPER::kill_and_await_finish->then( sub {
+
+      # skip this if the process never got started.
+      return Future->done unless $self->pid;
+
+      $self->{output}->diag( "Killing ${\ $self->pid }" );
+
+      $self->kill( 'INT' );
+
+      return Future->needs_any(
+         $self->await_finish,
+
+         $self->loop->delay_future( after => 30 )->then( sub {
+            print STDERR "Timed out waiting for ${\ $self->pid }; sending SIGKILL\n";
+            $self->kill( 'KILL' );
+            Future->done;
+         }),
+        );
+   });
+}
+
 sub on_finish
 {
    my $self = shift;
