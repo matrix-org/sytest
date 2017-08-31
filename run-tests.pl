@@ -371,11 +371,16 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
-struct Fixture => [qw( requires start result teardown )], predicate => "is_Fixture";
+struct Fixture => [qw( name requires start result teardown )], predicate => "is_Fixture";
 
+my $fixture_count = 0;
 sub fixture
 {
    my %args = @_;
+
+   # make up an id for later labelling etc
+   my $count = $fixture_count++;
+   my $name = $args{name} // "FIXTURE-$count";
 
    my $setup = $args{setup} or croak "fixture needs a 'setup' block";
    ref( $setup ) eq "CODE" or croak "Expected fixture 'setup' block to be CODE";
@@ -395,7 +400,7 @@ sub fixture
 
             $req->start->( $env );
             $req->result;
-         });
+         })->set_label( "$name->" . $req->name );
       }
       else {
          push @requires, $req;
@@ -413,12 +418,15 @@ sub fixture
    @req_futures or push @req_futures, $f_start;
 
    return Fixture(
+      $name,
+
       \@requires,
 
       sub { $f_start->done( @_ ) unless $f_start->is_ready },
 
       Future->needs_all( @req_futures )
-         ->then( $setup ),
+         ->then( $setup )
+         ->set_label( $name ),
 
       $teardown ? sub {
          my ( $self ) = @_;
@@ -512,7 +520,7 @@ sub _run_test
          push @req_futures, $f_start->then( sub {
             $fixture->start->( \%proven );
             $fixture->result;
-         });
+         })->set_label( "run_test->" . $fixture->name );
       }
       else {
          if( !exists $proven{$req} ) {

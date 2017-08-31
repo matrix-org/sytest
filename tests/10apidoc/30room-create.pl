@@ -158,6 +158,8 @@ sub room_alias_name_fixture
    my $prefix = $args{prefix} // "";
 
    return fixture(
+      name => 'room_alias_name_fixture',
+
       setup => sub {
          my ( $info ) = @_;
 
