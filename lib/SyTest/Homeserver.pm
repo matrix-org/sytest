@@ -43,7 +43,7 @@ diagnostic messages etc.
 =head1 SUBCLASS METHODS
 
 The folowing methods must be provided by any subclass which implements the
-HomeServer interface.
+Homeserver interface.
 
 =head2 secure_port
 
