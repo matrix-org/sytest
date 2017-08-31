@@ -205,7 +205,7 @@ require that fixture will be marked as failures. However, if the future fails
 with a reason beginning with the special string ``SKIP``, then any tests which
 require it are instead skipped. This can be used to differentiate between tests
 which we were unable to run due to constraints when setting up the test
-environment, as opposeed to those where setup steps that should have succeeded
+environment, as opposed to those where setup steps that should have succeeded
 did not.
 
 The intented use for fixtures is that test files will provide wrapper functions

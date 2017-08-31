@@ -550,7 +550,7 @@ sub _run_test
 # Helper for _run_test. Waits for the req_futures to become ready, then runs
 # the test itself and waits for the test to complete.
 #
-# returns a pair [$res, $reason] where $res is one of:
+# returns a pair ($res, $reason) where $res is one of:
 #  1 - success
 #  0 - skipped
 #  undef - failure
@@ -570,8 +570,8 @@ sub _run_test0
             # if any of the fixtures failed with a special 'SKIP' result, then skip
             # the test rather than failing it.
             if ( $reason =~ /^SKIP(: *(.*))?$/ ) {
-               my $r = ": $2" // '';
-               $skip_reason = "failing fixture$r";
+               $skip_reason = "failing fixture";
+               $skip_reason .= ": $2" if defined $2;
             }
             die "fixture failed - $_[0]\n"
          } );
