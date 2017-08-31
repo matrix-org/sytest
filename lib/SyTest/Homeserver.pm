@@ -12,6 +12,8 @@ use JSON ();
 use File::Path qw( make_path );
 use File::Slurper qw( write_binary );
 
+use POSIX qw( WIFEXITED WEXITSTATUS );
+
 =head1 NAME
 
 C<SyTest::Homeserver> - base class for homeserver implementations
@@ -378,6 +380,53 @@ sub await_connectable
    $fut->on_done( sub {
       $output->diag( "Connected to server $port" );
    });
+
+   return $fut;
+}
+
+=head2 _run_command
+
+   $future = $self->_run_command( %params )
+
+This method runs a specified command and returns a future which will complete
+when the process exits.
+
+The parameters are passed to C<IO::Loop->run_child>.
+
+=cut
+
+sub _run_command
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $cmd = $params{command}[0];
+
+   my $fut = $self->loop->new_future;
+   $self->loop->run_child(
+      %params,
+
+      on_finish => sub {
+         my ( $pid, $exitcode, $stdout, $stderr ) = @_;
+
+         if( $exitcode == 0 ) {
+            $fut->done( $stdout );
+            return;
+         }
+
+         my $failure;
+         if( WIFEXITED($exitcode) ) {
+            $failure = "$cmd exited " . WEXITSTATUS( $exitcode );
+         } else {
+            $failure = "$cmd failed $exitcode";
+         }
+
+         if( $stderr ) {
+            $failure .= ": $stderr";
+         }
+         $fut->fail( $failure );
+      }
+   );
 
    return $fut;
 }
