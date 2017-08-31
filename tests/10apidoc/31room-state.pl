@@ -7,6 +7,8 @@ my $user_fixture = local_user_fixture();
 
 # This provides $room_id *AND* $room_alias
 my $room_fixture = fixture(
+   name => 'room_fixture',
+
    requires => [ $user_fixture, room_alias_name_fixture() ],
 
    setup => sub {

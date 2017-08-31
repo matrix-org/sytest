@@ -66,7 +66,7 @@ test "POST /register can create a user",
             auth => {
                type => "m.login.dummy",
             },
-            username => "01register-user",
+            username => "01register-user-".$TEST_RUN_ID,
             password => "s3kr1t",
          },
       )->then( sub {
@@ -84,7 +84,7 @@ my $next_anon_uid = 1;
 
 sub sprintf_localpart
 {
-   sprintf "ANON-%d", $next_anon_uid++
+   sprintf "ANON-%s-%d", $TEST_RUN_ID, $next_anon_uid++
 }
 
 sub localpart_fixture
@@ -231,6 +231,8 @@ sub local_user_fixture
    my %args = @_;
 
    fixture(
+      name => 'local_user_fixture',
+
       requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
       setup => sub {
@@ -270,6 +272,8 @@ sub remote_user_fixture
    my %args = @_;
 
    fixture(
+      name => "remote_user_fixture",
+
       requires => [ $main::API_CLIENTS[1], localpart_fixture() ],
 
       setup => sub {
