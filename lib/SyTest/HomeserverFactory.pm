@@ -14,10 +14,12 @@
 
 package SyTest::HomeserverFactory;
 
-# get the name of this implementation, by which it can be referenced with -I
+# get the name of this implementation, by which it can be referenced with -I.
+#
+# Intented to be called as a class method: $FACTORY_CLASS->name
 sub name
 {
-   my $cls = "" . shift;
+   my $cls = shift;
    $cls =~ s/^SyTest::HomeserverFactory:://;
    return $cls;
 }
