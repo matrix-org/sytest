@@ -100,37 +100,29 @@ sub start
 
    my $hs_dir = $self->{hs_dir};
 
-   my $db_config_path = "database.yaml";
-   my $db_config_abs_path = "$hs_dir/${db_config_path}";
-   my $db  = ":memory:"; #"$hs_dir/homeserver.db";
+   my %db_config = $self->_get_dbconfig(
+      type => 'sqlite',
+      args => {
+         database => ":memory:", #"$hs_dir/homeserver.db",
+      },
+   );
 
-   my ( $db_type, %db_args, $db_config );
-   if( -f $db_config_abs_path ) {
-      $db_config = YAML::LoadFile( $db_config_abs_path );
-      if( $db_config->{name} eq "psycopg2") {
-          $db_type = "pg";
-          %db_args = %{ $db_config->{args} };
-      }
-      elsif ($db_config->{name} eq "sqlite3") {
-          $db_type = "sqlite";
-          $db_args{path} = $db_config->{args}->{database};
-      }
-      else {
-         die "Unrecognised DB type '$db_config->{name}' in $db_config_abs_path";
-      }
+   my $db_type = $db_config{type};
+
+   # map sytest db args onto synapse db args
+   my %synapse_db_config;
+   if( $db_type eq "pg" ) {
+      %synapse_db_config = (
+         name => 'psycopg2',
+         args => $db_config{args},
+      );
    }
    else {
-      $db_type = "sqlite";
-      $db_args{path} = $db;
-      $db_config = { name => "sqlite3", args => { database => $db } };
-      $self->write_yaml_file( $db_config_path, $db_config );
-   }
-
-   $self->check_db_config( $db_type, $db_config, %db_args );
-
-   if( defined $db_type ) {
-      my $clear_meth = "clear_db_${db_type}";
-      $self->$clear_meth( %db_args );
+      # must be sqlite
+      %synapse_db_config = (
+         name => 'sqlite3',
+         args => $db_config{args},
+      );
    }
 
    # Clean up the media_store directory each time, or else it fills up with
@@ -168,8 +160,7 @@ sub start
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
         enable_registration => "true",
-        database => $db_config,
-        database_config => $db_config_path,
+        database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
         registration_shared_secret => $registration_shared_secret,
 
@@ -292,11 +283,6 @@ sub start
    );
 
    return $started_future;
-}
-
-sub check_db_config
-{
-   # Normally don't care
 }
 
 sub generate_listeners
@@ -527,14 +513,14 @@ sub _init
       for qw( dendron );
 }
 
-sub check_db_config
+sub _check_db_config
 {
    my $self = shift;
-   my ( $type, $config, %args ) = @_;
+   my ( %config ) = @_;
 
-   $type eq "pg" or die "Dendron can only run against postgres";
+   $config{type} eq "pg" or die "Dendron can only run against postgres";
 
-   return $self->SUPER::check_db_config( @_ );
+   return $self->SUPER::_check_db_config( @_ );
 }
 
 sub wrap_synapse_command

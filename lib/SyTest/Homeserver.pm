@@ -76,6 +76,10 @@ sub _init
    $self->SUPER::_init( $args );
 }
 
+=head1 UTILITY METHODS
+
+=cut
+
 sub write_file
 {
    my $self = shift;
@@ -108,19 +112,106 @@ sub write_json_file
    return $self->write_file( $relpath, JSON::encode_json( $content ) );
 }
 
-sub clear_db_sqlite
+=head2 _get_dbconfig
+
+   %db_config = $self->_get_dbconfig( %defaults )
+
+This method loads the database config from C<database.yaml>, or creates that
+file according to the given defaults.
+
+It then passes the loaded config to C<_check_db_config> for
+sanity-checking. That method may be overridden by subclasses, and should C<die>
+if there is a problem with the config.
+
+Finally, it calls the relevant clear_db method to clear out the configured
+database.
+
+It returns the config hash.
+
+=cut
+
+sub _get_dbconfig
+{
+   my $self = shift;
+   my ( %defaults ) = @_;
+
+   my $hs_dir = $self->{hs_dir};
+   my $db_config_path = "database.yaml";
+   my $db_config_abs_path = "$hs_dir/${db_config_path}";
+
+   my ( %db_config );
+   if( -f $db_config_abs_path ) {
+      %db_config = %{ YAML::LoadFile( $db_config_abs_path ) };
+
+      # backwards-compatibility hacks
+      my $db_name = delete $db_config{name};
+      if( defined $db_name ) {
+         if( $db_name eq 'psycopg2' ) {
+            $db_config{type} = 'pg';
+         }
+         elsif( $db_name eq 'sqlite3' ) {
+            $db_config{type} = 'sqlite';
+         }
+         else {
+            die "Unrecognised DB name '$db_name' in $db_config_abs_path";
+         }
+      }
+   }
+   else {
+      YAML::DumpFile( $db_config_abs_path, \%defaults );
+      %db_config = %defaults;
+   }
+
+   eval {
+      $self->_check_db_config( %db_config );
+      1;
+   } or die "Error loading db config $db_config_abs_path: $@";
+
+   my $db_type = $db_config{type};
+   my $clear_meth = "_clear_db_${db_type}";
+   $self->$clear_meth( %{ $db_config{args} } );
+
+   return %db_config;
+}
+
+sub _check_db_config
+{
+   my $self = shift;
+   my ( %db_config ) = @_;
+
+   my $db_type = $db_config{type};
+   if( $db_type eq 'pg' ) {
+      foreach (qw( database host user password )) {
+         if( !$db_config{args}->{$_} ) {
+            die "Missing required database argument $_";
+         }
+      }
+   }
+   elsif( $db_type eq 'sqlite' ) {
+      foreach (qw( database )) {
+         if( !$db_config{args}->{$_} ) {
+            die "Missing required database argument $_";
+         }
+      }
+   }
+   else {
+      die "Unrecognised DB type '$db_type'";
+   }
+}
+
+sub _clear_db_sqlite
 {
    my $self = shift;
    my %args = @_;
 
-   my $db = $args{path};
+   my $db = $args{database};
 
    $self->{output}->diag( "Clearing SQLite database at $db" );
 
    unlink $db if -f $db;
 }
 
-sub clear_db_pg
+sub _clear_db_pg
 {
    my $self = shift;
    my %args = @_;
