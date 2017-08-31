@@ -138,7 +138,7 @@ sub await_connectable
       })
    } while => sub { !$_[0]->failure and !$_[0]->get };
 
-   $fut -> on_done( sub {
+   $fut->on_done( sub {
       $output->diag( "Connected to server $port" );
    });
 
