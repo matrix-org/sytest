@@ -99,13 +99,16 @@ sub _get_dbconfig
       if( defined $db_name ) {
          if( $db_name eq 'psycopg2' ) {
             $db_config{type} = 'pg';
-         } elsif( $db_name eq 'sqlite3' ) {
+         }
+         elsif( $db_name eq 'sqlite3' ) {
             $db_config{type} = 'sqlite';
-         } else {
+         }
+         else {
             die "Unrecognised DB name '$db_name' in $db_config_abs_path";
          }
       }
-   } else {
+   }
+   else {
       YAML::DumpFile( $db_config_abs_path, \%defaults );
       %db_config = %defaults;
    }
@@ -134,13 +137,15 @@ sub _check_db_config
             die "Missing required database argument $_";
          }
       }
-   } elsif( $db_type eq 'sqlite' ) {
+   }
+   elsif( $db_type eq 'sqlite' ) {
       foreach (qw( database )) {
          if( !$db_config{args}->{$_} ) {
             die "Missing required database argument $_";
          }
       }
-   } else {
+   }
+   else {
       die "Unrecognised DB type '$db_type'";
    }
 }
