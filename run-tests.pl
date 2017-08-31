@@ -423,11 +423,12 @@ sub fixture
       $teardown ? sub {
          my ( $self ) = @_;
          my $result_f = $self->result;
+
          $self->result = Future->fail(
             "This Fixture has been torn down and cannot be used again"
          );
 
-         if( $self->result->is_ready ) {
+         if( $result_f->is_ready ) {
             return $teardown->( $result_f->get );
          }
          else {
