@@ -12,6 +12,55 @@ use JSON ();
 use File::Path qw( make_path );
 use File::Slurper qw( write_binary );
 
+=head1 NAME
+
+C<SyTest::Homeserver> - base class for homeserver implementations
+
+=head1 DESCRIPTION
+
+This class forms the basis for the various classes which implement homeservers
+(or, more accurately, which provide the code to configure, start, and stop
+homeserver implementations).
+
+=head1 REQUIRED PARAMETERS
+
+The following named parameters must be passed to C<new>:
+
+=head2 output => SyTest::Output
+
+An Output instance which is used to write diagnostic information.
+
+=head2 hs_dir => STRING
+
+A path unique to this homeserver instance, which will be created as a temporary
+directory to hold things like config files and logs.
+
+=head2 hs_index => INTEGER
+
+The index of this homeserver (starting from 0). Used to identify it in
+diagnostic messages etc.
+
+=head1 SUBCLASS METHODS
+
+The folowing methods must be provided by any subclass which implements the
+Homeserver interface.
+
+=head2 secure_port
+
+   $hs->secure_port
+
+This method should return the port number where the homeserver exposes a
+client-server API over HTTPS.
+
+=head2 unsecure_port
+
+   $hs->unsecure_port
+
+This method should return the port number where the homeserver exposes a
+client-server API over HTTP.
+
+=cut
+
 sub _init
 {
    my $self = shift;
