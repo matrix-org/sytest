@@ -94,6 +94,10 @@ sub _get_config
       $db_config{args}->{database},
    );
 
+   if( exists $db_config{args}->{sslmode} ) {
+      $db_uri .= sprintf( "?sslmode=%s", $db_config{args}->{sslmode} );
+   }
+
    return (
       version => 0,
       matrix => {
