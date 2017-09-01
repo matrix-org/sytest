@@ -1,3 +1,7 @@
+## This test often fails when run via haproxy on slower machines. See
+#    https://github.com/matrix-org/sytest/issues/362
+#  for more information.
+
 test "Outbound federation can query profile data",
    requires => [ $main::INBOUND_SERVER, $main::SPYGLASS_USER,
                 qw( can_get_displayname )],
@@ -7,7 +11,7 @@ test "Outbound federation can query profile data",
 
       my $local_server_name = $inbound_server->server_name;
 
-      require_stub $inbound_server->await_query_profile( "\@user:$local_server_name" )
+      require_stub $inbound_server->await_request_query_profile( "\@user:$local_server_name" )
          ->on_done( sub {
             my ( $req ) = @_;
 
@@ -19,7 +23,7 @@ test "Outbound federation can query profile data",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/profile/\@user:$local_server_name/displayname",
+         uri    => "/r0/profile/\@user:$local_server_name/displayname",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
@@ -44,7 +48,7 @@ test "Inbound federation can query profile data",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/api/v1/profile/:user_id/displayname",
+         uri    => "/r0/profile/:user_id/displayname",
 
          content => {
             displayname => $dname,

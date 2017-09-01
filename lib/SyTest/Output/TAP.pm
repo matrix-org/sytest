@@ -6,9 +6,15 @@ use warnings;
 use constant FORMAT => "tap";
 
 STDOUT->autoflush(1);
+STDERR->autoflush(1);
 
 # File status
-sub run_file {}
+sub run_file {
+   shift;
+   my ( $filename ) = @_;
+
+   print STDERR "$filename:\n";
+}
 
 my $test_num;
 
@@ -78,7 +84,11 @@ package SyTest::Output::TAP::Test {
    sub failure :lvalue { shift->{failure}     }
    sub subnum :lvalue  { shift->{subnum}      }
 
-   sub start {}
+   sub start {
+      my $self = shift;
+
+      print STDERR "    Test ${\$self->num} ${\$self->name}...\n";
+   }
 
    sub pass { }
 
@@ -127,7 +137,13 @@ package SyTest::Output::TAP::Test {
          print "ok ${\$self->num} $name\n";
       }
       else {
-         print "not ok ${\$self->num} ${\$self->name}" . ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
+         # for expected fails, theoretically all we need to do is write the
+         # TODO, but Jenkins' 'TAP Test results' page is arse and doesn't distinguish
+         # between expected and unexpected fails, so stick it in the name too.
+         print "not ok ${\$self->num} " .
+            ( $self->expect_fail ? "(expected fail) " : "" ) .
+            $self->name .
+            ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
 
          print "# $_\n" for split m/\n/, $self->failure;
       }

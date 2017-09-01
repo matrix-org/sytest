@@ -76,7 +76,7 @@ my $PREVLINE = "\eM";
 
    sub _clearstatus
    {
-      print $CLEARLINE . $PREVLINE if length $status;
+      print $CLEARLINE if length $status;
       undef $status;
    }
 }

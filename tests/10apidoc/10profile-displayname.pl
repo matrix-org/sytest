@@ -12,7 +12,7 @@ test "PUT /profile/:user_id/displayname sets my name",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/profile/:user_id/displayname",
+         uri    => "/r0/profile/:user_id/displayname",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -30,7 +30,7 @@ test "PUT /profile/:user_id/displayname sets my name",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/api/v1/profile/:user_id/displayname",
+         uri    => "/r0/profile/:user_id/displayname",
 
          content => {
             displayname => $displayname,
@@ -50,7 +50,7 @@ test "GET /profile/:user_id/displayname publicly accessible",
 
       $http->do_request_json(
          method => "GET",
-         uri    => "/api/v1/profile/$user_id/displayname",
+         uri    => "/r0/profile/$user_id/displayname",
          # no access_token
       )->then( sub {
          my ( $body ) = @_;
@@ -63,3 +63,19 @@ test "GET /profile/:user_id/displayname publicly accessible",
          Future->done(1);
       });
    };
+
+
+push our @EXPORT, qw( matrix_set_displayname );
+
+
+sub matrix_set_displayname
+{
+   my ( $user, $displayname ) = @_;
+
+   do_request_json_for( $user,
+      method => "PUT",
+      uri    => "/r0/profile/:user_id/displayname",
+
+      content => { displayname => $displayname },
+   );
+}

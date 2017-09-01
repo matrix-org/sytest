@@ -4,6 +4,10 @@ multi_test "New federated private chats get full presence information (SYN-115)"
    requires => [ local_user_fixture(), remote_user_fixture(),
                  qw( can_create_private_room )],
 
+   # this test fails intermittently on dendron-fronted builds, for unknown
+   # reasons.
+   bug => 'synapse#1663',
+
    do => sub {
       my ( $alice, $bob ) = @_;
 
@@ -57,7 +61,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
 
                do_request_json_for( $user,
                   method => "GET",
-                  uri    => $is_initial ? "/api/v1/initialSync" : "/api/v1/events",
+                  uri    => $is_initial ? "/r0/initialSync" : "/r0/events",
                   params => { from => $user->eventstream_token, timeout => 500 }
                )->then( sub {
                   my ( $body ) = @_;

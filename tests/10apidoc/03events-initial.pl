@@ -11,7 +11,7 @@ test "GET /events initially",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/events",
+         uri    => "/r0/events",
          params => { timeout => 0 },
       )->then( sub {
          my ( $body ) = @_;
@@ -39,7 +39,7 @@ test "GET /initialSync initially",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/api/v1/initialSync",
+         uri    => "/r0/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -63,7 +63,7 @@ sub matrix_initialsync
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/api/v1/initialSync",
+      uri    => "/r0/initialSync",
 
       params => {
          ( map { defined $args{$_} ? ( $_ => $args{$_} ) : () }
@@ -80,21 +80,20 @@ sub GET_new_events_for
    my ( $user, %params ) = @_;
 
    return $user->pending_get_events //=
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/api/v1/events",
-         params => {
-            %params,
-            from    => $user->eventstream_token,
-            timeout => 500,
-         },
+      matrix_get_events( $user,
+         %params,
+         from    => $user->eventstream_token,
+         timeout => 500,
       )->on_ready( sub {
          undef $user->pending_get_events;
       })->then( sub {
          my ( $body ) = @_;
+
+         log_if_fail "GET_new_events_for ${\$user->user_id}:", $body;
+
          $user->eventstream_token = $body->{end};
 
-         my @events = ( @{ $user->saved_events }, @{ $body->{chunk} } );
+         my @events = ( @{ $user->saved_events //= [] }, @{ $body->{chunk} } );
          @{ $user->saved_events } = ();
 
          Future->done( @events );
@@ -103,25 +102,53 @@ sub GET_new_events_for
 
 # Some Matrix protocol helper functions
 
-push our @EXPORT, qw( matrix_initialsync matrix_sync flush_events_for await_event_for );
+push our @EXPORT, qw(
+   matrix_initialsync matrix_get_events
+   matrix_sync matrix_sync_again
+   flush_events_for await_event_for
+);
+
+=head2 matrix_get_events
+
+   $response = matrix_get_events( $user )
+
+Returns a response body which should contain the start and end tokens, and a
+chunk of data as an ARRAY reference.
+
+=cut
+
+sub matrix_get_events
+{
+   my ( $user, %params ) = @_;
+
+   do_request_json_for( $user,
+      method => "GET",
+      uri    => "/r0/events",
+      params => \%params,
+   );
+}
 
 sub flush_events_for
 {
    my ( $user ) = @_;
 
-   do_request_json_for( $user,
-      method => "GET",
-      uri    => "/api/v1/events",
-      params => {
-         timeout => 0,
-      }
-   )->then( sub {
+   matrix_get_events( $user, timeout => 0 )
+   ->then( sub {
       my ( $body ) = @_;
       $user->eventstream_token = $body->{end};
-      @{ $user->saved_events } = ();
+      @{ $user->saved_events //= [] } = ();
 
       Future->done;
    });
+}
+
+# return any saved events for this user, and clear the store.
+sub get_saved_events_for
+{
+   my ( $user ) = @_;
+   my @result = splice @{ $user->saved_events //= [] }; # fetch-and-clear
+   log_if_fail "get_saved_events_for ${\$user->user_id}:", @result;
+   return @result;
 }
 
 # Note that semantics are undefined if calls are interleaved with differing
@@ -137,10 +164,10 @@ sub await_event_for
 
    my $f = repeat {
       # Just replay saved ones the first time around, if there are any
-      my $replay_saved = !shift && scalar @{ $user->saved_events };
+      my $replay_saved = !shift && scalar @{ $user->saved_events //= [] };
 
       ( $replay_saved
-         ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
+         ? Future->done( get_saved_events_for( $user ) )
          : GET_new_events_for( $user, %params )
       )->then( sub {
          my @events = @_;
@@ -148,7 +175,7 @@ sub await_event_for
          my $found = extract_first_by { $filter->( $_ ) } @events;
 
          # Save the rest for next time
-         push @{ $user->saved_events }, @events;
+         push @{ $user->saved_events //= [] }, @events;
 
          Future->done( $found );
       });
@@ -167,7 +194,8 @@ sub await_event_for
    my ( $sync_body ) = matrix_sync( $user, %query_params )->get;
 
 Make a v2_alpha/sync request for the user. Returns the response body as a
-reference to a hash.
+reference to a hash. As a side-effect, this function updates the
+C<sync_next_batch> field of the user object.
 
 =cut
 
@@ -175,9 +203,11 @@ sub matrix_sync
 {
    my ( $user, %params ) = @_;
 
+   my $update_next_batch = delete $params{update_next_batch} // 1;
+
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/v2_alpha/sync",
+      uri     => "/r0/sync",
       params  => \%params,
    )->on_done( sub {
       my ( $body ) = @_;
@@ -185,5 +215,26 @@ sub matrix_sync
       assert_json_keys( $body, qw( account_data rooms presence next_batch ) );
       assert_json_keys( $body->{presence}, qw( events ));
       assert_json_keys( $body->{rooms}, qw( join invite leave ) );
+
+      if ( $update_next_batch ) {
+         $user->sync_next_batch = $body->{next_batch};
+      }
    });
+}
+
+=head2 matrix_sync_again
+
+   my ( $sync_body ) = matrix_sync_again( $user, %query_params )->get;
+
+A convenient wrapper around L</matrix_sync> which applies the user's
+C<sync_next_batch> field as the C<since> parameter, to perform an incremental
+sync since the last time the function was called.
+
+=cut
+
+sub matrix_sync_again
+{
+   my ( $user, %params ) = @_;
+
+   matrix_sync( $user, since => $user->sync_next_batch, %params );
 }

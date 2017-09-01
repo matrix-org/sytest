@@ -1,3 +1,7 @@
 .*.swp
-localhost-800*
-media_store
+/localhost-*
+/server-*
+/media_store
+/.synapse-base
+/synapse
+/var

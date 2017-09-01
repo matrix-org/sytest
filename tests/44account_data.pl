@@ -1,44 +1,3 @@
-push our @EXPORT, qw( matrix_add_account_data );
-
-=head2 matrix_add_account_data
-
-   matrix_add_account_data( $user, $type, $content )->get;
-
-Add account data for the user.
-
-=cut
-
-sub matrix_add_account_data
-{
-   my ( $user, $type, $content ) = @_;
-
-   do_request_json_for( $user,
-      method  => "PUT",
-      uri     => "/v2_alpha/user/:user_id/account_data/$type",
-      content => $content
-   );
-}
-
-=head2 matrix_add_room_account_data
-
-    matrix_add_account_data( $user, $room_id, $type, $content )->get;
-
-Add account data for the user for a room.
-
-=cut
-
-sub matrix_add_room_account_data
-{
-   my ( $user, $room_id, $type, $content ) = @_;
-
-   do_request_json_for( $user,
-      method  => "PUT",
-      uri     => "/v2_alpha/user/:user_id/rooms/$room_id/account_data/$type",
-      content => $content
-   );
-}
-
-
 test "Can add account data",
    requires => [ local_user_fixture() ],
 
@@ -172,18 +131,21 @@ test "Room account data appears in v1 /events stream",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      Future->needs_all(
-         await_event_for( $user, filter => sub {
-            my ( $event ) = @_;
+      flush_events_for( $user )
+      ->then( sub {
+         Future->needs_all(
+            await_event_for( $user, filter => sub {
+               my ( $event ) = @_;
 
-            return $event->{type} eq "my.test.type"
-               && $event->{content}{cats_or_rats} eq "rats"
-               && $event->{room_id} eq $room_id;
-         }),
-         matrix_add_room_account_data( $user, $room_id, "my.test.type", {
-            cats_or_rats => "rats",
-         }),
-      );
+               return $event->{type} eq "my.test.type"
+                  && $event->{content}{cats_or_rats} eq "rats"
+                  && $event->{room_id} eq $room_id;
+            }),
+            matrix_add_room_account_data( $user, $room_id, "my.test.type", {
+               cats_or_rats => "rats",
+            }),
+         );
+      });
    };
 
 
@@ -194,7 +156,10 @@ test "Latest account data appears in v2 /sync",
       my ( $user, $room_id ) = @_;
 
       setup_account_data( $user, $room_id )->then( sub {
-         matrix_sync( $user );
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced");
+      })->then( sub {
+         matrix_sync( $user, filter => '{"account_data":{"types":["my.test.type"]}}' );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -231,8 +196,6 @@ test "New account data appears in incremental v2 /sync",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      my ( $next_batch );
-
       Future->needs_all(
          setup_incremental_account_data(
             $user, $room_id, "my.unchanging.type", "lions", "tigers"
@@ -241,17 +204,19 @@ test "New account data appears in incremental v2 /sync",
             $user, $room_id, "my.changing.type", "dogs", "frogs"
          ),
       )->then( sub {
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced");
+      })->then( sub {
          matrix_sync( $user );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
          setup_incremental_account_data(
             $user, $room_id, "my.changing.type", "cats", "rats"
          ),
       })->then( sub {
-         matrix_sync( $user, since => $next_batch );
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced");
+      })->then( sub {
+         matrix_sync_again( $user );
       })->then( sub {
          my ( $body ) = @_;
 

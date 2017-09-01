@@ -370,7 +370,7 @@ sub mk_await_request_pair
 
    no strict 'refs';
    no warnings 'redefine';
-   *{"${class}::await_$shortname"} = $awaitfunc;
+   *{"${class}::await_request_$shortname"} = $awaitfunc;
    *{"${class}::on_request_federation_v1_$shortname"} = $on_requestfunc;
 }
 
@@ -387,7 +387,19 @@ __PACKAGE__->mk_await_request_pair(
 );
 
 __PACKAGE__->mk_await_request_pair(
+   make_leave => [qw( :room_id :user_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
    send_join => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   state_ids => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   state => [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
@@ -396,6 +408,18 @@ __PACKAGE__->mk_await_request_pair(
 
 __PACKAGE__->mk_await_request_pair(
    backfill => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   invite => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   event => [qw( :event_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   user_devices => [qw( :user_id )],
 );
 
 sub on_request_federation_v1_send

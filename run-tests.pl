@@ -14,15 +14,17 @@ use SyTest::Assertions qw( :all );
 use SyTest::JSONSensible;
 
 use Future;
+use Future::Utils qw( try_repeat repeat );
 use IO::Async::Loop;
 
 use Data::Dump qw( pp );
 use File::Basename qw( basename );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
-use List::Util 1.33 qw( first all any maxstr );
+use List::Util 1.33 qw( first all any maxstr max );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
+use Time::HiRes qw( time );
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
@@ -47,9 +49,12 @@ our %SYNAPSE_ARGS = (
    log        => 0,
    log_filter => [],
    coverage   => 0,
+   dendron    => "",
 );
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
+
+our $BIND_HOST = "localhost";
 
 my %FIXED_BUGS;
 
@@ -76,7 +81,22 @@ GetOptions(
 
    'coverage+' => \$SYNAPSE_ARGS{coverage},
 
-   'p|port-base=i' => \(my $PORT_BASE = 8000),
+   'dendron=s' => \$SYNAPSE_ARGS{dendron},
+   'haproxy'   => \$SYNAPSE_ARGS{haproxy},
+
+
+   # These are now unused, but retaining arguments for commandline parsing support
+   'pusher+'            => sub {},
+   'synchrotron+'       => sub {},
+   'federation-reader+' => sub {},
+   'media-repository+'  => sub {},
+   'appservice+'        => sub {},
+   'federation-sender+' => sub {},
+   'client-reader+'     => sub {},
+
+   'bind-host=s' => \$BIND_HOST,
+
+   'p|port-range=s' => \(my $PORT_RANGE = "8800:8899"),
 
    'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
@@ -100,7 +120,9 @@ if( @ARGV ) {
    $stop_after = maxstr keys %only_files;
 }
 
-push @{ $SYNAPSE_ARGS{extra_args} }, "-v" if $VERBOSE;
+if( $VERBOSE ) {
+   push @{ $SYNAPSE_ARGS{extra_args} }, ( "-" . ( "v" x $VERBOSE ));
+}
 
 sub usage
 {
@@ -141,7 +163,7 @@ Options:
 
        --coverage               - generate code coverage stats for synapse
 
-   -p, --port-base NUMBER       - initial port number to run server under test
+   -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
    -F, --fixed BUGS             - bug names that are expected to be fixed
                                   (ignores 'bug' declarations with these names)
@@ -178,6 +200,17 @@ if( $CLIENT_LOG ) {
          my $request_uri = $request->uri;
 
          my $request_user = $args{request_user};
+
+         my $original_on_redirect = $args{on_redirect};
+         $args{on_redirect} = sub {
+             my ( $response, $to ) = @_;
+             print STDERR "\e[1;33mRedirect\e[m from ${ \$request->method } ${ \$request->uri->path }:\n";
+             print STDERR "  $_\n" for split m/\n/, $response->as_string;
+             print STDERR "-- \n";
+             if ( $original_on_redirect ) {
+                 $original_on_redirect->( $response, $to );
+             }
+         };
 
          if( $request_uri->path =~ m{/events$} ) {
             my %params = $request_uri->query_form;
@@ -260,11 +293,28 @@ if( $CLIENT_LOG ) {
 
 my $loop = IO::Async::Loop->new;
 
-$SIG{INT} = sub { exit 1 };
+# Be polite to any existing SIGINT handler (e.g. in case of Devel::MAT et.al.)
+my $old_SIGINT = $SIG{INT};
+$SIG{INT} = sub { $old_SIGINT->( "INT" ) if ref $old_SIGINT; exit 1 };
 
+( my ( $port_next, $port_max ) = split m/:/, $PORT_RANGE ) == 2 or
+   die "Expected a --port-range expressed as START:MAX\n";
 
-# We need two servers; a "local" and a "remote" one for federation-based tests
-our @HOMESERVER_PORTS = ( $PORT_BASE + 1, $PORT_BASE + 2 );
+my %port_desc;
+
+## TODO: better name here
+sub alloc_port
+{
+   my ( $desc ) = @_;
+   defined $desc or croak "alloc_port() without description";
+
+   die "No more free ports\n" if $port_next >= $port_max;
+   my $port = $port_next++;
+
+   $port_desc{$port} = $desc;
+
+   return $port;
+}
 
 # Util. function for tests
 sub delay
@@ -273,13 +323,51 @@ sub delay
    $loop->delay_future( after => $secs );
 }
 
+# Handy utility wrapper around Future::Utils::try_repeat_until_success which
+# includes a delay on retry
+sub retry_until_success(&)
+{
+   my ( $code ) = @_;
+
+   my $delay = 0.1;
+
+   try_repeat {
+      my $prev_f = shift;
+
+      ( $prev_f ?
+            delay( $delay *= 1.5 ) :
+            Future->done )
+         ->then( $code );
+   }  until => sub { !$_[0]->failure };
+}
+
+# Another wrapper which repeats (with delay) until the block returns a true
+# value. If the block fails entirely then it aborts, does not retry.
+sub repeat_until_true(&)
+{
+   my ( $code ) = @_;
+
+   my $delay = 0.1;
+
+   repeat {
+      my $prev_f = shift;
+
+      ( $prev_f ?
+            delay( $delay *= 1.5 ) :
+            Future->done )
+         ->then( $code );
+   }  until => sub { $_[0]->get };
+}
+
 my @log_if_fail_lines;
+my $test_start_time;
 
 sub log_if_fail
 {
    my ( $message, $structure ) = @_;
 
-   push @log_if_fail_lines, $message;
+   my $elapsed_time = time() - $test_start_time;
+   push @log_if_fail_lines, sprintf("%.06f: %s", $elapsed_time, $message);
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
@@ -320,6 +408,10 @@ sub fixture
       }
    }
 
+   # If there's no requirements, we still want to wait for $f_start before we
+   # actually invoke $setup
+   @req_futures or push @req_futures, $f_start;
+
    return Fixture(
       \@requires,
 
@@ -331,11 +423,12 @@ sub fixture
       $teardown ? sub {
          my ( $self ) = @_;
          my $result_f = $self->result;
+
          $self->result = Future->fail(
             "This Fixture has been torn down and cannot be used again"
          );
 
-         if( $self->result->is_ready ) {
+         if( $result_f->is_ready ) {
             return $teardown->( $result_f->get );
          }
          else {
@@ -403,6 +496,7 @@ sub _run_test
    my ( $t, $test ) = @_;
 
    undef @log_if_fail_lines;
+   $test_start_time = time();
 
    local $MORE_STUBS = [];
 
@@ -434,9 +528,11 @@ sub _run_test
 
    my $success = eval {
       my @reqs;
-      my $f_test = Future->needs_all( @req_futures )
+      my $f_setup = Future->needs_all( @req_futures )
          ->on_done( sub { @reqs = @_ } )
          ->on_fail( sub { die "fixture failed - $_[0]\n" } );
+
+      my $f_test = $f_setup;
 
       my $check = $test->check;
       if( my $do = $test->do ) {
@@ -469,6 +565,12 @@ sub _run_test
             Future->done;
          });
       }
+
+      Future->wait_any(
+         $f_setup,
+         $loop->delay_future( after => 60 )
+            ->then_fail( "Timed out waiting for setup" )
+      )->get;
 
       Future->wait_any(
          $f_test,
@@ -630,10 +732,27 @@ foreach my $test ( @TESTS ) {
 $OUTPUT->status();
 
 if( $WAIT_AT_END ) {
+   ## It's likely someone wants to interact with a running system. Lets print all
+   #    the port descriptions to be useful
+   my $width = max map { length } values %port_desc;
+
+   print STDERR "\n";
+   printf STDERR "%-*s: %d\n", $width, $port_desc{$_}, $_ for sort keys %port_desc;
+
    print STDERR "Waiting... (hit ENTER to end)\n";
    $loop->add( my $stdin = IO::Async::Stream->new_for_stdin( on_read => sub {} ) );
    $stdin->read_until( "\n" )->get;
 }
+
+# A workaround for
+#   https://rt.perl.org/Public/Bug/Display.html?id=128774
+my @AT_END;
+sub AT_END
+{
+   push @AT_END, @_;
+}
+
+$_->() for @AT_END;
 
 if( $failed_count ) {
    $OUTPUT->final_fail( $failed_count );

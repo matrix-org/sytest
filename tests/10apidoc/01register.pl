@@ -1,15 +1,31 @@
+use Digest::HMAC_SHA1 qw( hmac_sha1_hex );
+use JSON qw( decode_json );
+
 test "GET /register yields a set of flows",
    requires => [ $main::API_CLIENTS[0] ],
 
-   proves => [qw( can_register_password_flow )],
+   proves => [qw( can_register_dummy_flow )],
 
    check => sub {
       my ( $http ) = @_;
 
       $http->do_request_json(
-         uri => "/api/v1/register",
-      )->then( sub {
-         my ( $body ) = @_;
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {},
+      )->main::expect_http_401
+      ->then( sub {
+         my ( $response ) = @_;
+
+         # Despite being an HTTP failure, the body is still JSON encoded and
+         # has useful information
+         assert_eq( $response->content_type, "application/json",
+            'POST /r0/register results in application/json 401 failure'
+         );
+
+         my $body = decode_json( $response->content );
+         log_if_fail "/r0/register flow information", $body;
 
          assert_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
@@ -26,8 +42,7 @@ test "GET /register yields a set of flows",
                die "Expected flow[$idx] to have 'stages' as a list or a 'type'";
 
             $has_register_flow++ if
-               $flow->{type} eq "m.login.password" or
-               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password";
+               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.dummy";
          }
 
          Future->done( $has_register_flow );
@@ -36,7 +51,7 @@ test "GET /register yields a set of flows",
 
 test "POST /register can create a user",
    requires => [ $main::API_CLIENTS[0],
-                 qw( can_register_password_flow ) ],
+                 qw( can_register_dummy_flow ) ],
 
    critical => 1,
 
@@ -45,11 +60,13 @@ test "POST /register can create a user",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type     => "m.login.password",
-            user     => "01register-user",
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "01register-user",
             password => "s3kr1t",
          },
       )->then( sub {
@@ -61,30 +78,58 @@ test "POST /register can create a user",
       });
    };
 
-push our @EXPORT, qw( matrix_register_user );
+push our @EXPORT, qw( localpart_fixture );
 
 my $next_anon_uid = 1;
+
+sub sprintf_localpart
+{
+   sprintf "ANON-%d", $next_anon_uid++
+}
+
+sub localpart_fixture
+{
+   fixture(
+      setup => sub {
+         Future->done( sprintf_localpart() );
+      },
+   );
+}
+
+push @EXPORT, qw( matrix_register_user );
 
 sub matrix_register_user
 {
    my ( $http, $uid, %opts ) = @_;
 
-   $uid //= sprintf "_ANON_-%d", $next_anon_uid++;
+   my $password = $opts{password} // "an0th3r s3kr1t";
+
+   defined $uid or
+      croak "Require UID for matrix_register_user";
 
    $http->do_request_json(
       method => "POST",
-      uri    => "/api/v1/register",
+      uri    => "/r0/register",
 
       content => {
-         type     => "m.login.password",
-         user     => $uid,
-         password => "an0th3r s3kr1t",
+         auth => {
+            type => "m.login.dummy",
+         },
+         bind_email => JSON::false,
+         username   => $uid,
+         password   => $password,
       },
    )->then( sub {
       my ( $body ) = @_;
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $access_token, undef, undef, [], undef );
+      my $user = new_User(
+         http         => $http,
+         user_id      => $body->{user_id},
+         device_id    => $body->{device_id},
+         password     => $password,
+         access_token => $access_token,
+      );
 
       my $f = Future->done;
 
@@ -92,7 +137,7 @@ sub matrix_register_user
          $f = $f->then( sub {
             $http->do_request_json(
                method => "GET",
-               uri    => "/api/v1/events",
+               uri    => "/r0/events",
                params => { access_token => $access_token, timeout => 0 },
             )
          })->on_done( sub {
@@ -109,57 +154,104 @@ sub matrix_register_user
    });
 }
 
-push @EXPORT, qw( local_user_fixture local_user_fixtures );
+push @EXPORT, qw( matrix_register_user_via_secret );
+
+sub matrix_register_user_via_secret
+{
+   my ( $http, $uid, %opts ) = @_;
+
+   my $password = $opts{password} // "an0th3r s3kr1t";
+   my $is_admin = $opts{is_admin} // 0;
+
+   defined $uid or
+      croak "Require UID for matrix_register_user_via_secret";
+
+   my $mac = hmac_sha1_hex(
+      join( "\0", $uid, $password, $is_admin ? "admin" : "notadmin" ),
+      "reg_secret"
+   );
+
+   $http->do_request_json(
+      method => "POST",
+      uri    => "/api/v1/register",
+
+      content => {
+        type     => "org.matrix.login.shared_secret",
+        user     => $uid,
+        password => $password,
+        admin    => $is_admin ? JSON::true : JSON::false,
+        mac      => $mac,
+      },
+   )->then( sub {
+      my ( $body ) = @_;
+
+      assert_json_keys( $body, qw( user_id access_token ));
+
+      my $access_token = $body->{access_token};
+
+      my $user = new_User(
+         http         => $http,
+         user_id      => $body->{user_id},
+         device_id    => $body->{device_id},
+         password     => $password,
+         access_token => $access_token,
+      );
+
+      return Future->done( $user )
+        ->on_done( sub {
+           log_if_fail "Registered new user (via secret) $uid";
+        });
+   });
+}
+
+test "POST /register with shared secret",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   proves => [qw( can_register_with_secret )],
+
+   do => sub {
+       my ( $http, $uid ) = @_;
+
+       matrix_register_user_via_secret( $http, $uid, is_admin => 0 );
+   };
+
+test "POST /register admin with shared secret",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   do => sub {
+       my ( $http, $uid ) = @_;
+
+       matrix_register_user_via_secret( $http, $uid, is_admin => 1 );
+   };
+
+push @EXPORT, qw( local_user_fixture local_user_fixtures local_admin_fixture );
 
 sub local_user_fixture
 {
    my %args = @_;
 
    fixture(
-      requires => [ $main::API_CLIENTS[0] ],
+      requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
       setup => sub {
-         my ( $http ) = @_;
+         my ( $http, $localpart ) = @_;
 
-         matrix_register_user( $http, undef,
-            with_events => $args{with_events} // 1,
-         )->then_with_f( sub {
-            my $f = shift;
-            return $f unless defined( my $displayname = $args{displayname} );
+         setup_user( $http, $localpart, %args );
+      },
+   );
+}
 
-            my $user = $f->get;
-            do_request_json_for( $user,
-               method => "PUT",
-               uri    => "/api/v1/profile/:user_id/displayname",
+sub local_admin_fixture
+{
+   my %args = @_;
 
-               content => { displayname => $displayname },
-            )->then_done( $user );
-         })->then_with_f( sub {
-            my $f = shift;
-            return $f unless defined( my $avatar_url = $args{avatar_url} );
+   fixture(
+      requires => [ $main::API_CLIENTS[0], localpart_fixture(), qw( can_register_with_secret ) ],
 
-            my $user = $f->get;
-            do_request_json_for( $user,
-               method => "PUT",
-               uri    => "/api/v1/profile/:user_id/avatar_url",
+      setup => sub {
+         my ( $http, $localpart ) = @_;
 
-               content => { avatar_url => $avatar_url },
-            )->then_done( $user );
-         })->then_with_f( sub {
-            my $f = shift;
-            return $f unless defined( my $presence = $args{presence} );
-
-            my $user = $f->get;
-            do_request_json_for( $user,
-               method => "PUT",
-               uri    => "/api/v1/presence/:user_id/status",
-
-               content => {
-                  presence   => $presence,
-                  status_msg => ucfirst $presence,
-               }
-            )->then_done( $user );
-         });
+         matrix_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
       },
    );
 }
@@ -175,16 +267,75 @@ push @EXPORT, qw( remote_user_fixture );
 
 sub remote_user_fixture
 {
+   my %args = @_;
+
    fixture(
-      requires => [ $main::API_CLIENTS[1] ],
+      requires => [ $main::API_CLIENTS[1], localpart_fixture() ],
 
       setup => sub {
-         my ( $http ) = @_;
+         my ( $http, $localpart ) = @_;
 
-         matrix_register_user( $http )
+         setup_user( $http, $localpart, %args )
       }
    );
 }
+
+sub setup_user
+{
+   my ( $http, $localpart, %args ) = @_;
+
+   matrix_register_user( $http, $localpart,
+      with_events => $args{with_events} // 1,
+      password => $args{password},
+   )->then_with_f( sub {
+      my $f = shift;
+      return $f unless defined( my $displayname = $args{displayname} );
+
+      my $user = $f->get;
+      do_request_json_for( $user,
+         method => "PUT",
+         uri    => "/r0/profile/:user_id/displayname",
+
+         content => { displayname => $displayname },
+      )->then_done( $user );
+   })->then_with_f( sub {
+      my $f = shift;
+      return $f unless defined( my $avatar_url = $args{avatar_url} );
+
+      my $user = $f->get;
+      do_request_json_for( $user,
+         method => "PUT",
+         uri    => "/r0/profile/:user_id/avatar_url",
+
+         content => { avatar_url => $avatar_url },
+      )->then_done( $user );
+   })->then_with_f( sub {
+      my $f = shift;
+      return $f unless defined( my $presence = $args{presence} );
+
+      my $user = $f->get;
+      do_request_json_for( $user,
+         method => "PUT",
+         uri    => "/r0/presence/:user_id/status",
+
+         content => {
+            presence   => $presence,
+            status_msg => ucfirst $presence,
+         }
+      )->then_done( $user );
+   });
+}
+
+
+push @EXPORT, qw( matrix_create_user_on_server );
+
+sub matrix_create_user_on_server
+{
+   my ( $http, %args ) = @_;
+
+   setup_user( $http, sprintf_localpart(), %args )
+}
+
 
 push @EXPORT, qw( SPYGLASS_USER );
 
@@ -198,7 +349,7 @@ our $SPYGLASS_USER = fixture(
    setup => sub {
       my ( $http ) = @_;
 
-      matrix_register_user( $http )
+      matrix_register_user( $http, "spyglass" )
       ->on_done( sub {
          my ( $user ) = @_;
 

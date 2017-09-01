@@ -47,41 +47,6 @@ test "Forgotten room messages cannot be paginated",
       });
    };
 
-test "Forgetting room leaves room",
-   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
-
-   do => sub {
-      my ( $creator, $room_id, $user ) = @_;
-
-      matrix_join_room( $user, $room_id )
-      ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "sup" )
-      })->then( sub {
-         matrix_get_room_messages( $user, $room_id, limit => 1 );
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( chunk ) );
-         log_if_fail "Chunk", $body->{chunk};
-         $body->{chunk}[0]{content}{body} eq "sup" or die "Wrong message";
-
-         matrix_forget_room( $user, $room_id )
-      })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.member",
-            state_key => $user->user_id,
-         )
-      })->then( sub {
-         my ( $content ) = @_;
-
-         assert_eq( $content->{membership}, "leave",
-            "membership state" );
-
-         matrix_get_room_messages( $user, $room_id, limit => 1 )
-            ->main::expect_http_403;
-      })
-   };
-
 test "Forgetting room does not show up in v2 /sync",
    requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
 
@@ -91,6 +56,8 @@ test "Forgetting room does not show up in v2 /sync",
       matrix_join_room( $user, $room_id )
       ->then( sub {
          matrix_send_room_text_message( $creator, $room_id, body => "sup" )
+      })->then( sub {
+         matrix_leave_room( $user, $room_id )
       })->then( sub {
          matrix_forget_room( $user, $room_id )
       })->then( sub {
@@ -106,6 +73,54 @@ test "Forgetting room does not show up in v2 /sync",
 
          Future->done( 1 );
       });
+   };
+
+test "Can forget room you've been kicked from",
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+
+   do => sub {
+      my ( $creator, $room_id, $user ) = @_;
+
+      matrix_join_room( $user, $room_id )
+      ->then( sub {
+         matrix_send_room_text_message( $creator, $room_id, body => "sup" );
+      })->then( sub {
+         do_request_json_for( $creator,
+            method => "POST",
+            uri    => "/r0/rooms/$room_id/kick",
+
+            content => { user_id => $user->user_id },
+         );
+      })->then( sub {
+         matrix_forget_room( $user, $room_id )
+      })->then( sub {
+         matrix_sync( $user )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Sync response", $body;
+
+         die "Did not expect room in archived" if $body->{rooms}->{archived}->{$room_id};
+         die "Did not expect room in joined" if $body->{rooms}->{joined}->{$room_id};
+         die "Did not expect room in invited" if $body->{rooms}->{invited}->{$room_id};
+
+         Future->done( 1 );
+      });
+   };
+
+
+test "Can't forget room you're still in",
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+
+   do => sub {
+      my ( $creator, $room_id, $user ) = @_;
+
+      matrix_join_room( $user, $room_id )
+      ->then( sub {
+         matrix_send_room_text_message( $creator, $room_id, body => "sup" );
+      })->then( sub {
+         matrix_forget_room( $user, $room_id )
+      })->main::expect_http_4xx;
    };
 
 test "Can re-join room if re-invited - history_visibility = shared",
@@ -134,6 +149,8 @@ test "Can re-join room if re-invited - history_visibility = shared",
          matrix_send_room_text_message( $creator, $room_id, body => "before leave" );
       })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 100 );
+      })->then( sub {
+         matrix_leave_room( $user, $room_id );
       })->then( sub {
          matrix_forget_room( $user, $room_id );
       })->then( sub {
@@ -193,6 +210,8 @@ test "Can re-join room if re-invited - history_visibility joined",
       })->then( sub {
          matrix_send_room_text_message( $creator, $room_id, body => "before leave" );
       })->then( sub {
+         matrix_leave_room( $user, $room_id );
+      })->then( sub {
          matrix_forget_room( $user, $room_id );
       })->then( sub {
          matrix_join_room( $user, $room_id )->main::expect_http_403;
@@ -233,7 +252,7 @@ sub matrix_forget_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/api/v1/rooms/$room_id/forget",
+      uri    => "/r0/rooms/$room_id/forget",
 
       content => {},
    )->then_done(1);

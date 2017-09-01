@@ -49,7 +49,7 @@ multi_test "Read receipts are visible to /initialSync",
          my ( $member_event ) = @_;
          $member_event_id = $member_event->{event_id};
 
-         matrix_advance_room_receipt( $user, $room_id, "m.read" => $member_event_id )
+         matrix_advance_room_receipt_synced( $user, $room_id, "m.read" => $member_event_id )
       })->then( sub {
          matrix_initialsync( $user, limit => $initial_sync_limit++ );  # Change the limit to defeat caching
       })->then( sub {
@@ -79,7 +79,7 @@ multi_test "Read receipts are visible to /initialSync",
       })->then( sub {
          ( $message_event_id ) = @_;
 
-         matrix_advance_room_receipt( $user, $room_id, "m.read" => $message_event_id );
+         matrix_advance_room_receipt_synced( $user, $room_id, "m.read" => $message_event_id );
       })->then( sub {
          matrix_initialsync( $user, limit => $initial_sync_limit++ );  # Change the limit to defeat caching
       })->then( sub {
@@ -155,5 +155,26 @@ test "Read receipts are sent as events",
 
             return 1;
          })
+      });
+   };
+
+test "Receipts must be m.read",
+   requires => [ local_user_and_room_fixtures(),
+                 qw( can_post_room_receipts )],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      # We need an event ID in the room. The ID of our own member event seems
+      # reasonable. Lets fetch it.
+      my $event_id;
+
+      matrix_get_my_member_event( $user, $room_id )->then( sub {
+         my ( $member_event ) = @_;
+         $event_id = $member_event->{event_id};
+
+         matrix_advance_room_receipt( $user, $room_id,
+            "not.m.read" => $event_id
+         )->main::expect_http_400;
       });
    };

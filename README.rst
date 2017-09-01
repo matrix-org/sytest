@@ -70,6 +70,28 @@ SyTest requires a number of dependencies that are easiest installed from CPAN.
    Synapse does not need to be installed, as SyTest will run it directly from
    its source code directory.
 
+Installing on OS X
+------------------
+Dependencies can be installed on OS X in the same manner, except that packages
+using NaCl / libsodium will fail. This can be worked around by:
+
+Installing libsodium manually, eg.::
+
+    $ brew install libsodium
+
+and confirm it is installed correctly and visible to pkg-config. It should give
+some configuration output, rather than an error::
+
+    $ pkg-config --libs libsodium
+    -L/usr/local/Cellar/libsodium/1.0.8/lib -lsodium
+
+Then force an install of Crypt::NaCl::Sodium::
+
+    $ cpan
+    cpan> force install Crypt::NaCl::Sodium
+
+Then run install-deps.pl as normal.
+
 Running
 -------
 
@@ -107,8 +129,27 @@ arguments::
 
     ./run-tests.pl tests/20profile-events.pl
 
+To run synapse with a specific logging configuration, create a YAML file
+suitable for dictConfig_ called ``log.config`` (it can be copied from a running
+synapse) and place it within the homeserver configuration directory
+(``localhost-<port>``).
+
+.. _dictConfig: https://docs.python.org/2/library/logging.config.html#logging.config.dictConfig
+
 Developing
 ----------
 
 For more information on developing SyTest itself (maintaining or writing new
 tests) see the `DEVELOP.rst` file.
+
+
+Postgres Template Database
+--------------------------
+
+When testing with postgres SyTest will check if there is a database named
+`sytest_template` and will create the test databases using that as a template.
+This can be used to greatly reduce the time to create databases as they don't
+need to be created from scratch.
+
+The easiest way to create the template database is to start a HS pointing at
+the database and stop it once the database has been created.

@@ -11,11 +11,13 @@ my $registered_user_fixture = fixture(
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type     => "m.login.password",
-            user     => "02login",
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "02login",
             password => $password,
          },
       )->then( sub {
@@ -35,7 +37,7 @@ test "GET /login yields a set of flows",
       my ( $http ) = @_;
 
       $http->do_request_json(
-         uri => "/api/v1/login",
+         uri => "/r0/login",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -75,7 +77,7 @@ test "POST /login can log in as a user",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/login",
+         uri    => "/r0/login",
 
          content => {
             type     => "m.login.password",
@@ -94,6 +96,57 @@ test "POST /login can log in as a user",
       });
    };
 
+test "POST /login can log in as a user with just the local part of the id",
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
+                 qw( can_login_password_flow )],
+
+   proves => [qw( can_login )],
+
+   do => sub {
+      my ( $http, $user_id ) = @_;
+
+      my ( $user_localpart ) = ( $user_id =~ m/@([^:]*):/ );
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/login",
+
+         content => {
+            type     => "m.login.password",
+            user     => $user_localpart,
+            password => $password,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( access_token home_server ));
+
+         assert_eq( $body->{home_server}, $http->server_name,
+            'Response home_server' );
+
+         Future->done(1);
+      });
+   };
+
+test "POST /login as non-existing user is rejected",
+   requires => [ $main::API_CLIENTS[0],
+                 qw( can_login_password_flow )],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/login",
+
+         content => {
+            type     => "m.login.password",
+            user     => "i-ought-not-to-exist",
+            password => "XXX",
+         },
+      )->main::expect_http_403;
+   };
+
 test "POST /login wrong password is rejected",
    requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
                  qw( can_login_password_flow )],
@@ -103,7 +156,7 @@ test "POST /login wrong password is rejected",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/login",
+         uri    => "/r0/login",
 
          content => {
             type     => "m.login.password",
@@ -126,51 +179,36 @@ test "POST /login wrong password is rejected",
       });
    };
 
-test "POST /tokenrefresh invalidates old refresh token",
-   requires => [ $main::API_CLIENTS[0], $registered_user_fixture ],
 
-   do => sub {
-      my ( $http, $user_id ) = @_;
+our @EXPORT = qw( matrix_login_again_with_user );
 
-      my $first_body;
 
-      $http->do_request_json(
-         method => "POST",
-         uri    => "/api/v1/login",
+sub matrix_login_again_with_user
+{
+   my ( $user, %args ) = @_;
 
-         content => {
-            type     => "m.login.password",
-            user     => $user_id,
-            password => $password,
-         },
-      )->then( sub {
-         ( $first_body ) = @_;
+   $user->http->do_request_json(
+      method  => "POST",
+      uri     => "/r0/login",
+      content  => {
+         type     => "m.login.password",
+         user     => $user->user_id,
+         password => $user->password,
+         %args,
+      },
+   )->then( sub {
+      my ( $body ) = @_;
 
-         $http->do_request_json(
-            method => "POST",
-            uri    => "/v2_alpha/tokenrefresh",
+      assert_json_keys( $body, qw( access_token home_server ));
 
-            content => {
-               refresh_token => $first_body->{refresh_token},
-            },
-         )
-      })->then(
-         sub {
-            my ( $second_body ) = @_;
-
-            assert_json_keys( $second_body, qw( access_token refresh_token ));
-
-            $second_body->{$_} ne $first_body->{$_} or
-               die "Expected new '$_'" for qw( access_token refresh_token );
-
-            $http->do_request_json(
-               method => "POST",
-               uri    => "/v2_alpha/tokenrefresh",
-
-               content => {
-                  refresh_token => $first_body->{refresh_token},
-               },
-            )->main::expect_http_403;
-         }
+      my $new_user = new_User(
+         http          => $user->http,
+         user_id       => $user->user_id,
+         device_id     => $body->{device_id},
+         password      => $user->password,
+         access_token  => $body->{access_token},
       );
-   };
+
+      Future->done( $new_user );
+   });
+}

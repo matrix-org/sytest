@@ -14,7 +14,7 @@ sub matrix_add_tag
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/v2_alpha/user/:user_id/rooms/$room_id/tags/$tag",
+      uri     => "/r0/user/:user_id/rooms/$room_id/tags/$tag",
       content => $content
    );
 }
@@ -34,7 +34,7 @@ sub matrix_remove_tag
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/v2_alpha/user/:user_id/rooms/$room_id/tags/$tag",
+      uri     => "/r0/user/:user_id/rooms/$room_id/tags/$tag",
       content => {}
    );
 }
@@ -54,7 +54,7 @@ sub matrix_list_tags
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/v2_alpha/user/:user_id/rooms/$room_id/tags",
+      uri     => "/r0/user/:user_id/rooms/$room_id/tags",
    )->then( sub {
       my ( $body ) = @_;
 
@@ -306,6 +306,9 @@ test "Tags appear in an initial v2 /sync",
 
          matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced" );
+      })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
@@ -327,7 +330,7 @@ test "Newly updated tags appear in an incremental v2 /sync",
    do => sub {
       my ( $user ) = @_;
 
-      my ( $room_id, $filter_id, $next_batch );
+      my ( $room_id, $filter_id );
 
       my $filter = {};
 
@@ -340,13 +343,12 @@ test "Newly updated tags appear in an incremental v2 /sync",
 
          matrix_sync( $user, $filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
          matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced" );
+      })->then( sub {
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -366,7 +368,7 @@ test "Deleted tags appear in an incremental v2 /sync",
    do => sub {
       my ( $user ) = @_;
 
-      my ( $room_id, $filter_id, $next_batch );
+      my ( $room_id, $filter_id );
 
       my $filter = {};
 
@@ -379,21 +381,19 @@ test "Deleted tags appear in an incremental v2 /sync",
 
          matrix_sync( $user, $filter => $filter_id );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
          matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced" );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_batch = $body->{next_batch};
-
+         matrix_sync_again( $user, filter => $filter_id );
+      })->then( sub {
          matrix_remove_tag( $user, $room_id, "test_tag" );
       })->then( sub {
-         matrix_sync( $user, filter => $filter_id, since => $next_batch );
+         # Send and wait for a text message so that we know that /sync is ready
+         matrix_send_room_text_message_synced( $user, $room_id, body => "synced" );
+      })->then( sub {
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 

@@ -19,7 +19,9 @@ test "Rooms a user is invited to appear in an initial sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id );
+         matrix_invite_user_to_room_synced(
+            $user_a, $user_b, $room_id
+         );
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -52,7 +54,7 @@ test "Rooms a user is invited to appear in an incremental sync",
    check => sub {
       my ( $user_a, $user_b ) = @_;
 
-      my ( $filter_id_a, $filter_id_b, $room_id, $next_b );
+      my ( $filter_id_a, $filter_id_b, $room_id );
 
       Future->needs_all(
          matrix_create_filter( $user_a, {} ),
@@ -62,16 +64,15 @@ test "Rooms a user is invited to appear in an incremental sync",
 
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $next_b = $body->{next_batch};
          matrix_create_room( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user_a, $user_b, $room_id );
+         matrix_invite_user_to_room_synced(
+            $user_a, $user_b, $room_id
+         );
       })->then( sub {
-         matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
+         matrix_sync_again( $user_b, filter => $filter_id_b );
       })->then( sub {
          my ( $body ) = @_;
          my $room = $body->{rooms}{invite}{$room_id};

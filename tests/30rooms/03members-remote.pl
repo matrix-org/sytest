@@ -1,4 +1,3 @@
-use Future::Utils 0.18 qw( try_repeat );
 use List::Util qw( first );
 use List::UtilsBy qw( partition_by );
 
@@ -8,16 +7,19 @@ my $creator_fixture = local_user_fixture(
    avatar_url => "mxc://foo/bar",
 );
 
-my $remote_user_fixture = remote_user_fixture();
+my $remote_user_fixture = remote_user_fixture(
+   displayname => "My remote name here",
+   avatar_url => "mxc://foo/remote",
+);
 
 my $room_fixture = fixture(
-   requires => [ $creator_fixture ],
+   requires => [ $creator_fixture, room_alias_name_fixture() ],
 
    setup => sub {
-      my ( $user ) = @_;
+      my ( $user, $room_alias_name ) = @_;
 
       matrix_create_room( $user,
-         room_alias_name => "03members-remote"
+         room_alias_name => $room_alias_name,
       );
    },
 );
@@ -34,7 +36,7 @@ test "Remote users can join room by alias",
       flush_events_for( $user )->then( sub {
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/api/v1/join/$room_alias",
+            uri    => "/r0/join/$room_alias",
 
             content => {},
          );
@@ -52,6 +54,8 @@ test "Remote users can join room by alias",
 
          $body->{membership} eq "join" or
             die "Expected membership to be 'join'";
+
+         assert_json_keys( $body, qw( displayname avatar_url ) );
 
          Future->done(1);
       });
@@ -72,7 +76,7 @@ test "New room members see their own join event",
          return unless $event->{room_id} eq $room_id;
          return unless $event->{user_id} eq $user->user_id;
 
-         assert_json_keys( my $content = $event->{content}, qw( membership ));
+         assert_json_keys( my $content = $event->{content}, qw( membership displayname avatar_url ));
 
          $content->{membership} eq "join" or
             die "Expected user membership as 'join'";
@@ -88,25 +92,27 @@ test "New room members see existing members' presence in room initialSync",
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
-      try_repeat {
+      ( repeat_until_true {
          matrix_initialsync_room( $user, $room_id )->then( sub {
             my ( $body ) = @_;
 
             my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
             $presence{$first_user->user_id} or
-               die "Expected to find initial user's presence";
+               return Future->done( undef );  # try again
 
-            assert_json_keys( $presence{ $first_user->user_id },
-               qw( type content ));
-            assert_json_keys( $presence{ $first_user->user_id }{content},
-               qw( presence last_active_ago ));
+            return Future->done( \%presence );
+         })
+      })->then( sub {
+         my ( $presencemap ) = @_;
 
-            Future->done(1);
-         })->else_with_f( sub {
-            my ( $f ) = @_; delay( 0.2 )->then( sub { $f } );
-         });
-      } until => sub { !$_[0]->failure };
+         assert_json_keys( $presencemap->{ $first_user->user_id },
+            qw( type content ));
+         assert_json_keys( $presencemap->{ $first_user->user_id }{content},
+            qw( presence last_active_ago ));
+
+         Future->done(1);
+      });
    };
 
 test "Existing members see new members' join events",
@@ -123,7 +129,7 @@ test "Existing members see new members' join events",
          return unless $event->{room_id} eq $room_id;
          return unless $event->{user_id} eq $user->user_id;
 
-         assert_json_keys( my $content = $event->{content}, qw( membership ));
+         assert_json_keys( my $content = $event->{content}, qw( membership displayname avatar_url ));
 
          $content->{membership} eq "join" or
             die "Expected user membership as 'join'";
@@ -170,7 +176,7 @@ test "New room members see first user's profile information in global initialSyn
 
          assert_json_keys( $presence, qw( content ));
          assert_json_keys( my $content = $presence->{content},
-            qw( user_id displayname avatar_url ));
+            qw( user_id presence ));
 
          Future->done(1);
       });
@@ -208,14 +214,14 @@ test "New room members see first user's profile information in per-room initialS
    };
 
 test "Remote users may not join unfederated rooms",
-   requires => [ local_user_fixture(), remote_user_fixture(),
+   requires => [ local_user_fixture(), remote_user_fixture(), room_alias_name_fixture(),
                  qw( can_create_room_with_creation_content )],
 
    check => sub {
-      my ( $creator, $remote_user ) = @_;
+      my ( $creator, $remote_user, $room_alias_name ) = @_;
 
       matrix_create_room( $creator,
-         room_alias_name  => "unfederated",
+         room_alias_name  => $room_alias_name,
          creation_content => {
             "m.federate" => JSON::false,
          },
