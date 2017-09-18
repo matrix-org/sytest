@@ -747,7 +747,8 @@ test "When user joins and leaves a room in the same batch, the full state is sti
    };
 
 # Test to check that current state events appear in the timeline,
-# even if they were set during a period the user couldn't see
+# even if they were set during a period the user couldn't see.
+# See bug https://github.com/matrix-org/matrix-ios-sdk/issues/341
 test "Current state appears in timeline in private history",
    requires => [ local_user_fixtures( 3, with_events => 0 ),
                  qw( can_sync ) ],
