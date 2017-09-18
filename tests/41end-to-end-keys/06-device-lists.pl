@@ -290,7 +290,7 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
             ->then( sub {
                my ( $body ) = @_;
 
-               log_if_fail "Third body", $body;
+               log_if_fail "Second body", $body;
 
                Future->done( is_user_in_changed_list( $remote_leaver, $body ) );
             })
@@ -517,11 +517,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
             })
          };
       })->then( sub {
-         matrix_sync_again( $creator )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         $from_token = $body->{next_batch};
+         $from_token = $creator->sync_next_batch;
 
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
@@ -546,11 +542,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
             })
          };
       })->then( sub {
-         matrix_sync_again( $creator )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         $to_token = $body->{to_batch};
+         $to_token = $creator->sync_next_batch;
 
          do_request_json_for( $creator,
             method => "GET",
@@ -575,7 +567,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
       });
    };
 
-test "Get left notifs in sync when other user leaves",
+test "Get left notifs in sync and /keys/changes when other user leaves",
    requires => [ local_user_fixtures( 2 ), qw( can_upload_e2e_keys )],
 
    check => sub {
@@ -607,11 +599,7 @@ test "Get left notifs in sync when other user leaves",
             })
          };
       })->then( sub {
-         matrix_sync_again( $creator )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         $from_token = $body->{next_batch};
+         $from_token = $creator->sync_next_batch;
 
          matrix_leave_room_synced( $other_user, $room_id )
       })->then( sub {
@@ -625,11 +613,30 @@ test "Get left notifs in sync when other user leaves",
                Future->done( is_user_in_left_list( $other_user, $body ) );
             })
          };
+      })->then( sub {
+         do_request_json_for( $creator,
+            method => "GET",
+            uri    => "/unstable/keys/changes",
+
+            params => {
+               from => $from_token,
+               to   => $creator->sync_next_batch,
+            }
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( left ) );
+
+         any { $other_user->user_id eq $_ } @{ $body->{left} }
+            or die "user not in left list";
+
+         Future->done(1);
       });
    };
 
 
-test "Get left notifs for other users in sync when user leaves",
+test "Get left notifs for other users in sync and /keys/changes when user leaves",
    requires => [ local_user_fixtures( 2 ), qw( can_upload_e2e_keys )],
 
    check => sub {
@@ -661,11 +668,7 @@ test "Get left notifs for other users in sync when user leaves",
             })
          };
       })->then( sub {
-         matrix_sync_again( $creator )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         $from_token = $body->{next_batch};
+         $from_token = $creator->sync_next_batch;
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
@@ -679,6 +682,25 @@ test "Get left notifs for other users in sync when user leaves",
                Future->done( is_user_in_left_list( $other_user, $body ) );
             })
          };
+      })->then( sub {
+         do_request_json_for( $creator,
+            method => "GET",
+            uri    => "/unstable/keys/changes",
+
+            params => {
+               from => $from_token,
+               to   => $creator->sync_next_batch,
+            }
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( left ) );
+
+         any { $other_user->user_id eq $_ } @{ $body->{left} }
+            or die "user not in left list";
+
+         Future->done(1);
       });
    };
 
@@ -716,11 +738,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
             })
          };
       })->then( sub {
-         matrix_sync_again( $creator )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         $from_token = $body->{next_batch};
+         $from_token = $creator->sync_next_batch;
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
@@ -745,11 +763,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
             })
          };
       })->then( sub {
-         matrix_sync_again( $creator )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         $to_token = $body->{to_batch};
+         $to_token = $creator->sync_next_batch;
 
          do_request_json_for( $creator,
             method => "GET",
