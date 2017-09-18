@@ -536,7 +536,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
             ->then( sub {
                my ( $body ) = @_;
 
-               log_if_fail "Third body", $body;
+               log_if_fail "Second body", $body;
 
                Future->done( is_user_in_changed_list( $remote_leaver, $body ) );
             })
