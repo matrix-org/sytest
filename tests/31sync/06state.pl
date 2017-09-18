@@ -746,6 +746,8 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       })
    };
 
+# Test to check that current state events appear in the timeline,
+# even if they were set during a period the user couldn't see
 test "Current state appears in timeline in private history",
    requires => [ local_user_fixtures( 3, with_events => 0 ),
                  qw( can_sync ) ],
@@ -779,6 +781,7 @@ test "Current state appears in timeline in private history",
 
          my $room = $body->{rooms}{join}{$room_id};
 
+         # Check that we see invitee join event
          any {
             $_->{type} eq "m.room.member"
             && $_->{state_key} eq $invitee->user_id
@@ -831,6 +834,7 @@ test "Current state appears in timeline in private history with many messages be
 
          my $room = $body->{rooms}{join}{$room_id};
 
+         # Check that we see invitee join event
          any {
             $_->{type} eq "m.room.member"
             && $_->{state_key} eq $invitee->user_id
@@ -885,6 +889,7 @@ test "Current state appears in timeline in private history with many messages af
 
          my $room = $body->{rooms}{join}{$room_id};
 
+         # Check that we see invitee join event
          any {
             $_->{type} eq "m.room.member"
             && $_->{state_key} eq $invitee->user_id
