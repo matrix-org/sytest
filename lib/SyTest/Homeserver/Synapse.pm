@@ -20,24 +20,6 @@ use POSIX qw( strftime WIFEXITED WEXITSTATUS );
 
 use YAML ();
 
-sub new
-{
-   my $class = shift;
-   my %args = @_;
-
-   if( delete $args{haproxy} ) {
-      $class = "SyTest::Homeserver::Synapse::ViaHaproxy";
-   }
-   elsif( $args{dendron} ) {
-      $class = "SyTest::Homeserver::Synapse::ViaDendron";
-   }
-   else {
-      $class = "SyTest::Homeserver::Synapse::Direct";
-   }
-
-   return $class->SUPER::new( %args );
-}
-
 sub _init
 {
    my $self = shift;
