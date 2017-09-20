@@ -69,45 +69,7 @@ our @HOMESERVER_INFO = map {
          my $server = $HS_FACTORY->create_server(
             synapse_dir   => $SYNAPSE_ARGS{directory},
             hs_dir        => abs_path( "server-$idx" ),
-            ports         => {
-               synapse                  => main::alloc_port( "synapse[$idx]" ),
-               synapse_unsecure         => main::alloc_port( "synapse[$idx].unsecure" ),
-               synapse_metrics          => main::alloc_port( "synapse[$idx].metrics" ),
-               synapse_replication_tcp  => main::alloc_port( "synapse[$idx].replication_tcp" ),
-
-               pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
-               pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
-
-               synchrotron         => main::alloc_port( "synchrotron[$idx]" ),
-               synchrotron_metrics => main::alloc_port( "synchrotron[$idx].metrics" ),
-               synchrotron_manhole => main::alloc_port( "synchrotron[$idx].manhole" ),
-
-               federation_reader         => main::alloc_port( "federation_reader[$idx]" ),
-               federation_reader_metrics => main::alloc_port( "federation_reader[$idx].metrics" ),
-               federation_reader_manhole => main::alloc_port( "federation_reader[$idx].manhole" ),
-
-               media_repository => main::alloc_port( "media_repository[$idx]" ),
-               media_repository_metrics => main::alloc_port( "media_repository[$idx].metrics" ),
-               media_repository_manhole => main::alloc_port( "media_repository[$idx].manhole" ),
-
-               appservice_metrics => main::alloc_port( "appservice[$idx].metrics" ),
-               appservice_manhole => main::alloc_port( "appservice[$idx].manhole" ),
-
-               federation_sender_metrics => main::alloc_port( "federation_sender1[$idx].metrics" ),
-               federation_sender_manhole => main::alloc_port( "federation_sender[$idx].manhole" ),
-
-               client_reader         => main::alloc_port( "client_reader[$idx]" ),
-               client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
-               client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
-
-               user_dir         => main::alloc_port( "user_dir[$idx]" ),
-               user_dir_metrics => main::alloc_port( "user_dir[$idx].metrics" ),
-               user_dir_manhole => main::alloc_port( "user_dir[$idx].manhole" ),
-
-               dendron => main::alloc_port( "dendron[$idx]" ),
-
-               haproxy => main::alloc_port( "haproxy[$idx]" ),
-            },
+            hs_index            => $idx,
             bind_host           => $BIND_HOST,
             output              => $OUTPUT,
             print_output        => $SYNAPSE_ARGS{log},

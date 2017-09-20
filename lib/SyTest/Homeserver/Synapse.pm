@@ -26,15 +26,51 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      ports synapse_dir extra_args python coverage dendron bind_host
+      synapse_dir extra_args python coverage dendron bind_host
    );
-
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( synapse synapse_unsecure synapse_metrics );
 
    $self->{paths} = {};
 
    $self->SUPER::_init( $args );
+
+   my $idx = $self->{hs_index};
+   $self->{ports} = {
+      synapse                  => main::alloc_port( "synapse[$idx]" ),
+      synapse_unsecure         => main::alloc_port( "synapse[$idx].unsecure" ),
+      synapse_metrics          => main::alloc_port( "synapse[$idx].metrics" ),
+      synapse_replication_tcp  => main::alloc_port( "synapse[$idx].replication_tcp" ),
+
+      pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
+      pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
+
+      synchrotron         => main::alloc_port( "synchrotron[$idx]" ),
+      synchrotron_metrics => main::alloc_port( "synchrotron[$idx].metrics" ),
+      synchrotron_manhole => main::alloc_port( "synchrotron[$idx].manhole" ),
+
+      federation_reader         => main::alloc_port( "federation_reader[$idx]" ),
+      federation_reader_metrics => main::alloc_port( "federation_reader[$idx].metrics" ),
+      federation_reader_manhole => main::alloc_port( "federation_reader[$idx].manhole" ),
+
+      media_repository => main::alloc_port( "media_repository[$idx]" ),
+      media_repository_metrics => main::alloc_port( "media_repository[$idx].metrics" ),
+      media_repository_manhole => main::alloc_port( "media_repository[$idx].manhole" ),
+
+      appservice_metrics => main::alloc_port( "appservice[$idx].metrics" ),
+      appservice_manhole => main::alloc_port( "appservice[$idx].manhole" ),
+
+      federation_sender_metrics => main::alloc_port( "federation_sender1[$idx].metrics" ),
+      federation_sender_manhole => main::alloc_port( "federation_sender[$idx].manhole" ),
+
+      client_reader         => main::alloc_port( "client_reader[$idx]" ),
+      client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
+      client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
+
+      user_dir         => main::alloc_port( "user_dir[$idx]" ),
+      user_dir_metrics => main::alloc_port( "user_dir[$idx].metrics" ),
+      user_dir_manhole => main::alloc_port( "user_dir[$idx].manhole" ),
+
+      haproxy => main::alloc_port( "haproxy[$idx]" ),
+   };
 }
 
 sub configure
@@ -491,8 +527,8 @@ sub _init
    my $self = shift;
    $self->SUPER::_init( @_ );
 
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( dendron );
+   my $idx = $self->{hs_index};
+   $self->{ports}{dendron} = main::alloc_port( "dendron[$idx]" );
 }
 
 sub _check_db_config
