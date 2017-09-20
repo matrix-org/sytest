@@ -551,14 +551,59 @@ sub _run_test
       }
    }
 
-   $t->start;
    $f_start->done;
+
+   my ( $success, $reason ) = _run_test0( $t, $test, \@req_futures );
+
+   Future->needs_all( map {
+      if( is_Fixture( $_ ) and $_->teardown ) {
+         $_->teardown->( $_ );
+      }
+      else {
+         ();
+      }
+   } @requires )->get;
+
+   if( !defined $success ) {
+      $t->fail( $reason );
+   }
+   elsif( $success ) {
+      $proven{$_} = PROVEN for @{ $test->proves // [] };
+      $t->pass;
+   }
+   else {
+      $t->skip( $reason );
+   }
+}
+
+# Helper for _run_test. Waits for the req_futures to become ready, then runs
+# the test itself and waits for the test to complete.
+#
+# returns a pair ($res, $reason) where $res is one of:
+#  1 - success
+#  0 - skipped
+#  undef - failure
+#
+sub _run_test0
+{
+   my ( $t, $test, $req_futures ) = @_;
+   my $skip_reason;
 
    my $success = eval {
       my @reqs;
-      my $f_setup = Future->needs_all( map { without_cancel($_) } @req_futures )
+      my $f_setup = Future->needs_all( map { without_cancel($_) } @$req_futures )
          ->on_done( sub { @reqs = @_ } )
-         ->else( sub { die "fixture failed - $_[0]\n" } );
+         ->else( sub {
+            my ( $reason ) = @_;
+
+            # if any of the fixtures failed with a special 'SKIP' result, then skip
+            # the test rather than failing it.
+            if ( $reason =~ /^SKIP(: *(.*))?$/ ) {
+               $skip_reason = "failing fixture";
+               $skip_reason .= ": $2" if defined $2;
+            }
+            die "fixture failed - $_[0]\n"
+         } );
 
       my $f_test = $f_setup;
 
@@ -614,23 +659,12 @@ sub _run_test
       1;
    };
 
-   Future->needs_all( map {
-      if( is_Fixture( $_ ) and $_->teardown ) {
-         $_->teardown->( $_ );
-      }
-      else {
-         ();
-      }
-   } @requires )->get;
+   if( $skip_reason ) {
+      return ( 0, $skip_reason );
+   }
 
-   if( $success ) {
-      $proven{$_} = PROVEN for @{ $test->proves // [] };
-      $t->pass;
-   }
-   else {
-      my $e = $@; chomp $e;
-      $t->fail( $e );
-   }
+   my $e = $@; chomp $e;
+   return ( $success, $e );
 }
 
 our $RUNNING_TEST;
@@ -725,6 +759,8 @@ foreach my $test ( @TESTS ) {
 
    my $t = $OUTPUT->$m( $test->name, $test->expect_fail );
    local $RUNNING_TEST = $t;
+
+   $t->start;
 
    _run_test( $t, $test );
 
