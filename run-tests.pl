@@ -39,9 +39,14 @@ use Module::Pluggable
    search_path => [ "SyTest::Output" ],
    require     => 1;
 
+use Module::Pluggable
+   sub_name    => "homeserver_factories",
+   search_path => [ "SyTest::HomeserverFactory" ],
+   require     => 1;
+
 # A number of commandline arguments exist simply for passing values through to
-# the way that synapse is started by tests/05synapse.pl. We'll collect them
-# all in one place for neatness
+# the way that the server is started by tests/05homeserver.pl. We'll collect
+# them all in one place for neatness
 our %SYNAPSE_ARGS = (
    directory  => "../synapse",
    python     => "python",
@@ -64,8 +69,10 @@ our $TEST_RUN_ID = strftime( '%Y%m%dT%H%M%S', gmtime() );
 my %FIXED_BUGS;
 
 my $STOP_ON_FAIL;
+my $SERVER_IMPL = undef;
 
 GetOptions(
+   'I|server-implementation=s' => \$SERVER_IMPL,
    'C|client-log+' => \my $CLIENT_LOG,
    'S|server-log+' => \$SYNAPSE_ARGS{log},
    'server-grep=s' => \$SYNAPSE_ARGS{log_filter},
@@ -86,8 +93,14 @@ GetOptions(
 
    'coverage+' => \$SYNAPSE_ARGS{coverage},
 
-   'dendron=s' => \$SYNAPSE_ARGS{dendron},
-   'haproxy'   => \$SYNAPSE_ARGS{haproxy},
+   # these two are superceded by -I, but kept for backwards compat
+   'dendron=s' => sub {
+      $SERVER_IMPL = 'Synapse::ViaDendron' unless $SERVER_IMPL;
+      $SYNAPSE_ARGS{dendron} = $_[1];
+   },
+   'haproxy'   => sub {
+      $SERVER_IMPL = 'Synapse::ViaHaproxy' unless $SERVER_IMPL;
+   },
 
 
    # These are now unused, but retaining arguments for commandline parsing support
@@ -133,10 +146,22 @@ sub usage
 {
    my ( $exitcode ) = @_;
 
-   print STDERR <<'EOF';
+   my @output_formats =
+      map { $_->FORMAT }
+      grep { $_->can( "FORMAT" ) } output_formats();
+
+   my @homeserver_implementations =
+      map { $_->name() } homeserver_factories();
+
+   format STDERR =
 run-tests.pl: [options...] [test-file]
 
 Options:
+   -I, --server-implementation  - specify the type of homeserver to start.
+                                  Supported implementations:
+                                   ~~ @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                                      shift( @homeserver_implementations ) || ''
+
    -C, --client-log             - enable logging of requests made by the
                                   internal HTTP client. Also logs the internal
                                   HTTP server.
@@ -153,7 +178,10 @@ Options:
    -a, --all                    - don't stop after the first failed test;
                                   attempt as many as possible
 
-   -O, --output-format FORMAT   - set the style of test output report
+   -O, --output-format FORMAT   - set the style of test output report.
+                                  Supported formats:
+                                   ~~ @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                                      shift( @output_formats ) || ''
 
    -w, --wait-at-end            - pause for input before shutting down testing
                                   synapse servers
@@ -175,13 +203,19 @@ Options:
 
    -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
 
-EOF
+.
 
+   write STDERR;
    exit $exitcode;
 }
 
 my $OUTPUT = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
+
+$SERVER_IMPL = 'Synapse' unless $SERVER_IMPL;
+my $hs_factory_class = first { $_->name() eq $SERVER_IMPL } homeserver_factories()
+   or die "Unrecognised server implementation $SERVER_IMPL\n";
+our $HS_FACTORY = $hs_factory_class -> new();
 
 # Turn warnings into $OUTPUT->diag calls
 $SIG{__WARN__} = sub {
