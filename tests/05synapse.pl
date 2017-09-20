@@ -57,6 +57,8 @@ our @HOMESERVER_INFO = map {
    my $idx = $_;
 
    fixture(
+      name => "HOMESERVER_$idx",
+
       requires => [ $main::TEST_SERVER_INFO, @main::AS_INFO ],
 
       setup => sub {

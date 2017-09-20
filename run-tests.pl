@@ -25,6 +25,7 @@ use List::Util 1.33 qw( first all any maxstr max );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
 use Time::HiRes qw( time );
+use POSIX qw( strftime );
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
@@ -55,6 +56,10 @@ our %SYNAPSE_ARGS = (
 our $WANT_TLS = 1;  # This is shared with the test scripts
 
 our $BIND_HOST = "localhost";
+
+# a unique ID for this test run. It is used in some tests to create user IDs
+# and the like.
+our $TEST_RUN_ID = strftime( '%Y%m%dT%H%M%S', gmtime() );
 
 my %FIXED_BUGS;
 
@@ -359,6 +364,21 @@ sub repeat_until_true(&)
    }  until => sub { $_[0]->get };
 }
 
+# wrapper around Future::with_cancel which works around a bug whereby the
+# returned future does not keep a reference to the old future, which means it
+# may get garbage-collected.
+# (Ref: https://rt.cpan.org/Ticket/Display.html?id=122920)
+#
+# (also sets the label as a potential debugging aid)
+sub without_cancel
+{
+   my ( $future ) = @_;
+   my $new = $future->without_cancel;
+   $new->{oldref} = $future;
+   $new->set_label( "without_cancel(" . ( $future->label // $future ) . ")" );
+   return $new;
+}
+
 my @log_if_fail_lines;
 my $test_start_time;
 
@@ -371,11 +391,16 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
-struct Fixture => [qw( requires start result teardown )], predicate => "is_Fixture";
+struct Fixture => [qw( name requires start result teardown )], predicate => "is_Fixture";
 
+my $fixture_count = 0;
 sub fixture
 {
    my %args = @_;
+
+   # make up an id for later labelling etc
+   my $count = $fixture_count++;
+   my $name = $args{name} // "FIXTURE-$count";
 
    my $setup = $args{setup} or croak "fixture needs a 'setup' block";
    ref( $setup ) eq "CODE" or croak "Expected fixture 'setup' block to be CODE";
@@ -395,7 +420,7 @@ sub fixture
 
             $req->start->( $env );
             $req->result;
-         });
+         })->set_label( "$name->" . $req->name );
       }
       else {
          push @requires, $req;
@@ -413,21 +438,25 @@ sub fixture
    @req_futures or push @req_futures, $f_start;
 
    return Fixture(
+      $name,
+
       \@requires,
 
       sub { $f_start->done( @_ ) unless $f_start->is_ready },
 
-      Future->needs_all( @req_futures )
-         ->then( $setup ),
+      Future->needs_all( map { without_cancel($_) } @req_futures )
+         ->then( $setup )
+         ->set_label( $name ),
 
       $teardown ? sub {
          my ( $self ) = @_;
          my $result_f = $self->result;
+
          $self->result = Future->fail(
             "This Fixture has been torn down and cannot be used again"
          );
 
-         if( $self->result->is_ready ) {
+         if( $result_f->is_ready ) {
             return $teardown->( $result_f->get );
          }
          else {
@@ -511,7 +540,7 @@ sub _run_test
          push @req_futures, $f_start->then( sub {
             $fixture->start->( \%proven );
             $fixture->result;
-         });
+         })->set_label( "run_test->" . $fixture->name );
       }
       else {
          if( !exists $proven{$req} ) {
@@ -562,9 +591,9 @@ sub _run_test0
 
    my $success = eval {
       my @reqs;
-      my $f_setup = Future->needs_all( @$req_futures )
+      my $f_setup = Future->needs_all( map { without_cancel($_) } @$req_futures )
          ->on_done( sub { @reqs = @_ } )
-         ->on_fail( sub {
+         ->else( sub {
             my ( $reason ) = @_;
 
             # if any of the fixtures failed with a special 'SKIP' result, then skip
