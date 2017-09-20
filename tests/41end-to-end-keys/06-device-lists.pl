@@ -9,13 +9,34 @@ sub is_user_in_changed_list
           any { $_ eq $user->user_id } @{ $body->{device_lists}{changed} };
 }
 
-sub is_user_in_left_list
-{
-   my ( $user, $body ) = @_;
 
-   return $body->{device_lists} &&
-          $body->{device_lists}{left} &&
-          any { $_ eq $user->user_id } @{ $body->{device_lists}{left} };
+# returns a Future which resolves to the body of the sync result which contains
+# the change notification
+sub sync_until_user_in_device_list
+{
+   my ( $syncing_user, $user_to_wait_for, %params ) = @_;
+
+   my $device_list = $params{device_list} // 'changed';
+   my $msg = $params{msg} // 'sync_until_user_in_device_list';
+
+   my $wait_for_id = $user_to_wait_for->user_id;
+
+   $msg = "$msg: waiting for $wait_for_id in $device_list";
+
+   return repeat_until_true {
+      matrix_sync_again( $syncing_user, timeout => 1000 )
+      ->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "$msg: body", $body;
+
+         my $res = $body->{device_lists} &&
+            $body->{device_lists}{$device_list} &&
+            any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} };
+
+         Future->done( $res && $body );
+      });
+   };
 }
 
 test "Local device key changes appear in v2 /sync",
@@ -126,16 +147,7 @@ test "Local delete device changes appear in v2 /sync",
              }
          });
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $user1, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Body", $body;
-
-               Future->done( is_user_in_changed_list( $user2, $body ) );
-            });
-         };
+         sync_until_user_in_device_list( $user1, $user2 );
       });
    };
 
@@ -157,16 +169,7 @@ test "Local update device changes appear in v2 /sync",
       })->then( sub {
          matrix_set_device_display_name( $user2, $user2->device_id, "wibble");
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $user1, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Body", $body;
-
-               Future->done( is_user_in_changed_list( $user2, $body ) );
-            });
-         };
+         sync_until_user_in_device_list( $user1, $user2 );
       });
    };
 
@@ -191,18 +194,11 @@ test "Can query remote device keys using POST after notification",
       })->then( sub {
          matrix_put_e2e_keys( $user2 )
       })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
          matrix_set_device_display_name( $user2, $user2->device_id, "test display name" ),
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $user1, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Body", $body;
-
-               Future->done( is_user_in_changed_list( $user2, $body ) );
-            });
-         };
+         sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
          do_request_json_for( $user1,
             method  => "POST",
@@ -260,18 +256,7 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
       })->then( sub {
          matrix_put_e2e_keys( $remote_leaver )
       })->then( sub {
-         matrix_set_device_display_name( $remote_leaver, $remote_leaver->device_id, "test display name" )
-      })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "First body", $body;
-
-               Future->done( is_user_in_changed_list( $remote_leaver, $body ) );
-            })
-         };
+         sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
@@ -326,18 +311,11 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_put_e2e_keys( $remote2 )
       })->then( sub {
+         sync_until_user_in_device_list( $creator, $remote_leaver );
+      })->then( sub {
          matrix_set_device_display_name( $remote_leaver, $remote_leaver->device_id, "test display name" ),
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "First body", $body;
-
-               Future->done( is_user_in_changed_list( $remote_leaver, $body ) );
-            })
-         };
+         sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
          matrix_leave_room( $remote_leaver, $room_id )
       })->then( sub {
@@ -345,18 +323,7 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_put_e2e_keys( $remote2, device_keys => { updated => "keys" } )
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Second body", $body;
-
-               Future->done(
-                  is_user_in_changed_list( $remote2, $body ) && $body
-               );
-            })
-         };
+         sync_until_user_in_device_list( $creator, $remote2 );
       })->then( sub {
          my ( $body ) = @_;
 
@@ -504,18 +471,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
       })->then( sub {
          matrix_put_e2e_keys( $remote_leaver )
       })->then( sub {
-         matrix_set_device_display_name( $remote_leaver, $remote_leaver->device_id, "test display name" )
-      })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "First body", $body;
-
-               Future->done( is_user_in_changed_list( $remote_leaver, $body ) );
-            })
-         };
+         sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
          $from_token = $creator->sync_next_batch;
 
@@ -531,16 +487,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
       })->then( sub {
          matrix_join_room( $remote_leaver, $room_id );
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Second body", $body;
-
-               Future->done( is_user_in_changed_list( $remote_leaver, $body ) );
-            })
-         };
+         sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
          $to_token = $creator->sync_next_batch;
 
@@ -586,33 +533,20 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
       })->then( sub {
          matrix_put_e2e_keys( $other_user )
       })->then( sub {
+         sync_until_user_in_device_list( $creator, $other_user );
+      })->then( sub {
          matrix_set_device_display_name( $other_user, $other_user->device_id, "test display name" )
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "First body", $body;
-
-               Future->done( is_user_in_changed_list( $other_user, $body ) );
-            })
-         };
+         sync_until_user_in_device_list( $creator, $other_user );
       })->then( sub {
          $from_token = $creator->sync_next_batch;
 
          matrix_leave_room_synced( $other_user, $room_id )
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Second body", $body;
-
-               Future->done( is_user_in_left_list( $other_user, $body ) );
-            })
-         };
+         sync_until_user_in_device_list(
+            $creator, $other_user,
+            device_list => "left",
+         );
       })->then( sub {
          do_request_json_for( $creator,
             method => "GET",
@@ -657,31 +591,16 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
       })->then( sub {
          matrix_set_device_display_name( $other_user, $other_user->device_id, "test display name" )
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "First body", $body;
-
-               Future->done( is_user_in_changed_list( $other_user, $body ) );
-            })
-         };
+         sync_until_user_in_device_list( $creator, $other_user );
       })->then( sub {
          $from_token = $creator->sync_next_batch;
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Second body", $body;
-
-               Future->done( is_user_in_left_list( $other_user, $body ) );
-            })
-         };
+         sync_until_user_in_device_list(
+            $creator, $other_user,
+            device_list => "left",
+         );
       })->then( sub {
          do_request_json_for( $creator,
             method => "GET",
@@ -725,18 +644,9 @@ test "If user leaves room, remote user changes device and rejoins we see update 
       })->then( sub {
          matrix_put_e2e_keys( $remote_user )
       })->then( sub {
-         matrix_set_device_display_name( $remote_user, $remote_user->device_id, "test display name" )
-      })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "First body", $body;
-
-               Future->done( is_user_in_changed_list( $remote_user, $body ) );
-            })
-         };
+         sync_until_user_in_device_list(
+            $creator, $remote_user, msg => 'First body',
+         );
       })->then( sub {
          $from_token = $creator->sync_next_batch;
 
@@ -752,16 +662,9 @@ test "If user leaves room, remote user changes device and rejoins we see update 
       })->then( sub {
          matrix_join_room( $creator, $room_id );
       })->then( sub {
-         repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Third body", $body;
-
-               Future->done( is_user_in_changed_list( $remote_user, $body ) );
-            })
-         };
+         sync_until_user_in_device_list(
+            $creator, $remote_user, msg => 'Second body',
+         );
       })->then( sub {
          $to_token = $creator->sync_next_batch;
 
