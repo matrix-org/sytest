@@ -58,12 +58,11 @@ test "Notifications can be viewed with GET /notifications",
       })->then( sub {
          my ( $body ) = @_;
 
-         log_if_fail( "first /notifications response", $body );
+         log_if_fail( "second /notifications response", $body );
 
          assert_json_keys( $body, "notifications" );
 
-         my $notif = $body->{notifications}[0];
-         assert_eq( $notif->{read}, JSON::true );
+         assert_eq( scalar @{ $body->{notifications} }, 0 );
 
          Future->done(1);
       })
