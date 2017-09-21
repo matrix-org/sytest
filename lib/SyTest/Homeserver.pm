@@ -280,7 +280,7 @@ sub _check_db_config
 
    my $db_type = $db_config{type};
    if( $db_type eq 'pg' ) {
-      foreach (qw( database host user password )) {
+      foreach (qw( database )) {
          if( !$db_config{args}->{$_} ) {
             die "Missing required database argument $_";
          }
