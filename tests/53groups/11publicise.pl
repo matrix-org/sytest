@@ -25,6 +25,28 @@ test "Get/set local group publicity",
          assert_json_keys( $body, qw( groups ) );
          assert_deeply_eq( $body->{groups}, [ $group_id ] );
 
+         matrix_get_group_summary( $user, $group_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Summary body", $body;
+
+         assert_json_keys( $body, qw( user ) );
+
+         assert_eq( $body->{user}{is_public}, 1 );
+
+         matrix_update_group_publicity( $group_id, $user, 0 );
+      })->then( sub {
+         matrix_get_group_summary( $user, $group_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Summary body 2", $body;
+
+         assert_json_keys( $body, qw( user ) );
+
+         assert_eq( $body->{user}{is_public}, 0 );
+
          Future->done( 1 );
       });
    };
