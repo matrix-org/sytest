@@ -104,6 +104,7 @@ sub _get_config
          server_name => $self->server_name,
          private_key => $self->{paths}{matrix_key},
          federation_certificates => [$self->{paths}{tls_cert}],
+         registration_shared_secret => "reg_secret",
       },
 
       media => {
