@@ -493,31 +493,6 @@ sub rotate_logfile
      otherwise => sub { die "Timed out waiting for synapse to recreate its log file" };
 }
 
-package SyTest::Homeserver::Synapse::Direct;
-use base qw( SyTest::Homeserver::Synapse );
-
-sub generate_listeners
-{
-   my $self = shift;
-
-   return
-      {
-         type => "http",
-         port => $self->{ports}{synapse},
-         bind_address => $self->{bind_host},
-         tls => 1,
-         resources => [{
-            names => [ "client", "federation", "replication", "metrics" ], compress => 0
-         }]
-      },
-      $self->SUPER::generate_listeners;
-}
-
-sub _start_await_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse};
-}
 
 sub server_name
 {
@@ -547,6 +522,32 @@ sub unsecure_port
 {
    my $self = shift;
    return $self->{ports}{synapse_unsecure};
+}
+
+package SyTest::Homeserver::Synapse::Direct;
+use base qw( SyTest::Homeserver::Synapse );
+
+sub generate_listeners
+{
+   my $self = shift;
+
+   return
+      {
+         type => "http",
+         port => $self->{ports}{synapse},
+         bind_address => $self->{bind_host},
+         tls => 1,
+         resources => [{
+            names => [ "client", "federation", "replication", "metrics" ], compress => 0
+         }]
+      },
+      $self->SUPER::generate_listeners;
+}
+
+sub _start_await_port
+{
+   my $self = shift;
+   return $self->{ports}{synapse};
 }
 
 package SyTest::Homeserver::Synapse::ViaDendron;
