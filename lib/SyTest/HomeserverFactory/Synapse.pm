@@ -109,9 +109,8 @@ use base qw( SyTest::HomeserverFactory::Synapse );
 sub _init
 {
    my $self = shift;
-   $self->{impl} = "SyTest::Homeserver::Synapse::ViaDendron";
    $self->SUPER::_init( @_ );
-
+   $self->{impl} = "SyTest::Homeserver::Synapse::ViaDendron";
    $self->{args}{dendron_binary} = "";
 }
 
@@ -144,8 +143,8 @@ use base qw( SyTest::HomeserverFactory::Synapse::ViaDendron );
 sub _init
 {
    my $self = shift;
-   $self->{impl} = "SyTest::Homeserver::Synapse::ViaHaproxy";
    $self->SUPER::_init( @_ );
+   $self->{impl} = "SyTest::Homeserver::Synapse::ViaHaproxy";
 }
 
 1;
