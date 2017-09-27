@@ -53,7 +53,7 @@ foreach my $viewer_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
          });
       };
 
-   test "Add $test_name group rooms",
+   test "Add/remove $test_name group rooms",
       requires => [ local_admin_fixture( with_events => 0 ), $viewer_fixture ],
 
       do => sub {
@@ -79,6 +79,17 @@ foreach my $viewer_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
 
             any { $_->{room_id} eq $room_id } @{ $body->{chunk} }
                or die "Room not in group rooms list";
+
+            matrix_remove_group_rooms( $user, $group_id, $room_id );
+         })->then( sub {
+            matrix_get_group_rooms( $viewer, $group_id );
+         })->then( sub {
+            my ( $body ) = @_;
+
+            assert_json_keys( $body, qw( chunk ) );
+
+            any { $_->{room_id} eq $room_id } @{ $body->{chunk} }
+               and die "Room still in group rooms list after deleted";
 
             Future->done( 1 );
          });

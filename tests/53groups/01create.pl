@@ -47,7 +47,30 @@ test "Add group rooms",
    };
 
 
-push our @EXPORT, qw( matrix_create_group matrix_add_group_rooms );
+test "Remove group rooms",
+   requires => [ local_admin_fixture( with_events => 0 ) ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      my ( $group_id, $room_id );
+
+      matrix_create_group( $user )
+      ->then( sub {
+         ( $group_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_add_group_rooms( $user, $group_id, $room_id );
+      })->then( sub {
+         matrix_remove_group_rooms( $user, $group_id, $room_id );
+      });
+   };
+
+
+push our @EXPORT, qw( matrix_create_group matrix_add_group_rooms matrix_remove_group_rooms );
 
 sub matrix_create_group
 {
@@ -81,6 +104,16 @@ sub matrix_add_group_rooms
    );
 }
 
+
+sub matrix_remove_group_rooms
+{
+   my ( $user, $group_id, $room_id ) = @_;
+
+   do_request_json_for( $user,
+      method  => "DELETE",
+      uri     => "/unstable/groups/$group_id/admin/rooms/$room_id",
+   );
+}
 
 
 my $next_group_localpart = 0;
