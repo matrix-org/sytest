@@ -158,7 +158,10 @@ test "GET /rooms/:room_id/messages returns a message",
       });
    };
 
-push @EXPORT, qw( matrix_get_room_messages );
+push @EXPORT, qw(
+   matrix_get_room_messages matrix_send_room_text_message_synced
+   matrix_send_room_message_synced matrix_send_filler_messages_synced
+);
 
 sub matrix_get_room_messages
 {
@@ -173,4 +176,59 @@ sub matrix_get_room_messages
 
       params => \%params,
    );
+}
+
+sub matrix_send_room_text_message_synced
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_send_room_text_message( $user, $room_id, %params );
+      },
+      check => sub {
+         my ( $sync_body, $event_id ) = @_;
+
+         sync_timeline_contains( $sync_body, $room_id, sub {
+            $_[0]->{event_id} eq $event_id
+         });
+      },
+   );
+}
+
+sub matrix_send_room_message_synced
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_send_room_message( $user, $room_id, %params );
+      },
+      check => sub {
+         my ( $sync_body, $event_id ) = @_;
+
+         sync_timeline_contains( $sync_body, $room_id, sub {
+            $_[0]->{event_id} eq $event_id
+         });
+      },
+   );
+}
+
+sub matrix_send_filler_messages_synced
+{
+   my ( $user, $room_id, $count, %params ) = @_;
+
+   my $type = $params{type} // "a.made.up.filler.type";
+
+   Future->needs_all( map {
+      matrix_send_room_message( $user, $room_id,
+         content => { "filler" => $_ },
+         type    => $type,
+      );
+   } 1 .. ($count - 1) )->then( sub {
+      matrix_send_room_message_synced( $user, $room_id,
+         content => { "filler" => $count },
+         type    => $type,
+      );
+   });
 }

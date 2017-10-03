@@ -529,7 +529,10 @@ sub local_user_and_room_fixtures
    );
 }
 
-push @EXPORT, qw( magic_local_user_and_room_fixtures );
+push @EXPORT, qw(
+   magic_local_user_and_room_fixtures matrix_join_room_synced
+   matrix_leave_room_synced matrix_invite_user_to_room_synced
+);
 
 sub magic_local_user_and_room_fixtures
 {
@@ -540,5 +543,54 @@ sub magic_local_user_and_room_fixtures
    return (
       $user_fixture,
       magic_room_fixture( requires_users => [ $user_fixture ], %args ),
+   );
+}
+
+sub matrix_join_room_synced
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_join_room( $user, $room_id, %params );
+      },
+      check => sub { exists $_[0]->{rooms}{join}{$room_id} },
+   );
+}
+
+sub matrix_leave_room_synced
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_leave_room( $user, $room_id, %params );
+      },
+      check => sub { exists $_[0]->{rooms}{leave}{$room_id} },
+   );
+}
+
+sub matrix_invite_user_to_room_synced
+{
+   my ( $inviter, $invitee, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $inviter,
+      do => sub {
+         matrix_do_and_wait_for_sync( $invitee,
+            do => sub {
+               matrix_invite_user_to_room(
+                  $inviter, $invitee, $room_id, %params
+               );
+            },
+            check => sub { exists $_[0]->{rooms}{invite}{$room_id} },
+         );
+      },
+      check => sub {
+         sync_timeline_contains( $_[0], $room_id, sub {
+            $_[0]->{type} eq "m.room.member"
+               and $_[0]->{state_key} eq $invitee->user_id
+               and $_[0]->{content}{membership} eq "invite"
+         });
+      },
    );
 }
