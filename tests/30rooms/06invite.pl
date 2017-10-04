@@ -52,26 +52,14 @@ multi_test "Can invite users to invite-only rooms",
       matrix_invite_user_to_room( $creator, $invitee, $room_id )
          ->SyTest::pass_on_done( "Sent invite" )
       ->then( sub {
-         await_event_for( $invitee, filter => sub {
-            my ( $event ) = @_;
+         await_sync( $invitee, check => sub {
+            my ( $body ) = @_;
 
-            assert_json_keys( $event, qw( type ));
-            return 0 unless $event->{type} eq "m.room.member";
-
-            assert_json_keys( $event, qw( room_id state_key ));
-            return 0 unless $event->{room_id} eq $room_id;
-            return 0 unless $event->{state_key} eq $invitee->user_id;
+            return 0 unless exists $body->{rooms}{invite}{$room_id};
 
             return 1;
          })
       })->then( sub {
-         my ( $event ) = @_;
-
-         assert_json_keys( my $content = $event->{content}, qw( membership ));
-
-         $content->{membership} eq "invite" or
-            die "Expected membership to be 'invite'";
-
          matrix_join_room( $invitee, $room_id )
             ->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
@@ -267,24 +255,28 @@ test "Invited user can see room metadata",
       )->then( sub {
          matrix_invite_user_to_room( $creator, $invitee, $room_id );
       })->then( sub {
-         await_event_for( $invitee, filter => sub {
-            my ( $event ) = @_;
-            return $event->{type} eq "m.room.member" &&
-                   $event->{room_id} eq $room_id;
-         });
+         await_sync( $invitee, check => sub {
+            my ( $body ) = @_;
+
+            return 0 unless exists $body->{rooms}{invite}{$room_id};
+
+            return $body->{rooms}{invite}{$room_id};
+         })
       })->then( sub {
-         my ( $event ) = @_;
+         my ( $body ) = @_;
 
          # invite_room_state is optional
-         if( !$event->{invite_room_state} ) {
+         if( !$body->{invite_state} ) {
             return Future->done();
          }
 
-         assert_json_list( $event->{invite_room_state} );
+         log_if_fail "Invite", $body;
+
+         assert_json_list( $body->{invite_state}{events} );
 
          my %state_by_type = map {
             $_->{type} => $_
-         } @{ $event->{invite_room_state} };
+         } @{ $body->{invite_state}{events} };
 
          $state_by_type{$_} or die "Did not receive $_ state"
             for qw( m.room.join_rules m.room.name
@@ -331,24 +323,28 @@ test "Remote invited user can see room metadata",
       )->then( sub {
          matrix_invite_user_to_room( $creator, $invitee, $room_id );
       })->then( sub {
-         await_event_for( $invitee, filter => sub {
-            my ( $event ) = @_;
-            return $event->{type} eq "m.room.member" &&
-                   $event->{room_id} eq $room_id;
+         await_sync( $invitee, check => sub {
+            my ( $body ) = @_;
+
+            return 0 unless exists $body->{rooms}{invite}{$room_id};
+
+            return $body->{rooms}{invite}{$room_id};
          });
       })->then( sub {
-         my ( $event ) = @_;
+         my ( $body ) = @_;
 
          # invite_room_state is optional
-         if( !$event->{invite_room_state} ) {
+         if( !$body->{invite_state} ) {
             return Future->done();
          }
 
-         assert_json_list( $event->{invite_room_state} );
+         log_if_fail "Invite", $body;
+
+         assert_json_list( $body->{invite_state}{events} );
 
          my %state_by_type = map {
             $_->{type} => $_
-         } @{ $event->{invite_room_state} };
+         } @{ $body->{invite_state}{events} };
 
          $state_by_type{$_} or die "Did not receive $_ state"
             for qw( m.room.join_rules m.room.name

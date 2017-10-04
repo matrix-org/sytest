@@ -45,7 +45,7 @@ test "Outbound federation can send events",
 
 test "Inbound federation can receive events",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
+                 local_user_and_room_fixtures( with_events => 1 ),
                  federation_user_id_fixture() ],
 
    do => sub {

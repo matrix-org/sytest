@@ -414,7 +414,7 @@ test "POST /createRoom with creation content",
 
 push our @EXPORT, qw(
    matrix_get_room_state matrix_put_room_state matrix_get_my_member_event
-   matrix_initialsync_room
+   matrix_initialsync_room matrix_put_room_state_synced
 );
 
 sub matrix_get_room_state
@@ -479,5 +479,25 @@ sub matrix_initialsync_room
       method => "GET",
       uri    => "/r0/rooms/$room_id/initialSync",
       params => \%params,
+   );
+}
+
+
+sub matrix_put_room_state_synced
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_put_room_state( $user, $room_id, %params );
+      },
+      check => sub {
+         my ( $sync_body, $put_result ) = @_;
+         my $event_id = $put_result->{event_id};
+
+         sync_timeline_contains( $sync_body, $room_id, sub {
+            $_[0]->{event_id} eq $event_id;
+         });
+      },
    );
 }

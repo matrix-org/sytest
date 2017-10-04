@@ -134,7 +134,7 @@ sub matrix_create_room
    });
 }
 
-push @EXPORT, qw( room_alias_name_fixture room_alias_fixture );
+push @EXPORT, qw( room_alias_name_fixture room_alias_fixture matrix_create_room_synced );
 
 my $next_alias_name = 0;
 
@@ -198,5 +198,18 @@ sub room_alias_fixture
 
          Future->done( sprintf "#%s:%s", $alias_name, $info->server_name );
       },
+   );
+}
+
+
+sub matrix_create_room_synced
+{
+   my ( $user, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_create_room( $user, %params );
+      },
+      check => sub { exists $_[0]->{rooms}{join}{$_[1]} },
    );
 }

@@ -3,7 +3,7 @@ my $PRESENCE_LIST_URI = "/r0/presence/list/:user_id";
 
 
 test "initialSync sees my presence status",
-   requires => [ local_user_fixture(),
+   requires => [ local_user_fixture( with_events => 1 ),
                  qw( can_initial_sync )],
 
    check => sub {
@@ -49,13 +49,15 @@ test "Presence change reports an event to myself",
       matrix_set_presence_status( $user, "online",
          status_msg => $status_msg,
       )->then( sub {
-         await_event_for( $user, filter => sub {
+         await_sync_presence_contains( $user, check => sub {
             my ( $event ) = @_;
-            return 0 unless $event->{type} eq "m.presence";
-            my $content = $event->{content};
-            return 0 unless $content->{user_id} eq $user->user_id;
 
-            return 0 unless ( $content->{status_msg} // "" ) eq $status_msg;
+            log_if_fail "Event", $event;
+
+            return 0 unless $event->{sender} eq $user->user_id;
+
+            my $content = $event->{content};
+            assert_eq( $content->{status_msg} // "", $status_msg);
 
             return 1;
          });
@@ -79,20 +81,20 @@ test "Friends presence changes reports events",
             invite => [ $friend->user_id ],
          }
       )->then( sub {
-         flush_events_for( $user )
+         matrix_sync( $user )
       })->then( sub {
          matrix_set_presence_status( $friend, "online",
             status_msg => $friend_status,
          );
       })->then( sub {
-         await_event_for( $user, filter => sub {
+         await_sync_presence_contains( $user, check => sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.presence";
+
+            assert_json_keys( $event, qw( sender ));
+
+            return unless $event->{sender} eq $friend->user_id;
 
             my $content = $event->{content};
-            assert_json_keys( $content, qw( user_id ));
-
-            return unless $content->{user_id} eq $friend->user_id;
 
             assert_json_keys( $content, qw( presence status_msg ));
             $content->{presence} eq "online" or

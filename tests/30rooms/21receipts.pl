@@ -117,7 +117,7 @@ multi_test "Read receipts are visible to /initialSync",
    };
 
 test "Read receipts are sent as events",
-   requires => [ local_user_and_room_fixtures(),
+   requires => [ local_user_and_room_fixtures( with_events => 1 ),
                  qw( can_post_room_receipts )],
 
    do => sub {
