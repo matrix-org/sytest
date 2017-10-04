@@ -34,6 +34,43 @@ test "Add room to group summary",
       });
    };
 
+# Luke claims that adding room to group summary removes the room_id
+# when fetching the rooms in a group
+test "Adding room to group summary keeps room_id when fetching rooms in group",
+   requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
+
+   do => sub {
+      my ( $user, $viewer ) = @_;
+
+      my ( $group_id, $room_id );
+
+      matrix_create_group( $user,
+         name => "Testing summaries",
+      )
+      ->then( sub {
+         ( $group_id ) = @_;
+
+         matrix_create_room( $user );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_add_group_rooms( $user, $group_id, $room_id );
+      })->then( sub {
+         matrix_add_room_to_group_summary( $user, $group_id, $room_id );
+      })->then( sub {
+         matrix_get_group_rooms( $viewer, $group_id );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( chunk ) );
+
+         any { $_->{room_id} eq $room_id } @{ $body->{chunk} }
+            or die "Room not in group rooms list";
+
+         Future->done( 1 );
+      });
+   };
+
 
 test "Adding multiple rooms to group summary have correct order",
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
