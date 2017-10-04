@@ -4,12 +4,14 @@ use List::UtilsBy qw( partition_by );
 my $creator_fixture = local_user_fixture(
    # Some of these tests depend on the user having a displayname
    displayname => "My name here",
-   avatar_url => "mxc://foo/bar",
+   avatar_url  => "mxc://foo/bar",
+   with_events => 1,
 );
 
 my $remote_user_fixture = remote_user_fixture(
    displayname => "My remote name here",
-   avatar_url => "mxc://foo/remote",
+   avatar_url  => "mxc://foo/remote",
+   with_events => 1,
 );
 
 my $room_fixture = fixture(

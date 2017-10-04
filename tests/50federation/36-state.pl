@@ -98,7 +98,7 @@ test "Inbound federation can get state_ids for a room",
 
 test "Outbound federation requests /state_ids and correctly handles 404",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
+                 local_user_and_room_fixtures( with_events => 1 ),
                  federation_user_id_fixture() ],
 
    do => sub {
@@ -200,7 +200,7 @@ test "Outbound federation requests /state_ids and correctly handles 404",
 
 test "Outbound federation requests /state_ids and asks for missing state",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
+                 local_user_and_room_fixtures( with_events => 1 ),
                  federation_user_id_fixture() ],
 
    do => sub {

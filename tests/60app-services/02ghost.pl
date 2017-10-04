@@ -1,4 +1,4 @@
-my $user_fixture = local_user_fixture();
+my $user_fixture = local_user_fixture( with_events => 1 );
 
 multi_test "AS-ghosted users can use rooms via AS",
    requires => [ as_ghost_fixture(), $main::AS_USER[0], $user_fixture, $main::APPSERV[0],

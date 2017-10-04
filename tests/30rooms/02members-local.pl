@@ -37,13 +37,12 @@ test "New room members see their own join event",
    do => sub {
       my ( $local_user, $room_id ) = @_;
 
-      await_event_for( $local_user, filter => sub {
+      await_sync_timeline_contains( $local_user, $room_id, check => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
 
-         assert_json_keys( $event, qw( type room_id user_id ));
-         return unless $event->{room_id} eq $room_id;
-         return unless $event->{user_id} eq $local_user->user_id;
+         assert_json_keys( $event, qw( type sender ));
+         return unless $event->{sender} eq $local_user->user_id;
 
          assert_json_keys( my $content = $event->{content}, qw( membership ));
 
@@ -86,12 +85,11 @@ test "Existing members see new members' join events",
    do => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
 
-      await_event_for( $first_user, filter => sub {
+      await_sync_timeline_contains( $first_user, $room_id, check => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
-         assert_json_keys( $event, qw( type room_id user_id ));
-         return unless $event->{room_id} eq $room_id;
-         return unless $event->{user_id} eq $local_user->user_id;
+         assert_json_keys( $event, qw( type sender ));
+         return unless $event->{sender} eq $local_user->user_id;
 
          assert_json_keys( my $content = $event->{content}, qw( membership ));
 

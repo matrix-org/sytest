@@ -22,11 +22,11 @@ sub matrix_typing
 }
 
 
-my $typing_user_fixture = local_user_fixture();
+my $typing_user_fixture = local_user_fixture( with_events => 1 );
 
-my $local_user_fixture = local_user_fixture();
+my $local_user_fixture = local_user_fixture( with_events => 1 );
 
-my $remote_user_fixture = remote_user_fixture();
+my $remote_user_fixture = remote_user_fixture( with_events => 1 );
 
 my $room_fixture = magic_room_fixture(
    requires_users => [
