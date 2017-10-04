@@ -66,7 +66,11 @@ sub matrix_join_room
       uri    => "/r0/join/$room",
 
       content => \%content,
-   )->then_done(1);
+   )->then( sub {
+      my ( $body ) = @_;
+
+      Future->done( $body->{room_id} )
+   });
 }
 
 test "POST /join/:room_alias can join a room",
@@ -424,48 +428,13 @@ sub matrix_create_and_join_room
       Future->needs_all(
          ( fmap {
             my $user = shift;
-            do_request_json_for( $user,
-               method => "POST",
-               uri    => "/r0/join/$room_alias_fullname",
-
-               content => {},
-            )
+            matrix_join_room_synced( $user, $room_alias_fullname )
          } foreach => \@remote_members ),
 
          map {
             my $user = $_;
-            do_request_json_for( $user,
-               method => "POST",
-               uri    => "/r0/join/$room_alias_fullname",
-
-               content => {},
-            )
-         } @local_members )
-   })->then( sub {
-      return Future->done unless $n_joiners;
-
-      # Now wait for the creator to see every join event, so we're sure
-      # the remote joins have happened
-      my %joined_members;
-
-      # This really ought to happen within, say, 3 seconds. We'll pick a
-      #   timeout smaller than the default overall test timeout so if this
-      #   fails to happen we'll fail sooner, and get a better message
-      Future->wait_any(
-         await_event_for( $creator, filter => sub {
-            my ( $event ) = @_;
-
-            return unless $event->{type} eq "m.room.member";
-            return unless $event->{room_id} eq $room_id;
-
-            $joined_members{ $event->{state_key} }++;
-
-            return 1 if keys( %joined_members ) == $n_joiners;
-            return 0;
-         }),
-
-         delay( 3 )
-            ->then_fail( "Timed out waiting to receive m.room.member join events to newly-created room" )
+            matrix_join_room_synced( $user, $room_alias_fullname )
+         } @local_members,
       )
    })->then( sub {
       Future->done( $room_id,
@@ -521,7 +490,7 @@ sub local_user_and_room_fixtures
 {
    my %args = @_;
 
-   my $user_fixture = local_user_fixture();
+   my $user_fixture = local_user_fixture( %args );
 
    return (
       $user_fixture,
@@ -554,7 +523,7 @@ sub matrix_join_room_synced
       do => sub {
          matrix_join_room( $user, $room_id, %params );
       },
-      check => sub { exists $_[0]->{rooms}{join}{$room_id} },
+      check => sub { exists $_[0]->{rooms}{join}{$_[1]} },
    );
 }
 
