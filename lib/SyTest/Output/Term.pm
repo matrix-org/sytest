@@ -213,20 +213,20 @@ package SyTest::Output::Term::Test {
       my $self = shift;
       my ( $reason ) = @_;
 
-      _printline "  ${YELLOW_B}SKIP${RESET} ${\$self->name} due to $reason\n";
-
-      $self->skipped++;
+      $self->skipped .= $reason;
    }
 
    sub leave
    {
       my $self = shift;
 
-      return if $self->skipped;
-
       _morepartial "   ${CYAN}+--- " if $self->multi;
 
-      if( !$self->failed ) {
+      if( $self->skipped ) {
+         my $reason = $self->skipped;
+         _finishpartial "${YELLOW_B}SKIP${RESET} due to $reason";
+      }
+      elsif( !$self->failed ) {
          _finishpartial "${GREEN}PASS${RESET}";
 
          if( $self->expect_fail ) {

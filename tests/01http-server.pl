@@ -11,7 +11,7 @@ struct Awaiter => [qw( pathmatch filter future )];
 
 push our @EXPORT, qw( ServerInfo await_http_request TEST_SERVER_INFO );
 
-struct ServerInfo => [qw( server_name client_location )];
+struct ServerInfo => [qw( server_name client_location federation_host federation_port )];
 
 our $TEST_SERVER_INFO = fixture(
    requires => [],
@@ -37,7 +37,8 @@ our $TEST_SERVER_INFO = fixture(
 
          my $uri_base = "https://$listen_host:$sockport";
 
-         $server_info = ServerInfo( "$listen_host:$sockport", $uri_base );
+         $server_info = ServerInfo( "$listen_host:$sockport", $uri_base,
+                                    $listen_host, $sockport );
 
          $http_client = SyTest::HTTPClient->new(
             uri_base => $uri_base,
