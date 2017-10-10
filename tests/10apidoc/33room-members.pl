@@ -517,11 +517,11 @@ sub magic_local_user_and_room_fixtures
 
 sub matrix_join_room_synced
 {
-   my ( $user, $room_id, %params ) = @_;
+   my ( $user, $room_id_or_alias, %params ) = @_;
 
    matrix_do_and_wait_for_sync( $user,
       do => sub {
-         matrix_join_room( $user, $room_id, %params );
+         matrix_join_room( $user, $room_id_or_alias, %params );
       },
       check => sub { exists $_[0]->{rooms}{join}{$_[1]} },
    );
