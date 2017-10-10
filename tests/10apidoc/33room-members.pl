@@ -66,7 +66,11 @@ sub matrix_join_room
       uri    => "/r0/join/$room",
 
       content => \%content,
-   )->then_done(1);
+   )->then( sub {
+      my ( $body ) = @_;
+
+      Future->done( $body->{room_id} )
+   });
 }
 
 test "POST /join/:room_alias can join a room",
@@ -424,48 +428,13 @@ sub matrix_create_and_join_room
       Future->needs_all(
          ( fmap {
             my $user = shift;
-            do_request_json_for( $user,
-               method => "POST",
-               uri    => "/r0/join/$room_alias_fullname",
-
-               content => {},
-            )
+            matrix_join_room_synced( $user, $room_alias_fullname )
          } foreach => \@remote_members ),
 
          map {
             my $user = $_;
-            do_request_json_for( $user,
-               method => "POST",
-               uri    => "/r0/join/$room_alias_fullname",
-
-               content => {},
-            )
-         } @local_members )
-   })->then( sub {
-      return Future->done unless $n_joiners;
-
-      # Now wait for the creator to see every join event, so we're sure
-      # the remote joins have happened
-      my %joined_members;
-
-      # This really ought to happen within, say, 3 seconds. We'll pick a
-      #   timeout smaller than the default overall test timeout so if this
-      #   fails to happen we'll fail sooner, and get a better message
-      Future->wait_any(
-         await_event_for( $creator, filter => sub {
-            my ( $event ) = @_;
-
-            return unless $event->{type} eq "m.room.member";
-            return unless $event->{room_id} eq $room_id;
-
-            $joined_members{ $event->{state_key} }++;
-
-            return 1 if keys( %joined_members ) == $n_joiners;
-            return 0;
-         }),
-
-         delay( 3 )
-            ->then_fail( "Timed out waiting to receive m.room.member join events to newly-created room" )
+            matrix_join_room_synced( $user, $room_alias_fullname )
+         } @local_members,
       )
    })->then( sub {
       Future->done( $room_id,
@@ -521,7 +490,7 @@ sub local_user_and_room_fixtures
 {
    my %args = @_;
 
-   my $user_fixture = local_user_fixture();
+   my $user_fixture = local_user_fixture( %args );
 
    return (
       $user_fixture,
@@ -529,7 +498,10 @@ sub local_user_and_room_fixtures
    );
 }
 
-push @EXPORT, qw( magic_local_user_and_room_fixtures );
+push @EXPORT, qw(
+   magic_local_user_and_room_fixtures matrix_join_room_synced
+   matrix_leave_room_synced matrix_invite_user_to_room_synced
+);
 
 sub magic_local_user_and_room_fixtures
 {
@@ -540,5 +512,54 @@ sub magic_local_user_and_room_fixtures
    return (
       $user_fixture,
       magic_room_fixture( requires_users => [ $user_fixture ], %args ),
+   );
+}
+
+sub matrix_join_room_synced
+{
+   my ( $user, $room_id_or_alias, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_join_room( $user, $room_id_or_alias, %params );
+      },
+      check => sub { exists $_[0]->{rooms}{join}{$_[1]} },
+   );
+}
+
+sub matrix_leave_room_synced
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_leave_room( $user, $room_id, %params );
+      },
+      check => sub { exists $_[0]->{rooms}{leave}{$room_id} },
+   );
+}
+
+sub matrix_invite_user_to_room_synced
+{
+   my ( $inviter, $invitee, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $inviter,
+      do => sub {
+         matrix_do_and_wait_for_sync( $invitee,
+            do => sub {
+               matrix_invite_user_to_room(
+                  $inviter, $invitee, $room_id, %params
+               );
+            },
+            check => sub { exists $_[0]->{rooms}{invite}{$room_id} },
+         );
+      },
+      check => sub {
+         sync_timeline_contains( $_[0], $room_id, sub {
+            $_[0]->{type} eq "m.room.member"
+               and $_[0]->{state_key} eq $invitee->user_id
+               and $_[0]->{content}{membership} eq "invite"
+         });
+      },
    );
 }
