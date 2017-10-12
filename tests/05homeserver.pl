@@ -114,12 +114,25 @@ our @HOMESERVER_INFO = map {
 
          push @servers, $server;
 
+         $OUTPUT->diag( "Starting server-$idx" );
          Future->wait_any(
             $server->start,
 
             $loop->delay_future( after => 60 )
-               ->then_fail( "Homeserver number $idx (on port ${\$server->secure_port}) failed to start" ),
-         )->then_done( $info );
+               ->then_fail( "Timeout waiting for HS to start" ),
+         )->then( sub {
+            $OUTPUT->diag( "Started server-$idx" );
+            return Future->done( $info );
+         })->on_fail( sub {
+            my ( $exn, @details ) = @_;
+            warn( "Error starting server-$idx (on port ${\$server->secure_port}): $exn" );
+
+            # if we can't start the first homeserver, we really might as well go home.
+            if( $idx == 0 ) {
+               print STDERR "\nAborting test run due to failure to start test server\n";
+               exit 1;
+            }
+         })
       },
    );
 } 0 .. $N_HOMESERVERS-1;
