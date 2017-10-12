@@ -448,21 +448,37 @@ sub fixture
    # actually invoke $setup
    @req_futures or push @req_futures, $f_start;
 
+   my $start = sub {
+      return if $f_start->is_ready;   # already started
+      $OUTPUT->diag( "Starting fixture $name" ) if ( $VERBOSE >= 2 );
+      $f_start->done( @_ );
+   };
+
    return Fixture(
       $name,
 
       \@requires,
 
-      sub { $f_start->done( @_ ) unless $f_start->is_ready },
+      $start,
 
       Future->needs_all( map { without_cancel($_) } @req_futures )
-         ->then( $setup )
-         ->set_label( $name ),
+         ->on_fail( sub {
+            my ( $reason ) = @_;
+
+            warn( "$name: input fixture failed with $reason" )
+               if ( $VERBOSE >= 3 );
+         })->then( $setup )->on_done( sub {
+            $OUTPUT->diag( "Fixture $name now ready" ) if ( $VERBOSE >= 2 );
+         })->set_label( $name ),
 
       $teardown ? sub {
          my ( $self ) = @_;
-         my $result_f = $self->result;
 
+         $OUTPUT->diag( "Tearing down fixture $name" ) if ( $VERBOSE >= 2 );
+
+         # replace the result with a failure so that the fixture will fail
+         # if reused.
+         my $result_f = $self->result;
          $self->result = Future->fail(
             "This Fixture has been torn down and cannot be used again"
          );
@@ -537,6 +553,8 @@ sub _run_test
    undef @log_if_fail_lines;
    $test_start_time = time();
 
+   $OUTPUT->diag( "Starting test ${ \$t->name }" ) if ( $VERBOSE >= 2 );
+
    local $MORE_STUBS = [];
 
    my @requires = @{ $test->requires // [] };
@@ -606,6 +624,8 @@ sub _run_test0
          ->on_done( sub { @reqs = @_ } )
          ->else( sub {
             my ( $reason ) = @_;
+
+            warn( "Fixture failed with $reason" ) if ( $VERBOSE >= 2 );
 
             # if any of the fixtures failed with a special 'SKIP' result, then skip
             # the test rather than failing it.
