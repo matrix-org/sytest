@@ -255,6 +255,8 @@ sub start
 
    my $started_future = $loop->new_future;
 
+   $output->diag( "Starting server with command " . join( " ", @config_command ));
+
    $loop->run_child(
       setup => [ env => $env ],
 
@@ -264,8 +266,8 @@ sub start
          my ( $pid, $exitcode, $stdout, $stderr ) = @_;
 
          if( $exitcode != 0 ) {
-            print STDERR $stderr;
-            exit $exitcode;
+            $started_future->fail( "Server failed to start: exitcode " . ( $exitcode >> 8 ));
+            return
          }
 
          $output->diag( "Starting server for port $port" );
