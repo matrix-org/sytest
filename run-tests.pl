@@ -467,7 +467,7 @@ sub fixture
             "This Fixture has been torn down and cannot be used again"
          );
 
-         if( $result_f->is_ready ) {
+         if( $result_f->is_done ) {
             return $teardown->( $result_f->get );
          }
          else {
