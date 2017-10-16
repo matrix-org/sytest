@@ -467,7 +467,8 @@ sub fixture
 
             warn( "$name: input fixture failed with $reason" )
                if ( $VERBOSE >= 3 );
-         })->then( $setup )->on_done( sub {
+         })->then( $setup )
+         ->on_done( sub {
             $OUTPUT->diag( "Fixture $name now ready" ) if ( $VERBOSE >= 2 );
          })->set_label( $name ),
 
