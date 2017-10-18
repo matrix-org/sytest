@@ -255,7 +255,7 @@ sub on_request_federation_v1_event
 
    Future->done( json => {
       origin           => $self->server_name,
-      origin_server_ts => $self->time_ms,
+      origin_server_ts => JSON::number( $self->time_ms ),
       pdus             => [
          $event,
       ]

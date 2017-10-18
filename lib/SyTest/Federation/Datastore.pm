@@ -191,7 +191,7 @@ sub create_event
 
       event_id         => $self->next_event_id,
       origin           => $self->server_name,
-      origin_server_ts => int( time() * 1000 ),
+      origin_server_ts => JSON::number( int( time() * 1000 )),
    };
 
    $self->sign_event( $event );

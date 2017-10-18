@@ -162,7 +162,7 @@ sub create_event
    );
    $fields{auth_events} //= make_event_refs( @auth_events ),
 
-   $fields{depth} //= $self->next_depth;
+   $fields{depth} //= JSON::number($self->next_depth);
 
    $fields{prev_events} //= make_event_refs( @{ $self->{prev_events} } );
 
@@ -269,7 +269,7 @@ sub make_join_protoevent
 
       auth_events      => make_event_refs( @auth_events ),
       content          => { membership => "join" },
-      depth            => $self->next_depth,
+      depth            => JSON::number($self->next_depth),
       prev_events      => make_event_refs( @{ $self->{prev_events} } ),
       room_id          => $self->room_id,
       sender           => $user_id,
