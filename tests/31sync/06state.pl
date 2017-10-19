@@ -1,30 +1,5 @@
 use Future::Utils qw( repeat );
 
-# call /sync repeatedly until it returns a result
-# with an event in the given room
-# TODO: it might be good to combine this with await_event_for() at some point.
-sub wait_for_event_in_room {
-    my ($user, $room_id, %params) = @_;
-
-    my $sync_params = $params{sync_params} || {};
-
-    repeat(sub {
-        # returns the sync body if the event happened, else undef
-        matrix_sync( $user, %{ $sync_params } )->then( sub {
-            my ( $body ) = @_;
-
-            my $room = $body->{rooms}{join}{$room_id};
-
-            if( $room && (scalar @{ $room->{timeline}{events}} ||
-                          scalar @{ $room->{state}{events}})) {
-                Future->done($body);
-            } else {
-                delay(0.1)->then_done(undef);
-            }
-        });
-    }, while => sub {!$_[0]->failure and !$_[0]->get});
-}
-
 test "State is included in the timeline in the initial sync",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
