@@ -120,5 +120,5 @@ my $next_group_localpart = 0;
 
 sub make_group_localpart
 {
-   sprintf "__ANON__-%d", $next_group_localpart++;
+   sprintf "__anon__-%d", $next_group_localpart++;
 }
