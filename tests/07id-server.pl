@@ -10,6 +10,8 @@ push our @EXPORT, qw( id_server_fixture );
 sub id_server_fixture
 {
    return fixture(
+      name => 'id_server_fixture',
+
       setup => sub {
          my $id_server = SyTest::Identity::Server->new;
          $loop->add( $id_server );

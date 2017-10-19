@@ -4,8 +4,6 @@ use Future::Utils qw( repeat );
 test "GET /events initially",
    requires => [ $main::SPYGLASS_USER ],
 
-   critical => 1,
-
    check => sub {
       my ( $user ) = @_;
 

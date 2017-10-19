@@ -3,7 +3,8 @@ use 5.014; # ${^GLOBAL_PHASE}
 use base qw( Net::Async::HTTP::Server::Request );
 
 use HTTP::Response;
-use JSON qw( decode_json encode_json );
+use JSON;
+my $json = JSON->new->convert_blessed;
 
 use constant JSON_MIME_TYPE => "application/json";
 
@@ -32,16 +33,16 @@ sub body_from_json
       croak "Cannot ->body_from_json with Content-Type: $type";
    }
 
-   return decode_json $self->body;
+   return $json->decode( $self->body );
 }
 
 sub respond_json
 {
    my $self = shift;
-   my ( $json, %opts ) = @_;
+   my ( $body, %opts ) = @_;
 
    my $response = HTTP::Response->new( $opts{code} // 200 );
-   $response->add_content( encode_json $json );
+   $response->add_content( $json->encode( $body ));
    $response->content_type( JSON_MIME_TYPE );
    $response->content_length( length $response->content );
 

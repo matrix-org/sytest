@@ -20,39 +20,58 @@ use POSIX qw( strftime WIFEXITED WEXITSTATUS );
 
 use YAML ();
 
-sub new
-{
-   my $class = shift;
-   my %args = @_;
-
-   if( delete $args{haproxy} ) {
-      $class = "SyTest::Homeserver::Synapse::ViaHaproxy";
-   }
-   elsif( $args{dendron} ) {
-      $class = "SyTest::Homeserver::Synapse::ViaDendron";
-   }
-   else {
-      $class = "SyTest::Homeserver::Synapse::Direct";
-   }
-
-   return $class->SUPER::new( %args );
-}
-
 sub _init
 {
    my $self = shift;
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      ports synapse_dir extra_args python coverage dendron bind_host
+      synapse_dir extra_args python coverage
    );
 
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( synapse synapse_unsecure synapse_metrics );
-
    $self->{paths} = {};
+   $self->{dendron} = '';
 
    $self->SUPER::_init( $args );
+
+   my $idx = $self->{hs_index};
+   $self->{ports} = {
+      synapse                  => main::alloc_port( "synapse[$idx]" ),
+      synapse_unsecure         => main::alloc_port( "synapse[$idx].unsecure" ),
+      synapse_metrics          => main::alloc_port( "synapse[$idx].metrics" ),
+      synapse_replication_tcp  => main::alloc_port( "synapse[$idx].replication_tcp" ),
+
+      pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
+      pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
+
+      synchrotron         => main::alloc_port( "synchrotron[$idx]" ),
+      synchrotron_metrics => main::alloc_port( "synchrotron[$idx].metrics" ),
+      synchrotron_manhole => main::alloc_port( "synchrotron[$idx].manhole" ),
+
+      federation_reader         => main::alloc_port( "federation_reader[$idx]" ),
+      federation_reader_metrics => main::alloc_port( "federation_reader[$idx].metrics" ),
+      federation_reader_manhole => main::alloc_port( "federation_reader[$idx].manhole" ),
+
+      media_repository => main::alloc_port( "media_repository[$idx]" ),
+      media_repository_metrics => main::alloc_port( "media_repository[$idx].metrics" ),
+      media_repository_manhole => main::alloc_port( "media_repository[$idx].manhole" ),
+
+      appservice_metrics => main::alloc_port( "appservice[$idx].metrics" ),
+      appservice_manhole => main::alloc_port( "appservice[$idx].manhole" ),
+
+      federation_sender_metrics => main::alloc_port( "federation_sender1[$idx].metrics" ),
+      federation_sender_manhole => main::alloc_port( "federation_sender[$idx].manhole" ),
+
+      client_reader         => main::alloc_port( "client_reader[$idx]" ),
+      client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
+      client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
+
+      user_dir         => main::alloc_port( "user_dir[$idx]" ),
+      user_dir_metrics => main::alloc_port( "user_dir[$idx].metrics" ),
+      user_dir_manhole => main::alloc_port( "user_dir[$idx].manhole" ),
+
+      haproxy => main::alloc_port( "haproxy[$idx]" ),
+   };
 }
 
 sub configure
@@ -62,33 +81,9 @@ sub configure
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
       print_output filter_output
-      config
    );
 
    $self->SUPER::configure( %params );
-}
-
-sub _append
-{
-   my ( $config, $more ) = @_;
-   if( ref $more eq "HASH" ) {
-      ref $config eq "HASH" or die "Cannot append HASH to non-HASH";
-      _append( $_[0]->{$_}, $more->{$_} ) for keys %$more;
-   }
-   elsif( ref $more eq "ARRAY" ) {
-      push @{ $_[0] }, @$more;
-   }
-   else {
-      die "Not sure how to append ${\ref $more} to config\n";
-   }
-}
-
-sub append_config
-{
-   my $self = shift;
-   my %more = @_;
-
-   _append( $self->{config}, \%more );
 }
 
 sub start
@@ -100,37 +95,29 @@ sub start
 
    my $hs_dir = $self->{hs_dir};
 
-   my $db_config_path = "database.yaml";
-   my $db_config_abs_path = "$hs_dir/${db_config_path}";
-   my $db  = ":memory:"; #"$hs_dir/homeserver.db";
+   my %db_config = $self->_get_dbconfig(
+      type => 'sqlite',
+      args => {
+         database => ":memory:", #"$hs_dir/homeserver.db",
+      },
+   );
 
-   my ( $db_type, %db_args, $db_config );
-   if( -f $db_config_abs_path ) {
-      $db_config = YAML::LoadFile( $db_config_abs_path );
-      if( $db_config->{name} eq "psycopg2") {
-          $db_type = "pg";
-          %db_args = %{ $db_config->{args} };
-      }
-      elsif ($db_config->{name} eq "sqlite3") {
-          $db_type = "sqlite";
-          $db_args{path} = $db_config->{args}->{database};
-      }
-      else {
-         die "Unrecognised DB type '$db_config->{name}' in $db_config_abs_path";
-      }
+   my $db_type = $db_config{type};
+
+   # map sytest db args onto synapse db args
+   my %synapse_db_config;
+   if( $db_type eq "pg" ) {
+      %synapse_db_config = (
+         name => 'psycopg2',
+         args => $db_config{args},
+      );
    }
    else {
-      $db_type = "sqlite";
-      $db_args{path} = $db;
-      $db_config = { name => "sqlite3", args => { database => $db } };
-      $self->write_yaml_file( $db_config_path, $db_config );
-   }
-
-   $self->check_db_config( $db_type, $db_config, %db_args );
-
-   if( defined $db_type ) {
-      my $clear_meth = "clear_db_${db_type}";
-      $self->$clear_meth( %db_args );
+      # must be sqlite
+      %synapse_db_config = (
+         name => 'sqlite3',
+         args => $db_config{args},
+      );
    }
 
    # Clean up the media_store directory each time, or else it fills up with
@@ -148,7 +135,6 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $server_name = "$bind_host:" . $self->secure_port;
 
    my $cert_file = $self->{paths}{cert_file} = "$hs_dir/cert.pem";
    my $key_file  = $self->{paths}{key_file}  = "$hs_dir/key.pem";
@@ -158,7 +144,7 @@ sub start
    my $registration_shared_secret = "reg_secret";
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
-        server_name => $server_name,
+        server_name => $self->server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
         tls_certificate_path => $cert_file,
@@ -168,8 +154,7 @@ sub start
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
         enable_registration => "true",
-        database => $db_config,
-        database_config => $db_config_path,
+        database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
         registration_shared_secret => $registration_shared_secret,
 
@@ -207,7 +192,20 @@ sub start
         media_store_path => "$hs_dir/media_store",
         uploads_path => "$hs_dir/uploads_path",
 
-        %{ $self->{config} },
+        user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
+
+        $self->{recaptcha_config} ? (
+           recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
+           recaptcha_public_key     => $self->{recaptcha_config}->{public_key},
+           recaptcha_private_key    => $self->{recaptcha_config}->{private_key},
+        ) : (),
+
+        map {
+           defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
+        } qw(
+           cas_config
+           app_service_config_files
+        ),
    } );
 
    $self->{paths}{log} = $log;
@@ -237,7 +235,7 @@ sub start
    push @synapse_command,
       "-m", "synapse.app.homeserver",
       "--config-path" => $config_path,
-      "--server-name" => "$bind_host:$port";
+      "--server-name" => $self->server_name;
 
    $output->diag( "Generating config for port $port" );
 
@@ -257,6 +255,8 @@ sub start
 
    my $started_future = $loop->new_future;
 
+   $output->diag( "Starting server with command " . join( " ", @config_command ));
+
    $loop->run_child(
       setup => [ env => $env ],
 
@@ -266,8 +266,8 @@ sub start
          my ( $pid, $exitcode, $stdout, $stderr ) = @_;
 
          if( $exitcode != 0 ) {
-            print STDERR $stderr;
-            exit $exitcode;
+            $started_future->fail( "Server failed to start: exitcode " . ( $exitcode >> 8 ));
+            return
          }
 
          $output->diag( "Starting server for port $port" );
@@ -281,12 +281,8 @@ sub start
             )
          );
 
-         $output->diag( "Connecting to server $port" );
-
          $self->adopt_future(
             $self->await_connectable( $bind_host, $self->_start_await_port )->then( sub {
-               $output->diag( "Connected to server $port" );
-
                $started_future->done;
             })
          );
@@ -296,11 +292,6 @@ sub start
    );
 
    return $started_future;
-}
-
-sub check_db_config
-{
-   # Normally don't care
 }
 
 sub generate_listeners
@@ -364,6 +355,31 @@ sub kill
    }
 }
 
+sub kill_and_await_finish
+{
+   my $self = shift;
+
+   return $self->SUPER::kill_and_await_finish->then( sub {
+
+      # skip this if the process never got started.
+      return Future->done unless $self->pid;
+
+      $self->{output}->diag( "Killing ${\ $self->pid }" );
+
+      $self->kill( 'INT' );
+
+      return Future->needs_any(
+         $self->await_finish,
+
+         $self->loop->delay_future( after => 30 )->then( sub {
+            print STDERR "Timed out waiting for ${\ $self->pid }; sending SIGKILL\n";
+            $self->kill( 'KILL' );
+            Future->done;
+         }),
+        );
+   });
+}
+
 sub on_finish
 {
    my $self = shift;
@@ -425,7 +441,7 @@ sub on_synapse_read
 
       if( $self->{print_output} ) {
          my $filter = $self->{filter_output};
-         if( !$filter or any { $line =~ m/$_/ } @$filter ) {
+         if( !$filter or $line =~ m/$filter/ ) {
             print STDERR "\e[1;35m[server $port]\e[m: $line\n";
          }
       }
@@ -479,6 +495,37 @@ sub rotate_logfile
      otherwise => sub { die "Timed out waiting for synapse to recreate its log file" };
 }
 
+
+sub server_name
+{
+   my $self = shift;
+   return $self->{bind_host} . ":" . $self->secure_port;
+}
+
+sub http_api_host
+{
+   my $self = shift;
+   return $self->{bind_host};
+}
+
+sub federation_port
+{
+   my $self = shift;
+   return $self->secure_port;
+}
+
+sub secure_port
+{
+   my $self = shift;
+   return $self->{ports}{synapse};
+}
+
+sub unsecure_port
+{
+   my $self = shift;
+   return $self->{ports}{synapse_unsecure};
+}
+
 package SyTest::Homeserver::Synapse::Direct;
 use base qw( SyTest::Homeserver::Synapse );
 
@@ -505,18 +552,6 @@ sub _start_await_port
    return $self->{ports}{synapse};
 }
 
-sub secure_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse};
-}
-
-sub unsecure_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse_unsecure};
-}
-
 package SyTest::Homeserver::Synapse::ViaDendron;
 use base qw( SyTest::Homeserver::Synapse );
 
@@ -525,20 +560,24 @@ use Carp;
 sub _init
 {
    my $self = shift;
+   my ( $args ) = @_;
+
    $self->SUPER::_init( @_ );
 
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( dendron );
+   $self->{dendron} = delete $args->{dendron_binary};
+
+   my $idx = $self->{hs_index};
+   $self->{ports}{dendron} = main::alloc_port( "dendron[$idx]" );
 }
 
-sub check_db_config
+sub _check_db_config
 {
    my $self = shift;
-   my ( $type, $config, %args ) = @_;
+   my ( %config ) = @_;
 
-   $type eq "pg" or die "Dendron can only run against postgres";
+   $config{type} eq "pg" or die "Dendron can only run against postgres";
 
-   return $self->SUPER::check_db_config( @_ );
+   return $self->SUPER::_check_db_config( @_ );
 }
 
 sub wrap_synapse_command
