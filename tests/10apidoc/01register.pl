@@ -78,6 +78,33 @@ test "POST /register can create a user",
       });
    };
 
+test "POST /register forbids registration of users with capitals",
+   requires => [ $main::API_CLIENTS[0],
+                 qw( can_register_dummy_flow ) ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "user-UPPER",
+            password => "sUp3rs3kr1t",
+         },
+      )->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         assert_eq( $body->{errcode}, "M_INVALID_USERNAME" );
+         Future->done( 1 );
+      });
+   };
+
 push our @EXPORT, qw( localpart_fixture );
 
 my $next_anon_uid = 1;
@@ -222,6 +249,24 @@ test "POST /register admin with shared secret",
        my ( $http, $uid ) = @_;
 
        matrix_register_user_via_secret( $http, $uid, is_admin => 1 );
+   };
+
+test "POST /register with shared secret disallows capitals",
+   requires => [ $main::API_CLIENTS[0] ],
+
+   proves => [qw( can_register_with_secret )],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      matrix_register_user_via_secret( $http, "uPPER", is_admin => 0 )
+      ->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         assert_eq( $body->{errcode}, "M_INVALID_USERNAME" );
+         Future->done( 1 );
+      });
    };
 
 push @EXPORT, qw( local_user_fixture local_user_fixtures local_admin_fixture );
