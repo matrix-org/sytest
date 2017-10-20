@@ -130,7 +130,7 @@ foreach my $viewer_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
       };
 }
 
-push our @EXPORT, qw( matrix_get_group_profile matrix_get_group_users matrix_get_group_rooms matrix_get_group_summary );
+push our @EXPORT, qw( matrix_get_group_rooms matrix_get_group_summary );
 
 sub matrix_get_group_profile
 {
@@ -152,6 +152,17 @@ sub matrix_get_group_users
    );
 }
 
+
+=head2 matrix_get_group_rooms
+
+Get list of associated rooms for a group.
+
+The body of the response is returned, which is in the form:
+
+      { chunk => [ { room_id => '!...' } ] }
+
+=cut
+
 sub matrix_get_group_rooms
 {
    my ( $user, $group_id ) = @_;
@@ -161,6 +172,14 @@ sub matrix_get_group_rooms
       uri    => "/unstable/groups/$group_id/rooms",
    );
 }
+
+
+=head2 matrix_get_group_summary
+
+Get the full group summary for a group. The body of the response
+is returned.
+
+=cut
 
 sub matrix_get_group_summary
 {

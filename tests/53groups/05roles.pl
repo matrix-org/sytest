@@ -81,17 +81,19 @@ test "Get group roles",
    };
 
 
-push our @EXPORT, qw( matrix_get_group_role matrix_add_role_to_group matrix_remove_role_from_group matrix_get_group_roles );
+push our @EXPORT, qw( matrix_add_role_to_group );
 
-sub matrix_get_group_role
-{
-   my ( $user, $group_id, $role_id ) = @_;
 
-   do_request_json_for( $user,
-      method  => "GET",
-      uri     => "/unstable/groups/$group_id/roles/$role_id",
+=head2 matrix_add_role_to_group
+
+Create a role for a group. Extra options are passed directly into the
+content of the request.
+
+   matrix_add_role_to_group( $user, $group_id, "some_role1",
+      profile => { name => "Role Name 1" }
    );
-}
+
+=cut
 
 sub matrix_add_role_to_group
 {
@@ -101,6 +103,16 @@ sub matrix_add_role_to_group
       method  => "PUT",
       uri     => "/unstable/groups/$group_id/roles/$role_id",
       content => \%opts,
+   );
+}
+
+sub matrix_get_group_role
+{
+   my ( $user, $group_id, $role_id ) = @_;
+
+   do_request_json_for( $user,
+      method  => "GET",
+      uri     => "/unstable/groups/$group_id/roles/$role_id",
    );
 }
 

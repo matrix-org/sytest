@@ -81,17 +81,19 @@ test "Get group categories",
    };
 
 
-push our @EXPORT, qw( matrix_get_group_category matrix_add_category_to_group matrix_remove_category_from_group matrix_get_group_categories );
+push our @EXPORT, qw( matrix_add_category_to_group );
 
-sub matrix_get_group_category
-{
-   my ( $user, $group_id, $category_id ) = @_;
 
-   do_request_json_for( $user,
-      method  => "GET",
-      uri     => "/unstable/groups/$group_id/categories/$category_id",
+=head2 matrix_add_category_to_group
+
+Create a category for a group. Extra options are passed directly into the
+content of the request.
+
+   matrix_add_category_to_group( $user, $group_id, "some_cat1",
+      profile => { name => "Category Name 1" }
    );
-}
+
+=cut
 
 sub matrix_add_category_to_group
 {
@@ -101,6 +103,16 @@ sub matrix_add_category_to_group
       method  => "PUT",
       uri     => "/unstable/groups/$group_id/categories/$category_id",
       content => \%opts,
+   );
+}
+
+sub matrix_get_group_category
+{
+   my ( $user, $group_id, $category_id ) = @_;
+
+   do_request_json_for( $user,
+      method  => "GET",
+      uri     => "/unstable/groups/$group_id/categories/$category_id",
    );
 }
 

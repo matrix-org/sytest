@@ -100,8 +100,14 @@ test "Remove other from local group",
    };
 
 
-push our @EXPORT, qw( matrix_invite_group_users matrix_remove_group_users matrix_accept_group_invite matrix_get_joined_groups matrix_remove_group_self );
+push our @EXPORT, qw( matrix_invite_group_users matrix_accept_group_invite matrix_get_joined_groups matrix_remove_group_self );
 
+
+=head2 matrix_invite_group_users
+
+Invite user to group
+
+=cut
 
 sub matrix_invite_group_users
 {
@@ -117,6 +123,12 @@ sub matrix_invite_group_users
 }
 
 
+=head2 matrix_remove_group_users
+
+Remove another user from group using admin api
+
+=cut
+
 sub matrix_remove_group_users
 {
    my ( $inviter, $group_id, $invitee ) = @_;
@@ -130,6 +142,13 @@ sub matrix_remove_group_users
    );
 }
 
+
+=head2 matrix_accept_group_invite
+
+Accept a received invite
+
+=cut
+
 sub matrix_accept_group_invite
 {
    my ( $group_id, $user ) = @_;
@@ -140,6 +159,13 @@ sub matrix_accept_group_invite
       content => {},
    );
 }
+
+
+=head2 matrix_remove_group_self
+
+Leave a group that user is in
+
+=cut
 
 sub matrix_remove_group_self
 {
@@ -152,6 +178,15 @@ sub matrix_remove_group_self
    );
 }
 
+
+=head2 matrix_get_joined_groups
+
+Get list of groups the user is in. Returns the body of the response,
+which is in the form:
+
+    { groups => [ '+foo:bar.com' ] }
+
+=cut
 
 sub matrix_get_joined_groups
 {

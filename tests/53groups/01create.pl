@@ -72,6 +72,20 @@ test "Remove group rooms",
 
 push our @EXPORT, qw( matrix_create_group matrix_add_group_rooms matrix_remove_group_rooms );
 
+
+=head2 matrix_create_group
+
+   matrix_create_group( $user, %profile )
+
+Creates a group as the given user, and optionally the given profile.
+Returns the created group_id.
+
+For example:
+
+    matrix_create_group( $creator, name => "My new group" )
+
+=cut
+
 sub matrix_create_group
 {
    my ( $user, %opts ) = @_;
@@ -93,6 +107,12 @@ sub matrix_create_group
 }
 
 
+=head2 matrix_add_group_rooms
+
+Add room to group as given user.
+
+=cut
+
 sub matrix_add_group_rooms
 {
    my ( $user, $group_id, $room_id ) = @_;
@@ -104,6 +124,13 @@ sub matrix_add_group_rooms
    );
 }
 
+
+
+=head2 matrix_remove_group_rooms
+
+Remove room from group as given user.
+
+=cut
 
 sub matrix_remove_group_rooms
 {
