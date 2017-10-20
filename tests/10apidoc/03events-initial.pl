@@ -73,6 +73,9 @@ sub matrix_initialsync
 # A useful function which keeps track of the current eventstream token and
 #   fetches new events since it
 # $room_id may be undefined, in which case it gets events for all joined rooms.
+#
+# Note that this calls the deprecated /r0/events, which you probably don't want.
+# Try await_sync instead.
 sub GET_new_events_for
 {
    my ( $user, %params ) = @_;
@@ -113,6 +116,9 @@ push our @EXPORT, qw(
 Returns a response body which should contain the start and end tokens, and a
 chunk of data as an ARRAY reference.
 
+Note that this calls the deprecated /r0/events, which you probably don't want.
+Try matrix_sync instead.
+
 =cut
 
 sub matrix_get_events
@@ -149,8 +155,18 @@ sub get_saved_events_for
    return @result;
 }
 
-# Note that semantics are undefined if calls are interleaved with differing
-# $room_ids for the same user.
+=head2 await_event_for
+
+   $future = await_event_for( $user, %params )
+
+Note that semantics are undefined if calls are interleaved with differing
+$room_ids for the same user.
+
+Note that this calls the deprecated /r0/events, which you probably don't want.
+Try await_sync_timeline_contains instead.
+
+=cut
+
 sub await_event_for
 {
    my ( $user, %params ) = @_;
