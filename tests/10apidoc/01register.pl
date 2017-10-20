@@ -84,7 +84,7 @@ my $next_anon_uid = 1;
 
 sub sprintf_localpart
 {
-   sprintf "ANON-%s-%d", $TEST_RUN_ID, $next_anon_uid++
+   sprintf "anon-%s-%d", $TEST_RUN_ID, $next_anon_uid++
 }
 
 sub localpart_fixture
