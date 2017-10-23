@@ -78,7 +78,7 @@ push our @EXPORT, qw( matrix_create_group matrix_add_group_rooms matrix_remove_g
    matrix_create_group( $user, %profile )
 
 Creates a group as the given user, and optionally the given profile.
-Returns the created group_id.
+Returns a Future for the created group_id.
 
 For example:
 
