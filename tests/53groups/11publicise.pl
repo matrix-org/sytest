@@ -77,7 +77,7 @@ sub matrix_update_group_publicity
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/unstable/groups/$group_id/self/update_publicity",
+      uri     => "/r0/groups/$group_id/self/update_publicity",
       content => {
          publicise => $publicise ? JSON::true : JSON::false,
       },
@@ -92,7 +92,7 @@ sub matrix_get_group_publicity
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/unstable/publicised_groups/$other_user_id",
+      uri    => "/r0/publicised_groups/$other_user_id",
    );
 }
 
@@ -102,7 +102,7 @@ sub matrix_bulk_get_group_publicity
 
    do_request_json_for( $user,
       method  => "POST",
-      uri     => "/unstable/publicised_groups",
+      uri     => "/r0/publicised_groups",
       content => {
          user_ids => [ map { $_->user_id } @users ],
       }

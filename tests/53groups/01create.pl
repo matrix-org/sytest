@@ -94,7 +94,7 @@ sub matrix_create_group
 
    do_request_json_for( $user,
       method  => "POST",
-      uri     => "/unstable/create_group",
+      uri     => "/r0/create_group",
       content => {
          localpart => $localpart,
          profile   => { %opts },
@@ -121,7 +121,7 @@ sub matrix_add_group_rooms
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/unstable/groups/$group_id/admin/rooms/$room_id",
+      uri     => "/r0/groups/$group_id/admin/rooms/$room_id",
       content => {},
    );
 }
@@ -142,7 +142,7 @@ sub matrix_remove_group_rooms
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/unstable/groups/$group_id/admin/rooms/$room_id",
+      uri     => "/r0/groups/$group_id/admin/rooms/$room_id",
    );
 }
 

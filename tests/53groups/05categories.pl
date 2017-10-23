@@ -103,7 +103,7 @@ sub matrix_add_category_to_group
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/unstable/groups/$group_id/categories/$category_id",
+      uri     => "/r0/groups/$group_id/categories/$category_id",
       content => \%opts,
    );
 }
@@ -114,7 +114,7 @@ sub matrix_get_group_category
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/unstable/groups/$group_id/categories/$category_id",
+      uri     => "/r0/groups/$group_id/categories/$category_id",
    );
 }
 
@@ -124,7 +124,7 @@ sub matrix_remove_category_from_group
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/unstable/groups/$group_id/categories/$category_id",
+      uri     => "/r0/groups/$group_id/categories/$category_id",
    );
 }
 
@@ -134,6 +134,6 @@ sub matrix_get_group_categories
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/unstable/groups/$group_id/categories/",
+      uri     => "/r0/groups/$group_id/categories/",
    );
 }

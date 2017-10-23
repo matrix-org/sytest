@@ -103,7 +103,7 @@ sub matrix_add_role_to_group
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/unstable/groups/$group_id/roles/$role_id",
+      uri     => "/r0/groups/$group_id/roles/$role_id",
       content => \%opts,
    );
 }
@@ -114,7 +114,7 @@ sub matrix_get_group_role
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/unstable/groups/$group_id/roles/$role_id",
+      uri     => "/r0/groups/$group_id/roles/$role_id",
    );
 }
 
@@ -124,7 +124,7 @@ sub matrix_remove_role_from_group
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/unstable/groups/$group_id/roles/$role_id",
+      uri     => "/r0/groups/$group_id/roles/$role_id",
    );
 }
 
@@ -134,6 +134,6 @@ sub matrix_get_group_roles
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/unstable/groups/$group_id/roles/",
+      uri     => "/r0/groups/$group_id/roles/",
    );
 }
