@@ -50,7 +50,7 @@ our $BIND_HOST = "localhost";
 
 # a unique ID for this test run. It is used in some tests to create user IDs
 # and the like.
-our $TEST_RUN_ID = strftime( '%Y%m%dT%H%M%S', gmtime() );
+our $TEST_RUN_ID = strftime( '%Y%m%d_%H%M%S', gmtime() );
 
 my %FIXED_BUGS;
 

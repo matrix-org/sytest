@@ -10,6 +10,8 @@ use List::UtilsBy qw( uniq_by );
 use MIME::Base64 qw( decode_base64 );
 use HTTP::Headers::Util qw( join_header_words );
 
+use SyTest::Assertions qw( :all );
+
 sub _fetch_key
 {
    my $self = shift;
@@ -107,7 +109,7 @@ sub send_transaction
       uri      => "/send/$ts/",
 
       content => \%transaction,
-   )->then_done(); # response body is empty
+   );
 }
 
 sub send_edu
@@ -125,7 +127,7 @@ sub send_edu
             destination => $params{destination},
          }
       ],
-   );
+   )->then_done(); # TODO: check response
 }
 
 sub send_event
@@ -133,10 +135,18 @@ sub send_event
    my $self = shift;
    my %params = @_;
 
+   my $event = delete $params{event};
+
    $self->send_transaction(
       %params,
-      pdus => [ $params{event} ],
-   );
+      pdus => [ $event ],
+   )->then( sub {
+      my ( $body ) = @_;
+      assert_deeply_eq( $body,
+                        { pdus => { $event->{event_id} => {} } },
+                        "/send/ response" );
+      Future->done;
+   });
 }
 
 sub join_room
