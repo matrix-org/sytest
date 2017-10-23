@@ -147,5 +147,5 @@ my $next_group_localpart = 0;
 
 sub make_group_localpart
 {
-   sprintf "__anon__-%d", $next_group_localpart++;
+   sprintf "__anon__-%s-%d", $TEST_RUN_ID, $next_group_localpart++;
 }
