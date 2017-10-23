@@ -50,7 +50,7 @@ test "Remove self from remote group",
          assert_json_list( my $group_ids = $body->{groups} );
          assert_deeply_eq( $group_ids, [ $group_id ] );
 
-         matrix_remove_group_self( $user, $group_id );
+         matrix_leave_group( $user, $group_id );
       })->then( sub {
          matrix_get_joined_groups( $user );
       })->then( sub {

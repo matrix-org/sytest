@@ -50,7 +50,7 @@ test "Remove self from local group",
          assert_json_list( my $group_ids = $body->{groups} );
          assert_deeply_eq( $group_ids, [ $group_id ] );
 
-         matrix_remove_group_self( $user, $group_id );
+         matrix_leave_group( $user, $group_id );
       })->then( sub {
          matrix_get_joined_groups( $user );
       })->then( sub {
@@ -100,7 +100,7 @@ test "Remove other from local group",
    };
 
 
-push our @EXPORT, qw( matrix_invite_group_users matrix_accept_group_invite matrix_get_joined_groups matrix_remove_group_self );
+push our @EXPORT, qw( matrix_invite_group_users matrix_accept_group_invite matrix_get_joined_groups matrix_leave_group );
 
 
 =head2 matrix_invite_group_users
@@ -167,15 +167,15 @@ sub matrix_accept_group_invite
 }
 
 
-=head2 matrix_remove_group_self
+=head2 matrix_leave_group
 
-   matrix_remove_group_self( $user, $group_id )
+   matrix_leave_group( $user, $group_id )
 
 Leave a group that user is in
 
 =cut
 
-sub matrix_remove_group_self
+sub matrix_leave_group
 {
    my ( $user, $group_id ) = @_;
 
