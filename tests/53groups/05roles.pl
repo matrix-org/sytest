@@ -86,6 +86,8 @@ push our @EXPORT, qw( matrix_add_role_to_group );
 
 =head2 matrix_add_role_to_group
 
+   matrix_add_role_to_group( $user, $group_id, $role_id, %opts )
+
 Create a role for a group. Extra options are passed directly into the
 content of the request.
 

@@ -86,6 +86,8 @@ push our @EXPORT, qw( matrix_add_category_to_group );
 
 =head2 matrix_add_category_to_group
 
+   matrix_add_category_to_group( $user, $group_id, $category_id, %opts )
+
 Create a category for a group. Extra options are passed directly into the
 content of the request.
 

@@ -155,6 +155,8 @@ sub matrix_get_group_users
 
 =head2 matrix_get_group_rooms
 
+   matrix_get_group_rooms( $user, $group_id )
+
 Get list of associated rooms for a group.
 
 The body of the response is returned, which is in the form:
@@ -175,6 +177,8 @@ sub matrix_get_group_rooms
 
 
 =head2 matrix_get_group_summary
+
+   matrix_get_group_summary( $user, $group_id )
 
 Get the full group summary for a group. The body of the response
 is returned.

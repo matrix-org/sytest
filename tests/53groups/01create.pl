@@ -109,6 +109,8 @@ sub matrix_create_group
 
 =head2 matrix_add_group_rooms
 
+   matrix_add_group_rooms( $user, $group_id, $room_id )
+
 Add room to group as given user.
 
 =cut
@@ -127,6 +129,8 @@ sub matrix_add_group_rooms
 
 
 =head2 matrix_remove_group_rooms
+
+   matrix_remove_group_rooms( $user, $group_id, $room_id )
 
 Remove room from group as given user.
 

@@ -105,6 +105,8 @@ push our @EXPORT, qw( matrix_invite_group_users matrix_accept_group_invite matri
 
 =head2 matrix_invite_group_users
 
+   matrix_invite_group_users( $inviter, $group_id, $invitee )
+
 Invite user to group
 
 =cut
@@ -124,6 +126,8 @@ sub matrix_invite_group_users
 
 
 =head2 matrix_remove_group_users
+
+   matrix_remove_group_users( $inviter, $group_id, $invitee )
 
 Remove another user from group using admin api
 
@@ -145,6 +149,8 @@ sub matrix_remove_group_users
 
 =head2 matrix_accept_group_invite
 
+   matrix_accept_group_invite( $group_id, $user )
+
 Accept a received invite
 
 =cut
@@ -163,6 +169,8 @@ sub matrix_accept_group_invite
 
 =head2 matrix_remove_group_self
 
+   matrix_remove_group_self( $user, $group_id )
+
 Leave a group that user is in
 
 =cut
@@ -180,6 +188,8 @@ sub matrix_remove_group_self
 
 
 =head2 matrix_get_joined_groups
+
+   matrix_get_joined_groups( $user )
 
 Get list of groups the user is in. Returns the body of the response,
 which is in the form:
