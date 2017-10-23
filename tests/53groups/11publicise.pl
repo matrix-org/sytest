@@ -71,9 +71,6 @@ test "Bulk get group publicity",
    };
 
 
-push our @EXPORT, qw( matrix_update_group_publicity matrix_get_group_publicity matrix_bulk_get_group_publicity );
-
-
 sub matrix_update_group_publicity
 {
    my ( $group_id, $user, $publicise ) = @_;
