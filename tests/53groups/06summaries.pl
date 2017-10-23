@@ -307,7 +307,7 @@ test "Adding multiple users to group summary have correct order",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_invite_group_users( $user, $group_id, $viewer );
+         matrix_invite_group_user( $user, $group_id, $viewer );
       })->then( sub {
          matrix_accept_group_invite( $group_id, $viewer );
       })->then( sub {

@@ -10,7 +10,7 @@ test "Get/set local group publicity",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_invite_group_users( $creator, $group_id, $user );
+         matrix_invite_group_user( $creator, $group_id, $user );
       })->then( sub {
          matrix_accept_group_invite( $group_id, $user );
       })->then( sub {
@@ -41,11 +41,11 @@ test "Bulk get group publicity",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_invite_group_users( $creator, $group_id, $local_user );
+         matrix_invite_group_user( $creator, $group_id, $local_user );
       })->then( sub {
          matrix_accept_group_invite( $group_id, $local_user );
       })->then( sub {
-         matrix_invite_group_users( $creator, $group_id, $remote_user );
+         matrix_invite_group_user( $creator, $group_id, $remote_user );
       })->then( sub {
          matrix_accept_group_invite( $group_id, $remote_user );
       })->then( sub {

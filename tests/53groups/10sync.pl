@@ -21,7 +21,7 @@ test "Local group invites come down sync",
       })->then( sub {
          matrix_sync_again( $user )
       })->then( sub {
-         matrix_invite_group_users( $creator, $group_id, $user );
+         matrix_invite_group_user( $creator, $group_id, $user );
       })->then( sub {
          try_repeat_until_success( sub {
             matrix_sync_again( $user )

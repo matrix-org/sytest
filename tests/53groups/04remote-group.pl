@@ -10,7 +10,7 @@ test "Add remote group users",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_invite_group_users( $creator, $group_id, $user );
+         matrix_invite_group_user( $creator, $group_id, $user );
       })->then( sub {
          matrix_accept_group_invite( $group_id, $user );
       })->then( sub {
@@ -39,7 +39,7 @@ test "Remove self from remote group",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_invite_group_users( $creator, $group_id, $user );
+         matrix_invite_group_user( $creator, $group_id, $user );
       })->then( sub {
          matrix_accept_group_invite( $group_id, $user );
       })->then( sub {

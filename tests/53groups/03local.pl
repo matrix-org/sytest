@@ -10,7 +10,7 @@ test "Add local group users",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_invite_group_users( $creator, $group_id, $user );
+         matrix_invite_group_user( $creator, $group_id, $user );
       })->then( sub {
          matrix_accept_group_invite( $group_id, $user );
       })->then( sub {
@@ -39,7 +39,7 @@ test "Remove self from local group",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_invite_group_users( $creator, $group_id, $user );
+         matrix_invite_group_user( $creator, $group_id, $user );
       })->then( sub {
          matrix_accept_group_invite( $group_id, $user );
       })->then( sub {
@@ -75,7 +75,7 @@ test "Remove other from local group",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_invite_group_users( $creator, $group_id, $user );
+         matrix_invite_group_user( $creator, $group_id, $user );
       })->then( sub {
          matrix_accept_group_invite( $group_id, $user );
       })->then( sub {
@@ -100,18 +100,18 @@ test "Remove other from local group",
    };
 
 
-push our @EXPORT, qw( matrix_invite_group_users matrix_accept_group_invite matrix_get_joined_groups matrix_leave_group );
+push our @EXPORT, qw( matrix_invite_group_user matrix_accept_group_invite matrix_get_joined_groups matrix_leave_group );
 
 
-=head2 matrix_invite_group_users
+=head2 matrix_invite_group_user
 
-   matrix_invite_group_users( $inviter, $group_id, $invitee )
+   matrix_invite_group_user( $inviter, $group_id, $invitee )
 
 Invite user to group
 
 =cut
 
-sub matrix_invite_group_users
+sub matrix_invite_group_user
 {
    my ( $inviter, $group_id, $invitee ) = @_;
 
