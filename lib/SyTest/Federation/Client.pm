@@ -12,6 +12,19 @@ use HTTP::Headers::Util qw( join_header_words );
 
 use SyTest::Assertions qw( :all );
 
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   # there may be multiple concurrent requests; for example, while processing a
+   # /send request, synapse may send us back a /get_missing_events/ request, which
+   # we have to authenticate, so make a /keys request.
+   $params{max_connections_per_host} //= 0;
+
+   return $self->SUPER::configure( %params );
+}
+
 sub _fetch_key
 {
    my $self = shift;
