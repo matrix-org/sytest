@@ -213,11 +213,18 @@ test "Outbound federation requests /state_ids and asks for missing state",
       my $sent_event;
       my $missing_state;
 
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $user_id,
-      )->then( sub {
+      # make sure that the sytest user has permission to alter the state
+      matrix_change_room_powerlevels( $creator, $room_id, sub {
+         my ( $levels ) = @_;
+
+         $levels->{users}->{$user_id} = 100;
+      })->then( sub {
+         $outbound_client->join_room(
+            server_name => $first_home_server,
+            room_id     => $room_id,
+            user_id     => $user_id,
+           );
+      })->then( sub {
          ( $room ) = @_;
 
          # Generate but don't send an event
@@ -257,16 +264,16 @@ test "Outbound federation requests /state_ids and asks for missing state",
             },
          );
 
-         log_if_fail "Missing message", $missing_event->{event_id};
-         log_if_fail "Missing topic", $missing_state->{event_id};
-         log_if_fail "Sent message", $sent_event->{event_id};
+         log_if_fail "Missing message: " . $missing_event->{event_id};
+         log_if_fail "Missing topic: " . $missing_state->{event_id};
+         log_if_fail "Sent message: " . $sent_event->{event_id};
 
          Future->needs_all(
             $inbound_server->await_request_state_ids( $room_id )
             ->then( sub {
                my ( $req ) = @_;
 
-               log_if_fail "Got /state_ids";
+               log_if_fail "Got /state_ids request";
 
                my @auth_event_ids = map { $_->{event_id} } $room->current_state_events;
 
@@ -282,7 +289,7 @@ test "Outbound federation requests /state_ids and asks for missing state",
             ->then( sub {
                my ( $req ) = @_;
 
-               log_if_fail "Got /event/";
+               log_if_fail "Got /event/ request";
 
                # Don't need to be exact, synapse handles failure gracefully
                $req->respond_json( {
@@ -294,6 +301,8 @@ test "Outbound federation requests /state_ids and asks for missing state",
             $inbound_server->await_request_get_missing_events( $room_id )
             ->then( sub {
                my ( $req ) = @_;
+
+               log_if_fail "Got /missing_events request";
 
                # We return no events to force the remote to ask for state
                $req->respond_json( {
@@ -314,6 +323,8 @@ test "Outbound federation requests /state_ids and asks for missing state",
             my ( $event ) = @_;
             return $event->{type} eq "m.room.message" &&
                    $event->{event_id} eq $sent_event->{event_id};
+         })->on_done( sub {
+            log_if_fail "Creator received sent event";
          });
       })->then( sub {
          matrix_get_room_state( $creator, $room_id,
