@@ -86,7 +86,7 @@ test "Remove other from local group",
          assert_json_list( my $group_ids = $body->{groups} );
          assert_deeply_eq( $group_ids, [ $group_id ] );
 
-         matrix_remove_group_users( $creator, $group_id, $user );
+         matrix_remove_group_user( $creator, $group_id, $user );
       })->then( sub {
          matrix_get_joined_groups( $user );
       })->then( sub {
@@ -125,15 +125,15 @@ sub matrix_invite_group_user
 }
 
 
-=head2 matrix_remove_group_users
+=head2 matrix_remove_group_user
 
-   matrix_remove_group_users( $inviter, $group_id, $invitee )
+   matrix_remove_group_user( $inviter, $group_id, $invitee )
 
 Remove another user from group using admin api
 
 =cut
 
-sub matrix_remove_group_users
+sub matrix_remove_group_user
 {
    my ( $inviter, $group_id, $invitee ) = @_;
 
