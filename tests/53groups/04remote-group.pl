@@ -18,10 +18,7 @@ test "Add remote group users",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( groups ) );
-         assert_json_list( my $group_ids = $body->{groups} );
-
-         assert_deeply_eq( $group_ids, [ $group_id ] );
+         assert_deeply_eq( $body->{groups}, [ $group_id ] );
 
          Future->done( 1 );
       });
@@ -47,8 +44,7 @@ test "Remove self from remote group",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_list( my $group_ids = $body->{groups} );
-         assert_deeply_eq( $group_ids, [ $group_id ] );
+         assert_deeply_eq( $body->{groups}, [ $group_id ] );
 
          matrix_leave_group( $user, $group_id );
       })->then( sub {
@@ -56,8 +52,7 @@ test "Remove self from remote group",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_list( my $group_ids = $body->{groups} );
-         assert_deeply_eq( $group_ids, [] );
+         assert_deeply_eq( $body->{groups}, [] );
 
          Future->done( 1 );
       });
