@@ -9,7 +9,7 @@ test "Create group",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/unstable/create_group",
+         uri     => "/r0/create_group",
          content => {
             localpart => $localpart,
             profile   => {
