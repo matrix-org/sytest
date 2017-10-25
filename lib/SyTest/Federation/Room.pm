@@ -158,6 +158,8 @@ sub create_event
 
    my @auth_events = grep { defined } (
       $self->get_current_state_event( "m.room.create" ),
+      $self->get_current_state_event( "m.room.join_rules" ),
+      $self->get_current_state_event( "m.room.power_levels" ),
       $self->get_current_state_event( "m.room.member", $fields{sender} ),
    );
    $fields{auth_events} //= make_event_refs( @auth_events ),
