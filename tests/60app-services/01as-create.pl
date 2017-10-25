@@ -10,11 +10,35 @@ test "AS can create a user",
 
       do_request_json_for( $as_user,
          method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            user => "astest-01create-0-$TEST_RUN_ID",
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( user_id home_server access_token device_id ));
+
+         Future->done(1);
+      });
+   };
+
+test "AS can create a user via the legacy /v1 endpoint",
+   requires => [ $main::AS_USER[0], $room_fixture ],
+
+   do => sub {
+      my ( $as_user, $room_id ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
          uri    => "/api/v1/register",
 
          content => {
             type => "m.login.application_service",
-            user => "astest-01create-1",
+            user => "astest-01create-1-$TEST_RUN_ID",
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -27,7 +51,8 @@ test "AS can create a user",
       });
    };
 
-test "AS can get or create user and return an access_token",
+# XXX this is completely unspecced. Why are we even bothering to test it?
+test "AS can create a user via the unspecced /createUser endpoint",
    requires => [ $main::AS_USER[0], $main::API_CLIENTS[0] ],
 
    do => sub {
@@ -74,10 +99,9 @@ test "AS cannot create users outside its own namespace",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type => "m.login.application_service",
             user => "a-different-user",
          }
       )->main::expect_http_4xx;
@@ -89,7 +113,7 @@ test "Regular users cannot register within the AS namespace",
    do => sub {
       my ( $http ) = @_;
 
-      matrix_register_user( $http, "astest-01create-2" )
+      matrix_register_user( $http, "astest-01create-2-$TEST_RUN_ID" )
          ->main::expect_http_4xx;
    };
 
@@ -192,10 +216,9 @@ sub matrix_register_as_ghost
 
    do_request_json_for( $as_user,
       method => "POST",
-      uri    => "/api/v1/register",
+      uri    => "/r0/register",
 
       content => {
-         type => "m.login.application_service",
          user => $user_id,
       }
    )->then( sub {
@@ -222,7 +245,7 @@ sub as_ghost_fixture
       setup => sub {
          my ( $as_user ) = @_;
 
-         my $user_id = "astest-$next_as_user_id";
+         my $user_id = "astest-$next_as_user_id-$TEST_RUN_ID";
          $next_as_user_id++;
 
          matrix_register_as_ghost( $as_user, $user_id );
