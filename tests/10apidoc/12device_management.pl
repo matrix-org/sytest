@@ -266,6 +266,56 @@ test "DELETE /device/{deviceId}",
       });
    };
 
+
+# this test guards against the situation where a malicious user Eve has stolen
+# an access_token for a genuine user Alice, and now wants to deactivate all of
+# Alice's other devices. This should require Alice's username/password.
+#
+test "DELETE /device/{deviceId} requires UI auth user to match device owner",
+   requires => [
+      local_user_fixture( with_events => 0 ),
+      local_user_fixture( with_events => 0 ),
+   ],
+
+   do => sub {
+      my ( $alice, $eve ) = @_;
+
+      my $DEVICE_ID = "login_device";
+
+      matrix_login_again_with_user(
+         $alice,
+         device_id => $DEVICE_ID,
+         initial_device_display_name => "device display",
+      )->then( sub {
+         my ( $other_login ) = @_;
+
+         # Eve now uses alice's stolen access token to try to delete the second device.
+         matrix_delete_device( $alice, $DEVICE_ID, {
+             auth => {
+                 type     => "m.login.password",
+                 user     => $eve->user_id,
+                 password => $eve->password,
+             },
+         })->main::expect_http_403;
+      })->then( sub {
+         # the device should still exist
+         matrix_get_device( $alice, $DEVICE_ID );
+      })->then( sub {
+         #  but it should work when we use alice's userid/pass.
+         matrix_delete_device( $alice, $DEVICE_ID, {
+             auth => {
+                 type     => "m.login.password",
+                 user     => $alice->user_id,
+                 password => $alice->password,
+             },
+         });
+      })->then( sub {
+         # the device should be deleted.
+         matrix_get_device( $alice, $DEVICE_ID )->main::expect_http_404;
+      });
+   };
+
+
 test "DELETE /device/{deviceId} with no body gives a 401",
    requires => [ local_user_fixture( with_events => 0 ) ],
 
