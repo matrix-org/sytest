@@ -189,3 +189,106 @@ test "Ghost user must register before joining room",
          },
       );
    };
+
+
+my $avatar_url = "http://somewhere/my-pic.jpg";
+
+test "AS can set avatar for ghosted users",
+   requires => [ as_ghost_fixture(), $main::AS_USER[0],
+                 qw( can_get_avatar_url ) ],
+
+   check => sub {
+      my ( $ghost, $as_user ) = @_;
+
+      my $user_id = $ghost->user_id;
+
+      my $http = $as_user->http;
+
+      $http->do_request_json(
+         method => "GET",
+         uri    => "/r0/profile/$user_id/avatar_url",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( avatar_url ));
+         assert_eq( $body->{avatar_url}, $avatar_url, 'avatar_url' );
+
+         Future->done(1);
+      });
+   },
+
+   do => sub {
+      my ( $ghost, $as_user ) = @_;
+
+      my $user_id = $ghost->user_id;
+
+      do_request_json_for(
+         $as_user,
+         method => "PUT",
+         uri    => "/r0/profile/$user_id/avatar_url",
+         params => {
+            user_id => $user_id,
+         },
+         content => { avatar_url => $avatar_url },
+      );
+   };
+
+
+my $displayname = "Ghost user's new name";
+
+test "AS can set displayname for ghosted users",
+   requires => [ as_ghost_fixture(), $main::AS_USER[0],
+                 qw( can_get_displayname ) ],
+
+   check => sub {
+      my ( $ghost, $as_user ) = @_;
+
+      my $user_id = $ghost->user_id;
+
+      my $http = $as_user->http;
+
+      $http->do_request_json(
+         method => "GET",
+         uri    => "/r0/profile/$user_id/displayname",
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( displayname ));
+         assert_eq( $body->{displayname}, $displayname, 'displayname' );
+
+         Future->done(1);
+      });
+   },
+
+   do => sub {
+      my ( $ghost, $as_user ) = @_;
+      as_set_displayname_for_user( $as_user, $ghost, $displayname );
+   };
+
+
+test "AS can't set displayname for random users",
+   requires => [ $main::AS_USER[0], $user_fixture ],
+
+   do => sub {
+      my ( $as_user, $regular_user ) = @_;
+
+      as_set_displayname_for_user(
+         $as_user, $regular_user, $displayname
+      )->main::expect_http_403;
+   };
+
+sub as_set_displayname_for_user {
+   my ( $as_user, $target_user, $displayname ) = @_;
+
+   my $user_id = $target_user->user_id;
+
+   do_request_json_for(
+      $as_user,
+      method => "PUT",
+      uri    => "/r0/profile/$user_id/displayname",
+      content => { displayname => $displayname },
+      params => {
+         user_id => $user_id,
+      },
+   );
+}
