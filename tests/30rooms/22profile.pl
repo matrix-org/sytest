@@ -13,7 +13,8 @@ foreach my $datum (qw( displayname avatar_url )) {
          )->then( sub {
             my ( $body ) = @_;
 
-            defined $body->{$datum} and die "Didn't expect $datum but was ".$body->{$datum};
+            # N.B. nowadays we let servers specify default displayname & avatar_url
+            # previously we asserted that these must be undefined at this point.
 
             do_request_json_for( $user,
                method  => "PUT",

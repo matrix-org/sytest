@@ -156,7 +156,8 @@ test "Guest user can set display names",
       )})->then( sub {
          my ( $body ) = @_;
 
-         defined $body->{displayname} and die "Didn't expect displayname";
+         # We used to assert here that the initial displayname was undefined, but as
+         # we let homeservers set sensible defaults these days, it's been relaxed.
 
          do_request_json_for( $guest_user,
             method  => "PUT",
