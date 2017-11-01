@@ -101,17 +101,20 @@ test "/joined_members return joined members",
                assert_json_keys( $body, qw( joined ));
                assert_json_object( my $members = $body->{joined} );
 
-               my ( $joined_local_part ) = $user_joined->user_id =~ m/^@([^:]+):/g;
-
                assert_deeply_eq( $members, {
                   $creator->user_id => {
                      display_name => $display_name,
                      avatar_url   => $avatar_url,
                   },
-                  $user_joined->user_id => {
-                     display_name => $joined_local_part,
-                     avatar_url   => undef,
-                  },
+                  # N.B. originally we asserted that the joined user must have
+                  # no display_name or avatar_url, but since we nowadays let
+                  # servers define sensible defaults for their users, this
+                  # has been relaxed.
+                  #
+                  # $user_joined->user_id => {
+                  #    display_name => undef,
+                  #    avatar_url   => undef,
+                  # },
                } );
 
                Future->done(1);
