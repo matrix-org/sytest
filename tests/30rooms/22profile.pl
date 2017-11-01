@@ -13,7 +13,14 @@ foreach my $datum (qw( displayname avatar_url )) {
          )->then( sub {
             my ( $body ) = @_;
 
-            defined $body->{$datum} and die "Didn't expect $datum but was ".$body->{$datum};
+            if ( $datum eq 'displayname' ) {
+               my ( $local_part ) = $user->user_id =~ m/^@([^:]+):/g;
+               die ("Expected $datum to be $local_part but was ".$body->{$datum})
+                  unless $body->{$datum} eq $local_part;
+            }
+            else {
+               defined $body->{$datum} and die "Didn't expect $datum but was ".$body->{$datum};
+            }
 
             do_request_json_for( $user,
                method  => "PUT",
