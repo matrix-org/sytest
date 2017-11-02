@@ -26,6 +26,34 @@ test "AS can create a user",
       });
    };
 
+test "AS can create a user with inhibit_locin",
+   requires => [ $main::AS_USER[0], $room_fixture ],
+
+   do => sub {
+      my ( $as_user, $room_id ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            user => "astest-01create-1-$TEST_RUN_ID",
+            inhibit_login => 1,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( user_id home_server ));
+         foreach ( qw( device_id access_token )) {
+            exists $body->{$_} and die "Got an unexpected a '$_' key";
+         }
+
+         Future->done(1);
+      });
+   };
+
 test "AS can create a user via the legacy /v1 endpoint",
    requires => [ $main::AS_USER[0], $room_fixture ],
 
@@ -38,7 +66,7 @@ test "AS can create a user via the legacy /v1 endpoint",
 
          content => {
             type => "m.login.application_service",
-            user => "astest-01create-1-$TEST_RUN_ID",
+            user => "astest-01create-2-$TEST_RUN_ID",
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -113,7 +141,7 @@ test "Regular users cannot register within the AS namespace",
    do => sub {
       my ( $http ) = @_;
 
-      matrix_register_user( $http, "astest-01create-2-$TEST_RUN_ID" )
+      matrix_register_user( $http, "astest-01create-3-$TEST_RUN_ID" )
          ->main::expect_http_4xx;
    };
 
