@@ -325,3 +325,59 @@ test "registration accepts non-ascii passwords",
          Future->done( 1 );
       });
    };
+
+test "registration with inhibit_login inhibits login",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   do => sub {
+      my ( $http, $localpart ) = @_;
+
+      my $session;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            username => $localpart,
+            password => "s3kr1t",
+            inhibit_login => 1,
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session ));
+
+         $session = $body->{session};
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id home_server ));
+         foreach ( qw( device_id access_token )) {
+            exists $body->{$_} and die "Got an unexpected a '$_' key";
+         }
+
+         my $actual_user_id = $body->{user_id};
+         my $home_server = $body->{home_server};
+
+         assert_eq( $actual_user_id, "\@$localpart:$home_server",
+            "registered user ID" );
+
+         Future->done( 1 );
+      });
+   };
+
