@@ -160,7 +160,7 @@ sub matrix_register_user
 
       my $f = Future->done;
 
-      if( $opts{with_events} // 1 ) {
+      if( $opts{with_events} // 0 ) {
          $f = $f->then( sub {
             $http->do_request_json(
                method => "GET",
@@ -334,7 +334,7 @@ sub setup_user
    my ( $http, $localpart, %args ) = @_;
 
    matrix_register_user( $http, $localpart,
-      with_events => $args{with_events} // 1,
+      with_events => $args{with_events} // 0,
       password => $args{password},
    )->then_with_f( sub {
       my $f = shift;
