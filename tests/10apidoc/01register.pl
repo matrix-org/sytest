@@ -364,7 +364,23 @@ sub shared_secret_tests {
          });
       };
 
-   test "POST $ep_name with shared secret disallows capitals",
+   test "POST $ep_name with shared secret downcases capitals",
+      requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+      proves => [qw( can_register_with_secret )],
+
+      do => sub {
+         my ( $http, $localpart ) = @_;
+
+         $register_func->( $http, $localpart . "A", is_admin => 0 )
+         ->then( sub {
+            my ( $user ) = @_;
+            assert_eq( $user->user_id, '@' . $localpart . 'a:' . $http->{server_name}, 'userid' );
+            Future->done( 1 );
+         });
+      };
+
+   test "POST $ep_name with shared secret disallows symbols",
       requires => [ $main::API_CLIENTS[0] ],
 
       proves => [qw( can_register_with_secret )],
@@ -372,12 +388,12 @@ sub shared_secret_tests {
       do => sub {
          my ( $http ) = @_;
 
-         $register_func->( $http, "uPPER", is_admin => 0 )
+         $register_func->( $http, "us,er", is_admin => 0 )
          ->main::expect_http_400()
          ->then( sub {
             my ( $response ) = @_;
             my $body = decode_json( $response->content );
-            assert_eq( $body->{errcode}, "M_INVALID_USERNAME" );
+            assert_eq( $body->{errcode}, "M_INVALID_USERNAME", 'errcode' );
             Future->done( 1 );
          });
       };
