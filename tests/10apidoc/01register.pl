@@ -1,3 +1,5 @@
+use utf8;
+
 use Digest::HMAC_SHA1 qw( hmac_sha1_hex );
 use JSON qw( decode_json );
 
@@ -78,7 +80,7 @@ test "POST /register can create a user",
       });
    };
 
-test "POST /register forbids registration of users with capitals",
+test "POST /register downcases capitals in usernames",
    requires => [ $main::API_CLIENTS[0],
                  qw( can_register_dummy_flow ) ],
 
@@ -96,14 +98,58 @@ test "POST /register forbids registration of users with capitals",
             username => "user-UPPER",
             password => "sUp3rs3kr1t",
          },
-      )->main::expect_http_400()
-      ->then( sub {
-         my ( $response ) = @_;
-         my $body = decode_json( $response->content );
-         assert_eq( $body->{errcode}, "M_INVALID_USERNAME" );
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id access_token ));
+         assert_eq( $body->{user_id}, '@user-upper:' . $http->{server_name}, 'user_id' );
+
          Future->done( 1 );
       });
    };
+
+
+foreach my $chr (split '', '!":?\@[]{|}£é' . "\n'" ) {
+   my $q = $chr; $q =~ s/\n/\\n/;
+
+   test "POST /register rejects registration of usernames with '$q'",
+      requires => [ $main::API_CLIENTS[0],
+                    qw( can_register_dummy_flow ) ],
+
+      do => sub {
+         my ( $http ) = @_;
+
+         my $reqbody = {
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => 'chrtestuser-'.ord($chr)."-",
+            password => "sUp3rs3kr1t",
+         };
+
+         # registration without the dodgy char should be ok
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => $reqbody,
+         )->then( sub {
+            # registration with the dodgy char should 400
+            $reqbody->{username} .= $chr;
+            $http->do_request_json(
+               method => "POST",
+               uri    => "/r0/register",
+               content => $reqbody,
+            );
+         })->main::expect_http_400()
+            ->then( sub {
+               my ( $response ) = @_;
+               my $body = decode_json( $response->content );
+               assert_eq( $body->{errcode}, "M_INVALID_USERNAME", 'responsecode' );
+               Future->done( 1 );
+            });
+      };
+}
 
 push our @EXPORT, qw( localpart_fixture );
 
