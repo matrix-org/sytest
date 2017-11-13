@@ -44,6 +44,9 @@ use Module::Pluggable
    search_path => [ "SyTest::HomeserverFactory" ],
    require     => 1;
 
+
+binmode(STDOUT, ":utf8");
+
 our $WANT_TLS = 1;  # This is shared with the test scripts
 
 our $BIND_HOST = "localhost";

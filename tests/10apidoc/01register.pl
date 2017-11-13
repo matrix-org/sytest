@@ -1,3 +1,5 @@
+use utf8;
+
 use Digest::HMAC_SHA1 qw( hmac_sha1_hex );
 use JSON qw( decode_json );
 
@@ -78,7 +80,7 @@ test "POST /register can create a user",
       });
    };
 
-test "POST /register forbids registration of users with capitals",
+test "POST /register downcases capitals in usernames",
    requires => [ $main::API_CLIENTS[0],
                  qw( can_register_dummy_flow ) ],
 
@@ -96,14 +98,58 @@ test "POST /register forbids registration of users with capitals",
             username => "user-UPPER",
             password => "sUp3rs3kr1t",
          },
-      )->main::expect_http_400()
-      ->then( sub {
-         my ( $response ) = @_;
-         my $body = decode_json( $response->content );
-         assert_eq( $body->{errcode}, "M_INVALID_USERNAME" );
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id access_token ));
+         assert_eq( $body->{user_id}, '@user-upper:' . $http->{server_name}, 'user_id' );
+
          Future->done( 1 );
       });
    };
+
+
+foreach my $chr (split '', '!":?\@[]{|}£é' . "\n'" ) {
+   my $q = $chr; $q =~ s/\n/\\n/;
+
+   test "POST /register rejects registration of usernames with '$q'",
+      requires => [ $main::API_CLIENTS[0],
+                    qw( can_register_dummy_flow ) ],
+
+      do => sub {
+         my ( $http ) = @_;
+
+         my $reqbody = {
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => 'chrtestuser-'.ord($chr)."-",
+            password => "sUp3rs3kr1t",
+         };
+
+         # registration without the dodgy char should be ok
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => $reqbody,
+         )->then( sub {
+            # registration with the dodgy char should 400
+            $reqbody->{username} .= $chr;
+            $http->do_request_json(
+               method => "POST",
+               uri    => "/r0/register",
+               content => $reqbody,
+            );
+         })->main::expect_http_400()
+            ->then( sub {
+               my ( $response ) = @_;
+               my $body = decode_json( $response->content );
+               assert_eq( $body->{errcode}, "M_INVALID_USERNAME", 'responsecode' );
+               Future->done( 1 );
+            });
+      };
+}
 
 push our @EXPORT, qw( localpart_fixture );
 
@@ -181,9 +227,10 @@ sub matrix_register_user
    });
 }
 
-push @EXPORT, qw( matrix_register_user_via_secret );
+shared_secret_tests( "/v1/register", \&matrix_v1_register_user_via_secret);
+shared_secret_tests( "/r0/register", \&matrix_r0_register_user_via_secret);
 
-sub matrix_register_user_via_secret
+sub matrix_v1_register_user_via_secret
 {
    my ( $http, $uid, %opts ) = @_;
 
@@ -231,43 +278,126 @@ sub matrix_register_user_via_secret
    });
 }
 
-test "POST /register with shared secret",
-   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+sub matrix_r0_register_user_via_secret
+{
+   my ( $http, $uid, %opts ) = @_;
 
-   proves => [qw( can_register_with_secret )],
+   my $password = $opts{password} // "an0th3r s3kr1t";
+   my $is_admin = $opts{is_admin} // 0;
 
-   do => sub {
-       my ( $http, $uid ) = @_;
+   defined $uid or
+      croak "Require UID for matrix_register_user_via_secret";
 
-       matrix_register_user_via_secret( $http, $uid, is_admin => 0 );
-   };
+   # for some reason the /r0/register endpoint only includes the
+   # uid in the hash. AFAICT it's equally valid, but one has to
+   # wonder why it is different to the /v1/ endpoint.
+   # (https://github.com/matrix-org/synapse/issues/2664)
+   my $mac = hmac_sha1_hex(
+      $uid,
+      "reg_secret"
+   );
 
-test "POST /register admin with shared secret",
-   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+   $http->do_request_json(
+      method => "POST",
+      uri    => "/r0/register",
 
-   do => sub {
-       my ( $http, $uid ) = @_;
+      content => {
+        type     => "org.matrix.login.shared_secret",
+        username => $uid,
+        password => $password,
+        admin    => $is_admin ? JSON::true : JSON::false,
+        mac      => $mac,
+      },
+   )->then( sub {
+      my ( $body ) = @_;
 
-       matrix_register_user_via_secret( $http, $uid, is_admin => 1 );
-   };
+      assert_json_keys( $body, qw( user_id access_token device_id ));
 
-test "POST /register with shared secret disallows capitals",
-   requires => [ $main::API_CLIENTS[0] ],
+      my $uid = $body->{user_id};
 
-   proves => [qw( can_register_with_secret )],
+      log_if_fail "Registered new user (via secret) $uid";
 
-   do => sub {
-      my ( $http ) = @_;
+      my $access_token = $body->{access_token};
 
-      matrix_register_user_via_secret( $http, "uPPER", is_admin => 0 )
-      ->main::expect_http_400()
-      ->then( sub {
-         my ( $response ) = @_;
-         my $body = decode_json( $response->content );
-         assert_eq( $body->{errcode}, "M_INVALID_USERNAME" );
-         Future->done( 1 );
-      });
-   };
+      my $user = new_User(
+         http         => $http,
+         user_id      => $uid,
+         device_id    => $body->{device_id},
+         password     => $password,
+         access_token => $access_token,
+      );
+      return Future->done( $user );
+   });
+}
+
+sub shared_secret_tests {
+   my ( $ep_name, $register_func ) = @_;
+
+   test "POST $ep_name with shared secret",
+      requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+      proves => [qw( can_register_with_secret )],
+
+      do => sub {
+         my ( $http, $uid ) = @_;
+
+         $register_func->( $http, $uid, is_admin => 0 )
+         ->then( sub {
+            my ( $user ) = @_;
+            assert_eq( $user->user_id, "\@$uid:" . $http->{server_name}, 'userid' );
+            Future->done( 1 );
+         });
+      };
+
+   test "POST $ep_name admin with shared secret",
+      requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+      do => sub {
+         my ( $http, $uid ) = @_;
+
+         $register_func->( $http, $uid, is_admin => 1 )
+         ->then( sub {
+            my ( $user ) = @_;
+            assert_eq( $user->user_id, "\@$uid:" . $http->{server_name}, 'userid' );
+            # TODO: test it is actually an admin
+            Future->done( 1 );
+         });
+      };
+
+   test "POST $ep_name with shared secret downcases capitals",
+      requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+      proves => [qw( can_register_with_secret )],
+
+      do => sub {
+         my ( $http, $localpart ) = @_;
+
+         $register_func->( $http, $localpart . "A", is_admin => 0 )
+         ->then( sub {
+            my ( $user ) = @_;
+            assert_eq( $user->user_id, '@' . $localpart . 'a:' . $http->{server_name}, 'userid' );
+            Future->done( 1 );
+         });
+      };
+
+   test "POST $ep_name with shared secret disallows symbols",
+      requires => [ $main::API_CLIENTS[0] ],
+
+      proves => [qw( can_register_with_secret )],
+
+      do => sub {
+         my ( $http ) = @_;
+
+         $register_func->( $http, "us,er", is_admin => 0 )
+         ->main::expect_http_400()
+         ->then( sub {
+            my ( $response ) = @_;
+            my $body = decode_json( $response->content );
+            assert_eq( $body->{errcode}, "M_INVALID_USERNAME", 'errcode' );
+            Future->done( 1 );
+         });
+      };
+}
 
 push @EXPORT, qw( local_user_fixture local_user_fixtures local_admin_fixture );
 
@@ -298,7 +428,7 @@ sub local_admin_fixture
       setup => sub {
          my ( $http, $localpart ) = @_;
 
-         matrix_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
+         matrix_v1_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
       },
    );
 }
