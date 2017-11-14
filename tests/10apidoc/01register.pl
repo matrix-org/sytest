@@ -160,7 +160,7 @@ sub matrix_register_user
 
       my $f = Future->done;
 
-      if( $opts{with_events} // 0 ) {
+      if( $opts{with_events} ) {
          $f = $f->then( sub {
             $http->do_request_json(
                method => "GET",
