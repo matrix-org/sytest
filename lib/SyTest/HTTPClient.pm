@@ -12,7 +12,7 @@ use base qw( Net::Async::HTTP );
 Net::Async::HTTP->VERSION( '0.36' ); # PUT content bugfix
 
 use JSON;
-my $json = JSON->new->convert_blessed;
+my $json = JSON->new->convert_blessed(1)->utf8(1);
 
 use Future 0.33; # ->catch
 use List::Util qw( any );
