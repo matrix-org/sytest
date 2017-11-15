@@ -52,30 +52,45 @@ test "Local room members see posted message events",
    };
 
 test "Fetching eventstream a second time doesn't yield the message again",
-   requires => [ $senduser_fixture, $local_user_fixture,
+   requires => [ $senduser_fixture, $local_user_fixture, $room_fixture,
                  qw( can_receive_room_message_locally )],
 
    check => sub {
-      my ( $senduser, $local_user ) = @_;
+      my ( $senduser, $local_user, $room_id ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
          matrix_sync( $recvuser,
-            since    => $recvuser->sync_next_batch,
             timeout  => 0,
          )->then( sub {
             my ( $body ) = @_;
 
-            foreach my $event ( @{ $body->{chunk} } ) {
-               next unless $event->{type} eq "m.room.message";
-               my $content = $event->{content};
+            # We expect the event to be in the initial sync
+            sync_timeline_contains( $body, $room_id, sub {
+               my ( $event ) = @_;
 
-               $content->{body} eq $msgbody and
-                  die "Expected not to recieve duplicate message\n";
-            }
+               return unless $event->{type} eq "m.room.message";
 
-            Future->done;
+               return 1;
+            }) or die "Excpected event not in initial sync";
+
+            matrix_sync_again( $recvuser,
+               timeout  => 0,
+            )
+         })->then( sub {
+            my ( $body ) = @_;
+
+            # We expect the event not to be in subsequent syncs
+            sync_timeline_contains( $body, $room_id, sub {
+               my ( $event ) = @_;
+
+               return unless $event->{type} eq "m.room.message";
+
+               return 1;
+            }) and die "Old event in incremental sync";
+
+            Future->done( 1 );
          })
       } $senduser, $local_user )->then_done(1);
    };
