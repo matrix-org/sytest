@@ -1,8 +1,8 @@
-my $senduser_fixture = local_user_fixture();
+my $senduser_fixture = local_user_fixture( with_events => 1 );
 
-my $local_user_fixture = local_user_fixture();
+my $local_user_fixture = local_user_fixture( with_events => 1 );
 
-my $remote_user_fixture = remote_user_fixture();
+my $remote_user_fixture = remote_user_fixture( with_events => 1 );
 
 # Ensure all the users are members of a shared room, so that we know presence
 # messages can be shared between them all

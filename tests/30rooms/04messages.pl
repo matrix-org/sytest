@@ -28,20 +28,21 @@ test "Local room members see posted message events",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, filter => sub {
+            await_sync_timeline_contains( $recvuser, $room_id, check => sub {
                my ( $event ) = @_;
+
+               log_if_fail "Event for ${\$recvuser->user_id}", $event;
+
                return unless $event->{type} eq "m.room.message";
 
-               assert_json_keys( $event, qw( type content room_id user_id ));
+               assert_json_keys( $event, qw( type content sender ));
                assert_json_keys( my $content = $event->{content}, qw( msgtype body ));
-
-               return unless $event->{room_id} eq $room_id;
 
                $content->{msgtype} eq $msgtype or
                   die "Expected msgtype as $msgtype";
                $content->{body} eq $msgbody or
                   die "Expected body as '$msgbody'";
-               $event->{user_id} eq $senduser->user_id or
+               $event->{sender} eq $senduser->user_id or
                   die "Expected sender user_id as ${\$senduser->user_id}\n";
 
                return 1;
@@ -51,30 +52,45 @@ test "Local room members see posted message events",
    };
 
 test "Fetching eventstream a second time doesn't yield the message again",
-   requires => [ $senduser_fixture, $local_user_fixture,
+   requires => [ $senduser_fixture, $local_user_fixture, $room_fixture,
                  qw( can_receive_room_message_locally )],
 
    check => sub {
-      my ( $senduser, $local_user ) = @_;
+      my ( $senduser, $local_user, $room_id ) = @_;
 
       Future->needs_all( map {
          my $recvuser = $_;
 
-         matrix_get_events( $recvuser,
-            from    => $recvuser->eventstream_token,
-            timeout => 0,
+         matrix_sync( $recvuser,
+            timeout  => 0,
          )->then( sub {
             my ( $body ) = @_;
 
-            foreach my $event ( @{ $body->{chunk} } ) {
-               next unless $event->{type} eq "m.room.message";
-               my $content = $event->{content};
+            # We expect the event to be in the initial sync
+            sync_timeline_contains( $body, $room_id, sub {
+               my ( $event ) = @_;
 
-               $content->{body} eq $msgbody and
-                  die "Expected not to recieve duplicate message\n";
-            }
+               return unless $event->{type} eq "m.room.message";
 
-            Future->done;
+               return 1;
+            }) or die "Expected event not in initial sync";
+
+            matrix_sync_again( $recvuser,
+               timeout  => 0,
+            )
+         })->then( sub {
+            my ( $body ) = @_;
+
+            # We expect the event not to be in subsequent syncs
+            sync_timeline_contains( $body, $room_id, sub {
+               my ( $event ) = @_;
+
+               return unless $event->{type} eq "m.room.message";
+
+               return 1;
+            }) and die "Old event in incremental sync";
+
+            Future->done( 1 );
          })
       } $senduser, $local_user )->then_done(1);
    };
@@ -86,14 +102,13 @@ test "Local non-members don't see posted message events",
       my ( $nonmember, $room_id ) = @_;
 
       Future->wait_any(
-         await_event_for( $nonmember, filter => sub {
+         await_sync_timeline_contains( $nonmember, $room_id, check => sub {
             my ( $event ) = @_;
             log_if_fail "Received event:", $event;
 
             return unless $event->{type} eq "m.room.message";
 
-            assert_json_keys( $event, qw( type content room_id user_id ));
-            return unless $event->{room_id} eq $room_id;
+            assert_json_keys( $event, qw( type content user_id ));
 
             die "Nonmember received event about a room they're not a member of";
          }),
@@ -145,20 +160,18 @@ test "Remote room members also see posted message events",
    do => sub {
       my ( $senduser, $remote_user, $room_id ) = @_;
 
-      await_event_for( $remote_user, filter => sub {
+      await_sync_timeline_contains( $remote_user, $room_id, check => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.message";
 
-         assert_json_keys( $event, qw( type content room_id user_id ));
+         assert_json_keys( $event, qw( type content sender ));
          assert_json_keys( my $content = $event->{content}, qw( msgtype body ));
-
-         return unless $event->{room_id} eq $room_id;
 
          $content->{msgtype} eq $msgtype or
             die "Expected msgtype as $msgtype";
          $content->{body} eq $msgbody or
             die "Expected body as '$msgbody'";
-         $event->{user_id} eq $senduser->user_id or
+         $event->{sender} eq $senduser->user_id or
             die "Expected sender user_id as ${\$senduser->user_id}\n";
 
          return 1;
@@ -263,7 +276,7 @@ test "Message history can be paginated over federation",
       } foreach => [ 1 .. 20 ] )->then( sub {
          matrix_join_room( $remote_user, $room_alias );
       })->then( sub {
-         flush_events_for( $remote_user )
+         matrix_sync( $remote_user )
       })->then( sub {
          # The member event is likely to arrive first
          matrix_get_room_messages( $remote_user, $room_id, limit => 5+1 )
@@ -311,7 +324,7 @@ test "Message history can be paginated over federation",
 
          # Wait for the message we just sent, ensuring that we don't see any
          # of the backfilled events.
-         await_event_for( $remote_user, filter => sub {
+         await_sync_timeline_contains( $remote_user, $room_id, check => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
 
