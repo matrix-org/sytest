@@ -43,7 +43,7 @@ test "Local room members see posted message events",
                $content->{body} eq $msgbody or
                   die "Expected body as '$msgbody'";
                $event->{sender} eq $senduser->user_id or
-                  die "Expected sender user_id as ${\$senduser->sender}\n";
+                  die "Expected sender user_id as ${\$senduser->user_id}\n";
 
                return 1;
             });
