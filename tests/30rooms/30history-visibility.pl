@@ -576,8 +576,9 @@ push our @EXPORT, qw( await_event_not_history_visibility_or_presence_for );
 
 sub await_event_not_history_visibility_or_presence_for
 {
-   my ( $user, $room_id, $allowed_users ) = @_;
+   my ( $user, $room_id, $allowed_users, %params ) = @_;
    await_event_for( $user,
+      %params,
       room_id => $room_id,
       filter  => sub {
          my ( $event ) = @_;

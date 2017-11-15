@@ -6,8 +6,7 @@ foreach my $i (
 
    test(
       "$name user can call /events on another world_readable room (SYN-606)",
-      requires => [ $fixture->( with_events => 0 ),
-                    local_user_fixture( with_events => 0 ) ],
+      requires => [ $fixture->(),  local_user_fixture() ],
 
       do => sub {
          my ( $nonjoined_user, $user ) = @_;
@@ -27,20 +26,28 @@ foreach my $i (
          })->then( sub {
             matrix_initialsync_room( $nonjoined_user, $room_id1 )
          })->then( sub {
+            my ( $body ) = @_;
+
+            my $from_token = $body->{messages}{end};
+
             Future->needs_all(
                matrix_send_room_text_message( $user, $room_id1, body => "moose" ),
-               await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id1, [] ),
+               await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id1, [],
+                  from => $from_token,
+               ),
             );
          })->then( sub {
             matrix_initialsync_room( $nonjoined_user, $room_id2 )
          })->then( sub {
-            Future->needs_all(
-               delay( 0.1 )->then( sub {
-                  matrix_send_room_text_message( $user, $room_id2, body => "mice" );
-               }),
+            my ( $body ) = @_;
 
-               await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id2, [] )
-               ->then( sub {
+            my $from_token = $body->{messages}{end};
+
+            Future->needs_all(
+               matrix_send_room_text_message( $user, $room_id2, body => "mice" ),
+               await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id2, [],
+                  from => $from_token,
+               )->then( sub {
                   my ( $event ) = @_;
 
                   assert_json_keys( $event, qw( content ) );
