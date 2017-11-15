@@ -22,14 +22,9 @@ test "Local room members see posted message events",
    do => sub {
       my ( $senduser, $local_user, $room_id ) = @_;
 
-      Future->needs_all(
-         matrix_sync( $senduser ),
-         matrix_sync( $local_user ),
+      matrix_send_room_message( $senduser, $room_id,
+         content => { msgtype => $msgtype, body => $msgbody },
       )->then( sub {
-         matrix_send_room_message( $senduser, $room_id,
-            content => { msgtype => $msgtype, body => $msgbody },
-         )
-      })->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
 
