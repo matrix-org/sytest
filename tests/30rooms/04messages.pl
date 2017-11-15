@@ -73,7 +73,7 @@ test "Fetching eventstream a second time doesn't yield the message again",
                return unless $event->{type} eq "m.room.message";
 
                return 1;
-            }) or die "Excpected event not in initial sync";
+            }) or die "Expected event not in initial sync";
 
             matrix_sync_again( $recvuser,
                timeout  => 0,
