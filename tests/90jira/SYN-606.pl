@@ -28,6 +28,15 @@ foreach my $i (
          })->then( sub {
             my ( $body ) = @_;
 
+            # We need to manually handle the from tokens here as the await_event*
+            # methods may otherwise reuse results from an /events call that did
+            # not include the specified room (due to the user not being joined to
+            # it). This could cause the event to not be found.
+            # I.e. there is a race where we send a message, the background /events
+            # stream streams past the message, and then /events stream triggered by
+            # await_event_* (which *does* include the room_id) starts streaming
+            # from *after* the message. Hence the event is neither in the cache
+            # nor in the liv event stream.
             my $from_token = $body->{messages}{end};
 
             Future->needs_all(
