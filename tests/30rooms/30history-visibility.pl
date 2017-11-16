@@ -578,7 +578,6 @@ sub await_event_not_history_visibility_or_presence_for
 {
    my ( $user, $room_id, $allowed_users, %params ) = @_;
    await_event_for( $user,
-      %params,
       room_id => $room_id,
       filter  => sub {
          my ( $event ) = @_;
@@ -591,6 +590,7 @@ sub await_event_not_history_visibility_or_presence_for
          return ((not $event->{type} eq "m.presence") or
             any { $event->{content}{user_id} eq $_->user_id } @$allowed_users);
       },
+      %params,
    )->on_done( sub {
       my ( $event ) = @_;
       log_if_fail "event", $event
