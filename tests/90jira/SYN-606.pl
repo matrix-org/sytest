@@ -36,7 +36,7 @@ foreach my $i (
             # stream streams past the message, and then /events stream triggered by
             # await_event_* (which *does* include the room_id) starts streaming
             # from *after* the message. Hence the event is neither in the cache
-            # nor in the liv event stream.
+            # nor in the live event stream.
             my $from_token = $body->{messages}{end};
 
             Future->needs_all(
