@@ -126,7 +126,7 @@ sub _get_config
       database => {
          map { $_ => $db_uri } qw(
             account device media_api sync_api room_server server_key
-            federation_sender public_rooms_api
+            federation_sender public_rooms_api naffka
          ),
       },
    );
