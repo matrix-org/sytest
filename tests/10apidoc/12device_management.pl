@@ -8,7 +8,7 @@ sub matrix_get_device {
    return do_request_json_for(
       $user,
       method => "GET",
-      uri    => "/unstable/devices/${device_id}",
+      uri    => "/r0/devices/${device_id}",
    );
 }
 
@@ -18,7 +18,7 @@ sub matrix_set_device_display_name {
     return do_request_json_for(
         $user,
         method => "PUT",
-        uri    => "/unstable/devices/${device_id}",
+        uri    => "/r0/devices/${device_id}",
         content => {
             display_name => $display_name,
         },
@@ -31,7 +31,7 @@ sub matrix_delete_device {
     return do_request_json_for(
         $user,
         method  => "DELETE",
-        uri     => "/unstable/devices/${device_id}",
+        uri     => "/r0/devices/${device_id}",
         content => $request_body,
     );
 }
@@ -72,7 +72,7 @@ test "GET /device/{deviceId} gives a 404 for unknown devices",
       do_request_json_for(
          $user,
          method => "GET",
-         uri    => "/unstable/devices/unknown_device",
+         uri    => "/r0/devices/unknown_device",
       )->main::expect_http_404;
    };
 
@@ -106,7 +106,7 @@ test "GET /devices",
           do_request_json_for(
              $user,
              method => "GET",
-             uri => "/unstable/devices",
+             uri => "/r0/devices",
           );
       })->then( sub {
          my ( $devices ) = @_;
@@ -152,7 +152,7 @@ test "PUT /device/{deviceId} updates device fields",
          do_request_json_for(
             $user,
             method => "PUT",
-            uri    => "/unstable/devices/${DEVICE_ID}",
+            uri    => "/r0/devices/${DEVICE_ID}",
             content => {
                display_name => "new display name",
             },
@@ -180,7 +180,7 @@ test "PUT /device/{deviceId} gives a 404 for unknown devices",
       do_request_json_for(
          $user,
          method => "PUT",
-         uri    => "/unstable/devices/unknown_device",
+         uri    => "/r0/devices/unknown_device",
          content => {
             display_name => "new display name",
          },
