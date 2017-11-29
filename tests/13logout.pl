@@ -10,9 +10,23 @@ test "Can logout current device",
       ->then( sub {
          ( $other_login ) = @_;
 
+         # the device list should now have both devices
+         do_request_json_for(
+            $other_login,
+            method => "GET",
+            uri => "/r0/devices",
+         );
+      })->then( sub {
+         my ( $devices ) = @_;
+         log_if_fail ("/devices response (1): ", $devices);
+         my $my_device_id = $user->device_id;
+         if ( not any { $_->{device_id} eq $my_device_id } @{ $devices->{devices} } ) {
+            die 'Original device $my_device_id did not appear in device list';
+         }
+
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/logout",
+             uri    => "/r0/logout",
             content => {},
          )
       })->then( sub {
@@ -24,6 +38,20 @@ test "Can logout current device",
             );
          };
       })->then( sub {
+         # the device should also have been deleted
+         do_request_json_for(
+            $other_login,
+            method => "GET",
+            uri => "/r0/devices",
+         );
+      })->then( sub {
+         my ( $devices ) = @_;
+         log_if_fail ("/devices response (2): ", $devices);
+         my $my_device_id = $user->device_id;
+         if ( any { $_->{device_id} eq $my_device_id } @{ $devices->{devices} } ) {
+            die 'Original device $my_device_id still appears in device list';
+         }
+
          matrix_sync( $other_login );
       });
    };
