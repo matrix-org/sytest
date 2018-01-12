@@ -10,47 +10,80 @@ test "POSTed media can be thumbnailed",
    do => sub {
       my ( $http, $user ) = @_;
 
-      my $pngdata = read_binary( "$dir/test.png" );
-
-      # Because we're POST'ing non-JSON
-      $http->do_request(
-         method => "POST",
-         full_uri => "/_matrix/media/r0/upload",
-         params => {
-            access_token => $user->access_token,
-         },
-
-         content_type => "image/png",
-         content      => $pngdata,
+      upload_test_image(
+         $user,
       )->then( sub {
-         my ( $body ) = @_;
-
-         my $content_uri = URI->new( $body->{content_uri} );
-
-         $http->do_request(
-            method => "GET",
-            full_uri => "/_matrix/media/r0/thumbnail/" .
-               join( "", $content_uri->authority, $content_uri->path ),
-            params => {
-               width  => 32,
-               height => 32,
-               method => "scale",
-            }
-         )
-      })->then( sub {
-         my ( $body, $response ) = @_;
-
-         for( $response->content_type ) {
-            m{^image/png$} and validate_png( $body ), last;
-
-            # TODO: should probably write a JPEG recogniser too
-
-            warn "Unrecognised Content-Type ($_) - unable to detect if this is a valid image";
-         }
-
-         Future->done(1);
+         my ( $content_uri ) = @_;
+         fetch_and_validate_thumbnail( $http, $content_uri );
       });
    };
+
+
+test "Remote media can be thumbnailed",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_upload_media can_download_media )],
+   do => sub {
+      my ( $local_user, $remote_user ) = @_;
+
+      upload_test_image(
+         $local_user,
+      )->then( sub {
+         my ( $content_uri ) = @_;
+         fetch_and_validate_thumbnail( $remote_user->http, $content_uri );
+      });
+   };
+
+
+sub upload_test_image
+{
+   my ( $user ) = @_;
+
+   my $pngdata = read_binary( "$dir/test.png" );
+
+   # Because we're POST'ing non-JSON
+   return $user->http->do_request(
+      method => "POST",
+      full_uri => "/_matrix/media/r0/upload",
+      params => {
+         access_token => $user->access_token,
+      },
+
+      content_type => "image/png",
+      content      => $pngdata,
+   )->then( sub {
+       my ( $body ) = @_;
+       log_if_fail "Upload response", $body;
+       my $content_uri = URI->new( $body->{content_uri} );
+       Future->done( $content_uri );
+    });
+}
+
+sub fetch_and_validate_thumbnail
+{
+   my ( $http, $mxc_uri ) = @_;
+
+   return $http->do_request(
+      method => "GET",
+      full_uri => "/_matrix/media/r0/thumbnail/" .
+         join( "", $mxc_uri->authority, $mxc_uri->path ),
+      params => {
+         width  => 32,
+         height => 32,
+         method => "scale",
+      }
+   )->then( sub {
+       my ( $body, $response ) = @_;
+       for( $response->content_type ) {
+          m{^image/png$} and validate_png( $body ), last;
+
+          # TODO: should probably write a JPEG recogniser too
+
+          die "Unrecognised Content-Type ($_) - unable to detect if this is a valid image";
+       }
+
+       Future->done(1);
+   });
+}
 
 # We won't assert too heavily that it's a valid image as that's hard to do
 # without using a full image parsing library like Imager. Instead we'll just
