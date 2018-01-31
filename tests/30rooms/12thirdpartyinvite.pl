@@ -1,3 +1,5 @@
+#use Data::Dump qw( pp );
+
 my $invitee_email = 'lemurs@monkeyworld.org';
 
 test "Can invite existing 3pid",
@@ -404,11 +406,19 @@ test "3pid invite join valid signature but unreachable ID server are rejected",
 
       invite_should_fail( $inviter, $invitee, $hs_uribase, $id_server, sub {
          $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee, sub {
-            # Stop the server listening by taking its handle away
+            # Stop the server listening by closing any active connections and
+            # taking its handle away
+
+            foreach my $c ($id_server->children()) {
+               if( $c->can( 'close' )) {
+                  $c->close();
+               }
+            }
             $id_server->configure( handle => undef );
          });
       });
    };
+
 
 sub invite_should_fail {
    my ( $inviter, $invitee, $hs_base_url, $id_server, $bind_sub ) = @_;
