@@ -341,6 +341,15 @@ sub _clear_db_pg
          $dbh->do( "DROP TABLE $tablename CASCADE" ) or
             die $dbh->errstr;
       }
+
+      foreach my $row ( @{ $dbh->selectall_arrayref(
+         "SELECT c.relname FROM pg_class c LEFT JOIN pg_namespace n ON n.oid = c.relnamespace WHERE relkind='S' AND n.nspname='public'"
+      ) } ) {
+         my ( $seqname ) = @$row;
+
+         $dbh->do( "DROP SEQUENCE $seqname" ) or
+            die $dbh->errstr;
+      }
    }
 }
 
