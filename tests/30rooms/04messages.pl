@@ -274,9 +274,25 @@ test "Message history can be paginated over federation",
             body => "Message number $_[0]"
          )
       } foreach => [ 1 .. 20 ] )->then( sub {
+         matrix_sync( $remote_user )
+      })->then( sub {
          matrix_join_room( $remote_user, $room_alias );
       })->then( sub {
-         matrix_sync( $remote_user )
+         # We wait until we see our join to the room.
+         await_sync_timeline_contains( $remote_user, $room_id, check => sub {
+            my ( $event ) = @_;
+            log_if_fail "Received event", $event;
+
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{sender} eq $remote_user->user_id;
+            return unless $event->{content}{membership} eq "join";
+
+            return 1;
+         });
+      })->then( sub {
+         # We sync again to ensure our next batch token is up to date, as
+         # await_sync_ doesn't update it.
+         matrix_sync_again( $remote_user )
       })->then( sub {
          # The member event is likely to arrive first
          matrix_get_room_messages( $remote_user, $room_id, limit => 5+1 )
