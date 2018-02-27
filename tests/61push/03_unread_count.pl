@@ -26,8 +26,6 @@ test "Messages that notify from another user increment unread notification count
 
          matrix_advance_room_receipt_synced( $user1, $room_id, "m.read" => $event_id );
       })->then( sub {
-         delay( 0.5 )
-      })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
          my ( $body ) = @_;
@@ -44,8 +42,6 @@ test "Messages that notify from another user increment unread notification count
          matrix_send_room_text_message_synced( $user2, $room_id,
             body => "Test message 2",
          );
-      })->then( sub {
-         delay ( 0.5 )
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
