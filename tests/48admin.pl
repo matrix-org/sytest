@@ -1,5 +1,31 @@
 use Future::Utils qw( repeat );
 
+
+# poll the status endpoint until it completes. Returns the final status.
+sub await_purge_complete {
+   my ( $admin_user, $purge_id ) = @_;
+
+   my $delay = 0.1;
+
+   return repeat( sub {
+      my ( $prev_trial ) = @_;
+
+      # delay if this isn't the first time around the loop
+      (
+         $prev_trial ? delay( $delay *= 1.5 ) : Future->done
+      )->then( sub {
+         do_request_json_for( $admin_user,
+            method  => "GET",
+            uri     => "/r0/admin/purge_history_status/$purge_id",
+         )
+      })->then( sub {
+         my ($body) = @_;
+         assert_json_keys( $body, "status" );
+         Future->done( $body->{status} );
+      })
+   }, while => sub { $_[0]->get eq 'active' });
+}
+
 test "/whois",
    requires => [ $main::API_CLIENTS[0] ],
 
@@ -77,6 +103,15 @@ test "/purge_history",
             content => {}
          )
       })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, "purge_id" );
+         my $purge_id = $body->{purge_id};
+         await_purge_complete( $admin, $purge_id );
+      })->then( sub {
+         my ( $purge_status ) = @_;
+         assert_eq( $purge_status, 'complete' );
+
          # Test that /sync with an existing token still works.
          matrix_sync_again( $user )
       })->then( sub {
@@ -180,6 +215,15 @@ test "Can backfill purged history",
             content => {}
          )
       })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, "purge_id" );
+         my $purge_id = $body->{purge_id};
+         await_purge_complete( $admin, $purge_id );
+      })->then( sub {
+         my ( $purge_status ) = @_;
+         assert_eq( $purge_status, 'complete' );
+
          matrix_sync( $user )
       })->then( sub {
          my ( $body ) = @_;
