@@ -5,11 +5,20 @@ use Future::Utils qw( repeat );
 sub await_purge_complete {
    my ( $admin_user, $purge_id ) = @_;
 
+   my $delay = 0.1;
+
    return repeat( sub {
-      do_request_json_for( $admin_user,
-         method  => "GET",
-         uri     => "/r0/admin/purge_history_status/$purge_id",
+      my ( $prev_trial ) = @_;
+
+      # delay if this isn't the first time around the loop
+      (
+         $prev_trial ? delay( $delay *= 1.5 ) : Future->done
       )->then( sub {
+         do_request_json_for( $admin_user,
+            method  => "GET",
+            uri     => "/r0/admin/purge_history_status/$purge_id",
+         )
+      })->then( sub {
          my ($body) = @_;
          assert_json_keys( $body, "status" );
          Future->done( $body->{status} );
