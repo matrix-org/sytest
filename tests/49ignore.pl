@@ -72,7 +72,7 @@ test "Ignore user in existing room",
          my $state_events = $body->{rooms}{join}{$room_id}{state}{events};
 
          assert_eq( scalar @$timeline_events, 2, "Expected only 2 messages" );
-         assert_eq( scalar @$state_events, 3, "Expected 3 member state events" );
+         assert_eq( scalar @$state_events, 2, "Expected 2 member state events" );
 
          matrix_send_room_message_synced( $user2, $room_id,
             content => { msgtype => "m.text", body => "Message2" }
