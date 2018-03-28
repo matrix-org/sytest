@@ -51,6 +51,7 @@ test "Can enable/disable default rules",
 
             my ( $kind, $rule_id ) = @$to_check;
 
+            log_if_fail("testing $rule_id");
             check_enable_disable_rule( $user, "global", $kind, $rule_id );
          } foreach => \@to_check;
       });
