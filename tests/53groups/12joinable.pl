@@ -118,7 +118,9 @@ sub matrix_set_group_join_policy
       method  => "PUT",
       uri     => "/r0/groups/$group_id/settings/m.join_policy",
       content => {
-         join_policy => $join_policy,
+         "m.join_policy" => {
+             "type" => $join_policy,
+         },
       },
    );
 }
