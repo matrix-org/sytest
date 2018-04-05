@@ -10,7 +10,7 @@ test "Joinability comes down summary",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_set_group_joinable( $group_id, $creator, 1 );
+         matrix_set_group_join_policy( $group_id, $creator, "open" );
       })->then( sub {
          matrix_get_group_summary( $creator, $group_id );
       })->then( sub {
@@ -19,9 +19,9 @@ test "Joinability comes down summary",
          log_if_fail "Summary Body", $body;
 
          assert_json_keys( $body, qw( profile ) );
-         assert_eq( $body->{profile}->{is_joinable}, JSON::true );
+         assert_eq( $body->{profile}->{join_policy}, "open" );
 
-         matrix_set_group_joinable( $group_id, $creator, 0 );
+         matrix_set_group_join_policy( $group_id, $creator, "invite" );
       })->then( sub {
          matrix_get_group_summary( $creator, $group_id );
       })->then( sub {
@@ -30,7 +30,7 @@ test "Joinability comes down summary",
          log_if_fail "Summary Body", $body;
 
          assert_json_keys( $body, qw( profile ) );
-         assert_eq( $body->{profile}->{is_joinable}, JSON::false );
+         assert_eq( $body->{profile}->{join_policy}, "invite" );
 
          Future->done( 1 );
       });
@@ -48,7 +48,7 @@ test "Set group joinable and join it",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_set_group_joinable( $group_id, $creator, 1 );
+         matrix_set_group_join_policy( $group_id, $creator, "open" );
       })->then( sub {
          matrix_join_group( $group_id, $user );
       })->then( sub {
@@ -93,7 +93,7 @@ test "Group is joinable over federation",
       ->then( sub {
          ( $group_id ) = @_;
 
-         matrix_set_group_joinable( $group_id, $creator, 1 );
+         matrix_set_group_join_policy( $group_id, $creator, "open" );
       })->then( sub {
          matrix_join_group( $group_id, $user );
       })->then( sub {
@@ -110,15 +110,15 @@ test "Group is joinable over federation",
       });
    };
 
-sub matrix_set_group_joinable
+sub matrix_set_group_join_policy
 {
-   my ( $group_id, $user, $joinable ) = @_;
+   my ( $group_id, $user, $join_policy ) = @_;
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/joinable",
+      uri     => "/r0/groups/$group_id/settings/m.join_policy",
       content => {
-         joinable => $joinable ? JSON::true : JSON::false,
+         join_policy => $join_policy,
       },
    );
 }
