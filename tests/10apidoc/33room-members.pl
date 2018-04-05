@@ -31,7 +31,14 @@ test "POST /rooms/:room_id/join can join a room",
          uri    => "/r0/rooms/$room_id/join",
 
          content => {},
-      );
+      )->then( sub {
+         my ( $body ) = @_;
+
+         $body->{room_id} eq $room_id or
+            die "Expected 'room_id' to be $room_id";
+
+         Future->done(1);
+      });
    },
 
    check => sub {
