@@ -19,7 +19,7 @@ test "Joinability comes down summary",
          log_if_fail "Summary Body", $body;
 
          assert_json_keys( $body, qw( profile ) );
-         assert_eq( $body->{profile}->{join_policy}, "open" );
+         assert_eq( $body->{profile}->{is_openly_joinable}, JSON::true );
 
          matrix_set_group_join_policy( $group_id, $creator, "invite" );
       })->then( sub {
@@ -30,7 +30,7 @@ test "Joinability comes down summary",
          log_if_fail "Summary Body", $body;
 
          assert_json_keys( $body, qw( profile ) );
-         assert_eq( $body->{profile}->{join_policy}, "invite" );
+         assert_eq( $body->{profile}->{is_openly_joinable}, JSON::false );
 
          Future->done( 1 );
       });
