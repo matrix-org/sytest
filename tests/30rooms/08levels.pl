@@ -1,3 +1,4 @@
+use Future::Utils qw( try_repeat_until_success );
 use List::Util qw( first );
 
 # No harm in sharing the users as every test runs in its own room
@@ -60,7 +61,9 @@ sub test_powerlevel
                $levels->{users}{ $test_user->user_id } = 80;
             })
          })->then( sub {
-            $try->( $test_user, $room_id );
+            try_repeat_until_success {
+               $try->( $test_user, $room_id );
+            }
          })->on_done( sub {
             pass( "Succeeds at powerlevel 100" );
          })
@@ -85,10 +88,10 @@ test_powerlevel "'ban' event respects room powerlevel",
 ## test_powerlevel "'invite' event respects room powerlevel",
 ##    requires => [qw( test_user
 ##                     can_invite_room )],
-## 
+##
 ##    try => sub {
 ##       my ( $test_user, $room_id ) = @_;
-## 
+##
 ##       matrix_invite_user_to_room( $test_user, '@random-invitee:$BIND_HOST:8001', $room_id );
 ##    };
 

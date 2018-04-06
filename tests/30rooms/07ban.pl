@@ -1,3 +1,5 @@
+use Future::Utils qw( try_repeat_until_success );
+
 my $creator_fixture = local_user_fixture();
 
 my $banned_user_fixture = local_user_fixture();
@@ -25,8 +27,10 @@ test "Banned user is kicked and may not rejoin until unbanned",
          $body->{membership} eq "ban" or
             die "Expected banned user membership to be 'ban'";
 
-         matrix_join_room( $banned_user, $room_id )
-            ->main::expect_http_403;  # Must be unbanned first
+         retry_until_success {
+            matrix_join_room( $banned_user, $room_id )
+               ->main::expect_http_403;  # Must be unbanned first
+         }
       })->then( sub {
          do_request_json_for( $creator,
             method => "POST",
@@ -49,12 +53,14 @@ test "Banned user is kicked and may not rejoin until unbanned",
             content => { user_id => $banned_user->user_id },
          );
       })->then( sub {
-         do_request_json_for( $banned_user,
-            method => "POST",
-            uri    => "/r0/rooms/$room_id/join",
+         retry_until_success {
+            do_request_json_for( $banned_user,
+               method => "POST",
+               uri    => "/r0/rooms/$room_id/join",
 
-            content => {},
-         );
+               content => {},
+            )
+         }
       })
    };
 

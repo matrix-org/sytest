@@ -12,8 +12,9 @@ multi_test "Left room members do not cause problems for presence",
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_leave_room( $user2, $room_id )
-            ->SyTest::pass_on_done( "Left room" )
+         retry_until_success {
+            matrix_leave_room( $user2, $room_id )
+         }->SyTest::pass_on_done( "Left room" )
       })->then( sub {
 
          matrix_initialsync_room( $user1, $room_id );

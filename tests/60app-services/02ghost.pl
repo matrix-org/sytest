@@ -163,31 +163,42 @@ my $unregistered_as_user_localpart = "astest-02ghost-1";
 test "Ghost user must register before joining room",
    requires => [ $main::AS_USER[0], local_user_and_room_fixtures(), $main::HOMESERVER_INFO[0] ],
 
-   check => sub {
+   do => sub {
       my ( $as_user, undef, $room_id, $hs_info ) = @_;
+
+      my $user_id = "@".$unregistered_as_user_localpart.":".$hs_info->server_name;
 
       do_request_json_for( $as_user,
          method => "POST",
          uri    => "/r0/rooms/$room_id/join",
          params => {
-            user_id => "@".$unregistered_as_user_localpart.":".$hs_info->server_name,
+            user_id => $user_id,
          },
          content => {},
-      );
-   },
+      )->main::expect_http_403
+      ->then( sub {
+         do_request_json_for( $as_user,
+            method => "POST",
+            uri    => "/api/v1/register",
 
-   do => sub {
-      my ( $as_user, undef, $room_id ) = @_;
+            content => {
+               type => "m.login.application_service",
+               user => $unregistered_as_user_localpart,
+            },
+         );
+      })->then( sub {
+         retry_until_success {
+            do_request_json_for( $as_user,
+               method => "POST",
+               uri    => "/r0/rooms/$room_id/join",
+               params => {
+                  user_id => $user_id,
+               },
+               content => {},
+            )
+         }
+      })
 
-      do_request_json_for( $as_user,
-         method => "POST",
-         uri    => "/api/v1/register",
-
-         content => {
-            type => "m.login.application_service",
-            user => $unregistered_as_user_localpart,
-         },
-      );
    };
 
 

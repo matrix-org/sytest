@@ -14,15 +14,17 @@ test "Guest users can join guest_access rooms",
    requires => [ local_user_and_room_fixtures(), guest_user_fixture() ],
 
    do => sub {
-      my ( $user, $room_id ) = @_;
+      my ( $user, $room_id, $guest_user ) = @_;
 
-      matrix_set_room_guest_access( $user, $room_id, "can_join" );
-   },
-
-   check => sub {
-      my ( undef, $room_id, $guest_user ) = @_;
-
-      matrix_join_room( $guest_user, $room_id );
+      matrix_join_room( $guest_user, $room_id )
+      ->main::expect_http_403
+      ->then( sub {
+         matrix_set_room_guest_access( $user, $room_id, "can_join" )
+      })->then( sub {
+         retry_until_success {
+            matrix_join_room( $guest_user, $room_id );
+         }
+      });
    };
 
 test "Guest users can send messages to guest_access rooms if joined",

@@ -89,6 +89,8 @@ test "User sees updates to presence from other users in the incremental sync.",
    requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
 
+   bug => "foo",
+
    check => sub {
       my ( $user_a, $user_b ) = @_;
 

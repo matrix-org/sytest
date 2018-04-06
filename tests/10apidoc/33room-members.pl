@@ -26,36 +26,39 @@ test "POST /rooms/:room_id/join can join a room",
    do => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/rooms/$room_id/join",
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.member",
+         state_key => $user->user_id,
+      )->main::expect_http_403
+      ->then( sub {
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/rooms/$room_id/join",
 
-         content => {},
-      )->then( sub {
+            content => {},
+         )
+      })->then( sub {
          my ( $body ) = @_;
 
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
 
-         Future->done(1);
-      });
-   },
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-   check => sub {
-      my ( $user, $room_id, undef ) = @_;
+               $body->{membership} eq "join" or
+                  die "Expected membership to be 'join'";
 
-      matrix_get_room_state( $user, $room_id,
-         type      => "m.room.member",
-         state_key => $user->user_id,
-      )->then( sub {
-         my ( $body ) = @_;
-
-         $body->{membership} eq "join" or
-            die "Expected membership to be 'join'";
-
-         Future->done(1);
+               Future->done( 1 );
+            })
+         }
       });
    };
+
 
 push our @EXPORT, qw( matrix_join_room );
 
@@ -89,34 +92,31 @@ test "POST /join/:room_alias can join a room",
    do => sub {
       my ( $user, $room_id, $room_alias ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/join/$room_alias",
-
-         content => {},
-      )->then( sub {
-         my ( $body ) = @_;
-
-         $body->{room_id} eq $room_id or
-            die "Expected 'room_id' to be $room_id";
-
-         Future->done(1);
-      });
-   },
-
-   check => sub {
-      my ( $user, $room_id, undef ) = @_;
-
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
          state_key => $user->user_id,
-      )->then( sub {
-         my ( $body ) = @_;
+      )->main::expect_http_403
+      ->then( sub {
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/join/$room_alias",
 
-         $body->{membership} eq "join" or
-            die "Expected membership to be 'join'";
+            content => {},
+         )
+      })->then( sub {
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         Future->done(1);
+               $body->{membership} eq "join" or
+                  die "Expected membership to be 'join'";
+
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -127,35 +127,31 @@ test "POST /join/:room_id can join a room",
    do => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/join/$room_id",
-
-         content => {},
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( room_id ));
-         $body->{room_id} eq $room_id or
-            die "Expected 'room_id' to be $room_id";
-
-         Future->done(1);
-      });
-   },
-
-   check => sub {
-      my ( $user, $room_id, undef ) = @_;
-
       matrix_get_room_state( $user, $room_id,
          type      => "m.room.member",
          state_key => $user->user_id,
-      )->then( sub {
-         my ( $body ) = @_;
+      )->main::expect_http_403
+      ->then( sub {
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/join/$room_id",
 
-         $body->{membership} eq "join" or
-            die "Expected membership to be 'join'";
+            content => {},
+         )
+      })->then( sub {
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         Future->done(1);
+               $body->{membership} eq "join" or
+                  die "Expected membership to be 'join'";
+
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -177,10 +173,12 @@ test "POST /join/:room_id can join a room with custom content",
          assert_json_keys( $body, qw( room_id ) );
          assert_eq( $body->{room_id}, $room_id );
 
-         matrix_get_room_state( $user, $room_id,
-            type      => "m.room.member",
-            state_key => $user->user_id,
-         )
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )
+         }
       })->then( sub {
          my ( $body ) = @_;
 
@@ -212,10 +210,12 @@ test "POST /join/:room_alias can join a room with custom content",
          assert_json_keys( $body, qw( room_id ) );
          assert_eq( $body->{room_id}, $room_id );
 
-         matrix_get_room_state( $user, $room_id,
-            type      => "m.room.member",
-            state_key => $user->user_id,
-         )
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )
+         }
       })->then( sub {
          my ( $body ) = @_;
 
@@ -300,22 +300,20 @@ test "POST /rooms/:room_id/invite can send an invite",
          uri    => "/r0/rooms/$room_id/invite",
 
          content => { user_id => $invited_user->user_id },
-      );
-   },
-
-   check => sub {
-      my ( $creator, $invited_user, $room_id, undef ) = @_;
-
-      matrix_get_room_state( $creator, $room_id,
-         type      => "m.room.member",
-         state_key => $invited_user->user_id,
       )->then( sub {
-         my ( $body ) = @_;
+         retry_until_success {
+            matrix_get_room_state( $creator, $room_id,
+               type      => "m.room.member",
+               state_key => $invited_user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         $body->{membership} eq "invite" or
-            die "Expected membership to be 'invite'";
+               $body->{membership} eq "invite" or
+                  die "Expected membership to be 'invite'";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -363,22 +361,20 @@ test "POST /rooms/:room_id/ban can ban a user",
             user_id => $banned_user->user_id,
             reason  => "Just testing",
          },
-      );
-   },
-
-   check => sub {
-      my ( $creator, $banned_user, $room_id, undef ) = @_;
-
-      matrix_get_room_state( $creator, $room_id,
-         type      => "m.room.member",
-         state_key => $banned_user->user_id,
       )->then( sub {
-         my ( $body ) = @_;
+         retry_until_success {
+            matrix_get_room_state( $creator, $room_id,
+               type      => "m.room.member",
+               state_key => $banned_user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         $body->{membership} eq "ban" or
-            die "Expecting membership to be 'ban'";
+               $body->{membership} eq "ban" or
+                  die "Expecting membership to be 'ban'";
 
-         Future->done(1);
+               Future->done(1);
+            });
+         }
       });
    };
 

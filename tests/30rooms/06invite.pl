@@ -60,8 +60,9 @@ multi_test "Can invite users to invite-only rooms",
             return 1;
          })
       })->then( sub {
-         matrix_join_room( $invitee, $room_id )
-            ->SyTest::pass_on_done( "Joined room" )
+         retry_until_success{
+            matrix_join_room( $invitee, $room_id )
+         }->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
          matrix_get_room_state( $invitee, $room_id,
             type      => "m.room.member",
@@ -135,22 +136,24 @@ sub invited_user_can_reject_invite
 {
    my ( $invitee, $creator, $room_id ) = @_;
 
-   matrix_invite_user_to_room( $creator, $invitee, $room_id )
+   matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
    ->then( sub {
       matrix_leave_room( $invitee, $room_id )
    })->then( sub {
-      matrix_get_room_state( $creator, $room_id,
-         type      => "m.room.member",
-         state_key => $invitee->user_id,
-      );
-   })->then( sub {
-      my ( $body ) = @_;
+      retry_until_success {
+         matrix_get_room_state( $creator, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )->then( sub {
+            my ( $body ) = @_;
 
-      log_if_fail "Membership body", $body;
-      $body->{membership} eq "leave" or
-         die "Expected membership to be 'leave'";
+            log_if_fail "Membership body", $body;
+            $body->{membership} eq "leave" or
+               die "Expected membership to be 'leave'";
 
-      Future->done(1);
+            Future->done(1);
+         });
+      }
    })->then( sub {
       matrix_sync( $invitee )
    })->then( sub {
@@ -191,7 +194,9 @@ sub invited_user_can_reject_invite_for_empty_room
       matrix_leave_room( $creator, $room_id )
    })
    ->then( sub {
-      matrix_leave_room( $invitee, $room_id )
+      retry_until_success {
+         matrix_leave_room( $invitee, $room_id )
+      }
    })->then( sub {
       matrix_sync( $invitee )
    })->then( sub {
@@ -219,7 +224,9 @@ test "Invited user can reject local invite after originator leaves",
       ->then( sub {
          matrix_leave_room( $creator, $room_id );
       })->then( sub {
-         matrix_leave_room( $invitee, $room_id );
+         retry_until_success {
+            matrix_leave_room( $invitee, $room_id )
+         }
       })->then( sub {
          # there's nobody left who can look at the room state, but the
          # important thing is that a /sync for the invitee should not include

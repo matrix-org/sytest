@@ -42,25 +42,23 @@ test "Remote users can join room by alias",
 
             content => {},
          );
-      });
-   },
+      })->then( sub {
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-   check => sub {
-      my ( $user, $room_id, $room_alias ) = @_;
+               $body->{membership} eq "join" or
+                  die "Expected membership to be 'join'";
 
-      matrix_get_room_state( $user, $room_id,
-         type      => "m.room.member",
-         state_key => $user->user_id,
-      )->then( sub {
-         my ( $body ) = @_;
+               assert_json_keys( $body, qw( displayname avatar_url ) );
 
-         $body->{membership} eq "join" or
-            die "Expected membership to be 'join'";
-
-         assert_json_keys( $body, qw( displayname avatar_url ) );
-
-         Future->done(1);
-      });
+               Future->done(1);
+            })
+         }
+      })
    };
 
 test "New room members see their own join event",

@@ -34,6 +34,8 @@ test "Sync can be polled for updates",
 
          my $room = $body->{rooms}{join}{$room_id};
 
+         log_if_fail "Sync entry", $room;
+
          my $events = $room->{timeline}{events} or
             die "Expected an event timeline";
          @$events == 1 or

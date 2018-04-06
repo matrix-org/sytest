@@ -253,19 +253,21 @@ test "Alias creators can delete alias with no ops",
            content => {},
          )
       })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.aliases",
-            state_key => $server_name,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
+         retry_until_success {
+            matrix_get_room_state( $creator, $room_id,
+               type      => "m.room.aliases",
+               state_key => $server_name,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( aliases ) );
-         assert_json_list( my $aliases = $body->{aliases} );
+               assert_json_keys( $body, qw( aliases ) );
+               assert_json_list( my $aliases = $body->{aliases} );
 
-         none { $_ eq $room_alias } @$aliases or die "Expected alias to not be in list";
+               none { $_ eq $room_alias } @$aliases or die "Expected alias to not be in list";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       })
    };
 

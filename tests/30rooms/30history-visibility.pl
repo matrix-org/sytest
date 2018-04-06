@@ -300,18 +300,22 @@ foreach my $i (
       requires => [ local_user_and_room_fixtures(), $fixture->() ],
 
       do => sub {
-         my ( $user, $room_id ) = @_;
-
-         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-      },
-
-      check => sub {
          my ( $user, $room_id, $nonjoined_user ) = @_;
 
          do_request_json_for( $nonjoined_user,
             method => "GET",
             uri    => "/r0/rooms/$room_id/state/m.room.member/".$user->user_id,
-         );
+         )->main::expect_http_403
+         ->then( sub {
+            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+         })->then( sub {
+            retry_until_success {
+               do_request_json_for( $nonjoined_user,
+                  method => "GET",
+                  uri    => "/r0/rooms/$room_id/state/m.room.member/".$user->user_id,
+               )
+            }
+         })
       },
    );
 
@@ -397,7 +401,9 @@ foreach my $i (
          )->then( sub {
             matrix_join_room( $nonjoined_user, $room_id );
          })->then( sub {
-            matrix_leave_room( $nonjoined_user, $room_id );
+            retry_until_success {
+               matrix_leave_room( $nonjoined_user, $room_id );
+            }
          })->then( sub {
             do_request_json_for( $nonjoined_user,
                method => "GET",

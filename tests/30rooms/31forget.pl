@@ -154,11 +154,15 @@ test "Can re-join room if re-invited - history_visibility = shared",
       })->then( sub {
          matrix_forget_room( $user, $room_id );
       })->then( sub {
-         matrix_join_room( $user, $room_id )->main::expect_http_403;
+         retry_until_success {
+            matrix_join_room( $user, $room_id )->main::expect_http_403
+         };
       })->then( sub {
          matrix_invite_user_to_room( $creator, $user, $room_id );
       })->then( sub {
-         matrix_join_room( $user, $room_id );
+         retry_until_success {
+            matrix_join_room( $user, $room_id );
+         }
       })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 100 );
       })->then( sub {
@@ -214,11 +218,15 @@ test "Can re-join room if re-invited - history_visibility joined",
       })->then( sub {
          matrix_forget_room( $user, $room_id );
       })->then( sub {
-         matrix_join_room( $user, $room_id )->main::expect_http_403;
+         retry_until_success {
+            matrix_join_room( $user, $room_id )->main::expect_http_403;
+         }
       })->then( sub {
          matrix_invite_user_to_room( $creator, $user, $room_id );
       })->then( sub {
-         matrix_join_room( $user, $room_id );
+         retry_until_success {
+            matrix_join_room( $user, $room_id );
+         }
       })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 100 );
       })->then( sub {

@@ -85,7 +85,7 @@ test "Newly joined room is included in an incremental sync",
    check => sub {
       my ( $user ) = @_;
 
-      my ( $filter_id, $room_id );
+      my ( $filter_id, $room_id, $event_id );
 
       my $filter = { room => { timeline => { limit => 10 } } };
 
@@ -98,21 +98,32 @@ test "Newly joined room is included in an incremental sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_sync_again( $user, filter => $filter_id);
+         log_if_fail "room", $room_id;
+
+         matrix_send_room_text_message_synced( $user, $room_id, body => "test" );
+      })->then( sub {
+         ( $event_id ) = @_;
+
+         await_sync_timeline_contains( $user, $room_id, check => sub {
+            my ( $event ) = @_;
+
+            return unless $event->{event_id} eq $event_id;
+            return 1;
+         });
+      })->then( sub {
+         matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
-         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         assert_json_keys( $room->{state}, qw( events ));
-         assert_json_keys( $room->{ephemeral}, qw( events ));
+         log_if_fail "First room entry", $room;
 
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
+         log_if_fail "Second room entry", $room;
          (!defined $room) or die "Unchanged rooms shouldn't be in the sync response";
 
          Future->done(1)
