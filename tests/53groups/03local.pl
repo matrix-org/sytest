@@ -96,7 +96,7 @@ test "Remove other from local group",
    };
 
 
-push our @EXPORT, qw( matrix_invite_group_user matrix_accept_group_invite matrix_get_joined_groups matrix_leave_group );
+push our @EXPORT, qw( matrix_invite_group_user matrix_accept_group_invite matrix_get_joined_groups matrix_leave_group matrix_join_group );
 
 
 =head2 matrix_invite_group_user
@@ -158,6 +158,26 @@ sub matrix_accept_group_invite
    do_request_json_for( $user,
       method  => "PUT",
       uri     => "/r0/groups/$group_id/self/accept_invite",
+      content => {},
+   );
+}
+
+
+=head2 matrix_join_group
+
+   matrix_join_group( $group_id, $user )
+
+Join a group
+
+=cut
+
+sub matrix_join_group
+{
+   my ( $group_id, $user ) = @_;
+
+   do_request_json_for( $user,
+      method  => "PUT",
+      uri     => "/r0/groups/$group_id/self/join",
       content => {},
    );
 }
