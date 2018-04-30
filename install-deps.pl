@@ -37,10 +37,14 @@ sub requires
    # somehow in PERL_{MB,MM}_OPT
 
    if( !$DRYRUN ) {
-      system( $^X, "-MCPAN", "-e", qq(install "$mod") ) == 0 and return;
+      # cpan returns zero even if installation fails, so we double-check
+      # that the module is installed after running it.
+      system( $^X, "-MCPAN", "-e", qq(install "$mod") ) == 0 and
+         is_installed( $mod, $ver ) and
+         return;
 
       print STDERR "Failed to install $mod\n";
-      exit $? >> 8;
+      exit 1;
    }
    else {
       print qq($^X -MCPAN -e 'install "$mod"'\n);
