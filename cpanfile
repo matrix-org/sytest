@@ -1,5 +1,8 @@
 # vim:ft=perl
 
+# Sodium won't install without this.
+requires 'Alien::Base::ModuleBuild';
+
 requires 'Class::Method::Modifiers';
 requires 'Data::Dump';
 requires 'DBD::Pg';
