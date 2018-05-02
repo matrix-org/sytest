@@ -183,6 +183,8 @@ test "Inbound federation can receive room-join requests",
             origin_server_ts => $inbound_server->time_ms,
          );
 
+         $datastore->sign_event( \%event );
+
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $first_home_server,
