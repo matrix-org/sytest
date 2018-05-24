@@ -222,14 +222,9 @@ test "Getting messages going forward is limited for a departed room (SPEC-216)",
     check => sub {
         my ( $user, $room_id ) = @_;
 
-        # TODO: The "t10000-0_0_0_0" token format is synapse specific.
-        #  However there isn't a way in the matrix C-S protocol to learn the
-        #  latest token for a room that you aren't in. It may be necessary
-        #  to add some extra APIs to matrix for learning this sort of thing for
-        #  testing security.
         matrix_get_room_messages( $user, $room_id,
             limit => 2,
-            to    => "t10000-0_0_0_0",
+            dir   => 'f',
         )->then( sub {
             my ( $body ) = @_;
 
