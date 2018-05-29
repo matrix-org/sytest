@@ -1,5 +1,8 @@
 # vim:ft=perl
 
+# Sodium won't install without this.
+requires 'Alien::Base::ModuleBuild';
+
 requires 'Class::Method::Modifiers';
 requires 'Data::Dump';
 requires 'DBD::Pg';
@@ -15,6 +18,12 @@ requires 'IO::Async::SSL';
 requires 'IO::Socket::IP', '>= 0.04';
 requires 'IO::Socket::SSL';
 requires 'JSON';
+
+# We don't have a hard dep on JSON::PP (JSON::XS would be fine), but
+# JSON::PP 2.274 incorrectly encodes JSON::Number(0) as "0", so we don't
+# want to end up using that by accident
+requires 'JSON::PP', '>= 2.91';
+
 requires 'List::Util', '>= 1.45';
 requires 'List::UtilsBy', '>= 0.10';
 requires 'MIME::Base64';

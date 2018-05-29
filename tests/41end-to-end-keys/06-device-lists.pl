@@ -317,7 +317,7 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
-         matrix_leave_room( $remote_leaver, $room_id )
+         matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
          matrix_put_e2e_keys( $remote_leaver, device_keys => { updated => "keys" } )
       })->then( sub {
