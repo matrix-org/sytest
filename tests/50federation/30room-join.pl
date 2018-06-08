@@ -2,6 +2,57 @@ use List::UtilsBy qw( partition_by extract_by );
 
 use SyTest::Federation::Room;
 
+my %STATE_EVENT_TYPES = map {$_=>1} qw (
+   m.room.create
+   m.room.member
+   m.room.power_levels
+   m.room.join_levels
+   m.room.history_visibility
+);
+
+# check that the given event is valid
+# (ideally would check that it is correctly signed and hashed, but that is TODO)
+sub assert_is_valid_pdu {
+   my ( $event ) = @_;
+
+   assert_json_keys( $event, qw(
+      auth_events content depth event_id hashes origin origin_server_ts
+      prev_events room_id sender signatures type
+   ));
+
+   assert_json_list( $event->{auth_events} );
+   assert_json_number( $event->{depth} );
+   assert_json_string( $event->{event_id} );
+   assert_json_object( $event->{hashes} );
+
+   assert_json_string( $event->{origin} );
+
+   assert_json_number( $event->{origin_server_ts} );
+   assert_json_list( $event->{prev_events} );
+
+   assert_json_string( $event->{room_id} );
+   assert_json_string( $event->{sender} );
+   assert_json_object( $event->{signatures} );
+   assert_json_string( $event->{type} );
+
+   # for event types which are known to be state events, check that they
+   # have the relevant keys
+   if ( $STATE_EVENT_TYPES{ $event->{type} }) {
+      # XXX richvdh: I'm unconvinced prev_state is required here - I think
+      # it's deprecated. It's certainly not mentioned in the spec.
+      assert_json_keys( $event, qw(
+         state_key prev_state
+      ));
+
+      assert_json_string( $event->{state_key} );
+      assert_json_list( $event->{prev_state} );
+   }
+
+   # TODO: Check signatures and hashes
+}
+push our @EXPORT, qw( assert_is_valid_pdu );
+
+
 test "Outbound federation can send room-join requests",
    requires => [ local_user_fixture(), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
@@ -213,32 +264,9 @@ test "Inbound federation can receive room-join requests",
          log_if_fail "Auth chain", \@auth_chain;
 
          foreach my $event ( @auth_chain ) {
-            assert_json_keys( $event, qw(
-               auth_events content depth event_id hashes origin origin_server_ts
-               prev_events prev_state room_id sender signatures state_key type
-            ));
-
-            assert_json_list( $event->{auth_events} );
-            assert_json_number( $event->{depth} );
-            assert_json_string( $event->{event_id} );
-            assert_json_object( $event->{hashes} );
-
-            assert_json_string( $event->{origin} );
-
-            assert_json_number( $event->{origin_server_ts} );
-            assert_json_list( $event->{prev_events} );
-            assert_json_list( $event->{prev_state} );
-
-            assert_json_string( $event->{room_id} );
+            assert_is_valid_pdu( $event );
             $event->{room_id} eq $room_id or
                die "Expected auth_event room_id to be $room_id";
-
-            assert_json_string( $event->{sender} );
-            assert_json_object( $event->{signatures} );
-            assert_json_string( $event->{state_key} );
-            assert_json_string( $event->{type} );
-
-            # TODO: Check signatures of every auth event
          }
 
          # Annoyingly, the "auth chain" isn't specified to arrive in any
