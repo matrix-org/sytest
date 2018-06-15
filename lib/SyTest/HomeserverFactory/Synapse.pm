@@ -102,6 +102,15 @@ sub create_server
    return $self->{impl}->new( %params );
 }
 
+sub get_critical_tests
+{
+   return (
+       'POST [^ ]+ register can create a user',
+       'POST /createRoom makes a public room',
+       'POST /rooms/:room_id/join can join a room',
+       'POST /rooms/:room_id/leave can leave a room'
+   );
+}
 
 package SyTest::HomeserverFactory::Synapse::ViaDendron;
 use base qw( SyTest::HomeserverFactory::Synapse );

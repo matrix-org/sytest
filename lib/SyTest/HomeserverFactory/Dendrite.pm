@@ -73,4 +73,11 @@ sub create_server
    return $self->{impl}->new( %params );
 }
 
+sub get_critical_tests
+{
+   return (
+
+   );
+}
+
 1;
