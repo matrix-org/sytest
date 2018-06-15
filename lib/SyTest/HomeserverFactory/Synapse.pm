@@ -105,10 +105,10 @@ sub create_server
 sub get_critical_tests
 {
    return (
-       'POST [^ ]+ register can create a user',
+       'POST \S+ register can create a user',
        'POST /createRoom makes a public room',
        'POST /rooms/:room_id/join can join a room',
-       'POST /rooms/:room_id/leave can leave a room'
+       'POST /rooms/:room_id/leave can leave a room',
    );
 }
 
