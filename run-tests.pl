@@ -788,6 +788,11 @@ $OUTPUT->status(
 # Now run the tests
 my $prev_filename;
 foreach my $test ( @TESTS ) {
+   # Check if the current homeserver has chosen to run this test
+   if( grep { $test->name !~ m/$_/ } $HS_FACTORY->get_tests() ) {
+      next;
+   }
+
    if( !$prev_filename or $prev_filename ne $test->file ) {
       $OUTPUT->run_file( $prev_filename = $test->file );
    }

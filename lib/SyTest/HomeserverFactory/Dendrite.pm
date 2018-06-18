@@ -73,6 +73,15 @@ sub create_server
    return $self->{impl}->new( %params );
 }
 
+# Tests to run for Dendrite defined by array of regexes
+sub get_tests
+{
+   return (
+       '.*',
+   );
+}
+
+# Critical tests for Dendrite defined by array of regexes
 sub get_critical_tests
 {
    return (
