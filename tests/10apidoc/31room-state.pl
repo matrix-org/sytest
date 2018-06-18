@@ -433,6 +433,52 @@ sub matrix_get_room_state
    );
 }
 
+=head2 matrix_get_room_state_by_type
+
+    matrix_get_room_state_by_type( $user, $room_id, %opts )->then( sub {
+       my ( $state ) = @_;
+       my $event = $state->{'m.room.member'}->{$user_id};
+    });
+
+Makes a /room/<room_id>/state request. Returns a map from type to state_key to
+event.
+
+The following may be passed as optional parameters:
+
+=over
+
+=item type => STRING
+
+the type of state to fetch
+
+=item state_key => STRING
+
+the state_key to fetch
+
+=cut
+
+sub matrix_get_room_state_by_type
+{
+   my ( $user, $room_id, %opts ) = @_;
+   matrix_get_room_state( $user, $room_id, %opts ) -> then( sub {
+      my ( $state ) = @_;
+
+      my %state_by_type;
+      for my $ev (@$state) {
+         my $type = $ev->{type};
+         my $state_key = $ev->{state_key};
+         $state_by_type{$type} //= {};
+
+         die "duplicate state key $type:$state_key in /state response"
+            if exists $state_by_type{$type}->{$state_key};
+
+         $state_by_type{$type}->{$state_key} = $ev;
+      }
+      Future->done( \%state_by_type );
+   });
+}
+push @EXPORT, qw( matrix_get_room_state_by_type );
+
 sub matrix_put_room_state
 {
    my ( $user, $room_id, %opts ) = @_;
