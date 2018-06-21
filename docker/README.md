@@ -38,3 +38,9 @@ docker run --rm -it -v /path/to/sytest:/src/sytest -v /path/to/synapse:/src/syna
 Then at the prompt, `cd /src/sytest` and then you can run `./run-tests.pl` and
 iterate developing a new test or modifying an existing test using your
 favourite editor on your host.
+
+#### Windows as a Docker host
+
+If you're using Windows as your Docker host you may need to `apt-get install dos2unix` and run
+it on the applicable script (eg: `dos2unix run-tests.pl`). If you're getting "No such file or
+directory" when running something, try fixing it with dos2unix first.
