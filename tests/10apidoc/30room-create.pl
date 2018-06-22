@@ -163,6 +163,88 @@ test "POST /createRoom makes a room with a topic",
       });
    };
 
+test "POST /createRoom makes a room with guest access enabled",
+   requires => [ $user_fixture, local_user_fixture(),
+                 qw( can_create_private_room )],
+
+   proves => [qw( can_createroom_with_guest_access )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for( $user,
+         method => "POST",
+         uri    => "/r0/createRoom",
+
+         content => {
+            guest_can_join => JSON::true
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( room_id ));
+         assert_json_nonempty_string( $body->{room_id} );
+
+         my ( $room_id ) = $body->{room_id};
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/state/m.room.guest_access",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "state", $state;
+
+         assert_json_keys( $state, qw( guest_access ));
+         assert_json_nonempty_string( $state->{guest_access} );
+         assert_eq( $state->{guest_access}, "can_join", "room guest access policy" );
+
+         Future->done(1);
+      });
+   };
+
+test "POST /createRoom makes a room with guest access disabled",
+   requires => [ $user_fixture, local_user_fixture(),
+                 qw( can_create_private_room )],
+
+   proves => [qw( can_createroom_with_guest_access )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for( $user,
+         method => "POST",
+         uri    => "/r0/createRoom",
+
+         content => {
+            guest_can_join => JSON::false
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( room_id ));
+         assert_json_nonempty_string( $body->{room_id} );
+
+         my ( $room_id ) = $body->{room_id};
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/state/m.room.guest_access",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "state", $state;
+
+         assert_json_keys( $state, qw( guest_access ));
+         assert_json_nonempty_string( $state->{guest_access} );
+         assert_eq( $state->{guest_access}, "forbidden", "room guest access policy" );
+
+         Future->done(1);
+      });
+   };
+
 test "Can /sync newly created room",
    requires => [ $user_fixture ],
 
