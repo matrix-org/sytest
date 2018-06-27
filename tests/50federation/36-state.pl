@@ -164,7 +164,7 @@ test "Outbound federation requests /state_ids and correctly handles 404",
          );
        })->then( sub {
 	  my @futureresults = @_;
-	  if (@futureresults[1]->is_failed eq 0) { die "Should have failed"}
+	  if ($futureresults[1]->is_failed eq 0) { die "Should have failed"}
 
 	  Future->done(1);
       })->then_done(1);
