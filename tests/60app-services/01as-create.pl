@@ -13,7 +13,7 @@ test "AS can create a user",
          uri    => "/r0/register",
 
          content => {
-            user => "astest-01create-0-$TEST_RUN_ID",
+            username => "astest-01create-0-$TEST_RUN_ID",
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -37,7 +37,7 @@ test "AS can create a user with inhibit_locin",
          uri    => "/r0/register",
 
          content => {
-            user => "astest-01create-1-$TEST_RUN_ID",
+            username => "astest-01create-1-$TEST_RUN_ID",
             inhibit_login => 1,
          },
       )->then( sub {
@@ -66,7 +66,7 @@ test "AS can create a user via the legacy /v1 endpoint",
 
          content => {
             type => "m.login.application_service",
-            user => "astest-01create-2-$TEST_RUN_ID",
+            username => "astest-01create-2-$TEST_RUN_ID",
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -130,7 +130,7 @@ test "AS cannot create users outside its own namespace",
          uri    => "/r0/register",
 
          content => {
-            user => "a-different-user",
+            username => "a-different-user",
          }
       )->main::expect_http_4xx;
    };
@@ -247,7 +247,7 @@ sub matrix_register_as_ghost
       uri    => "/r0/register",
 
       content => {
-         user => $user_id,
+         username => $user_id,
       }
    )->then( sub {
       my ( $body ) = @_;
