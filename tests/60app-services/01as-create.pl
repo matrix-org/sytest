@@ -26,7 +26,7 @@ test "AS can create a user",
       });
    };
 
-test "AS can create a user with inhibit_locin",
+test "AS can create a user with inhibit_login",
    requires => [ $main::AS_USER[0], $room_fixture ],
 
    do => sub {
