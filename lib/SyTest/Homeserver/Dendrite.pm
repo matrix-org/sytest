@@ -126,9 +126,16 @@ sub _get_config
       database => {
          map { $_ => $db_uri } qw(
             account device media_api sync_api room_server server_key
-            federation_sender public_rooms_api naffka
+            federation_sender public_rooms_api appservice naffka
          ),
       },
+
+      application_services => {
+        config_files => [
+            '/home/user/code/sytest/server-0/appserv-0.yaml',
+            '/home/user/code/sytest/server-0/appserv-1.yaml',
+        ]
+      }
    );
 }
 
