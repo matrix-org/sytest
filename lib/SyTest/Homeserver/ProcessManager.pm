@@ -79,7 +79,7 @@ sub _start_process
 
    my $fut = $self->loop->new_future;
 
-   my $proc_info = ProcessInfo( undef, $fut, [], 0 );
+   my $proc_info = ProcessInfo( undef, $fut, [], 1 );
 
    my $on_output = sub {
       my ( $stream, $buffref, $eof ) = @_;
