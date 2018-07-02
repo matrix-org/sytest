@@ -79,46 +79,6 @@ test "AS can create a user via the legacy /v1 endpoint",
       });
    };
 
-# XXX this is completely unspecced. Why are we even bothering to test it?
-test "AS can create a user via the unspecced /createUser endpoint",
-   requires => [ $main::AS_USER[0], $main::API_CLIENTS[0] ],
-
-   do => sub {
-      my ( $as_user, $http ) = @_;
-
-      do_request_json_for( $as_user,
-         method => "POST",
-         uri    => "/unstable/createUser",
-
-         content => {
-            localpart        => "user_localpart",
-            displayname      => "user_displayname",
-            duration_seconds => 200,
-         }
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( access_token user_id  home_server ));
-
-         my $user = new_User(
-            http         => $http,
-            user_id      => $body->{user_id},
-            access_token => $body->{access_token},
-         );
-
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/r0/profile/:user_id/displayname",
-         )}
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_eq( $body->{displayname}, qw( user_displayname ));
-
-         Future->done(1);
-      });
-   };
-
 test "AS cannot create users outside its own namespace",
    requires => [ $main::AS_USER[0] ],
 
