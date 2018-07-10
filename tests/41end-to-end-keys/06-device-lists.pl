@@ -192,7 +192,7 @@ test "Can query remote device keys using POST after notification",
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
-         matrix_put_e2e_keys( $user2 )
+         matrix_put_e2e_keys( $user2 );
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
@@ -227,6 +227,163 @@ test "Can query remote device keys using POST after notification",
          # TODO: Check that the content matches what we uploaded.
 
          assert_eq( $alice_device_keys->{"unsigned"}->{"device_display_name"},
+                    "test display name" );
+
+         Future->done(1)
+      });
+   };
+
+test "See devices for invited users via /keys/query",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_upload_e2e_keys )],
+
+   check => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $room_id;
+
+      matrix_create_room( $user1 )->then( sub {
+         ( $room_id ) = @_;
+         matrix_put_e2e_keys( $user2 );
+      })->then( sub {
+         matrix_sync( $user1 );
+      })->then( sub {
+         matrix_invite_user_to_room( $user1, $user2, $room_id )
+      # })->then( sub {
+      #    # KNOWN BROKEN:
+      #    # We'd expect to get told via the devicelist at this point that the
+      #    # invited user's devices have been added.
+      #    sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         do_request_json_for( $user1,
+            method  => "POST",
+            uri     => "/unstable/keys/query",
+            content => {
+               device_keys => {
+                  $user2->user_id => {}
+               }
+            }
+         )
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "key query content", $content;
+
+         assert_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         assert_json_keys( $device_keys, $user2->user_id );
+
+         my $user2_keys = $device_keys->{ $user2->user_id };
+         assert_json_keys( $user2_keys, $user2->device_id );
+
+         my $user2_device_keys = $user2_keys->{ $user2->device_id };
+
+         assert_ok( !defined $user2_device_keys->{"unsigned"}->{"device_display_name"} );
+
+         matrix_set_device_display_name( $user2, $user2->device_id, "test display name" ),
+      # })->then( sub {
+      #    # KNOWN BROKEN: we should get an update from the invited user when they
+      #    # update their devices, but we don't because of
+      #    # https://github.com/vector-im/riot-web/issues/2713#issuecomment-402989021
+      #    sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         do_request_json_for( $user1,
+            method  => "POST",
+            uri     => "/unstable/keys/query",
+            content => {
+               device_keys => {
+                  $user2->user_id => {}
+               }
+            }
+         )
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "key query content", $content;
+
+         assert_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         assert_json_keys( $device_keys, $user2->user_id );
+
+         my $user2_keys = $device_keys->{ $user2->user_id };
+         assert_json_keys( $user2_keys, $user2->device_id );
+
+         my $user2_device_keys = $user2_keys->{ $user2->device_id };
+
+         assert_eq( $user2_device_keys->{"unsigned"}->{"device_display_name"},
+                    "test display name" );
+
+         Future->done(1);
+      });
+   };
+
+broken_test "Get notified for remote devices in /sync for invited users",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_upload_e2e_keys )],
+
+   bug => "synapse#3503",
+
+   check => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $room_id;
+
+      matrix_create_room( $user1 )->then( sub {
+         ( $room_id ) = @_;
+         matrix_put_e2e_keys( $user2 );
+      })->then( sub {
+         matrix_sync( $user1 );
+      })->then( sub {
+         matrix_invite_user_to_room( $user1, $user2, $room_id )
+      # })->then( sub {
+      #    # KNOWN BROKEN:
+      #    # We'd expect to get told via the devicelist at this point that the
+      #    # invited user's devices have been added.
+      #    sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         # check whether device changes get pushed for invited users before they join
+         matrix_set_device_display_name( $user2, $user2->device_id, "test display name" ),
+      # })->then( sub {
+      #    # KNOWN BROKEN: we should get an update from the invited user when they
+      #    # update their devices, but we don't because of
+      #    # https://github.com/vector-im/riot-web/issues/2713#issuecomment-402989021
+      #    sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         do_request_json_for( $user1,
+            method  => "POST",
+            uri     => "/unstable/keys/query",
+            content => {
+               device_keys => {
+                  $user2->user_id => {}
+               }
+            }
+         )
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "key query content", $content;
+
+         assert_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         assert_json_keys( $device_keys, $user2->user_id );
+
+         my $user2_keys = $device_keys->{ $user2->user_id };
+         assert_json_keys( $user2_keys, $user2->device_id );
+
+         my $user2_device_keys = $user2_keys->{ $user2->device_id };
+
+         assert_eq( $user2_device_keys->{"unsigned"}->{"device_display_name"},
                     "test display name" );
 
          Future->done(1)

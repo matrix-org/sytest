@@ -737,8 +737,9 @@ TEST: {
 
          no warnings 'once';
 
-         local *test       = sub { _push_test( $filename, 0, @_ ); };
-         local *multi_test = sub { _push_test( $filename, 1, @_ ); };
+         local *test        = sub { _push_test( $filename, 0, @_ ); };
+         local *multi_test  = sub { _push_test( $filename, 1, @_ ); };
+         local *broken_test = sub {};
 
          # Slurp and eval() the file instead of do() because then lexical
          # environment such as strict/warnings will still apply
