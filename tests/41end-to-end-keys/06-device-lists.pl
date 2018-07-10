@@ -250,7 +250,7 @@ test "See devices for invited users via /keys/query",
       })->then( sub {
          matrix_invite_user_to_room( $user1, $user2, $room_id )
       # })->then( sub {
-      #    # KNOWN BROKEN:
+      #    # KNOWN BROKEN: (https://github.com/matrix-org/synapse/issues/3503)
       #    # We'd expect to get told via the devicelist at this point that the
       #    # invited user's devices have been added.
       #    sync_until_user_in_device_list( $user1, $user2 );
@@ -285,7 +285,7 @@ test "See devices for invited users via /keys/query",
       # })->then( sub {
       #    # KNOWN BROKEN: we should get an update from the invited user when they
       #    # update their devices, but we don't because of
-      #    # https://github.com/vector-im/riot-web/issues/2713#issuecomment-402989021
+      #    # https://github.com/matrix-org/synapse/issues/3504
       #    sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
          matrix_join_room( $user2, $room_id );
@@ -342,7 +342,7 @@ broken_test "Get notified for remote devices in /sync for invited users",
       })->then( sub {
          matrix_invite_user_to_room( $user1, $user2, $room_id )
       # })->then( sub {
-      #    # KNOWN BROKEN:
+      #    # KNOWN BROKEN (https://github.com/matrix-org/synapse/issues/3503)
       #    # We'd expect to get told via the devicelist at this point that the
       #    # invited user's devices have been added.
       #    sync_until_user_in_device_list( $user1, $user2 );
@@ -352,7 +352,7 @@ broken_test "Get notified for remote devices in /sync for invited users",
       # })->then( sub {
       #    # KNOWN BROKEN: we should get an update from the invited user when they
       #    # update their devices, but we don't because of
-      #    # https://github.com/vector-im/riot-web/issues/2713#issuecomment-402989021
+      #    # https://github.com/matrix-org/synapse/issues/3504
       #    sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
          matrix_join_room( $user2, $room_id );
