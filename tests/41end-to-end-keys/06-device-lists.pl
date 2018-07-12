@@ -1,5 +1,5 @@
 use Future::Utils qw( try_repeat_until_success );
-use Devel::StackTrace;
+#use Devel::StackTrace;
 
 sub is_user_in_changed_list
 {
@@ -22,8 +22,8 @@ sub sync_until_user_in_device_list
 
    my $wait_for_id = $user_to_wait_for->user_id;
 
-   my $trace = Devel::StackTrace->new(no_args => 1);
-   log_if_fail $trace->frame(1)->as_string();
+   # my $trace = Devel::StackTrace->new(no_args => 1);
+   # log_if_fail $trace->frame(1)->as_string();
 
    $msg = "$msg: waiting for $wait_for_id in $device_list";
 
