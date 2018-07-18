@@ -8,9 +8,11 @@ test "Can read configuration endpoint",
             full_uri => "/_matrix/media/r0/config",
         )->then( sub {
             my ( $body, $response ) = @_;
-                
-            assert_json_keys( $body, qw( m.upload.size ) );
-            #TODO: We should probably check the size is correct.
+
+            # TODO: Check size is correct
+            if ( defined $body->{"m.upload.size"} ) {
+                assert_json_number( $body->{"m.upload.size"} )
+            }
             
             Future->done(1);
         });
