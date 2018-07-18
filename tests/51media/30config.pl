@@ -3,11 +3,11 @@ test "Can read configuration endpoint",
 
    check => sub {
         my ( $http ) = @_;
-        $http->do_request(
+        $http->do_request_json(
             method   => "GET",
             full_uri => "/_matrix/media/r0/config",
         )->then( sub {
-            my ( $body, $response ) = @_;
+            my ( $body ) = @_;
 
             # TODO: Check size is correct
             if ( defined $body->{"m.upload.size"} ) {
