@@ -227,9 +227,9 @@ sub matrix_register_user
    });
 }
 
-shared_secret_tests( "/r0/register", \&matrix_r0_register_user_via_secret);
+shared_secret_tests( "/r0/admin/register", \&matrix_admin_register_user_via_secret);
 
-sub matrix_r0_register_user_via_secret
+sub matrix_admin_register_user_via_secret
 {
    my ( $http, $uid, %opts ) = @_;
 
@@ -239,22 +239,30 @@ sub matrix_r0_register_user_via_secret
    defined $uid or
       croak "Require UID for matrix_register_user_via_secret";
 
-   my $mac = hmac_sha1_hex(
-      join( "\0", $uid, $password, $is_admin ? "admin" : "notadmin" ),
-      "reg_secret"
-   );
-
    $http->do_request_json(
+      method => "GET",
+      uri    => "/r0/admin/register",
+   )->then(sub{
+      my ( $nonce ) = @_;
+
+      my $mac = hmac_sha1_hex(
+      join("\0", $nonce->{nonce}, $uid, $password, $is_admin ? "admin" : "notadmin" ),
+      "reg_secret"
+      );
+
+      return $http->do_request_json(
       method => "POST",
-      uri    => "/r0/register",
+      uri    => "/r0/admin/register",
 
       content => {
+        nonce => $nonce->{nonce},
         username => $uid,
         password => $password,
         admin    => $is_admin ? JSON::true : JSON::false,
         mac      => $mac,
       },
-   )->then( sub {
+      )
+   })->then( sub {
       my ( $body ) = @_;
 
       assert_json_keys( $body, qw( user_id access_token ));
@@ -374,7 +382,7 @@ sub local_admin_fixture
       setup => sub {
          my ( $http, $localpart ) = @_;
 
-         matrix_r0_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
+         matrix_admin_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
       },
    );
 }
