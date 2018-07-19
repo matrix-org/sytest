@@ -774,11 +774,13 @@ TEST: {
 my $done_count = 0;
 my $failed_count = 0;
 my $expected_fail_count = 0;
+my $passed_count = 0;
 my $skipped_count = 0;
 
 $OUTPUT->status(
    tests   => scalar @TESTS,
    done    => $done_count,
+   passed  => $passed_count,
    failed  => $failed_count,
    skipped => $skipped_count,
 );
@@ -803,6 +805,10 @@ foreach my $test ( @TESTS ) {
 
    $done_count++;
 
+   if( $t->passed ) {
+      $passed_count++;
+   }
+
    if( $t->skipped ) {
       $skipped_count++;
    }
@@ -823,6 +829,7 @@ foreach my $test ( @TESTS ) {
    $OUTPUT->status(
       tests   => scalar @TESTS,
       done    => $done_count,
+      passed  => $passed_count,
       failed  => $failed_count,
       skipped => $skipped_count,
    );
@@ -869,7 +876,7 @@ if( $failed_count ) {
    exit 1;
 }
 else {
-   $OUTPUT->final_pass( $expected_fail_count, $skipped_count );
+   $OUTPUT->final_pass( $expected_fail_count, $passed_count, $skipped_count );
    exit 0;
 }
 

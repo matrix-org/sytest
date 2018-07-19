@@ -84,7 +84,7 @@ The 'Service' parameter that the homeserver should send to the mock CAS server.
 
 =head2 app_service_config_files => ARRAY
 
-An array of paths to appservice YAML files to ve included in the homeserver's
+An array of paths to appservice YAML files to be included in the homeserver's
 configuration.
 
 =head1 SUBCLASS METHODS

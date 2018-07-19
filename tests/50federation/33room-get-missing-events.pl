@@ -99,61 +99,108 @@ test "Outbound federation can request missing events",
       });
    };
 
-test "Inbound federation can return missing events",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
-                 federation_user_id_fixture() ],
+foreach my $vis (qw( world_readable shared invite joined )) {
+   test "Inbound federation can return missing events for $vis visibility",
+      requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+                    local_user_and_room_fixtures(),
+                    federation_user_id_fixture() ],
 
-   do => sub {
-      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      do => sub {
+         my ( $outbound_client, $info, $creator, $room_id, $user_id ) = @_;
+         my $first_home_server = $info->server_name;
 
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $user_id,
-      )->then( sub {
-         my ( $room ) = @_;
+         # start by making the room sekret
+         matrix_set_room_history_visibility(
+            $creator, $room_id, $vis
+         )->then( sub {
+            # send a message
+            matrix_send_room_text_message( $creator, $room_id, body => "1" )
+         })->then( sub {
+            $outbound_client->join_room(
+               server_name => $first_home_server,
+               room_id     => $room_id,
+               user_id     => $user_id,
+            )
+         })->then( sub {
+            my ( $room ) = @_;
 
-         # Find two event IDs that there's going to be something missing
-         # inbetween. Say, any history between the room's creation and my own
-         # joining of it.
+            # Find two event IDs that there's going to be something missing
+            # inbetween. Say, any history between the room's creation and my own
+            # joining of it.
 
-         my $creation_event = $room->get_current_state_event( "m.room.create" );
+            my $creation_event = $room->get_current_state_event( "m.room.create" );
+            my $member_event = $room->get_current_state_event(
+               "m.room.member", $user_id
+            );
 
-         my $member_event = $room->get_current_state_event(
-            "m.room.member", $user_id
-         );
+            $outbound_client->do_request_json(
+               method   => "POST",
+               hostname => $first_home_server,
+               uri      => "/get_missing_events/" . $room->room_id,
 
-         $outbound_client->do_request_json(
-            method   => "POST",
-            hostname => $first_home_server,
-            uri      => "/get_missing_events/" . $room->room_id,
+               content => {
+                  earliest_events => [ $creation_event->{event_id} ],
+                  latest_events   => [ $member_event->{event_id} ],
+                  limit           => 10,
 
-            content => {
-               earliest_events => [ $creation_event->{event_id} ],
-               latest_events   => [ $member_event->{event_id} ],
-               limit           => 10,
-               min_depth       => 1,  # TODO(paul): find out what this is for
-            },
-         );
-      })->then( sub {
-         my ( $result ) = @_;
-         log_if_fail "missing events result", $result;
+                  # XXX: min_depth requests the remote server to filter by depth
+                  # (it will only return events with depth >= the given value),
+                  # but that sounds (a) dangerous and (b) pointless.
+                  min_depth       => 1,
+               },
+            );
+         })->then( sub {
+            my ( $result ) = @_;
+            log_if_fail "get_missing_events result", $result;
 
-         assert_json_keys( $result, qw( events ));
-         assert_json_list( my $events = $result->{events} );
+            assert_json_keys( $result, qw( events ));
+            assert_json_list( my $events = $result->{events} );
 
-         # Just check that they all look like events.
-         # TODO(paul): Some stronger assertions that these are the /correct/
-         #   events that we actually asked for
-         foreach my $event ( @$events ) {
-            assert_json_keys( $event, qw( type event_id room_id ));
+            # check that they all look like events
+            foreach my $event ( @$events ) {
+               assert_is_valid_pdu( $event );
+               assert_eq( $event->{room_id}, $room_id,
+                          'event room_id' );
+            }
 
-            assert_eq( $event->{room_id}, $room_id,
-               'event room_id' );
-         }
+            # check that they are the *right* events. We expect copies of:
+            # * the creator's join
+            # * the power_levels
+            # * the join rules
+            # * the initial history_vis
+            # * another history_vis, unless we tried to set it to the default (shared)
+            # * the message
 
-         Future->done(1);
+            # if the history vis is 'joined' or 'invite', we should get redacted
+            # copies of the events before we joined.
+            my $idx = 0;
+            assert_eq( $events->[$idx]->{type}, 'm.room.member' );
+            assert_eq( $events->[$idx]->{state_key}, $creator->user_id );
+            $idx++;
+
+            assert_eq( $events->[$idx]->{type}, 'm.room.power_levels' );
+            $idx++;
+            assert_eq( $events->[$idx]->{type}, 'm.room.join_rules' );
+            $idx++;
+            assert_eq( $events->[$idx]->{type}, 'm.room.history_visibility', "event $idx type" );
+            $idx++;
+            if ( $vis ne 'shared' ) {
+               assert_eq( $events->[$idx]->{type}, 'm.room.history_visibility', "event $idx type" );
+               $idx++;
+            }
+
+            assert_eq( $events->[$idx]->{type}, 'm.room.message', "event $idx type" );
+            my $content = $events->[$idx]->{content};
+            if ( $vis eq 'joined' || $vis eq 'invited' ) {
+               assert_deeply_eq( $content, {}, "redacted event content" );
+            } else {
+               assert_json_keys( $content, qw( msgtype body ));
+            }
+            $idx++;
+
+            assert_eq( scalar @$events, $idx, "extra events returned" );
+
+            Future->done(1);
       });
    };
+}

@@ -144,33 +144,7 @@ test "Outbound federation requests /state_ids and correctly handles 404",
             },
          );
 
-         Future->needs_all(
-            $inbound_server->await_request_state_ids( $room_id )
-            ->then( sub {
-               my ( $req ) = @_;
-
-               log_if_fail "Got /state_ids";
-
-               # We 404 to simulate old servers to test that the remote will
-               # fall back to asking for /state
-               $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
-
-               Future->done(1);
-            }),
-            $inbound_server->await_request_state( $room_id )
-            ->then( sub {
-               my ( $req ) = @_;
-
-               log_if_fail "Got /state";
-
-               # Just send anything back, synapse handles this gracefully.
-               $req->respond_json( {
-                  pdus => [],
-                  auth_chain => [],
-               } );
-
-               Future->done(1);
-            }),
+         Future->wait_all(
             $inbound_server->await_request_get_missing_events( $room_id )
             ->then( sub {
                my ( $req ) = @_;
@@ -188,17 +162,17 @@ test "Outbound federation requests /state_ids and correctly handles 404",
                destination => $first_home_server,
             ),
          );
-      })->then( sub {
-         # creator user should eventually receive the sent event
-         await_event_for( $creator, filter => sub {
-            my ( $event ) = @_;
-            return $event->{type} eq "m.room.message" &&
-                   $event->{event_id} eq $sent_event->{event_id};
-         });
+       })->then( sub {
+	  my @futureresults = @_;
+	  if ($futureresults[1]->is_failed eq 0) { die "Should have failed"}
+
+	  Future->done(1);
       })->then_done(1);
    };
 
 test "Outbound federation requests /state_ids and asks for missing state",
+   # Disabled as Synapse now checks the state of the missing item's ancestors instead
+   bug => "DISABLED",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures( with_events => 1 ),
                  federation_user_id_fixture() ],
