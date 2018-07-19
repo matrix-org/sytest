@@ -105,7 +105,7 @@ sub do_request
          my $message = $response->message;
          $message =~ s/\r?\n?$//; # because HTTP::Response doesn't do this
 
-         return Future->fail( "HTTP Request failed (${\$response->code} $message $uri)",
+         return Future->fail( "HTTP Request failed ( ${\$response->code} $message $uri )",
             http => $response, $response->request );
       }
 

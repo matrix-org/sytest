@@ -242,25 +242,25 @@ sub matrix_admin_register_user_via_secret
    $http->do_request_json(
       method => "GET",
       uri    => "/r0/admin/register",
-   )->then(sub{
+   )->then( sub{
       my ( $nonce ) = @_;
 
       my $mac = hmac_sha1_hex(
-      join("\0", $nonce->{nonce}, $uid, $password, $is_admin ? "admin" : "notadmin" ),
-      "reg_secret"
+         join( "\0", $nonce->{nonce}, $uid, $password, $is_admin ? "admin" : "notadmin" ),
+         "reg_secret"
       );
 
       return $http->do_request_json(
-      method => "POST",
-      uri    => "/r0/admin/register",
+         method => "POST",
+         uri    => "/r0/admin/register",
 
-      content => {
-        nonce => $nonce->{nonce},
-        username => $uid,
-        password => $password,
-        admin    => $is_admin ? JSON::true : JSON::false,
-        mac      => $mac,
-      },
+         content => {
+           nonce    => $nonce->{nonce},
+           username => $uid,
+           password => $password,
+           admin    => $is_admin ? JSON::true : JSON::false,
+           mac      => $mac,
+         },
       )
    })->then( sub {
       my ( $body ) = @_;
