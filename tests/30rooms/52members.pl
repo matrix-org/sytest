@@ -70,3 +70,59 @@ test "Can get rooms/{roomId}/members at a given point",
       })
    };
 
+test "Can filter rooms/{roomId}/members",
+   requires => [
+      local_user_fixture(), local_user_fixture(),
+      qw ( can_send_message )
+   ],
+
+   check => sub {
+      my ( $user1, $user2 ) = @_;
+      my ( $room_id, $event_id );
+
+      matrix_create_and_join_room( [ $user1, $user2 ] )->then( sub {
+         ( $room_id ) = @_;
+         matrix_leave_room( $user2, $room_id );
+      })->then( sub {
+         do_request_json_for( $user1,
+            method => "GET",
+            uri => "/r0/rooms/$room_id/members",
+            params => {
+               not_membership => 'leave',
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( chunk ) );
+         assert_room_members_in_state( $body->{chunk}, { $user1->user_id => 'join' } );
+
+         do_request_json_for( $user1,
+            method => "GET",
+            uri => "/r0/rooms/$room_id/members",
+            params => {
+               membership => 'leave',
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( chunk ) );
+         assert_room_members_in_state( $body->{chunk}, { $user2->user_id => 'leave' });
+
+         do_request_json_for( $user1,
+            method => "GET",
+            uri => "/r0/rooms/$room_id/members",
+            params => {
+               membership => 'join',
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( chunk ) );
+         assert_room_members_in_state( $body->{chunk}, { $user1->user_id => 'join' });
+         Future->done(1);
+      })
+   };
+
