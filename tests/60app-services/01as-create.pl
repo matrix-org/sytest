@@ -79,31 +79,6 @@ test "AS can create a user with inhibit_login",
       });
    };
 
-test "AS can create a user via the legacy /v1 endpoint",
-   requires => [ $main::AS_USER[0], $room_fixture ],
-
-   do => sub {
-      my ( $as_user, $room_id ) = @_;
-
-      do_request_json_for( $as_user,
-         method => "POST",
-         uri    => "/api/v1/register",
-
-         content => {
-            type => "m.login.application_service",
-            user => "astest-01create-2-$TEST_RUN_ID",
-         },
-      )->then( sub {
-         my ( $body ) = @_;
-
-         log_if_fail "Body", $body;
-
-         assert_json_keys( $body, qw( user_id home_server ));
-
-         Future->done(1);
-      });
-   };
-
 test "AS cannot create users outside its own namespace",
    requires => [ $main::AS_USER[0] ],
 
