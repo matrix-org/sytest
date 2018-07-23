@@ -158,6 +158,46 @@ test "GET /rooms/:room_id/messages returns a message",
       });
    };
 
+test "GET /rooms/:room_id/messages lazy loads members correctly",
+   requires => [ local_user_and_room_fixtures(),
+                 qw( can_send_message )],
+
+   proves => [qw( can_get_messages )],
+
+   check => sub {
+      my ( $user, $room_id ) = @_;
+
+      matrix_send_room_text_message( $user, $room_id,
+         body => "Here is the message content",
+      )->then( sub {
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/messages",
+
+            # With no params this does "forwards from END"; i.e. nothing useful
+            params => {
+               dir => "b",
+               filter => '{ "lazy_load_members" : true }',
+            },
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( start end state chunk ));
+         assert_json_list( $body->{chunk} );
+         assert_json_list( $body->{state} );
+
+         assert_eq( scalar @{$body->{state}}, 1);
+         assert_eq( $body->{state}[0]{type}, 'm.room.member');
+         assert_eq( $body->{state}[0]{state_key}, $user->user_id);
+
+         scalar @{ $body->{chunk} } > 0 or
+            die "Expected some messages but got none at all\n";
+
+         Future->done(1);
+      });
+   };
+
 push @EXPORT, qw(
    matrix_get_room_messages matrix_send_room_text_message_synced
    matrix_send_room_message_synced matrix_send_filler_messages_synced
