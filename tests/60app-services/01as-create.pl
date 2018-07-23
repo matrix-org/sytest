@@ -26,6 +26,31 @@ test "AS can create a user",
       });
    };
 
+test "AS can create a user with an underscore",
+   requires => [ $main::AS_USER[0], $room_fixture ],
+
+   do => sub {
+      my ( $as_user, $room_id ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            user => "_astest-01create-0-$TEST_RUN_ID",
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( user_id home_server access_token device_id ));
+
+         Future->done(1);
+      });
+   };
+
+
 test "AS can create a user with inhibit_login",
    requires => [ $main::AS_USER[0], $room_fixture ],
 
