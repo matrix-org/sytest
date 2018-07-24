@@ -33,7 +33,6 @@ test "Unnamed room comes with a name summary",
          assert_deeply_eq( $summary, {
             'm.joined_member_count' => 3,
             'm.heros' => [
-               $alice->user_id,
                $bob->user_id,
                $charlie->user_id,
             ]
@@ -117,7 +116,6 @@ test "Room summary only has 5 heros",
          my $summary = $body->{rooms}{join}{$room_id}{summary};
          my $expected_heros = [
             (sort(
-               $alice->user_id,
                $users[0]->user_id,
                $users[1]->user_id,
                $users[2]->user_id,
