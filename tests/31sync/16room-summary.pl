@@ -32,7 +32,7 @@ test "Unnamed room comes with a name summary",
          my $summary = $body->{rooms}{join}{$room_id}{summary};
          assert_deeply_eq( $summary, {
             'm.joined_member_count' => 3,
-            'm.heros' => [
+            'm.heroes' => [
                $bob->user_id,
                $charlie->user_id,
             ]
@@ -84,7 +84,7 @@ test "Named room comes with just joined member count summary",
    };
 
 
-test "Room summary only has 5 heros",
+test "Room summary only has 5 heroes",
    requires => [ local_user_fixtures( 6 ),
                  qw( can_sync ) ],
 
@@ -114,7 +114,7 @@ test "Room summary only has 5 heros",
          my ( $body ) = @_;
          log_if_fail ( "sync response:", $body->{rooms}{join}{$room_id} );
          my $summary = $body->{rooms}{join}{$room_id}{summary};
-         my $expected_heros = [
+         my $expected_heroes = [
             (sort(
                $users[0]->user_id,
                $users[1]->user_id,
@@ -123,10 +123,10 @@ test "Room summary only has 5 heros",
                $users[4]->user_id,
             ))[0..4]
          ];
-         log_if_fail( "expected_heros:", $expected_heros );
+         log_if_fail( "expected_heroes:", $expected_heroes );
          assert_deeply_eq($summary, {
             'm.joined_member_count' => 6,
-            'm.heros' => $expected_heros,
+            'm.heroes' => $expected_heroes,
          });
          Future->done(1);
       });
