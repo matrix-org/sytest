@@ -1,3 +1,4 @@
+use utf8;
 use JSON qw( decode_json );
 use URI;
 
@@ -380,4 +381,3 @@ test "registration with inhibit_login inhibits login",
          Future->done( 1 );
       });
    };
-
