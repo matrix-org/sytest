@@ -227,10 +227,9 @@ sub matrix_register_user
    });
 }
 
-shared_secret_tests( "/v1/register", \&matrix_v1_register_user_via_secret);
-shared_secret_tests( "/r0/register", \&matrix_r0_register_user_via_secret);
+shared_secret_tests( "/r0/admin/register", \&matrix_admin_register_user_via_secret);
 
-sub matrix_v1_register_user_via_secret
+sub matrix_admin_register_user_via_secret
 {
    my ( $http, $uid, %opts ) = @_;
 
@@ -240,23 +239,30 @@ sub matrix_v1_register_user_via_secret
    defined $uid or
       croak "Require UID for matrix_register_user_via_secret";
 
-   my $mac = hmac_sha1_hex(
-      join( "\0", $uid, $password, $is_admin ? "admin" : "notadmin" ),
-      "reg_secret"
-   );
-
    $http->do_request_json(
-      method => "POST",
-      uri    => "/api/v1/register",
+      method => "GET",
+      uri    => "/r0/admin/register",
+   )->then( sub{
+      my ( $nonce ) = @_;
 
-      content => {
-        type     => "org.matrix.login.shared_secret",
-        user     => $uid,
-        password => $password,
-        admin    => $is_admin ? JSON::true : JSON::false,
-        mac      => $mac,
-      },
-   )->then( sub {
+      my $mac = hmac_sha1_hex(
+         join( "\0", $nonce->{nonce}, $uid, $password, $is_admin ? "admin" : "notadmin" ),
+         "reg_secret"
+      );
+
+      return $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/admin/register",
+
+         content => {
+           nonce    => $nonce->{nonce},
+           username => $uid,
+           password => $password,
+           admin    => $is_admin ? JSON::true : JSON::false,
+           mac      => $mac,
+         },
+      )
+   })->then( sub {
       my ( $body ) = @_;
 
       assert_json_keys( $body, qw( user_id access_token ));
@@ -275,58 +281,6 @@ sub matrix_v1_register_user_via_secret
         ->on_done( sub {
            log_if_fail "Registered new user (via secret) $uid";
         });
-   });
-}
-
-sub matrix_r0_register_user_via_secret
-{
-   my ( $http, $uid, %opts ) = @_;
-
-   my $password = $opts{password} // "an0th3r s3kr1t";
-   my $is_admin = $opts{is_admin} // 0;
-
-   defined $uid or
-      croak "Require UID for matrix_register_user_via_secret";
-
-   # for some reason the /r0/register endpoint only includes the
-   # uid in the hash. AFAICT it's equally valid, but one has to
-   # wonder why it is different to the /v1/ endpoint.
-   # (https://github.com/matrix-org/synapse/issues/2664)
-   my $mac = hmac_sha1_hex(
-      $uid,
-      "reg_secret"
-   );
-
-   $http->do_request_json(
-      method => "POST",
-      uri    => "/r0/register",
-
-      content => {
-        type     => "org.matrix.login.shared_secret",
-        username => $uid,
-        password => $password,
-        admin    => $is_admin ? JSON::true : JSON::false,
-        mac      => $mac,
-      },
-   )->then( sub {
-      my ( $body ) = @_;
-
-      assert_json_keys( $body, qw( user_id access_token device_id ));
-
-      my $uid = $body->{user_id};
-
-      log_if_fail "Registered new user (via secret) $uid";
-
-      my $access_token = $body->{access_token};
-
-      my $user = new_User(
-         http         => $http,
-         user_id      => $uid,
-         device_id    => $body->{device_id},
-         password     => $password,
-         access_token => $access_token,
-      );
-      return Future->done( $user );
    });
 }
 
@@ -428,7 +382,7 @@ sub local_admin_fixture
       setup => sub {
          my ( $http, $localpart ) = @_;
 
-         matrix_v1_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
+         matrix_admin_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
       },
    );
 }
