@@ -1,5 +1,56 @@
 use Future::Utils qw( repeat );
 
+test "Lazy loading parameters in the filter are strictly boolean",
+   requires => [ local_user_fixtures( 1 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $alice ) = @_;
+
+      matrix_create_filter( $alice, {
+         room => {
+            state => {
+               lazy_load_members => "true",
+            },
+         }
+      })->main::expect_http_400()
+      ->then( sub {
+         matrix_create_filter( $alice, {
+            room => {
+               state => {
+                  lazy_load_members => 1,
+               },
+            }
+         })->main::expect_http_400()
+      })->then( sub {
+         matrix_create_filter( $alice, {
+            room => {
+               state => {
+                  lazy_load_members => "true",
+               },
+            }
+         })->main::expect_http_400()
+      })->then( sub {
+         matrix_create_filter( $alice, {
+            room => {
+               state => {
+                  include_redundant_members => 1,
+               },
+            }
+         })->main::expect_http_400()
+      })->then( sub {
+         matrix_create_filter( $alice, {
+            room => {
+               state => {
+                  include_redundant_members => "true",
+               },
+            }
+         })->main::expect_http_400()
+      })->then( sub {
+         Future->done(1);
+      });
+   };
+
 test "The only membership state included in an initial sync are for all the senders in the timeline",
    requires => [ local_user_fixtures( 3 ),
                  qw( can_sync ) ],
