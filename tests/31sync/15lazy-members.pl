@@ -270,10 +270,6 @@ test "We don't send redundant membership state across incremental syncs by defau
       # Alice syncs again; she should not see any membership events as
       # the redundant ones for Bob and Charlie are removed.
 
-      # TODO: speed up time and check that if we wait an hour then the server's
-      # cache will expire and we'll send redundant members over anyway in the next
-      # sync.
-
       my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
 
       matrix_create_filter( $alice, {
