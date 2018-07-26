@@ -26,7 +26,7 @@ test "Lazy loading parameters in the filter are strictly boolean",
          matrix_create_filter( $alice, {
             room => {
                state => {
-                  lazy_load_members => "true",
+                  include_redundant_members => "true",
                },
             }
          })->main::expect_http_400()
@@ -35,14 +35,6 @@ test "Lazy loading parameters in the filter are strictly boolean",
             room => {
                state => {
                   include_redundant_members => 1,
-               },
-            }
-         })->main::expect_http_400()
-      })->then( sub {
-         matrix_create_filter( $alice, {
-            room => {
-               state => {
-                  include_redundant_members => "true",
                },
             }
          })->main::expect_http_400()
