@@ -1,5 +1,48 @@
 use Future::Utils qw( repeat );
 
+test "Lazy loading parameters in the filter are strictly boolean",
+   requires => [ local_user_fixtures( 1 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $alice ) = @_;
+
+      matrix_create_filter( $alice, {
+         room => {
+            state => {
+               lazy_load_members => "true",
+            },
+         }
+      })->main::expect_http_400()
+      ->then( sub {
+         matrix_create_filter( $alice, {
+            room => {
+               state => {
+                  lazy_load_members => 1,
+               },
+            }
+         })->main::expect_http_400()
+      })->then( sub {
+         matrix_create_filter( $alice, {
+            room => {
+               state => {
+                  include_redundant_members => "true",
+               },
+            }
+         })->main::expect_http_400()
+      })->then( sub {
+         matrix_create_filter( $alice, {
+            room => {
+               state => {
+                  include_redundant_members => 1,
+               },
+            }
+         })->main::expect_http_400()
+      })->then( sub {
+         Future->done(1);
+      });
+   };
+
 test "The only membership state included in an initial sync are for all the senders in the timeline",
    requires => [ local_user_fixtures( 3 ),
                  qw( can_sync ) ],
@@ -218,10 +261,6 @@ test "We don't send redundant membership state across incremental syncs by defau
       # Charlie sends 1 more event
       # Alice syncs again; she should not see any membership events as
       # the redundant ones for Bob and Charlie are removed.
-
-      # TODO: speed up time and check that if we wait an hour then the server's
-      # cache will expire and we'll send redundant members over anyway in the next
-      # sync.
 
       my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
 
