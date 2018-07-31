@@ -143,7 +143,7 @@ test "The only membership state included in an incremental sync are for senders 
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $bob, $room_id,
+            matrix_send_room_text_message_synced( $bob, $room_id,
                body => "Message $msgnum",
             )
          }, foreach => [ 1 .. 10 ])
@@ -153,7 +153,7 @@ test "The only membership state included in an incremental sync are for senders 
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [ $bob->user_id ]);
 
-         matrix_send_room_text_message( $charlie, $room_id,
+         matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "Message from charlie",
          )
       })->then( sub {
@@ -294,7 +294,7 @@ test "We don't send redundant membership state across incremental syncs by defau
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $charlie, $room_id,
+            matrix_send_room_text_message_synced( $charlie, $room_id,
                body => "Message $msgnum",
             )
          }, foreach => [ 1 .. 5 ])
@@ -304,11 +304,11 @@ test "We don't send redundant membership state across incremental syncs by defau
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [ $bob->user_id, $charlie->user_id ]);
 
-         matrix_send_room_text_message( $bob, $room_id,
+         matrix_send_room_text_message_synced( $bob, $room_id,
             body => "New message from bob",
          )
       })->then( sub {
-         matrix_send_room_text_message( $charlie, $room_id,
+         matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "New message from charlie",
          )
       })->then( sub {
@@ -373,7 +373,7 @@ test "We do send redundant membership state across incremental syncs if asked",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $charlie, $room_id,
+            matrix_send_room_text_message_synced( $charlie, $room_id,
                body => "Message $msgnum",
             )
          }, foreach => [ 1 .. 5 ])
@@ -387,7 +387,7 @@ test "We do send redundant membership state across incremental syncs if asked",
             body => "New message from bob",
          )
       })->then( sub {
-         matrix_send_room_text_message( $charlie, $room_id,
+         matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "New message from charlie",
          )
       })->then( sub {
