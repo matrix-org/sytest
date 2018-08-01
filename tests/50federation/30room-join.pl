@@ -1,3 +1,4 @@
+use JSON qw( decode_json );
 use List::UtilsBy qw( partition_by extract_by );
 
 use SyTest::Federation::Room;
