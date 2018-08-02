@@ -224,7 +224,20 @@ test "Backfill checks the events requested belong to the room",
             params => {
                v     => $priv_event_id,
                limit => 1,
-            }
-         )->main::expect_http_403;
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Backfill response", $body;
+
+         assert_json_keys( $body, qw( origin pdus ));
+
+         assert_eq( $body->{origin}, $first_home_server,
+            'body origin' );
+         assert_json_list( my $events = $body->{pdus} );
+
+         # the response should be empty.
+         assert_eq( 0, scalar @{$body->{pdus}}, 'response should be empty' );
+         Future->done(1);
       });
    };

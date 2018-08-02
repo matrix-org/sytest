@@ -37,6 +37,6 @@ test "Querying auth checks the events requested belong to the room",
             content => {
                auth_chain => [], # This is part of the exploit
             }
-         )->main::expect_http_403;
+         )->main::expect_m_not_found;
       });
    };

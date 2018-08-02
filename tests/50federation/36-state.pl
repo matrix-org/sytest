@@ -353,7 +353,7 @@ test "Getting state checks the events requested belong to the room",
             params => {
                event_id => $priv_event_id,
             }
-         )->main::expect_http_403;
+         )->main::expect_m_not_found;
       });
    };
 
@@ -395,6 +395,6 @@ test "Getting state IDs checks the events requested belong to the room",
             params => {
                event_id => $priv_event_id,
             }
-         )->main::expect_http_403;
+         )->main::expect_m_not_found;
       });
    };
