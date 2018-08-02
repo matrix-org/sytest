@@ -193,6 +193,20 @@ sub room_alias_fixture
 }
 
 
+=head2 matrix_create_room_synced
+
+    my ( $room_id, $room_alias, $sync_body ) = matrix_create_room_synced( %params );
+
+Creates a new room, and waits for it to appear in the /sync response.
+
+The parameters are passed through to C<matrix_create_room>.
+
+The resultant future completes with three values: the room_id from the
+/createRoom response; the room_alias from the /createRoom response (which is
+non-standard and should not be relied upon); the /sync response.
+
+=cut
+
 sub matrix_create_room_synced
 {
    my ( $user, %params ) = @_;
@@ -201,6 +215,10 @@ sub matrix_create_room_synced
       do => sub {
          matrix_create_room( $user, %params );
       },
-      check => sub { exists $_[0]->{rooms}{join}{$_[1]} },
+      check => sub {
+         my ( $sync_body, $room_id ) = @_;
+         return 0 if not exists $sync_body->{rooms}{join}{$room_id};
+         return $sync_body;
+      },
    );
 }
