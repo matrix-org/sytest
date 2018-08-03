@@ -396,6 +396,41 @@ sub _invite_users
    );
 }
 
+=head2 matrix_create_and_join_room
+
+   matrix_create_and_join_room( [ $creator, $user2, ... ], %opts )->then( sub {
+      my ( $room_id ) = @_;
+   });
+
+   matrix_create_and_join_room( [ $creator, $user2, ... ],
+     with_alias => 1, %opts,
+   )->then( sub {
+      my ( $room_id, $room_alias ) = @_;
+   });
+
+Create a new room, and have a list of users join it.
+
+The following may be passed as optional parametrs:
+
+=over
+
+=item with_alias => SCALAR
+
+Make this truthy to return the newly created alias
+
+=item with_invite => SCALAR
+
+Make this truthy to send invites to the other users before they join.
+
+=item (everything else)
+
+Other parameters are passed into C<matrix_create_room>, whence they are
+passed on to the server.
+
+=back
+
+=cut
+
 push @EXPORT, qw( matrix_create_and_join_room );
 
 sub matrix_create_and_join_room
@@ -413,6 +448,9 @@ sub matrix_create_and_join_room
 
    my $n_joiners = scalar @other_members;
 
+   my $with_invite = delete $options{with_invite};
+   my $with_alias = delete $options{with_alias};
+
    matrix_create_room( $creator,
       %options,
       room_alias_name => sprintf( "test-%s-%d", $TEST_RUN_ID, $next_alias++ ),
@@ -421,7 +459,7 @@ sub matrix_create_and_join_room
 
       log_if_fail "room_id=$room_id";
 
-      ( $options{with_invite} ?
+      ( $with_invite ?
          _invite_users( $creator, $room_id, @other_members ) :
          Future->done() )
    })->then( sub {
@@ -445,7 +483,7 @@ sub matrix_create_and_join_room
       )
    })->then( sub {
       Future->done( $room_id,
-         ( $options{with_alias} ? ( $room_alias_fullname ) : () )
+         ( $with_alias ? ( $room_alias_fullname ) : () )
       );
    });
 }
@@ -497,11 +535,14 @@ sub local_user_and_room_fixtures
 {
    my %args = @_;
 
-   my $user_fixture = local_user_fixture( %args );
+   my $user_opts = $args{user_opts} // {};
+   my $room_opts = $args{room_opts} // {};
+
+   my $user_fixture = local_user_fixture( %$user_opts );
 
    return (
       $user_fixture,
-      room_fixture( $user_fixture, %args ),
+      room_fixture( $user_fixture, %$room_opts ),
    );
 }
 
