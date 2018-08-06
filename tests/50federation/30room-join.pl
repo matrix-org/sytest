@@ -75,21 +75,8 @@ test "Outbound federation can send room-join requests",
 
       my $room_id = $room->room_id;
 
-      # We'll have to jump through the extra hoop of using the directory
-      # service first, because we can't join a remote room by room ID alone
-
       my $room_alias = "#50fed-room-alias:$local_server_name";
-      require_stub $inbound_server->await_request_query_directory( $room_alias )
-         ->on_done( sub {
-            my ( $req ) = @_;
-
-            $req->respond_json( {
-               room_id => $room_id,
-               servers => [
-                  $local_server_name,
-               ]
-            } );
-         });
+      $datastore->{room_aliases}{$room_alias} = $room_id;
 
       Future->needs_all(
          # Await PDU?
@@ -183,17 +170,7 @@ test "Outbound federation passes make_join failures through to the client",
       # We'll have to jump through the extra hoop of using the directory
       # service first, because we can't join a remote room by room ID alone
       my $room_alias = "#unsupported-room-ver:$local_server_name";
-      require_stub $inbound_server->await_request_query_directory( $room_alias )
-         ->on_done( sub {
-            my ( $req ) = @_;
-
-            $req->respond_json( {
-               room_id => $room_id,
-               servers => [
-                  $local_server_name,
-               ]
-            } );
-         });
+      $datastore->{room_aliases}{$room_alias} = $room_id;
 
       Future->needs_all(
          $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
@@ -502,4 +479,53 @@ test "Inbound federation accepts attempts to join v2 rooms from servers with sup
          assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
          Future->done( 1 );
       });
+   };
+
+
+test "Outbound federation correctly handles unsupported room versions",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+      my $room_id           = $datastore->next_room_id;
+
+      my $test_room_version = 'sytest-room-ver';
+
+      my $room_alias = "#unsupported-room-ver:$local_server_name";
+      $datastore->{room_aliases}{$room_alias} = $room_id;
+
+      Future->needs_all(
+         $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
+            my ( $req, $room_id, $user_id ) = @_;
+            $req->respond_json({
+               errcode => "M_INCOMPATIBLE_ROOM_VERSION",
+               error => "y u no upgrade",
+               room_version => 'sytest-room-ver',
+            },
+               code => 400,
+            );
+            Future->done;
+         }),
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/join/$room_alias",
+
+            content => {},
+         )->main::expect_http_400
+         ->then( sub {
+            my ( $response ) = @_;
+            my $body = decode_json( $response->content );
+            log_if_fail "Join error response", $body;
+
+            assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
+            assert_eq( $body->{room_version}, 'sytest-room-ver', 'room_version' );
+            Future->done(1);
+         }),
+      )
    };
