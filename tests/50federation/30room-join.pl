@@ -529,3 +529,18 @@ test "Outbound federation correctly handles unsupported room versions",
          }),
       )
    };
+
+
+test "A pair of servers can establish a join in a v2 room",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_create_versioned_room can_join_remote_room_by_alias ),
+               ],
+
+   do => sub {
+      my ( $creator_user, $joiner_user ) = @_;
+
+      matrix_create_and_join_room(
+         [ $creator_user, $joiner_user ],
+         room_version => 'vdh-test-version',
+        );
+   };
