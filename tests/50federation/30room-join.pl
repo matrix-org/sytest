@@ -359,3 +359,147 @@ test "Inbound federation can receive room-join requests",
          Future->done(1);
       });
    };
+
+
+test "Inbound federation rejects attempts to join v1 rooms from servers without v1 support",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 $main::HOMESERVER_INFO[0],
+                 local_user_fixture(),
+                 federation_user_id_fixture(),
+               ],
+
+   do => sub {
+      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      matrix_create_room(
+         $creator_user,
+      )->then( sub {
+         my ( $room_id ) = @_;
+
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/make_join/$room_id/$user_id",
+            params   => {
+               ver => [qw/2 abc def/],
+            },
+         );
+      })->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "error body", $body;
+         assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
+         assert_eq( $body->{room_version}, "1", 'room_version' );
+         Future->done( 1 );
+      });
+   };
+
+
+test "Inbound federation rejects attempts to join v2 rooms from servers lacking version support",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 $main::HOMESERVER_INFO[0],
+                 local_user_fixture(),
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      matrix_create_room(
+         $creator_user,
+         room_version => 'vdh-test-version',
+      )->then( sub {
+         my ( $room_id ) = @_;
+
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/make_join/$room_id/$user_id",
+         );
+      })->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "error body", $body;
+         assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
+         assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
+         Future->done( 1 );
+      });
+   };
+
+
+test "Inbound federation rejects attempts to join v2 rooms from servers only supporting v1",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 $main::HOMESERVER_INFO[0],
+                 local_user_fixture(),
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      matrix_create_room(
+         $creator_user,
+         room_version => 'vdh-test-version',
+      )->then( sub {
+         my ( $room_id ) = @_;
+
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/make_join/$room_id/$user_id",
+            params   => {
+               ver => ["1"],
+            },
+         );
+      })->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "error body", $body;
+         assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
+         assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
+         Future->done( 1 );
+      });
+   };
+
+
+test "Inbound federation accepts attempts to join v2 rooms from servers with support",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 $main::HOMESERVER_INFO[0],
+                 local_user_fixture(),
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      matrix_create_room(
+         $creator_user,
+         room_version => 'vdh-test-version',
+      )->then( sub {
+         my ( $room_id ) = @_;
+
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/make_join/$room_id/$user_id",
+            params   => {
+               ver => [qw/abc vdh-test-version def/],
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "make_join body", $body;
+
+         assert_json_keys( $body, qw( event room_version ));
+
+         assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
+         Future->done( 1 );
+      });
+   };
