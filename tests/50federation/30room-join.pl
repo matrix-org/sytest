@@ -544,3 +544,91 @@ test "A pair of servers can establish a join in a v2 room",
          room_version => 'vdh-test-version',
         );
    };
+
+
+test "Outbound federation rejects m.room.create events with an unknown room version",
+   # we don't really require can_create_versioned_rooms, because the room is on the sytest server
+   # but we use it as a proxy for "synapse supports room versioning"
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      my $room = SyTest::Federation::Room->new(
+         datastore => $datastore,
+      );
+
+      $room->create_initial_events(
+         creator => $creator_id,
+         room_version => 'sytest-room-ver',
+      );
+
+      my $room_id = $room->room_id;
+
+      my $room_alias = "#inconsistent-room-ver:$local_server_name";
+      $datastore->{room_aliases}{$room_alias} = $room_id;
+
+      Future->needs_all(
+         $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
+            my ( $req, $room_id, $user_id ) = @_;
+
+            my $proto = $room->make_join_protoevent(
+               user_id => $user_id,
+            );
+
+            $proto->{origin}           = $inbound_server->server_name;
+            $proto->{origin_server_ts} = $inbound_server->time_ms;
+
+            $req->respond_json( {
+               event => $proto,
+            } );
+
+            Future->done;
+         }),
+
+         $inbound_server->await_request_send_join( $room_id )->then( sub {
+            my ( $req, $room_id, $event_id ) = @_;
+
+            $req->method eq "PUT" or
+               die "Expected send_join method to be PUT";
+
+            my $event = $req->body_from_json;
+            log_if_fail "send_join event", $event;
+
+            my @auth_chain = $datastore->get_auth_chain_events(
+               map { $_->[0] } @{ $event->{auth_events} }
+            );
+
+            $req->respond_json(
+               # TODO(paul): This workaround is for SYN-490
+               my $response = [ 200, {
+                  auth_chain => \@auth_chain,
+                  state      => [ $room->current_state_events ],
+               } ]
+            );
+
+            log_if_fail "send_join response", $response;
+
+            Future->done;
+         }),
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/join/$room_alias",
+
+            content => {},
+         )->main::expect_http_error()->then( sub {
+            my ( $response ) = @_;
+
+            # XXX currently synapse fails with a 500 here. I'm not really convinced that's
+            # a thing we want to enforce, but we don't really have a specced way to say
+            # "a remote server did something wierd".
+            Future->done(1);
+         }),
+      )
+   };
