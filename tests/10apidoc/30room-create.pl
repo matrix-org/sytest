@@ -91,6 +91,28 @@ test "Can /sync newly created room",
       matrix_create_room_synced( $user );
    };
 
+
+=head2 matrix_create_room
+
+   matrix_create_room( $creator, %opts )->then( sub {
+      my ( $room_id, $room_alias ) = @_;
+   });
+
+Create a new room.
+
+Any options given in %opts are passed into the /createRoom API.
+
+The following options have defaults:
+
+   visibility => 'private'
+   preset => 'public_chat'
+
+The resultant future completes with two values: the room_id from the
+/createRoom response; the room_alias from the /createRoom response (which is
+non-standard and its use is deprecated).
+
+=cut
+
 push our @EXPORT, qw( matrix_create_room );
 
 sub matrix_create_room
@@ -98,26 +120,13 @@ sub matrix_create_room
    my ( $user, %opts ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
 
+   $opts{visibility} //= "private";
+   $opts{preset} //= "public_chat";
+
    do_request_json_for( $user,
       method => "POST",
       uri    => "/r0/createRoom",
-
-      content => {
-         visibility => $opts{visibility} || "private",
-         preset     => $opts{preset} || "public_chat",
-         ( defined $opts{room_alias_name} ?
-            ( room_alias_name => $opts{room_alias_name} ) : () ),
-         ( defined $opts{invite} ?
-            ( invite => $opts{invite} ) : () ),
-         ( defined $opts{invite_3pid} ?
-            ( invite_3pid => $opts{invite_3pid} ) : () ),
-         ( defined $opts{creation_content} ?
-            ( creation_content => $opts{creation_content} ) : () ),
-         ( defined $opts{name} ?
-            ( name => $opts{name} ) : () ),
-         ( defined $opts{topic} ?
-            ( topic => $opts{topic} ) : () ),
-      }
+      content => \%opts,
    )->then( sub {
       my ( $body ) = @_;
 
@@ -195,7 +204,9 @@ sub room_alias_fixture
 
 =head2 matrix_create_room_synced
 
-    my ( $room_id, $room_alias, $sync_body ) = matrix_create_room_synced( %params );
+    matrix_create_room_synced( $creator, %params )->then( sub {
+        my ( $room_id, $room_alias, $sync_body ) = @_;
+    });
 
 Creates a new room, and waits for it to appear in the /sync response.
 
