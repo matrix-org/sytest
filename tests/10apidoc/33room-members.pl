@@ -444,18 +444,22 @@ sub matrix_create_and_join_room
       for @other_members;
 
    my $room_id;
-   my $room_alias_fullname;
 
    my $n_joiners = scalar @other_members;
+
+   my $creator_server_name = $creator->http->server_name;
+   my $room_alias_name = sprintf "test-%s-%d", $TEST_RUN_ID, $next_alias++;
+   my $room_alias_fullname =
+      sprintf "#%s:%s", $room_alias_name, $creator_server_name;
 
    my $with_invite = delete $options{with_invite};
    my $with_alias = delete $options{with_alias};
 
    matrix_create_room( $creator,
       %options,
-      room_alias_name => sprintf( "test-%s-%d", $TEST_RUN_ID, $next_alias++ ),
+      room_alias_name => $room_alias_name,
    )->then( sub {
-      ( $room_id, $room_alias_fullname ) = @_;
+      ( $room_id ) = @_;
 
       log_if_fail "room_id=$room_id";
 
