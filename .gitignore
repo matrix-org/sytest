@@ -5,3 +5,7 @@
 /.synapse-base
 /synapse
 /var
+*~
+\#*
+logs/
+results.tap
