@@ -11,12 +11,12 @@ push our @EXPORT, qw(
 
 =head2 matrix_do_and_wait_for_sync
 
-   my ( $action_result ) = matrix_do_and_wait_for_sync( $user,
+   my ( $action_result, $check_result ) = matrix_do_and_wait_for_sync( $user,
       do => sub {
          return some_action_that_returns_a_future();
       },
       check => sub {
-         my ( $sync_body, $action_result ) = @_
+         my ( $sync_body, $action_result ) = @_;
 
          # return a true value if the sync contains the action.
          # return a false value if the sync isn't ready yet.
@@ -70,7 +70,10 @@ sub matrix_do_and_wait_for_sync
          %params
       );
 
-      $finished->then( sub { Future->done( @action_result ); } );
+      $finished->then( sub {
+         my ( @check_result ) = @_;
+         Future->done( @action_result, @check_result );
+      } );
    });
 }
 

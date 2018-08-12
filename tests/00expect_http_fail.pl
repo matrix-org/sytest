@@ -1,6 +1,7 @@
 use Future 0.33; # ->then catch semantics
 
 use Carp;
+use JSON qw( decode_json );
 
 sub gen_expect_failure
 {
@@ -112,3 +113,19 @@ sub check_http_code
       },
    );
 }
+
+
+# todo: generalise this to other http errors/matrix errcodes
+sub expect_m_not_found
+{
+   my $f = shift;
+
+   $f->main::expect_http_404()
+   ->then( sub {
+      my ( $response ) = @_;
+      my $body = decode_json( $response->content );
+      assert_eq( $body->{errcode}, "M_NOT_FOUND", 'responsecode' );
+      Future->done( 1 );
+   });
+}
+push @EXPORT, qw/expect_m_not_found/;
