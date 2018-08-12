@@ -36,7 +36,7 @@ test "Can get rooms/{roomId}/members at a given point",
 
    check => sub {
       my ( $user1, $user2 ) = @_;
-      my ( $room_id, $event_id );
+      my ( $room_id, $at_token );
 
       matrix_create_and_join_room( [ $user1 ] )->then( sub {
          ( $room_id ) = @_;
@@ -44,7 +44,12 @@ test "Can get rooms/{roomId}/members at a given point",
             body => "Hello world",
          );
       })->then( sub {
-         ( $event_id ) = @_;
+         matrix_sync ( $user1 );
+      })->then( sub {
+         my ( $body ) = @_;
+         # find the token at this point so we can query it later
+         $at_token = $body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
+
          matrix_join_room( $user2, $room_id );
       })->then( sub {
          matrix_send_room_text_message( $user1, $room_id,
@@ -55,7 +60,7 @@ test "Can get rooms/{roomId}/members at a given point",
             method => "GET",
             uri => "/r0/rooms/$room_id/members",
             params => {
-               at => $event_id
+               at => $at_token
             }
          );
       })->then( sub {
