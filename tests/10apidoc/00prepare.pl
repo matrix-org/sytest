@@ -69,7 +69,7 @@ sub assert_room_members_in_state {
    log_if_fail "state:", $events;
 
    my ( $member_ids );
-   if (ref($memberships) eq 'ARRAY') {
+   if ( ref($memberships) eq 'ARRAY' ) {
       $member_ids = $memberships;
       $memberships = {};
       foreach (@$member_ids) {
