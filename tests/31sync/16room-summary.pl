@@ -32,6 +32,7 @@ test "Unnamed room comes with a name summary",
          my $summary = $body->{rooms}{join}{$room_id}{summary};
          assert_deeply_eq( $summary, {
             'm.joined_member_count' => 3,
+            'm.invited_member_count' => 0,
             'm.heroes' => [
                $bob->user_id,
                $charlie->user_id,
@@ -78,6 +79,7 @@ test "Named room comes with just joined member count summary",
          my $summary = $body->{rooms}{join}{$room_id}{summary};
          assert_deeply_eq($summary, {
             'm.joined_member_count' => 3,
+            'm.invited_member_count' => 0,
          });
          Future->done(1);
       });
@@ -126,6 +128,7 @@ test "Room summary only has 5 heroes",
          log_if_fail( "expected_heroes:", $expected_heroes );
          assert_deeply_eq($summary, {
             'm.joined_member_count' => 6,
+            'm.invited_member_count' => 0,
             'm.heroes' => $expected_heroes,
          });
          Future->done(1);
