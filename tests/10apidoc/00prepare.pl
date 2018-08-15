@@ -1,4 +1,4 @@
-our @EXPORT = qw( User is_User do_request_json_for new_User assert_room_members assert_room_members_in_state );
+our @EXPORT = qw( User is_User do_request_json_for new_User );
 
 my @KEYS = qw(
    http user_id device_id password access_token eventstream_token
@@ -41,71 +41,4 @@ sub new_User
    }
 
    return $user;
-}
-
-
-# assert that the given members are in the body of a sync response
-sub assert_room_members {
-   my ( $body, $room_id, $memberships ) = @_;
-   # Takes either an arrayref of user_ids or a hashref of user_id to membership strings
-
-   my $room = $body->{rooms}{join}{$room_id};
-   my $timeline = $room->{timeline}{events};
-
-   log_if_fail "Room", $room;
-
-   assert_json_keys( $room, qw( timeline state ephemeral ));
-
-   return assert_room_members_in_state( $room->{state}{events}, $memberships );
-}
-
-
-# assert that the given members are present in a block of state events
-sub assert_room_members_in_state {
-   my ( $events, $memberships ) = @_;
-   # Takes either an arrayref of user_ids or a hashref of user_id to membership strings
-
-   log_if_fail "members:", $memberships;
-   log_if_fail "state:", $events;
-
-   my ( $member_ids );
-   if ( ref($memberships) eq 'ARRAY' ) {
-      $member_ids = $memberships;
-      $memberships = {};
-      foreach (@$member_ids) {
-         $memberships->{$_} = 'join';
-      }
-   }
-   else {
-      $member_ids = [ keys %$memberships ];
-   }
-
-   my @members = grep { $_->{type} eq 'm.room.member' } @{ $events };
-   @members == scalar @{ $member_ids }
-      or die "Expected only ".(scalar @{ $member_ids })." membership events";
-
-   my $found_senders = {};
-   my $found_state_keys = {};
-
-   foreach my $event (@members) {
-      $event->{type} eq "m.room.member"
-         or die "Unexpected state event type";
-
-      assert_json_keys( $event, qw( sender state_key content ));
-
-      $found_senders->{ $event->{sender} }++;
-      $found_state_keys->{ $event->{state_key} }++;
-
-      assert_json_keys( my $content = $event->{content}, qw( membership ));
-
-      $content->{membership} eq $memberships->{ $event->{state_key} } or
-         die "Expected membership as " . $memberships->{ $event->{state_key} };
-   }
-
-   foreach my $user_id (@{ $member_ids }) {
-      assert_eq( $found_senders->{ $user_id }, 1,
-                 "Expected membership event sender for ".$user_id );
-      assert_eq( $found_state_keys->{ $user_id }, 1,
-                 "Expected membership event state key for ".$user_id );
-   }
 }
