@@ -3,6 +3,7 @@
 set -x
 
 # Attempt to find a sytest to use.
+# If /test/run-tests.pl exists, it means that a SyTest checkout has been mounted into the Docker image.
 if [ -e "/test/run-tests.pl" ]
 then
     # If the user has mounted in a SyTest checkout, use that. We can tell this by files being in the directory.
@@ -62,7 +63,11 @@ $PYTHON -m virtualenv -p $PYTHON /venv/
 # Run the tests
 ./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all > results.tap
 
+TEST_STATUS=$?
+
 # Copy out the logs
 cp results.tap /logs/results.tap
 cp server-0/homeserver.log /logs/homeserver-0.log
 cp server-1/homeserver.log /logs/homeserver-1.log
+
+exit $TEST_STATUS

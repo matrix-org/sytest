@@ -17,11 +17,12 @@ ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
 # Copy in the sytest dependencies and install them
-# The dockerfile context, when ran by the buildscript, will actually be the
+# The dockerfile context, when run by the buildscript, will actually be the
 # repo root, not the docker folder
 ADD install-deps.pl ./install-deps.pl
 ADD cpanfile ./cpanfile
 RUN perl ./install-deps.pl
+RUN rm cpanfile install-deps.pl
 
 # /logs is where we should expect logs to end up
 RUN mkdir /logs
