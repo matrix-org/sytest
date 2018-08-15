@@ -130,7 +130,7 @@ test "/context/ with lazy_load_members filter works",
          assert_json_keys( $body, qw( state event ) );
 
          # only the user who sent 'hello world' should be present in the state
-         assert_room_members_in_state( $body->{state}, [ $user->user_id ]);
+         assert_state_room_members_matches( $body->{state}, [ $user->user_id ]);
 
          Future->done( 1 )
       });
