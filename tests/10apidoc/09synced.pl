@@ -205,7 +205,7 @@ sub await_sync_presence_contains {
 }
 
 
-push our @EXPORT, qw( assert_room_members assert_state_room_members_matches );
+push @EXPORT, qw( assert_room_members assert_state_room_members_matches );
 
 # assert that the given members are in the body of a sync response
 sub assert_room_members {
