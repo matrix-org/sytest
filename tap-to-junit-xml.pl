@@ -267,7 +267,7 @@ sub _parse_testcases {
        }
        next unless $result->is_test;
        $directive = $result->directive;
-       $name = sprintf "%s%02d", 'Test_', $result->number;
+       $name = $result->description;
        $name .= "_$directive" if $directive;
        if ( $result->is_ok ) {
            $xml = $xmlgen->testcase( { name      => $name,
