@@ -74,6 +74,11 @@ test "The only membership state included in an initial sync are for all the send
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
@@ -136,6 +141,11 @@ test "The only membership state included in an incremental sync are for senders 
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
@@ -200,6 +210,11 @@ test "The only membership state included in a gapped incremental sync are for se
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
@@ -279,6 +294,11 @@ test "We don't send redundant membership state across incremental syncs by defau
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
@@ -358,6 +378,11 @@ test "We do send redundant membership state across incremental syncs if asked",
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
