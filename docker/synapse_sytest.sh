@@ -4,7 +4,7 @@ set -x
 
 # Attempt to find a sytest to use.
 # If /test/run-tests.pl exists, it means that a SyTest checkout has been mounted into the Docker image.
-if [ -e "/test/run-tests.pl" ]
+if [ -e "./run-tests.pl" ]
 then
     # If the user has mounted in a SyTest checkout, use that. We can tell this by files being in the directory.
     echo "Using local sytests..."
