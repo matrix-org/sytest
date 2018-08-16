@@ -162,8 +162,6 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
    requires => [ local_user_and_room_fixtures(),
                  qw( can_send_message )],
 
-   proves => [qw( can_get_messages )],
-
    check => sub {
       my ( $user, $room_id ) = @_;
 
