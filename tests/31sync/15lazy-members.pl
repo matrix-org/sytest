@@ -74,6 +74,11 @@ test "The only membership state included in an initial sync are for all the send
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
@@ -136,6 +141,11 @@ test "The only membership state included in an incremental sync are for senders 
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
@@ -200,6 +210,11 @@ test "The only membership state included in a gapped incremental sync are for se
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
@@ -279,6 +294,11 @@ test "We don't send redundant membership state across incremental syncs by defau
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
@@ -358,6 +378,11 @@ test "We do send redundant membership state across incremental syncs if asked",
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
          matrix_join_room( $bob, $room_id );
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
@@ -398,44 +423,3 @@ test "We do send redundant membership state across incremental syncs if asked",
          Future->done(1);
       });
    };
-
-
-sub assert_room_members {
-   my ( $body, $room_id, $member_ids ) = @_;
-
-   my $room = $body->{rooms}{join}{$room_id};
-   my $timeline = $room->{timeline}{events};
-
-   log_if_fail "Room", $room;
-
-   assert_json_keys( $room, qw( timeline state ephemeral ));
-
-   my @members = grep { $_->{type} eq 'm.room.member' } @{ $room->{state}{events} };
-   @members == scalar @{ $member_ids }
-      or die "Expected only ".(scalar @{ $member_ids })." membership events";
-
-   my $found_senders = {};
-   my $found_state_keys = {};
-
-   foreach my $event (@members) {
-      $event->{type} eq "m.room.member"
-         or die "Unexpected state event type";
-
-      assert_json_keys( $event, qw( sender state_key content ));
-
-      $found_senders->{ $event->{sender} }++;
-      $found_state_keys->{ $event->{state_key} }++;
-
-      assert_json_keys( my $content = $event->{content}, qw( membership ));
-
-      $content->{membership} eq "join" or
-         die "Expected membership as 'join'";
-   }
-
-   foreach my $user_id (@{ $member_ids }) {
-      assert_eq( $found_senders->{ $user_id }, 1,
-                 "Expected membership event sender for ".$user_id );
-      assert_eq( $found_state_keys->{ $user_id }, 1,
-                 "Expected membership event state key for ".$user_id );
-   }
-}

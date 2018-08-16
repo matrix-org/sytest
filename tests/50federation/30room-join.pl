@@ -53,7 +53,6 @@ sub assert_is_valid_pdu {
 }
 push our @EXPORT, qw( assert_is_valid_pdu );
 
-
 test "Outbound federation can send room-join requests",
    requires => [ local_user_fixture(), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
@@ -75,21 +74,8 @@ test "Outbound federation can send room-join requests",
 
       my $room_id = $room->room_id;
 
-      # We'll have to jump through the extra hoop of using the directory
-      # service first, because we can't join a remote room by room ID alone
-
       my $room_alias = "#50fed-room-alias:$local_server_name";
-      require_stub $inbound_server->await_request_query_directory( $room_alias )
-         ->on_done( sub {
-            my ( $req ) = @_;
-
-            $req->respond_json( {
-               room_id => $room_id,
-               servers => [
-                  $local_server_name,
-               ]
-            } );
-         });
+      $datastore->{room_aliases}{$room_alias} = $room_id;
 
       Future->needs_all(
          # Await PDU?
@@ -183,17 +169,7 @@ test "Outbound federation passes make_join failures through to the client",
       # We'll have to jump through the extra hoop of using the directory
       # service first, because we can't join a remote room by room ID alone
       my $room_alias = "#unsupported-room-ver:$local_server_name";
-      require_stub $inbound_server->await_request_query_directory( $room_alias )
-         ->on_done( sub {
-            my ( $req ) = @_;
-
-            $req->respond_json( {
-               room_id => $room_id,
-               servers => [
-                  $local_server_name,
-               ]
-            } );
-         });
+      $datastore->{room_aliases}{$room_alias} = $room_id;
 
       Future->needs_all(
          $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
@@ -358,4 +334,387 @@ test "Inbound federation can receive room-join requests",
          # TODO: lots more checking. Requires spec though
          Future->done(1);
       });
+   };
+
+
+test "Inbound federation rejects attempts to join v1 rooms from servers without v1 support",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 $main::HOMESERVER_INFO[0],
+                 local_user_fixture(),
+                 federation_user_id_fixture(),
+               ],
+
+   do => sub {
+      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      matrix_create_room(
+         $creator_user,
+      )->then( sub {
+         my ( $room_id ) = @_;
+
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/make_join/$room_id/$user_id",
+            params   => {
+               ver => [qw/2 abc def/],
+            },
+         );
+      })->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "error body", $body;
+         assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
+         assert_eq( $body->{room_version}, "1", 'room_version' );
+         Future->done( 1 );
+      });
+   };
+
+
+test "Inbound federation rejects attempts to join v2 rooms from servers lacking version support",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 $main::HOMESERVER_INFO[0],
+                 local_user_fixture(),
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      matrix_create_room(
+         $creator_user,
+         room_version => 'vdh-test-version',
+      )->then( sub {
+         my ( $room_id ) = @_;
+
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/make_join/$room_id/$user_id",
+         );
+      })->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "error body", $body;
+         assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
+         assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
+         Future->done( 1 );
+      });
+   };
+
+
+test "Inbound federation rejects attempts to join v2 rooms from servers only supporting v1",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 $main::HOMESERVER_INFO[0],
+                 local_user_fixture(),
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      matrix_create_room(
+         $creator_user,
+         room_version => 'vdh-test-version',
+      )->then( sub {
+         my ( $room_id ) = @_;
+
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/make_join/$room_id/$user_id",
+            params   => {
+               ver => ["1"],
+            },
+         );
+      })->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "error body", $body;
+         assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
+         assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
+         Future->done( 1 );
+      });
+   };
+
+
+test "Inbound federation accepts attempts to join v2 rooms from servers with support",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 $main::HOMESERVER_INFO[0],
+                 local_user_fixture(),
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      matrix_create_room(
+         $creator_user,
+         room_version => 'vdh-test-version',
+      )->then( sub {
+         my ( $room_id ) = @_;
+
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/make_join/$room_id/$user_id",
+            params   => {
+               ver => [qw/abc vdh-test-version def/],
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "make_join body", $body;
+
+         assert_json_keys( $body, qw( event room_version ));
+
+         assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
+         Future->done( 1 );
+      });
+   };
+
+
+test "Outbound federation correctly handles unsupported room versions",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+      my $room_id           = $datastore->next_room_id;
+
+      my $test_room_version = 'sytest-room-ver';
+
+      my $room_alias = "#unsupported-room-ver:$local_server_name";
+      $datastore->{room_aliases}{$room_alias} = $room_id;
+
+      Future->needs_all(
+         $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
+            my ( $req, $room_id, $user_id ) = @_;
+            $req->respond_json({
+               errcode => "M_INCOMPATIBLE_ROOM_VERSION",
+               error => "y u no upgrade",
+               room_version => 'sytest-room-ver',
+            },
+               code => 400,
+            );
+            Future->done;
+         }),
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/join/$room_alias",
+
+            content => {},
+         )->main::expect_http_400
+         ->then( sub {
+            my ( $response ) = @_;
+            my $body = decode_json( $response->content );
+            log_if_fail "Join error response", $body;
+
+            assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
+            assert_eq( $body->{room_version}, 'sytest-room-ver', 'room_version' );
+            Future->done(1);
+         }),
+      )
+   };
+
+
+test "A pair of servers can establish a join in a v2 room",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_create_versioned_room can_join_remote_room_by_alias ),
+               ],
+
+   do => sub {
+      my ( $creator_user, $joiner_user ) = @_;
+
+      matrix_create_and_join_room(
+         [ $creator_user, $joiner_user ],
+         room_version => 'vdh-test-version',
+        );
+   };
+
+
+test "Outbound federation rejects send_join responses with no m.room.create event",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      my $room = SyTest::Federation::Room->new(
+         datastore => $datastore,
+      );
+
+      $room->create_initial_events(
+         creator => $creator_id,
+      );
+
+      my $room_id = $room->room_id;
+
+      my $room_alias = "#no_create_event:$local_server_name";
+      $datastore->{room_aliases}{$room_alias} = $room_id;
+
+      Future->needs_all(
+         $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
+            my ( $req, $room_id, $user_id ) = @_;
+
+            my $proto = $room->make_join_protoevent(
+               user_id => $user_id,
+            );
+
+            $proto->{origin}           = $inbound_server->server_name;
+            $proto->{origin_server_ts} = $inbound_server->time_ms;
+
+            $req->respond_json( {
+               event => $proto,
+            } );
+
+            Future->done;
+         }),
+
+         $inbound_server->await_request_send_join( $room_id )->then( sub {
+            my ( $req, $room_id, $event_id ) = @_;
+
+            $req->method eq "PUT" or
+               die "Expected send_join method to be PUT";
+
+            my $event = $req->body_from_json;
+            log_if_fail "send_join event", $event;
+
+            my @auth_chain = $datastore->get_auth_chain_events(
+               map { $_->[0] } @{ $event->{auth_events} }
+            );
+
+            # filter out the m.room.create event
+            @auth_chain = grep { $_->{type} ne 'm.room.create' } @auth_chain;
+
+            $req->respond_json(
+               # TODO(paul): This workaround is for SYN-490
+               my $response = [ 200, {
+                  auth_chain => \@auth_chain,
+                  state      => [ $room->current_state_events ],
+               } ]
+            );
+
+            log_if_fail "send_join response", $response;
+
+            Future->done;
+         }),
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/join/$room_alias",
+
+            content => {},
+         )->main::expect_http_error()->then( sub {
+            my ( $response ) = @_;
+
+            # XXX currently synapse fails with a 500 here. I'm not really convinced that's
+            # a thing we want to enforce, but we don't really have a specced way to say
+            # "a remote server did something wierd".
+            Future->done(1);
+         }),
+      )
+   };
+
+
+test "Outbound federation rejects m.room.create events with an unknown room version",
+   # we don't really require can_create_versioned_rooms, because the room is on the sytest server
+   # but we use it as a proxy for "synapse supports room versioning"
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture(),
+                 qw( can_create_versioned_room ) ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      my $room = SyTest::Federation::Room->new(
+         datastore => $datastore,
+      );
+
+      $room->create_initial_events(
+         creator => $creator_id,
+         room_version => 'sytest-room-ver',
+      );
+
+      my $room_id = $room->room_id;
+
+      my $room_alias = "#inconsistent-room-ver:$local_server_name";
+      $datastore->{room_aliases}{$room_alias} = $room_id;
+
+      Future->needs_all(
+         $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
+            my ( $req, $room_id, $user_id ) = @_;
+
+            my $proto = $room->make_join_protoevent(
+               user_id => $user_id,
+            );
+
+            $proto->{origin}           = $inbound_server->server_name;
+            $proto->{origin_server_ts} = $inbound_server->time_ms;
+
+            $req->respond_json( {
+               event => $proto,
+            } );
+
+            Future->done;
+         }),
+
+         $inbound_server->await_request_send_join( $room_id )->then( sub {
+            my ( $req, $room_id, $event_id ) = @_;
+
+            $req->method eq "PUT" or
+               die "Expected send_join method to be PUT";
+
+            my $event = $req->body_from_json;
+            log_if_fail "send_join event", $event;
+
+            my @auth_chain = $datastore->get_auth_chain_events(
+               map { $_->[0] } @{ $event->{auth_events} }
+            );
+
+            $req->respond_json(
+               # TODO(paul): This workaround is for SYN-490
+               my $response = [ 200, {
+                  auth_chain => \@auth_chain,
+                  state      => [ $room->current_state_events ],
+               } ]
+            );
+
+            log_if_fail "send_join response", $response;
+
+            Future->done;
+         }),
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/join/$room_alias",
+
+            content => {},
+         )->main::expect_http_error()->then( sub {
+            my ( $response ) = @_;
+
+            # XXX currently synapse fails with a 500 here. I'm not really convinced that's
+            # a thing we want to enforce, but we don't really have a specced way to say
+            # "a remote server did something wierd".
+            Future->done(1);
+         }),
+      )
    };
