@@ -111,10 +111,15 @@ sub create_initial_events
    my $creator = $args{creator} or
       croak "Require a 'creator'";
 
+   my $room_version = $args{room_version};
+
    $self->create_event(
       type => "m.room.create",
 
-      content     => { creator => $creator },
+      content     => {
+         creator => $creator,
+         defined( $room_version ) ? ( room_version => $room_version ) : (),
+      },
       sender      => $creator,
       state_key   => "",
    );

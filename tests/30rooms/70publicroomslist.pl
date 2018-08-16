@@ -25,8 +25,7 @@ test "Name/topic keys are correct",
          matrix_create_room( $user,
             visibility      => "public",
             room_alias_name => $alias_local,
-            name            => $room->{name},
-            topic           => $room->{topic},
+            %{$room},
          )
       } keys %rooms )
       ->then( sub {

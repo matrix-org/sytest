@@ -98,7 +98,7 @@ test "Inbound federation can get state_ids for a room",
 
 test "Outbound federation requests /state_ids and correctly handles 404",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( with_events => 1 ),
+                 local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
                  federation_user_id_fixture() ],
 
    do => sub {
@@ -144,33 +144,7 @@ test "Outbound federation requests /state_ids and correctly handles 404",
             },
          );
 
-         Future->needs_all(
-            $inbound_server->await_request_state_ids( $room_id )
-            ->then( sub {
-               my ( $req ) = @_;
-
-               log_if_fail "Got /state_ids";
-
-               # We 404 to simulate old servers to test that the remote will
-               # fall back to asking for /state
-               $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
-
-               Future->done(1);
-            }),
-            $inbound_server->await_request_state( $room_id )
-            ->then( sub {
-               my ( $req ) = @_;
-
-               log_if_fail "Got /state";
-
-               # Just send anything back, synapse handles this gracefully.
-               $req->respond_json( {
-                  pdus => [],
-                  auth_chain => [],
-               } );
-
-               Future->done(1);
-            }),
+         Future->wait_all(
             $inbound_server->await_request_get_missing_events( $room_id )
             ->then( sub {
                my ( $req ) = @_;
@@ -188,19 +162,19 @@ test "Outbound federation requests /state_ids and correctly handles 404",
                destination => $first_home_server,
             ),
          );
-      })->then( sub {
-         # creator user should eventually receive the sent event
-         await_event_for( $creator, filter => sub {
-            my ( $event ) = @_;
-            return $event->{type} eq "m.room.message" &&
-                   $event->{event_id} eq $sent_event->{event_id};
-         });
+       })->then( sub {
+	  my @futureresults = @_;
+	  if ($futureresults[1]->is_failed eq 0) { die "Should have failed"}
+
+	  Future->done(1);
       })->then_done(1);
    };
 
 test "Outbound federation requests /state_ids and asks for missing state",
+   # Disabled as Synapse now checks the state of the missing item's ancestors instead
+   bug => "DISABLED",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( with_events => 1 ),
+                 local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
                  federation_user_id_fixture() ],
 
    do => sub {
@@ -339,5 +313,88 @@ test "Outbound federation requests /state_ids and asks for missing state",
          assert_eq( $body->{topic}, $missing_state->{content}{topic} );
 
          Future->done( 1 );
+      });
+   };
+
+test "Getting state checks the events requested belong to the room",
+   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+                 local_user_and_room_fixtures(),
+                 local_user_and_room_fixtures(),
+                 federation_user_id_fixture() ],
+   do => sub {
+      my ( $outbound_client, $info, $priv_creator, $priv_room_id,
+           $pub_creator, $pub_room_id, $fed_user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      my $local_server_name = $outbound_client->server_name;
+
+      my $priv_join_event;
+
+      # Join the public room, but don't touch the private one
+      $outbound_client->join_room(
+         server_name => $first_home_server,
+         room_id     => $pub_room_id,
+         user_id     => $fed_user_id,
+      )->then( sub {
+         # Send an event into the private room
+         matrix_send_room_text_message( $priv_creator, $priv_room_id,
+            body => "Hello world",
+         )
+      })->then( sub {
+         my ( $priv_event_id ) = @_;
+
+         # We specifically use the public room, but the private event ID
+         # That's the point of this test.
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/state/$pub_room_id/",
+
+            params => {
+               event_id => $priv_event_id,
+            }
+         )->main::expect_m_not_found;
+      });
+   };
+
+
+test "Getting state IDs checks the events requested belong to the room",
+   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+                 local_user_and_room_fixtures(),
+                 local_user_and_room_fixtures(),
+                 federation_user_id_fixture() ],
+   do => sub {
+      my ( $outbound_client, $info, $priv_creator, $priv_room_id,
+           $pub_creator, $pub_room_id, $fed_user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      my $local_server_name = $outbound_client->server_name;
+
+      my $priv_join_event;
+
+      # Join the public room, but don't touch the private one
+      $outbound_client->join_room(
+         server_name => $first_home_server,
+         room_id     => $pub_room_id,
+         user_id     => $fed_user_id,
+      )->then( sub {
+         # Send an event into the private room
+         matrix_send_room_text_message( $priv_creator, $priv_room_id,
+            body => "Hello world",
+         )
+      })->then( sub {
+         my ( $priv_event_id ) = @_;
+
+         # We specifically use the public room, but the private event ID
+         # That's the point of this test.
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/state_ids/$pub_room_id/",
+
+            params => {
+               event_id => $priv_event_id,
+            }
+         )->main::expect_m_not_found;
       });
    };
