@@ -70,4 +70,8 @@ cp results.tap /logs/results.tap
 cp server-0/homeserver.log /logs/homeserver-0.log
 cp server-1/homeserver.log /logs/homeserver-1.log
 
+# Write out JUnit for CircleCI
+mkdir -p /logs/sytest
+perl /tap-to-junit-xml.pl --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
+
 exit $TEST_STATUS
