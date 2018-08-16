@@ -205,11 +205,12 @@ sub await_sync_presence_contains {
 }
 
 
-push our @EXPORT, qw( assert_room_members assert_state_room_members_matches );
+push @EXPORT, qw( assert_room_members assert_state_room_members_matches );
 
 # assert that the given members are in the body of a sync response
 sub assert_room_members {
-   my ( $body, $room_id, $member_ids ) = @_;
+   my ( $body, $room_id, $memberships ) = @_;
+   # Takes either an arrayref of user_ids or a hashref of user_id to membership strings
 
    my $room = $body->{rooms}{join}{$room_id};
    my $timeline = $room->{timeline}{events};
@@ -218,16 +219,29 @@ sub assert_room_members {
 
    assert_json_keys( $room, qw( timeline state ephemeral ));
 
-   return assert_state_room_members_matches( $room->{state}{events}, $member_ids );
+   return assert_state_room_members_matches( $room->{state}{events}, $memberships );
 }
 
 
 # assert that the given members are present in a block of state events
 sub assert_state_room_members_matches {
-   my ( $events, $member_ids ) = @_;
+   my ( $events, $memberships ) = @_;
+   # Takes either an arrayref of user_ids or a hashref of user_id to membership strings
 
-   log_if_fail "expected members:", $member_ids;
+   log_if_fail "expected members:", $memberships;
    log_if_fail "state:", $events;
+
+   my ( $member_ids );
+   if ( ref($memberships) eq 'ARRAY' ) {
+      $member_ids = $memberships;
+      $memberships = {};
+      foreach (@$member_ids) {
+         $memberships->{$_} = 'join';
+      }
+   }
+   else {
+      $member_ids = [ keys %$memberships ];
+   }
 
    my @members = grep { $_->{type} eq 'm.room.member' } @{ $events };
    @members == scalar @{ $member_ids }
@@ -247,8 +261,8 @@ sub assert_state_room_members_matches {
 
       assert_json_keys( my $content = $event->{content}, qw( membership ));
 
-      $content->{membership} eq "join" or
-         die "Expected membership as 'join'";
+      $content->{membership} eq $memberships->{ $event->{state_key} } or
+         die "Expected membership as " . $memberships->{ $event->{state_key} };
    }
 
    foreach my $user_id (@{ $member_ids }) {
