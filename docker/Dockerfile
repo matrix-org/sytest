@@ -24,6 +24,10 @@ ADD cpanfile ./cpanfile
 RUN perl ./install-deps.pl
 RUN rm cpanfile install-deps.pl
 
+# Add in the TAP-JUnit converter
+ADD tap-to-junit-xml.pl /tap-to-junit-xml.pl
+RUN cpan XML::Generator
+
 # /logs is where we should expect logs to end up
 RUN mkdir /logs
 # /test is where sytest will live

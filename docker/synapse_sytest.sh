@@ -4,7 +4,7 @@ set -x
 
 # Attempt to find a sytest to use.
 # If /test/run-tests.pl exists, it means that a SyTest checkout has been mounted into the Docker image.
-if [ -e "/test/run-tests.pl" ]
+if [ -e "./run-tests.pl" ]
 then
     # If the user has mounted in a SyTest checkout, use that. We can tell this by files being in the directory.
     echo "Using local sytests..."
@@ -69,5 +69,9 @@ TEST_STATUS=$?
 cp results.tap /logs/results.tap
 cp server-0/homeserver.log /logs/homeserver-0.log
 cp server-1/homeserver.log /logs/homeserver-1.log
+
+# Write out JUnit for CircleCI
+mkdir -p /logs/sytest
+perl /tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
 
 exit $TEST_STATUS
