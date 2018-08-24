@@ -205,7 +205,35 @@ sub await_sync_presence_contains {
 }
 
 
-push @EXPORT, qw( assert_room_members assert_state_room_members_matches );
+push @EXPORT, qw( assert_room_members assert_state_room_members_matches assert_room_state);
+
+# assert that the state body of a sync response is made up of the given state types.
+sub assert_room_state {
+   my ( $body, $room_id, $state_types ) = @_;
+
+   my $room = $body->{rooms}{join}{$room_id};
+   my $state = $room->{state}{events};
+
+   log_if_fail "Room", $room;
+
+   my $found_types = [];
+   foreach (@$state) {
+      push @$found_types, [ $_->{type}, $_->{state_key} ];
+   }
+
+   my $comp = sub {
+      my ($a, $b) = @_;
+      return ($a->[0] cmp $b->[0]) || ($a->[1] cmp $b->[1]);
+   };
+
+   $found_types = [ sort { &$comp($a, $b) } @$found_types ];
+   $state_types = [ sort { &$comp($a, $b) } @$state_types ];
+
+   log_if_fail "Found state types", $found_types;
+   log_if_fail "Desired state types", $state_types;
+
+   assert_deeply_eq($found_types, $state_types);
+}
 
 # assert that the given members are in the body of a sync response
 sub assert_room_members {

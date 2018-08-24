@@ -161,7 +161,14 @@ test "The only membership state included in an incremental sync are for senders 
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $bob->user_id ]);
+         assert_room_state( $body, $room_id, [
+            [ 'm.room.create', '' ],
+            [ 'm.room.join_rules', '' ],
+            [ 'm.room.power_levels', '' ],
+            [ 'm.room.name', '' ],
+            [ 'm.room.history_visibility', '' ],
+            [ 'm.room.member', $bob->user_id ],
+         ]);
 
          matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "Message from charlie",
@@ -170,7 +177,9 @@ test "The only membership state included in an incremental sync are for senders 
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $charlie->user_id ]);
+         assert_room_state( $body, $room_id, [
+            [ 'm.room.member', $charlie->user_id ],
+         ]);
          Future->done(1);
       });
    };
@@ -257,7 +266,6 @@ test "The only membership state included in a gapped incremental sync are for se
          Future->done(1);
       });
    };
-
 
 test "We don't send redundant membership state across incremental syncs by default",
    requires => [ local_user_fixtures( 3 ),
