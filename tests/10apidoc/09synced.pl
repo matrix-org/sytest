@@ -222,12 +222,11 @@ sub assert_room_state {
    }
 
    my $comp = sub {
-      my ($a, $b) = @_;
       return ($a->[0] cmp $b->[0]) || ($a->[1] cmp $b->[1]);
    };
 
-   $found_types = [ sort { &$comp($a, $b) } @$found_types ];
-   $state_types = [ sort { &$comp($a, $b) } @$state_types ];
+   $found_types = [ sort $comp @$found_types ];
+   $state_types = [ sort $comp @$state_types ];
 
    log_if_fail "Found state types", $found_types;
    log_if_fail "Desired state types", $state_types;
