@@ -114,18 +114,68 @@ sub check_http_code
    );
 }
 
+=head2 expect_matrix_error
 
-# todo: generalise this to other http errors/matrix errcodes
+   http_request()->main::expect_matrix_error(
+      'M_EXPECTED_ERROR',
+      http_code => 418,
+   )->then( sub {
+      my ( $error_body ) = @_;
+   });
+
+A decorator for a Future which we expect to return an HTTP error with a Matrix
+error code. Asserts that the HTTP error code and matrix error code were as
+expected, and if so returns the JSON-decoded body of the error (so that it can
+be checked for additional fields).
+
+By default, the expected HTTP error code is 400. This can be overridden with an
+"http_code" parameter.
+
+=cut
+
+sub expect_matrix_error
+{
+   my ( $f, $expected_errcode, %opts ) = @_;
+
+   my $expected_http_code = $opts{http_code} // 400;
+
+   return $f->then_with_f(
+      sub {  # done
+         my ( undef, $response ) = @_;
+
+         log_if_fail "Response", $response;
+         Future->fail(
+            "Expected to receive an HTTP $expected_http_code failure but it succeeded"
+         );
+      },
+      http => sub {  # catch http
+         my ( $f, undef, undef, $response ) = @_;
+
+         $response and $response->code == $expected_http_code and
+            return Future->done( $response );
+
+         # if the error code doesn't match, return the failure.
+         return $f;
+      },
+   )->then( sub {
+      my ( $response ) = @_;
+      my $body = decode_json( $response->content );
+
+      log_if_fail "Error response body", $body;
+
+      assert_eq( $body->{errcode}, $expected_errcode, 'errcode' );
+      Future->done( $body );
+   });
+}
+push @EXPORT, qw/expect_matrix_error/;
+
+
 sub expect_m_not_found
 {
    my $f = shift;
-
-   $f->main::expect_http_404()
-   ->then( sub {
-      my ( $response ) = @_;
-      my $body = decode_json( $response->content );
-      assert_eq( $body->{errcode}, "M_NOT_FOUND", 'responsecode' );
-      Future->done( 1 );
-   });
+   return expect_matrix_error(
+      $f, 'M_NOT_FOUND',
+      http_code=>404,
+     );
 }
 push @EXPORT, qw/expect_m_not_found/;
