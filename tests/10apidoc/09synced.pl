@@ -220,8 +220,6 @@ push @EXPORT, qw( assert_state_types_match );
 sub assert_state_types_match {
    my ( $state, $room_id, $state_types ) = @_;
 
-   log_if_fail "Room", $room;
-
    my $found_types = [];
    foreach (@$state) {
       push @$found_types, [ $_->{type}, $_->{state_key} ];
