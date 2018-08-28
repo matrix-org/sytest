@@ -205,14 +205,20 @@ sub await_sync_presence_contains {
 }
 
 
-push @EXPORT, qw( assert_room_members assert_state_room_members_matches assert_room_state);
+=head2 assert_state_types_match
 
-# assert that the state body of a sync response is made up of the given state types.
-sub assert_room_state {
-   my ( $body, $room_id, $state_types ) = @_;
+Assert that the state body of a sync response is made up of the given state types.
 
-   my $room = $body->{rooms}{join}{$room_id};
-   my $state = $room->{state}{events};
+$state is an arrayref of state events.
+
+$state_types is an arrayref of arrayrefs, each a tuple of type & state_key.
+
+=cut
+
+push @EXPORT, qw( assert_state_types_match );
+
+sub assert_state_types_match {
+   my ( $state, $room_id, $state_types ) = @_;
 
    log_if_fail "Room", $room;
 
@@ -234,10 +240,19 @@ sub assert_room_state {
    assert_deeply_eq($found_types, $state_types);
 }
 
-# assert that the given members are in the body of a sync response
+=head2 assert_room_members
+
+Assert that the given members are in the body of a sync response
+
+$memberships is either an arrayref of user_ids or a hashref of user_id
+to membership strings.
+
+=cut
+
+push @EXPORT, qw ( assert_room_members );
+
 sub assert_room_members {
    my ( $body, $room_id, $memberships ) = @_;
-   # Takes either an arrayref of user_ids or a hashref of user_id to membership strings
 
    my $room = $body->{rooms}{join}{$room_id};
    my $timeline = $room->{timeline}{events};
@@ -246,14 +261,22 @@ sub assert_room_members {
 
    assert_json_keys( $room, qw( timeline state ephemeral ));
 
-   return assert_state_room_members_matches( $room->{state}{events}, $memberships );
+   return assert_state_room_members_match( $room->{state}{events}, $memberships );
 }
 
+=head2 assert_state_room_members_match
 
-# assert that the given members are present in a block of state events
-sub assert_state_room_members_matches {
+Assert that the given members are present in a block of state events
+
+$memberships is either an arrayref of user_ids or a hashref of user_id
+to membership strings.
+
+=cut
+
+push @EXPORT, qw( assert_state_room_members_match );
+
+sub assert_state_room_members_match {
    my ( $events, $memberships ) = @_;
-   # Takes either an arrayref of user_ids or a hashref of user_id to membership strings
 
    log_if_fail "expected members:", $memberships;
    log_if_fail "state:", $events;

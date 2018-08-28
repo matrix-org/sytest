@@ -18,7 +18,7 @@ test "Can get rooms/{roomId}/members",
 
          assert_json_keys( $body, qw( chunk ) );
 
-         assert_state_room_members_matches( $body->{chunk}, [
+         assert_state_room_members_match( $body->{chunk}, [
             $user1->user_id,
             $user2->user_id,
          ]);
@@ -69,7 +69,7 @@ test "Can get rooms/{roomId}/members at a given point",
          assert_json_keys( $body, qw( chunk ) );
 
          # as of the first 'Hello world' the only member in the room should be user1
-         assert_state_room_members_matches( $body->{chunk}, [ $user1->user_id ]);
+         assert_state_room_members_match( $body->{chunk}, [ $user1->user_id ]);
 
          Future->done(1);
       })
@@ -100,7 +100,7 @@ test "Can filter rooms/{roomId}/members",
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( chunk ) );
-         assert_state_room_members_matches( $body->{chunk}, { $user1->user_id => 'join' } );
+         assert_state_room_members_match( $body->{chunk}, { $user1->user_id => 'join' } );
 
          do_request_json_for( $user1,
             method => "GET",
@@ -113,7 +113,7 @@ test "Can filter rooms/{roomId}/members",
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( chunk ) );
-         assert_state_room_members_matches( $body->{chunk}, { $user2->user_id => 'leave' });
+         assert_state_room_members_match( $body->{chunk}, { $user2->user_id => 'leave' });
 
          do_request_json_for( $user1,
             method => "GET",
@@ -126,7 +126,7 @@ test "Can filter rooms/{roomId}/members",
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( chunk ) );
-         assert_state_room_members_matches( $body->{chunk}, { $user1->user_id => 'join' });
+         assert_state_room_members_match( $body->{chunk}, { $user1->user_id => 'join' });
          Future->done(1);
       })
    };

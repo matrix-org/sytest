@@ -161,7 +161,9 @@ test "The only membership state included in an incremental sync are for senders 
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_state( $body, $room_id, [
+         my $state = $body->{rooms}{join}{$room_id}{state}{events};
+
+         assert_state_types_match( $state, $room_id, [
             [ 'm.room.create', '' ],
             [ 'm.room.join_rules', '' ],
             [ 'm.room.power_levels', '' ],
@@ -177,7 +179,9 @@ test "The only membership state included in an incremental sync are for senders 
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_state( $body, $room_id, [
+         my $state = $body->{rooms}{join}{$room_id}{state}{events};
+
+         assert_state_types_match( $state, $room_id, [
             [ 'm.room.member', $charlie->user_id ],
          ]);
          Future->done(1);
