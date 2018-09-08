@@ -117,13 +117,7 @@ test "Room summary only has 5 heroes",
          log_if_fail ( "sync response:", $body->{rooms}{join}{$room_id} );
          my $summary = $body->{rooms}{join}{$room_id}{summary};
          my $expected_heroes = [
-            (sort(
-               $users[0]->user_id,
-               $users[1]->user_id,
-               $users[2]->user_id,
-               $users[3]->user_id,
-               $users[4]->user_id,
-            ))[0..4]
+            (sort( map { $_->user_id } @users ))[0..4]
          ];
          log_if_fail( "expected_heroes:", $expected_heroes );
          assert_deeply_eq($summary, {
