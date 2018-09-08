@@ -43,7 +43,7 @@ test "Lazy loading parameters in the filter are strictly boolean",
       });
    };
 
-test "The only membership state included in an initial sync are for all the senders in the timeline",
+test "The only membership state included in an initial sync is for all the senders in the timeline",
    requires => [ local_user_fixtures( 3 ),
                  qw( can_sync ) ],
 
@@ -108,7 +108,7 @@ test "The only membership state included in an initial sync are for all the send
    };
 
 
-test "The only membership state included in an incremental sync are for senders in the timeline",
+test "The only membership state included in an incremental sync is for senders in the timeline",
    requires => [ local_user_fixtures( 3 ),
                  qw( can_sync ) ],
 
@@ -176,7 +176,7 @@ test "The only membership state included in an incremental sync are for senders 
    };
 
 
-test "The only membership state included in a gapped incremental sync are for senders in the timeline",
+test "The only membership state included in a gapped incremental sync is for senders in the timeline",
    requires => [ local_user_fixtures( 4 ),
                  qw( can_sync ) ],
 
