@@ -129,6 +129,71 @@ test "Room summary only has 5 heroes",
       });
    };
 
+test "Room summary counts change when membership changes",
+   requires => [ local_user_fixtures( 3 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $alice, $bob, $charlie ) = @_;
+
+      my ( $filter_id, $room_id );
+
+      matrix_create_filter( $alice, {
+         room => {
+            state => {
+               lazy_load_members => JSON::true
+            },
+         }
+      })->then( sub {
+         ( $filter_id ) = @_;
+
+         matrix_create_room_synced( $alice );
+      })->then( sub {
+         ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_join_room_synced( $bob, $room_id );
+      })->then( sub {
+         matrix_sync( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail ( "sync response:", $body->{rooms}{join}{$room_id} );
+         my $summary = $body->{rooms}{join}{$room_id}{summary};
+         assert_deeply_eq($summary, {
+            'm.joined_member_count' => 2,
+            'm.invited_member_count' => 0,
+         });
+
+         matrix_join_room_synced( $charlie, $room_id );
+      })->then( sub {
+         matrix_sync( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail ( "sync response:", $body->{rooms}{join}{$room_id} );
+         my $summary = $body->{rooms}{join}{$room_id}{summary};
+         assert_deeply_eq($summary, {
+            'm.joined_member_count' => 3,
+            'm.invited_member_count' => 0,
+         });
+
+         matrix_leave_room_synced( $bob, $room_id );
+      })->then( sub {
+         matrix_sync( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail ( "sync response:", $body->{rooms}{join}{$room_id} );
+         my $summary = $body->{rooms}{join}{$room_id}{summary};
+         assert_deeply_eq($summary, {
+            'm.joined_member_count' => 2,
+            'm.invited_member_count' => 0,
+         });
+         Future->done(1);
+      });
+   };
+
 # TODO: test that parted users don't feature in room summaries, unless everyone has left
 # TODO: check we receive room state for unknown hero mxids
 # TODO: check that room summary changes whenever membership changes
