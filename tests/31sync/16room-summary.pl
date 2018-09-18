@@ -42,7 +42,7 @@ test "Unnamed room comes with a name summary",
       });
    };
 
-test "Named room comes with just joined member count summary",
+test "Named room with avatar comes with just joined member count summary",
    requires => [ local_user_fixtures( 3 ),
                  qw( can_sync ) ],
 
@@ -63,9 +63,14 @@ test "Named room comes with just joined member count summary",
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $alice, $room_id,
+         matrix_put_room_state_synced( $alice, $room_id,
             type    => "m.room.name",
             content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_put_room_state_synced( $alice, $room_id,
+            type    => "m.room.avatar",
+            content => { url => "mxc://example.com/something" },
          );
       })->then( sub {
          matrix_join_room_synced( $bob, $room_id );
@@ -84,7 +89,6 @@ test "Named room comes with just joined member count summary",
          Future->done(1);
       });
    };
-
 
 test "Room summary only has 5 heroes",
    requires => [ local_user_fixtures( 6 ),
@@ -150,9 +154,14 @@ test "Room summary counts change when membership changes",
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $alice, $room_id,
+         matrix_put_room_state_synced( $alice, $room_id,
             type    => "m.room.name",
             content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_put_room_state_synced( $alice, $room_id,
+            type    => "m.room.avatar",
+            content => { url => "mxc://example.com/something" },
          );
       })->then( sub {
          matrix_join_room_synced( $bob, $room_id );
