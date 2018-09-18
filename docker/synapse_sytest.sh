@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-set -x
+set -ex
 
 # Attempt to find a sytest to use.
 # If /test/run-tests.pl exists, it means that a SyTest checkout has been mounted into the Docker image.
@@ -14,17 +14,11 @@ else
 
     # Try and fetch the branch
     echo "Trying to get same-named sytest branch..."
-    wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz
-
-    if [ $? -eq 0 ]
-    then
-        # The download succeeded, use that.
-        echo "Using $branch_name!"
-    else
+    wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
         # Probably a 404, fall back to develop
         echo "Using develop instead..."
         wget -q https://github.com/matrix-org/sytest/archive/develop.tar.gz -O sytest.tar.gz
-    fi
+    }
 
     tar --strip-components=1 -xf sytest.tar.gz
 
@@ -61,9 +55,8 @@ $PYTHON -m virtualenv -p $PYTHON /venv/
 ./install-deps.pl
 
 # Run the tests
-./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all > results.tap
-
-TEST_STATUS=$?
+TEST_STATUS=0
+./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all > results.tap || TEST_STATUS=$?
 
 # Copy out the logs
 cp results.tap /logs/results.tap
