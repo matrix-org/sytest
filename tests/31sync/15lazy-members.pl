@@ -161,7 +161,16 @@ test "The only membership state included in an incremental sync is for senders i
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $bob->user_id ]);
+         my $state = $body->{rooms}{join}{$room_id}{state}{events};
+
+         assert_state_types_match( $state, $room_id, [
+            [ 'm.room.create', '' ],
+            [ 'm.room.join_rules', '' ],
+            [ 'm.room.power_levels', '' ],
+            [ 'm.room.name', '' ],
+            [ 'm.room.history_visibility', '' ],
+            [ 'm.room.member', $bob->user_id ],
+         ]);
 
          matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "Message from charlie",
@@ -170,7 +179,11 @@ test "The only membership state included in an incremental sync is for senders i
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $charlie->user_id ]);
+         my $state = $body->{rooms}{join}{$room_id}{state}{events};
+
+         assert_state_types_match( $state, $room_id, [
+            [ 'm.room.member', $charlie->user_id ],
+         ]);
          Future->done(1);
       });
    };
