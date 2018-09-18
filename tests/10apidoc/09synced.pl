@@ -211,7 +211,13 @@ Assert that the state body of a sync response is made up of the given state type
 
 $state is an arrayref of state events.
 
-$state_types is an arrayref of arrayrefs, each a tuple of type & state_key.
+$state_types is an arrayref of arrayrefs, each a tuple of type & state_key, e.g:
+
+   [
+      [ 'm.room.create', '' ],
+      [ 'm.room.name', '' ],
+      [ 'm.room.member', '@foo:bar.com' ],
+   ]
 
 =cut
 
