@@ -74,9 +74,14 @@ test "The only membership state included in an initial sync is for all the sende
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $alice, $room_id,
+         matrix_put_room_state_synced( $alice, $room_id,
             type    => "m.room.name",
             content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_put_room_state_synced( $alice, $room_id,
+            type    => "m.room.avatar",
+            content => { url => "https://example.com/something" },
          );
       })->then( sub {
          matrix_join_room( $bob, $room_id );
@@ -141,9 +146,14 @@ test "The only membership state included in an incremental sync is for senders i
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $alice, $room_id,
+         matrix_put_room_state_synced( $alice, $room_id,
             type    => "m.room.name",
             content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_put_room_state_synced( $alice, $room_id,
+            type    => "m.room.avatar",
+            content => { url => "https://example.com/something" },
          );
       })->then( sub {
          matrix_join_room( $bob, $room_id );
@@ -212,9 +222,14 @@ test "The only membership state included in a gapped incremental sync is for sen
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $alice, $room_id,
+         matrix_put_room_state_synced( $alice, $room_id,
             type    => "m.room.name",
             content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_put_room_state_synced( $alice, $room_id,
+            type    => "m.room.avatar",
+            content => { url => "https://example.com/something" },
          );
       })->then( sub {
          matrix_join_room( $bob, $room_id );
@@ -294,9 +309,14 @@ test "Old members are included in gappy incr LL sync if they start speaking",
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $alice, $room_id,
+         matrix_put_room_state_synced( $alice, $room_id,
             type    => "m.room.name",
             content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_put_room_state_synced( $alice, $room_id,
+            type    => "m.room.avatar",
+            content => { url => "https://example.com/something" },
          );
       })->then( sub {
          matrix_join_room( $bob, $room_id );
@@ -372,9 +392,14 @@ test "Members from the gap are included in gappy incr LL sync",
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $alice, $room_id,
+         matrix_put_room_state_synced( $alice, $room_id,
             type    => "m.room.name",
             content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_put_room_state_synced( $alice, $room_id,
+            type    => "m.room.avatar",
+            content => { url => "https://example.com/something" },
          );
       })->then( sub {
          matrix_join_room( $bob, $room_id );
@@ -453,9 +478,14 @@ test "We don't send redundant membership state across incremental syncs by defau
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $alice, $room_id,
+         matrix_put_room_state_synced( $alice, $room_id,
             type    => "m.room.name",
             content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_put_room_state_synced( $alice, $room_id,
+            type    => "m.room.avatar",
+            content => { url => "https://example.com/something" },
          );
       })->then( sub {
          matrix_join_room( $bob, $room_id );
@@ -537,9 +567,14 @@ test "We do send redundant membership state across incremental syncs if asked",
          matrix_create_room_synced( $alice );
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $alice, $room_id,
+         matrix_put_room_state_synced( $alice, $room_id,
             type    => "m.room.name",
             content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_put_room_state_synced( $alice, $room_id,
+            type    => "m.room.avatar",
+            content => { url => "https://example.com/something" },
          );
       })->then( sub {
          matrix_join_room( $bob, $room_id );
