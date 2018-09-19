@@ -286,7 +286,7 @@ test "Old members are included in gappy incr LL sync if they start speaking",
       # Bob and Charlie join.
       # Bob sends 10 events into it
       # Alice initial syncs with a filter on the last 10 events, and LL members
-      # Alice should see only Bob in the membership list.
+      # Alice should see only Bob in the membership list (and herself)
       # Charlie then sends 10 events
       # Alice syncs again; she should get a gappy sync and see
       # Charlie's membership (due to his timeline events).
@@ -329,7 +329,8 @@ test "Old members are included in gappy incr LL sync if they start speaking",
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [
-            $bob->user_id
+            $alice->user_id,
+            $bob->user_id,
          ]);
 
          repeat( sub {
@@ -362,7 +363,7 @@ test "Members from the gap are included in gappy incr LL sync",
       # Bob and Charlie join.
       # Bob sends 10 events into it
       # Alice initial syncs with a filter on the last 10 events, and LL members
-      # Alice should see only Bob in the membership list.
+      # Alice should see only Bob in the membership list (and herself)
       # Dave joins
       # Charlie then sends 10 events
       # Alice syncs again; she should get a gappy sync and see both
@@ -407,7 +408,8 @@ test "Members from the gap are included in gappy incr LL sync",
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [
-            $bob->user_id
+            $alice->user_id,
+            $bob->user_id,
          ]);
 
          matrix_join_room( $dave, $room_id );
