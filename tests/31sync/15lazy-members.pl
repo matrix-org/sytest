@@ -43,7 +43,7 @@ test "Lazy loading parameters in the filter are strictly boolean",
       });
    };
 
-test "The only membership state included in an initial sync are for all the senders in the timeline",
+test "The only membership state included in an initial sync is for all the senders in the timeline",
    requires => [ local_user_fixtures( 3 ),
                  qw( can_sync ) ],
 
@@ -108,7 +108,7 @@ test "The only membership state included in an initial sync are for all the send
    };
 
 
-test "The only membership state included in an incremental sync are for senders in the timeline",
+test "The only membership state included in an incremental sync is for senders in the timeline",
    requires => [ local_user_fixtures( 3 ),
                  qw( can_sync ) ],
 
@@ -161,7 +161,17 @@ test "The only membership state included in an incremental sync are for senders 
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $alice->user_id, $bob->user_id ]);
+         my $state = $body->{rooms}{join}{$room_id}{state}{events};
+
+         assert_state_types_match( $state, $room_id, [
+            [ 'm.room.create', '' ],
+            [ 'm.room.join_rules', '' ],
+            [ 'm.room.power_levels', '' ],
+            [ 'm.room.name', '' ],
+            [ 'm.room.history_visibility', '' ],
+            [ 'm.room.member', $alice->user_id ],
+            [ 'm.room.member', $bob->user_id ],
+         ]);
 
          matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "Message from charlie",
@@ -170,15 +180,21 @@ test "The only membership state included in an incremental sync are for senders 
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $charlie->user_id ]);
+         my $state = $body->{rooms}{join}{$room_id}{state}{events};
+
+         assert_state_types_match( $state, $room_id, [
+            [ 'm.room.member', $charlie->user_id ],
+         ]);
          Future->done(1);
       });
    };
 
 
-test "The only membership state included in a gapped incremental sync are for senders in the timeline",
+test "The only membership state included in a gapped incremental sync is for senders in the timeline",
    requires => [ local_user_fixtures( 4 ),
                  qw( can_sync ) ],
+
+   bug => "vector-im/riot-web#7211",
 
    check => sub {
       my ( $alice, $bob, $charlie, $dave ) = @_;
@@ -254,6 +270,163 @@ test "The only membership state included in a gapped incremental sync are for se
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [ $dave->user_id ]);
+         Future->done(1);
+      });
+   };
+
+
+test "Old members are included in gappy incr LL sync if they start speaking",
+   requires => [ local_user_fixtures( 3 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $alice, $bob, $charlie ) = @_;
+
+      # Alice creates a public room,
+      # Bob and Charlie join.
+      # Bob sends 10 events into it
+      # Alice initial syncs with a filter on the last 10 events, and LL members
+      # Alice should see only Bob in the membership list.
+      # Charlie then sends 10 events
+      # Alice syncs again; she should get a gappy sync and see
+      # Charlie's membership (due to his timeline events).
+
+      my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
+
+      matrix_create_filter( $alice, {
+         room => {
+            state => {
+               lazy_load_members => JSON::true
+            },
+            timeline => {
+               limit => 10
+            },
+         }
+      } )->then( sub {
+         ( $filter_id ) = @_;
+
+         matrix_create_room_synced( $alice );
+      })->then( sub {
+         ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_join_room( $bob, $room_id );
+      })->then( sub {
+         matrix_join_room( $charlie, $room_id );
+      })->then( sub {
+         repeat( sub {
+            my $msgnum = $_[0];
+
+            matrix_send_room_text_message( $bob, $room_id,
+               body => "Message $msgnum",
+            )
+         }, foreach => [ 1 .. 20 ])
+      })->then( sub {
+         matrix_sync( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         assert_room_members( $body, $room_id, [
+            $bob->user_id
+         ]);
+
+         repeat( sub {
+            my $msgnum = $_[0];
+
+            matrix_send_room_text_message( $charlie, $room_id,
+               body => "Message $msgnum",
+            )
+         }, foreach => [ 1 .. 20 ])
+      })->then( sub {
+         matrix_sync_again( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         assert_room_members( $body, $room_id, [
+            $charlie->user_id,
+         ]);
+         Future->done(1);
+      });
+   };
+
+
+test "Members from the gap are included in gappy incr LL sync",
+   requires => [ local_user_fixtures( 4 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $alice, $bob, $charlie, $dave ) = @_;
+
+      # Alice creates a public room,
+      # Bob and Charlie join.
+      # Bob sends 10 events into it
+      # Alice initial syncs with a filter on the last 10 events, and LL members
+      # Alice should see only Bob in the membership list.
+      # Dave joins
+      # Charlie then sends 10 events
+      # Alice syncs again; she should get a gappy sync and see both
+      # Charlie's membership (due to his timeline events) and
+      # Dave's membership (because he joined during the gap)
+
+      my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
+
+      matrix_create_filter( $alice, {
+         room => {
+            state => {
+               lazy_load_members => JSON::true
+            },
+            timeline => {
+               limit => 10
+            },
+         }
+      } )->then( sub {
+         ( $filter_id ) = @_;
+
+         matrix_create_room_synced( $alice );
+      })->then( sub {
+         ( $room_id ) = @_;
+         matrix_put_room_state( $alice, $room_id,
+            type    => "m.room.name",
+            content => { name => "A room name" },
+         );
+      })->then( sub {
+         matrix_join_room( $bob, $room_id );
+      })->then( sub {
+         matrix_join_room( $charlie, $room_id );
+      })->then( sub {
+         repeat( sub {
+            my $msgnum = $_[0];
+
+            matrix_send_room_text_message( $bob, $room_id,
+               body => "Message $msgnum",
+            )
+         }, foreach => [ 1 .. 10 ])
+      })->then( sub {
+         matrix_sync( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         assert_room_members( $body, $room_id, [
+            $bob->user_id
+         ]);
+
+         matrix_join_room( $dave, $room_id );
+      })->then( sub {
+         repeat( sub {
+            my $msgnum = $_[0];
+
+            matrix_send_room_text_message( $charlie, $room_id,
+               body => "Message $msgnum",
+            )
+         }, foreach => [ 1 .. 10 ])
+      })->then( sub {
+         matrix_sync_again( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         assert_room_members( $body, $room_id, [
+            $charlie->user_id,
+            $dave->user_id
+         ]);
          Future->done(1);
       });
    };
