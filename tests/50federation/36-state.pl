@@ -118,7 +118,7 @@ test "Outbound federation requests /state_ids and correctly handles 404",
          ( $room ) = @_;
 
          # Generate but don't send an event
-         my $missing_event = $room->create_event(
+         my $missing_event = $room->create_and_insert_event(
             type => "m.room.message",
 
             sender  => $user_id,
@@ -129,10 +129,10 @@ test "Outbound federation requests /state_ids and correctly handles 404",
 
          # Generate another one and do send it so it will refer to the
          # previous in its prev_events field
-         $sent_event = $room->create_event(
+         $sent_event = $room->create_and_insert_event(
             type => "m.room.message",
 
-            # This would be done by $room->create_event anyway but lets be
+            # This would be done by $room->create_and_insert_event anyway but lets be
             #   sure for this test
             prev_events => [
                [ $missing_event->{event_id}, $missing_event->{hashes} ],
@@ -202,7 +202,7 @@ test "Outbound federation requests /state_ids and asks for missing state",
          ( $room ) = @_;
 
          # Generate but don't send an event
-         my $missing_event = $room->create_event(
+         my $missing_event = $room->create_and_send_event(
             type => "m.room.message",
 
             sender  => $user_id,
@@ -211,7 +211,7 @@ test "Outbound federation requests /state_ids and asks for missing state",
             },
          );
 
-         $missing_state = $room->create_event(
+         $missing_state = $room->create_and_insert_event(
             type      => "m.room.topic",
             state_key => "",
 
@@ -223,10 +223,10 @@ test "Outbound federation requests /state_ids and asks for missing state",
 
          # Generate another one and do send it so it will refer to the
          # previous in its prev_events field
-         $sent_event = $room->create_event(
+         $sent_event = $room->create_and_insert_event(
             type => "m.room.message",
 
-            # This would be done by $room->create_event anyway but lets be
+            # This would be done by $room->create_and_insert_event anyway but lets be
             #   sure for this test
             prev_events => [
                [ $missing_event->{event_id}, $missing_event->{hashes} ],

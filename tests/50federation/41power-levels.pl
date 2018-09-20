@@ -85,7 +85,7 @@ test "Remote servers should reject attempts by non-creators to set the power lev
       );
       my $room_id = $room->{room_id};
 
-      $room->create_event(
+      $room->create_and_insert_event(
          type => "m.room.member",
          content     => { membership => "join" },
          sender      => $sytest_user_id_b,
@@ -105,7 +105,7 @@ test "Remote servers should reject attempts by non-creators to set the power lev
             or die "no membership for $sytest_user_id_b";
 
          # now synapse should reject an attempt by user b to set the power levels.
-         my $pl = $room->create_event(
+         my $pl = $room->create_and_insert_event(
             sender    => $sytest_user_id_b,
             type      => "m.room.power_levels",
             state_key => "",
