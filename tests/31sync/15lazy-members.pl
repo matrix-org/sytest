@@ -185,6 +185,13 @@ test "The only membership state included in an incremental sync is for senders i
          assert_state_types_match( $state, $room_id, [
             [ 'm.room.member', $charlie->user_id ],
          ]);
+
+         # check syncing again doesn't return any state changes
+         matrix_sync_again( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         my $joined_rooms = $body->{rooms}{join};
+         assert_deeply_eq($joined_rooms, {});
          Future->done(1);
       });
    };
