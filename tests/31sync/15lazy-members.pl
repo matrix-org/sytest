@@ -185,6 +185,13 @@ test "The only membership state included in an incremental sync is for senders i
          assert_state_types_match( $state, $room_id, [
             [ 'm.room.member', $charlie->user_id ],
          ]);
+
+         # check syncing again doesn't return any state changes
+         matrix_sync_again( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         my $joined_rooms = $body->{rooms}{join};
+         assert_deeply_eq($joined_rooms, {});
          Future->done(1);
       });
    };
@@ -537,7 +544,7 @@ test "We do send redundant membership state across incremental syncs if asked",
       # Bob sends 1 more event
       # Charlie sends 1 more event
       # Alice syncs again; she should see redundant membership events for Bob and
-      # Charlie again (and herself)
+      # Charlie again.  We don't include herself as redundant.
 
       my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
 
@@ -603,7 +610,6 @@ test "We do send redundant membership state across incremental syncs if asked",
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [
-            $alice->user_id,
             $bob->user_id,
             $charlie->user_id
          ]);
