@@ -96,7 +96,7 @@ test "Inbound federation can get state_ids for a room",
       });
    };
 
-test "Outbound federation requests /state_ids and correctly handles 404",
+test "Federation rejects inbound events where the prev_events cannot be found",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
                  federation_user_id_fixture() ],
@@ -144,12 +144,12 @@ test "Outbound federation requests /state_ids and correctly handles 404",
             },
          );
 
-         Future->wait_all(
+         Future->needs_all(
             $inbound_server->await_request_get_missing_events( $room_id )
             ->then( sub {
                my ( $req ) = @_;
 
-               # We return no events to force the remote to ask for state
+               # Return no events, which should cause a rejection.
                $req->respond_json( {
                   events => [],
                } );
@@ -157,17 +157,22 @@ test "Outbound federation requests /state_ids and correctly handles 404",
                Future->done(1);
             }),
 
-            $outbound_client->send_event(
-               event       => $sent_event,
+            $outbound_client->send_transaction(
+               pdus => [ $sent_event ],
                destination => $first_home_server,
-            ),
-         );
-       })->then( sub {
-	  my @futureresults = @_;
-	  if ($futureresults[1]->is_failed eq 0) { die "Should have failed"}
+            )->then( sub {
+               # we expect the event to be rejected.
+               my ( $body ) = @_;
+               log_if_fail "send_transaction response", $body;
+               assert_ok(
+                  defined( $body->{pdus}->{ $sent_event->{event_id} }->{error} ),
+                  "/send accepted faulty event",
+               );
 
-	  Future->done(1);
-      })->then_done(1);
+               Future->done(1);
+            }),
+         );
+      });
    };
 
 test "Outbound federation requests /state_ids and asks for missing state",
