@@ -63,7 +63,7 @@ test "Inbound federation can receive events",
       )->then( sub {
          my ( $room ) = @_;
 
-         my $event = $room->create_event(
+         my $event = $room->create_and_insert_event(
             type => "m.room.message",
 
             sender  => $user_id,
@@ -110,7 +110,7 @@ test "Inbound federation can receive redacted events",
       )->then( sub {
          my ( $room ) = @_;
 
-         my $event = $room->create_event(
+         my $event = $room->create_and_insert_event(
             type => "m.room.message",
 
             sender  => $user_id,
