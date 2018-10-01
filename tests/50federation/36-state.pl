@@ -363,8 +363,9 @@ test "Outbound federation requests missing prev_events and then asks for /state_
                      map { $_->{event_id} } values( %state ),
                   ],
                   auth_chain_ids => [
-                     # XXX I'm not really sure why we have to return our
-                     # auth_events here, when they are already in the event
+                     # XXX we're supposed to return the whole auth chain here,
+                     # not just y's auth_events. It doesn't matter too much
+                     # here though.
                      map { $_->[0] } @{ $missing_event_y->{auth_events} },
                   ],
                };
