@@ -110,11 +110,13 @@ sub start
 
    # map sytest db args onto synapse db args
    my %synapse_db_config;
+   my %synapse_frozen_dicts;
    if( $db_type eq "pg" ) {
       %synapse_db_config = (
          name => 'psycopg2',
          args => $db_config{args},
       );
+      %synapse_frozen_dicts="false";
    }
    else {
       # must be sqlite
@@ -122,6 +124,7 @@ sub start
          name => 'sqlite3',
          args => $db_config{args},
       );
+      %synapse_frozen_dicts="true";
    }
 
    # Clean up the media_store directory each time, or else it fills up with
@@ -162,7 +165,7 @@ sub start
         macaroon_secret_key => $macaroon_secret_key,
         registration_shared_secret => $registration_shared_secret,
 
-        use_frozen_events => "true",
+        use_frozen_dicts => \%synapse_frozen_dicts,
 
         allow_guest_access => "True",
         invite_3pid_guest => "true",
