@@ -1,50 +1,35 @@
 #!/venv/bin/python
 
-import shlex, subprocess
+import shlex
+import subprocess
 import sys
-from six.moves.BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-
 import time
+
 import requests
+from six.moves.BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 
 def _print(out):
+    """
+    Print to stderr, so it shows up in the sytest logs when TAP is being used.
+    """
     sys.stderr.write(str(out) + "\n")
     sys.stderr.flush()
 
 
-_print("Starting pydron...")
-
-input_args = sys.argv[1:]
-
-args = {}
-
-while input_args:
-    key = input_args.pop(0)
-    args[key] = input_args.pop(0)
-
-configs = {}
-urls = {}
-
-for x in args.keys():
-    if x != "--synapse-config" and x.endswith("-config"):
-        configs[x[2 : -len("-config")]] = args[x]
-
-    if x.endswith("-url"):
-        urls[x[2 : -len("-url")]] = args[x]
-
-appname_map = {"user-directory": "user_dir"}
-
-
 def wait_for_start(process, url):
-
+    """
+    Wait for the start of Synapse by polling its HTTP endpoint.
+    """
     tries = 10
     while tries != 0:
         tries -= 1
 
         try:
-            r = requests.get("http://" + url.replace("http://", ""), timeout=5)
+            r = requests.get("http://" + url, timeout=5)
             if r.status_code:
+                # We don't care what the status code is, just that it's
+                # responding.
                 return
         except Exception as e:
             time.sleep(2)
@@ -54,24 +39,53 @@ def wait_for_start(process, url):
     raise ValueError("Never started, couldn't get %s!" % (url,))
 
 
+_print("Starting pydron...")
+
+# Sort the args into key:value pairs in a dict
+input_args = sys.argv[1:]
+args = {}
+
+while input_args:
+    key = input_args.pop(0)
+    args[key] = input_args.pop(0)
+
+# Using the key:value arg pairs, parse which ones are config paths.
+configs = {}
+
+for x in args.keys():
+    if x != "--synapse-config" and x.endswith("-config"):
+        # Strip the first two dashes and -config off it
+        configs[x[2 : -len("-config")]] = args[x]
+
+# One of the config options is named differently than the actual app script, so,
+# create a map for it.
+appname_map = {"user-directory": "user_dir"}
+
+# running is where we'll keep a map of app name to the Popen object (so we can
+# terminate it later).
 running = {}
 
 try:
+    # First, try and start Synapse (which will set up the database).
     synapse = (
         args["--synapse-python"]
         + " -m synapse.app.homeserver --config-path="
         + args["--synapse-config"]
     )
-    # _print("Calling %s" % (synapse,))
     syn = subprocess.Popen(
         shlex.split(synapse), stdout=subprocess.PIPE, stderr=subprocess.STDOUT
     )
-
     running["synapse"] = syn
-    wait_for_start(syn, urls["synapse"])
 
+    # Wait for Synapse to start by polling its webserver until it responds.
+    wait_for_start(syn, args["--synapse-url"])
+
+    # Then, start up all the workers.
     for i in configs.keys():
 
+        # Get the synapse app name from the map, if needed. Otherwise, just
+        # replace any dashes with underscores, so they match the Python module
+        # name.
         appname = appname_map.get(i, i.replace("-", "_"))
 
         base = (
@@ -83,7 +97,6 @@ try:
             + " --config-path="
             + args["--synapse-config"]
         )
-        # _print("Calling %s" % (base,))
         exc = subprocess.Popen(
             shlex.split(base), stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
@@ -124,8 +137,10 @@ try:
     server.serve_forever()
 
 except BaseException as e:
+    # If we get told to shut down, log it
     _print("Told to quit because %s" % (repr(e)))
 
+    # Terminate all the workers as cleanly as possible.
     for x in running.keys():
         if not running[x].returncode:
             _print("Terminating %s" % (x,))
@@ -133,7 +148,7 @@ except BaseException as e:
         else:
             _print("%s was already dead" % (x,))
 
-    # If it's keyboard interrupt, exit cleanly.
+    # If it's keyboard interrupt, exit cleanly -- sytest is finished.
     if isinstance(e, KeyboardInterrupt):
         sys.exit(0)
 
