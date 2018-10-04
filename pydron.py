@@ -21,7 +21,7 @@ def wait_for_start(process, url):
     """
     Wait for the start of Synapse by polling its HTTP endpoint.
     """
-    tries = 10
+    tries = 100
     while tries != 0:
         tries -= 1
 
@@ -32,7 +32,7 @@ def wait_for_start(process, url):
                 # responding.
                 return
         except Exception as e:
-            time.sleep(2)
+            time.sleep(0.2)
             pass
 
     process.terminate()
