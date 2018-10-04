@@ -26,16 +26,16 @@ def wait_for_start(process, url):
         tries -= 1
 
         try:
-            r = requests.get("http://" + url, timeout=5)
+            r = requests.get("http://" + url.replace("http://", ""), timeout=5)
             if r.status_code:
                 # We don't care what the status code is, just that it's
                 # responding.
                 return
         except Exception as e:
-            time.sleep(0.2)
+            time.sleep(0.5)
             pass
 
-    process.terminate()
+    process.kill()
     raise ValueError("Never started, couldn't get %s!" % (url,))
 
 
@@ -82,7 +82,7 @@ try:
     running["synapse"] = syn
 
     # Wait for Synapse to start by polling its webserver until it responds.
-    wait_for_start(syn, args["--synapse-url"])
+    wait_for_start(syn, urls["synapse"])
 
     # Then, start up all the workers.
     for i in configs.keys():
@@ -108,7 +108,7 @@ try:
 
         # If we've been given a url for it, poll it until it's up
         if i in urls:
-            wait_for_start(exc, urls[i].replace("http://", ""))
+            wait_for_start(exc, urls[i])
 
     # Check if any have outright failed to start up (syntax errors, etc). We do
     # this even if we've waited for them to start, because not all workers have
@@ -144,6 +144,10 @@ try:
     server.serve_forever()
 
 except BaseException as e:
+    # Log a traceback for debug
+    import traceback
+    traceback.print_exc()
+
     # If we get told to shut down, log it
     _print("Told to quit because %s" % (repr(e)))
 
