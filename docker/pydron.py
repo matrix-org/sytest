@@ -51,11 +51,15 @@ while input_args:
 
 # Using the key:value arg pairs, parse which ones are config paths.
 configs = {}
+urls = {}
 
 for x in args.keys():
     if x != "--synapse-config" and x.endswith("-config"):
         # Strip the first two dashes and -config off it
         configs[x[2 : -len("-config")]] = args[x]
+    if x.endswith("-url"):
+        # Strip the first two dashes and -url off it
+        urls[x[2 : -len("-url")]] = args[x]
 
 # One of the config options is named differently than the actual app script, so,
 # create a map for it.
@@ -102,10 +106,13 @@ try:
         )
         running[i] = exc
 
-    # Give them some time to start up...
-    time.sleep(3)
+        # If we've been given a url for it, poll it until it's up
+        if i in urls:
+            wait_for_start(exc, urls[i].replace("http://", ""))
 
-    # Check if any have outright failed to start up (syntax errors, etc)
+    # Check if any have outright failed to start up (syntax errors, etc). We do
+    # this even if we've waited for them to start, because not all workers have
+    # a URL.
     failed_units = []
 
     for x in running.keys():
@@ -143,8 +150,8 @@ except BaseException as e:
     # Terminate all the workers as cleanly as possible.
     for x in running.keys():
         if not running[x].returncode:
-            _print("Terminating %s" % (x,))
-            running[x].terminate()
+            _print("Killing %s" % (x,))
+            running[x].kill()
         else:
             _print("%s was already dead" % (x,))
 
