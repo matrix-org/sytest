@@ -315,3 +315,73 @@ test "Can delete backup",
          );
       })->main::expect_http_404;
    };
+
+test "Deleted & recreated backups are empty",
+   requires => [ $fixture, qw( can_create_backup_version ) ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      my $version;
+
+      do_request_json_for( $user,
+         method  => "POST",
+         uri     => "/unstable/room_keys/version",
+         content => {
+            algorithm => "m.megolm_backup.v1",
+            auth_data => "anevenmoreopaquestring",
+         }
+      )->then( sub {
+         my ( $content ) = @_;
+         log_if_fail "Content", $content;
+
+         assert_json_keys( $content, "version" );
+
+         $version = $content->{version};
+
+         log_if_fail "Created version $version";
+
+         do_request_json_for( $user,
+            method  => "PUT",
+            uri     => "/unstable/room_keys/keys/!abcd/1234",
+            params  => {
+               version => $version,
+            },
+            content => {
+               first_message_index => 3,
+               forwarded_count     => 0,
+               is_verified         => JSON::false,
+               session_data        => "areallyopaquestring",
+            }
+         );
+      })->then( sub {
+         log_if_fail "Deleting version $version";
+         do_request_json_for( $user,
+            method  => "DELETE",
+            uri     => "/unstable/room_keys/version/$version",
+         );
+      })->then( sub {
+         my ( $content ) = @_;
+         log_if_fail "Content", $content;
+
+         do_request_json_for( $user,
+            method  => "POST",
+            uri     => "/unstable/room_keys/version",
+            content => {
+               algorithm => "m.megolm_backup.v1",
+               auth_data => "omgyouwouldntbelievehowopaquethisstringis",
+            }
+         );
+      })->then( sub {
+         my ( $content ) = @_;
+         log_if_fail "Created version $content->{version}";
+
+         do_request_json_for( $user,
+            method  => "GET",
+            uri     => "/unstable/room_keys/keys",
+            params  => {
+               version => $content->{version},
+            }
+         );
+      })->main::expect_http_404;
+   };
