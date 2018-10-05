@@ -269,3 +269,49 @@ test "Will not back up to an old backup version",
       })->main::expect_http_4xx
       ->then_done(1);
    };
+
+test "Can delete backup",
+   requires => [ $fixture, qw( can_create_backup_version ) ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      log_if_fail "Deleting version: ", $current_version;
+
+      do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/unstable/room_keys/version",
+      )->then( sub {
+         my ( $content ) = @_;
+         log_if_fail "Content", $content;
+
+         do_request_json_for( $user,
+            method  => "DELETE",
+            uri     => "/unstable/room_keys/version/$current_version",
+         );
+      })->then( sub {
+         my ( $content ) = @_;
+         log_if_fail "Content", $content;
+
+         do_request_json_for( $user,
+            method  => "GET",
+            uri     => "/unstable/room_keys/version",
+         );
+      })->then( sub {
+         my ( $content ) = @_;
+         log_if_fail "Content", $content;
+
+         do_request_json_for( $user,
+            method  => "DELETE",
+            uri     => "/unstable/room_keys/version/$content->{version}",
+         );
+      })->then( sub {
+         my ( $content ) = @_;
+         log_if_fail "Content", $content;
+
+         do_request_json_for( $user,
+            method  => "GET",
+            uri     => "/unstable/room_keys/version",
+         );
+      })->main::expect_http_404;
+   };
