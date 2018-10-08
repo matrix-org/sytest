@@ -400,7 +400,7 @@ __PACKAGE__->mk_await_request_pair(
 );
 
 __PACKAGE__->mk_await_request_pair(
-   state_ids => [qw( :room_id )],
+   state_ids => [qw( :room_id ?event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(

@@ -105,6 +105,8 @@ test "Creators can delete alias",
    requires => [ $creator_fixture, $room_fixture, room_alias_fixture(),
                  qw( can_create_room_alias )],
 
+   proves => [qw( can_delete_room_alias )],
+
    do => sub {
       my ( $user, $room_id, $room_alias ) = @_;
       my $server_name = $user->http->server_name;
@@ -122,6 +124,21 @@ test "Creators can delete alias",
            content => {},
          )
       })
+   };
+
+test "Deleting a non-existent alias should return a 404",
+   requires => [ $creator_fixture, room_alias_fixture(),
+                 qw( can_delete_room_alias ) ],
+
+   do => sub {
+      my ( $user, $room_alias ) = @_;
+
+      do_request_json_for(
+         $user,
+         method => "DELETE",
+         uri    => "/r0/directory/room/$room_alias",
+         content => {},
+      )->main::expect_m_not_found;
    };
 
 test "Users can't delete other's aliases",

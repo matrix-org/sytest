@@ -428,7 +428,7 @@ sub invite_should_fail {
    matrix_create_room( $inviter, visibility => "private" )
    ->then( sub {
       ( $room_id ) = @_;
-
+      log_if_fail "Created room id $room_id";
       do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
    })->then( sub {
       $bind_sub->( $id_server );
@@ -474,5 +474,9 @@ sub do_3pid_invite {
          medium       => "email",
          address      => $invitee_email,
       }
-   )
+   )->then( sub {
+      my ( $result ) = @_;
+      log_if_fail "sent 3pid invite for $invitee_email to $id_server";
+      Future->done( 1 );
+   });
 }
