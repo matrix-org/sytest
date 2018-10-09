@@ -17,7 +17,7 @@ test "Outbound federation can backfill events",
       );
 
       # Create some past messages to backfill from
-      $room->create_event(
+      $room->create_and_insert_event(
          type => "m.room.message",
 
          sender  => $creator_id,

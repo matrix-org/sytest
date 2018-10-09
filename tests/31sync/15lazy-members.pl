@@ -55,7 +55,7 @@ test "The only membership state included in an initial sync is for all the sende
       # Bob sends 10 events into it
       # Charlie sends 10 events into it
       # Alice syncs with a filter on the last 10 events, and lazy loaded members
-      # She should only see Charlie in the membership list.
+      # She should only see Charlie in the membership list (and herself)
 
       my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
 
@@ -102,7 +102,7 @@ test "The only membership state included in an initial sync is for all the sende
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members ( $body, $room_id, [ $charlie->user_id ]);
+         assert_room_members ( $body, $room_id, [ $alice->user_id, $charlie->user_id ]);
          Future->done(1);
       });
    };
@@ -119,7 +119,7 @@ test "The only membership state included in an incremental sync is for senders i
       # Bob and Charlie join.
       # Bob sends 10 events into it
       # Alice syncs with a filter on the last 10 events, and lazy loaded members
-      # Alice should see only Bob in the membership list.
+      # Alice should see only Bob in the membership list (and herself).
       # Charlie sends an event
       # Alice syncs again; she should only see Charlie's membership event
       # in the incremental sync as Charlie sent anything in this timeframe.
@@ -161,7 +161,17 @@ test "The only membership state included in an incremental sync is for senders i
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $bob->user_id ]);
+         my $state = $body->{rooms}{join}{$room_id}{state}{events};
+
+         assert_state_types_match( $state, $room_id, [
+            [ 'm.room.create', '' ],
+            [ 'm.room.join_rules', '' ],
+            [ 'm.room.power_levels', '' ],
+            [ 'm.room.name', '' ],
+            [ 'm.room.history_visibility', '' ],
+            [ 'm.room.member', $alice->user_id ],
+            [ 'm.room.member', $bob->user_id ],
+         ]);
 
          matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "Message from charlie",
@@ -170,7 +180,18 @@ test "The only membership state included in an incremental sync is for senders i
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $charlie->user_id ]);
+         my $state = $body->{rooms}{join}{$room_id}{state}{events};
+
+         assert_state_types_match( $state, $room_id, [
+            [ 'm.room.member', $charlie->user_id ],
+         ]);
+
+         # check syncing again doesn't return any state changes
+         matrix_sync_again( $alice, filter => $filter_id );
+      })->then( sub {
+         my ( $body ) = @_;
+         my $joined_rooms = $body->{rooms}{join};
+         assert_deeply_eq($joined_rooms, {});
          Future->done(1);
       });
    };
@@ -189,7 +210,7 @@ test "The only membership state included in a gapped incremental sync is for sen
       # Bob and Charlie and Dave join.
       # Bob sends 10 events into it
       # Alice syncs with a filter on the last 10 events, and lazy loaded members
-      # Alice should see only Bob in the membership list.
+      # Alice should see only Bob in the membership list (and herself).
       # Charlie then sends 10 events
       # Dave then sends 10 events
       # Alice syncs again; she should get a gappy sync and only see
@@ -234,7 +255,7 @@ test "The only membership state included in a gapped incremental sync is for sen
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $bob->user_id ]);
+         assert_room_members( $body, $room_id, [ $alice->user_id, $bob->user_id ]);
 
          repeat( sub {
             my $msgnum = $_[0];
@@ -272,7 +293,7 @@ test "Old members are included in gappy incr LL sync if they start speaking",
       # Bob and Charlie join.
       # Bob sends 10 events into it
       # Alice initial syncs with a filter on the last 10 events, and LL members
-      # Alice should see only Bob in the membership list.
+      # Alice should see only Bob in the membership list (and herself)
       # Charlie then sends 10 events
       # Alice syncs again; she should get a gappy sync and see
       # Charlie's membership (due to his timeline events).
@@ -315,7 +336,8 @@ test "Old members are included in gappy incr LL sync if they start speaking",
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [
-            $bob->user_id
+            $alice->user_id,
+            $bob->user_id,
          ]);
 
          repeat( sub {
@@ -348,7 +370,7 @@ test "Members from the gap are included in gappy incr LL sync",
       # Bob and Charlie join.
       # Bob sends 10 events into it
       # Alice initial syncs with a filter on the last 10 events, and LL members
-      # Alice should see only Bob in the membership list.
+      # Alice should see only Bob in the membership list (and herself)
       # Dave joins
       # Charlie then sends 10 events
       # Alice syncs again; she should get a gappy sync and see both
@@ -393,7 +415,8 @@ test "Members from the gap are included in gappy incr LL sync",
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [
-            $bob->user_id
+            $alice->user_id,
+            $bob->user_id,
          ]);
 
          matrix_join_room( $dave, $room_id );
@@ -430,11 +453,11 @@ test "We don't send redundant membership state across incremental syncs by defau
       # Bob sends 10 events into it
       # Charlie sends 5 events into it
       # Alice syncs with a filter on the last 10 events, and lazy loaded members
-      # Alice should see only Bob and Charlie in the membership list.
+      # Alice should see only Bob and Charlie in the membership list (and herself).
       # Bob sends 1 more event
       # Charlie sends 1 more event
       # Alice syncs again; she should not see any membership events as
-      # the redundant ones for Bob and Charlie are removed.
+      # the redundant ones for Bob and Charlie are removed
 
       my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
 
@@ -481,7 +504,11 @@ test "We don't send redundant membership state across incremental syncs by defau
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $bob->user_id, $charlie->user_id ]);
+         assert_room_members( $body, $room_id, [
+            $alice->user_id,
+            $bob->user_id,
+            $charlie->user_id
+         ]);
 
          matrix_send_room_text_message_synced( $bob, $room_id,
             body => "New message from bob",
@@ -513,11 +540,11 @@ test "We do send redundant membership state across incremental syncs if asked",
       # Charlie sends 5 events into it
       # Alice syncs with a filter on the last 10 events, and lazy loaded members
       #   and include_redundant_members
-      # Alice should see only Bob and Charlie in the membership list.
+      # Alice should see only Bob and Charlie in the membership list (and herself)
       # Bob sends 1 more event
       # Charlie sends 1 more event
       # Alice syncs again; she should see redundant membership events for Bob and
-      # Charlie again
+      # Charlie again.  We don't include herself as redundant.
 
       my ( $filter_id, $room_id, $event_id_1, $event_id_2 );
 
@@ -565,7 +592,11 @@ test "We do send redundant membership state across incremental syncs if asked",
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $bob->user_id, $charlie->user_id ]);
+         assert_room_members( $body, $room_id, [
+            $alice->user_id,
+            $bob->user_id,
+            $charlie->user_id
+         ]);
 
          matrix_send_room_text_message( $bob, $room_id,
             body => "New message from bob",
@@ -578,7 +609,10 @@ test "We do send redundant membership state across incremental syncs if asked",
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         assert_room_members( $body, $room_id, [ $bob->user_id, $charlie->user_id ]);
+         assert_room_members( $body, $room_id, [
+            $bob->user_id,
+            $charlie->user_id
+         ]);
          Future->done(1);
       });
    };

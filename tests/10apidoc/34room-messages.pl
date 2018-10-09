@@ -181,6 +181,8 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
       })->then( sub {
          my ( $body ) = @_;
 
+         log_if_fail "Body", $body;
+
          assert_json_keys( $body, qw( start end state chunk ));
          assert_json_list( $body->{chunk} );
          assert_json_list( $body->{state} );

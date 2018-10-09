@@ -205,12 +205,58 @@ sub await_sync_presence_contains {
 }
 
 
-push @EXPORT, qw( assert_room_members assert_state_room_members_matches );
+=head2 assert_state_types_match
 
-# assert that the given members are in the body of a sync response
+Assert that the state body of a sync response is made up of the given state types.
+
+$state is an arrayref of state events.
+
+$state_types is an arrayref of arrayrefs, each a tuple of type & state_key, e.g:
+
+   [
+      [ 'm.room.create', '' ],
+      [ 'm.room.name', '' ],
+      [ 'm.room.member', '@foo:bar.com' ],
+   ]
+
+=cut
+
+push @EXPORT, qw( assert_state_types_match );
+
+sub assert_state_types_match {
+   my ( $state, $room_id, $state_types ) = @_;
+
+   my $found_types = [];
+   foreach (@$state) {
+      push @$found_types, [ $_->{type}, $_->{state_key} ];
+   }
+
+   my $comp = sub {
+      return ($a->[0] cmp $b->[0]) || ($a->[1] cmp $b->[1]);
+   };
+
+   $found_types = [ sort $comp @$found_types ];
+   $state_types = [ sort $comp @$state_types ];
+
+   log_if_fail "Found state types", $found_types;
+   log_if_fail "Desired state types", $state_types;
+
+   assert_deeply_eq($found_types, $state_types);
+}
+
+=head2 assert_room_members
+
+Assert that the given members are in the body of a sync response
+
+$memberships is either an arrayref of user_ids or a hashref of user_id
+to membership strings.
+
+=cut
+
+push @EXPORT, qw ( assert_room_members );
+
 sub assert_room_members {
    my ( $body, $room_id, $memberships ) = @_;
-   # Takes either an arrayref of user_ids or a hashref of user_id to membership strings
 
    my $room = $body->{rooms}{join}{$room_id};
    my $timeline = $room->{timeline}{events};
@@ -219,14 +265,22 @@ sub assert_room_members {
 
    assert_json_keys( $room, qw( timeline state ephemeral ));
 
-   return assert_state_room_members_matches( $room->{state}{events}, $memberships );
+   return assert_state_room_members_match( $room->{state}{events}, $memberships );
 }
 
+=head2 assert_state_room_members_match
 
-# assert that the given members are present in a block of state events
-sub assert_state_room_members_matches {
+Assert that the given members are present in a block of state events
+
+$memberships is either an arrayref of user_ids or a hashref of user_id
+to membership strings.
+
+=cut
+
+push @EXPORT, qw( assert_state_room_members_match );
+
+sub assert_state_room_members_match {
    my ( $events, $memberships ) = @_;
-   # Takes either an arrayref of user_ids or a hashref of user_id to membership strings
 
    log_if_fail "expected members:", $memberships;
    log_if_fail "state:", $events;

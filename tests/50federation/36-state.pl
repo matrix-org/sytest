@@ -1,3 +1,14 @@
+sub get_state_ids_from_server {
+   my ( $outbound_client, $server, $room_id, $event_id ) = @_;
+
+   return $outbound_client->do_request_json(
+      method   => "GET",
+      hostname => $server,
+      uri      => "/state_ids/$room_id/",
+      params   => { event_id => $event_id },
+   );
+}
+
 test "Inbound federation can get state for a room",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures(),
@@ -67,13 +78,9 @@ test "Inbound federation can get state_ids for a room",
       )->then( sub {
          ( $room ) = @_;
 
-         $outbound_client->do_request_json(
-            method   => "GET",
-            hostname => $first_home_server,
-            uri      => "/state_ids/$room_id/",
-            params   => {
-               event_id => $room->{prev_events}[-1]->{event_id},
-            }
+         get_state_ids_from_server(
+            $outbound_client, $first_home_server,
+            $room_id, $room->{prev_events}[-1]->{event_id},
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -96,7 +103,7 @@ test "Inbound federation can get state_ids for a room",
       });
    };
 
-test "Outbound federation requests /state_ids and correctly handles 404",
+test "Federation rejects inbound events where the prev_events cannot be found",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
                  federation_user_id_fixture() ],
@@ -118,7 +125,7 @@ test "Outbound federation requests /state_ids and correctly handles 404",
          ( $room ) = @_;
 
          # Generate but don't send an event
-         my $missing_event = $room->create_event(
+         my $missing_event = $room->create_and_insert_event(
             type => "m.room.message",
 
             sender  => $user_id,
@@ -129,10 +136,10 @@ test "Outbound federation requests /state_ids and correctly handles 404",
 
          # Generate another one and do send it so it will refer to the
          # previous in its prev_events field
-         $sent_event = $room->create_event(
+         $sent_event = $room->create_and_insert_event(
             type => "m.room.message",
 
-            # This would be done by $room->create_event anyway but lets be
+            # This would be done by $room->create_and_insert_event anyway but lets be
             #   sure for this test
             prev_events => [
                [ $missing_event->{event_id}, $missing_event->{hashes} ],
@@ -144,12 +151,12 @@ test "Outbound federation requests /state_ids and correctly handles 404",
             },
          );
 
-         Future->wait_all(
+         Future->needs_all(
             $inbound_server->await_request_get_missing_events( $room_id )
             ->then( sub {
                my ( $req ) = @_;
 
-               # We return no events to force the remote to ask for state
+               # Return no events, which should cause a rejection.
                $req->respond_json( {
                   events => [],
                } );
@@ -157,22 +164,27 @@ test "Outbound federation requests /state_ids and correctly handles 404",
                Future->done(1);
             }),
 
-            $outbound_client->send_event(
-               event       => $sent_event,
+            $outbound_client->send_transaction(
+               pdus => [ $sent_event ],
                destination => $first_home_server,
-            ),
-         );
-       })->then( sub {
-	  my @futureresults = @_;
-	  if ($futureresults[1]->is_failed eq 0) { die "Should have failed"}
+            )->then( sub {
+               # we expect the event to be rejected.
+               my ( $body ) = @_;
+               log_if_fail "send_transaction response", $body;
+               assert_ok(
+                  defined( $body->{pdus}->{ $sent_event->{event_id} }->{error} ),
+                  "/send accepted faulty event",
+               );
 
-	  Future->done(1);
-      })->then_done(1);
+               Future->done(1);
+            }),
+         );
+      });
    };
 
-test "Outbound federation requests /state_ids and asks for missing state",
-   # Disabled as Synapse now checks the state of the missing item's ancestors instead
-   bug => "DISABLED",
+
+
+test "Outbound federation requests missing prev_events and then asks for /state_ids and resolves the state",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
                  federation_user_id_fixture() ],
@@ -181,11 +193,37 @@ test "Outbound federation requests /state_ids and asks for missing state",
       my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
       my $first_home_server = $info->server_name;
 
-      my $local_server_name = $outbound_client->server_name;
+      # in this test, we're going to create a DAG like this:
+      #
+      #      A
+      #     /
+      #    B  (Y)
+      #   / \ /
+      #   |  X
+      #   \ /
+      #    C
+      #
+      # So we start with A and B, and then send C, which has prev_events (B,
+      # X). We expect the remote server to request the missing events, and we
+      # respond with X, which has another prev_event Y, which we don't send
+      # proactively.
+      #
+      # In this case, we don't expect the remote server to go on requesting
+      # missing events indefinitely - rather we expect it to stop after one
+      # round and instead request the state at Y.
+      #
+      # In order to test the state resolution, we also have a couple of made-up
+      # state events, S and T, which we stick in the response when we get the
+      # state request.
+      #
+      # XXX: the number of rounds of get_missing_events which the server does
+      # is an implementation detail - Synapse only does one round, but it is of
+      # course valid to keep going for a while. We may need to update this test
+      # to handle alternative implementations.
 
+      my $pl_event_id;
       my $room;
-      my $sent_event;
-      my $missing_state;
+      my $sent_event_b;
 
       # make sure that the sytest user has permission to alter the state
       matrix_change_room_powerlevels( $creator, $room_id, sub {
@@ -193,6 +231,9 @@ test "Outbound federation requests /state_ids and asks for missing state",
 
          $levels->{users}->{$user_id} = 100;
       })->then( sub {
+         my ( $body ) = @_;
+         $pl_event_id = $body->{event_id};
+
          $outbound_client->join_room(
             server_name => $first_home_server,
             room_id     => $room_id,
@@ -201,120 +242,366 @@ test "Outbound federation requests /state_ids and asks for missing state",
       })->then( sub {
          ( $room ) = @_;
 
-         # Generate but don't send an event
-         my $missing_event = $room->create_event(
-            type => "m.room.message",
+         # Create and send B
+         $sent_event_b = $room->create_and_insert_event(
+            type => "test_state",
+            state_key => "B",
 
             sender  => $user_id,
             content => {
-               body => "Message missing",
+               body => "event_b",
             },
          );
-
-         $missing_state = $room->create_event(
-            type      => "m.room.topic",
-            state_key => "",
-
-            sender  => $user_id,
-            content => {
-               topic => "Test topic",
-            },
-         );
-
-         # Generate another one and do send it so it will refer to the
-         # previous in its prev_events field
-         $sent_event = $room->create_event(
-            type => "m.room.message",
-
-            # This would be done by $room->create_event anyway but lets be
-            #   sure for this test
-            prev_events => [
-               [ $missing_event->{event_id}, $missing_event->{hashes} ],
-            ],
-
-            sender  => $user_id,
-            content => {
-               body => "Message sent",
-            },
-         );
-
-         log_if_fail "Missing message: " . $missing_event->{event_id};
-         log_if_fail "Missing topic: " . $missing_state->{event_id};
-         log_if_fail "Sent message: " . $sent_event->{event_id};
 
          Future->needs_all(
-            $inbound_server->await_request_state_ids( $room_id )
-            ->then( sub {
-               my ( $req ) = @_;
-
-               log_if_fail "Got /state_ids request";
-
-               my @auth_event_ids = map { $_->{event_id} } $room->current_state_events;
-
-               # Don't need to be exact, synapse handles failure gracefully
-               $req->respond_json( {
-                  pdu_ids => [ $missing_state->{event_id}, @auth_event_ids ],
-                  auth_chain_ids => [ @auth_event_ids ],
-               } );
-
-               Future->done(1);
+            $outbound_client->send_event(
+               event       => $sent_event_b,
+               destination => $first_home_server,
+            ),
+            await_event_for( $creator, filter => sub {
+               ( $_[0]->{event_id} // '' ) eq $sent_event_b->{event_id};
             }),
-            $inbound_server->await_request_event( $missing_state->{event_id} )
-            ->then( sub {
-               my ( $req ) = @_;
+         );
+      })->then( sub {
+         # Generate our "missing" events
+         my $missing_event_y = $room->create_event(
+            type => "test_state",
+            state_key => "Y",
 
-               log_if_fail "Got /event/ request";
+            sender  => $user_id,
+            content => {
+               body => "event_y",
+            },
+         );
 
-               # Don't need to be exact, synapse handles failure gracefully
-               $req->respond_json( {
-                  pdus => [ $missing_state ],
-               } );
+         my $missing_event_x = $room->create_event(
+            type => "m.room.message",
 
-               Future->done(1);
-            }),
+            sender  => $user_id,
+            content => {
+               body => "event_x",
+            },
+            prev_events => SyTest::Federation::Room::make_event_refs(
+               @{ $room->{prev_events} }, $missing_event_y,
+            ),
+         );
+
+         my $missing_state_s = $room->create_event(
+            type => "m.room.power_levels",
+            state_key => "",
+            sender  => $user_id,
+            content => {
+               users => {
+                  $user_id => 100,
+               },
+            },
+         );
+
+         my $missing_state_t = $room->create_event(
+            type => "test_state",
+            state_key => "T",
+            sender  => $user_id,
+            content => { topic => "how now" },
+         );
+
+         # Now create and send our regular event C.
+         my $sent_event_c = $room->create_and_insert_event(
+            type => "m.room.message",
+
+            prev_events => SyTest::Federation::Room::make_event_refs(
+               @{ $room->{prev_events} }, $missing_event_x,
+            ),
+
+            sender  => $user_id,
+            content => {
+               body => "event_c",
+            },
+         );
+
+         log_if_fail "Missing events X, Y: " . $missing_event_x->{event_id} .
+            ", " . $missing_event_y->{event_id};
+         log_if_fail "Sent events B, C: " . $sent_event_b->{event_id} .
+            ", " . $sent_event_c->{event_id};
+
+         Future->needs_all(
+            $outbound_client->send_event(
+               event       => $sent_event_c,
+               destination => $first_home_server,
+            ),
+
             $inbound_server->await_request_get_missing_events( $room_id )
             ->then( sub {
                my ( $req ) = @_;
 
-               log_if_fail "Got /missing_events request";
+               my $body = $req->body_from_json;
+               log_if_fail "/get_missing_events request", $body;
 
-               # We return no events to force the remote to ask for state
+               assert_deeply_eq(
+                  $body->{latest_events},
+                  [ $sent_event_c->{event_id } ],
+                  "latest_events in /get_missing_events request",
+               );
+
+               # just return X
                $req->respond_json( {
-                  events => [],
+                  events => [ $missing_event_x ],
                } );
 
                Future->done(1);
             }),
 
-            $outbound_client->send_event(
-               event       => $sent_event,
-               destination => $first_home_server,
-            ),
-         );
-      })->then( sub {
-         # creator user should eventually receive the sent event
-         await_event_for( $creator, filter => sub {
-            my ( $event ) = @_;
-            return $event->{type} eq "m.room.message" &&
-                   $event->{event_id} eq $sent_event->{event_id};
-         })->on_done( sub {
-            log_if_fail "Creator received sent event";
+            $inbound_server->await_request_state_ids(
+               $room_id, $missing_event_y->{event_id},
+            )->then( sub {
+               my ( $req ) = @_;
+               log_if_fail "/state_ids request";
+
+               # build a state map from the room's current state and our extra events
+               my %state = %{ $room->{current_state} };
+               foreach my $event ( $missing_state_s, $missing_state_t ) {
+                  my $k = join "\0", $event->{type}, $event->{state_key};
+                  $state{$k} = $event;
+               }
+
+               my $resp = {
+                  pdu_ids => [
+                     map { $_->{event_id} } values( %state ),
+                  ],
+                  auth_chain_ids => [
+                     # XXX we're supposed to return the whole auth chain here,
+                     # not just y's auth_events. It doesn't matter too much
+                     # here though.
+                     map { $_->[0] } @{ $missing_event_y->{auth_events} },
+                  ],
+               };
+
+               log_if_fail "/state_ids response", $resp;
+
+               $req->respond_json( $resp );
+
+               Future->done(1);
+            }),
+         )->then( sub {
+            # creator user should eventually receive the events
+            Future->needs_all(
+               await_event_for( $creator, filter => sub {
+                  ( $_[0]->{event_id} // '' ) eq $sent_event_c->{event_id};
+               }),
+               await_event_for( $creator, filter => sub {
+                  ( $_[0]->{event_id} // '' ) eq $missing_event_x->{event_id};
+               }),
+            );
+         })->then( sub {
+            # check the 'current' state of the room after state resolution
+            matrix_get_room_state_by_type( $creator, $room_id ) -> then( sub {
+               my ( $state ) = @_;
+               log_if_fail "final room state", $state;
+
+               assert_eq(
+                  $state->{"m.room.power_levels"}->{""}->{"event_id"},
+                  $pl_event_id,
+                  "power_levels event after state res",
+               );
+
+               assert_eq(
+                  $state->{"test_state"}->{"B"}->{"event_id"},
+                  $sent_event_b->{event_id},
+                  "test_state B after state res",
+               );
+
+               assert_eq(
+                  $state->{"test_state"}->{"T"}->{"event_id"},
+                  $missing_state_t->{event_id},
+                  "test_state T after state res",
+               );
+
+               assert_eq(
+                  $state->{"test_state"}->{"Y"}->{"event_id"},
+                  $missing_event_y->{event_id},
+                  "test_state Y after state res",
+               );
+
+               Future->done(1);
+            });
+         })->then( sub {
+            # check state at X
+            get_state_ids_from_server(
+               $outbound_client, $first_home_server,
+               $room_id, $missing_event_x->{event_id},
+            )->then( sub {
+               my ( $body ) = @_;
+               my $state_ids = $body->{pdu_ids};
+               log_if_fail "State at X", $state_ids;
+               for my $ev (
+                  $pl_event_id,
+                  $missing_state_t->{event_id},
+                  $sent_event_b->{event_id},
+                  $missing_event_y->{event_id},
+               ) {
+                  any { $_ eq $ev } @{ $state_ids }
+                     or die "State $ev missing at X";
+               }
+
+               Future->done(1);
+            });
          });
-      })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.topic",
-            state_key => "",
-         );
-      })->then( sub {
-         my ( $body ) = @_;
-
-         log_if_fail "Returned body", $body;
-
-         assert_eq( $body->{topic}, $missing_state->{content}{topic} );
-
-         Future->done( 1 );
       });
    };
+
+
+test "Federation handles empty auth_events in state_ids sanely",
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
+                 local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      # in this test, we're going to create a DAG like this:
+      #
+      #   A
+      #   |
+      #   B
+      #   .
+      #   .
+      #   .
+      #  (Y)
+      #   |
+      #   X
+      #   |
+      #   C
+      #
+      # So, to a regular room with events A and B, we send C, whose (only)
+      # prev_event is X.
+      #
+      # We expect the remote server to request the missing events, and we
+      # respond with X, which has another prev_event Y, which we don't send
+      # proactively.
+      #
+      # In this case, we don't expect the remote server to go on requesting
+      # missing events indefinitely - rather we expect it to stop after one
+      # round and instead request the state at Y.
+      #
+      # We then send a bogus value for auth_events in the response to the
+      # state_ids request, and check that X and C are still accepted.
+      #
+      # XXX: the number of rounds of get_missing_events which the server does
+      # is an implementation detail - Synapse only does one round, but it is of
+      # course valid to keep going for a while. We may need to update this test
+      # to handle alternative implementations.
+
+      my $pl_event_id;
+      my $room;
+      my $sent_event_b;
+
+      $outbound_client->join_room(
+         server_name => $first_home_server,
+         room_id     => $room_id,
+         user_id     => $user_id,
+        )->then( sub {
+         ( $room ) = @_;
+
+         # Generate our "missing" events
+         my $missing_event_y = $room->create_event(
+            type => "test_state",
+            state_key => "Y",
+
+            sender  => $user_id,
+            content => {
+               body => "event_y",
+            },
+         );
+
+         my $missing_event_x = $room->create_event(
+            type => "m.room.message",
+
+            sender  => $user_id,
+            content => {
+               body => "event_x",
+            },
+            prev_events => SyTest::Federation::Room::make_event_refs(
+               @{ $room->{prev_events} }, $missing_event_y,
+            ),
+         );
+
+         # Now create and send our regular event C.
+         my $sent_event_c = $room->create_and_insert_event(
+            type => "m.room.message",
+
+            prev_events => SyTest::Federation::Room::make_event_refs(
+               @{ $room->{prev_events} }, $missing_event_x,
+            ),
+
+            sender  => $user_id,
+            content => {
+               body => "event_c",
+            },
+         );
+
+         log_if_fail "Missing events X, Y: " . $missing_event_x->{event_id} .
+            ", " . $missing_event_y->{event_id};
+         log_if_fail "Sent event C: " . $sent_event_c->{event_id};
+
+         Future->needs_all(
+            $outbound_client->send_event(
+               event       => $sent_event_c,
+               destination => $first_home_server,
+            ),
+
+            $inbound_server->await_request_get_missing_events( $room_id )
+            ->then( sub {
+               my ( $req ) = @_;
+
+               my $body = $req->body_from_json;
+               log_if_fail "/get_missing_events request", $body;
+
+               assert_deeply_eq(
+                  $body->{latest_events},
+                  [ $sent_event_c->{event_id } ],
+                  "latest_events in /get_missing_events request",
+               );
+
+               # just return X
+               $req->respond_json( {
+                  events => [ $missing_event_x ],
+               } );
+
+               Future->done(1);
+            }),
+
+            $inbound_server->await_request_state_ids(
+               $room_id, $missing_event_y->{event_id},
+            )->then( sub {
+               my ( $req ) = @_;
+
+               my $resp = {
+                  pdu_ids => [
+                     map { $_->{event_id} } values( %{ $room->{current_state} } ),
+                  ],
+                  auth_chain_ids => [],
+               };
+
+               log_if_fail "/state_ids response", $resp;
+
+               $req->respond_json( $resp );
+
+               Future->done(1);
+            }),
+         )->then( sub {
+            # creator user should eventually receive X and C.
+            Future->needs_all(
+               await_event_for( $creator, filter => sub {
+                  ( $_[0]->{event_id} // '' ) eq $sent_event_c->{event_id};
+               }),
+               await_event_for( $creator, filter => sub {
+                  ( $_[0]->{event_id} // '' ) eq $missing_event_x->{event_id};
+               }),
+            );
+         });
+      });
+   };
+
 
 test "Getting state checks the events requested belong to the room",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],

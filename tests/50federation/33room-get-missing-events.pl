@@ -24,7 +24,7 @@ test "Outbound federation can request missing events",
          my $latest_event = $room->get_current_state_event( "m.room.member", $user_id );
 
          # Generate but don't send an event
-         $missing_event = $room->create_event(
+         $missing_event = $room->create_and_insert_event(
             type => "m.room.message",
 
             sender  => $user_id,
@@ -35,10 +35,10 @@ test "Outbound federation can request missing events",
 
          # Generate another one and do send it so it will refer to the
          # previous in its prev_events field
-         my $sent_event = $room->create_event(
+         my $sent_event = $room->create_and_insert_event(
             type => "m.room.message",
 
-            # This would be done by $room->create_event anyway but lets be
+            # This would be done by $room->create_and_insert_event anyway but lets be
             #   sure for this test
             prev_events => [
                [ $missing_event->{event_id}, $missing_event->{hashes} ],
