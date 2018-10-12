@@ -84,13 +84,7 @@ test "Can backup keys",
          my ( $content ) = @_;
          log_if_fail "Content", $content;
 
-         assert_json_keys( $content, "first_message_index" );
-
-         assert_json_keys( $content, "forwarded_count" );
-
-         assert_json_keys( $content, "is_verified" );
-
-         assert_json_keys( $content, "session_data" );
+         assert_json_keys( $content, qw( first_message_index forwarded_count is_verified session_data ) );
 
          $content->{first_message_index} == 3 or
             die "Expected first message index to match submitted data";
