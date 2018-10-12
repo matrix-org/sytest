@@ -72,17 +72,13 @@ test "Can backup keys",
 
          assert_json_keys( $content, qw( first_message_index forwarded_count is_verified session_data ) );
 
-         $content->{first_message_index} == 3 or
-            die "Expected first message index to match submitted data";
+         assert_eq( $content->{first_message_index}, 3, "Expected first message index to match submitted data" );
 
-         $content->{forwarded_count} == 0 or
-            die "Expected forwarded count to match submitted data";
+         assert_eq( $content->{forwarded_count}, 0, "Expected forwarded count to match submitted data" );
 
-         $content->{is_verified} == JSON::false or
-            die "Expected is_verified to match submitted data";
+         assert_eq( $content->{is_verified}, JSON::false, "Expected is_verified to match submitted data" );
 
-         $content->{session_data} eq "anopaquestring" or
-            die "Expected session data to match submitted data";
+         assert_eq( $content->{session_data}, "anopaquestring", "Expected session data to match submitted data" );
 
          Future->done(1);
       });
@@ -128,17 +124,13 @@ test "Can update keys with better versions",
 
          assert_json_keys( $content, qw( first_message_index forwarded_count is_verified session_data ) );
 
-         $content->{first_message_index} == 1 or
-            die "Expected first message index to match submitted data";
+         assert_eq( $content->{first_message_index}, 1, "Expected first message index to match submitted data" );
 
-         $content->{forwarded_count} == 0 or
-            die "Expected forwarded count to match submitted data";
+         assert_eq( $content->{forwarded_count}, 0, "Expected forwarded count to match submitted data" );
 
-         $content->{is_verified} == JSON::false or
-            die "Expected is_verified to match submitted data";
+         assert_eq( $content->{is_verified}, JSON::false, "Expected is_verified to match submitted data" );
 
-         $content->{session_data} eq "anotheropaquestring" or
-            die "Expected session data to match submitted data";
+         assert_eq(  $content->{session_data}, "anotheropaquestring", "Expected session data to match submitted data" );
 
          Future->done(1);
       });
@@ -186,17 +178,13 @@ test "Will not update keys with worse versions",
 
          # The data should not be overwritten, so should be the same as what
          # was set by the previous test.
-         $content->{first_message_index} == 2 or
-            die "Expected first message index to match submitted data";
+         assert_eq( $content->{first_message_index}, 2, "Expected first message index to match submitted data" );
 
-         $content->{forwarded_count} == 0 or
-            die "Expected forwarded count to match submitted data";
+         assert_eq( $content->{forwarded_count}, 0, "Expected forwarded count to match submitted data" );
 
-         $content->{is_verified} == JSON::false or
-            die "Expected is_verified to match submitted data";
+         assert_eq( $content->{is_verified}, JSON::false, "Expected is_verified to match submitted data" );
 
-         $content->{session_data} eq "anotheropaquestring" or
-            die "Expected session data to match submitted data";
+         assert_eq( $content->{session_data}, "anotheropaquestring", "Expected session data to match submitted data" );
 
          Future->done(1);
       });
