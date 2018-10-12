@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+use Future::Utils qw( repeat );
 use List::Util qw( first );
 
 # TODO: switch this to '2' once that is released
@@ -218,6 +219,62 @@ test "/upgrade copies the power levels to the new room",
          Future->done(1);
       });
    };
+
+
+test "/upgrade copies important state to the new room",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      # map from type to content
+      my %STATE_DICT = (
+         "m.room.topic" => { topic => "topic" },
+         "m.room.name" => { name => "name" },
+         "m.room.join_rules" => { join_rule => "public" },
+         "m.room.guest_access" => { guest_access => "forbidden" },
+         "m.room.history_visibility" => { history_visibility => "joined" },
+      );
+
+      my $f = Future->done(1);
+      foreach my $k ( keys %STATE_DICT ) {
+         $f = $f->then( sub {
+            matrix_put_room_state(
+               $creator, $room_id,
+               type => $k,
+               content => $STATE_DICT{$k},
+            );
+         });
+      }
+
+      $f->then( sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         my ( $new_room_id, $sync_body ) = @_;
+         my $room = $sync_body->{rooms}{join}{$new_room_id};
+
+         foreach my $k ( keys %STATE_DICT ) {
+            my $event = first {
+               $_->{type} eq $k && $_->{state_key} eq '',
+            } @{ $room->{timeline}->{events} };
+
+            log_if_fail "State for $k", $event->{content};
+            assert_deeply_eq(
+               $event->{content},
+               $STATE_DICT{$k},
+               "$k in replacement room",
+            );
+         }
+         Future->done(1);
+      });
+   };
+
 
 test "/upgrade to an unknown version is rejected",
    requires => [
