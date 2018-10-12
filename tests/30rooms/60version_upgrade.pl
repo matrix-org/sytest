@@ -116,9 +116,11 @@ test "/upgrade creates a new room",
 
          # the old room should have a tombstone event
          my $old_room_timeline = $sync_body->{rooms}{join}{$old_room_id}{timeline}{events};
-         assert_eq( $old_room_timeline->[0]{type},
-                    'm.room.tombstone',
-                    'event in old room' );
+         assert_eq(
+            $old_room_timeline->[0]{type},
+            'm.room.tombstone',
+            'event in old room',
+         );
 
          assert_eq(
             $old_room_timeline->[0]{content}{replacement_room},
@@ -130,11 +132,56 @@ test "/upgrade creates a new room",
       });
    };
 
+foreach my $vis ( qw( public private ) ) {
+   test "/upgrade should preserve room visibility for $vis rooms",
+      requires => [
+         local_user_and_room_fixtures(),
+         qw( can_upgrade_room_version ),
+      ],
+
+      do => sub {
+         my ( $creator, $room_id ) = @_;
+
+         # set the visibility on the old room. (The default is 'private', but
+         # we may as well set it explicitly.)
+         do_request_json_for(
+            $creator,
+            method   => "PUT",
+            uri      => "/r0/directory/list/room/$room_id",
+            content  => {
+               visibility => $vis,
+            },
+         )->then( sub {
+            upgrade_room_synced(
+               $creator, $room_id,
+               new_version => $TEST_NEW_VERSION,
+            );
+         })->then( sub {
+            my ( $new_room_id, $sync_body ) = @_;
+
+            # check the visibility of the new room
+            do_request_json_for(
+               $creator,
+               method   => "GET",
+               uri      => "/r0/directory/list/room/$new_room_id",
+            );
+         })->then( sub {
+            my ( $response ) = @_;
+            log_if_fail "room vis", $response;
+            assert_eq(
+               $response->{visibility},
+               $vis,
+               "replacement room visibility",
+              );
+            Future->done(1);
+         });
+      };
+}
+
 test "/upgrade to an unknown version is rejected",
    requires => [
       local_user_and_room_fixtures(),
-      local_user_fixture(),
-      qw( can_create_versioned_room can_upgrade_room_version),
+      qw( can_upgrade_room_version ),
    ],
 
    do => sub {
@@ -150,7 +197,7 @@ test "/upgrade is rejected if the user can't send state events",
    requires => [
       local_user_and_room_fixtures(),
       local_user_fixture(),
-      qw( can_create_versioned_room can_upgrade_room_version),
+      qw( can_create_versioned_room ),
    ],
 
    do => sub {
@@ -164,6 +211,19 @@ test "/upgrade is rejected if the user can't send state events",
       });
    };
 
+test "/upgrade of a bogus room fails gracefully",
+   requires => [
+      local_user_fixture(),
+   ],
+
+   do => sub {
+      my ( $user ) = @_;
+      my ( $replacement_room );
+
+      upgrade_room(
+         $user, "!fail:unknown",
+      )->main::expect_matrix_error( 'M_NOT_FOUND', http_code => 404 );
+   };
 
 # upgrade without perms
 # upgrade with other local users
