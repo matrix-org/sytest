@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+use List::Util qw( first );
+
 # TODO: switch this to '2' once that is released
 my $TEST_NEW_VERSION = 'vdh-test-version';
 
@@ -177,6 +179,45 @@ foreach my $vis ( qw( public private ) ) {
          });
       };
 }
+
+test "/upgrade copies the power levels to the new room",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version can_change_power_levels ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      my $pl_content;
+
+      matrix_change_room_power_levels(
+         $creator, $room_id, sub {
+             ( $pl_content ) = @_;
+             $pl_content->{users}->{'@test:xyz'} = 40;
+         }
+      )->then( sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         my ( $new_room_id, $sync_body ) = @_;
+         my $room = $sync_body->{rooms}{join}{$new_room_id};
+         my $pl_event = first {
+            $_->{type} eq 'm.room.power_levels'
+         } @{ $room->{timeline}->{events} };
+
+         log_if_fail "PL content in new room", $pl_event->{content};
+
+         assert_deeply_eq(
+            $pl_event->{content},
+            $pl_content,
+            "power levels in replacement room",
+         );
+         Future->done(1);
+      });
+   };
 
 test "/upgrade to an unknown version is rejected",
    requires => [
