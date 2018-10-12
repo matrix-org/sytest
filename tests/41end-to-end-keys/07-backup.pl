@@ -247,7 +247,7 @@ test "Will not back up to an old backup version",
                is_verified         => JSON::false,
                session_data        => "anopaquestring",
             }
-             );
+         );
       })->main::expect_http_4xx
       ->then_done(1);
    };
