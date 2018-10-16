@@ -13,14 +13,19 @@ sub check_installed
 {
    my ( $mod, $want_ver, %opts ) = @_;
 
-   ( my $modfile = "$mod.pm" ) =~ s{::}{/}g;
+   # we do the import via a subprocess. The main reason for this is that, as
+   # things get installed, the number of directories to be scanned increases
+   # (for example, we may add architecture-dependent directories), and perl
+   # only checks for these to add to @INC at startup.
+   #
+   # There are other benefits in doing so:
+   #  - we don't pollute the installation process with lots of random modules
+   #  - we ensure that each module really is installable in its own right.
 
-   if( $opts{unload_first} ) {
-      # unload the module in case we already loaded an older version
-      delete $INC{$modfile};
+   my $res = `$^X -M$mod -e 1 2>&1`;
+   if( $? != 0 ) {
+      die "unable to import $mod: $res";
    }
-
-   require $modfile;
 
    defined $want_ver or return 1;
    unless( $want_ver =~ s/^>=\s+// ) {
@@ -28,9 +33,8 @@ sub check_installed
       return 1;
    }
 
-   my $inst_ver = do { no strict 'refs'; ${"$mod\:\:VERSION"} };
-
-   if( $inst_ver < $want_ver ) {
+   my $inst_ver = `$^X -M$mod -e 'print \$${mod}::VERSION'`;
+   if( $inst_ver lt $want_ver ) {
       die "$mod: got $inst_ver, want $want_ver\n";
    }
    return 1;
@@ -53,7 +57,7 @@ sub requires
          exit 1;
       }
 
-      if( not eval { check_installed( $mod, $ver, unload_first => 1 ) } ) {
+      if( not eval { check_installed( $mod, $ver ) } ) {
          print STDERR "Failed to import $mod even after installing: $@\n";
          exit 1;
       }
