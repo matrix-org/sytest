@@ -56,12 +56,19 @@ $PYTHON -m virtualenv -p $PYTHON /venv/
 
 # Run the tests
 TEST_STATUS=0
-./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all > results.tap || TEST_STATUS=$?
+if [ -n "$WORKERS" ]
+then
+    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --dendron-binary=/test/docker/pydron.py -O tap --all > results.tap || TEST_STATUS=$?
+else
+    ./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all > results.tap || TEST_STATUS=$?
+fi
 
 # Copy out the logs
+mkdir -p /logs/server-0/
+mkdir -p /logs/server-1/
 cp results.tap /logs/results.tap
-cp server-0/homeserver.log /logs/homeserver-0.log
-cp server-1/homeserver.log /logs/homeserver-1.log
+rsync --ignore-errors -av server-0/ /logs/server-0 --include="*.log.*" --include="*.log" --exclude="*"
+rsync --ignore-errors -av server-1/ /logs/server-1 --include="*.log.*" --include="*.log" --exclude="*"
 
 # Write out JUnit for CircleCI
 mkdir -p /logs/sytest
