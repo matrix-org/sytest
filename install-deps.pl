@@ -9,7 +9,7 @@ GetOptions(
    'n|dryrun' => \my $DRYRUN,
 ) or exit 1;
 
-sub is_installed
+sub check_installed
 {
    my ( $mod, $want_ver, %opts ) = @_;
 
@@ -20,7 +20,7 @@ sub is_installed
       delete $INC{$modfile};
    }
 
-   return 0 unless( eval { require $modfile; 1 } );
+   require $modfile;
 
    defined $want_ver or return 1;
    unless( $want_ver =~ s/^>=\s+// ) {
@@ -28,16 +28,19 @@ sub is_installed
       return 1;
    }
 
-   my $inst_ver = eval do { no strict 'refs'; ${"$mod\:\:VERSION"} };
+   my $inst_ver = do { no strict 'refs'; ${"$mod\:\:VERSION"} };
 
-   return $inst_ver >= $want_ver;
+   if( $inst_ver < $want_ver ) {
+      die "$mod: got $inst_ver, want $want_ver\n";
+   }
+   return 1;
 }
 
 sub requires
 {
    my ( $mod, $ver ) = @_;
 
-   is_installed( $mod, $ver ) and return;
+   eval { check_installed( $mod, $ver ) } and return;
 
    # TODO: check that some location is user-writable in @INC, and that it appears
    # somehow in PERL_{MB,MM}_OPT
@@ -45,14 +48,16 @@ sub requires
    if( !$DRYRUN ) {
       # cpan returns zero even if installation fails, so we double-check
       # that the module is installed after running it.
-      system( $^X, "-MCPAN", "-e", qq(install "$mod") ) == 0 and
-         is_installed( $mod, $ver, unload_first => 1 ) and
-         return;
+      if ( system( $^X, "-MCPAN", "-e", qq(install "$mod") ) != 0 ) {
+         print STDERR "Failed to install $mod\n";
+         exit 1;
+      }
 
-      print STDERR "Failed to install $mod\n";
-      exit 1;
-   }
-   else {
+      if( not eval { check_installed( $mod, $ver, unload_first => 1 ) } ) {
+         print STDERR "Failed to import $mod even after installing: $@\n";
+         exit 1;
+      }
+   } else {
       print qq($^X -MCPAN -e 'install "$mod"'\n);
    }
 
