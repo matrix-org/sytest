@@ -79,4 +79,9 @@ CPAN::HandleConfig->load;
 # from things that are now certain to fail
 $CPAN::Config->{halt_on_failure} = 1;
 
+
+# Alien::Sodium will think it is building for javascript if the EMSCRIPTEN env
+# var is set.
+delete $ENV{EMSCRIPTEN};
+
 do "./cpanfile";
