@@ -64,11 +64,9 @@ else
 fi
 
 # Copy out the logs
-mkdir -p /logs/server-0/
-mkdir -p /logs/server-1/
+mkdir -p /logs
 cp results.tap /logs/results.tap
-rsync --ignore-errors -av server-0/ /logs/server-0 --include="*.log.*" --include="*.log" --exclude="*"
-rsync --ignore-errors -av server-1/ /logs/server-1 --include="*.log.*" --include="*.log" --exclude="*"
+rsync --ignore-missing-args -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
 # Write out JUnit for CircleCI
 mkdir -p /logs/sytest
