@@ -5,6 +5,8 @@ use warnings;
 
 use Getopt::Long;
 
+use CPAN;
+
 GetOptions(
    'n|dryrun' => \my $DRYRUN,
 ) or exit 1;
@@ -50,12 +52,9 @@ sub requires
    # somehow in PERL_{MB,MM}_OPT
 
    if( !$DRYRUN ) {
-      # cpan returns zero even if installation fails, so we double-check
-      # that the module is installed after running it.
-      if ( system( $^X, "-MCPAN", "-e", qq(install "$mod") ) != 0 ) {
-         print STDERR "Failed to install $mod\n";
-         exit 1;
-      }
+      print STDERR "**** Installing $mod ****\n";
+
+      CPAN::install( $mod );
 
       if( not eval { check_installed( $mod, $ver ) } ) {
          print STDERR "Failed to import $mod even after installing: $@\n";
@@ -64,7 +63,15 @@ sub requires
    } else {
       print qq($^X -MCPAN -e 'install "$mod"'\n);
    }
-
 }
+
+# $CPAN::DEBUG=2047;
+
+# load the config before we override things
+CPAN::HandleConfig->load;
+
+# tell CPAN to halt on first failure, to avoid hiding the error with errors
+# from things that are now certain to fail
+$CPAN::Config->{halt_on_failure} = 1;
 
 do "./cpanfile";
