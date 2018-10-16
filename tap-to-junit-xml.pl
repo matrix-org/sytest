@@ -251,11 +251,31 @@ sub _parse_testcases {
    my $parser = shift;
    my $xmlgen = shift;
    return () unless $parser and $xmlgen;
-   my ($name, $directive, $xml, @testcases);
+   my (@testcases, @comments, $current_test_result);
 
-   while ( my $result = $parser->next ) {
+   while ( 1 ) {
+       my $result = $parser->next;
+       if ( $result && $result->is_comment ) {
+         push @comments, $result->comment;
+         next;
+       }
+
+       if ( $current_test_result and
+               ( !$result or $result->is_bailout or $result->is_test ) ) {
+         # we're starting a new result, so pop the current one
+         my $xml = _result_to_xml( $xmlgen, $current_test_result, \@comments );
+         push @testcases, $xml;
+         $current_test_result = undef;
+         @comments = ();
+       }
+
+       if ( !$result ) {
+          # no more results
+          last;
+       }
+
        if ( $result->is_bailout ) {
-           $xml  = $xmlgen->testcase( { name      => 'BailOut',
+           my $xml  = $xmlgen->testcase( { name      => 'BailOut',
                                         classname => "$safe_suite_name.Tests",
                                         time      => 0 },
 
@@ -265,27 +285,37 @@ sub _parse_testcases {
            push @testcases, $xml;
            last;
        }
-       next unless $result->is_test;
-       $directive = $result->directive;
-       $name = $result->description;
-       $name .= "_$directive" if $directive;
-       if ( $result->is_ok ) {
-           $xml = $xmlgen->testcase( { name      => $name,
-                                       classname => "$safe_suite_name.Tests",
-                                       time      => 0 } );
-           push @testcases, $xml;
-       }
-       else {
-           $xml = $xmlgen->testcase( { name      => $name,
-                                       classname => "$safe_suite_name.Tests",
-                                       time      => 0 },
-                      $xmlgen->failure( { type    => 'TAPTestFailed',
-                                          message => $result->as_string } ));
-           push @testcases, $xml;
+
+       if ( $result->is_test ) {
+          # regular test result: store it until we get to the next one.
+          $current_test_result = $result;
        }
    }
 
    return @testcases;
+ }
+
+sub _result_to_xml {
+  my ( $xmlgen, $result, $comments ) = @_;
+
+  my $directive = $result->directive;
+  my $name = $result->description;
+  $name .= "_$directive" if $directive;
+
+  my @failures;
+  if ( not $result->is_ok ) {
+     my $failure_message = join( "&#10;", $result->as_string, @$comments );
+     push @failures, $xmlgen->failure({
+        type    => 'TAPTestFailed',
+        message => $failure_message,
+     });
+  }
+
+  return $xmlgen->testcase({
+     name      => $name,
+     classname => "$safe_suite_name.Tests",
+     time      => 0,
+  }, @failures );
 }
 
 sub _parse_tests {
