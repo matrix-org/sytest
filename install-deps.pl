@@ -8,6 +8,7 @@ use Getopt::Long;
 use CPAN;
 
 GetOptions(
+   'T|notest' => \my $NOTEST,
    'n|dryrun' => \my $DRYRUN,
 ) or exit 1;
 
@@ -54,7 +55,11 @@ sub requires
    if( !$DRYRUN ) {
       print STDERR "**** Installing $mod ****\n";
 
-      CPAN::install( $mod );
+      if( $NOTEST ) {
+         CPAN::Shell->notest('install', $mod);
+      } else {
+         CPAN::Shell->install($mod);
+      }
 
       if( not eval { check_installed( $mod, $ver ) } ) {
          print STDERR "Failed to import $mod even after installing: $@\n";
