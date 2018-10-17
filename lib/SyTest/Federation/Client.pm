@@ -223,4 +223,45 @@ sub join_room
    });
 }
 
+=head2 get_remote_forward_extremities
+
+   $client->get_remote_forward_extremities(
+      server_name => $first_home_server,
+      room_id     => $room_id,
+   )->then( sub {
+      my ( @extremity_event_ids ) = @_;
+   });
+
+Returns the remote server's idea of the current forward extremities in the
+given room.
+
+=cut
+
+
+sub get_remote_forward_extremities
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $server_name = $args{server_name};
+   my $room_id     = $args{room_id};
+
+   # we do this slightly hackily, by asking the server to make us a join event,
+   # which will handily list the forward extremities as prev_events.
+
+   my $user_id = '@fakeuser:' . $self->server_name;
+   $self->do_request_json(
+      method   => "GET",
+      hostname => $server_name,
+      uri      => "/make_join/$room_id/$user_id",
+   )->then( sub {
+      my ( $resp ) = @_;
+
+      my $protoevent = $resp->{event};
+
+      my @prev_events = map { $_->[0] } @{ $protoevent->{prev_events} };
+      Future->done( @prev_events );
+   });
+}
+
 1;

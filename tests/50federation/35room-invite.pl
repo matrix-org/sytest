@@ -78,7 +78,7 @@ sub invite_server
 
    my $room_id = $room->room_id;
 
-   my $invitation = $room->create_event(
+   my $invitation = $room->create_and_insert_event(
      type => "m.room.member",
 
      content   => { membership => "invite" },
