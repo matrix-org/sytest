@@ -96,7 +96,7 @@ test "Remove other from local group",
    };
 
 
-push our @EXPORT, qw( matrix_invite_group_user matrix_accept_group_invite matrix_get_joined_groups matrix_leave_group matrix_join_group );
+push our @EXPORT, qw( matrix_invite_group_user matrix_accept_group_invite matrix_get_joined_groups matrix_leave_group matrix_join_group matrix_get_invited_group_users );
 
 
 =head2 matrix_invite_group_user
@@ -222,4 +222,34 @@ sub matrix_get_joined_groups
       method => "GET",
       uri    => "/r0/joined_groups",
    );
+}
+
+=head2 matrix_get_invited_group_users
+
+    matrix_get_invited_group_users( $group_id, $user )
+
+Get a list of invited group members. Returns the body of the response, which
+is in the form:
+
+    {
+        chunk => [
+            {
+                user_id     => '@someone:example.org',
+                avatar_url  => 'mxc://example.org/something',
+                displayname => 'Example User'
+            }
+        ],
+        total_user_count_estimate => 1
+    }
+
+=cut
+
+sub matrix_get_invited_group_users
+{
+    my ( $group_id, $user ) = @_;
+
+    do_request_json_for( $user,
+        method => "GET",
+        uri    => "/r0/groups/$group_id/invited_users"
+    )
 }
