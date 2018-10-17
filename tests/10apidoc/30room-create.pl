@@ -92,15 +92,11 @@ test "POST /createRoom makes a room with a name",
    do => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/createRoom",
-
-         content => {
-            name => "Test Room"
-         },
+      matrix_create_room_synced(
+         $user,
+         name => 'Test Room',
       )->then( sub {
-         my ( $body ) = @_;
+         my ( $room_id, undef, $body ) = @_;
 
          assert_json_keys( $body, qw( room_id ));
          assert_json_nonempty_string( $body->{room_id} );
@@ -133,15 +129,11 @@ test "POST /createRoom makes a room with a topic",
    do => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/createRoom",
-
-         content => {
-            topic => "Test Room"
-         },
+      matrix_create_room_synced(
+         $user,
+         topic => 'Test Room',
       )->then( sub {
-         my ( $body ) = @_;
+         my ( $room_id, undef, $body ) = @_;
 
          assert_json_keys( $body, qw( room_id ));
          assert_json_nonempty_string( $body->{room_id} );
