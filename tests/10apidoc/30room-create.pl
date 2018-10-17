@@ -98,11 +98,6 @@ test "POST /createRoom makes a room with a name",
       )->then( sub {
          my ( $room_id, undef, $body ) = @_;
 
-         assert_json_keys( $body, qw( room_id ));
-         assert_json_nonempty_string( $body->{room_id} );
-
-         my ( $room_id ) = $body->{room_id};
-
          do_request_json_for( $user,
             method => "GET",
             uri    => "/r0/rooms/$room_id/state/m.room.name",
@@ -134,11 +129,6 @@ test "POST /createRoom makes a room with a topic",
          topic => 'Test Room',
       )->then( sub {
          my ( $room_id, undef, $body ) = @_;
-
-         assert_json_keys( $body, qw( room_id ));
-         assert_json_nonempty_string( $body->{room_id} );
-
-         my ( $room_id ) = $body->{room_id};
 
          do_request_json_for( $user,
             method => "GET",
