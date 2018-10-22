@@ -71,7 +71,6 @@ test "POST /createRoom makes a private room with invites",
 
          content => {
             visibility => "private",
-            # TODO: This doesn't actually appear in the API docs yet
             invite     => [ $invitee->user_id ],
          },
       )->then( sub {
@@ -79,6 +78,70 @@ test "POST /createRoom makes a private room with invites",
 
          assert_json_keys( $body, qw( room_id ));
          assert_json_nonempty_string( $body->{room_id} );
+
+         Future->done(1);
+      });
+   };
+
+test "POST /createRoom makes a room with a name",
+   requires => [ $user_fixture, local_user_fixture(),
+                 qw( can_create_private_room )],
+
+   proves => [qw( can_createroom_with_name )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room_synced(
+         $user,
+         name => 'Test Room',
+      )->then( sub {
+         my ( $room_id, undef, $body ) = @_;
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/state/m.room.name",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "state", $state;
+
+         assert_json_keys( $state, qw( name ));
+         assert_json_nonempty_string( $state->{name} );
+         assert_eq( $state->{name}, "Test Room", "room name" );
+
+         Future->done(1);
+      });
+   };
+
+test "POST /createRoom makes a room with a topic",
+   requires => [ $user_fixture, local_user_fixture(),
+                 qw( can_create_private_room )],
+
+   proves => [qw( can_createroom_with_topic )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room_synced(
+         $user,
+         topic => 'Test Room',
+      )->then( sub {
+         my ( $room_id, undef, $body ) = @_;
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/state/m.room.topic",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "state", $state;
+
+         assert_json_keys( $state, qw( topic ));
+         assert_json_nonempty_string( $state->{topic} );
+         assert_eq( $state->{topic}, "Test Room", "room topic" );
 
          Future->done(1);
       });
