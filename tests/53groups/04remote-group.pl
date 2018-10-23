@@ -58,5 +58,21 @@ test "Remove self from remote group",
       });
    };
 
+test "Listing invited users of a remote group when not a member returns a 403",
+    requires => [ local_admin_fixture( with_events => 0 ), remote_user_fixture( with_events => 0 ) ],
+
+    do => sub {
+        my ( $creator, $user ) = @_;
+
+        my $group_id;
+
+        matrix_create_group( $creator )
+        ->then( sub {
+            ( $group_id ) = @_;
+
+            matrix_get_invited_group_users( $group_id, $user )
+            -> main::expect_http_403;
+        });
+    };
 
 # TODO: Test kicks
