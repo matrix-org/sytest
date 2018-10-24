@@ -119,17 +119,23 @@ test "/upgrade creates a new room",
 
          # the old room should have a tombstone event
          my $old_room_timeline = $sync_body->{rooms}{join}{$old_room_id}{timeline}{events};
+         my $tombstone_event = $old_room_timeline->[0];
          assert_eq(
-            $old_room_timeline->[0]{type},
+            $tombstone_event->{type},
             'm.room.tombstone',
             'event in old room',
          );
-
          assert_eq(
-            $old_room_timeline->[0]{content}{replacement_room},
+            $tombstone_event->{content}{replacement_room},
             $new_room_id,
             'room_id in tombstone'
          );
+
+         # the new room should link to the old room
+         assert_json_keys( $ev0->{content}, qw( predecessor ));
+         assert_json_keys( $ev0->{content}{predecessor}, qw( room_id event_id ));
+         assert_eq( $ev0->{content}{predecessor}{room_id}, $old_room_id );
+         assert_eq( $ev0->{content}{predecessor}{event_id}, $tombstone_event->{event_id} );
 
          Future->done(1);
       });
@@ -196,6 +202,7 @@ test "/upgrade copies the power levels to the new room",
          $creator, $room_id, sub {
              ( $pl_content ) = @_;
              $pl_content->{users}->{'@test:xyz'} = 40;
+             log_if_fail "PL content in old room", $pl_content;
          }
       )->then( sub {
          upgrade_room_synced(
@@ -204,12 +211,15 @@ test "/upgrade copies the power levels to the new room",
          );
       })->then( sub {
          my ( $new_room_id, $sync_body ) = @_;
+
+         log_if_fail "sync body", $sync_body;
+
          my $room = $sync_body->{rooms}{join}{$new_room_id};
          my $pl_event = first {
             $_->{type} eq 'm.room.power_levels'
          } @{ $room->{timeline}->{events} };
 
-         log_if_fail "PL content in new room", $pl_event->{content};
+         log_if_fail "PL event in new room", $pl_event;
 
          assert_deeply_eq(
             $pl_event->{content},
