@@ -275,6 +275,71 @@ test "/upgrade copies important state to the new room",
       });
    };
 
+test "/upgrade restricts power levels in the old room",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      log_if_fail "Old room id", $room_id;
+
+      upgrade_room_synced(
+         $creator, $room_id,
+         new_version => $TEST_NEW_VERSION,
+      )->then( sub {
+         my ( $new_room_id, $sync_body ) = @_;
+
+         matrix_get_room_state(
+            $creator, $room_id, type=>'m.room.power_levels',
+         );
+      })->then( sub {
+         my ( $pl_event ) = @_;
+
+         log_if_fail 'power_levels after upgrade', $pl_event;
+         assert_eq( $pl_event->{events_default}, 50, "events_default" );
+         assert_eq( $pl_event->{invite}, 50, "invite" );
+         Future->done(1);
+      });
+   };
+
+test "/upgrade restricts power levels in the old room when the old PLs are unusual",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      matrix_change_room_power_levels(
+         $creator, $room_id, sub {
+            my ( $levels ) = @_;
+            $levels -> {users_default} = 80;
+         }
+      )->then( sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         my ( $new_room_id, $sync_body ) = @_;
+
+         matrix_get_room_state(
+            $creator, $room_id, type=>'m.room.power_levels',
+         );
+      })->then( sub {
+         my ( $pl_event ) = @_;
+
+         log_if_fail 'power_levels after upgrade', $pl_event;
+
+         assert_eq( $pl_event->{events_default}, 81, "events_default" );
+         assert_eq( $pl_event->{invite}, 81, "invite" );
+         Future->done(1);
+      });
+   };
 
 test "/upgrade to an unknown version is rejected",
    requires => [
