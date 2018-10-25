@@ -226,7 +226,7 @@ test "Outbound federation requests missing prev_events and then asks for /state_
       my $sent_event_b;
 
       # make sure that the sytest user has permission to alter the state
-      matrix_change_room_powerlevels( $creator, $room_id, sub {
+      matrix_change_room_power_levels( $creator, $room_id, sub {
          my ( $levels ) = @_;
 
          $levels->{users}->{$user_id} = 100;

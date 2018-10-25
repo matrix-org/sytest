@@ -35,7 +35,7 @@ multi_test "Test that we can be reinvited to a room we created",
             ->SyTest::pass_on_done( "User B joined the room" )
       })->then( sub {
 
-         matrix_change_room_powerlevels( $user_1, $room_id, sub {
+         matrix_change_room_power_levels( $user_1, $room_id, sub {
             my ( $levels ) = @_;
 
             $levels->{users}{ $user_2->user_id } = 100;
