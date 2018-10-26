@@ -205,22 +205,32 @@ test "/upgrade copies the power levels to the new room",
              log_if_fail "PL content in old room", $pl_content;
          }
       )->then( sub {
-         upgrade_room_synced(
-            $creator, $room_id,
-            new_version => $TEST_NEW_VERSION,
+         # we have to wait for the second PL event to turn up.
+         my $c = 0;
+         matrix_do_and_wait_for_sync(
+            $creator,
+            do => sub {
+               upgrade_room(
+                  $creator, $room_id, new_version => $TEST_NEW_VERSION,
+               );
+            },
+            check => sub {
+               my ( $sync_body, $new_room_id ) = @_;
+               return 0 if not exists $sync_body->{rooms}{join}{$new_room_id};
+               my $tl = $sync_body->{rooms}{join}{$new_room_id}{timeline}{events};
+               foreach my $ev ( @$tl ) {
+                  next if $ev->{type} ne 'm.room.power_levels';
+                  $c++;
+                  log_if_fail "PL event $c in new room", $ev;
+                  return $ev if $c == 2;
+               }
+               return 0;
+            },
          );
       })->then( sub {
-         my ( $new_room_id, $sync_body ) = @_;
+         my ( $new_room_id, $pl_event ) = @_;
 
-         log_if_fail "sync body", $sync_body;
-
-         my $room = $sync_body->{rooms}{join}{$new_room_id};
-         my $pl_event = first {
-            $_->{type} eq 'm.room.power_levels'
-         } @{ $room->{timeline}->{events} };
-
-         log_if_fail "PL event in new room", $pl_event;
-
+         log_if_fail "PL event", $pl_event;
          assert_deeply_eq(
             $pl_event->{content},
             $pl_content,
@@ -261,6 +271,19 @@ test "/upgrade copies important state to the new room",
       }
 
       $f->then( sub {
+         # to make things harder, we now restrict our ability to change each of
+         # those states: the server should make sure it sets up the state
+         # *before* it replicates the PL.
+         matrix_change_room_power_levels(
+            $creator, $room_id, sub {
+               my ( $levels ) = @_;
+               foreach my $k ( keys %STATE_DICT ) {
+                  $levels->{events}->{$k} = 80;
+               }
+               $levels->{users}->{$creator->user_id} = 50;
+            },
+         );
+      })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
@@ -398,7 +421,6 @@ test "/upgrade of a bogus room fails gracefully",
       )->main::expect_matrix_error( 'M_NOT_FOUND', http_code => 404 );
    };
 
-# upgrade without perms
 # upgrade with other local users
 # upgrade with remote users
 # check names and aliases are copied
