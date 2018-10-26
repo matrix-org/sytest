@@ -492,6 +492,23 @@ sub matrix_create_and_join_room
    });
 }
 
+=head2 room_fixture
+
+   $fixture = room_fixture( $user_fixture, %opts );
+
+Returns a Fixture, which when provisioned will create a new room on the user's
+server and return the room id.
+
+C<$user_fixture> should be a Fixture which will provide a User when
+provisioned.
+
+Any other options are passed into C<matrix_create_room>, whence they are passed
+on to the server.
+
+It is generally easier to use C<local_user_and_name_fixtures>.
+
+=cut
+
 push @EXPORT, qw( room_fixture );
 
 sub room_fixture
@@ -532,6 +549,32 @@ sub magic_room_fixture
       }
    );
 }
+
+=head2 local_user_and_room_fixtures
+
+   ( $user_fixture, $room_fixture ) = local_user_and_room_fixtures( %opts );
+
+Returns a pair of Fixtures, which when provisioned will respectively create a
+new user on the main test server (returning the User object), and use that
+user to create a new room (returning the room id).
+
+The following can be passed as optional parameters:
+
+=over
+
+=item user_opts => HASH
+
+Options to use when creating the user, such as C<displayname>. These are passed
+through to C<setup_user>.
+
+=item room_opts => HASH
+
+Options to use when creating the room. Thes are passed into into
+C<matrix_create_room>, whence they are passed on to the server.
+
+=back
+
+=cut
 
 push @EXPORT, qw( local_user_and_room_fixtures );
 
