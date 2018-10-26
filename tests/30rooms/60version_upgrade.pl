@@ -247,6 +247,7 @@ test "/upgrade copies important state to the new room",
          "m.room.join_rules" => { join_rule => "public" },
          "m.room.guest_access" => { guest_access => "forbidden" },
          "m.room.history_visibility" => { history_visibility => "joined" },
+         "m.room.avatar" => { url => "http://something" },
       );
 
       my $f = Future->done(1);
