@@ -14,7 +14,7 @@ my $room_fixture = fixture(
         matrix_create_and_join_room( [ $leaving_user, $other_user ] )->then( sub {
             ( $room_id ) = @_;
 
-            matrix_change_room_powerlevels( $leaving_user, $room_id, sub {
+            matrix_change_room_power_levels( $leaving_user, $room_id, sub {
                 my ( $levels ) = @_;
                 # Set user B's power level so that they can set the room
                 # name. By default the level to set a room name is 50. But

@@ -18,7 +18,7 @@ sub lockeddown_room_fixture
          ->then( sub {
             my ( $room_id ) = @_;
 
-            matrix_change_room_powerlevels( $creator, $room_id, sub {
+            matrix_change_room_power_levels( $creator, $room_id, sub {
                my ( $levels ) = @_;
 
                # Allow users at 80 or above to edit any of the room state
@@ -45,7 +45,7 @@ sub test_powerlevel
          my ( $creator, $test_user, $room_id ) = @_;
 
          # Fails at powerlevel 0
-         matrix_change_room_powerlevels( $creator, $room_id, sub {
+         matrix_change_room_power_levels( $creator, $room_id, sub {
             my ( $levels ) = @_;
             $levels->{users}{ $test_user->user_id } = 0;
          })->then( sub {
@@ -55,7 +55,7 @@ sub test_powerlevel
             pass( "Fails at powerlevel 0" );
 
             # Succeeds at powerlevel 80
-            matrix_change_room_powerlevels( $creator, $room_id, sub {
+            matrix_change_room_power_levels( $creator, $room_id, sub {
                my ( $levels ) = @_;
                $levels->{users}{ $test_user->user_id } = 80;
             })
@@ -110,7 +110,7 @@ test_powerlevel "setting 'm.room.power_levels' respects room powerlevel",
    try => sub {
       my ( $test_user, $room_id ) = @_;
 
-      matrix_change_room_powerlevels( $test_user, $room_id, sub {
+      matrix_change_room_power_levels( $test_user, $room_id, sub {
          my ( $levels ) = @_;
          $levels->{users}{'@some-random-user:here'} = 50;
       });
@@ -123,7 +123,7 @@ test "Unprivileged users can set m.room.topic if it only needs level 0",
    do => sub {
       my ( $creator, $test_user, $room_id ) = @_;
 
-      matrix_change_room_powerlevels( $creator, $room_id, sub {
+      matrix_change_room_power_levels( $creator, $room_id, sub {
          my ( $levels ) = @_;
          delete $levels->{users}{ $test_user->user_id };
          $levels->{events}{"m.room.topic"} = 0;
@@ -143,13 +143,13 @@ foreach my $levelname (qw( ban kick redact )) {
       do => sub {
          my ( $user, undef, $room_id ) = @_;
 
-         matrix_change_room_powerlevels( $user, $room_id, sub {
+         matrix_change_room_power_levels( $user, $room_id, sub {
             my ( $levels ) = @_;
 
             $levels->{$levelname} = 25;
          })->SyTest::pass_on_done( "Succeeds at setting 25" )
          ->then( sub {
-            matrix_change_room_powerlevels( $user, $room_id, sub {
+            matrix_change_room_power_levels( $user, $room_id, sub {
                my ( $levels ) = @_;
 
                $levels->{$levelname} = 10000000;

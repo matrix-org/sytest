@@ -46,7 +46,7 @@ test "Forward extremities remain so even after the next events are populated as 
 
          # make sure that the sytest user has permission to alter the state
          Future->needs_all(
-            matrix_change_room_powerlevels( $creator, $room_id, sub {
+            matrix_change_room_power_levels( $creator, $room_id, sub {
                my ( $levels ) = @_;
                $levels->{users}->{$user_id} = 100;
             }),
