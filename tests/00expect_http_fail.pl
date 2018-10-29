@@ -167,7 +167,7 @@ sub expect_matrix_error
       Future->done( $body );
    });
 }
-push @EXPORT, qw/expect_matrix_error/;
+push @EXPORT, qw( expect_matrix_error );
 
 
 sub expect_m_not_found
@@ -178,4 +178,4 @@ sub expect_m_not_found
       http_code=>404,
      );
 }
-push @EXPORT, qw/expect_m_not_found/;
+push @EXPORT, qw( expect_m_not_found );
