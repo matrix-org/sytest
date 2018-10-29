@@ -117,8 +117,7 @@ sub check_http_code
 =head2 expect_matrix_error
 
    http_request()->main::expect_matrix_error(
-      'M_EXPECTED_ERROR',
-      http_code => 418,
+      $http_code, $matrix_errcode,
    )->then( sub {
       my ( $error_body ) = @_;
    });
@@ -128,16 +127,11 @@ error code. Asserts that the HTTP error code and matrix error code were as
 expected, and if so returns the JSON-decoded body of the error (so that it can
 be checked for additional fields).
 
-By default, the expected HTTP error code is 400. This can be overridden with an
-"http_code" parameter.
-
 =cut
 
 sub expect_matrix_error
 {
-   my ( $f, $expected_errcode, %opts ) = @_;
-
-   my $expected_http_code = $opts{http_code} // 400;
+   my ( $f, $expected_http_code, $expected_errcode ) = @_;
 
    return $f->then_with_f(
       sub {  # done
@@ -174,8 +168,7 @@ sub expect_m_not_found
 {
    my $f = shift;
    return expect_matrix_error(
-      $f, 'M_NOT_FOUND',
-      http_code=>404,
-     );
+      $f, 404, 'M_NOT_FOUND',
+   );
 }
 push @EXPORT, qw( expect_m_not_found );

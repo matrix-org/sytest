@@ -363,7 +363,7 @@ test "/upgrade to an unknown version is rejected",
       upgrade_room(
          $user, $room_id,
          new_version => 'my_bad_version',
-      )->main::expect_matrix_error( 'M_UNSUPPORTED_ROOM_VERSION' );
+      )->main::expect_matrix_error( 400, 'M_UNSUPPORTED_ROOM_VERSION' );
    };
 
 test "/upgrade is rejected if the user can't send state events",
@@ -380,7 +380,7 @@ test "/upgrade is rejected if the user can't send state events",
       matrix_join_room( $joiner, $room_id )->then( sub {
          upgrade_room(
             $joiner, $room_id,
-         )->main::expect_matrix_error( 'M_FORBIDDEN', http_code => 403 );
+         )->main::expect_matrix_error( 403, 'M_FORBIDDEN' );
       });
    };
 
@@ -395,7 +395,7 @@ test "/upgrade of a bogus room fails gracefully",
 
       upgrade_room(
          $user, "!fail:unknown",
-      )->main::expect_matrix_error( 'M_NOT_FOUND', http_code => 404 );
+      )->main::expect_matrix_error( 404, 'M_NOT_FOUND' );
    };
 
 # upgrade without perms
