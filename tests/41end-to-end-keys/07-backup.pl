@@ -74,7 +74,8 @@ test "Responds correctly when backup is empty",
          assert_deeply_eq( $content, {"rooms" => {}});
 
          Future->done(1);
-      });
+         matrix_get_backup_key( $user, '', '', 'bogusversion');
+      })->main::expect_http_404;
    };
 
 test "Can backup keys",
