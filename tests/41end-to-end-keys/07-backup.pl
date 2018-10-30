@@ -40,6 +40,43 @@ test "Can create backup version",
       });
    };
 
+test "Responds correctly when backup is empty",
+   requires => [ $fixture, qw( can_create_backup_version ) ],
+
+   do => sub {
+      my ( $user ) = @_;
+      my $version;
+
+      matrix_get_key_backup_info( $user )->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "Content", $content;
+
+         $version = $content->{version};
+
+         matrix_get_backup_key( $user, '!notaroom', 'notassession', $version);
+      })->main::expect_http_4xx
+      ->then( sub {
+         matrix_get_backup_key( $user, '!notaroom', '', $version);
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "Content", $content;
+
+         assert_deeply_eq( $content, {"sessions" => {}});
+
+         matrix_get_backup_key( $user, '', '', $version );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "Content", $content;
+
+         assert_deeply_eq( $content, {"rooms" => {}});
+
+         Future->done(1);
+      });
+   };
+
 test "Can backup keys",
    requires => [ $fixture, qw( can_create_backup_version ) ],
 
@@ -295,7 +332,13 @@ test "Deleted & recreated backups are empty",
                version => $content->{version},
             }
          );
-      })->main::expect_http_404;
+      })->then( sub {
+         my ( $content ) = @_;
+
+         assert_deeply_eq($content, {"rooms" => {}}, "Expected new backup to be empty");
+
+         Future->done(1);
+      });
    };
 
 
@@ -393,9 +436,19 @@ Send keys to a given key backup version
 sub matrix_get_backup_key {
    my ( $user, $room_id, $session_id, $version ) = @_;
 
+   my $uri;
+
+   if ($session_id) {
+      $uri = "/unstable/room_keys/keys/$room_id/$session_id";
+   } elsif ($room_id) {
+      $uri = "/unstable/room_keys/keys/$room_id";
+   } else {
+      $uri = "/unstable/room_keys/keys";
+   }
+
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/unstable/room_keys/keys/$room_id/$session_id",
+      uri     => $uri,
       params  => {
          version => $version,
       },
