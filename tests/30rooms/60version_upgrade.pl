@@ -38,7 +38,6 @@ Defaults to $TEST_NEW_VERSION if unspecified
 
 =cut
 
-
 sub upgrade_room {
    my ( $user, $room_id, %opts ) = @_;
 
@@ -52,7 +51,6 @@ sub upgrade_room {
          new_version => $new_version,
       },
    )->then( sub {
-
       my ( $body ) = @_;
       log_if_fail "upgrade response", $body;
 
