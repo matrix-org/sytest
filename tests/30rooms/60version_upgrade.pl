@@ -62,18 +62,40 @@ sub upgrade_room {
 =head2 upgrade_room_synced
 
     upgrade_room_synced( $user, $room_id, %opts )->then( sub {
-        my ( $new_room_id, $sync_body ) = @_;
+        my ( $new_room_id ) = @_;
     })
 
 Request that the homeserver upgrades the given room, and waits for the
 new room to appear in the sync result.
 
-%opts are as for C<upgrade_room>.
+%opts may include:
+
+=over
+
+=item expected_event_counts => HASH
+
+The number of events of each type we expect to appear in the new room. A map
+from event type to count.
+
+=back
+
+Other %opts are as for C<upgrade_room>.
 
 =cut
 
 sub upgrade_room_synced {
    my ( $user, $room_id, %opts ) = @_;
+
+   my $expected_event_counts = delete $opts{expected_event_counts} // {};
+   foreach my $t (qw(
+      m.room.create m.room.member m.room.guest_access
+      m.room.history_visibility m.room.join_rules m.room.power_levels
+   )) {
+      $expected_event_counts->{$t} //= 1;
+   }
+
+   # map from event type to count
+   my %received_event_counts = ();
 
    matrix_do_and_wait_for_sync(
       $user,
@@ -83,7 +105,22 @@ sub upgrade_room_synced {
       check => sub {
          my ( $sync_body, $new_room_id ) = @_;
          return 0 if not exists $sync_body->{rooms}{join}{$new_room_id};
-         return $sync_body;
+         my $tl = $sync_body->{rooms}{join}{$new_room_id}{timeline}{events};
+         log_if_fail "New room timeline", $tl;
+
+         foreach my $ev ( @$tl ) {
+            $received_event_counts{$ev->{type}} //= 0;
+            $received_event_counts{$ev->{type}} += 1;
+         }
+
+         # check we've got all the events we expect
+         foreach my $t ( keys %$expected_event_counts ) {
+            if( $received_event_counts{$t} < $expected_event_counts->{$t} ) {
+               log_if_fail "Still waiting for a $t event";
+               return 0;
+            }
+         }
+         return 1;
       },
    );
 }
@@ -98,13 +135,19 @@ test "/upgrade creates a new room",
 
    do => sub {
       my ( $user, $old_room_id ) = @_;
-      my ( $replacement_room );
+      my ( $new_room_id );
 
-      upgrade_room_synced(
-         $user, $old_room_id,
-         new_version => $TEST_NEW_VERSION,
-      )->then( sub {
-         my ( $new_room_id, $sync_body ) = @_;
+      matrix_sync( $user )->then( sub {
+         upgrade_room_synced(
+            $user, $old_room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id, ) = @_;
+
+         matrix_sync_again( $user );
+      })->then( sub {
+         my ( $sync_body ) = @_;
 
          log_if_fail "sync body", $sync_body;
 
@@ -166,7 +209,7 @@ foreach my $vis ( qw( public private ) ) {
                new_version => $TEST_NEW_VERSION,
             );
          })->then( sub {
-            my ( $new_room_id, $sync_body ) = @_;
+            my ( $new_room_id, ) = @_;
 
             # check the visibility of the new room
             do_request_json_for(
@@ -196,7 +239,7 @@ test "/upgrade copies the power levels to the new room",
    do => sub {
       my ( $creator, $room_id ) = @_;
 
-      my $pl_content;
+      my ( $pl_content, $new_room_id );
 
       matrix_change_room_power_levels(
          $creator, $room_id, sub {
@@ -205,19 +248,26 @@ test "/upgrade copies the power levels to the new room",
              log_if_fail "PL content in old room", $pl_content;
          }
       )->then( sub {
+         matrix_sync( $creator );
+      })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
+            expected_event_counts => { 'm.room.power_levels' => 2 },
             new_version => $TEST_NEW_VERSION,
          );
       })->then( sub {
-         my ( $new_room_id, $sync_body ) = @_;
+         ( $new_room_id, ) = @_;
+
+         matrix_sync_again( $creator );
+      })->then( sub {
+         my ( $sync_body ) = @_;
 
          log_if_fail "sync body", $sync_body;
 
          my $room = $sync_body->{rooms}{join}{$new_room_id};
          my $pl_event = first {
             $_->{type} eq 'm.room.power_levels'
-         } @{ $room->{timeline}->{events} };
+         } reverse @{ $room->{timeline}->{events} };
 
          log_if_fail "PL event in new room", $pl_event;
 
@@ -239,6 +289,7 @@ test "/upgrade copies important state to the new room",
 
    do => sub {
       my ( $creator, $room_id ) = @_;
+      my ( $new_room_id );
 
       # map from type to content
       my %STATE_DICT = (
@@ -262,12 +313,21 @@ test "/upgrade copies important state to the new room",
       }
 
       $f->then( sub {
+         matrix_sync( $creator );
+      })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
          );
       })->then( sub {
-         my ( $new_room_id, $sync_body ) = @_;
+         ( $new_room_id, ) = @_;
+
+         matrix_sync_again( $creator );
+      })->then( sub {
+         my ( $sync_body ) = @_;
+
+         log_if_fail "sync body", $sync_body;
+
          my $room = $sync_body->{rooms}{join}{$new_room_id};
 
          foreach my $k ( keys %STATE_DICT ) {
@@ -301,7 +361,7 @@ test "/upgrade restricts power levels in the old room",
          $creator, $room_id,
          new_version => $TEST_NEW_VERSION,
       )->then( sub {
-         my ( $new_room_id, $sync_body ) = @_;
+         my ( $new_room_id ) = @_;
 
          matrix_get_room_state(
             $creator, $room_id, type=>'m.room.power_levels',
@@ -333,10 +393,11 @@ test "/upgrade restricts power levels in the old room when the old PLs are unusu
       )->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
+            expected_event_counts => { 'm.room.power_levels' => 2 },
             new_version => $TEST_NEW_VERSION,
          );
       })->then( sub {
-         my ( $new_room_id, $sync_body ) = @_;
+         my ( $new_room_id ) = @_;
 
          matrix_get_room_state(
             $creator, $room_id, type=>'m.room.power_levels',
@@ -364,7 +425,7 @@ test "/upgrade to an unknown version is rejected",
       upgrade_room(
          $user, $room_id,
          new_version => 'my_bad_version',
-      )->main::expect_matrix_error( 'M_UNSUPPORTED_ROOM_VERSION' );
+      )->main::expect_matrix_error( 400, 'M_UNSUPPORTED_ROOM_VERSION' );
    };
 
 test "/upgrade is rejected if the user can't send state events",
@@ -381,7 +442,7 @@ test "/upgrade is rejected if the user can't send state events",
       matrix_join_room( $joiner, $room_id )->then( sub {
          upgrade_room(
             $joiner, $room_id,
-         )->main::expect_matrix_error( 'M_FORBIDDEN', http_code => 403 );
+         )->main::expect_matrix_error( 403, 'M_FORBIDDEN' );
       });
    };
 
@@ -396,7 +457,7 @@ test "/upgrade of a bogus room fails gracefully",
 
       upgrade_room(
          $user, "!fail:unknown",
-      )->main::expect_matrix_error( 'M_NOT_FOUND', http_code => 404 );
+      )->main::expect_matrix_error( 404, 'M_NOT_FOUND' );
    };
 
 # upgrade without perms
