@@ -95,7 +95,7 @@ sub upgrade_room_synced {
    }
 
    # map from event type to count
-   my %received_event_counts = ();
+   my %received_event_counts = map { $_ => 0 } keys %$expected_event_counts;
 
    matrix_do_and_wait_for_sync(
       $user,
@@ -109,7 +109,6 @@ sub upgrade_room_synced {
          log_if_fail "New room timeline", $tl;
 
          foreach my $ev ( @$tl ) {
-            $received_event_counts{$ev->{type}} //= 0;
             $received_event_counts{$ev->{type}} += 1;
          }
 
@@ -373,9 +372,7 @@ test "/upgrade moves aliases to the new room",
       my ( $info, $creator, $room_id, $room_alias_1, $room_alias_2 ) = @_;
 
       my $server_name = $info->server_name;
-
-      # $received_events{room_id}->{type}->{state_key}->event
-      my %received_events;
+      my $new_room_id;
 
       do_request_json_for(
          $creator,
@@ -398,55 +395,50 @@ test "/upgrade moves aliases to the new room",
             },
          );
       })->then( sub {
-         matrix_do_and_wait_for_sync(
-            $creator,
-            do => sub {
-               upgrade_room(
-                  $creator, $room_id, new_version => $TEST_NEW_VERSION,
-               );
-            },
-            check => sub {
-               my ( $sync_body, $new_room_id ) = @_;
-
-               log_if_fail "sync body", $sync_body;
-
-               my $joined = $sync_body->{rooms}{join} // {};
-               foreach my $room_id ( keys %{ $joined } ) {
-                  foreach my $ev ( @{ $joined->{$room_id}{timeline}{events} } ) {
-                     $received_events{$room_id}->{$ev->{type}}->{$ev->{state_key} // ''} = $ev;
-                  }
-               }
-
-               # wait until we've received both alias events in both rooms.
-               foreach my $room_id ( $room_id, $new_room_id ) {
-                  my $rs = $received_events{$room_id} // {};
-                  foreach ( qw( m.room.aliases m.room.canonical_alias ) ) {
-                     log_if_fail "$_ in $room_id", $rs->{$_};
-                     return 0 unless $rs->{$_};
-                  }
-               }
-               return 1;
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+            expected_event_counts => {
+               'm.room.aliases' => 1, 'm.room.canonical_alias' => 1,
             },
          );
       })->then( sub {
-         my ( $new_room_id, $sync_body ) = @_;
+         ( $new_room_id ) = @_;
 
-         my $old_aliases = $received_events{$room_id}->{'m.room.aliases'}->{$server_name};
-         assert_deeply_eq( $old_aliases->{content}, {aliases => []}, "aliases on old room" );
+         matrix_get_room_state(
+            $creator, $room_id,
+            type=>'m.room.aliases', state_key=>$server_name,
+         );
+      })->then( sub {
+         my ( $old_aliases ) = @_;
+         assert_deeply_eq( $old_aliases, {aliases => []}, "aliases on old room" );
 
-         my $old_canonical_alias = $received_events{$room_id}->{'m.room.canonical_alias'}->{''};
-         assert_deeply_eq( $old_canonical_alias->{content}, {}, "canonical_alias on old room" );
-
-         my $new_aliases = $received_events{$new_room_id}->{'m.room.aliases'}->{$server_name};
+         matrix_get_room_state( $creator, $room_id, type=>'m.room.canonical_alias' );
+      })->then( sub {
+         my ( $old_canonical_alias ) = @_;
          assert_deeply_eq(
-            $new_aliases->{content}{aliases},
+            $old_canonical_alias, {}, "canonical_alias on old room",
+         );
+
+         matrix_get_room_state(
+            $creator, $new_room_id,
+            type=>'m.room.aliases', state_key=>$server_name,
+         );
+      })->then( sub {
+         my ( $new_aliases ) = @_;
+         assert_deeply_eq(
+            $new_aliases->{aliases},
             [ $room_alias_1, $room_alias_2 ],
             "aliases on new room",
          );
 
-         my $new_canonical_alias = $received_events{$new_room_id}->{'m.room.canonical_alias'}->{''};
+         matrix_get_room_state(
+            $creator, $new_room_id, type=>'m.room.canonical_alias',
+         );
+      })->then( sub {
+         my ( $new_canonical_alias ) = @_;
          assert_deeply_eq(
-            $new_canonical_alias->{content},
+            $new_canonical_alias,
             { alias => $room_alias_1 },
             "canonical_alias on new room",
          );
