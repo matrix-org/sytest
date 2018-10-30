@@ -1,7 +1,5 @@
 my $fixture = local_user_fixture();
 
-my $current_version; # FIXME: is there a better way of passing the backup version between tests?
-
 test "Can create backup version",
    requires => [ $fixture ],
 
