@@ -35,20 +35,24 @@ multi_test "Can quarantine media in rooms",
          $content_id = "$server$path";
 
          matrix_send_room_message( $user, $room_id,
-            content => { msgtype => "m.image", body => "test.png", url => "$content_uri" }
+            content => {
+               msgtype => "m.image",
+               body => "test.png",
+               url => "$content_uri",
+            },
          );
       })->then( sub {
          do_request_json_for( $admin,
             method  => "POST",
             uri     => "/r0/admin/quarantine_media/$room_id",
-            content => {}
-         )
+            content => {},
+         );
       })->SyTest::pass_on_done( "Quarantine returns success" )
       ->then( sub {
          $user->http->do_request(
             method   => "GET",
             full_uri => "/_matrix/media/r0/download/$content_id",
-         )->main::expect_http_404
+         )->main::expect_http_404;
       })->SyTest::pass_on_done( "404 on getting quarantined local media" )
       ->then( sub {
          $user->http->do_request(
@@ -58,14 +62,14 @@ multi_test "Can quarantine media in rooms",
                width  => 32,
                height => 32,
                method => "scale",
-            }
+            },
          )->main::expect_http_404
       })->SyTest::pass_on_done( "404 on getting quarantined local thumbnails" )
       ->then( sub {
          $remote_user->http->do_request(
             method   => "GET",
             full_uri => "/_matrix/media/r0/download/$content_id",
-         )->main::expect_http_404
+         )->main::expect_http_404;
       })->SyTest::pass_on_done( "404 on getting quarantined remote media" )
       ->then( sub {
          $remote_user->http->do_request(
@@ -76,6 +80,6 @@ multi_test "Can quarantine media in rooms",
                height => 32,
                method => "scale",
             }
-         )->main::expect_http_404
+         )->main::expect_http_404;
       })->SyTest::pass_on_done( "404 on getting quarantined remote thumbnails" );
    };
