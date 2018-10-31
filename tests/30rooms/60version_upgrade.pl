@@ -13,7 +13,7 @@
 # limitations under the License.
 
 use Future::Utils qw( repeat );
-use List::Util qw( first );
+use List::Util qw( all first );
 
 # TODO: switch this to '2' once that is released
 my $TEST_NEW_VERSION = 'vdh-test-version';
@@ -95,7 +95,7 @@ sub upgrade_room_synced {
    }
 
    # map from event type to count
-   my %received_event_counts = ();
+   my %received_event_counts = map { $_ => 0 } keys %$expected_event_counts;
 
    matrix_do_and_wait_for_sync(
       $user,
@@ -109,7 +109,6 @@ sub upgrade_room_synced {
          log_if_fail "New room timeline", $tl;
 
          foreach my $ev ( @$tl ) {
-            $received_event_counts{$ev->{type}} //= 0;
             $received_event_counts{$ev->{type}} += 1;
          }
 
@@ -359,6 +358,117 @@ test "/upgrade copies important state to the new room",
       });
    };
 
+
+test "/upgrade moves aliases to the new room",
+   requires => [
+      $main::HOMESERVER_INFO[0],
+      local_user_and_room_fixtures(),
+      room_alias_fixture(),
+      room_alias_fixture(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $info, $creator, $room_id, $room_alias_1, $room_alias_2 ) = @_;
+
+      my $server_name = $info->server_name;
+      my $new_room_id;
+
+      do_request_json_for(
+         $creator,
+         method => "PUT",
+         uri    => "/r0/directory/room/$room_alias_1",
+         content => { room_id => $room_id },
+      )->then( sub {
+         do_request_json_for(
+            $creator,
+            method => "PUT",
+            uri    => "/r0/directory/room/$room_alias_2",
+            content => { room_id => $room_id },
+         );
+      })->then( sub {
+         # alias 1 is the canonical alias.
+         matrix_put_room_state( $creator, $room_id,
+            type    => "m.room.canonical_alias",
+            content => {
+               alias => $room_alias_1,
+            },
+         );
+      })->then( sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+            expected_event_counts => {
+               'm.room.aliases' => 1, 'm.room.canonical_alias' => 1,
+            },
+         );
+      })->then( sub {
+         ( $new_room_id ) = @_;
+
+         matrix_get_room_state(
+            $creator, $room_id,
+            type=>'m.room.aliases', state_key=>$server_name,
+         );
+      })->then( sub {
+         my ( $old_aliases ) = @_;
+         assert_deeply_eq( $old_aliases, {aliases => []}, "aliases on old room" );
+
+         matrix_get_room_state( $creator, $room_id, type=>'m.room.canonical_alias' );
+      })->then( sub {
+         my ( $old_canonical_alias ) = @_;
+         assert_deeply_eq(
+            $old_canonical_alias, {}, "canonical_alias on old room",
+         );
+
+         matrix_get_room_state(
+            $creator, $new_room_id,
+            type=>'m.room.aliases', state_key=>$server_name,
+         );
+      })->then( sub {
+         my ( $new_aliases ) = @_;
+         assert_deeply_eq(
+            [ sort( @{ $new_aliases->{aliases} } ) ],
+            [ sort( $room_alias_1, $room_alias_2 ) ],
+            "aliases on new room",
+         );
+
+         matrix_get_room_state(
+            $creator, $new_room_id, type=>'m.room.canonical_alias',
+         );
+      })->then( sub {
+         my ( $new_canonical_alias ) = @_;
+         assert_deeply_eq(
+            $new_canonical_alias,
+            { alias => $room_alias_1 },
+            "canonical_alias on new room",
+         );
+
+         # check that the directory now maps the aliases to the new room
+         do_request_json_for(
+            $creator,
+            method => "GET",
+            uri    => "/r0/directory/room/$room_alias_1",
+         )->then( sub {
+            my ( $body ) = @_;
+
+            assert_eq( $body->{room_id}, $new_room_id, "room_id for alias 1" );
+
+            do_request_json_for(
+               $creator,
+               method => "GET",
+               uri    => "/r0/directory/room/$room_alias_2",
+            );
+         })->then( sub {
+            my ( $body ) = @_;
+
+            assert_eq( $body->{room_id}, $new_room_id, "room_id for alias 2" );
+
+            Future->done(1);
+         });
+      });
+   };
+
+
 test "/upgrade restricts power levels in the old room",
    requires => [
       local_user_and_room_fixtures(),
@@ -475,6 +585,5 @@ test "/upgrade of a bogus room fails gracefully",
 
 # upgrade with other local users
 # upgrade with remote users
-# check names and aliases are copied
 
 
