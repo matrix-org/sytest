@@ -427,8 +427,8 @@ test "/upgrade moves aliases to the new room",
       })->then( sub {
          my ( $new_aliases ) = @_;
          assert_deeply_eq(
-            $new_aliases->{aliases},
-            [ $room_alias_1, $room_alias_2 ],
+            [ sort( @{ $new_aliases->{aliases} } ) ],
+            [ sort( $room_alias_1, $room_alias_2 ) ],
             "aliases on new room",
          );
 
