@@ -158,7 +158,50 @@ test "GET /rooms/:room_id/messages returns a message",
       });
    };
 
-push @EXPORT, qw( matrix_get_room_messages );
+test "GET /rooms/:room_id/messages lazy loads members correctly",
+   requires => [ local_user_and_room_fixtures(),
+                 qw( can_send_message )],
+
+   check => sub {
+      my ( $user, $room_id ) = @_;
+
+      matrix_send_room_text_message( $user, $room_id,
+         body => "Here is the message content",
+      )->then( sub {
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/messages",
+
+            # With no params this does "forwards from END"; i.e. nothing useful
+            params => {
+               dir => "b",
+               filter => '{ "lazy_load_members" : true }',
+            },
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( start end state chunk ));
+         assert_json_list( $body->{chunk} );
+         assert_json_list( $body->{state} );
+
+         assert_eq( scalar @{$body->{state}}, 1);
+         assert_eq( $body->{state}[0]{type}, 'm.room.member');
+         assert_eq( $body->{state}[0]{state_key}, $user->user_id);
+
+         scalar @{ $body->{chunk} } > 0 or
+            die "Expected some messages but got none at all\n";
+
+         Future->done(1);
+      });
+   };
+
+push @EXPORT, qw(
+   matrix_get_room_messages matrix_send_room_text_message_synced
+   matrix_send_room_message_synced matrix_send_filler_messages_synced
+);
 
 sub matrix_get_room_messages
 {
@@ -173,4 +216,59 @@ sub matrix_get_room_messages
 
       params => \%params,
    );
+}
+
+sub matrix_send_room_text_message_synced
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_send_room_text_message( $user, $room_id, %params );
+      },
+      check => sub {
+         my ( $sync_body, $event_id ) = @_;
+
+         sync_timeline_contains( $sync_body, $room_id, sub {
+            $_[0]->{event_id} eq $event_id
+         });
+      },
+   );
+}
+
+sub matrix_send_room_message_synced
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_send_room_message( $user, $room_id, %params );
+      },
+      check => sub {
+         my ( $sync_body, $event_id ) = @_;
+
+         sync_timeline_contains( $sync_body, $room_id, sub {
+            $_[0]->{event_id} eq $event_id
+         });
+      },
+   );
+}
+
+sub matrix_send_filler_messages_synced
+{
+   my ( $user, $room_id, $count, %params ) = @_;
+
+   my $type = $params{type} // "a.made.up.filler.type";
+
+   Future->needs_all( map {
+      matrix_send_room_message( $user, $room_id,
+         content => { "filler" => $_ },
+         type    => $type,
+      );
+   } 1 .. ($count - 1) )->then( sub {
+      matrix_send_room_message_synced( $user, $room_id,
+         content => { "filler" => $count },
+         type    => $type,
+      );
+   });
 }

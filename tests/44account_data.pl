@@ -106,7 +106,7 @@ test "Latest account data comes down in room initialSync",
 
 
 test "Account data appears in v1 /events stream",
-   requires => [ local_user_fixture() ],
+   requires => [ local_user_fixture( with_events => 1 ) ],
 
    check => sub {
       my ( $user ) = @_;

@@ -48,7 +48,7 @@ test "Outbound federation can send invites",
    };
 
 test "Inbound federation can receive invites",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+   requires => [ local_user_fixture( with_events => 1 ), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
 
    do => sub {
@@ -78,7 +78,7 @@ sub invite_server
 
    my $room_id = $room->room_id;
 
-   my $invitation = $room->create_event(
+   my $invitation = $room->create_and_insert_event(
      type => "m.room.member",
 
      content   => { membership => "invite" },
@@ -160,7 +160,7 @@ foreach my $error_code ( 403, 500, -1 ) {
    test "Inbound federation can receive invite and reject when "
          . ( $error_code >= 0 ? "remote replies with a $error_code" :
              "is unreachable" ),
-      requires => [ local_user_fixture(), $temp_federation_server_fixture ],
+      requires => [ local_user_fixture( with_events => 1 ), $temp_federation_server_fixture ],
 
       do => sub {
          my ( $user, $federation_server ) = @_;

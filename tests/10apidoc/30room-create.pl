@@ -1,11 +1,10 @@
+use JSON qw( decode_json );
+
 my $user_fixture = local_user_fixture();
 
-# An incrementing parameter for initialSync to defeat the caching mechanism and ensure fresh results every time
-my $initial_sync_limit = 1;
 
 test "POST /createRoom makes a public room",
-   requires => [ $user_fixture,
-                 qw( can_initial_sync )],
+   requires => [ $user_fixture ],
 
    critical => 1,
 
@@ -27,21 +26,6 @@ test "POST /createRoom makes a public room",
          assert_json_keys( $body, qw( room_id room_alias ));
          assert_json_nonempty_string( $body->{room_id} );
          assert_json_nonempty_string( $body->{room_alias} );
-
-         Future->done(1);
-      });
-   },
-
-   check => sub {
-      my ( $user ) = @_;
-
-      # Change the limit for each request to defeat caching
-      matrix_initialsync( $user, limit => $initial_sync_limit++ )->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_list( $body->{rooms} );
-         @{ $body->{rooms} } or
-            die "Expected a list of rooms";
 
          Future->done(1);
       });
@@ -87,7 +71,6 @@ test "POST /createRoom makes a private room with invites",
 
          content => {
             visibility => "private",
-            # TODO: This doesn't actually appear in the API docs yet
             invite     => [ $invitee->user_id ],
          },
       )->then( sub {
@@ -100,6 +83,203 @@ test "POST /createRoom makes a private room with invites",
       });
    };
 
+test "POST /createRoom makes a room with a name",
+   requires => [ $user_fixture, local_user_fixture(),
+                 qw( can_create_private_room )],
+
+   proves => [qw( can_createroom_with_name )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room_synced(
+         $user,
+         name => 'Test Room',
+      )->then( sub {
+         my ( $room_id, undef, $body ) = @_;
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/state/m.room.name",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "state", $state;
+
+         assert_json_keys( $state, qw( name ));
+         assert_json_nonempty_string( $state->{name} );
+         assert_eq( $state->{name}, "Test Room", "room name" );
+
+         Future->done(1);
+      });
+   };
+
+test "POST /createRoom makes a room with a topic",
+   requires => [ $user_fixture, local_user_fixture(),
+                 qw( can_create_private_room )],
+
+   proves => [qw( can_createroom_with_topic )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room_synced(
+         $user,
+         topic => 'Test Room',
+      )->then( sub {
+         my ( $room_id, undef, $body ) = @_;
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/state/m.room.topic",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "state", $state;
+
+         assert_json_keys( $state, qw( topic ));
+         assert_json_nonempty_string( $state->{topic} );
+         assert_eq( $state->{topic}, "Test Room", "room topic" );
+
+         Future->done(1);
+      });
+   };
+
+test "Can /sync newly created room",
+   requires => [ $user_fixture ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room_synced( $user );
+   };
+
+test "POST /createRoom creates a room with the given version",
+   requires => [ $user_fixture ],
+   proves => [qw( can_create_versioned_room )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room_synced(
+         $user,
+         room_version => 'vdh-test-version',
+      )->then( sub {
+         my ( $room_id, undef, $sync_body ) = @_;
+
+         log_if_fail "sync body", $sync_body;
+
+         my $room =  $sync_body->{rooms}{join}{$room_id};
+         my $ev0 = $room->{timeline}{events}[0];
+
+         assert_eq( $ev0->{type}, 'm.room.create',
+                    'first event was not m.room.create' );
+         assert_json_keys( $ev0->{content}, qw( room_version ));
+         assert_eq( $ev0->{content}{room_version}, 'vdh-test-version', 'room_version' );
+
+         Future->done(1);
+      });
+   };
+
+
+test "POST /createRoom rejects attempts to create rooms with numeric versions",
+   requires => [ $user_fixture, qw( can_create_versioned_room )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room_synced(
+         $user,
+         room_version => 1,
+      )->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         assert_eq( $body->{errcode}, "M_BAD_JSON", 'responsecode' );
+         Future->done( 1 );
+      });
+   };
+
+
+test "POST /createRoom rejects attempts to create rooms with unknown versions",
+   requires => [ $user_fixture, qw( can_create_versioned_room )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room_synced(
+         $user,
+         room_version => "agjkyhdsghkjackljkj",
+      )->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         assert_eq( $body->{errcode}, "M_UNSUPPORTED_ROOM_VERSION", 'responsecode' );
+         Future->done( 1 );
+      });
+   };
+
+test "POST /createRoom ignores attempts to set the room version via creation_content",
+   requires => [ $user_fixture, ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      matrix_create_room_synced(
+         $user,
+         creation_content => {
+            test => "azerty",
+            room_version => "test",
+         },
+      )->then( sub {
+         my ( $room_id, undef, $sync_body ) = @_;
+
+         log_if_fail "sync body", $sync_body;
+
+         my $room =  $sync_body->{rooms}{join}{$room_id};
+         my $ev0 = $room->{timeline}{events}[0];
+
+         assert_eq( $ev0->{type}, 'm.room.create',
+                    'first event was not m.room.create' );
+         assert_json_keys( $ev0->{content}, qw( room_version ));
+
+         # which version we actually get is up to the server impl, so we
+         # just check it's not the bogus version we set.
+         my $got_ver = $ev0->{content}{room_version};
+         defined $got_ver && $got_ver ne 'test' or
+            die 'Got unexpected room version $got_ver';
+
+         # check that the rest of creation_content worked
+         assert_eq( $ev0->{content}{test}, 'azerty', 'test key' );
+
+         Future->done(1);
+      });
+   };
+
+
+=head2 matrix_create_room
+
+   matrix_create_room( $creator, %opts )->then( sub {
+      my ( $room_id, $room_alias ) = @_;
+   });
+
+Create a new room.
+
+Any options given in %opts are passed into the /createRoom API.
+
+The following options have defaults:
+
+   visibility => 'private'
+   preset => 'public_chat'
+
+The resultant future completes with two values: the room_id from the
+/createRoom response; the room_alias from the /createRoom response (which is
+non-standard and its use is deprecated).
+
+=cut
+
 push our @EXPORT, qw( matrix_create_room );
 
 sub matrix_create_room
@@ -107,26 +287,13 @@ sub matrix_create_room
    my ( $user, %opts ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";
 
+   $opts{visibility} //= "private";
+   $opts{preset} //= "public_chat";
+
    do_request_json_for( $user,
       method => "POST",
       uri    => "/r0/createRoom",
-
-      content => {
-         visibility => $opts{visibility} || "private",
-         preset     => $opts{preset} || "public_chat",
-         ( defined $opts{room_alias_name} ?
-            ( room_alias_name => $opts{room_alias_name} ) : () ),
-         ( defined $opts{invite} ?
-            ( invite => $opts{invite} ) : () ),
-         ( defined $opts{invite_3pid} ?
-            ( invite_3pid => $opts{invite_3pid} ) : () ),
-         ( defined $opts{creation_content} ?
-            ( creation_content => $opts{creation_content} ) : () ),
-         ( defined $opts{name} ?
-            ( name => $opts{name} ) : () ),
-         ( defined $opts{topic} ?
-            ( topic => $opts{topic} ) : () ),
-      }
+      content => \%opts,
    )->then( sub {
       my ( $body ) = @_;
 
@@ -134,7 +301,7 @@ sub matrix_create_room
    });
 }
 
-push @EXPORT, qw( room_alias_name_fixture room_alias_fixture );
+push @EXPORT, qw( room_alias_name_fixture room_alias_fixture matrix_create_room_synced );
 
 my $next_alias_name = 0;
 
@@ -158,6 +325,8 @@ sub room_alias_name_fixture
    my $prefix = $args{prefix} // "";
 
    return fixture(
+      name => 'room_alias_name_fixture',
+
       setup => sub {
          my ( $info ) = @_;
 
@@ -195,6 +364,39 @@ sub room_alias_fixture
          my ( $alias_name, $info ) = @_;
 
          Future->done( sprintf "#%s:%s", $alias_name, $info->server_name );
+      },
+   );
+}
+
+
+=head2 matrix_create_room_synced
+
+    matrix_create_room_synced( $creator, %params )->then( sub {
+        my ( $room_id, $room_alias, $sync_body ) = @_;
+    });
+
+Creates a new room, and waits for it to appear in the /sync response.
+
+The parameters are passed through to C<matrix_create_room>.
+
+The resultant future completes with three values: the room_id from the
+/createRoom response; the room_alias from the /createRoom response (which is
+non-standard and should not be relied upon); the /sync response.
+
+=cut
+
+sub matrix_create_room_synced
+{
+   my ( $user, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_create_room( $user, %params );
+      },
+      check => sub {
+         my ( $sync_body, $room_id ) = @_;
+         return 0 if not exists $sync_body->{rooms}{join}{$room_id};
+         return $sync_body;
       },
    );
 }

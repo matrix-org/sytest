@@ -10,11 +10,60 @@ test "AS can create a user",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type => "m.login.application_service",
-            user => "astest-01create-1",
+            user => "astest-01create-0-$TEST_RUN_ID",
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( user_id home_server access_token device_id ));
+
+         Future->done(1);
+      });
+   };
+
+test "AS can create a user with an underscore",
+   requires => [ $main::AS_USER[0], $room_fixture ],
+
+   do => sub {
+      my ( $as_user, $room_id ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            user => "_astest-01create-0-$TEST_RUN_ID",
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( user_id home_server access_token device_id ));
+
+         Future->done(1);
+      });
+   };
+
+
+test "AS can create a user with inhibit_login",
+   requires => [ $main::AS_USER[0], $room_fixture ],
+
+   do => sub {
+      my ( $as_user, $room_id ) = @_;
+
+      do_request_json_for( $as_user,
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            user => "astest-01create-1-$TEST_RUN_ID",
+            inhibit_login => 1,
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -22,45 +71,9 @@ test "AS can create a user",
          log_if_fail "Body", $body;
 
          assert_json_keys( $body, qw( user_id home_server ));
-
-         Future->done(1);
-      });
-   };
-
-test "AS can get or create user and return an access_token",
-   requires => [ $main::AS_USER[0], $main::API_CLIENTS[0] ],
-
-   do => sub {
-      my ( $as_user, $http ) = @_;
-
-      do_request_json_for( $as_user,
-         method => "POST",
-         uri    => "/unstable/createUser",
-
-         content => {
-            localpart        => "user_localpart",
-            displayname      => "user_displayname",
-            duration_seconds => 200,
+         foreach ( qw( device_id access_token )) {
+            exists $body->{$_} and die "Got an unexpected a '$_' key";
          }
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( access_token user_id  home_server ));
-
-         my $user = new_User(
-            http         => $http,
-            user_id      => $body->{user_id},
-            access_token => $body->{access_token},
-         );
-
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/r0/profile/:user_id/displayname",
-         )}
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_eq( $body->{displayname}, qw( user_displayname ));
 
          Future->done(1);
       });
@@ -74,10 +87,9 @@ test "AS cannot create users outside its own namespace",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type => "m.login.application_service",
             user => "a-different-user",
          }
       )->main::expect_http_4xx;
@@ -89,7 +101,7 @@ test "Regular users cannot register within the AS namespace",
    do => sub {
       my ( $http ) = @_;
 
-      matrix_register_user( $http, "astest-01create-2" )
+      matrix_register_user( $http, "astest-01create-3-$TEST_RUN_ID" )
          ->main::expect_http_4xx;
    };
 
@@ -192,10 +204,9 @@ sub matrix_register_as_ghost
 
    do_request_json_for( $as_user,
       method => "POST",
-      uri    => "/api/v1/register",
+      uri    => "/r0/register",
 
       content => {
-         type => "m.login.application_service",
          user => $user_id,
       }
    )->then( sub {
@@ -222,7 +233,7 @@ sub as_ghost_fixture
       setup => sub {
          my ( $as_user ) = @_;
 
-         my $user_id = "astest-$next_as_user_id";
+         my $user_id = "astest-$next_as_user_id-$TEST_RUN_ID";
          $next_as_user_id++;
 
          matrix_register_as_ghost( $as_user, $user_id );

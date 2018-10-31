@@ -94,8 +94,8 @@ sub test_history_visibility
 }
 
 foreach my $i (
-   [ "Guest", sub { guest_user_fixture() } ],
-   [ "Real", sub { local_user_fixture() } ]
+   [ "Guest", sub { guest_user_fixture( with_events => 1 ) } ],
+   [ "Real", sub { local_user_fixture( with_events => 1 ) } ]
 ) {
    my ( $name, $fixture ) = @$i;
 
@@ -129,7 +129,7 @@ foreach my $i (
    test(
       "$name non-joined user can call /events on world_readable room",
 
-      requires => [ $fixture->(), local_user_fixture(), local_user_fixture() ],
+      requires => [ $fixture->(), local_user_fixture( with_events => 1 ), local_user_fixture( with_events => 1 ) ],
 
       do => sub {
          my ( $nonjoined_user, $user, $user_not_in_room ) = @_;
@@ -238,7 +238,7 @@ foreach my $i (
    test(
       "$name non-joined user doesn't get events before room made world_readable",
 
-      requires => [ $fixture->(), local_user_fixture() ],
+      requires => [ $fixture->(), local_user_fixture( with_events => 1 ) ],
 
       do => sub {
          my ( $nonjoined_user, $user ) = @_;
@@ -342,7 +342,7 @@ foreach my $i (
    test(
       "$name non-joined users can room initialSync for world_readable rooms",
 
-      requires => [ guest_user_fixture(), local_user_fixture() ],
+      requires => [ guest_user_fixture( with_events => 1 ), local_user_fixture( with_events => 1 ) ],
 
       do => sub {
          my ( $syncing_user, $creating_user ) = @_;
@@ -487,7 +487,7 @@ foreach my $i (
 
 
 test "Only see history_visibility changes on boundaries",
-   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+   requires => [ local_user_and_room_fixtures(), local_user_fixture( with_events => 1 ) ],
 
    do => sub {
       my ( $user, $room_id, $joining_user ) = @_;
@@ -576,7 +576,7 @@ push our @EXPORT, qw( await_event_not_history_visibility_or_presence_for );
 
 sub await_event_not_history_visibility_or_presence_for
 {
-   my ( $user, $room_id, $allowed_users ) = @_;
+   my ( $user, $room_id, $allowed_users, %params ) = @_;
    await_event_for( $user,
       room_id => $room_id,
       filter  => sub {
@@ -590,6 +590,7 @@ sub await_event_not_history_visibility_or_presence_for
          return ((not $event->{type} eq "m.presence") or
             any { $event->{content}{user_id} eq $_->user_id } @$allowed_users);
       },
+      %params,
    )->on_done( sub {
       my ( $event ) = @_;
       log_if_fail "event", $event

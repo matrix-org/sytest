@@ -31,7 +31,14 @@ test "POST /rooms/:room_id/join can join a room",
          uri    => "/r0/rooms/$room_id/join",
 
          content => {},
-      );
+      )->then( sub {
+         my ( $body ) = @_;
+
+         $body->{room_id} eq $room_id or
+            die "Expected 'room_id' to be $room_id";
+
+         Future->done(1);
+      });
    },
 
    check => sub {
@@ -66,7 +73,11 @@ sub matrix_join_room
       uri    => "/r0/join/$room",
 
       content => \%content,
-   )->then_done(1);
+   )->then( sub {
+      my ( $body ) = @_;
+
+      Future->done( $body->{room_id} )
+   });
 }
 
 test "POST /join/:room_alias can join a room",
@@ -385,6 +396,41 @@ sub _invite_users
    );
 }
 
+=head2 matrix_create_and_join_room
+
+   matrix_create_and_join_room( [ $creator, $user2, ... ], %opts )->then( sub {
+      my ( $room_id ) = @_;
+   });
+
+   matrix_create_and_join_room( [ $creator, $user2, ... ],
+     with_alias => 1, %opts,
+   )->then( sub {
+      my ( $room_id, $room_alias ) = @_;
+   });
+
+Create a new room, and have a list of users join it.
+
+The following may be passed as optional parametrs:
+
+=over
+
+=item with_alias => SCALAR
+
+Make this truthy to return the newly created alias
+
+=item with_invite => SCALAR
+
+Make this truthy to send invites to the other users before they join.
+
+=item (everything else)
+
+Other parameters are passed into C<matrix_create_room>, whence they are
+passed on to the server.
+
+=back
+
+=cut
+
 push @EXPORT, qw( matrix_create_and_join_room );
 
 sub matrix_create_and_join_room
@@ -398,19 +444,26 @@ sub matrix_create_and_join_room
       for @other_members;
 
    my $room_id;
-   my $room_alias_fullname;
 
    my $n_joiners = scalar @other_members;
 
+   my $creator_server_name = $creator->http->server_name;
+   my $room_alias_name = sprintf "test-%s-%d", $TEST_RUN_ID, $next_alias++;
+   my $room_alias_fullname =
+      sprintf "#%s:%s", $room_alias_name, $creator_server_name;
+
+   my $with_invite = delete $options{with_invite};
+   my $with_alias = delete $options{with_alias};
+
    matrix_create_room( $creator,
       %options,
-      room_alias_name => sprintf( "test-%d", $next_alias++ ),
+      room_alias_name => $room_alias_name,
    )->then( sub {
-      ( $room_id, $room_alias_fullname ) = @_;
+      ( $room_id ) = @_;
 
       log_if_fail "room_id=$room_id";
 
-      ( $options{with_invite} ?
+      ( $with_invite ?
          _invite_users( $creator, $room_id, @other_members ) :
          Future->done() )
    })->then( sub {
@@ -424,52 +477,17 @@ sub matrix_create_and_join_room
       Future->needs_all(
          ( fmap {
             my $user = shift;
-            do_request_json_for( $user,
-               method => "POST",
-               uri    => "/r0/join/$room_alias_fullname",
-
-               content => {},
-            )
+            matrix_join_room_synced( $user, $room_alias_fullname )
          } foreach => \@remote_members ),
 
          map {
             my $user = $_;
-            do_request_json_for( $user,
-               method => "POST",
-               uri    => "/r0/join/$room_alias_fullname",
-
-               content => {},
-            )
-         } @local_members )
-   })->then( sub {
-      return Future->done unless $n_joiners;
-
-      # Now wait for the creator to see every join event, so we're sure
-      # the remote joins have happened
-      my %joined_members;
-
-      # This really ought to happen within, say, 3 seconds. We'll pick a
-      #   timeout smaller than the default overall test timeout so if this
-      #   fails to happen we'll fail sooner, and get a better message
-      Future->wait_any(
-         await_event_for( $creator, filter => sub {
-            my ( $event ) = @_;
-
-            return unless $event->{type} eq "m.room.member";
-            return unless $event->{room_id} eq $room_id;
-
-            $joined_members{ $event->{state_key} }++;
-
-            return 1 if keys( %joined_members ) == $n_joiners;
-            return 0;
-         }),
-
-         delay( 3 )
-            ->then_fail( "Timed out waiting to receive m.room.member join events to newly-created room" )
+            matrix_join_room_synced( $user, $room_alias_fullname )
+         } @local_members,
       )
    })->then( sub {
       Future->done( $room_id,
-         ( $options{with_alias} ? ( $room_alias_fullname ) : () )
+         ( $with_alias ? ( $room_alias_fullname ) : () )
       );
    });
 }
@@ -521,15 +539,21 @@ sub local_user_and_room_fixtures
 {
    my %args = @_;
 
-   my $user_fixture = local_user_fixture();
+   my $user_opts = $args{user_opts} // {};
+   my $room_opts = $args{room_opts} // {};
+
+   my $user_fixture = local_user_fixture( %$user_opts );
 
    return (
       $user_fixture,
-      room_fixture( $user_fixture, %args ),
+      room_fixture( $user_fixture, %$room_opts ),
    );
 }
 
-push @EXPORT, qw( magic_local_user_and_room_fixtures );
+push @EXPORT, qw(
+   magic_local_user_and_room_fixtures matrix_join_room_synced
+   matrix_leave_room_synced matrix_invite_user_to_room_synced
+);
 
 sub magic_local_user_and_room_fixtures
 {
@@ -540,5 +564,54 @@ sub magic_local_user_and_room_fixtures
    return (
       $user_fixture,
       magic_room_fixture( requires_users => [ $user_fixture ], %args ),
+   );
+}
+
+sub matrix_join_room_synced
+{
+   my ( $user, $room_id_or_alias, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_join_room( $user, $room_id_or_alias, %params );
+      },
+      check => sub { exists $_[0]->{rooms}{join}{$_[1]} },
+   );
+}
+
+sub matrix_leave_room_synced
+{
+   my ( $user, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_leave_room( $user, $room_id, %params );
+      },
+      check => sub { exists $_[0]->{rooms}{leave}{$room_id} },
+   );
+}
+
+sub matrix_invite_user_to_room_synced
+{
+   my ( $inviter, $invitee, $room_id, %params ) = @_;
+
+   matrix_do_and_wait_for_sync( $inviter,
+      do => sub {
+         matrix_do_and_wait_for_sync( $invitee,
+            do => sub {
+               matrix_invite_user_to_room(
+                  $inviter, $invitee, $room_id, %params
+               );
+            },
+            check => sub { exists $_[0]->{rooms}{invite}{$room_id} },
+         );
+      },
+      check => sub {
+         sync_timeline_contains( $_[0], $room_id, sub {
+            $_[0]->{type} eq "m.room.member"
+               and $_[0]->{state_key} eq $invitee->user_id
+               and $_[0]->{content}{membership} eq "invite"
+         });
+      },
    );
 }

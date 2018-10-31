@@ -27,9 +27,7 @@ export BIND_HOST
 # If running dendron then give it somewhere to write log files to
 mkdir -p var
 
-export TOX_BIN=$WORKSPACE/.tox/py27/bin
 ./run-tests.pl \
-    --python="$TOX_BIN/python" \
     --port-range ${PORT_BASE}:$((PORT_BASE+PORT_COUNT-1)) \
     --bind-host ${BIND_HOST} \
     -O tap \

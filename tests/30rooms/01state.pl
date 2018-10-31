@@ -22,13 +22,14 @@ test "Room creation reports m.room.create to myself",
    do => sub {
       my ( $user, $room_id ) = @_;
 
-      await_event_for( $user, filter => sub {
+      await_sync_timeline_contains( $user, $room_id, check => sub {
          my ( $event ) = @_;
-         return unless $event->{type} eq "m.room.create";
-         assert_json_keys( $event, qw( room_id user_id content ));
-         return unless $event->{room_id} eq $room_id;
 
-         $event->{user_id} eq $user->user_id or
+         return unless $event->{type} eq "m.room.create";
+
+         assert_json_keys( $event, qw( sender content ));
+
+         $event->{sender} eq $user->user_id or
             die "Expected user_id to be ${\$user->user_id}";
 
          assert_json_keys( my $content = $event->{content}, qw( creator ));
@@ -45,12 +46,11 @@ test "Room creation reports m.room.member to myself",
    do => sub {
       my ( $user, $room_id ) = @_;
 
-      await_event_for( $user, filter => sub {
+      await_sync_timeline_contains( $user, $room_id, check => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.room.member";
-         assert_json_keys( $event, qw( room_id user_id state_key content ));
-         return unless $event->{room_id} eq $room_id;
-         return unless $event->{state_key} eq $user->user_id;
+         assert_json_keys( $event, qw( sender state_key content ));
+         return unless $event->{sender} eq $user->user_id;
 
          assert_json_keys( my $content = $event->{content}, qw( membership ));
 
@@ -74,13 +74,12 @@ test "Setting room topic reports m.room.topic to myself",
          type    => "m.room.topic",
          content => { topic => $topic },
       )->then( sub {
-         await_event_for( $user, filter => sub {
+         await_sync_timeline_contains( $user, $room_id, check => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.topic";
-            assert_json_keys( $event, qw( room_id user_id content ));
-            return unless $event->{room_id} eq $room_id;
+            assert_json_keys( $event, qw( sender content ));
 
-            $event->{user_id} eq $user->user_id or
+            $event->{sender} eq $user->user_id or
                die "Expected user_id to be ${\$user->user_id}";
 
             assert_json_keys( my $content = $event->{content}, qw( topic ));

@@ -10,6 +10,21 @@ use List::UtilsBy qw( uniq_by );
 use MIME::Base64 qw( decode_base64 );
 use HTTP::Headers::Util qw( join_header_words );
 
+use SyTest::Assertions qw( :all );
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   # there may be multiple concurrent requests; for example, while processing a
+   # /send request, synapse may send us back a /get_missing_events/ request, which
+   # we have to authenticate, so make a /keys request.
+   $params{max_connections_per_host} //= 0;
+
+   return $self->SUPER::configure( %params );
+}
+
 sub _fetch_key
 {
    my $self = shift;
@@ -107,7 +122,7 @@ sub send_transaction
       uri      => "/send/$ts/",
 
       content => \%transaction,
-   )->then_done(); # response body is empty
+   );
 }
 
 sub send_edu
@@ -125,7 +140,7 @@ sub send_edu
             destination => $params{destination},
          }
       ],
-   );
+   )->then_done(); # TODO: check response
 }
 
 sub send_event
@@ -133,10 +148,18 @@ sub send_event
    my $self = shift;
    my %params = @_;
 
+   my $event = delete $params{event};
+
    $self->send_transaction(
       %params,
-      pdus => [ $params{event} ],
-   );
+      pdus => [ $event ],
+   )->then( sub {
+      my ( $body ) = @_;
+      assert_deeply_eq( $body,
+                        { pdus => { $event->{event_id} => {} } },
+                        "/send/ response" );
+      Future->done;
+   });
 }
 
 sub join_room
@@ -197,6 +220,47 @@ sub join_room
 
          Future->done( $room );
       });
+   });
+}
+
+=head2 get_remote_forward_extremities
+
+   $client->get_remote_forward_extremities(
+      server_name => $first_home_server,
+      room_id     => $room_id,
+   )->then( sub {
+      my ( @extremity_event_ids ) = @_;
+   });
+
+Returns the remote server's idea of the current forward extremities in the
+given room.
+
+=cut
+
+
+sub get_remote_forward_extremities
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $server_name = $args{server_name};
+   my $room_id     = $args{room_id};
+
+   # we do this slightly hackily, by asking the server to make us a join event,
+   # which will handily list the forward extremities as prev_events.
+
+   my $user_id = '@fakeuser:' . $self->server_name;
+   $self->do_request_json(
+      method   => "GET",
+      hostname => $server_name,
+      uri      => "/make_join/$room_id/$user_id",
+   )->then( sub {
+      my ( $resp ) = @_;
+
+      my $protoevent = $resp->{event};
+
+      my @prev_events = map { $_->[0] } @{ $protoevent->{prev_events} };
+      Future->done( @prev_events );
    });
 }
 
