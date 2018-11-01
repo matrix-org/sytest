@@ -52,28 +52,37 @@ test "Responds correctly when backup is empty",
 
          $version = $content->{version};
 
-         matrix_get_backup_key( $user, '!notaroom', 'notassession', $version);
-      })->main::expect_http_4xx
+         # check that asking for a specific session that does not exist returns
+         # an M_NOT_FOUND
+         matrix_get_backup_key( $user, $version, '!notaroom', 'notassession' );
+      })->main::expect_m_not_found
       ->then( sub {
-         matrix_get_backup_key( $user, '!notaroom', '', $version);
+         # check that asking for all the keys in a room returns an empty
+         # response rather than an error when nothing has been backed up yet
+         matrix_get_backup_key( $user, $version, '!notaroom' );
       })->then( sub {
          my ( $content ) = @_;
 
-         log_if_fail "Content", $content;
+         log_if_fail "Get keys from room: ", $content;
 
-         assert_deeply_eq( $content, {"sessions" => {}});
+         assert_deeply_eq( $content, { "sessions" => {} } );
 
-         matrix_get_backup_key( $user, '', '', $version );
+         # check that asking for all the keys returns an empty response rather
+         # than an error when nothing has been backed up yet
+         matrix_get_backup_key( $user, $version );
       })->then( sub {
          my ( $content ) = @_;
 
-         log_if_fail "Content", $content;
+         log_if_fail "Get all keys: ", $content;
 
-         assert_deeply_eq( $content, {"rooms" => {}});
+         assert_deeply_eq( $content, { "rooms" => {} } );
 
          Future->done(1);
-         matrix_get_backup_key( $user, '', '', 'bogusversion');
-      })->main::expect_http_404;
+
+         # check that asking for a nonexistent backup version returns an
+         # M_NOT_FOUND
+         matrix_get_backup_key( $user, 'bogusversion' );
+      })->main::expect_m_not_found;
    };
 
 test "Can backup keys",
@@ -101,7 +110,7 @@ test "Can backup keys",
          my ( $content ) = @_;
          log_if_fail "Content", $content;
 
-         matrix_get_backup_key( $user, '!abcd', '1234', $version );
+         matrix_get_backup_key( $user, $version, '!abcd', '1234' );
       })->then( sub {
          my ( $content ) = @_;
          log_if_fail "Content", $content;
@@ -153,7 +162,7 @@ test "Can update keys with better versions",
          my ( $content ) = @_;
          log_if_fail "Content", $content;
 
-         matrix_get_backup_key( $user, '!abcd', '1234', $version );
+         matrix_get_backup_key( $user, $version, '!abcd', '1234' );
       })->then( sub {
          my ( $content ) = @_;
          log_if_fail "Content", $content;
@@ -205,7 +214,7 @@ test "Will not update keys with worse versions",
          my ( $content ) = @_;
          log_if_fail "Content", $content;
 
-         matrix_get_backup_key( $user, '!abcd', '1234', $version );
+         matrix_get_backup_key( $user, $version, '!abcd', '1234' );
       })->then( sub {
          my ( $content ) = @_;
          log_if_fail "Content", $content;
@@ -433,13 +442,13 @@ Send keys to a given key backup version
 =cut
 
 sub matrix_get_backup_key {
-   my ( $user, $room_id, $session_id, $version ) = @_;
+   my ( $user, $version, $room_id, $session_id ) = @_;
 
    my $uri;
 
-   if ($session_id) {
+   if ( defined $session_id ) {
       $uri = "/unstable/room_keys/keys/$room_id/$session_id";
-   } elsif ($room_id) {
+   } elsif ( defined $room_id ) {
       $uri = "/unstable/room_keys/keys/$room_id";
    } else {
       $uri = "/unstable/room_keys/keys";
