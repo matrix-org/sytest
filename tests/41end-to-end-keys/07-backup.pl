@@ -12,7 +12,7 @@ test "Can create backup version",
 
       matrix_create_key_backup( $user )->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Create backup: ", $content;
 
          assert_json_keys( $content, "version" );
          $version = $content->{version};
@@ -20,7 +20,7 @@ test "Can create backup version",
          matrix_get_key_backup_info( $user );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get backup info: ", $content;
 
          assert_json_keys( $content, "algorithm" );
 
@@ -48,7 +48,7 @@ test "Responds correctly when backup is empty",
       matrix_get_key_backup_info( $user )->then( sub {
          my ( $content ) = @_;
 
-         log_if_fail "Content", $content;
+         log_if_fail "Get backup info: ", $content;
 
          $version = $content->{version};
 
@@ -108,12 +108,12 @@ test "Can backup keys",
          );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Back up session: ", $content;
 
          matrix_get_backup_key( $user, $version, '!abcd', '1234' );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get session backup: ", $content;
 
          assert_json_keys( $content, qw( first_message_index forwarded_count is_verified session_data ) );
 
@@ -160,12 +160,12 @@ test "Can update keys with better versions",
          );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Back up session: ", $content;
 
          matrix_get_backup_key( $user, $version, '!abcd', '1234' );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get session backup: ", $content;
 
          assert_json_keys( $content, qw( first_message_index forwarded_count is_verified session_data ) );
 
@@ -212,12 +212,12 @@ test "Will not update keys with worse versions",
          );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Back up session: ", $content;
 
          matrix_get_backup_key( $user, $version, '!abcd', '1234' );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get session backup: ", $content;
 
          assert_json_keys( $content, qw( first_message_index forwarded_count is_verified session_data ) );
 
@@ -284,7 +284,7 @@ test "Can delete backup",
          matrix_get_key_backup_info( $user );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get backup: ", $content;
 
          my $new_version = $content->{version};
 
@@ -304,7 +304,7 @@ test "Deleted & recreated backups are empty",
 
       matrix_create_key_backup( $user )->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Create backup: ", $content;
 
          assert_json_keys( $content, "version" );
 
@@ -325,7 +325,7 @@ test "Deleted & recreated backups are empty",
          matrix_delete_key_backup( $user, $version );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Delete backup: ", $content;
 
          matrix_create_key_backup( $user );
       })->then( sub {
@@ -435,7 +435,7 @@ sub matrix_backup_keys {
 
 =head2 matrix_get_backup_key
 
-   matrix_get_backup_key( $user, $room_id, $session_id, $version )
+   matrix_get_backup_key( $user, $version, $room_id, $session_id )
 
 Send keys to a given key backup version
 
