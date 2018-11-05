@@ -77,8 +77,6 @@ test "Responds correctly when backup is empty",
 
          assert_deeply_eq( $content, { "rooms" => {} } );
 
-         Future->done(1);
-
          # check that asking for a nonexistent backup version returns an
          # M_NOT_FOUND
          matrix_get_backup_key( $user, 'bogusversion' );
@@ -437,7 +435,7 @@ sub matrix_backup_keys {
 
    matrix_get_backup_key( $user, $version, $room_id, $session_id )
 
-Send keys to a given key backup version
+Get keys from a given key backup version
 
 =cut
 
