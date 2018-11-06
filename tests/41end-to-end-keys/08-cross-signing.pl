@@ -1,0 +1,394 @@
+# these two functions are stolen from 06-device-lists.pl
+sub is_user_in_changed_list
+{
+   my ( $user, $body ) = @_;
+
+   return $body->{device_lists} &&
+          $body->{device_lists}{changed} &&
+          any { $_ eq $user->user_id } @{ $body->{device_lists}{changed} };
+}
+
+
+# returns a Future which resolves to the body of the sync result which contains
+# the change notification
+sub sync_until_user_in_device_list
+{
+   my ( $syncing_user, $user_to_wait_for, %params ) = @_;
+
+   my $device_list = $params{device_list} // 'changed';
+   my $msg = $params{msg} // 'sync_until_user_in_device_list';
+
+   my $wait_for_id = $user_to_wait_for->user_id;
+
+   # my $trace = Devel::StackTrace->new(no_args => 1);
+   # log_if_fail $trace->frame(1)->as_string();
+
+   $msg = "$msg: waiting for $wait_for_id in $device_list";
+
+   return repeat_until_true {
+      matrix_sync_again( $syncing_user, timeout => 1000 )
+      ->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "$msg: body", $body;
+
+         my $res = $body->{device_lists} &&
+            $body->{device_lists}{$device_list} &&
+            any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} };
+
+         Future->done( $res && $body );
+      });
+   };
+}
+
+test "Can store and retrieve attestations",
+   requires => [ local_user_fixtures( 2 ) ],
+
+   proves => [qw( can_store_attestations )],
+
+   do => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user2_id = $user2->user_id;
+
+      matrix_store_attestations( $user1, [
+            {
+               user_id => $user2_id,
+               device_id => "ABCDEFG",
+               keys => {
+                  ed25519 => "ed25519+key"
+               },
+               state => "verified",
+               signatures => {
+                  $user1_id => {
+                     "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+                  }
+               }
+            },
+         ],
+      )->then( sub {
+         my ( $content ) = @_;
+
+         matrix_get_attestations( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "attestations:", $content;
+
+         assert_json_list($content);
+
+         my $found = 0;
+
+         foreach my $attestation (@$content) {
+            assert_json_keys( $attestation, "user_id", "device_id", "keys", "state", "signatures" );
+            my $signatures = $attestation->{signatures};
+            if (exists $signatures->{$user1_id}
+                && exists $signatures->{$user1_id}{"ed25519:ZYXWVUT"}
+                && $signatures->{$user1_id}{"ed25519:ZYXWVUT"} eq "signature+of+ABCDEFG+key") {
+               $found = 1;
+               assert_eq($attestation->{user_id}, $user2_id, "Expected target user ID to match submitted data");
+               assert_eq($attestation->{device_id}, "ABCDEFG", "Expected device ID to match submitted data");
+               assert_deeply_eq($attestation->{keys}, {
+                     ed25519 => "ed25519+key"
+                  }, "Expected keys to match submitted data");
+               assert_eq($attestation->{state}, "verified", "Expected verified state to match submitted data");
+            }
+         }
+
+         assert_ok($found, "Expected submitted attestation to be found");
+
+         Future->done(1);
+      });
+   };
+
+test "Filters out attestations not made by the user",
+   requires => [ local_user_fixtures( 2 ) ],
+
+   proves => [qw( can_store_attestations )],
+
+   do => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user2_id = $user2->user_id;
+
+      matrix_store_attestations( $user1, [
+            {
+               user_id => $user2_id,
+               device_id => "ABCDEFG",
+               keys => {
+                  ed25519 => "ed25519+key"
+               },
+               state => "verified",
+               signatures => {
+                  $user2_id => {
+                     "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+                  }
+               }
+            },
+         ],
+      )->then( sub {
+         my ( $content ) = @_;
+
+         matrix_get_attestations( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "attestations:", $content;
+
+         assert_json_list($content);
+
+         my $found = 0;
+
+         foreach my $attestation (@$content) {
+            assert_json_keys( $attestation, "user_id", "device_id", "keys", "state", "signatures" );
+            my $signatures = $attestation->{signatures};
+            if (exists $signatures->{$user2_id}
+                && exists $signatures->{$user2_id}{"ed25519:ZYXWVUT"}
+                && $signatures->{$user2_id}{"ed25519:ZYXWVUT"} eq "signature+of+ABCDEFG+key") {
+               assert_ok(0, "Expected submitted attestation to not be found");
+            }
+         }
+
+         Future->done(1);
+      });
+   };
+
+test "Other users cannot see a user's attestations",
+   requires => [ local_user_fixtures( 2 ) ],
+
+   proves => [qw( can_store_attestations )],
+
+   do => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user2_id = $user2->user_id;
+
+      matrix_store_attestations( $user1, [
+            {
+               user_id => $user2_id,
+               device_id => "ABCDEFG",
+               keys => {
+                  ed25519 => "ed25519+key"
+               },
+               state => "verified",
+               signatures => {
+                  $user1_id => {
+                     "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+                  }
+               }
+            },
+         ],
+      )->then( sub {
+         my ( $content ) = @_;
+
+         matrix_get_attestations( $user2, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "attestations:", $content;
+
+         assert_json_list($content);
+
+         my $found = 0;
+
+         foreach my $attestation (@$content) {
+            assert_json_keys( $attestation, "user_id", "device_id", "keys", "state", "signatures" );
+            my $signatures = $attestation->{signatures};
+            if (exists $signatures->{$user1_id}
+                && exists $signatures->{$user1_id}{"ed25519:ZYXWVUT"}
+                && $signatures->{$user1_id}{"ed25519:ZYXWVUT"} eq "signature+of+ABCDEFG+key") {
+               assert_ok(0, "Expected submitted attestation to not be found");
+            }
+         }
+
+         Future->done(1);
+      });
+   };
+
+test "self-attestations appear in /sync (local test)",
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      # a user's self-attestations should show up in everyone's (who shares a
+      # room with them) sync stream
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user2_id = $user2->user_id;
+
+      my $room_id;
+
+      matrix_create_room( $user1 )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         matrix_sync( $user1 );
+      })->then( sub {
+         matrix_sync( $user2 );
+      })->then( sub {
+         matrix_store_attestations( $user2, [
+               {
+                  user_id => $user2_id,
+                  device_id => "ABCDEFG",
+                  keys => {
+                     ed25519 => "ed25519+key"
+                  },
+                  state => "verified",
+                  signatures => {
+                     $user2_id => {
+                        "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+                     }
+                  }
+               },
+            ],
+         );
+      })->then( sub {
+         matrix_sync_again( $user1 );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, "device_lists" );
+         my $device_lists = $body->{device_lists};
+
+         log_if_fail "user1 device_lists", $device_lists;
+
+         assert_json_keys( $device_lists, "changed" );
+
+         is_user_in_changed_list( $user2, $body )
+            or die "user not in changed list";
+
+         matrix_sync_again( $user2 );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, "device_lists" );
+         my $device_lists = $body->{device_lists};
+
+         log_if_fail "user2 device_lists", $device_lists;
+
+         assert_json_keys( $device_lists, "changed" );
+
+         is_user_in_changed_list( $user2, $body )
+            or die "user not in changed list";
+
+         Future->done(1);
+      });
+   };
+
+test "local attestations only notify the attesting user in /sync",
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      # only the attesting user should be notified about their own attestations
+      # made about someone else's devices
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user2_id = $user2->user_id;
+
+      my $room_id;
+
+      matrix_create_room( $user1 )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         matrix_sync( $user1 );
+      })->then( sub {
+         matrix_sync( $user2 );
+      })->then( sub {
+         matrix_store_attestations( $user1, [
+               {
+                  user_id => $user2_id,
+                  device_id => "ABCDEFG",
+                  keys => {
+                     ed25519 => "ed25519+key"
+                  },
+                  state => "verified",
+                  signatures => {
+                     $user1_id => {
+                        "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+                     }
+                  }
+               },
+            ],
+         );
+      })->then( sub {
+         matrix_sync_again( $user1 );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, "device_lists" );
+         my $device_lists = $body->{device_lists};
+
+         log_if_fail "user1 device_lists", $device_lists;
+
+         assert_json_keys( $device_lists, "changed" );
+
+         is_user_in_changed_list( $user2, $body )
+            or die "user not in changed list";
+
+         matrix_sync_again( $user2 );
+      })->then( sub {
+         # user2 should not be notified of user1's attestation
+         my ( $body ) = @_;
+
+         assert_json_object( $body );
+
+         !is_user_in_changed_list( $user2, $body )
+             or die "user in changed list";
+
+         Future->done(1);
+      });
+   };
+
+=head2 matrix_store_attestation
+
+   matrix_store_attestation( $user, $attestation )
+
+store an attestation
+
+=cut
+
+sub matrix_store_attestations {
+   my ( $user, $attestation ) = @_;
+
+   do_request_json_for( $user,
+      method  => "POST",
+      uri     => "/unstable/keys/upload",
+      content => {
+         attestations => $attestation,
+      }
+   )
+}
+
+=head2 matrix_get_attestations
+
+   matrix_get_attestations( $user, $taget_user_id )
+
+Delete a key backup version
+
+=cut
+
+sub matrix_get_attestations {
+   my ( $user, $target_user_id ) = @_;
+
+   do_request_json_for( $user,
+      method  => "POST",
+      uri     => "/unstable/keys/query",
+      content => {
+         device_keys => {
+            $target_user_id => []
+         }
+      }
+   )->then( sub {
+      my ( $content ) = @_;
+      Future->done($content->{"attestations"});
+   });
+}
