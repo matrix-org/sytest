@@ -1,7 +1,5 @@
 my $fixture = local_user_fixture();
 
-my $current_version; # FIXME: is there a better way of passing the backup version between tests?
-
 test "Can create backup version",
    requires => [ $fixture ],
 
@@ -14,7 +12,7 @@ test "Can create backup version",
 
       matrix_create_key_backup( $user )->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Create backup: ", $content;
 
          assert_json_keys( $content, "version" );
          $version = $content->{version};
@@ -22,7 +20,7 @@ test "Can create backup version",
          matrix_get_key_backup_info( $user );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get backup info: ", $content;
 
          assert_json_keys( $content, "algorithm" );
 
@@ -38,6 +36,51 @@ test "Can create backup version",
 
          Future->done(1);
       });
+   };
+
+test "Responds correctly when backup is empty",
+   requires => [ $fixture, qw( can_create_backup_version ) ],
+
+   do => sub {
+      my ( $user ) = @_;
+      my $version;
+
+      matrix_get_key_backup_info( $user )->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "Get backup info: ", $content;
+
+         $version = $content->{version};
+
+         # check that asking for a specific session that does not exist returns
+         # an M_NOT_FOUND
+         matrix_get_backup_key( $user, $version, '!notaroom', 'notassession' );
+      })->main::expect_m_not_found
+      ->then( sub {
+         # check that asking for all the keys in a room returns an empty
+         # response rather than an error when nothing has been backed up yet
+         matrix_get_backup_key( $user, $version, '!notaroom' );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "Get keys from room: ", $content;
+
+         assert_deeply_eq( $content, { "sessions" => {} } );
+
+         # check that asking for all the keys returns an empty response rather
+         # than an error when nothing has been backed up yet
+         matrix_get_backup_key( $user, $version );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "Get all keys: ", $content;
+
+         assert_deeply_eq( $content, { "rooms" => {} } );
+
+         # check that asking for a nonexistent backup version returns an
+         # M_NOT_FOUND
+         matrix_get_backup_key( $user, 'bogusversion' );
+      })->main::expect_m_not_found;
    };
 
 test "Can backup keys",
@@ -63,12 +106,12 @@ test "Can backup keys",
          );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Back up session: ", $content;
 
-         matrix_get_backup_key( $user, '!abcd', '1234', $version );
+         matrix_get_backup_key( $user, $version, '!abcd', '1234' );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get session backup: ", $content;
 
          assert_json_keys( $content, qw( first_message_index forwarded_count is_verified session_data ) );
 
@@ -115,12 +158,12 @@ test "Can update keys with better versions",
          );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Back up session: ", $content;
 
-         matrix_get_backup_key( $user, '!abcd', '1234', $version );
+         matrix_get_backup_key( $user, $version, '!abcd', '1234' );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get session backup: ", $content;
 
          assert_json_keys( $content, qw( first_message_index forwarded_count is_verified session_data ) );
 
@@ -167,12 +210,12 @@ test "Will not update keys with worse versions",
          );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Back up session: ", $content;
 
-         matrix_get_backup_key( $user, '!abcd', '1234', $version );
+         matrix_get_backup_key( $user, $version, '!abcd', '1234' );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get session backup: ", $content;
 
          assert_json_keys( $content, qw( first_message_index forwarded_count is_verified session_data ) );
 
@@ -239,7 +282,7 @@ test "Can delete backup",
          matrix_get_key_backup_info( $user );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Get backup: ", $content;
 
          my $new_version = $content->{version};
 
@@ -259,7 +302,7 @@ test "Deleted & recreated backups are empty",
 
       matrix_create_key_backup( $user )->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Create backup: ", $content;
 
          assert_json_keys( $content, "version" );
 
@@ -280,7 +323,7 @@ test "Deleted & recreated backups are empty",
          matrix_delete_key_backup( $user, $version );
       })->then( sub {
          my ( $content ) = @_;
-         log_if_fail "Content", $content;
+         log_if_fail "Delete backup: ", $content;
 
          matrix_create_key_backup( $user );
       })->then( sub {
@@ -295,7 +338,13 @@ test "Deleted & recreated backups are empty",
                version => $content->{version},
             }
          );
-      })->main::expect_http_404;
+      })->then( sub {
+         my ( $content ) = @_;
+
+         assert_deeply_eq($content, {"rooms" => {}}, "Expected new backup to be empty");
+
+         Future->done(1);
+      });
    };
 
 
@@ -384,18 +433,28 @@ sub matrix_backup_keys {
 
 =head2 matrix_get_backup_key
 
-   matrix_get_backup_key( $user, $room_id, $session_id, $version )
+   matrix_get_backup_key( $user, $version, $room_id, $session_id )
 
-Send keys to a given key backup version
+Get keys from a given key backup version
 
 =cut
 
 sub matrix_get_backup_key {
-   my ( $user, $room_id, $session_id, $version ) = @_;
+   my ( $user, $version, $room_id, $session_id ) = @_;
+
+   my $uri;
+
+   if ( defined $session_id ) {
+      $uri = "/unstable/room_keys/keys/$room_id/$session_id";
+   } elsif ( defined $room_id ) {
+      $uri = "/unstable/room_keys/keys/$room_id";
+   } else {
+      $uri = "/unstable/room_keys/keys";
+   }
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/unstable/room_keys/keys/$room_id/$session_id",
+      uri     => $uri,
       params  => {
          version => $version,
       },
