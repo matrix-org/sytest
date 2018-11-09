@@ -359,7 +359,7 @@ test "Can create more than 10 backup versions",
 
       repeat( sub {
          matrix_create_key_backup( $user );
-      }, foreach => [ 0 .. 10 ]);
+      }, foreach => [ 0 .. 10 ], while => sub { $_[0] -> is_done });
    };
 
 
