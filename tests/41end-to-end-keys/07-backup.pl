@@ -349,10 +349,9 @@ test "Deleted & recreated backups are empty",
       });
    };
 
+# regression test for https://github.com/matrix-org/synapse/issues/4169
 test "Can create more than 10 backup versions",
    requires => [ $fixture ],
-
-   bug => 'synapse/4169',
 
    do => sub {
       my ( $user ) = @_;
