@@ -1,3 +1,5 @@
+use Future::Utils qw( repeat );
+
 my $fixture = local_user_fixture();
 
 test "Can create backup version",
@@ -345,6 +347,18 @@ test "Deleted & recreated backups are empty",
 
          Future->done(1);
       });
+   };
+
+# regression test for https://github.com/matrix-org/synapse/issues/4169
+test "Can create more than 10 backup versions",
+   requires => [ $fixture ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      repeat( sub {
+         matrix_create_key_backup( $user );
+      }, foreach => [ 0 .. 10 ], while => sub { $_[0] -> is_done });
    };
 
 
