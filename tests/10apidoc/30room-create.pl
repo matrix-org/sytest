@@ -6,8 +6,6 @@ my $user_fixture = local_user_fixture();
 test "POST /createRoom makes a public room",
    requires => [ $user_fixture ],
 
-   critical => 1,
-
    do => sub {
       my ( $user ) = @_;
 
