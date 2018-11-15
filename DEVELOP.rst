@@ -50,10 +50,6 @@ is described in more detail in the following sections.
     Provides an ``ARRAY`` reference giving a list of named requirements and
     fixture objects.
 
-``critical``
-    If true and the test fails, the entire test run will bail out at this
-    point; no further tests will be attempted at all.
-
 A call to ``test`` is a simplified version of ``multi_test`` which produces
 only a single line of test output indicating success or failure automatically.
 A call to ``multi_test`` can make use of additional functions within the body

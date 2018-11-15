@@ -21,8 +21,6 @@ test "POST /rooms/:room_id/join can join a room",
    requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
-   critical => 1,
-
    do => sub {
       my ( $user, $room_id, undef ) = @_;
 
@@ -232,8 +230,6 @@ test "POST /join/:room_alias can join a room with custom content",
 test "POST /rooms/:room_id/leave can leave a room",
    requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
-
-   critical => 1,
 
    do => sub {
       my ( $joiner_to_leave, $room_id, undef ) = @_;
