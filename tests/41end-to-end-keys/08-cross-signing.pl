@@ -50,45 +50,61 @@ test "Can store and retrieve attestations",
       my ( $user1, $user2 ) = @_;
 
       my $user1_id = $user1->user_id;
+      my $user1_device = $user1->device_id;
       my $user2_id = $user2->user_id;
+      my $user2_device = $user2->device_id;
 
-      matrix_store_attestations( $user1, [
-            {
-               user_id => $user2_id,
-               device_id => "ABCDEFG",
-               keys => {
-                  ed25519 => "ed25519+key"
-               },
-               state => "verified",
-               signatures => {
-                  $user1_id => {
-                     "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+      matrix_upload_device_key( $user2 )->then( sub {
+         matrix_store_attestations( $user1, [
+               {
+                  user_id => $user2_id,
+                  device_id => $user2_device,
+                  keys => {
+                     ed25519 => "ed25519+key"
+                  },
+                  state => "verified",
+                  signatures => {
+                     $user1_id => {
+                        "ed25519:$user1_device" => "signature+of+user2+key"
+                     }
                   }
-               }
-            },
-         ],
-      )->then( sub {
-         my ( $content ) = @_;
-
-         matrix_get_attestations( $user1, $user2_id );
+               },
+            ]
+         );
       })->then( sub {
          my ( $content ) = @_;
 
-         log_if_fail "attestations:", $content;
+         matrix_get_keys( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
 
-         assert_json_list($content);
+         log_if_fail "device keys:", $content;
+
+         assert_json_keys( $content, $user2_device );
+
+         my $device = $content->{$user2_device};
+
+         assert_json_keys( $device, "unsigned" );
+
+         my $unsigned = $device->{unsigned};
+
+         assert_json_keys( $unsigned, "attestations" );
+
+         my $attestations = $unsigned->{attestations};
+
+         assert_json_list($attestations);
 
          my $found = 0;
 
-         foreach my $attestation (@$content) {
+         foreach my $attestation (@$attestations) {
             assert_json_keys( $attestation, "user_id", "device_id", "keys", "state", "signatures" );
             my $signatures = $attestation->{signatures};
             if (exists $signatures->{$user1_id}
-                && exists $signatures->{$user1_id}{"ed25519:ZYXWVUT"}
-                && $signatures->{$user1_id}{"ed25519:ZYXWVUT"} eq "signature+of+ABCDEFG+key") {
+                && exists $signatures->{$user1_id}{"ed25519:$user1_device"}
+                && $signatures->{$user1_id}{"ed25519:$user1_device"} eq "signature+of+user2+key") {
                $found = 1;
                assert_eq($attestation->{user_id}, $user2_id, "Expected target user ID to match submitted data");
-               assert_eq($attestation->{device_id}, "ABCDEFG", "Expected device ID to match submitted data");
+               assert_eq($attestation->{device_id}, $user2_device, "Expected device ID to match submitted data");
                assert_deeply_eq($attestation->{keys}, {
                      ed25519 => "ed25519+key"
                   }, "Expected keys to match submitted data");
@@ -111,45 +127,43 @@ test "Filters out attestations not made by the user",
       my ( $user1, $user2 ) = @_;
 
       my $user1_id = $user1->user_id;
+      my $user1_device = $user1->device_id;
       my $user2_id = $user2->user_id;
+      my $user2_device = $user2->device_id;
 
-      matrix_store_attestations( $user1, [
-            {
-               user_id => $user2_id,
-               device_id => "ABCDEFG",
-               keys => {
-                  ed25519 => "ed25519+key"
-               },
-               state => "verified",
-               signatures => {
-                  $user2_id => {
-                     "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+      matrix_upload_device_key( $user2 )->then( sub {
+         matrix_store_attestations( $user1, [
+               {
+                  user_id => $user2_id,
+                  device_id => $user2_device,
+                  keys => {
+                     ed25519 => "ed25519+key"
+                  },
+                  state => "verified",
+                  signatures => {
+                     $user2_id => {
+                        "ed25519:$user2_id" => "signature+of+user2+key"
+                     }
                   }
-               }
-            },
-         ],
-      )->then( sub {
-         my ( $content ) = @_;
-
-         matrix_get_attestations( $user1, $user2_id );
+               },
+            ],
+         );
       })->then( sub {
          my ( $content ) = @_;
 
-         log_if_fail "attestations:", $content;
+         matrix_get_keys( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
 
-         assert_json_list($content);
+         log_if_fail "device_keys:", $content;
 
-         my $found = 0;
+         assert_json_keys( $content, $user2_device );
 
-         foreach my $attestation (@$content) {
-            assert_json_keys( $attestation, "user_id", "device_id", "keys", "state", "signatures" );
-            my $signatures = $attestation->{signatures};
-            if (exists $signatures->{$user2_id}
-                && exists $signatures->{$user2_id}{"ed25519:ZYXWVUT"}
-                && $signatures->{$user2_id}{"ed25519:ZYXWVUT"} eq "signature+of+ABCDEFG+key") {
-               assert_ok(0, "Expected submitted attestation to not be found");
-            }
-         }
+         my $device = $content->{$user2_device};
+
+         assert_json_keys( $device, "unsigned" );
+
+         assert_ok(!defined $device->{unsigned}{attestations}, "Expected to have no attestations");
 
          Future->done(1);
       });
@@ -164,45 +178,43 @@ test "Other users cannot see a user's attestations",
       my ( $user1, $user2 ) = @_;
 
       my $user1_id = $user1->user_id;
+      my $user1_device = $user1->device_id;
       my $user2_id = $user2->user_id;
+      my $user2_device = $user2->device_id;
 
-      matrix_store_attestations( $user1, [
-            {
-               user_id => $user2_id,
-               device_id => "ABCDEFG",
-               keys => {
-                  ed25519 => "ed25519+key"
-               },
-               state => "verified",
-               signatures => {
-                  $user1_id => {
-                     "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+      matrix_upload_device_key( $user2 )->then( sub {
+         matrix_store_attestations( $user1, [
+               {
+                  user_id => $user2_id,
+                  device_id => "ABCDEFG",
+                  keys => {
+                     ed25519 => "ed25519+key"
+                  },
+                  state => "verified",
+                  signatures => {
+                     $user1_id => {
+                        "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+                     }
                   }
-               }
-            },
-         ],
-      )->then( sub {
-         my ( $content ) = @_;
-
-         matrix_get_attestations( $user2, $user2_id );
+               },
+            ],
+         );
       })->then( sub {
          my ( $content ) = @_;
 
-         log_if_fail "attestations:", $content;
+         matrix_get_keys( $user2, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
 
-         assert_json_list($content);
+         log_if_fail "device_keys:", $content;
 
-         my $found = 0;
+         assert_json_keys( $content, $user2_device );
 
-         foreach my $attestation (@$content) {
-            assert_json_keys( $attestation, "user_id", "device_id", "keys", "state", "signatures" );
-            my $signatures = $attestation->{signatures};
-            if (exists $signatures->{$user1_id}
-                && exists $signatures->{$user1_id}{"ed25519:ZYXWVUT"}
-                && $signatures->{$user1_id}{"ed25519:ZYXWVUT"} eq "signature+of+ABCDEFG+key") {
-               assert_ok(0, "Expected submitted attestation to not be found");
-            }
-         }
+         my $device = $content->{$user2_device};
+
+         assert_json_keys( $device, "unsigned" );
+
+         assert_ok(!defined $device->{unsigned}{attestations}, "Expected to have no attestations");
 
          Future->done(1);
       });
@@ -226,6 +238,8 @@ test "self-attestations appear in /sync (local test)",
          ( $room_id ) = @_;
 
          matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         matrix_upload_device_key( $user2 );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -299,6 +313,8 @@ test "local attestations only notify the attesting user in /sync",
 
          matrix_join_room( $user2, $room_id );
       })->then( sub {
+         matrix_upload_device_key( $user2 );
+      })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
          matrix_sync( $user2 );
@@ -348,6 +364,34 @@ test "local attestations only notify the attesting user in /sync",
       });
    };
 
+=head2 matrix_upload_device_key
+
+   matrix_upload_device_key( $user )
+
+upload a device key
+
+=cut
+
+sub matrix_upload_device_key {
+   my ( $user ) = @_;
+
+   do_request_json_for(
+      $user,
+      method  => "POST",
+      uri     => "/unstable/keys/upload",
+      content => {
+         device_keys => {
+            user_id   => $user->user_id,
+            device_id => $user->device_id,
+         },
+         one_time_keys => {
+            "my_algorithm:my_id_1" => "my+base64+key"
+         }
+      }
+   );
+}
+
+
 =head2 matrix_store_attestation
 
    matrix_store_attestation( $user, $attestation )
@@ -365,7 +409,7 @@ sub matrix_store_attestations {
       content => {
          attestations => $attestation,
       }
-   )
+   );
 }
 
 =head2 matrix_get_attestations
@@ -376,7 +420,7 @@ Delete a key backup version
 
 =cut
 
-sub matrix_get_attestations {
+sub matrix_get_keys {
    my ( $user, $target_user_id ) = @_;
 
    do_request_json_for( $user,
@@ -389,6 +433,6 @@ sub matrix_get_attestations {
       }
    )->then( sub {
       my ( $content ) = @_;
-      Future->done($content->{"attestations"});
+      Future->done($content->{"device_keys"}{$target_user_id});
    });
 }
