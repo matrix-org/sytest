@@ -42,7 +42,8 @@ sub sync_until_user_in_device_list
 }
 
 test "Can store and retrieve attestations",
-   requires => [ local_user_fixtures( 2 ) ],
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_upload_e2e_keys ) ],
 
    proves => [qw( can_store_attestations )],
 
@@ -119,7 +120,8 @@ test "Can store and retrieve attestations",
    };
 
 test "Filters out attestations not made by the user",
-   requires => [ local_user_fixtures( 2 ) ],
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_upload_e2e_keys ) ],
 
    proves => [qw( can_store_attestations )],
 
@@ -170,7 +172,8 @@ test "Filters out attestations not made by the user",
    };
 
 test "Other users cannot see a user's attestations",
-   requires => [ local_user_fixtures( 2 ) ],
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_upload_e2e_keys ) ],
 
    proves => [qw( can_store_attestations )],
 
@@ -222,7 +225,8 @@ test "Other users cannot see a user's attestations",
 
 test "self-attestations appear in /sync (local test)",
    requires => [ local_user_fixtures( 2 ),
-                 qw( can_sync ) ],
+                 qw( can_sync ),
+                 qw( can_upload_e2e_keys ) ],
 
    check => sub {
       # a user's self-attestations should show up in everyone's (who shares a
@@ -296,7 +300,8 @@ test "self-attestations appear in /sync (local test)",
 
 test "local attestations only notify the attesting user in /sync",
    requires => [ local_user_fixtures( 2 ),
-                 qw( can_sync ) ],
+                 qw( can_sync ),
+                 qw( can_upload_e2e_keys ) ],
 
    check => sub {
       # only the attesting user should be notified about their own attestations
