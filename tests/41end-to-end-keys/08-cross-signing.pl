@@ -369,6 +369,177 @@ test "local attestations only notify the attesting user in /sync",
       });
    };
 
+test "Can query remote attestations",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_upload_e2e_keys ) ],
+
+   check => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user1_device = $user1->device_id;
+      my $user2_id = $user2->user_id;
+      my $user2_device = $user2->device_id;
+
+      matrix_upload_device_key( $user2 )->then( sub {
+         matrix_store_attestations( $user2, [
+               {
+                  user_id => $user2_id,
+                  device_id => $user2_device,
+                  keys => {
+                     ed25519 => "ed25519+key"
+                  },
+                  state => "verified",
+                  signatures => {
+                     $user2_id => {
+                        "ed25519:$user2_device" => "signature+of+user2+key"
+                     }
+                  }
+               },
+            ]
+         );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         matrix_get_keys( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "device keys:", $content;
+
+         assert_json_keys( $content, $user2_device );
+
+         my $device = $content->{$user2_device};
+
+         assert_json_keys( $device, "unsigned" );
+
+         my $unsigned = $device->{unsigned};
+
+         assert_json_keys( $unsigned, "attestations" );
+
+         my $attestations = $unsigned->{attestations};
+
+         assert_json_list($attestations);
+
+         my $found = 0;
+
+         foreach my $attestation (@$attestations) {
+            assert_json_keys( $attestation, "user_id", "device_id", "keys", "state", "signatures" );
+            my $signatures = $attestation->{signatures};
+            if (exists $signatures->{$user2_id}
+                && exists $signatures->{$user2_id}{"ed25519:$user2_device"}
+                && $signatures->{$user2_id}{"ed25519:$user2_device"} eq "signature+of+user2+key") {
+               $found = 1;
+               assert_eq($attestation->{user_id}, $user2_id, "Expected target user ID to match submitted data");
+               assert_eq($attestation->{device_id}, $user2_device, "Expected device ID to match submitted data");
+               assert_deeply_eq($attestation->{keys}, {
+                     ed25519 => "ed25519+key"
+                  }, "Expected keys to match submitted data");
+               assert_eq($attestation->{state}, "verified", "Expected verified state to match submitted data");
+            }
+         }
+
+         assert_ok($found, "Expected submitted attestation to be found");
+
+         Future->done(1);
+      });
+   };
+
+test "self-attestations appear in /sync (federation test)",
+    requires => [ local_user_fixture(), remote_user_fixture(),
+                  qw( can_sync ),
+                  qw( can_upload_e2e_keys )],
+
+   check => sub {
+      # a user's self-attestations should show up in everyone's (who shares a
+      # room with them) sync stream
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user1_device = $user1->device_id;
+      my $user2_id = $user2->user_id;
+      my $user2_device = $user2->device_id;
+
+      my $room_id;
+
+      matrix_create_room( $user1 )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_invite_user_to_room( $user1, $user2, $room_id )
+      })->then( sub {
+         matrix_sync( $user1 );
+      })->then( sub {
+         matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         matrix_upload_device_key( $user2 );
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_sync( $user2 );
+      })->then( sub {
+         matrix_store_attestations( $user2, [
+               {
+                  user_id => $user2_id,
+                  device_id => "ABCDEFG",
+                  keys => {
+                     ed25519 => "ed25519+key"
+                  },
+                  state => "verified",
+                  signatures => {
+                     $user2_id => {
+                        "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+                     }
+                  }
+               },
+            ],
+         );
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_get_keys( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "device keys:", $content;
+
+         assert_json_keys( $content, $user2_device );
+
+         my $device = $content->{$user2_device};
+
+         assert_json_keys( $device, "unsigned" );
+
+         my $unsigned = $device->{unsigned};
+
+         assert_json_keys( $unsigned, "attestations" );
+
+         my $attestations = $unsigned->{attestations};
+
+         assert_json_list($attestations);
+
+         my $found = 0;
+
+         foreach my $attestation (@$attestations) {
+            assert_json_keys( $attestation, "user_id", "device_id", "keys", "state", "signatures" );
+            my $signatures = $attestation->{signatures};
+            if (exists $signatures->{$user2_id}
+                && exists $signatures->{$user2_id}{"ed25519:$user2_device"}
+                && $signatures->{$user2_id}{"ed25519:$user2_device"} eq "signature+of+user2+key") {
+               $found = 1;
+               assert_eq($attestation->{user_id}, $user2_id, "Expected target user ID to match submitted data");
+               assert_eq($attestation->{device_id}, $user2_device, "Expected device ID to match submitted data");
+               assert_deeply_eq($attestation->{keys}, {
+                     ed25519 => "ed25519+key"
+                  }, "Expected keys to match submitted data");
+               assert_eq($attestation->{state}, "verified", "Expected verified state to match submitted data");
+            }
+         }
+
+         assert_ok($found, "Expected submitted attestation to be found");
+
+         Future->done(1);
+      });
+   };
+
 =head2 matrix_upload_device_key
 
    matrix_upload_device_key( $user )
