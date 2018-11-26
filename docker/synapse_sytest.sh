@@ -60,9 +60,9 @@ dos2unix ./run-tests.pl
 TEST_STATUS=0
 if [ -n "$WORKERS" ]
 then
-    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --dendron-binary=/test/docker/pydron.py -O tap --all > results.tap || TEST_STATUS=$?
+    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --dendron-binary=/test/docker/pydron.py -O tap --all "$@" > results.tap || TEST_STATUS=$?
 else
-    ./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all > results.tap || TEST_STATUS=$?
+    ./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all "$@" > results.tap || TEST_STATUS=$?
 fi
 
 # Copy out the logs
