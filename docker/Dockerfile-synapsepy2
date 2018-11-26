@@ -10,4 +10,5 @@ RUN mkdir /src
 # The dockerfile context, when ran by the buildscript, will actually be the
 # repo root, not the docker folder
 ADD docker/synapse_sytest.sh /synapse_sytest.sh
+RUN dos2unix /synapse_sytest.sh
 ENTRYPOINT /synapse_sytest.sh

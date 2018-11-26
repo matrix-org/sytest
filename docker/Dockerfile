@@ -20,7 +20,8 @@ RUN apt-get -qq install -y \
     git \
     locales \
     haproxy \
-    jq
+    jq \
+    dos2unix
 
 # Set up the locales, as the default Debian image only has C, and PostgreSQL needs the correct locales to make a UTF-8 database
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
@@ -37,6 +38,7 @@ ENV LC_ALL en_US.UTF-8
 # repo root, not the docker folder
 ADD install-deps.pl ./install-deps.pl
 ADD cpanfile ./cpanfile
+RUN dos2unix ./cpanfile ./install-deps.pl
 RUN perl ./install-deps.pl
 RUN rm cpanfile install-deps.pl
 
