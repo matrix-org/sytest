@@ -528,7 +528,7 @@ sub require_stub
 }
 
 struct Test => [qw(
-   file name multi expect_fail critical proves requires check do timeout
+   file name multi expect_fail proves requires check do timeout
 )];
 
 my @TESTS;
@@ -547,7 +547,7 @@ sub _push_test
    }
 
    push @TESTS, Test( $filename, $name, $multi,
-      @params{qw( expect_fail critical proves requires check do timeout )} );
+      @params{qw( expect_fail proves requires check do timeout )} );
 }
 
 sub _run_test
@@ -819,11 +819,6 @@ foreach my $test ( @TESTS ) {
       $OUTPUT->diag( $_ ) for @log_if_fail_lines;
 
       last if $STOP_ON_FAIL and not $test->expect_fail;
-
-      if( $test->critical ) {
-         warn "This CRITICAL test has failed - bailing out\n";
-         last;
-      }
    }
 
    $OUTPUT->status(

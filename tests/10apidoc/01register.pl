@@ -55,8 +55,6 @@ test "POST /register can create a user",
    requires => [ $main::API_CLIENTS[0],
                  qw( can_register_dummy_flow ) ],
 
-   critical => 1,
-
    do => sub {
       my ( $http ) = @_;
 
