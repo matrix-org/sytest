@@ -230,7 +230,7 @@ my $TO_CHECK = [
       key => "content.msgtype",
       pattern => "m.notice",
    }]}],
-   [ "content", "%D1%82%D0%B5%D1%81%D1%82", { pattern => "тест" } ],
+   [ "content", "тест", { pattern => "тест" } ],
 ];
 
 foreach my $test ( @$TO_CHECK ) {
