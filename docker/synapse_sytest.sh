@@ -52,15 +52,17 @@ $PYTHON -m virtualenv -p $PYTHON /venv/
 /venv/bin/pip install -q --no-cache-dir lxml psycopg2 coverage codecov
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
+dos2unix ./install-deps.pl
 ./install-deps.pl
 
 # Run the tests
+dos2unix ./run-tests.pl
 TEST_STATUS=0
 if [ -n "$WORKERS" ]
 then
-    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --synapse-directory=/src --coverage --dendron-binary=/test/docker/pydron.py -O tap --all > results.tap || TEST_STATUS=$?
+    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --synapse-directory=/src --coverage --dendron-binary=/test/docker/pydron.py -O tap --all "$@" > results.tap || TEST_STATUS=$?
 else
-    ./run-tests.pl -I Synapse --python=/venv/bin/python --synapse-directory=/src --coverage -O tap --all > results.tap || TEST_STATUS=$?
+    ./run-tests.pl -I Synapse --python=/venv/bin/python --synapse-directory=/src --coverage -O tap --all "$@" > results.tap || TEST_STATUS=$?
 fi
 
 # Copy out the logs
@@ -75,8 +77,8 @@ perl /tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/syt
 # Upload coverage to codecov, if running on CircleCI
 if [ -n "$CIRCLECI" ]
 then
-    /venv/bin/coverage combine || IGN=$?
-    /venv/bin/coverage xml || IGN=$?
+    /venv/bin/coverage combine || true
+    /venv/bin/coverage xml || true
     /venv/bin/codecov -X gcov -f coverage.xml
 fi
 
