@@ -81,7 +81,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id?format=event fetches my m
 test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
    requires => [ $user_fixture, $room_fixture ],
 
-   proves => [qw( can_get_room_powerlevels )],
+   proves => [qw( can_get_room_power_levels )],
 
    check => sub {
       my ( $user, $room_id, undef ) = @_;

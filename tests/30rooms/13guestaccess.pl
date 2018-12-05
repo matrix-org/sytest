@@ -201,7 +201,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_change_room_powerlevels( $local_user, $room_id, sub {
+         matrix_change_room_power_levels( $local_user, $room_id, sub {
             my ( $levels ) = @_;
             $levels->{users}{ $remote_user->user_id } = 50;
          })->then( sub {
