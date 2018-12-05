@@ -22,6 +22,14 @@ If you want to use an existing checkout of SyTest, mount it to `/test` inside th
 
 If you want to test against a PostgreSQL database, pass `-e POSTGRES=1` to the docker command.
 
+You can pass arguments to sytest by adding them at the end of the docker command.  For example, you can use
+
+```
+$ docker run --rm -it ... matrixdotorg/sytest-synapsepy2 tests/20profile-events.pl
+```
+
+to run only a single test.
+
 ## Building the containers
 
 The containers are built by executing `build.sh`. You will then have to push them up to Docker Hub:

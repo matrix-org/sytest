@@ -120,13 +120,15 @@ sub _get_config
             output_room_event  => 'roomserverOutput',
             output_client_data => 'clientapiOutput',
             user_updates => 'userUpdates',
+            output_typing_event => 'typingServerOutput',
+            user_updates => 'userUpdates',
          },
       },
 
       database => {
          map { $_ => $db_uri } qw(
             account device media_api sync_api room_server server_key
-            federation_sender public_rooms_api naffka
+            federation_sender public_rooms_api naffka appservice
          ),
       },
    );

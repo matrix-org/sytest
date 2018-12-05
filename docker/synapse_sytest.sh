@@ -52,15 +52,17 @@ $PYTHON -m virtualenv -p $PYTHON /venv/
 /venv/bin/pip install -q --no-cache-dir lxml psycopg2
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
+dos2unix ./install-deps.pl
 ./install-deps.pl
 
 # Run the tests
+dos2unix ./run-tests.pl
 TEST_STATUS=0
 if [ -n "$WORKERS" ]
 then
-    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --dendron-binary=/test/docker/pydron.py -O tap --all > results.tap || TEST_STATUS=$?
+    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --dendron-binary=/test/docker/pydron.py -O tap --all "$@" > results.tap || TEST_STATUS=$?
 else
-    ./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all > results.tap || TEST_STATUS=$?
+    ./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all "$@" > results.tap || TEST_STATUS=$?
 fi
 
 # Copy out the logs
