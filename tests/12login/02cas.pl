@@ -20,7 +20,7 @@ sub wait_for_cas_request
 my $CAS_SUCCESS = <<'EOF';
 <cas:serviceResponse xmlns:cas='http://www.yale.edu/tp/cas'>
     <cas:authenticationSuccess>
-         <cas:user>cas_user</cas:user>
+         <cas:user>cas_user!</cas:user>
          <cas:attributes></cas:attributes>
     </cas:authenticationSuccess>
 </cas:serviceResponse>
@@ -207,7 +207,7 @@ test "Can login with new user via CAS",
          assert_eq( $body->{home_server}, $http->server_name,
                     'home_server in /login response' );
          assert_eq( $body->{user_id},
-                    '@cas_user:' . $http->server_name,
+                    '@cas_user=21:' . $http->server_name,
                     'user_id in /login response' );
 
          Future->done(1);
