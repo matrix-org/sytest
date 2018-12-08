@@ -480,14 +480,14 @@ test "self-attestations appear in /sync (federation test)",
          matrix_store_attestations( $user2, [
                {
                   user_id => $user2_id,
-                  device_id => "ABCDEFG",
+                  device_id => $user2_device,
                   keys => {
                      ed25519 => "ed25519+key"
                   },
                   state => "verified",
                   signatures => {
                      $user2_id => {
-                        "ed25519:ZYXWVUT" => "signature+of+ABCDEFG+key"
+                        "ed25519:$user2_device" => "signature+of+user2+key"
                      }
                   }
                },
