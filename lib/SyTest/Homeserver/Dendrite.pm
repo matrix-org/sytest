@@ -131,6 +131,14 @@ sub _get_config
             federation_sender public_rooms_api naffka appservice
          ),
       },
+
+      logging => [{
+         type => 'file',
+         level => 'debug',
+         params => {
+            path => "$self->{hs_dir}/dendrite-logs",
+         },
+      }],
    );
 }
 
