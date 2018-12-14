@@ -48,8 +48,7 @@ fi
 
 # Build the virtualenv, install extra deps that we will need for the tests
 $PYTHON -m virtualenv -p $PYTHON /venv/
-/venv/bin/pip install -q --no-cache-dir -e /src/
-/venv/bin/pip install -q --no-cache-dir lxml psycopg2
+/venv/bin/pip install -q --no-cache-dir -e /src/[all]
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
 dos2unix ./install-deps.pl
