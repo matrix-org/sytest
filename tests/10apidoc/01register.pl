@@ -244,7 +244,7 @@ sub matrix_admin_register_user_via_secret
       my ( $nonce ) = @_;
 
       my $mac = hmac_sha1_hex(
-         join( "\0", $nonce->{nonce}, $uid, $password, $is_admin ? "admin" : "notadmin" ),
+         join( "\0", $nonce->{nonce}, $uid, $password, $is_admin ? "admin" : "notadmin", "no_user_type" ),
          "reg_secret"
       );
 
