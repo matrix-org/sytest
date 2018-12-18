@@ -72,7 +72,7 @@ test "Can get account data without syncing",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys($body, qw( type cats_or_rats ));
+         assert_json_keys($body, qw( cats_or_rats ));
          $body->{cats_or_rats} eq "cats"
             or die "Unexpected event content, wanted cats";
 
@@ -92,7 +92,7 @@ test "Can get room account data without syncing",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys($body, qw( type cats_or_rats ));
+         assert_json_keys($body, qw( cats_or_rats ));
          $body->{cats_or_rats} eq "rats"
             or die "Unexpected event content, wanted rats";
 
