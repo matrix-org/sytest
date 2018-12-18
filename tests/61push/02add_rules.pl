@@ -1,3 +1,5 @@
+use utf8;
+
 use Future::Utils qw( repeat );
 use List::Util qw( first );
 
@@ -228,6 +230,7 @@ my $TO_CHECK = [
       key => "content.msgtype",
       pattern => "m.notice",
    }]}],
+   [ "content", "тест", { pattern => "тест" } ],
 ];
 
 foreach my $test ( @$TO_CHECK ) {
