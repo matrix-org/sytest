@@ -1,4 +1,5 @@
 push our @EXPORT, qw(
+   matrix_get_account_data matrix_get_room_account_data
    matrix_add_account_data matrix_add_room_account_data
    matrix_add_filler_account_data_synced
 );
