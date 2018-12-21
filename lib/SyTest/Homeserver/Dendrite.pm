@@ -139,6 +139,10 @@ sub _get_config
             path => "$self->{hs_dir}/dendrite-logs",
          },
       }],
+
+      application_services => {
+         config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
+      },
    );
 }
 
