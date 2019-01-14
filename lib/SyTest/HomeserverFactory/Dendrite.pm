@@ -81,12 +81,4 @@ sub get_tests
    );
 }
 
-# Critical tests for Dendrite defined by array of regexes
-sub get_critical_tests
-{
-   return (
-
-   );
-}
-
 1;

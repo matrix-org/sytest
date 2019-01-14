@@ -110,17 +110,6 @@ sub get_tests
    );
 }
 
-# Critical tests for Synapse defined by array of regexes
-sub get_critical_tests
-{
-   return (
-       'POST \S+ register can create a user',
-       'POST /createRoom makes a public room',
-       'POST /rooms/:room_id/join can join a room',
-       'POST /rooms/:room_id/leave can leave a room',
-   );
-}
-
 package SyTest::HomeserverFactory::Synapse::ViaDendron;
 use base qw( SyTest::HomeserverFactory::Synapse );
 
