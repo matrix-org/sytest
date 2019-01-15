@@ -60,10 +60,18 @@ my %FIXED_BUGS;
 my $STOP_ON_FAIL;
 my $SERVER_IMPL = undef;
 
+my $WHITELIST_FILE;
+my $BLACKLIST_FILE;
+
 Getopt::Long::Configure('pass_through');
 GetOptions(
    'I|server-implementation=s' => \$SERVER_IMPL,
    'C|client-log+' => \my $CLIENT_LOG,
+
+   # Whitelist and Blacklist files with test names to run.
+   # Both cannot be set at once
+   'W|test-whitelist-file=s' => \$WHITELIST_FILE,
+   'B|test-blacklist-file=s' => \$BLACKLIST_FILE,
 
    's|stop-on-fail' => sub { $STOP_ON_FAIL = 1 },
    'a|all'          => sub { $STOP_ON_FAIL = 0 },
@@ -125,6 +133,14 @@ Options:
                                    ~~ @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                                       shift( @homeserver_implementations ) || ''
 
+   -W, --test-whitelist-file    - whitelist file containing test names to run
+                                  One per line. Cannot be used in conjunction
+                                  with --test-blacklist-file
+
+   -B, --test-blacklist-file    - blacklist file containing test names to run
+                                  One per line. Cannot be used in conjunction
+                                  with --test-whitelist-file
+
    -C, --client-log             - enable logging of requests made by the
                                   internal HTTP client. Also logs the internal
                                   HTTP server.
@@ -184,6 +200,36 @@ our $HS_FACTORY = $hs_factory_class -> new();
 
 Getopt::Long::Configure("no_passthrough");
 GetOptions($HS_FACTORY->get_options()) or usage(1);
+
+# Check if both options have been set
+if (length($BLACKLIST_FILE) and length($WHITELIST_FILE)) {
+   print STDERR "Not allowed to set both whitelist and blacklist options.\n";
+   exit 1
+}
+
+# Read in test blacklist rules if set
+my @TEST_BLACKLIST = ();
+if (length($BLACKLIST_FILE)) {
+   open(my $blacklist_data, "<", $BLACKLIST_FILE) or die "Couldn't open blacklist file for writing: $!\n";
+   while (my $test_name = <$blacklist_data>) {
+      # Trim whitespace
+      chomp $test_name;
+      push @TEST_BLACKLIST, $test_name;
+   }
+   close $blacklist_data;
+}
+
+# Read in test whitelist rules if set
+my @TEST_WHITELIST = ();
+if (length($WHITELIST_FILE)) {
+   open(my $whitelist_data, "<", $WHITELIST_FILE) or die "Couldn't open whitelist file for writing: $!\n";
+   while (my $test_name = <$whitelist_data>) {
+      # Trim whitespace
+      chomp $test_name;
+      push @TEST_WHITELIST, $test_name;
+   }
+   close $whitelist_data;
+}
 
 my %only_files;
 my $stop_after;
@@ -622,6 +668,18 @@ sub _run_test0
    my ( $t, $test, $req_futures ) = @_;
    my $skip_reason;
 
+   # Check if this test has been blocked by the blacklist
+   if (scalar(@TEST_BLACKLIST) and grep { $test->name =~ /\Q$_\E\z/ } @TEST_BLACKLIST) {
+      $skip_reason = "test being in blacklist\n";
+      return (0, $skip_reason);
+   }
+
+   # Check if this test has been blocked by the whitelist
+   if (scalar(@TEST_WHITELIST) and not grep { $test->name =~ /\Q$_\E\z/ } @TEST_WHITELIST) {
+      $skip_reason = "test not being in whitelist\n";
+      return (0, $skip_reason);
+   }
+
    my $success = eval {
       my @reqs;
       my $f_setup = Future->needs_all( map { without_cancel($_) } @$req_futures )
@@ -788,11 +846,6 @@ $OUTPUT->status(
 # Now run the tests
 my $prev_filename;
 foreach my $test ( @TESTS ) {
-   # Check if the current homeserver has chosen to run this test
-   if( grep { $test->name !~ m/$_/ } $HS_FACTORY->get_tests() ) {
-      next;
-   }
-
    if( !$prev_filename or $prev_filename ne $test->file ) {
       $OUTPUT->run_file( $prev_filename = $test->file );
    }

@@ -102,14 +102,6 @@ sub create_server
    return $self->{impl}->new( %params );
 }
 
-# Tests to run for Synapse defined by array of regexes
-sub get_tests
-{
-   return (
-       '.*',
-   );
-}
-
 package SyTest::HomeserverFactory::Synapse::ViaDendron;
 use base qw( SyTest::HomeserverFactory::Synapse );
 
