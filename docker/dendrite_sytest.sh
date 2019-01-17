@@ -43,7 +43,7 @@ then
       database: $PGUSER
       host: $PGHOST
     type: pg
-    EOF
+EOF
 
     # Make the test databases
     create_user="CREATE USER dendrite PASSWORD 'itsasecret'"

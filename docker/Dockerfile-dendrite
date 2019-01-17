@@ -1,6 +1,6 @@
 FROM matrixdotorg/sytest:latest
 
-RUN apt-get -qq install -y golang-1.8
+RUN apt-get -qq install -y golang-1.8 dos2unix
 
 # /src is where we expect Synapse to be
 RUN mkdir /src
