@@ -106,9 +106,14 @@ sub upgrade_room_synced {
          my ( $sync_body, $new_room_id ) = @_;
          return 0 if not exists $sync_body->{rooms}{join}{$new_room_id};
          my $tl = $sync_body->{rooms}{join}{$new_room_id}{timeline}{events};
+         my $st = $sync_body->{rooms}{join}{$new_room_id}{state}{events};
          log_if_fail "New room timeline", $tl;
+         log_if_fail "New room state", $st;
 
          foreach my $ev ( @$tl ) {
+            $received_event_counts{$ev->{type}} += 1;
+         }
+         foreach my $ev ( @$st ) {
             $received_event_counts{$ev->{type}} += 1;
          }
 
