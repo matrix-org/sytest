@@ -212,8 +212,8 @@ sub do_v1_invite_request
    )->then( sub {
       my ( $response ) = @_;
 
-      # $response seems to arrive with an extraneous layer of wrapping as
-      # the result of a synapse implementation bug (SYN-490).
+      # $response arrives with an extraneous layer of wrapping as the result of
+      # a synapse implementation bug (matrix-org/synapse#1383).
       (ref $response eq "ARRAY") or die "V1 invite response must be an array";
 
       $response->[0] == 200 or
