@@ -99,7 +99,6 @@ sub upgrade_room_synced {
 
    matrix_do_and_wait_for_sync(
       $user,
-      timeout => 10000,
       do => sub {
          upgrade_room( $user, $room_id, %opts );
       },
@@ -107,6 +106,7 @@ sub upgrade_room_synced {
          my ( $sync_body, $new_room_id ) = @_;
          return 0 if not exists $sync_body->{rooms}{join}{$new_room_id};
          my $tl = $sync_body->{rooms}{join}{$new_room_id}{timeline}{events};
+         log_if_fail "Sync Response", $sync_body->{rooms}{join}{$new_room_id};
          log_if_fail "New room timeline", $tl;
 
          foreach my $ev ( @$tl ) {
