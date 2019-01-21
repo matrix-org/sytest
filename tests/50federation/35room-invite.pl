@@ -47,7 +47,7 @@ test "Outbound federation can send invites",
       );
    };
 
-test "Inbound federation can receive invites",
+test "Inbound federation can receive invites via v1 API",
    requires => [ local_user_fixture( with_events => 1 ), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
 
@@ -65,13 +65,71 @@ test "Inbound federation can receive invites",
          creator => $creator_id,
       );
 
-      invite_server( $room, $creator_id, $user, $inbound_server );
+      invite_server_v1( $room, $creator_id, $user, $inbound_server );
    };
 
 
+test "Inbound federation can receive invites via v2 API",
+   requires => [ local_user_fixture( with_events => 1 ), $main::INBOUND_SERVER,
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $datastore = $inbound_server->datastore;
+
+      my $room = SyTest::Federation::Room->new(
+         datastore => $datastore,
+      );
+
+      $room->create_initial_events(
+         server  => $inbound_server,
+         creator => $creator_id,
+      );
+
+      invite_server_v2( $room, $creator_id, $user, $inbound_server );
+   };
+
+
+=head2 invite_server_v1
+
+   invite_server_v1( $room, $creator_id, $user, $inbound_server )
+
+Invite a server using the V1 API. See invite_server
+
+=cut
+
+sub invite_server_v1
+{
+   invite_server( @_, \&do_v1_invite_request )
+}
+
+
+=head2 invite_server_v2
+
+   invite_server_v1( $room, $creator_id, $user, $inbound_server )
+
+Invite a server using the V2 API. See invite_server
+
+=cut
+
+sub invite_server_v2
+{
+   invite_server( @_, \&do_v2_invite_request )
+}
+
+=head2 invite_server
+
+   invite_server( $room, $creator_id, $user, $inbound_server, $do_invite_request )
+
+Invite a server into the room using the given `do_invite_request` parameter to
+actually send the invite request
+
+=cut
+
 sub invite_server
 {
-   my ( $room, $creator_id, $user, $inbound_server ) = @_;
+   my ( $room, $creator_id, $user, $inbound_server, $do_invite_request ) = @_;
 
    my $outbound_client = $inbound_server->client;
    my $first_home_server = $user->http->server_name;
@@ -107,23 +165,10 @@ sub invite_server
          Future->done(1);
      }),
 
-     $outbound_client->do_request_json(
-         method   => "PUT",
-         hostname => $first_home_server,
-         uri      => "/v1/invite/$room_id/$invitation->{event_id}",
-
-         content => $invitation,
+     $do_invite_request->(
+         $room, $user, $inbound_server, $invitation,
      )->then( sub {
          my ( $response ) = @_;
-
-         # $response seems to arrive with an extraneous layer of wrapping as
-         # the result of a synapse implementation bug (SYN-490).
-         if( ref $response eq "ARRAY" ) {
-            $response->[0] == 200 or
-               die "Expected first response element to be 200";
-
-            $response = $response->[1];
-         }
 
          log_if_fail "send invite response", $response;
 
@@ -140,6 +185,76 @@ sub invite_server
          Future->done(1);
      }),
    );
+}
+
+=head2 do_v1_invite_request
+
+   do_v1_invite_request( $room, $user, $inbound_server, $invitation )
+
+Send an invite event via the V1 API
+
+=cut
+
+sub do_v1_invite_request
+{
+   my ( $room, $user, $inbound_server, $invitation ) = @_;
+
+   my $outbound_client = $inbound_server->client;
+   my $first_home_server = $user->http->server_name;
+   my $room_id = $room->room_id;
+
+   $outbound_client->do_request_json(
+      method   => "PUT",
+      hostname => $first_home_server,
+      uri      => "/v1/invite/$room_id/$invitation->{event_id}",
+
+      content => $invitation,
+   )->then( sub {
+      my ( $response ) = @_;
+
+      # $response seems to arrive with an extraneous layer of wrapping as
+      # the result of a synapse implementation bug (SYN-490).
+      (ref $response eq "ARRAY") or die "V1 invite response must be an array";
+
+      $response->[0] == 200 or
+         die "Expected first response element to be 200";
+
+      $response = $response->[1];
+
+      Future->done( $response )
+   })
+}
+
+=head2 do_v2_invite_request
+
+   do_v2_invite_request( $room, $user, $inbound_server, $invitation )
+
+Send an invite event via the V2 API
+
+=cut
+
+sub do_v2_invite_request
+{
+   my ( $room, $user, $inbound_server, $invitation ) = @_;
+
+   my $outbound_client = $inbound_server->client;
+   my $first_home_server = $user->http->server_name;
+   my $room_id = $room->room_id;
+
+   my $create_event = $room->get_current_state_event( "m.room.create" );
+   my $room_version = $create_event->{content}{room_version} // "1";
+
+   $outbound_client->do_request_json(
+      method   => "PUT",
+      hostname => $first_home_server,
+      uri      => "/v2/invite/$room_id/$invitation->{event_id}",
+
+      content => {
+         event             => $invitation,
+         room_version      => $room_version,
+         invite_room_state => [],
+      },
+   )
 }
 
 
@@ -180,7 +295,7 @@ foreach my $error_code ( 403, 500, -1 ) {
 
          my $room_id = $room->room_id;
 
-         invite_server( $room, $creator_id, $user, $federation_server )
+         invite_server_v1( $room, $creator_id, $user, $federation_server )
          ->then( sub {
             if( $error_code < 0 ) {
                # now shut down the remote server, so that we get an 'unreachable'
