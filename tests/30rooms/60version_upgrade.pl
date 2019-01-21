@@ -99,6 +99,7 @@ sub upgrade_room_synced {
 
    matrix_do_and_wait_for_sync(
       $user,
+      timeout => 10000,
       do => sub {
          upgrade_room( $user, $room_id, %opts );
       },
