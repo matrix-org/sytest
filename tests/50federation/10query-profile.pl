@@ -57,7 +57,7 @@ test "Inbound federation can query profile data",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $info->server_name,
-            uri      => "/query/profile",
+            uri      => "/v1/query/profile",
 
             params => {
                user_id => $user->user_id,
