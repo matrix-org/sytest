@@ -298,7 +298,6 @@ test "/upgrade copies important state to the new room",
          "m.room.guest_access" => { guest_access => "forbidden" },
          "m.room.history_visibility" => { history_visibility => "joined" },
          "m.room.avatar" => { url => "http://something" },
-         "m.room.encryption" => { algorithm => "m.megolm.v1.aes-sha2" },
       );
 
       my $f = Future->done(1);
