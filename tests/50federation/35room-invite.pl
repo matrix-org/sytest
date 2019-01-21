@@ -71,7 +71,7 @@ test "Inbound federation can receive invites",
 
 sub invite_server
 {
-   my ( $room, $creator_id, $user, $inbound_server) = @_;
+   my ( $room, $creator_id, $user, $inbound_server ) = @_;
 
    my $outbound_client = $inbound_server->client;
    my $first_home_server = $user->http->server_name;
@@ -110,7 +110,7 @@ sub invite_server
      $outbound_client->do_request_json(
          method   => "PUT",
          hostname => $first_home_server,
-         uri      => "/invite/$room_id/$invitation->{event_id}",
+         uri      => "/v1/invite/$room_id/$invitation->{event_id}",
 
          content => $invitation,
      )->then( sub {

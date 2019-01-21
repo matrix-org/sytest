@@ -71,7 +71,7 @@ test "Inbound federation can query room alias directory",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/query/directory",
+            uri      => "/v1/query/directory",
 
             params => {
                room_alias => $room_alias,
