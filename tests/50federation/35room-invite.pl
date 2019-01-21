@@ -302,6 +302,13 @@ foreach my $error_code ( 403, 500, -1 ) {
                # error on make_leave
                $federation_server->close();
 
+               # close any connected sockets too, otherwise synapse will
+               # just reuse the connection.
+               foreach my $child ( $federation_server->children() ) {
+                  log_if_fail "closing", $child;
+                  $child->close();
+               }
+
                return matrix_leave_room( $user, $room_id );
             }
             else {
