@@ -90,7 +90,6 @@ sub upgrade_room_synced {
    foreach my $t (qw(
       m.room.create m.room.member m.room.guest_access
       m.room.history_visibility m.room.join_rules m.room.power_levels
-      m.room.encryption
    )) {
       $expected_event_counts->{$t} //= 1;
    }
