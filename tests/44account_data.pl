@@ -61,6 +61,46 @@ sub setup_account_data
 }
 
 
+test "Can get account data without syncing",
+   requires => [ local_user_and_room_fixtures() ],
+
+   check => sub {
+      my ( $user, $room_id ) = @_;
+
+      setup_account_data( $user, $room_id )->then( sub {
+         matrix_get_account_data( $user, "my.test.type" );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys($body, qw( cats_or_rats ));
+         $body->{cats_or_rats} eq "cats"
+            or die "Unexpected event content, wanted cats";
+
+         Future->done(1);
+      });
+   };
+
+
+test "Can get room account data without syncing",
+   requires => [ local_user_and_room_fixtures() ],
+
+   check => sub {
+      my ( $user, $room_id ) = @_;
+
+      setup_account_data( $user, $room_id )->then( sub {
+         matrix_get_room_account_data( $user, $room_id, "my.test.type" );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys($body, qw( cats_or_rats ));
+         $body->{cats_or_rats} eq "rats"
+            or die "Unexpected event content, wanted rats";
+
+         Future->done(1);
+      });
+   };
+
+
 test "Latest account data comes down in /initialSync",
    requires => [ local_user_and_room_fixtures() ],
 

@@ -261,7 +261,7 @@ sub assert_room_members {
    my $room = $body->{rooms}{join}{$room_id};
    my $timeline = $room->{timeline}{events};
 
-   log_if_fail "Room", $room;
+   #log_if_fail "Room", $room;
 
    assert_json_keys( $room, qw( timeline state ephemeral ));
 
