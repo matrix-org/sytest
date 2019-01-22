@@ -15,6 +15,8 @@
 use Future::Utils qw( repeat );
 use List::Util qw( all first );
 
+push our @EXPORT, qw ( upgrade_room_synced $TEST_NEW_VERSION );
+
 # TODO: switch this to '2' once that is released
 my $TEST_NEW_VERSION = 'vdh-test-version';
 
@@ -56,6 +58,45 @@ sub upgrade_room {
 
       assert_json_keys( $body, qw( replacement_room ) );
       Future->done( $body->{replacement_room} );
+   });
+}
+
+=head2 is_direct_room
+
+    is_direct_room( $user, $room_id )->then( sub {
+        my ( $is_direct ) = @_;
+    })
+
+Check if a room ID is considered direct by the given user.
+
+=cut
+
+sub is_direct_room {
+   my ( $user, $room_id ) = @_;
+
+   # Download account data events from sync
+   matrix_sync( $user )->then( sub {
+      my ( $sync_body ) = @_;
+
+      # Should only have the m.direct event in account_data
+      my $account_data = $sync_body->{account_data}{events};
+
+      # Check if the room_id is in the list of direct rooms
+      foreach my $event ( @$account_data ) {
+         if ( $event->{type} eq "m.direct" ) {
+            my $room_ids = $event->{content}{$user->user_id};
+
+            # Return whether the given room ID is in the response
+            foreach my $rid (@$room_ids) {
+               if ( $rid eq $room_id ) {
+                  return Future->done( 1 );
+               }
+            }
+         }
+      }
+
+      # Didn't find an m.direct event with our room ID
+      Future->done( 0 );
    });
 }
 
@@ -474,6 +515,39 @@ test "/upgrade moves aliases to the new room",
       });
    };
 
+test "/upgrade preserves direct room state",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      my $new_room_id;
+      my $user_id = $creator->user_id;
+
+      do_request_json_for(
+         $creator,
+         method => "PUT",
+         uri    => "/r0/user/$user_id/account_data/m.direct",
+         content => { $user_id => [$room_id] },
+      )->then( sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id ) = @_;
+
+         is_direct_room( $creator, $new_room_id );
+      })->then( sub {
+         my ( $is_direct_room ) = @_;
+
+         $is_direct_room == 1 or die "Expected upgraded room to be a direct room";
+         Future->done( 1 );
+      });
+   };
 
 test "/upgrade restricts power levels in the old room",
    requires => [
