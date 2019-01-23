@@ -48,6 +48,7 @@ fi
 
 # Build the virtualenv, install extra deps that we will need for the tests
 $PYTHON -m virtualenv -p $PYTHON /venv/
+/venv/bin/pip install pip==18.1
 /venv/bin/pip install -q --no-cache-dir -e /src/
 /venv/bin/pip install -q --no-cache-dir lxml psycopg2 coverage codecov
 
