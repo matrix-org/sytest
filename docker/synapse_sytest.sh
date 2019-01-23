@@ -24,6 +24,9 @@ else
 
 fi
 
+sytest_commit="$(git rev-parse HEAD)" || sytest_commit="Unknown"
+echo "Running on sytest commit $sytest_commit"
+
 # PostgreSQL setup
 if [ -n "$POSTGRES" ]
 then
