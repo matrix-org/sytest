@@ -75,27 +75,25 @@ sub is_direct_room {
    my ( $user, $room_id ) = @_;
 
    # Download account data events from sync
-   matrix_sync( $user )->then( sub {
-      my ( $sync_body ) = @_;
-
+   matrix_get_account_data( $user, "m.direct" )->then( sub {
       # Should only have the m.direct event in account_data
-      my $account_data = $sync_body->{account_data}{events};
+      my ( $data ) = @_;
+
+      log_if_fail "m.direct account data", $data;
 
       # Check if the room_id is in the list of direct rooms
-      foreach my $event ( @$account_data ) {
-         if ( $event->{type} eq "m.direct" ) {
-            my $room_ids = $event->{content}{$user->user_id};
+      foreach my $user_id ( keys %{ $data } ) {
+         my $room_ids = $data->{$user_id};
 
-            # Return whether the given room ID is in the response
-            foreach my $rid (@$room_ids) {
-               if ( $rid eq $room_id ) {
-                  return Future->done( 1 );
-               }
+         # Return whether the given room ID is in the response
+         foreach my $room (@$room_ids) {
+            if ( $room eq $room_id ) {
+               return Future->done( 1 );
             }
          }
       }
 
-      # Didn't find an m.direct event with our room ID
+      # Didn't find an direct romo with our room ID
       Future->done( 0 );
    });
 }
