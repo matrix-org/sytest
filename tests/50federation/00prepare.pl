@@ -48,7 +48,7 @@ sub create_federation_server
 
       my $outbound_client = SyTest::Federation::Client->new(
          datastore => $datastore,
-         uri_base  => "/_matrix/federation/v1",
+         uri_base  => "/_matrix/federation",
         );
       $loop->add( $outbound_client );
 

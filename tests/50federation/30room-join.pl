@@ -219,7 +219,7 @@ test "Inbound federation can receive room-join requests",
       $outbound_client->do_request_json(
          method   => "GET",
          hostname => $first_home_server,
-         uri      => "/make_join/$room_id/$user_id",
+         uri      => "/v1/make_join/$room_id/$user_id",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "make_join body", $body;
@@ -278,7 +278,7 @@ test "Inbound federation can receive room-join requests",
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $first_home_server,
-            uri      => "/send_join/$room_id/$event{event_id}",
+            uri      => "/v1/send_join/$room_id/$event{event_id}",
 
             content => \%event,
          )
@@ -356,7 +356,7 @@ test "Inbound federation rejects attempts to join v1 rooms from servers without 
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/make_join/$room_id/$user_id",
+            uri      => "/v1/make_join/$room_id/$user_id",
             params   => {
                ver => [qw/2 abc def/],
             },
@@ -393,7 +393,7 @@ test "Inbound federation rejects attempts to join v2 rooms from servers lacking 
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/make_join/$room_id/$user_id",
+            uri      => "/v1/make_join/$room_id/$user_id",
          );
       })->main::expect_http_400()
       ->then( sub {
@@ -427,7 +427,7 @@ test "Inbound federation rejects attempts to join v2 rooms from servers only sup
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/make_join/$room_id/$user_id",
+            uri      => "/v1/make_join/$room_id/$user_id",
             params   => {
                ver => ["1"],
             },
@@ -464,7 +464,7 @@ test "Inbound federation accepts attempts to join v2 rooms from servers with sup
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/make_join/$room_id/$user_id",
+            uri      => "/v1/make_join/$room_id/$user_id",
             params   => {
                ver => [qw/abc vdh-test-version def/],
             },
