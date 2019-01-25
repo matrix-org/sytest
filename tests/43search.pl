@@ -229,7 +229,7 @@ test "Can back-paginate search results",
         });
     };
 
-test "Search works across an upgraded room",
+test "Search works across an upgraded room and its predecessor",
    requires => [
       local_user_and_room_fixtures(),
       qw ( can_upgrade_room_version ),
