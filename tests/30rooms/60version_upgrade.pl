@@ -61,6 +61,43 @@ sub upgrade_room {
    });
 }
 
+=head2 is_direct_room
+
+    is_direct_room( $user, $room_id )->then( sub {
+        my ( $is_direct ) = @_;
+    })
+
+Check if a room ID is considered to be a direct chat by the given user.
+
+=cut
+
+sub is_direct_room {
+   my ( $user, $room_id ) = @_;
+
+   # Download account data events from sync
+   matrix_get_account_data( $user, "m.direct" )->then( sub {
+      # Should only have the m.direct event in account_data
+      my ( $data ) = @_;
+
+      log_if_fail "m.direct account data", $data;
+
+      # Check if the room_id is in the list of direct rooms
+      foreach my $user_id ( keys %{ $data } ) {
+         my $room_ids = $data->{$user_id};
+
+         # Return whether the given room ID is in the response
+         foreach my $room (@$room_ids) {
+            if ( $room eq $room_id ) {
+               return Future->done( 1 );
+            }
+         }
+      }
+
+      # Didn't find a direct room with our room ID
+      Future->done( 0 );
+   });
+}
+
 =head2 upgrade_room_synced
 
     upgrade_room_synced( $user, $room_id, %opts )->then( sub {
@@ -476,6 +513,39 @@ test "/upgrade moves aliases to the new room",
       });
    };
 
+test "/upgrade preserves direct room state",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      my $new_room_id;
+      my $user_id = $creator->user_id;
+
+      do_request_json_for(
+         $creator,
+         method => "PUT",
+         uri    => "/r0/user/$user_id/account_data/m.direct",
+         content => { $user_id => [$room_id] },
+      )->then( sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id ) = @_;
+
+         is_direct_room( $creator, $new_room_id );
+      })->then( sub {
+         my ( $is_direct_room ) = @_;
+
+         $is_direct_room == 1 or die "Expected upgraded room to be a direct room";
+         Future->done( 1 );
+      });
+   };
 
 test "/upgrade restricts power levels in the old room",
    requires => [

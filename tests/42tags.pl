@@ -407,3 +407,44 @@ test "Deleted tags appear in an incremental v2 /sync",
          Future->done( 1 );
       });
    };
+
+test "/upgrade copies user tags to the new room",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version can_add_tag ),
+   ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+      my ( $new_room_id );
+
+      matrix_add_tag(
+         $user, $room_id, "test_tag", {}
+      )->then( sub {
+         matrix_sync( $user );
+      })->then( sub {
+         upgrade_room_synced(
+            $user, $room_id,
+            new_version => $main::TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id, ) = @_;
+
+         matrix_sync_again( $user );
+      })->then( sub {
+         my ( $sync_body ) = @_;
+
+         log_if_fail "sync body", $sync_body;
+
+         my $room = $sync_body->{rooms}{join}{$new_room_id};
+
+         matrix_list_tags( $user, $new_room_id );
+      })->then( sub {
+         my ( $tags ) = @_;
+
+         keys %{ $tags } == 1 or die "Expected one tag in the upgraded room";
+         defined $tags->{test_tag} or die "Unexpected tag";
+
+         Future->done(1);
+      });
+   };
