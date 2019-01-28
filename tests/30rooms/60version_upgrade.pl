@@ -93,7 +93,7 @@ sub is_direct_room {
          }
       }
 
-      # Didn't find an direct romo with our room ID
+      # Didn't find a direct room with our room ID
       Future->done( 0 );
    });
 }
