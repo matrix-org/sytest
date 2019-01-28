@@ -67,7 +67,7 @@ sub upgrade_room {
         my ( $is_direct ) = @_;
     })
 
-Check if a room ID is considered direct by the given user.
+Check if a room ID is considered to be a direct chat by the given user.
 
 =cut
 
