@@ -25,32 +25,27 @@ else
 fi
 
 # PostgreSQL setup
-if [ -n "$POSTGRES" ]
-then
+export PGHOST=/var/run/postgresql
+export PGDATA=$PGHOST/data
+export PGUSER=dendrite
 
-    export PGHOST=/var/run/postgresql
-    export PGDATA=$PGHOST/data
-    export PGUSER=dendrite
+# Initialise the database files and start the database
+su -c '/usr/lib/postgresql/9.6/bin/initdb -E "UTF-8" --lc-collate="en_US.UTF-8" --lc-ctype="en_US.UTF-8" --username=postgres' postgres
+su -c '/usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/lib/postgresql/data start' postgres
 
-    # Initialise the database files and start the database
-    su -c '/usr/lib/postgresql/9.6/bin/initdb -E "UTF-8" --lc-collate="en_US.UTF-8" --lc-ctype="en_US.UTF-8" --username=postgres' postgres
-    su -c '/usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/lib/postgresql/data start' postgres
-
-    # Write dendrite configuration
-    mkdir -p "server-0"
-    cat > "server-0/database.yaml" << EOF
-    args:
-      database: $PGUSER
-      host: $PGHOST
-    type: pg
+# Write dendrite configuration
+mkdir -p "server-0"
+cat > "server-0/database.yaml" << EOF
+args:
+    database: $PGUSER
+    host: $PGHOST
+type: pg
 EOF
 
-    # Make the test databases
-    create_user="CREATE USER dendrite PASSWORD 'itsasecret'"
-    su -c 'psql -c "$create_user"' postgres
-    su -c 'for i in account device mediaapi syncapi roomserver serverkey federationsender publicroomsapi appservice naffka; do psql -c "CREATE DATABASE $i OWNER dendrite;"; done' postgres
-
-fi
+# Make the test databases
+create_user="CREATE USER dendrite PASSWORD 'itsasecret'"
+su -c 'psql -c "$create_user"' postgres
+su -c 'for i in account device mediaapi syncapi roomserver serverkey federationsender publicroomsapi appservice naffka; do psql -c "CREATE DATABASE $i OWNER dendrite;"; done' postgres
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
 dos2unix ./install-deps.pl
