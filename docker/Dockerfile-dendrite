@@ -1,9 +1,14 @@
 FROM matrixdotorg/sytest:latest
 
-RUN apt-get -qq install -y golang-1.8 golang-go dos2unix
+RUN apt-get -qq install -y golang-1.8-go dos2unix
 
 # /src is where we expect Dendrite to be
 RUN mkdir /src
+
+# Set up go
+RUN mkdir .go
+ENV GOPATH="$PWD/.go"
+ENV PATH="$PATH:/$PWD/.go/bin:/usr/lib/go-1.8/bin"
 
 # The dockerfile context, when ran by the buildscript, will actually be the
 # repo root, not the docker folder
