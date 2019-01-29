@@ -139,9 +139,6 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-
-   my $cert_file = $self->{paths}{cert_file} = "$hs_dir/cert.pem";
-   my $key_file  = $self->{paths}{key_file}  = "$hs_dir/key.pem";
    my $log_config_file = "$hs_dir/log.config";
 
    my $macaroon_secret_key = "secret_$port";
@@ -151,8 +148,8 @@ sub start
         server_name => $self->server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
-        tls_certificate_path => $cert_file,
-        tls_private_key_path => $key_file,
+        tls_certificate_path => "$cwd/keys/tls-selfsigned.crt",
+        tls_private_key_path => "$cwd/keys/tls-selfsigned.key",
         tls_dh_params_path => "$cwd/keys/tls.dh",
         use_insecure_ssl_client_just_for_testing_do_not_use => 1,
         rc_messages_per_second => 1000,
