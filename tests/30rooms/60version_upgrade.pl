@@ -17,8 +17,7 @@ use List::Util qw( all first );
 
 push our @EXPORT, qw ( upgrade_room_synced $TEST_NEW_VERSION );
 
-# TODO: switch this to '2' once that is released
-my $TEST_NEW_VERSION = 'vdh-test-version';
+my $TEST_NEW_VERSION = '2';
 
 =head2 upgrade_room
 
