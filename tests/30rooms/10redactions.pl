@@ -1,3 +1,5 @@
+use URI::Escape qw( uri_escape );
+
 sub make_room_and_message
 {
    my ( $users, $sender ) = @_;
@@ -27,6 +29,8 @@ test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
       ->then( sub {
          my ( $room_id, $to_redact ) = @_;
 
+         $to_redact = uri_escape( $to_redact );
+
          do_request_json_for( $creator,
             method => "POST",
             uri    => "/r0/rooms/$room_id/redact/$to_redact",
@@ -46,6 +50,8 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
       ->then( sub {
          my ( $room_id, $to_redact ) = @_;
 
+         $to_redact = uri_escape( $to_redact );
+
          do_request_json_for( $sender,
                method => "POST",
                uri    => "/r0/rooms/$room_id/redact/$to_redact",
@@ -64,6 +70,8 @@ test "POST /rooms/:room_id/redact/:event_id as random user does not redact messa
       make_room_and_message( [ $creator, $sender, $redactor ], $sender )
       ->then( sub {
          my ( $room_id, $to_redact ) = @_;
+
+         $to_redact = uri_escape( $to_redact );
 
          do_request_json_for( $redactor,
                method => "POST",

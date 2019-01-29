@@ -1,3 +1,5 @@
+use URI::Escape qw( uri_escape );
+
 test "POST /rooms/:room_id/receipt can create receipts",
    requires => [ local_user_and_room_fixtures() ],
 
@@ -10,7 +12,7 @@ test "POST /rooms/:room_id/receipt can create receipts",
       # reasonable. Lets fetch it.
       matrix_get_my_member_event( $user, $room_id )->then( sub {
          my ( $member_event ) = @_;
-         my $event_id = $member_event->{event_id};
+         my $event_id = uri_escape( $member_event->{event_id} );
 
          do_request_json_for( $user,
             method => "POST",
@@ -26,6 +28,8 @@ push our @EXPORT, qw( matrix_advance_room_receipt matrix_advance_room_receipt_sy
 sub matrix_advance_room_receipt
 {
    my ( $user, $room_id, $type, $event_id ) = @_;
+
+   $event_id = uri_escape( $event_id );
 
    do_request_json_for( $user,
       method => "POST",
