@@ -163,7 +163,7 @@ test "POST /createRoom creates a room with the given version",
 
       matrix_create_room_synced(
          $user,
-         room_version => 'vdh-test-version',
+         room_version => '2',
       )->then( sub {
          my ( $room_id, undef, $sync_body ) = @_;
 
@@ -175,7 +175,7 @@ test "POST /createRoom creates a room with the given version",
          assert_eq( $ev0->{type}, 'm.room.create',
                     'first event was not m.room.create' );
          assert_json_keys( $ev0->{content}, qw( room_version ));
-         assert_eq( $ev0->{content}{room_version}, 'vdh-test-version', 'room_version' );
+         assert_eq( $ev0->{content}{room_version}, '2', 'room_version' );
 
          Future->done(1);
       });

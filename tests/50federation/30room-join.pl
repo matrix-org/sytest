@@ -386,7 +386,7 @@ test "Inbound federation rejects attempts to join v2 rooms from servers lacking 
 
       matrix_create_room(
          $creator_user,
-         room_version => 'vdh-test-version',
+         room_version => '2',
       )->then( sub {
          my ( $room_id ) = @_;
 
@@ -401,7 +401,7 @@ test "Inbound federation rejects attempts to join v2 rooms from servers lacking 
          my $body = decode_json( $response->content );
          log_if_fail "error body", $body;
          assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
-         assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
+         assert_eq( $body->{room_version}, '2', 'room_version' );
          Future->done( 1 );
       });
    };
@@ -420,7 +420,7 @@ test "Inbound federation rejects attempts to join v2 rooms from servers only sup
 
       matrix_create_room(
          $creator_user,
-         room_version => 'vdh-test-version',
+         room_version => '2',
       )->then( sub {
          my ( $room_id ) = @_;
 
@@ -438,7 +438,7 @@ test "Inbound federation rejects attempts to join v2 rooms from servers only sup
          my $body = decode_json( $response->content );
          log_if_fail "error body", $body;
          assert_eq( $body->{errcode}, "M_INCOMPATIBLE_ROOM_VERSION", 'responsecode' );
-         assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
+         assert_eq( $body->{room_version}, '2', 'room_version' );
          Future->done( 1 );
       });
    };
@@ -457,7 +457,7 @@ test "Inbound federation accepts attempts to join v2 rooms from servers with sup
 
       matrix_create_room(
          $creator_user,
-         room_version => 'vdh-test-version',
+         room_version => '2',
       )->then( sub {
          my ( $room_id ) = @_;
 
@@ -466,7 +466,7 @@ test "Inbound federation accepts attempts to join v2 rooms from servers with sup
             hostname => $first_home_server,
             uri      => "/v1/make_join/$room_id/$user_id",
             params   => {
-               ver => [qw/abc vdh-test-version def/],
+               ver => [qw/abc 2 def/],
             },
          );
       })->then( sub {
@@ -475,7 +475,7 @@ test "Inbound federation accepts attempts to join v2 rooms from servers with sup
 
          assert_json_keys( $body, qw( event room_version ));
 
-         assert_eq( $body->{room_version}, 'vdh-test-version', 'room_version' );
+         assert_eq( $body->{room_version}, '2', 'room_version' );
          Future->done( 1 );
       });
    };
@@ -540,7 +540,7 @@ test "A pair of servers can establish a join in a v2 room",
 
       matrix_create_and_join_room(
          [ $creator_user, $joiner_user ],
-         room_version => 'vdh-test-version',
+         room_version => '2',
         );
    };
 
