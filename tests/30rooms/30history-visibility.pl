@@ -1,4 +1,5 @@
 use JSON qw( encode_json );
+use URI::Escape::XS qw( uri_escape );
 
 use constant { YES => 1, NO => !1 };
 
@@ -189,7 +190,7 @@ foreach my $i (
                Future->needs_all(
                   do_request_json_for( $user,
                      method  => "POST",
-                     uri     => "/r0/rooms/$room_id/receipt/m.read/$sent_event_id",
+                     uri     => "/r0/rooms/$room_id/receipt/m.read/${ \uri_escape( $sent_event_id ) }",
                      content => {},
                   ),
 

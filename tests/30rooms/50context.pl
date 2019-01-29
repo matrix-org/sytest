@@ -1,3 +1,5 @@
+use URI::Escape::XS qw( uri_escape );
+
 test "/context/ on joined room works",
    requires => [ local_user_and_room_fixtures() ],
 
@@ -11,7 +13,7 @@ test "/context/ on joined room works",
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/$event_id",
+            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -35,7 +37,7 @@ test "/context/ on non world readable room does not work",
 
          do_request_json_for( $other_user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/$event_id",
+            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
          );
       })->main::expect_http_403;
    };
@@ -73,7 +75,7 @@ test "/context/ returns correct number of events",
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/$event_middle_id",
+            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_middle_id ) }",
             params    => {
                limit => 2,
             }
@@ -118,7 +120,7 @@ test "/context/ with lazy_load_members filter works",
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/$event_id",
+            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
             params  => {
                limit => 2,
                filter  => '{ "lazy_load_members" : true }',

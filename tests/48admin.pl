@@ -1,5 +1,7 @@
 use Future::Utils qw( repeat );
 use Time::HiRes qw( time );
+use URI::Escape::XS qw( uri_escape );
+
 
 # poll the status endpoint until it completes. Returns the final status.
 sub await_purge_complete {
@@ -93,13 +95,13 @@ test "/purge_history",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/admin/purge_history/$room_id/$last_event_id",
+            uri     => "/r0/admin/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
             content => {}
          )->main::expect_http_403;  # Must be server admin
       })->then( sub {
          do_request_json_for( $admin,
             method  => "POST",
-            uri     => "/r0/admin/purge_history/$room_id/$last_event_id",
+            uri     => "/r0/admin/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
             content => {}
          )
       })->then( sub {
@@ -283,7 +285,7 @@ test "Can backfill purged history",
       })->then( sub {
          do_request_json_for( $admin,
             method  => "POST",
-            uri     => "/r0/admin/purge_history/$room_id/$last_event_id",
+            uri     => "/r0/admin/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
             content => {}
          )
       })->then( sub {
