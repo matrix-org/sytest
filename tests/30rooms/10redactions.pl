@@ -1,4 +1,4 @@
-use URI::Escape::XS qw( uri_escape );
+use URI::Escape qw( uri_escape );
 
 sub make_room_and_message
 {

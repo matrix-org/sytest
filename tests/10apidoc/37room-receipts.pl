@@ -1,4 +1,4 @@
-use URI::Escape::XS qw( uri_escape );
+use URI::Escape qw( uri_escape );
 
 test "POST /rooms/:room_id/receipt can create receipts",
    requires => [ local_user_and_room_fixtures() ],

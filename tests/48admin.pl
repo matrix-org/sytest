@@ -1,6 +1,6 @@
 use Future::Utils qw( repeat );
 use Time::HiRes qw( time );
-use URI::Escape::XS qw( uri_escape );
+use URI::Escape qw( uri_escape );
 
 
 # poll the status endpoint until it completes. Returns the final status.

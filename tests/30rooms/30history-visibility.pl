@@ -1,5 +1,5 @@
 use JSON qw( encode_json );
-use URI::Escape::XS qw( uri_escape );
+use URI::Escape qw( uri_escape );
 
 use constant { YES => 1, NO => !1 };
 
