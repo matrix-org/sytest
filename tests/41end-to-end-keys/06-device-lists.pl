@@ -1,6 +1,8 @@
 use Future::Utils qw( try_repeat_until_success );
 #use Devel::StackTrace;
 
+push our @EXPORT, qw( is_user_in_changed_list sync_until_user_in_device_list );
+
 sub is_user_in_changed_list
 {
    my ( $user, $body ) = @_;
