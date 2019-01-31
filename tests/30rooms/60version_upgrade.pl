@@ -66,7 +66,7 @@ sub upgrade_room {
         my ( $is_direct ) = @_;
     })
 
-Check if a room ID is considered to be a direct chat by the given user.
+Check if a room is considered to be a direct chat by the given user.
 
 =cut
 
@@ -543,6 +543,52 @@ test "/upgrade preserves direct room state",
 
          $is_direct_room == 1 or die "Expected upgraded room to be a direct room";
          Future->done( 1 );
+      });
+   };
+
+test "/upgrade preserves room federation ability",
+   requires => [
+      local_user_fixture(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator ) = @_;
+
+      do_request_json_for( $creator,
+         method => "POST",
+         uri    => "/r0/createRoom",
+
+         content => {
+            creation_content => {
+               "m.federate" => JSON::false,
+            },
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( room_id ));
+         assert_json_nonempty_string( my $old_room_id = $body->{room_id} );
+
+         upgrade_room_synced(
+            $creator, $old_room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( my $new_room_id, ) = @_;
+
+         do_request_json_for( $creator,
+            method => "GET",
+            uri    => "/r0/rooms/$new_room_id/state/m.room.create",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "upgraded room state", $state;
+
+         assert_json_keys( $state, qw( m.federate ));
+
+         Future->done(1);
       });
    };
 

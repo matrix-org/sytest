@@ -388,7 +388,7 @@ test "POST /createRoom with creation content",
 
          content => {
             creation_content => {
-               "m.federate" => JSON::true,
+               "m.federate" => JSON::false,
             },
          },
       )->then( sub {
