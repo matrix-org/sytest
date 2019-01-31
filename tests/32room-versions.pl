@@ -1,4 +1,6 @@
-# We test that some basic funcationality works across all room versions
+use URI::Escape qw( uri_escape );
+
+# We test that some basic functionality works across all room versions
 foreach my $version ( qw ( 1 2 3 ) )  {
    multi_test "User can create and send/receive messages in a room with version $version",
       requires => [ local_user_fixture() ],
@@ -186,6 +188,67 @@ foreach my $version ( qw ( 1 2 3 ) )  {
             })
          })->then( sub {
             matrix_leave_room_synced( $remote, $room_id );
+         });
+      };
+
+   test "Can receive redactions from regular users over federation in room version $version",
+      # This is basically a regression test for https://github.com/matrix-org/synapse/issues/4532
+      requires => [ local_user_fixture(), remote_user_fixture() ],
+
+      check => sub {
+         my ( $user, $remote ) = @_;
+
+         my ( $room_id, $message_id, $redaction_id );
+
+         matrix_create_room_synced(
+            $user,
+            room_version => $version,
+            invite       => [ $remote->user_id ]
+         )->then( sub {
+            ( $room_id ) = @_;
+
+            matrix_join_room_synced( $remote, $room_id );
+         })->then( sub {
+            matrix_send_room_text_message( $remote, $room_id,
+                body => "Message"
+            );
+         })->then( sub {
+            ( $message_id ) = @_;
+
+            my $to_redact = uri_escape( $message_id );
+
+            do_request_json_for(
+               $remote,
+               method => "POST",
+               uri    => "/r0/rooms/$room_id/redact/$to_redact",
+               content => {},
+             );
+         })->then( sub {
+            ( $redaction_id ) = $_[0]->{event_id};
+
+            log_if_fail "redaction id:", $redaction_id;
+
+            # wait for the redaction to turn up over sync
+            await_sync_timeline_contains( $user, $room_id, check => sub {
+               return $_[0]->{event_id} eq $redaction_id;
+            });
+         })->then( sub {
+            matrix_get_room_messages( $user, $room_id );
+         })->then( sub {
+            my ( $backfilled ) = @_;
+            log_if_fail "backfilled events:", $backfilled;
+
+            # first event should be the redaction
+            my $ev0 = $backfilled->{chunk}[0];
+            assert_eq $ev0->{event_id}, $redaction_id;
+            assert_eq $ev0->{redacts}, $message_id;
+
+            # second event should be the original event
+            my $ev1 = $backfilled->{chunk}[1];
+            assert_eq $ev1->{event_id}, $message_id;
+            assert_eq $ev1->{unsigned}{redacted_by}, $redaction_id;
+
+            Future->done( 1 );
          });
       };
 }
