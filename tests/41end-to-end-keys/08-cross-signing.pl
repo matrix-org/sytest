@@ -1,4 +1,8 @@
-use Future::Utils qw( repeat );
+use Crypt::NaCl::Sodium;
+use MIME::Base64;
+use Protocol::Matrix qw( sign_json );
+
+my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 test "Can upload self-signing keys",
    requires => [ local_user_fixture() ],
@@ -137,6 +141,9 @@ test "local self-signing notifies users",
       my $user_id = $user1->user_id;
       my $device_id = $user1->device_id;
 
+      my ( $self_signing_pubkey, $self_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my $cross_signature;
+
       matrix_sync( $user1 )->then(sub {
          matrix_sync( $user2 );
       })->then( sub {
@@ -186,23 +193,24 @@ test "local self-signing notifies users",
       })->then( sub {
          sync_until_user_in_device_list( $user2, $user1 );
       })->then( sub {
+         my $cross_signed_device = {
+             "user_id" => $user_id,
+             "device_id" => $device_id,
+             "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
+             "keys" => {
+                 "curve25519:".$device_id => "curve25519+key",
+                 "ed25519:".$device_id => "ed25519+key",
+             }
+         };
+         sign_json(
+            $cross_signed_device, secret_key => $self_signing_secret_key,
+            origin => $user_id, key_id => "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+         );
+         log_if_fail "sent signature", $cross_signed_device;
+         $cross_signature = $cross_signed_device->{signatures}->{$user_id}->{"ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"};
          matrix_upload_signatures( $user1, {
              $user_id => {
-                 $device_id => {
-                     "user_id" => $user_id,
-                     "device_id" => $device_id,
-                     "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
-                     "keys" => {
-                         "curve25519:".$device_id => "curve25519+key",
-                         "ed25519:".$device_id => "ed25519+key",
-                     },
-                     "signatures" => {
-                         $user_id => {
-                             "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
-                                 => "cross+signature",
-                         }
-                     }
-                 }
+                 $device_id => $cross_signed_device
              }
          } );
       })->then( sub {
@@ -225,7 +233,7 @@ test "local self-signing notifies users",
          assert_deeply_eq( $content->{device_keys}->{$user_id}->{$device_id}
                            ->{signatures}->{$user_id}, {
             "ed25519:".$device_id => "self+signature",
-            "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk" => "cross+signature",
+            "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk" => $cross_signature,
          } );
 
          matrix_get_keys( $user2, $user_id );
@@ -243,7 +251,7 @@ test "local self-signing notifies users",
          assert_deeply_eq( $content->{device_keys}->{$user_id}->{$device_id}
                            ->{signatures}->{$user_id}, {
             "ed25519:".$device_id => "self+signature",
-            "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk" => "cross+signature",
+            "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk" => $cross_signature,
          } );
 
          Future->done( 1 );
@@ -263,6 +271,10 @@ test "local user-signing notifies users",
       my $device_id = $user1->device_id;
       my $user2_id = $user2->user_id;
 
+      my ( $self_signing_pubkey, $self_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $user_signing_pubkey, $user_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "4TL4AjRYwDVwD3pqQzcor+ez/euOB1/q78aTJ+czDNs" ) );
+      my $cross_signature;
+
       matrix_sync( $user1 )->then(sub {
          matrix_sync( $user2 );
       })->then( sub {
@@ -272,6 +284,19 @@ test "local user-signing notifies users",
 
          matrix_join_room( $user2, $room_id );
       })->then( sub {
+         my $user_signing_key = {
+             # private key: 4TL4AjRYwDVwD3pqQzcor+ez/euOB1/q78aTJ+czDNs
+            "user_id" => $user_id,
+            "usage" => ["user_signing"],
+            "keys" => {
+                "ed25519:Hq6gL+utB4ET+UvD5ci0kgAwsX6qP/zvf8v6OInU5iw"
+                    => "Hq6gL+utB4ET+UvD5ci0kgAwsX6qP/zvf8v6OInU5iw",
+            }
+         };
+         sign_json(
+            $user_signing_key, secret_key => $self_signing_secret_key,
+            origin => $user_id, key_id => "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+         );
          matrix_set_cross_signing_key( $user1, {
              "auth" => {
                  "type"     => "m.login.password",
@@ -287,21 +312,7 @@ test "local user-signing notifies users",
                          => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
                  },
              },
-             "user_signing_key" => {
-                 # private key: 4TL4AjRYwDVwD3pqQzcor+ez/euOB1/q78aTJ+czDNs
-                 "user_id" => $user_id,
-                 "usage" => ["user_signing"],
-                 "keys" => {
-                     "ed25519:Hq6gL+utB4ET+UvD5ci0kgAwsX6qP/zvf8v6OInU5iw"
-                         => "Hq6gL+utB4ET+UvD5ci0kgAwsX6qP/zvf8v6OInU5iw",
-                 },
-                 "signatures" => {
-                    $user_id => {
-                       "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
-                           => "signature+of+user+signing+key"
-                    }
-                 }
-             }
+             "user_signing_key" => $user_signing_key
          });
       })->then( sub {
          matrix_set_cross_signing_key( $user2, {
@@ -325,22 +336,23 @@ test "local user-signing notifies users",
       })->then( sub {
          sync_until_user_in_device_list( $user2, $user2 );
       })->then( sub {
+         my $cross_signed_device = {
+             "user_id" => $user2_id,
+             "usage" => ["self_signing"],
+             "keys" => {
+                 "ed25519:NnHhnqiMFQkq969szYkooLaBAXW244ZOxgukCvm2ZeY"
+                     => "NnHhnqiMFQkq969szYkooLaBAXW244ZOxgukCvm2ZeY",
+             },
+         };
+         sign_json(
+            $cross_signed_device, secret_key => $user_signing_secret_key,
+            origin => $user_id, key_id => "ed25519:Hq6gL+utB4ET+UvD5ci0kgAwsX6qP/zvf8v6OInU5iw"
+         );
+         log_if_fail "sent signature", $cross_signed_device;
+         $cross_signature = $cross_signed_device->{signatures}->{$user_id}->{"ed25519:Hq6gL+utB4ET+UvD5ci0kgAwsX6qP/zvf8v6OInU5iw"};
          matrix_upload_signatures( $user1, {
              $user2_id => {
-                 "NnHhnqiMFQkq969szYkooLaBAXW244ZOxgukCvm2ZeY" => {
-                     "user_id" => $user2_id,
-                     "usage" => ["self_signing"],
-                     "keys" => {
-                         "ed25519:NnHhnqiMFQkq969szYkooLaBAXW244ZOxgukCvm2ZeY"
-                             => "NnHhnqiMFQkq969szYkooLaBAXW244ZOxgukCvm2ZeY",
-                     },
-                     "signatures" => {
-                         $user_id => {
-                             "ed25519:Hq6gL+utB4ET+UvD5ci0kgAwsX6qP/zvf8v6OInU5iw"
-                                 => "cross+signature",
-                         }
-                     }
-                 }
+                 "NnHhnqiMFQkq969szYkooLaBAXW244ZOxgukCvm2ZeY" => $cross_signed_device
              }
          } );
       })->then( sub {
@@ -360,7 +372,7 @@ test "local user-signing notifies users",
          assert_deeply_eq( $content->{self_signing_keys}->{$user2_id}
                            ->{signatures}->{$user_id}, {
              "ed25519:Hq6gL+utB4ET+UvD5ci0kgAwsX6qP/zvf8v6OInU5iw"
-                 => "cross+signature",
+                 => $cross_signature,
          } );
 
          matrix_get_keys( $user2, $user2_id );
