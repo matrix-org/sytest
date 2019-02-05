@@ -71,7 +71,7 @@ test "Can upload self-signing keys",
    };
 
 test "Fails to upload self-signing keys in invalid conditions",
-   requires => [ local_user_fixture() ],
+   requires => [ local_user_fixture(), qw( can_upload_self_signing_keys ) ],
 
    do => sub {
       my ( $user ) = @_;
@@ -130,9 +130,7 @@ test "Fails to upload self-signing keys in invalid conditions",
    };
 
 test "local self-signing notifies users",
-   requires => [ local_user_fixtures( 2 ) ],
-
-   proves => [qw( can_upload_self_signing_keys )],
+   requires => [ local_user_fixtures( 2 ), qw( can_upload_self_signing_keys ) ],
 
    do => sub {
       # when a user uploads a self-signing key or uploads a new signature,
@@ -259,9 +257,7 @@ test "local self-signing notifies users",
    };
 
 test "local user-signing notifies users",
-   requires => [ local_user_fixtures( 2 ) ],
-
-   proves => [qw( can_upload_self_signing_keys )],
+   requires => [ local_user_fixtures( 2 ), qw( can_upload_self_signing_keys ) ],
 
    do => sub {
       # when a user uploads a user-signing key or uploads a new signature,
