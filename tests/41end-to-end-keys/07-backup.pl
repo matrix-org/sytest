@@ -40,6 +40,54 @@ test "Can create backup version",
       });
    };
 
+test "Can update backup version",
+   requires => [ $fixture ],
+
+   proves => [qw( can_create_backup_version )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      my $version;
+
+      matrix_create_key_backup( $user )->then( sub {
+         my ( $content ) = @_;
+         log_if_fail "Create backup: ", $content;
+
+         assert_json_keys( $content, "version" );
+         $version = $content->{version};
+
+         do_request_json_for(
+            $user,
+            method  => "PUT",
+            uri     => "/unstable/room_keys/version/$version",
+            content => {
+               algorithm => "m.megolm_backup.v1",
+               auth_data => "adifferentopaquestring",
+            }
+         );
+      })->then( sub {
+         matrix_get_key_backup_info( $user, $version );
+      })->then( sub {
+         my ( $content ) = @_;
+         log_if_fail "Get backup info: ", $content;
+
+         assert_json_keys( $content, "algorithm" );
+
+         assert_json_keys( $content, "auth_data" );
+
+         $content->{algorithm} eq "m.megolm_backup.v1" or
+            die "Expected algorithm to match submitted data";
+
+         $content->{auth_data} eq "adifferentopaquestring" or
+            die "Expected auth_data to match submitted data";
+
+         assert_eq( $content->{version}, $version );
+
+         Future->done(1);
+      });
+   };
+
 test "Responds correctly when backup is empty",
    requires => [ $fixture, qw( can_create_backup_version ) ],
 
