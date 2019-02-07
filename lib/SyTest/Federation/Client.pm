@@ -119,7 +119,7 @@ sub send_transaction
    $self->do_request_json(
       method   => "PUT",
       hostname => $params{destination},
-      uri      => "/send/$ts/",
+      uri      => "/v1/send/$ts/",
 
       content => \%transaction,
    );
@@ -176,7 +176,7 @@ sub join_room
    $self->do_request_json(
       method   => "GET",
       hostname => $server_name,
-      uri      => "/make_join/$room_id/$user_id"
+      uri      => "/v1/make_join/$room_id/$user_id"
    )->then( sub {
       my ( $body ) = @_;
 
@@ -197,7 +197,7 @@ sub join_room
       $self->do_request_json(
          method   => "PUT",
          hostname => $server_name,
-         uri      => "/send_join/$room_id/$member_event{event_id}",
+         uri      => "/v1/send_join/$room_id/$member_event{event_id}",
 
          content => \%member_event,
       )->then( sub {
@@ -253,7 +253,7 @@ sub get_remote_forward_extremities
    $self->do_request_json(
       method   => "GET",
       hostname => $server_name,
-      uri      => "/make_join/$room_id/$user_id",
+      uri      => "/v1/make_join/$room_id/$user_id",
    )->then( sub {
       my ( $resp ) = @_;
 

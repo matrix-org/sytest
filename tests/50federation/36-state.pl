@@ -4,7 +4,7 @@ sub get_state_ids_from_server {
    return $outbound_client->do_request_json(
       method   => "GET",
       hostname => $server,
-      uri      => "/state_ids/$room_id/",
+      uri      => "/v1/state_ids/$room_id/",
       params   => { event_id => $event_id },
    );
 }
@@ -32,7 +32,7 @@ test "Inbound federation can get state for a room",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/state/$room_id/",
+            uri      => "/v1/state/$room_id/",
             params   => {
                event_id => $room->{prev_events}[-1]->{event_id},
             }
@@ -635,7 +635,7 @@ test "Getting state checks the events requested belong to the room",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/state/$pub_room_id/",
+            uri      => "/v1/state/$pub_room_id/",
 
             params => {
                event_id => $priv_event_id,
@@ -677,7 +677,7 @@ test "Getting state IDs checks the events requested belong to the room",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/state_ids/$pub_room_id/",
+            uri      => "/v1/state_ids/$pub_room_id/",
 
             params => {
                event_id => $priv_event_id,
