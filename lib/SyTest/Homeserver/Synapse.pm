@@ -220,12 +220,6 @@ sub start
       }
    }
 
-   my $pythonpath = (
-      exists $ENV{PYTHONPATH}
-      ? "$self->{synapse_dir}:$ENV{PYTHONPATH}"
-      : "$self->{synapse_dir}"
-   );
-
    my @synapse_command = ( $self->{python} );
 
    if( $self->{coverage} ) {
@@ -248,7 +242,6 @@ sub start
    my @command = $self->wrap_synapse_command( @synapse_command );
 
    my $env = {
-      "PYTHONPATH" => $pythonpath,
       "PATH" => $ENV{PATH},
       "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
    };
