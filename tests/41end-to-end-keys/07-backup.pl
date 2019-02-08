@@ -64,6 +64,7 @@ test "Can update backup version",
             content => {
                algorithm => "m.megolm_backup.v1",
                auth_data => "adifferentopaquestring",
+               version => $version
             }
          );
       })->then( sub {
