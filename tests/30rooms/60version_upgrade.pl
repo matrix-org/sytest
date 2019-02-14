@@ -426,7 +426,7 @@ test "/upgrade copies ban events to the new room",
          $creator, $room_id,
          type => "m.room.member",
          content => $content,
-         state_key => "@bob:matrix.org",
+         state_key => '@bob:matrix.org',
       )->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -446,7 +446,7 @@ test "/upgrade copies ban events to the new room",
          my $room = $sync_body->{rooms}{join}{$new_room_id};
 
          my $event = first {
-            $_->{type} eq "m.room.member" && $_->{state_key} eq "@bob:matrix.org",
+            $_->{type} eq "m.room.member" && $_->{state_key} eq '@bob:matrix.org',
          } @{ $room->{timeline}->{events} };
 
          log_if_fail "Content", $event->{content};
