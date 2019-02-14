@@ -418,7 +418,7 @@ test "/upgrade copies ban events to the new room",
       my ( $creator, $room_id ) = @_;
       my ( $new_room_id );
 
-      my $content => {
+      my $content = {
          membership => "ban",
       };
 
