@@ -58,6 +58,26 @@ test "Inbound federation can get state for a room",
       });
    };
 
+
+test "Inbound federation requires state_id as a mandatory parameter",
+   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+                 local_user_and_room_fixtures(),
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      my $local_server_name = $outbound_client->server_name;
+
+      $outbound_client->do_request_json(
+         method   => "GET",
+         hostname => $first_home_server,
+         uri      => "/v1/state/notaroombutitdoesntmatter/",
+      ))->main::expect_http_400(),
+   };
+
+
 test "Inbound federation can get state_ids for a room",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures(),
