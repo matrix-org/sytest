@@ -474,7 +474,7 @@ sub matrix_get_user_dir_synced
    })->then( sub {
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/r0/user_directory/search",
+         uri     => "/unstable/user_directory/search",
          content => {
             search_term => $search_term,
          }
