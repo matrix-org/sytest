@@ -59,7 +59,7 @@ test "Inbound federation can get state for a room",
    };
 
 
-test "Inbound federation requires state_id as a mandatory parameter",
+test "Inbound federation of state requires event_id as a mandatory paramater",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
@@ -121,6 +121,24 @@ test "Inbound federation can get state_ids for a room",
 
          Future->done(1);
       });
+   };
+
+test "Inbound federation of state_ids requires event_id as a mandatory paramater",
+   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+                 local_user_and_room_fixtures(),
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      my $local_server_name = $outbound_client->server_name;
+
+      $outbound_client->do_request_json(
+         method   => "GET",
+         hostname => $first_home_server,
+         uri      => "/v1/state_ids/notaroombutitdoesntmatter/",
+      )->main::expect_http_400();
    };
 
 test "Federation rejects inbound events where the prev_events cannot be found",
