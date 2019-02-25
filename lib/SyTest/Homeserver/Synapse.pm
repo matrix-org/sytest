@@ -102,7 +102,7 @@ sub start
    my %db_config = $self->_get_dbconfig(
       type => 'sqlite',
       args => {
-         database => ":memory:", #"$hs_dir/homeserver.db",
+         database => "$hs_dir/homeserver.db",
       },
    );
 

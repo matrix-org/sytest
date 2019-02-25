@@ -16,7 +16,7 @@ test "User in shared private room does appear in user directory",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $user2, $displayname );
       })->then( sub {
@@ -50,7 +50,7 @@ test "User in shared private room does appear in user directory until leave",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $user2, $displayname );
       })->then( sub {
@@ -61,7 +61,7 @@ test "User in shared private room does appear in user directory until leave",
          any { $_->{user_id} eq $user1->user_id } @{ $body->{results} }
             or die "user not in list";
 
-         matrix_leave_room( $user2, $room_id );
+         matrix_leave_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $user2, $displayname );
       })->then( sub {
@@ -94,7 +94,7 @@ test "User in dir while user still shares private rooms",
       })->then( sub {
          ( $room_id1 ) = @_;
 
-         matrix_join_room( $user2, $room_id1 );
+         matrix_join_room_synced( $user2, $room_id1 );
       })->then( sub {
          matrix_create_room( $user1,
             preset => "private_chat", invite => [ $user2->user_id ],
@@ -102,7 +102,7 @@ test "User in dir while user still shares private rooms",
       })->then( sub {
          ( $room_id2 ) = @_;
 
-         matrix_join_room( $user2, $room_id2 );
+         matrix_join_room_synced( $user2, $room_id2 );
       })->then( sub {
          matrix_get_user_dir_synced( $user2, $displayname );
       })->then( sub {
@@ -113,7 +113,7 @@ test "User in dir while user still shares private rooms",
          any { $_->{user_id} eq $user1->user_id } @{ $body->{results} }
             or die "user not in list";
 
-         matrix_leave_room( $user2, $room_id1 );
+         matrix_leave_room_synced( $user2, $room_id1 );
       })->then( sub {
          matrix_get_user_dir_synced( $user2, $displayname );
       })->then( sub {
