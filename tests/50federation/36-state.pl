@@ -74,7 +74,7 @@ test "Inbound federation requires state_id as a mandatory parameter",
          method   => "GET",
          hostname => $first_home_server,
          uri      => "/v1/state/notaroombutitdoesntmatter/",
-      ))->main::expect_http_400();
+      )->main::expect_http_400();
    };
 
 
