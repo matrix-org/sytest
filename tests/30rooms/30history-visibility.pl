@@ -534,7 +534,7 @@ test "Only see history_visibility changes on boundaries",
       });
    };
 
-test "Backfill works correctly with history visilibty set to joined",
+test "Backfill works correctly with history visibility set to joined",
    requires => [ magic_local_user_and_room_fixtures( with_alias => 1), local_user_fixture(), remote_user_fixture() ],
 
    do => sub {
@@ -542,16 +542,19 @@ test "Backfill works correctly with history visilibty set to joined",
 
       matrix_set_room_history_visibility( $user, $room_id, "joined" )
       ->then( sub {
+         # Send some m.room.message that the remote server will not be able to see
          repeat( sub {
             my $msgnum = $_[0];
 
             matrix_send_room_text_message( $user, $room_id, body => "Message $msgnum" );
-         }, foreach => [ 1 .. 100 ]);
+         }, foreach => [ 1 .. 10 ]);
       })->then( sub {
          matrix_join_room( $another_user, $room_alias );
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "2" );
       })->then( sub {
+         # We now send a state event to ensure they're correctly handled in
+         # backfill, this was a bug in synapse (c.f. #1943)
          matrix_join_room( $remote_user, $room_alias );
       })->then( sub {
          matrix_get_room_messages( $remote_user, $room_id, limit => 10 )
@@ -560,12 +563,12 @@ test "Backfill works correctly with history visilibty set to joined",
          log_if_fail "messages body", $body;
 
          my $chunk = $body->{chunk};
-         @$chunk == 1 or die "Expected 1 message";
 
-         my $event = $chunk->[0];
-
-         assert_eq( $event->{type}, "m.room.member" );
-         assert_eq( $event->{state_key}, $remote_user->user_id );
+         # Check we can't see any of the message events
+         foreach my $event ( @$chunk ) {
+            $event->{type} eq "m.room.message"
+               and die "Remote user should not see any message events";
+         }
 
          Future->done( 1 );
       })
