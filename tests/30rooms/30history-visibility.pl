@@ -549,12 +549,12 @@ test "Backfill works correctly with history visibility set to joined",
             matrix_send_room_text_message( $user, $room_id, body => "Message $msgnum" );
          }, foreach => [ 1 .. 10 ]);
       })->then( sub {
+         # We now send a state event to ensure they're correctly handled in
+         # backfill. This was a bug in synapse (c.f. #1943)
          matrix_join_room( $another_user, $room_alias );
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "2" );
       })->then( sub {
-         # We now send a state event to ensure they're correctly handled in
-         # backfill, this was a bug in synapse (c.f. #1943)
          matrix_join_room( $remote_user, $room_alias );
       })->then( sub {
          matrix_get_room_messages( $remote_user, $room_id, limit => 10 )
