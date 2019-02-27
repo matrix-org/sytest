@@ -17,7 +17,7 @@ test "Outbound federation can backfill events",
       );
 
       # Create some past messages to backfill from
-      $room->create_event(
+      $room->create_and_insert_event(
          type => "m.room.message",
 
          sender  => $creator_id,
@@ -157,7 +157,7 @@ test "Inbound federation can backfill events",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/backfill/$room_id/",
+            uri      => "/v1/backfill/$room_id/",
 
             params => {
                v     => $join_event->{prev_events}[0][0],
@@ -183,6 +183,61 @@ test "Inbound federation can backfill events",
          assert_eq( $events->[0]{event_id}, $join_event->{prev_events}[0][0],
             'event_id of first returned event' );
 
+         Future->done(1);
+      });
+   };
+
+test "Backfill checks the events requested belong to the room",
+   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+                 local_user_and_room_fixtures(),
+                 local_user_and_room_fixtures(),
+                 federation_user_id_fixture() ],
+   do => sub {
+      my ( $outbound_client, $info, $priv_creator, $priv_room_id,
+           $pub_creator, $pub_room_id, $fed_user_id ) = @_;
+      my $first_home_server = $info->server_name;
+
+      my $local_server_name = $outbound_client->server_name;
+
+      my $priv_join_event;
+
+      # Join the public room, but don't touch the private one
+      $outbound_client->join_room(
+         server_name => $first_home_server,
+         room_id     => $pub_room_id,
+         user_id     => $fed_user_id,
+      )->then( sub {
+         # Send an event into the private room
+         matrix_send_room_text_message( $priv_creator, $priv_room_id,
+            body => "Hello world",
+         )
+      })->then( sub {
+         my ( $priv_event_id ) = @_;
+
+         # We specifically use the public room, but the private event ID
+         # That's the point of this test.
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $first_home_server,
+            uri      => "/v1/backfill/$pub_room_id/",
+
+            params => {
+               v     => $priv_event_id,
+               limit => 1,
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Backfill response", $body;
+
+         assert_json_keys( $body, qw( origin pdus ));
+
+         assert_eq( $body->{origin}, $first_home_server,
+            'body origin' );
+         assert_json_list( my $events = $body->{pdus} );
+
+         # the response should be empty.
+         assert_eq( 0, scalar @{$body->{pdus}}, 'response should be empty' );
          Future->done(1);
       });
    };

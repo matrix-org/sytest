@@ -1,6 +1,3 @@
-use Future::Utils qw( try_repeat_until_success );
-
-
 test "Inbound federation can get public room list",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures(),
@@ -29,11 +26,11 @@ test "Inbound federation can get public room list",
           },
         );
       })->then( sub {
-         try_repeat_until_success( sub {
+         repeat_until_true {
             $outbound_client->do_request_json(
                method   => "GET",
                hostname => $first_home_server,
-               uri      => "/publicRooms",
+               uri      => "/v1/publicRooms",
             )->then( sub {
                my ( $body ) = @_;
 
@@ -41,11 +38,8 @@ test "Inbound federation can get public room list",
 
                assert_json_keys( $body, qw( chunk ) );
 
-               any { $_->{room_id} eq $room_id } @{ $body->{chunk} }
-                  or die "Room not in returned list";
-
-               Future->done( 1 );
+               Future->done( any { $_->{room_id} eq $room_id } @{ $body->{chunk} } );
             })
-         })
+         };
       });
    };

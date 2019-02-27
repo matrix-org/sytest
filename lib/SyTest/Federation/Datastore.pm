@@ -7,7 +7,7 @@ use Carp;
 
 use Protocol::Matrix qw( sign_event_json );
 
-use List::MoreUtils qw( uniq );
+use List::Util 1.45 qw( uniq );
 use Time::HiRes qw( time );
 
 use SyTest::Federation::Room;
@@ -122,6 +122,7 @@ sub put_key
 =head2 next_event_id
 
    $event_id = $store->next_event_id
+   $event_id = $store->next_event_id( "suffix" )
 
 Allocates and returns a new string event ID for a unique event on this server.
 
@@ -130,7 +131,12 @@ Allocates and returns a new string event ID for a unique event on this server.
 sub next_event_id
 {
    my $self = shift;
-   return sprintf "\$%d:%s", $self->{next_event_id}++, $self->server_name;
+   my ( $suffix ) = @_;
+
+   my $localpart = "" . $self->{next_event_id}++;
+   $localpart .= "_$suffix" if $suffix;
+
+   return sprintf '$%s:%s', $localpart, $self->server_name;
 }
 
 =head2 get_event
@@ -186,12 +192,17 @@ sub create_event
          for qw( prev_state );
    }
 
+   my $event_id = delete $fields{event_id};
+   if( not defined $event_id ) {
+      $event_id = $self->next_event_id( delete $fields{event_id_suffix} );
+   }
+
    my $event = {
       %fields,
 
-      event_id         => $self->next_event_id,
+      event_id         => $event_id,
       origin           => $self->server_name,
-      origin_server_ts => int( time() * 1000 ),
+      origin_server_ts => JSON::number( int( time() * 1000 )),
    };
 
    $self->sign_event( $event );

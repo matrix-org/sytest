@@ -1,0 +1,14 @@
+FROM matrixdotorg/sytest:latest
+
+RUN apt-get -qq install -y python python-dev python-virtualenv
+
+ENV PYTHON=python2
+
+# /src is where we expect Synapse to be
+RUN mkdir /src
+
+# The dockerfile context, when ran by the buildscript, will actually be the
+# repo root, not the docker folder
+ADD docker/synapse_sytest.sh /synapse_sytest.sh
+RUN dos2unix /synapse_sytest.sh
+ENTRYPOINT ["/synapse_sytest.sh"]

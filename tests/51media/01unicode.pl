@@ -7,14 +7,18 @@ my $FILENAME_ENCODED = uc uri_escape( $FILENAME );
 my $content_id;
 
 my $PROXY_SERVER = fixture(
+   name => 'PROXY_SERVER',
+
    requires => [ $main::HOMESERVER_INFO[0] ],
 
    setup => sub {
       my ( $server_info ) = @_;
-      my ( $host, $port ) = ( $server_info->server_name =~ /^(.*):([^:]*)$/ );
+
+      $OUTPUT->diag( "Starting proxy server" );
+
       my $listener = SyTest::TCPProxy->new(
-         host   => $host,
-         port   => $port,
+         host   => $server_info->federation_host,
+         port   => $server_info->federation_port,
          output => $OUTPUT,
       );
 

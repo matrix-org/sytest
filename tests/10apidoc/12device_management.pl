@@ -1,5 +1,4 @@
 use JSON qw( decode_json );
-use Future::Utils qw( try_repeat_until_success );
 
 our @EXPORT = qw( matrix_get_device matrix_set_device_display_name matrix_delete_device );
 
@@ -9,7 +8,7 @@ sub matrix_get_device {
    return do_request_json_for(
       $user,
       method => "GET",
-      uri    => "/unstable/devices/${device_id}",
+      uri    => "/r0/devices/${device_id}",
    );
 }
 
@@ -19,7 +18,7 @@ sub matrix_set_device_display_name {
     return do_request_json_for(
         $user,
         method => "PUT",
-        uri    => "/unstable/devices/${device_id}",
+        uri    => "/r0/devices/${device_id}",
         content => {
             display_name => $display_name,
         },
@@ -32,7 +31,7 @@ sub matrix_delete_device {
     return do_request_json_for(
         $user,
         method  => "DELETE",
-        uri     => "/unstable/devices/${device_id}",
+        uri     => "/r0/devices/${device_id}",
         content => $request_body,
     );
 }
@@ -73,7 +72,7 @@ test "GET /device/{deviceId} gives a 404 for unknown devices",
       do_request_json_for(
          $user,
          method => "GET",
-         uri    => "/unstable/devices/unknown_device",
+         uri    => "/r0/devices/unknown_device",
       )->main::expect_http_404;
    };
 
@@ -107,7 +106,7 @@ test "GET /devices",
           do_request_json_for(
              $user,
              method => "GET",
-             uri => "/unstable/devices",
+             uri => "/r0/devices",
           );
       })->then( sub {
          my ( $devices ) = @_;
@@ -153,7 +152,7 @@ test "PUT /device/{deviceId} updates device fields",
          do_request_json_for(
             $user,
             method => "PUT",
-            uri    => "/unstable/devices/${DEVICE_ID}",
+            uri    => "/r0/devices/${DEVICE_ID}",
             content => {
                display_name => "new display name",
             },
@@ -181,7 +180,7 @@ test "PUT /device/{deviceId} gives a 404 for unknown devices",
       do_request_json_for(
          $user,
          method => "PUT",
-         uri    => "/unstable/devices/unknown_device",
+         uri    => "/r0/devices/unknown_device",
          content => {
             display_name => "new display name",
          },
@@ -253,20 +252,69 @@ test "DELETE /device/{deviceId}",
          matrix_get_device( $user, $DEVICE_ID )
             ->main::expect_http_404;
       })->then( sub {
-         my $delay = 0.1;
          # our access token should be invalidated
-         try_repeat_until_success {
+         repeat_until_true {
             do_request_json_for(
                $other_login,
                method  => "GET",
                uri     => "/r0/sync",
-            )->main::expect_http_401
-            ->else_with_f( sub {
-               my ( $f ) = @_; delay( $delay *= 1.5 )->then( sub { $f } );
-            })
+            )->main::check_http_code(
+               401 => "ok",
+               200 => "redo",
+            );
          };
       });
    };
+
+
+# this test guards against the situation where a malicious user Eve has stolen
+# an access_token for a genuine user Alice, and now wants to deactivate all of
+# Alice's other devices. This should require Alice's username/password.
+#
+test "DELETE /device/{deviceId} requires UI auth user to match device owner",
+   requires => [
+      local_user_fixture( with_events => 0 ),
+      local_user_fixture( with_events => 0 ),
+   ],
+
+   do => sub {
+      my ( $alice, $eve ) = @_;
+
+      my $DEVICE_ID = "login_device";
+
+      matrix_login_again_with_user(
+         $alice,
+         device_id => $DEVICE_ID,
+         initial_device_display_name => "device display",
+      )->then( sub {
+         my ( $other_login ) = @_;
+
+         # Eve now uses alice's stolen access token to try to delete the second device.
+         matrix_delete_device( $alice, $DEVICE_ID, {
+             auth => {
+                 type     => "m.login.password",
+                 user     => $eve->user_id,
+                 password => $eve->password,
+             },
+         })->main::expect_http_403;
+      })->then( sub {
+         # the device should still exist
+         matrix_get_device( $alice, $DEVICE_ID );
+      })->then( sub {
+         #  but it should work when we use alice's userid/pass.
+         matrix_delete_device( $alice, $DEVICE_ID, {
+             auth => {
+                 type     => "m.login.password",
+                 user     => $alice->user_id,
+                 password => $alice->password,
+             },
+         });
+      })->then( sub {
+         # the device should be deleted.
+         matrix_get_device( $alice, $DEVICE_ID )->main::expect_http_404;
+      });
+   };
+
 
 test "DELETE /device/{deviceId} with no body gives a 401",
    requires => [ local_user_fixture( with_events => 0 ) ],

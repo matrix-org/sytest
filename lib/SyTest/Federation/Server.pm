@@ -70,19 +70,25 @@ sub on_request
    my $self = shift;
    my ( $req ) = @_;
 
-   my $path = $req->path;
-   unless( $path =~ s{^/_matrix/}{} ) {
+   my $uri = $req->as_http_request->uri;
+   my @pc = $uri->path_segments;
+
+   # Remove the initial empty component as it ought to be an absolute request
+   shift @pc if $pc[0] eq "";
+
+   unless( $pc[0] eq "_matrix" ) {
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
       return;
    }
+   shift @pc;
 
    $self->adopt_future(
       ( # 'key' requests don't need to be signed
-         $path =~ m{^key/}
+         $pc[0] eq "key"
             ? Future->done
             : $self->_check_authorization( $req )
       )->then( sub {
-         $self->_dispatch( $path, $req )
+         $self->_dispatch( $req, @pc )
       })->else_with_f( sub {
          my ( $f, undef, $name ) = @_;
          return $f unless $name and $name eq "matrix_auth";
@@ -179,9 +185,8 @@ sub _check_authorization
 sub _dispatch
 {
    my $self = shift;
-   my ( $path, $req ) = @_;
+   my ( $req, @pc ) = @_;
 
-   my @pc = split m{/}, $path;
    my @trial;
    while( @pc ) {
       push @trial, shift @pc;
@@ -255,7 +260,7 @@ sub on_request_federation_v1_event
 
    Future->done( json => {
       origin           => $self->server_name,
-      origin_server_ts => $self->time_ms,
+      origin_server_ts => JSON::number( $self->time_ms ),
       pdus             => [
          $event,
       ]
@@ -395,7 +400,7 @@ __PACKAGE__->mk_await_request_pair(
 );
 
 __PACKAGE__->mk_await_request_pair(
-   state_ids => [qw( :room_id )],
+   state_ids => [qw( :room_id ?event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
@@ -404,6 +409,10 @@ __PACKAGE__->mk_await_request_pair(
 
 __PACKAGE__->mk_await_request_pair(
    get_missing_events => [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   event_auth => [qw( :room_id :event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(

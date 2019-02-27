@@ -50,10 +50,6 @@ is described in more detail in the following sections.
     Provides an ``ARRAY`` reference giving a list of named requirements and
     fixture objects.
 
-``critical``
-    If true and the test fails, the entire test run will bail out at this
-    point; no further tests will be attempted at all.
-
 A call to ``test`` is a simplified version of ``multi_test`` which produces
 only a single line of test output indicating success or failure automatically.
 A call to ``multi_test`` can make use of additional functions within the body
@@ -199,6 +195,14 @@ main kinds of fixtures:
 - Fixtures that provide access to some resource that is created and destroyed
   over the lifetime of the test. These are fixtures that have a ``teardown``
   block.
+
+In general, if the future returned by ``setup`` fails, then any tests which
+require that fixture will be marked as failures. However, if the future fails
+with a reason beginning with the special string ``SKIP``, then any tests which
+require it are instead skipped. This can be used to differentiate between tests
+which we were unable to run due to constraints when setting up the test
+environment, as opposed to those where setup steps that should have succeeded
+did not.
 
 The intented use for fixtures is that test files will provide wrapper functions
 that create a new fixture object to encapsulate some common setup pattern that

@@ -101,16 +101,22 @@ test "/joined_members return joined members",
                assert_json_keys( $body, qw( joined ));
                assert_json_object( my $members = $body->{joined} );
 
-               assert_deeply_eq( $members, {
-                  $creator->user_id => {
+               # N.B. originally we asserted that the joined user must have
+               # no display_name or avatar_url, but since we nowadays let
+               # servers define sensible defaults for their users, this
+               # has been relaxed.
+
+               assert_deeply_eq(
+                  [ sort keys %$members ],
+                  [ sort ($creator->user_id, $user_joined->user_id) ]
+               );
+               assert_deeply_eq(
+                  $members->{$creator->user_id},
+                  {
                      display_name => $display_name,
                      avatar_url   => $avatar_url,
-                  },
-                  $user_joined->user_id => {
-                     display_name => undef,
-                     avatar_url   => undef,
-                  },
-               } );
+                  }
+               );
 
                Future->done(1);
             });

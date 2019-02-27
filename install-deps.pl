@@ -5,16 +5,30 @@ use warnings;
 
 use Getopt::Long;
 
+use CPAN;
+
 GetOptions(
+   'T|notest' => \my $NOTEST,
    'n|dryrun' => \my $DRYRUN,
 ) or exit 1;
 
-sub is_installed
+sub check_installed
 {
-   my ( $mod, $want_ver ) = @_;
+   my ( $mod, $want_ver, %opts ) = @_;
 
-   ( my $modfile = "$mod.pm" ) =~ s{::}{/}g;
-   return 0 unless( eval { require $modfile; 1 } );
+   # we do the import via a subprocess. The main reason for this is that, as
+   # things get installed, the number of directories to be scanned increases
+   # (for example, we may add architecture-dependent directories), and perl
+   # only checks for these to add to @INC at startup.
+   #
+   # There are other benefits in doing so:
+   #  - we don't pollute the installation process with lots of random modules
+   #  - we ensure that each module really is installable in its own right.
+
+   my $res = `$^X -M$mod -e 1 2>&1`;
+   if( $? != 0 ) {
+      die "unable to import $mod: $res";
+   }
 
    defined $want_ver or return 1;
    unless( $want_ver =~ s/^>=\s+// ) {
@@ -22,30 +36,52 @@ sub is_installed
       return 1;
    }
 
-   my $inst_ver = eval do { no strict 'refs'; ${"$mod\:\:VERSION"} };
-
-   return $inst_ver >= $want_ver;
+   my $inst_ver = `$^X -M$mod -e 'print \$${mod}::VERSION'`;
+   if( $inst_ver lt $want_ver ) {
+      die "$mod: got $inst_ver, want $want_ver\n";
+   }
+   return 1;
 }
 
 sub requires
 {
    my ( $mod, $ver ) = @_;
 
-   is_installed( $mod, $ver ) and return;
+   eval { check_installed( $mod, $ver ) } and return;
 
    # TODO: check that some location is user-writable in @INC, and that it appears
    # somehow in PERL_{MB,MM}_OPT
 
    if( !$DRYRUN ) {
-      system( $^X, "-MCPAN", "-e", qq(install "$mod") ) == 0 and return;
+      print STDERR "**** Installing $mod ****\n";
 
-      print STDERR "Failed to install $mod\n";
-      exit $? >> 8;
-   }
-   else {
+      if( $NOTEST ) {
+         CPAN::Shell->notest('install', $mod);
+      } else {
+         CPAN::Shell->install($mod);
+      }
+
+      if( not eval { check_installed( $mod, $ver ) } ) {
+         print STDERR "Failed to import $mod even after installing: $@\n";
+         exit 1;
+      }
+   } else {
       print qq($^X -MCPAN -e 'install "$mod"'\n);
    }
-
 }
 
-do "cpanfile";
+# $CPAN::DEBUG=2047;
+
+# load the config before we override things
+CPAN::HandleConfig->load;
+
+# tell CPAN to halt on first failure, to avoid hiding the error with errors
+# from things that are now certain to fail
+$CPAN::Config->{halt_on_failure} = 1;
+
+
+# Alien::Sodium will think it is building for javascript if the EMSCRIPTEN env
+# var is set.
+delete $ENV{EMSCRIPTEN};
+
+do "./cpanfile";

@@ -2,7 +2,7 @@ use Future::Utils qw( repeat try_repeat );
 
 
 multi_test "Check that event streams started after a client joined a room work (SYT-1)",
-   requires => [ local_user_fixture( with_events => 0 ),
+   requires => [ local_user_fixture(),
       qw( can_create_private_room can_send_message )
    ],
 
@@ -43,7 +43,7 @@ multi_test "Check that event streams started after a client joined a room work (
 
 
 test "Event stream catches up fully after many messages",
-   requires => [ local_user_fixture( with_events => 0 ),
+   requires => [ local_user_fixture(),
                  qw( can_send_message )],
 
    do => sub {

@@ -47,14 +47,12 @@ test "Outbound federation can send invites",
       );
    };
 
-test "Inbound federation can receive invites",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
+test "Inbound federation can receive invites via v1 API",
+   requires => [ local_user_fixture( with_events => 1 ), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $user, $inbound_server, $outbound_client, $creator_id ) = @_;
-
-      my $first_home_server = $user->http->server_name;
+      my ( $user, $inbound_server, $creator_id ) = @_;
 
       my $datastore = $inbound_server->datastore;
 
@@ -67,17 +65,78 @@ test "Inbound federation can receive invites",
          creator => $creator_id,
       );
 
-      invite_server( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server );
+      invite_server_v1( $room, $creator_id, $user, $inbound_server );
    };
 
 
+test "Inbound federation can receive invites via v2 API",
+   requires => [ local_user_fixture( with_events => 1 ), $main::INBOUND_SERVER,
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $datastore = $inbound_server->datastore;
+
+      my $room = SyTest::Federation::Room->new(
+         datastore => $datastore,
+      );
+
+      $room->create_initial_events(
+         server  => $inbound_server,
+         creator => $creator_id,
+      );
+
+      invite_server_v2( $room, $creator_id, $user, $inbound_server );
+   };
+
+
+=head2 invite_server_v1
+
+   invite_server_v1( $room, $creator_id, $user, $inbound_server )
+
+Invite a server using the V1 API. See invite_server
+
+=cut
+
+sub invite_server_v1
+{
+   invite_server( @_, \&do_v1_invite_request )
+}
+
+
+=head2 invite_server_v2
+
+   invite_server_v1( $room, $creator_id, $user, $inbound_server )
+
+Invite a server using the V2 API. See invite_server
+
+=cut
+
+sub invite_server_v2
+{
+   invite_server( @_, \&do_v2_invite_request )
+}
+
+=head2 invite_server
+
+   invite_server( $room, $creator_id, $user, $inbound_server, $do_invite_request )
+
+Invite a server into the room using the given `do_invite_request` parameter to
+actually send the invite request
+
+=cut
+
 sub invite_server
 {
-   my ( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server ) = @_;
+   my ( $room, $creator_id, $user, $inbound_server, $do_invite_request ) = @_;
+
+   my $outbound_client = $inbound_server->client;
+   my $first_home_server = $user->http->server_name;
 
    my $room_id = $room->room_id;
 
-   my $invitation = $room->create_event(
+   my $invitation = $room->create_and_insert_event(
      type => "m.room.member",
 
      content   => { membership => "invite" },
@@ -106,23 +165,10 @@ sub invite_server
          Future->done(1);
      }),
 
-     $outbound_client->do_request_json(
-         method   => "PUT",
-         hostname => $first_home_server,
-         uri      => "/invite/$room_id/$invitation->{event_id}",
-
-         content => $invitation,
+     $do_invite_request->(
+         $room, $user, $inbound_server, $invitation,
      )->then( sub {
          my ( $response ) = @_;
-
-         # $response seems to arrive with an extraneous layer of wrapping as
-         # the result of a synapse implementation bug (SYN-490).
-         if( ref $response eq "ARRAY" ) {
-            $response->[0] == 200 or
-               die "Expected first response element to be 200";
-
-            $response = $response->[1];
-         }
 
          log_if_fail "send invite response", $response;
 
@@ -141,51 +187,153 @@ sub invite_server
    );
 }
 
+=head2 do_v1_invite_request
 
-test "Inbound federation can receive invite and reject when remote errors",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
-                 federation_user_id_fixture() ],
+   do_v1_invite_request( $room, $user, $inbound_server, $invitation )
 
-   do => sub {
-      my ( $user, $inbound_server, $outbound_client, $creator_id ) = @_;
+Send an invite event via the V1 API
 
-      my $first_home_server = $user->http->server_name;
+=cut
 
-      my $datastore = $inbound_server->datastore;
+sub do_v1_invite_request
+{
+   my ( $room, $user, $inbound_server, $invitation ) = @_;
 
-      my $room = SyTest::Federation::Room->new(
-         datastore => $datastore,
-      );
+   my $outbound_client = $inbound_server->client;
+   my $first_home_server = $user->http->server_name;
+   my $room_id = $room->room_id;
 
-      $room->create_initial_events(
-         server  => $inbound_server,
-         creator => $creator_id,
-      );
+   $outbound_client->do_request_json(
+      method   => "PUT",
+      hostname => $first_home_server,
+      uri      => "/v1/invite/$room_id/$invitation->{event_id}",
 
-      my $room_id = $room->room_id;
+      content => $invitation,
+   )->then( sub {
+      my ( $response ) = @_;
 
-      invite_server( $room, $creator_id, $user, $inbound_server, $outbound_client, $first_home_server )
-      ->then( sub {
-         Future->needs_all(
-            $inbound_server->await_request_make_leave( $room_id, $user->user_id )->then( sub {
-               my ( $req, undef ) = @_;
+      # $response arrives with an extraneous layer of wrapping as the result of
+      # a synapse implementation bug (matrix-org/synapse#1383).
+      (ref $response eq "ARRAY") or die "V1 invite response must be an array";
 
-               assert_eq( $req->method, "GET", 'request method' );
+      $response->[0] == 200 or
+         die "Expected first response element to be 200";
 
-               $req->respond_json( {}, code => 403 );
+      $response = $response->[1];
 
-               Future->done;
-            }),
-            matrix_leave_room( $user, $room_id )
-         )
-      })->then( sub {
-         matrix_sync( $user );
-      })->then( sub {
-         my ( $body ) = @_;
+      Future->done( $response )
+   })
+}
 
-         log_if_fail "Sync body", $body;
-         assert_json_object( $body->{rooms}{invite} );
-         keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
-         Future->done(1);
-      });
-   };
+=head2 do_v2_invite_request
+
+   do_v2_invite_request( $room, $user, $inbound_server, $invitation )
+
+Send an invite event via the V2 API
+
+=cut
+
+sub do_v2_invite_request
+{
+   my ( $room, $user, $inbound_server, $invitation ) = @_;
+
+   my $outbound_client = $inbound_server->client;
+   my $first_home_server = $user->http->server_name;
+   my $room_id = $room->room_id;
+
+   my $create_event = $room->get_current_state_event( "m.room.create" );
+   my $room_version = $create_event->{content}{room_version} // "1";
+
+   $outbound_client->do_request_json(
+      method   => "PUT",
+      hostname => $first_home_server,
+      uri      => "/v2/invite/$room_id/$invitation->{event_id}",
+
+      content => {
+         event             => $invitation,
+         room_version      => $room_version,
+         invite_room_state => [],
+      },
+   )
+}
+
+
+foreach my $error_code ( 403, 500, -1 ) {
+   # a temporary federation server which is shut down at the end of the test.
+   # we use a temporary server because otherwise the remote server ends up on the
+   # backoff list and subsequent tests fail.
+   my $temp_federation_server_fixture = fixture(
+      setup => sub {
+         create_federation_server()
+      },
+      teardown => sub {
+         my ($server) = @_;
+         $server->close();
+      }
+   );
+
+   test "Inbound federation can receive invite and reject when "
+         . ( $error_code >= 0 ? "remote replies with a $error_code" :
+             "is unreachable" ),
+      requires => [ local_user_fixture( with_events => 1 ), $temp_federation_server_fixture ],
+
+      do => sub {
+         my ( $user, $federation_server ) = @_;
+
+         my $creator_id = '@__ANON__:' . $federation_server->server_name;
+
+         my $datastore = $federation_server->datastore;
+
+         my $room = SyTest::Federation::Room->new(
+            datastore => $datastore,
+         );
+
+         $room->create_initial_events(
+            server  => $federation_server,
+            creator => $creator_id,
+         );
+
+         my $room_id = $room->room_id;
+
+         invite_server_v1( $room, $creator_id, $user, $federation_server )
+         ->then( sub {
+            if( $error_code < 0 ) {
+               # now shut down the remote server, so that we get an 'unreachable'
+               # error on make_leave
+               $federation_server->close();
+
+               # close any connected sockets too, otherwise synapse will
+               # just reuse the connection.
+               foreach my $child ( $federation_server->children() ) {
+                  log_if_fail "closing", $child;
+                  $child->close();
+               }
+
+               return matrix_leave_room( $user, $room_id );
+            }
+            else {
+               Future->needs_all(
+                  $federation_server->await_request_make_leave( $room_id, $user->user_id )->then( sub {
+                     my ( $req, undef ) = @_;
+
+                     assert_eq( $req->method, "GET", 'request method' );
+
+                     $req->respond_json( {}, code => $error_code );
+
+                     Future->done;
+                  }),
+                  matrix_leave_room( $user, $room_id )
+               );
+            }
+         })->then( sub {
+            matrix_sync( $user );
+         })->then( sub {
+            my ( $body ) = @_;
+
+            log_if_fail "Sync body", $body;
+            assert_json_object( $body->{rooms}{invite} );
+            keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+            Future->done(1);
+         });
+      };
+}

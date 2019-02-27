@@ -111,15 +111,20 @@ sub create_initial_events
    my $creator = $args{creator} or
       croak "Require a 'creator'";
 
-   $self->create_event(
+   my $room_version = $args{room_version};
+
+   $self->create_and_insert_event(
       type => "m.room.create",
 
-      content     => { creator => $creator },
+      content     => {
+         creator => $creator,
+         defined( $room_version ) ? ( room_version => $room_version ) : (),
+      },
       sender      => $creator,
       state_key   => "",
    );
 
-   $self->create_event(
+   $self->create_and_insert_event(
       type => "m.room.member",
 
       content     => { membership => "join" },
@@ -127,7 +132,7 @@ sub create_initial_events
       state_key   => $creator,
    );
 
-   $self->create_event(
+   $self->create_and_insert_event(
       type => "m.room.join_rules",
 
       content     => { join_rule => "public" },
@@ -140,12 +145,11 @@ sub create_initial_events
 
    $event = $room->create_event( %fields )
 
-Constructs a new event in the room and updates the current state, if it is a
-state event. This helper also fills in the C<depth>, C<prev_events> and
-C<auth_events> lists if they are absent from C<%fields>, meaning the caller
-does not have to. Any values that are passed are used instead, even if they
-are somehow invalid - this allows callers to construct intentionally-invalid
-events for testing purposes.
+Constructs a new event in the room. This helper also fills in the C<depth>,
+C<prev_events> and C<auth_events> lists if they are absent from C<%fields>,
+meaning the caller does not have to. Any values that are passed are used
+instead, even if they are somehow invalid - this allows callers to construct
+intentionally-invalid events for testing purposes.
 
 =cut
 
@@ -158,18 +162,37 @@ sub create_event
 
    my @auth_events = grep { defined } (
       $self->get_current_state_event( "m.room.create" ),
+      $self->get_current_state_event( "m.room.join_rules" ),
+      $self->get_current_state_event( "m.room.power_levels" ),
       $self->get_current_state_event( "m.room.member", $fields{sender} ),
    );
    $fields{auth_events} //= make_event_refs( @auth_events ),
 
-   $fields{depth} //= $self->next_depth;
+   $fields{depth} //= JSON::number($self->next_depth);
 
    $fields{prev_events} //= make_event_refs( @{ $self->{prev_events} } );
 
-   my $event = $self->{datastore}->create_event(
+   return $self->{datastore}->create_event(
       room_id => $self->room_id,
       %fields,
    );
+}
+
+=head2 create_and_insert_event
+
+   $event = $room->create_and_insert_event( %fields )
+
+Constructs a new event via C<create_event>, updates the current state, if it is a
+state event, and records the event as the room's next prev_event.
+
+=cut
+
+sub create_and_insert_event
+{
+   my $self = shift;
+   my %fields = @_;
+
+   my $event = $self->create_event( %fields );
 
    $self->_insert_event( $event );
 
@@ -269,7 +292,7 @@ sub make_join_protoevent
 
       auth_events      => make_event_refs( @auth_events ),
       content          => { membership => "join" },
-      depth            => $self->next_depth,
+      depth            => JSON::number($self->next_depth),
       prev_events      => make_event_refs( @{ $self->{prev_events} } ),
       room_id          => $self->room_id,
       sender           => $user_id,

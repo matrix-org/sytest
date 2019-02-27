@@ -6,8 +6,7 @@ foreach my $i (
 
    test(
       "$name user can call /events on another world_readable room (SYN-606)",
-      requires => [ $fixture->( with_events => 0 ),
-                    local_user_fixture( with_events => 0 ) ],
+      requires => [ $fixture->(),  local_user_fixture() ],
 
       do => sub {
          my ( $nonjoined_user, $user ) = @_;
@@ -27,20 +26,37 @@ foreach my $i (
          })->then( sub {
             matrix_initialsync_room( $nonjoined_user, $room_id1 )
          })->then( sub {
+            my ( $body ) = @_;
+
+            # We need to manually handle the from tokens here as the await_event*
+            # methods may otherwise reuse results from an /events call that did
+            # not include the specified room (due to the user not being joined to
+            # it). This could cause the event to not be found.
+            # I.e. there is a race where we send a message, the background /events
+            # stream streams past the message, and then /events stream triggered by
+            # await_event_* (which *does* include the room_id) starts streaming
+            # from *after* the message. Hence the event is neither in the cache
+            # nor in the live event stream.
+            my $from_token = $body->{messages}{end};
+
             Future->needs_all(
                matrix_send_room_text_message( $user, $room_id1, body => "moose" ),
-               await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id1, [] ),
+               await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id1, [],
+                  from => $from_token,
+               ),
             );
          })->then( sub {
             matrix_initialsync_room( $nonjoined_user, $room_id2 )
          })->then( sub {
-            Future->needs_all(
-               delay( 0.1 )->then( sub {
-                  matrix_send_room_text_message( $user, $room_id2, body => "mice" );
-               }),
+            my ( $body ) = @_;
 
-               await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id2, [] )
-               ->then( sub {
+            my $from_token = $body->{messages}{end};
+
+            Future->needs_all(
+               matrix_send_room_text_message( $user, $room_id2, body => "mice" ),
+               await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id2, [],
+                  from => $from_token,
+               )->then( sub {
                   my ( $event ) = @_;
 
                   assert_json_keys( $event, qw( content ) );

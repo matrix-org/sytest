@@ -20,39 +20,62 @@ use POSIX qw( strftime WIFEXITED WEXITSTATUS );
 
 use YAML ();
 
-sub new
-{
-   my $class = shift;
-   my %args = @_;
-
-   if( delete $args{haproxy} ) {
-      $class = "SyTest::Homeserver::Synapse::ViaHaproxy";
-   }
-   elsif( $args{dendron} ) {
-      $class = "SyTest::Homeserver::Synapse::ViaDendron";
-   }
-   else {
-      $class = "SyTest::Homeserver::Synapse::Direct";
-   }
-
-   return $class->SUPER::new( %args );
-}
-
 sub _init
 {
    my $self = shift;
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      ports synapse_dir extra_args python coverage dendron bind_host
+      synapse_dir extra_args python coverage
    );
 
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( synapse synapse_unsecure synapse_metrics );
-
    $self->{paths} = {};
+   $self->{dendron} = '';
 
    $self->SUPER::_init( $args );
+
+   my $idx = $self->{hs_index};
+   $self->{ports} = {
+      synapse                  => main::alloc_port( "synapse[$idx]" ),
+      synapse_unsecure         => main::alloc_port( "synapse[$idx].unsecure" ),
+      synapse_metrics          => main::alloc_port( "synapse[$idx].metrics" ),
+      synapse_replication_tcp  => main::alloc_port( "synapse[$idx].replication_tcp" ),
+
+      pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
+      pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
+
+      synchrotron         => main::alloc_port( "synchrotron[$idx]" ),
+      synchrotron_metrics => main::alloc_port( "synchrotron[$idx].metrics" ),
+      synchrotron_manhole => main::alloc_port( "synchrotron[$idx].manhole" ),
+
+      federation_reader         => main::alloc_port( "federation_reader[$idx]" ),
+      federation_reader_metrics => main::alloc_port( "federation_reader[$idx].metrics" ),
+      federation_reader_manhole => main::alloc_port( "federation_reader[$idx].manhole" ),
+
+      media_repository => main::alloc_port( "media_repository[$idx]" ),
+      media_repository_metrics => main::alloc_port( "media_repository[$idx].metrics" ),
+      media_repository_manhole => main::alloc_port( "media_repository[$idx].manhole" ),
+
+      appservice_metrics => main::alloc_port( "appservice[$idx].metrics" ),
+      appservice_manhole => main::alloc_port( "appservice[$idx].manhole" ),
+
+      federation_sender_metrics => main::alloc_port( "federation_sender1[$idx].metrics" ),
+      federation_sender_manhole => main::alloc_port( "federation_sender[$idx].manhole" ),
+
+      client_reader         => main::alloc_port( "client_reader[$idx]" ),
+      client_reader_metrics => main::alloc_port( "client_reader[$idx].metrics" ),
+      client_reader_manhole => main::alloc_port( "client_reader[$idx].manhole" ),
+
+      user_dir         => main::alloc_port( "user_dir[$idx]" ),
+      user_dir_metrics => main::alloc_port( "user_dir[$idx].metrics" ),
+      user_dir_manhole => main::alloc_port( "user_dir[$idx].manhole" ),
+
+      event_creator         => main::alloc_port( "event_creator[$idx]" ),
+      event_creator_metrics => main::alloc_port( "event_creator[$idx].metrics" ),
+      event_creator_manhole => main::alloc_port( "event_creator[$idx].manhole" ),
+
+      haproxy => main::alloc_port( "haproxy[$idx]" ),
+   };
 }
 
 sub configure
@@ -62,75 +85,44 @@ sub configure
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
       print_output filter_output
-      config
    );
 
    $self->SUPER::configure( %params );
-}
-
-sub _append
-{
-   my ( $config, $more ) = @_;
-   if( ref $more eq "HASH" ) {
-      ref $config eq "HASH" or die "Cannot append HASH to non-HASH";
-      _append( $_[0]->{$_}, $more->{$_} ) for keys %$more;
-   }
-   elsif( ref $more eq "ARRAY" ) {
-      push @{ $_[0] }, @$more;
-   }
-   else {
-      die "Not sure how to append ${\ref $more} to config\n";
-   }
-}
-
-sub append_config
-{
-   my $self = shift;
-   my %more = @_;
-
-   _append( $self->{config}, \%more );
 }
 
 sub start
 {
    my $self = shift;
 
+   my $hs_index = $self->{hs_index};
    my $port = $self->{ports}{synapse};
    my $output = $self->{output};
 
    my $hs_dir = $self->{hs_dir};
 
-   my $db_config_path = "database.yaml";
-   my $db_config_abs_path = "$hs_dir/${db_config_path}";
-   my $db  = ":memory:"; #"$hs_dir/homeserver.db";
+   my %db_config = $self->_get_dbconfig(
+      type => 'sqlite',
+      args => {
+         database => ":memory:", #"$hs_dir/homeserver.db",
+      },
+   );
 
-   my ( $db_type, %db_args, $db_config );
-   if( -f $db_config_abs_path ) {
-      $db_config = YAML::LoadFile( $db_config_abs_path );
-      if( $db_config->{name} eq "psycopg2") {
-          $db_type = "pg";
-          %db_args = %{ $db_config->{args} };
-      }
-      elsif ($db_config->{name} eq "sqlite3") {
-          $db_type = "sqlite";
-          $db_args{path} = $db_config->{args}->{database};
-      }
-      else {
-         die "Unrecognised DB type '$db_config->{name}' in $db_config_abs_path";
-      }
+   my $db_type = $db_config{type};
+
+   # map sytest db args onto synapse db args
+   my %synapse_db_config;
+   if( $db_type eq "pg" ) {
+      %synapse_db_config = (
+         name => 'psycopg2',
+         args => $db_config{args},
+      );
    }
    else {
-      $db_type = "sqlite";
-      $db_args{path} = $db;
-      $db_config = { name => "sqlite3", args => { database => $db } };
-      $self->write_yaml_file( $db_config_path, $db_config );
-   }
-
-   $self->check_db_config( $db_type, $db_config, %db_args );
-
-   if( defined $db_type ) {
-      my $clear_meth = "clear_db_${db_type}";
-      $self->$clear_meth( %db_args );
+      # must be sqlite
+      %synapse_db_config = (
+         name => 'sqlite3',
+         args => $db_config{args},
+      );
    }
 
    # Clean up the media_store directory each time, or else it fills up with
@@ -148,28 +140,23 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $server_name = "$bind_host:" . $self->secure_port;
-
-   my $cert_file = $self->{paths}{cert_file} = "$hs_dir/cert.pem";
-   my $key_file  = $self->{paths}{key_file}  = "$hs_dir/key.pem";
    my $log_config_file = "$hs_dir/log.config";
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
-        server_name => $server_name,
+        server_name => $self->server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
-        tls_certificate_path => $cert_file,
-        tls_private_key_path => $key_file,
+        tls_certificate_path => "$cwd/keys/tls-selfsigned.crt",
+        tls_private_key_path => "$cwd/keys/tls-selfsigned.key",
         tls_dh_params_path => "$cwd/keys/tls.dh",
         use_insecure_ssl_client_just_for_testing_do_not_use => 1,
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
         enable_registration => "true",
-        database => $db_config,
-        database_config => $db_config_path,
+        database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
         registration_shared_secret => $registration_shared_secret,
 
@@ -189,13 +176,18 @@ sub start
 
         listeners => $listeners,
 
-        bcrypt_rounds => 0,
+        # we reduce the number of bcrypt rounds to make generating users
+        # faster, but note that python's bcrypt complains if rounds < 4,
+        # so this is effectively the minimum.
+        bcrypt_rounds => 4,
 
         # If we're using dendron-style split workers, we need to disable these
         # things in the main process
-        start_pushers      => ( not $self->{dendron} ),
-        notify_appservices => ( not $self->{dendron} ),
-        send_federation    => ( not $self->{dendron} ),
+        start_pushers         => ( not $self->{dendron} ),
+        notify_appservices    => ( not $self->{dendron} ),
+        send_federation       => ( not $self->{dendron} ),
+        update_user_directory => ( not $self->{dendron} ),
+        enable_media_repo     => ( not $self->{dendron} ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -203,7 +195,20 @@ sub start
         media_store_path => "$hs_dir/media_store",
         uploads_path => "$hs_dir/uploads_path",
 
-        %{ $self->{config} },
+        user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
+
+        $self->{recaptcha_config} ? (
+           recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
+           recaptcha_public_key     => $self->{recaptcha_config}->{public_key},
+           recaptcha_private_key    => $self->{recaptcha_config}->{private_key},
+        ) : (),
+
+        map {
+           defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
+        } qw(
+           cas_config
+           app_service_config_files
+        ),
    } );
 
    $self->{paths}{log} = $log;
@@ -211,16 +216,10 @@ sub start
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
-      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender ) ) {
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator ) ) {
          open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
       }
    }
-
-   my $pythonpath = (
-      exists $ENV{PYTHONPATH}
-      ? "$self->{synapse_dir}:$ENV{PYTHONPATH}"
-      : "$self->{synapse_dir}"
-   );
 
    my @synapse_command = ( $self->{python} );
 
@@ -233,18 +232,20 @@ sub start
    push @synapse_command,
       "-m", "synapse.app.homeserver",
       "--config-path" => $config_path,
-      "--server-name" => "$bind_host:$port";
+      "--server-name" => $self->server_name;
 
    $output->diag( "Generating config for port $port" );
 
    my @config_command = (
-      @synapse_command, "--generate-config", "--report-stats=no"
+      @synapse_command, "--generate-config", "--report-stats=no",
    );
 
-   my @command = $self->wrap_synapse_command( @synapse_command );
+   my @command = (
+      $self->wrap_synapse_command( @synapse_command ),
+      @{ $self->{extra_args} },
+   );
 
    my $env = {
-      "PYTHONPATH" => $pythonpath,
       "PATH" => $ENV{PATH},
       "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
    };
@@ -253,36 +254,40 @@ sub start
 
    my $started_future = $loop->new_future;
 
-   $loop->run_child(
-      setup => [ env => $env ],
+   $output->diag(
+      "Creating config for server $hs_index with command "
+         . join( " ", @config_command ),
+   );
 
+   $loop->open_process(
+      setup => [ env => $env ],
       command => [ @config_command ],
 
       on_finish => sub {
-         my ( $pid, $exitcode, $stdout, $stderr ) = @_;
+         my ( $proc, $exitcode ) = @_;
 
          if( $exitcode != 0 ) {
-            print STDERR $stderr;
-            exit $exitcode;
+            $started_future->fail( "Server failed to generate config: exitcode " . ( $exitcode >> 8 ));
+            return
          }
 
-         $output->diag( "Starting server for port $port" );
+         $output->diag(
+            "Starting server $hs_index for port $port with command "
+               . join( " ", @command ),
+         );
+
          $self->add_child(
             $self->{proc} = IO::Async::Process->new(
                setup => [ env => $env ],
 
-               command => [ @command, @{ $self->{extra_args} } ],
+               command => \@command,
 
                on_finish => $self->_capture_weakself( 'on_finish' ),
             )
          );
 
-         $output->diag( "Connecting to server $port" );
-
          $self->adopt_future(
             $self->await_connectable( $bind_host, $self->_start_await_port )->then( sub {
-               $output->diag( "Connected to server $port" );
-
                $started_future->done;
             })
          );
@@ -292,11 +297,6 @@ sub start
    );
 
    return $started_future;
-}
-
-sub check_db_config
-{
-   # Normally don't care
 }
 
 sub generate_listeners
@@ -309,22 +309,31 @@ sub generate_listeners
 
    if( my $unsecure_port = $self->{ports}{synapse_unsecure} ) {
       push @listeners, {
-         type => "http",
-         port => $unsecure_port,
+         type         => "http",
+         port         => $unsecure_port,
          bind_address => $bind_host,
-         tls => 0,
-         resources => [{
+         tls          => 0,
+         resources    => [{
             names => [ "client", "federation", "replication", "metrics" ], compress => 0
          }]
       }
    }
 
+   if( my $replication_tcp_port = $self->{ports}{synapse_replication_tcp} ) {
+      push @listeners, {
+         type         => "replication",
+         port         => $replication_tcp_port,
+         bind_address => $bind_host,
+         tls          => 0,
+      }
+   }
+
    return @listeners,
       {
-         type => "metrics",
-         port => $self->{ports}{synapse_metrics},
+         type         => "metrics",
+         port         => $self->{ports}{synapse_metrics},
          bind_address => $bind_host,
-         tls => 0,
+         tls          => 0,
       };
 }
 
@@ -337,6 +346,7 @@ sub wrap_synapse_command
 sub pid
 {
    my $self = shift;
+   return 0 if !$self->{proc};
    return $self->{proc}->pid;
 }
 
@@ -350,22 +360,51 @@ sub kill
    }
 }
 
+sub kill_and_await_finish
+{
+   my $self = shift;
+
+   return $self->SUPER::kill_and_await_finish->then( sub {
+
+      # skip this if the process never got started.
+      return Future->done unless $self->pid;
+
+      $self->{output}->diag( "Killing ${\ $self->pid }" );
+
+      $self->kill( 'INT' );
+
+      return Future->needs_any(
+         $self->await_finish,
+
+         $self->loop->delay_future( after => 30 )->then( sub {
+            print STDERR "Timed out waiting for ${\ $self->pid }; sending SIGKILL\n";
+            $self->kill( 'KILL' );
+            Future->done;
+         }),
+        );
+   });
+}
+
 sub on_finish
 {
    my $self = shift;
    my ( $process, $exitcode ) = @_;
 
+   my $hs_index = $self->{hs_index};
+
    say $self->pid . " stopped";
+
+   my $port = $self->{ports}{synapse};
 
    if( $exitcode > 0 ) {
       if( WIFEXITED($exitcode) ) {
-         warn "Main homeserver process exited " . WEXITSTATUS($exitcode) . "\n";
+         warn "Main homeserver process for server $hs_index exited " . WEXITSTATUS($exitcode) . "\n";
       }
       else {
-         warn "Main homeserver process failed - code=$exitcode\n";
+         warn "Main homeserver process for server $hs_index failed - code=$exitcode\n";
       }
 
-      print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
+      print STDERR "\e[1;35m[server $port}]\e[m: $_\n"
          for @{ $self->{stderr_lines} // [] };
 
       # Now force all remaining output to be printed
@@ -399,6 +438,7 @@ sub on_synapse_read
 {
    my $self = shift;
    my ( $stream, $bufref, $eof ) = @_;
+   my $port = $self->{ports}{synapse};
 
    while( $$bufref =~ s/^(.*)\n// ) {
       my $line = $1;
@@ -408,8 +448,8 @@ sub on_synapse_read
 
       if( $self->{print_output} ) {
          my $filter = $self->{filter_output};
-         if( !$filter or any { $line =~ m/$_/ } @$filter ) {
-            print STDERR "\e[1;35m[server $self->{port}]\e[m: $line\n";
+         if( !$filter or $line =~ m/$filter/ ) {
+            print STDERR "\e[1;35m[server $port]\e[m: $line\n";
          }
       }
    }
@@ -432,7 +472,8 @@ sub print_output
    $self->configure( print_output => $on );
 
    if( $on ) {
-      print STDERR "\e[1;35m[server $self->{port}]\e[m: $_\n"
+      my $port = $self->{ports}{synapse};
+      print STDERR "\e[1;35m[server $port]\e[m: $_\n"
          for @{ $self->{stderr_lines} // [] };
    }
 
@@ -461,6 +502,37 @@ sub rotate_logfile
      otherwise => sub { die "Timed out waiting for synapse to recreate its log file" };
 }
 
+
+sub server_name
+{
+   my $self = shift;
+   return $self->{bind_host} . ":" . $self->secure_port;
+}
+
+sub http_api_host
+{
+   my $self = shift;
+   return $self->{bind_host};
+}
+
+sub federation_port
+{
+   my $self = shift;
+   return $self->secure_port;
+}
+
+sub secure_port
+{
+   my $self = shift;
+   return $self->{ports}{synapse};
+}
+
+sub unsecure_port
+{
+   my $self = shift;
+   return $self->{ports}{synapse_unsecure};
+}
+
 package SyTest::Homeserver::Synapse::Direct;
 use base qw( SyTest::Homeserver::Synapse );
 
@@ -487,18 +559,6 @@ sub _start_await_port
    return $self->{ports}{synapse};
 }
 
-sub secure_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse};
-}
-
-sub unsecure_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse_unsecure};
-}
-
 package SyTest::Homeserver::Synapse::ViaDendron;
 use base qw( SyTest::Homeserver::Synapse );
 
@@ -507,20 +567,24 @@ use Carp;
 sub _init
 {
    my $self = shift;
+   my ( $args ) = @_;
+
    $self->SUPER::_init( @_ );
 
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( dendron );
+   $self->{dendron} = delete $args->{dendron_binary};
+
+   my $idx = $self->{hs_index};
+   $self->{ports}{dendron} = main::alloc_port( "dendron[$idx]" );
 }
 
-sub check_db_config
+sub _check_db_config
 {
    my $self = shift;
-   my ( $type, $config, %args ) = @_;
+   my ( %config ) = @_;
 
-   $type eq "pg" or die "Dendron can only run against postgres";
+   $config{type} eq "pg" or die "Dendron can only run against postgres";
 
-   return $self->SUPER::check_db_config( @_ );
+   return $self->SUPER::_check_db_config( @_ );
 }
 
 sub wrap_synapse_command
@@ -545,10 +609,11 @@ sub wrap_synapse_command
 
    {
       my $pusher_config_path = $self->write_yaml_file( "pusher.yaml" => {
-         "worker_app"             => "synapse.app.pusher",
-         "worker_log_file"        => "$log.pusher",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
-         "worker_listeners"       => [
+         "worker_app"              => "synapse.app.pusher",
+         "worker_log_file"         => "$log.pusher",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
             {
                type      => "http",
                resources => [{ names => ["metrics"] }],
@@ -568,10 +633,11 @@ sub wrap_synapse_command
 
    {
       my $appservice_config_path = $self->write_yaml_file( "appservice.yaml" => {
-         "worker_app"             => "synapse.app.appservice",
-         "worker_log_file"        => "$log.appservice",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
-         "worker_listeners"       => [
+         "worker_app"              => "synapse.app.appservice",
+         "worker_log_file"         => "$log.appservice",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
             {
                type => "manhole",
                port => $self->{ports}{appservice_manhole},
@@ -591,10 +657,11 @@ sub wrap_synapse_command
 
    {
       my $federation_sender_config_path = $self->write_yaml_file( "federation_sender.yaml" => {
-         "worker_app"             => "synapse.app.federation_sender",
-         "worker_log_file"        => "$log.federation_sender",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
-         "worker_listeners"       => [
+         "worker_app"              => "synapse.app.federation_sender",
+         "worker_log_file"         => "$log.federation_sender",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
             {
                type => "manhole",
                port => $self->{ports}{federation_sender_manhole},
@@ -614,10 +681,11 @@ sub wrap_synapse_command
 
    {
       my $synchrotron_config_path = $self->write_yaml_file( "synchrotron.yaml" => {
-         "worker_app"             => "synapse.app.synchrotron",
-         "worker_log_file"        => "$log.synchrotron",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
-         "worker_listeners"       => [
+         "worker_app"              => "synapse.app.synchrotron",
+         "worker_log_file"         => "$log.synchrotron",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
             {
                type      => "http",
                resources => [{ names => ["client"] }],
@@ -645,10 +713,11 @@ sub wrap_synapse_command
 
    {
       my $federation_reader_config_path = $self->write_yaml_file( "federation_reader.yaml" => {
-         "worker_app"             => "synapse.app.federation_reader",
-         "worker_log_file"        => "$log.federation_reader",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
-         "worker_listeners"       => [
+         "worker_app"              => "synapse.app.federation_reader",
+         "worker_log_file"         => "$log.federation_reader",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
             {
                type      => "http",
                resources => [{ names => ["federation"] }],
@@ -676,10 +745,11 @@ sub wrap_synapse_command
 
    {
       my $media_repository_config_path = $self->write_yaml_file( "media_repository.yaml" => {
-         "worker_app"             => "synapse.app.media_repository",
-         "worker_log_file"        => "$log.media_repository",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
-         "worker_listeners"       => [
+         "worker_app"              => "synapse.app.media_repository",
+         "worker_log_file"         => "$log.media_repository",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
             {
                type      => "http",
                resources => [{ names => ["media"] }],
@@ -707,10 +777,11 @@ sub wrap_synapse_command
 
    {
       my $client_reader_config_path = $self->write_yaml_file( "client_reader.yaml" => {
-         "worker_app"             => "synapse.app.client_reader",
-         "worker_log_file"        => "$log.client_reader",
-         "worker_replication_url" => "http://$bind_host:$self->{ports}{synapse_unsecure}/_synapse/replication",
-         "worker_listeners"       => [
+         "worker_app"              => "synapse.app.client_reader",
+         "worker_log_file"         => "$log.client_reader",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
             {
                type      => "http",
                resources => [{ names => ["client"] }],
@@ -734,6 +805,71 @@ sub wrap_synapse_command
       push @command,
          "--client-reader-config" => $client_reader_config_path,
          "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}";
+   }
+
+   {
+      my $user_dir_config_path = $self->write_yaml_file( "user_dir.yaml" => {
+         "worker_app"              => "synapse.app.user_dir",
+         "worker_log_file"         => "$log.user_dir",
+         "worker_replication_host" => "$bind_host",
+         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"        => [
+            {
+               type      => "http",
+               resources => [{ names => ["client"] }],
+               port      => $self->{ports}{user_dir},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{user_dir_manhole},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{user_dir_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      } );
+
+      push @command,
+         "--user-directory-config" => $user_dir_config_path,
+         "--user-directory-url" => "http://$bind_host:$self->{ports}{user_dir}";
+   }
+
+   {
+      my $event_creator_config_path = $self->write_yaml_file( "event_creator.yaml" => {
+         "worker_app"                   => "synapse.app.event_creator",
+         "worker_log_file"              => "$log.event_creator",
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_listeners"             => [
+            {
+               type      => "http",
+               resources => [{ names => ["client"] }],
+               port      => $self->{ports}{event_creator},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{event_creator_manhole},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{event_creator_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      } );
+
+      push @command,
+         "--event-creator-config" => $event_creator_config_path,
+         "--event-creator-url" => "http://$bind_host:$self->{ports}{event_creator}";
    }
 
    return @command;
@@ -869,6 +1005,12 @@ backend media_repository
 backend client_reader
     server client_reader ${bind_host}:$ports->{client_reader}
 
+backend user_dir
+    server user_dir ${bind_host}:$ports->{user_dir}
+
+backend event_creator
+    server event_creator ${bind_host}:$ports->{event_creator}
+
 EOCONFIG
 }
 
@@ -890,6 +1032,10 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/publicRooms             federation_reader
 
 ^/_matrix/client/(api/v1|r0)/publicRooms$    client_reader
+
+^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
+
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send      event_creator
 EOCONFIG
 }
 
