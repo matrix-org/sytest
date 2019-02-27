@@ -2,35 +2,13 @@ my $content_id;
 my $content_uri;
 
 test "Can upload with ASCII file name",
-   requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
-      my ( $http, $user ) = @_;
-
-      $http->do_request(
-         method       => "POST",
-         full_uri     => "/_matrix/media/r0/upload",
-         content      => "Test media file",
-         content_type => "text/plain",
-
-         params => {
-            access_token => $user->access_token,
-            filename => "ascii",
-         }
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( content_uri ));
-
-         $content_uri = $body->{content_uri};
-
-         my $parsed_uri = URI->new( $body->{content_uri} );
-         my $server = $parsed_uri->authority;
-         my $path = $parsed_uri->path;
-
-         $content_id = "$server$path";
-
-         Future->done(1)
+      my ( $user ) = @_;
+      upload_test_content( $user, filename=>"ascii" )->then( sub {
+         ( $content_id, $content_uri ) = @_;
+         Future->done(1);
       });
    };
 
@@ -41,13 +19,9 @@ sub test_using_client
 {
    my ( $client ) = @_;
 
-   $client->do_request(
-      method   => "GET",
-      full_uri => "/_matrix/media/r0/download/$content_id",
-   )->then( sub {
-      my ( $body, $response ) = @_;
+   get_media( $client, $content_id )->then( sub {
+      my ( $disposition ) = @_;
 
-      my $disposition = $response->header( "Content-Disposition" );
       $disposition eq "inline; filename=ascii" or
          die "Expected an ASCII filename parameter";
 

@@ -40,36 +40,85 @@ my $PROXY_SERVER = fixture(
 );
 
 
+=head2 upload_test_content
+
+   my ( $content_id, $content_uri ) = upload_test_content(
+      $user, filename => "filename",
+   ) -> get;
+
+Uploads some test content with the given filename.
+
+Returns the content id of the uploaded content.
+
+=cut
+sub upload_test_content
+{
+   my ( $user, %params ) = @_;
+
+   $user->http->do_request(
+      method       => "POST",
+      full_uri     => "/_matrix/media/r0/upload",
+      content      => "Test media file",
+      content_type => "text/plain",
+
+      params => {
+         access_token => $user->access_token,
+         %params,
+      },
+   )->then( sub {
+      my ( $body ) = @_;
+
+      assert_json_keys( $body, qw( content_uri ));
+
+      my $content_uri = $body->{content_uri};
+
+      my $parsed_uri = URI->new( $body->{content_uri} );
+      my $server = $parsed_uri->authority;
+      my $path = $parsed_uri->path;
+
+      my $content_id = "$server$path";
+
+      Future->done( $content_id, $content_uri );
+   });
+}
+push our @EXPORT, qw( upload_test_content );
+
+
+=head2 get_media
+
+   my ( $content_dispostion, $content ) = get_media( $http, $content_id ) -> get;
+
+Fetches a piece of media from the server.
+
+=cut
+sub get_media
+{
+   my ( $http, $content_id ) = @_;
+
+   $http->do_request(
+      method   => "GET",
+      full_uri => "/_matrix/media/r0/download/$content_id",
+   )->then( sub {
+      my ( $body, $response ) = @_;
+
+      my $disposition = $response->header( "Content-Disposition" );
+      Future->done( $disposition, $body );
+   });
+}
+push @EXPORT, qw( get_media );
+
+
 test "Can upload with Unicode file name",
-   requires => [ $main::API_CLIENTS[0], local_user_fixture(),
+   requires => [ local_user_fixture(),
                  qw( can_upload_media )],
 
    proves => [qw( can_upload_media_unicode )],
 
    do => sub {
-      my ( $http, $user ) = @_;
+      my ( $user ) = @_;
 
-      $http->do_request(
-         method       => "POST",
-         full_uri     => "/_matrix/media/r0/upload",
-         content      => "Test media file",
-         content_type => "text/plain",
-
-         params => {
-            access_token => $user->access_token,
-            filename     => $FILENAME,
-         }
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( content_uri ));
-
-         my $content_uri = URI->new( $body->{content_uri} );
-         my $server = $content_uri->authority;
-         my $path = $content_uri->path;
-
-         $content_id = "$server$path";
-
+      upload_test_content( $user, filename=>$FILENAME )->then( sub {
+         ( $content_id ) = @_;
          Future->done(1)
       });
    };
@@ -85,13 +134,8 @@ sub test_using_client
        $content = $content_id;
    }
 
-   $client->do_request(
-      method   => "GET",
-      full_uri => "/_matrix/media/r0/download/$content",
-   )->then( sub {
-      my ( $body, $response ) = @_;
-
-      my $disposition = $response->header( "Content-Disposition" );
+   get_media( $client, $content )->then( sub {
+      my ( $disposition ) = @_;
       uc $disposition eq uc "inline; filename*=utf-8''$FILENAME_ENCODED" or
          die "Expected a UTF-8 filename parameter";
 
