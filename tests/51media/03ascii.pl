@@ -37,7 +37,7 @@ while ( my ( $filename, $expected_disposition ) = each %TEST_CASES ) {
          my $content_id;
 
          # first upload the content with the given filename
-         upload_test_content( $user, $filename )->then( sub {
+         upload_test_content( $user, filename=>$filename )->then( sub {
             ( $content_id ) = @_;
 
             # try and fetch it as a local user
