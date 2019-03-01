@@ -444,6 +444,7 @@ sub matrix_get_user_dir_synced
 
    my $new_user;
    my $searching_user;
+   my $room_id;
 
    my $random_id = join "", map { chr 65 + rand 26 } 1 .. 20;
    my $searching_random_id = join "", map { chr 65 + rand 26 } 1 .. 20;
