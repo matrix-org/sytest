@@ -10,7 +10,6 @@ test "User appears in user directory",
       my $displayname = generate_random_displayname();
       my $searching_displayname = generate_random_displayname();
 
-
       matrix_set_displayname( $user, $displayname )
       ->then( sub {
          matrix_create_user_on_server( $user->http,
@@ -69,9 +68,10 @@ test "User in private room doesn't appear in user directory",
             preset => "private_chat",
          );
       })->then( sub {
-         ( $room_id ) = @_;
-
-         matrix_get_user_dir_synced( $searching_user, $displayname );
+         my ( $room_id ) = @_;
+         matrix_join_room( $searching_user, $room_id );
+      })->then( sub {
+         matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
          my $results = $body->{results};
@@ -406,6 +406,11 @@ test "User directory correctly update on display name change",
 
       matrix_set_displayname( $user, $displayname )
       ->then( sub {
+
+         matrix_create_user_on_server( $user->http,
+            displayname => $searching_displayname
+         );
+      })->then( sub {
          log_if_fail "First displayname", $displayname;
 
          matrix_create_room( $user,
