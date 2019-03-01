@@ -4,7 +4,6 @@ test "User appears in user directory",
    check => sub {
       my ( $user ) = @_;
 
-      my $room_id;
       my $searching_user;
 
       my $displayname = generate_random_displayname();
@@ -25,8 +24,6 @@ test "User appears in user directory",
          my ( $room_id ) = @_;
          matrix_join_room( $searching_user, $room_id );
       })->then( sub {
-         ( $room_id ) = @_;
-
          repeat_until_true {
             do_request_json_for( $searching_user,
                method  => "POST",
@@ -54,7 +51,6 @@ test "User in private room doesn't appear in user directory",
    check => sub {
       my ( $user ) = @_;
 
-      my $room_id;
       my $searching_user;
 
       my $displayname = generate_random_displayname();
@@ -71,7 +67,7 @@ test "User in private room doesn't appear in user directory",
             preset => "private_chat",
          );
       })->then( sub {
-         matrix_get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $searching_user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
          my $results = $body->{results};
@@ -408,7 +404,6 @@ test "User directory correctly update on display name change",
 
       matrix_set_displayname( $user, $displayname )
       ->then( sub {
-
          matrix_create_user_on_server( $user->http,
             displayname => $second_displayname
          );
