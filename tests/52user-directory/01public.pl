@@ -22,6 +22,9 @@ test "User appears in user directory",
             preset => "public_chat",
          );
       })->then( sub {
+         my ( $room_id ) = @_;
+         matrix_join_room( $searching_user, $room_id );
+      })->then( sub {
          ( $room_id ) = @_;
 
          repeat_until_true {
@@ -67,9 +70,6 @@ test "User in private room doesn't appear in user directory",
          matrix_create_room( $user,
             preset => "private_chat",
          );
-      })->then( sub {
-         my ( $room_id ) = @_;
-         matrix_join_room( $searching_user, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
