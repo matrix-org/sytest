@@ -5,11 +5,20 @@ test "User appears in user directory",
       my ( $user ) = @_;
 
       my $room_id;
+      my $searching_user;
 
       my $displayname = generate_random_displayname();
+      my $searching_displayname = generate_random_displayname();
+
 
       matrix_set_displayname( $user, $displayname )
       ->then( sub {
+         matrix_create_user_on_server( $user->http,
+            displayname => $searching_displayname
+         );
+      })->then( sub {
+         ( $searching_user ) = @_;
+
          matrix_create_room( $user,
             preset => "public_chat",
          );
@@ -17,9 +26,9 @@ test "User appears in user directory",
          ( $room_id ) = @_;
 
          repeat_until_true {
-            do_request_json_for( $user,
+            do_request_json_for( $searching_user,
                method  => "POST",
-               uri     => "/unstable/user_directory/search",
+               uri     => "/r0/user_directory/search",
                content => {
                   search_term => $displayname,
                }
@@ -44,18 +53,25 @@ test "User in private room doesn't appear in user directory",
       my ( $user ) = @_;
 
       my $room_id;
+      my $searching_user;
 
       my $displayname = generate_random_displayname();
+      my $searching_displayname = generate_random_displayname();
 
-      matrix_set_displayname( $user, $displayname )
-      ->then( sub {
+      matrix_set_displayname( $user, $displayname )->then( sub {
+         matrix_create_user_on_server( $user->http,
+            displayname => $searching_displayname
+         );
+      })->then( sub {
+         ( $searching_user ) = @_;
+
          matrix_create_room( $user,
             preset => "private_chat",
          );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_get_user_dir_synced( $user, $displayname );
+         matrix_get_user_dir_synced( $searching_user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
          my $results = $body->{results};
