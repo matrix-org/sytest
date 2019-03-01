@@ -408,7 +408,7 @@ test "User directory correctly update on display name change",
       ->then( sub {
 
          matrix_create_user_on_server( $user->http,
-            displayname => $searching_displayname
+            displayname => $second_displayname
          );
       })->then( sub {
          log_if_fail "First displayname", $displayname;
