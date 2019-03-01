@@ -435,7 +435,7 @@ sub generate_random_displayname
 }
 
 
-# Get the user direectory after a change has been made. This creates a new user
+# Get the user directory after a change has been made. This creates a new user
 # and then polls the user directory until we see it. This is to get around the
 # fact that the user directory gets updated asynchronously.
 sub matrix_get_user_dir_synced
@@ -443,22 +443,34 @@ sub matrix_get_user_dir_synced
    my ( $user, $search_term ) = @_;
 
    my $new_user;
+   my $searching_user;
 
    my $random_id = join "", map { chr 65 + rand 26 } 1 .. 20;
+   my $searching_random_id = join "", map { chr 65 + rand 26 } 1 .. 20;
 
    matrix_create_user_on_server( $user->http,
       displayname => $random_id
    )->then( sub {
       ( $new_user ) = @_;
 
+      matrix_create_user_on_server( $user->http,
+         displayname => $searching_random_id
+      );
+   }) -> then( sub {
+      ( $searching_user ) = @_;
+
       matrix_create_room( $new_user,
          preset => "public_chat",
       );
    })->then( sub {
+      ( $room_id ) = @_;
+
+      matrix_join_room( $searching_user, $room_id );
+   })->then( sub {
       repeat_until_true {
-         do_request_json_for( $new_user,
+         do_request_json_for( $searching_user,
             method  => "POST",
-            uri     => "/unstable/user_directory/search",
+            uri     => "/r0/user_directory/search",
             content => {
                search_term => $random_id,
             }
@@ -474,7 +486,7 @@ sub matrix_get_user_dir_synced
    })->then( sub {
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/unstable/user_directory/search",
+         uri     => "/r0/user_directory/search",
          content => {
             search_term => $search_term,
          }
