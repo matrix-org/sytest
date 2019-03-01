@@ -400,9 +400,11 @@ test "User directory correctly update on display name change",
       my ( $user ) = @_;
 
       my $room_id;
+      my $searching_user;
 
       my $displayname = generate_random_displayname();
       my $second_displayname = generate_random_displayname();
+      my $searching_displayname = generate_random_displayname();
 
       matrix_set_displayname( $user, $displayname )
       ->then( sub {
@@ -410,7 +412,13 @@ test "User directory correctly update on display name change",
          matrix_create_user_on_server( $user->http,
             displayname => $second_displayname
          );
-      })->then( sub {
+      ->then( sub {
+         matrix_create_user_on_server( $user->http,
+            displayname => $searching_displayname
+         );
+      }) -> then( sub {
+         ( $searching_user ) = @_;
+
          log_if_fail "First displayname", $displayname;
 
          matrix_create_room( $user,
@@ -419,6 +427,8 @@ test "User directory correctly update on display name change",
       })->then( sub {
          ( $room_id ) = @_;
 
+         matrix_join_room( $searching_user, $room_id );
+      })->then( sub {
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
          my ( $body ) = @_;
