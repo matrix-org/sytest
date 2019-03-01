@@ -466,8 +466,8 @@ sub generate_random_displayname
 }
 
 
-# Get the user directory after a change has been made. This creates a new user
-# and then polls the user directory until we see it. This is to get around the
+# Get the user directory after a change has been made. This creates two new users
+# and then polls the user directory until one sees the other. This is to get around the
 # fact that the user directory gets updated asynchronously.
 sub matrix_get_user_dir_synced
 {
