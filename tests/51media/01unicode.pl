@@ -1,3 +1,4 @@
+use HTTP::Headers::Util qw( split_header_words );
 use URI::Escape qw( uri_escape );
 use SyTest::TCPProxy;
 
@@ -86,7 +87,7 @@ push our @EXPORT, qw( upload_test_content );
 
 =head2 get_media
 
-   my ( $content_dispostion, $content ) = get_media( $http, $content_id ) -> get;
+   my ( $content_disposition_params, $content ) = get_media( $http, $content_id ) -> get;
 
 Fetches a piece of media from the server.
 
@@ -102,10 +103,40 @@ sub get_media
       my ( $body, $response ) = @_;
 
       my $disposition = $response->header( "Content-Disposition" );
-      Future->done( $disposition, $body );
+
+      my $cd_params;
+      if ( defined $disposition ) {
+         $cd_params = parse_content_disposition_params( $disposition );
+      }
+      Future->done( $cd_params, $body );
    });
 }
 push @EXPORT, qw( get_media );
+
+sub parse_content_disposition_params {
+   my ( $disposition ) = @_;
+   my @parts = split_header_words( $disposition );
+
+   # should be only one list of words
+   assert_eq( scalar @parts, 1, "number of content-dispostion header lists" );
+   @parts = @{$parts[0]};
+
+   # the first part must be 'inline'
+   my $k = shift @parts;
+   my $v = shift @parts;
+   assert_eq( $k, "inline", "content-disposition" );
+   die "invalid CD" if defined $v;
+
+   my %params;
+   while (@parts) {
+      my $k = shift @parts;
+      my $v = shift @parts;
+      die "multiple $k params" if exists $params{$k};
+      die "unknown param $k" unless ( $k eq 'filename' || $k eq 'filename*' );
+      $params{$k} = $v;
+   }
+   return \%params;
+}
 
 
 test "Can upload with Unicode file name",
@@ -135,10 +166,8 @@ sub test_using_client
    }
 
    get_media( $client, $content )->then( sub {
-      my ( $disposition ) = @_;
-      uc $disposition eq uc "inline; filename*=utf-8''$FILENAME_ENCODED" or
-         die "Expected a UTF-8 filename parameter";
-
+      my ( $cd_params ) = @_;
+      assert_eq( $cd_params->{'filename*'}, "utf-8''$FILENAME_ENCODED", "filename*" );
       Future->done(1);
    });
 }

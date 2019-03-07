@@ -15,17 +15,26 @@ test "Can upload with ASCII file name",
 # we only need one user for these tests
 my $user_fixture = local_user_fixture();
 
-my %TEST_CASES = (
-   "ascii" => "inline; filename=ascii",
+sub assert_cd_params_match_filename {
+   my ( $filename, $cd_params ) = @_;
 
-   # synapse uses filename* encoding for this, though regular filename encoding
-   # with a quoted string would be valid too
-   "name with spaces" => "inline; filename*=utf-8''name%20with%20spaces",
+   # either we need a valid "filename*" param
+   if ( $cd_params->{"filename*"} ) {
+      my $f = $cd_params->{"filename*"};
+      $f =~ s/%(..)/chr hex $1/eg;
+      assert_eq( $f, "utf-8''$filename", "filename*" );
 
-   "name;with;semicolons" => "inline; filename*=utf-8''name%3Bwith%3Bsemicolons",
-  );
+      # there might also be a 'filename', but it doesn't really matter what it
+      # is.
+      return;
+   }
 
-while ( my ( $filename, $expected_disposition ) = each %TEST_CASES ) {
+   # or we need a valid filename
+   my $f = $cd_params->{"filename"};
+   assert_eq( $f, $filename, "filename" );
+}
+
+foreach my $filename ( "ascii", "name with spaces", "name;with;semicolons" ) {
    test "Can download file '$filename'",
       requires => [
          $user_fixture, $main::API_CLIENTS[1]
@@ -43,12 +52,12 @@ while ( my ( $filename, $expected_disposition ) = each %TEST_CASES ) {
             # try and fetch it as a local user
             get_media( $user->http, $content_id );
          })->then( sub {
-            assert_eq( $_[0], $expected_disposition );
+            assert_cd_params_match_filename( $filename, $_[0] );
 
             # do the same over federation
             get_media( $federation_client, $content_id );
          })->then( sub {
-            assert_eq( $_[0], $expected_disposition );
+            assert_cd_params_match_filename( $filename, $_[0] );
             Future->done(1);
          });
       };
