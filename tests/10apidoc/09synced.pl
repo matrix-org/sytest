@@ -200,7 +200,7 @@ sub await_sync_timeline_or_state_contains {
       check => sub {
          my ( $body ) = @_;
 
-         sync_timeline_contains( $body, $room_id, $check ) or sync_room_contains( $body, $room_id, "state", $check )
+         sync_timeline_contains( $body, $room_id, $check ) || sync_room_contains( $body, $room_id, "state", $check )
       },
       %params,
    )
