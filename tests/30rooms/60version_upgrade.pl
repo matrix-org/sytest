@@ -437,24 +437,21 @@ test "/upgrade copies ban events to the new room",
       })->then( sub {
          ( $new_room_id, ) = @_;
 
-         matrix_sync_again( $creator );
-      })->then( sub {
-         my ( $sync_body ) = @_;
+         await_sync_timeline_or_state_contains( $creator, $new_room_id, check => sub {
+            my ( $event ) = @_;
 
-         log_if_fail "sync body", $sync_body;
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{state_key} eq "\@bob:matrix.org";
 
-         my $room = $sync_body->{rooms}{join}{$new_room_id};
+            assert_deeply_eq(
+               $event->{content},
+               $content,
+               "no ban in replacement room",
+            );
 
-         my $event = first {
-            $_->{type} eq "m.room.member" && $_->{state_key} eq '@bob:matrix.org',
-         } @{ $room->{timeline}->{events} };
+            return 1;
+         });
 
-         log_if_fail "Content", $event->{content};
-         assert_deeply_eq(
-            $event->{content},
-            $content,
-            "ban in replacement room",
-         );
          Future->done(1);
       });
    };

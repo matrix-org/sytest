@@ -6,6 +6,7 @@ push our @EXPORT, qw(
    sync_timeline_contains
    await_sync
    await_sync_timeline_contains
+   await_sync_timeline_or_state_contains
    await_sync_presence_contains
 );
 
@@ -176,6 +177,30 @@ sub await_sync_timeline_contains {
          my ( $body ) = @_;
 
          sync_timeline_contains( $body, $room_id, $check )
+      },
+      %params,
+   )
+}
+
+=head2 await_sync_timeline_or_state_contains
+
+Waits for something to appear in a the timeline or the state of a particular
+room, see await_sync for details.
+
+The C<check> function gets given individual events.
+
+=cut
+
+sub await_sync_timeline_or_state_contains {
+   my ( $user, $room_id, %params ) = @_;
+
+   my $check = delete $params{check} or die "Must supply a 'check' param";
+
+   await_sync( $user,
+      check => sub {
+         my ( $body ) = @_;
+
+         sync_timeline_contains( $body, $room_id, $check ) or sync_room_contains( $body, $room_id, "state", $check )
       },
       %params,
    )
