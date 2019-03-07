@@ -405,10 +405,6 @@ test "User directory correctly update on display name change",
       matrix_set_displayname( $user, $displayname )
       ->then( sub {
          matrix_create_user_on_server( $user->http,
-            displayname => $second_displayname
-         );
-      })->then( sub {
-         matrix_create_user_on_server( $user->http,
             displayname => $searching_displayname
          );
       }) -> then( sub {
