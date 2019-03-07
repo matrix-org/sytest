@@ -451,8 +451,6 @@ test "/upgrade copies ban events to the new room",
 
             return 1;
          });
-
-         Future->done(1);
       });
    };
 
