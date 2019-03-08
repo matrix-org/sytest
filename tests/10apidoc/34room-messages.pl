@@ -141,7 +141,7 @@ test "GET /rooms/:room_id/messages returns a message",
          matrix_sync( $user )
       })->then( sub {
          my ( $sync_body ) = @_;
-         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{next_batch};
+         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
 
          do_request_json_for( $user,
             method => "GET",
@@ -179,7 +179,7 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
          matrix_sync( $user )
       })->then( sub {
          my ( $sync_body ) = @_;
-         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{next_batch};
+         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
 
          do_request_json_for( $user,
             method => "GET",
