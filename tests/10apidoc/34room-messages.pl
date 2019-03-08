@@ -138,10 +138,10 @@ test "GET /rooms/:room_id/messages returns a message",
       matrix_send_room_text_message( $user, $room_id,
          body => "Here is the message content",
       )->then( sub {
-         matrix_sync($user)
+         matrix_sync( $user )
       })->then( sub {
          my ( $sync_body ) = @_;
-         my $token = $sync_body->{next_batch};
+         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{next_batch};
 
          do_request_json_for( $user,
             method => "GET",
@@ -176,16 +176,15 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
       matrix_send_room_text_message( $user, $room_id,
          body => "Here is the message content",
       )->then( sub {
-         matrix_sync($user)
+         matrix_sync( $user )
       })->then( sub {
          my ( $sync_body ) = @_;
-         my $token = $sync_body->{next_batch};
+         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{next_batch};
 
          do_request_json_for( $user,
             method => "GET",
             uri    => "/r0/rooms/$room_id/messages",
 
-            # With no params this does "forwards from END"; i.e. nothing useful
             params => {
                dir => "b",
                filter => '{ "lazy_load_members" : true }',
@@ -224,7 +223,7 @@ sub matrix_get_room_messages
 
    $params{dir} ||= "b";
 
-   matrix_sync($user)->then( sub {
+   matrix_sync( $user )->then( sub {
       my ( $sync_body ) = @_;
 
       $params{from} ||= $sync_body->{next_batch};
