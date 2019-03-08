@@ -29,7 +29,7 @@ test "Inbound federation correctly soft fails events",
       #  A = join of remote user
       #  B = creator of room blocks message sending
       #  C = remote user sends a message
-      #  D = remote user sends a non-mesasage event
+      #  D = remote user sends a non-message event
       #
       # Since the banning of sending message happends before C, we expect the
       # local server to soft fail C when it is received. D should be received as
@@ -54,7 +54,7 @@ test "Inbound federation correctly soft fails events",
             return unless $event->{type} eq "m.room.member";
             return unless $event->{sender} eq $user_id;
 
-            Future->done(1);
+            return 1;
          });
       })->then( sub {
          log_if_fail "Got join down sync";
@@ -77,7 +77,7 @@ test "Inbound federation correctly soft fails events",
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.power_levels";
 
-            Future->done(1);
+            return 1;
          });
       })->then( sub {
          log_if_fail "Blocked new messages";
@@ -134,7 +134,7 @@ test "Inbound federation correctly soft fails events",
 
             return unless $event->{type} eq "m.room.other_message_type";
 
-            Future->done(1);
+            return 1;
          });
       });
    };
