@@ -1,3 +1,5 @@
+use URI::Escape qw( uri_escape );
+
 test "/event/ on joined room works",
    requires => [ local_user_and_room_fixtures() ],
 
@@ -11,7 +13,7 @@ test "/event/ on joined room works",
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/$event_id",
+            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id ) }",
          )->then( sub {
             my ( $body ) = @_;
 
@@ -38,7 +40,7 @@ test "/event/ on non world readable room does not work",
 
          do_request_json_for( $other_user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/$event_id",
+            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id ) }",
          );
       })->main::expect_http_403;
    };
@@ -78,13 +80,13 @@ test "/event/ does not allow access to events before the user joined",
          # we shouldn't be able to get the event before we joined.
          do_request_json_for( $other_user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/$event_id_1",
+            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id_1 ) }",
          );
       })->main::expect_http_403->then( sub {
          # we should be able to get the event after we joined.
          do_request_json_for( $other_user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/$event_id_2",
+            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id_2 ) }",
          );
       })->then( sub {
          my ( $body ) = @_;

@@ -136,7 +136,7 @@ foreach my $vis (qw( world_readable shared invite joined )) {
             $outbound_client->do_request_json(
                method   => "POST",
                hostname => $first_home_server,
-               uri      => "/get_missing_events/" . $room->room_id,
+               uri      => "/v1/get_missing_events/" . $room->room_id,
 
                content => {
                   earliest_events => [ $creation_event->{event_id} ],
