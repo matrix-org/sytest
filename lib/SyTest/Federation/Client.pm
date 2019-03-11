@@ -184,7 +184,7 @@ sub join_room
 
       my %member_event = (
          ( map { $_ => $protoevent->{$_} } qw(
-            auth_events content depth prev_events prev_state room_id sender
+            auth_events content depth prev_events room_id sender
             state_key type ) ),
 
          event_id         => $store->next_event_id,
