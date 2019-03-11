@@ -408,6 +408,53 @@ test "/upgrade copies important state to the new room",
    };
 
 
+test "/upgrade copies ban events to the new room",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+      my ( $new_room_id );
+
+      my $content = {
+         membership => "ban",
+      };
+
+      matrix_put_room_state(
+         $creator, $room_id,
+         type => "m.room.member",
+         content => $content,
+         state_key => '@bob:matrix.org',
+      )->then( sub {
+         matrix_sync( $creator );
+      })->then( sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id, ) = @_;
+
+         await_sync_timeline_or_state_contains( $creator, $new_room_id, check => sub {
+            my ( $event ) = @_;
+
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{state_key} eq "\@bob:matrix.org";
+
+            assert_deeply_eq(
+               $event->{content},
+               $content,
+               "no ban in replacement room",
+            );
+
+            return 1;
+         });
+      });
+   };
+
+
 test "/upgrade moves aliases to the new room",
    requires => [
       $main::HOMESERVER_INFO[0],
