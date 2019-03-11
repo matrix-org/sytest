@@ -187,11 +187,6 @@ sub create_event
    defined $fields{$_} or croak "Every event needs a '$_' field"
       for qw( type auth_events content depth prev_events room_id sender );
 
-   if( defined $fields{state_key} ) {
-      defined $fields{$_} or croak "Every state event needs a '$_' field"
-         for qw( prev_state );
-   }
-
    my $event_id = delete $fields{event_id};
    if( not defined $event_id ) {
       $event_id = $self->next_event_id( delete $fields{event_id_suffix} );
