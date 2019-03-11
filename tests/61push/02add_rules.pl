@@ -1,5 +1,80 @@
 use utf8;
 
+use List::Util qw( first );
+
+sub check_add_push_rule
+{
+   my ( $user, $scope, $kind, $rule_id, $rule_body, %params ) = @_;
+
+   my $check_rule = sub {
+      my ( $rule ) = @_;
+
+      log_if_fail "Rule", $rule;
+
+      assert_json_keys( $rule, qw( rule_id actions enabled ) );
+
+      assert_json_boolean( $rule->{enabled} );
+
+      assert_eq( $rule->{rule_id}, $rule_id );
+   };
+
+   my $check_rule_list = sub {
+      my ( $rules ) = @_;
+
+      my ( $rule ) = first { $_->{rule_id} eq $rule_id } @$rules;
+
+      $check_rule->( $rule );
+   };
+
+   matrix_add_push_rule( $user, $scope, $kind, $rule_id, $rule_body, %params )
+   ->then( sub {
+      matrix_get_push_rule( $user, $scope, $kind, $rule_id )
+      ->on_done( $check_rule );
+   })->then( sub {
+      do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/$kind/",
+      )->on_done( $check_rule_list );
+   })->then( sub {
+       do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/",
+      )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, $kind );
+         $check_rule_list->( $body->{$kind} );
+      });
+   })->then( sub {
+      matrix_get_push_rules( $user )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body->{$scope}, $kind );
+         $check_rule_list->( $body->{$scope}{$kind} );
+      });
+   })->then( sub {
+      # Check that the rule is enabled.
+      do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/$kind/$rule_id/enabled",
+      )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_deeply_eq( $body, { enabled => JSON::true } );
+      });
+   })->then( sub {
+      # Check that the actions match.
+      do_request_json_for( $user,
+         method  => "GET",
+         uri     => "/r0/pushrules/$scope/$kind/$rule_id/actions",
+      )->on_done( sub {
+         my ( $body ) = @_;
+
+         assert_deeply_eq( $body, { actions => $rule_body->{actions} } );
+      });
+   })
+}
+
 my $TO_CHECK = [
    [ "room", "#spam:example.com", {} ],
    [ "sender", "\@bob:example.com", {} ],
