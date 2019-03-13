@@ -24,7 +24,7 @@ test "Inbound federation can return events",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/event/$member_event->{event_id}/",
+            uri      => "/v1/event/$member_event->{event_id}/",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -73,7 +73,7 @@ test "Inbound federation redacts events from erased users",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/event/$message_id/",
+            uri      => "/v1/event/$message_id/",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -96,7 +96,7 @@ test "Inbound federation redacts events from erased users",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/event/$message_id/",
+            uri      => "/v1/event/$message_id/",
          );
       })->then( sub {
          my ( $body ) = @_;

@@ -32,7 +32,7 @@ test "Querying auth checks the events requested belong to the room",
          $outbound_client->do_request_json(
             method   => "POST",
             hostname => $first_home_server,
-            uri      => "/query_auth/$pub_room_id/$priv_event_id",
+            uri      => "/v1/query_auth/$pub_room_id/$priv_event_id",
 
             content => {
                auth_chain => [], # This is part of the exploit

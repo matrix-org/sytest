@@ -15,8 +15,9 @@
 use Future::Utils qw( repeat );
 use List::Util qw( all first );
 
-# TODO: switch this to '2' once that is released
-my $TEST_NEW_VERSION = 'vdh-test-version';
+push our @EXPORT, qw ( upgrade_room_synced $TEST_NEW_VERSION );
+
+my $TEST_NEW_VERSION = '2';
 
 =head2 upgrade_room
 
@@ -56,6 +57,43 @@ sub upgrade_room {
 
       assert_json_keys( $body, qw( replacement_room ) );
       Future->done( $body->{replacement_room} );
+   });
+}
+
+=head2 is_direct_room
+
+    is_direct_room( $user, $room_id )->then( sub {
+        my ( $is_direct ) = @_;
+    })
+
+Check if a room is considered to be a direct chat by the given user.
+
+=cut
+
+sub is_direct_room {
+   my ( $user, $room_id ) = @_;
+
+   # Download account data events from sync
+   matrix_get_account_data( $user, "m.direct" )->then( sub {
+      # Should only have the m.direct event in account_data
+      my ( $data ) = @_;
+
+      log_if_fail "m.direct account data", $data;
+
+      # Check if the room_id is in the list of direct rooms
+      foreach my $user_id ( keys %{ $data } ) {
+         my $room_ids = $data->{$user_id};
+
+         # Return whether the given room ID is in the response
+         foreach my $room (@$room_ids) {
+            if ( $room eq $room_id ) {
+               return Future->done( 1 );
+            }
+         }
+      }
+
+      # Didn't find a direct room with our room ID
+      Future->done( 0 );
    });
 }
 
@@ -106,9 +144,14 @@ sub upgrade_room_synced {
          my ( $sync_body, $new_room_id ) = @_;
          return 0 if not exists $sync_body->{rooms}{join}{$new_room_id};
          my $tl = $sync_body->{rooms}{join}{$new_room_id}{timeline}{events};
+         my $st = $sync_body->{rooms}{join}{$new_room_id}{state}{events};
          log_if_fail "New room timeline", $tl;
+         log_if_fail "New room state", $st;
 
          foreach my $ev ( @$tl ) {
+            $received_event_counts{$ev->{type}} += 1;
+         }
+         foreach my $ev ( @$st ) {
             $received_event_counts{$ev->{type}} += 1;
          }
 
@@ -298,6 +341,12 @@ test "/upgrade copies important state to the new room",
          "m.room.guest_access" => { guest_access => "forbidden" },
          "m.room.history_visibility" => { history_visibility => "joined" },
          "m.room.avatar" => { url => "http://something" },
+         "m.room.encryption" => { algorithm => "m.megolm.v1.aes-sha2" },
+         "m.room.server_acl" => { 
+            allow => [ "*" ],
+            allow_ip_literals => "false",
+            deny => [ "*.evil.com", "evil.com" ],
+         },
       );
 
       my $f = Future->done(1);
@@ -355,6 +404,53 @@ test "/upgrade copies important state to the new room",
             );
          }
          Future->done(1);
+      });
+   };
+
+
+test "/upgrade copies ban events to the new room",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+      my ( $new_room_id );
+
+      my $content = {
+         membership => "ban",
+      };
+
+      matrix_put_room_state(
+         $creator, $room_id,
+         type => "m.room.member",
+         content => $content,
+         state_key => '@bob:matrix.org',
+      )->then( sub {
+         matrix_sync( $creator );
+      })->then( sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id, ) = @_;
+
+         await_sync_timeline_or_state_contains( $creator, $new_room_id, check => sub {
+            my ( $event ) = @_;
+
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{state_key} eq "\@bob:matrix.org";
+
+            assert_deeply_eq(
+               $event->{content},
+               $content,
+               "no ban in replacement room",
+            );
+
+            return 1;
+         });
       });
    };
 
@@ -468,6 +564,85 @@ test "/upgrade moves aliases to the new room",
       });
    };
 
+test "/upgrade preserves direct room state",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      my $new_room_id;
+      my $user_id = $creator->user_id;
+
+      do_request_json_for(
+         $creator,
+         method => "PUT",
+         uri    => "/r0/user/$user_id/account_data/m.direct",
+         content => { $user_id => [$room_id] },
+      )->then( sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id ) = @_;
+
+         is_direct_room( $creator, $new_room_id );
+      })->then( sub {
+         my ( $is_direct_room ) = @_;
+
+         $is_direct_room == 1 or die "Expected upgraded room to be a direct room";
+         Future->done( 1 );
+      });
+   };
+
+test "/upgrade preserves room federation ability",
+   requires => [
+      local_user_fixture(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator ) = @_;
+
+      do_request_json_for( $creator,
+         method => "POST",
+         uri    => "/r0/createRoom",
+
+         content => {
+            creation_content => {
+               "m.federate" => JSON::false,
+            },
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( room_id ));
+         assert_json_nonempty_string( my $old_room_id = $body->{room_id} );
+
+         upgrade_room_synced(
+            $creator, $old_room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( my $new_room_id, ) = @_;
+
+         do_request_json_for( $creator,
+            method => "GET",
+            uri    => "/r0/rooms/$new_room_id/state/m.room.create",
+         )
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "upgraded room state", $state;
+
+         assert_json_keys( $state, qw( m.federate ));
+
+         Future->done(1);
+      });
+   };
 
 test "/upgrade restricts power levels in the old room",
    requires => [

@@ -94,6 +94,7 @@ sub start
 {
    my $self = shift;
 
+   my $hs_index = $self->{hs_index};
    my $port = $self->{ports}{synapse};
    my $output = $self->{output};
 
@@ -139,9 +140,6 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-
-   my $cert_file = $self->{paths}{cert_file} = "$hs_dir/cert.pem";
-   my $key_file  = $self->{paths}{key_file}  = "$hs_dir/key.pem";
    my $log_config_file = "$hs_dir/log.config";
 
    my $macaroon_secret_key = "secret_$port";
@@ -151,12 +149,14 @@ sub start
         server_name => $self->server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
-        tls_certificate_path => $cert_file,
-        tls_private_key_path => $key_file,
+        tls_certificate_path => "$cwd/keys/tls-selfsigned.crt",
+        tls_private_key_path => "$cwd/keys/tls-selfsigned.key",
         tls_dh_params_path => "$cwd/keys/tls.dh",
         use_insecure_ssl_client_just_for_testing_do_not_use => 1,
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
+        rc_registration_requests_per_second => 1000,
+        rc_registration_request_burst_count => 1000,
         enable_registration => "true",
         database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
@@ -223,12 +223,6 @@ sub start
       }
    }
 
-   my $pythonpath = (
-      exists $ENV{PYTHONPATH}
-      ? "$self->{synapse_dir}:$ENV{PYTHONPATH}"
-      : "$self->{synapse_dir}"
-   );
-
    my @synapse_command = ( $self->{python} );
 
    if( $self->{coverage} ) {
@@ -245,13 +239,15 @@ sub start
    $output->diag( "Generating config for port $port" );
 
    my @config_command = (
-      @synapse_command, "--generate-config", "--report-stats=no"
+      @synapse_command, "--generate-config", "--report-stats=no",
    );
 
-   my @command = $self->wrap_synapse_command( @synapse_command );
+   my @command = (
+      $self->wrap_synapse_command( @synapse_command ),
+      @{ $self->{extra_args} },
+   );
 
    my $env = {
-      "PYTHONPATH" => $pythonpath,
       "PATH" => $ENV{PATH},
       "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
    };
@@ -260,27 +256,33 @@ sub start
 
    my $started_future = $loop->new_future;
 
-   $output->diag( "Starting server with command " . join( " ", @config_command ));
+   $output->diag(
+      "Creating config for server $hs_index with command "
+         . join( " ", @config_command ),
+   );
 
-   $loop->run_child(
+   $loop->open_process(
       setup => [ env => $env ],
-
       command => [ @config_command ],
 
       on_finish => sub {
-         my ( $pid, $exitcode, $stdout, $stderr ) = @_;
+         my ( $proc, $exitcode ) = @_;
 
          if( $exitcode != 0 ) {
-            $started_future->fail( "Server failed to start: exitcode " . ( $exitcode >> 8 ));
+            $started_future->fail( "Server failed to generate config: exitcode " . ( $exitcode >> 8 ));
             return
          }
 
-         $output->diag( "Starting server for port $port" );
+         $output->diag(
+            "Starting server $hs_index for port $port with command "
+               . join( " ", @command ),
+         );
+
          $self->add_child(
             $self->{proc} = IO::Async::Process->new(
                setup => [ env => $env ],
 
-               command => [ @command, @{ $self->{extra_args} } ],
+               command => \@command,
 
                on_finish => $self->_capture_weakself( 'on_finish' ),
             )
@@ -390,16 +392,18 @@ sub on_finish
    my $self = shift;
    my ( $process, $exitcode ) = @_;
 
+   my $hs_index = $self->{hs_index};
+
    say $self->pid . " stopped";
 
    my $port = $self->{ports}{synapse};
 
    if( $exitcode > 0 ) {
       if( WIFEXITED($exitcode) ) {
-         warn "Main homeserver process exited " . WEXITSTATUS($exitcode) . "\n";
+         warn "Main homeserver process for server $hs_index exited " . WEXITSTATUS($exitcode) . "\n";
       }
       else {
-         warn "Main homeserver process failed - code=$exitcode\n";
+         warn "Main homeserver process for server $hs_index failed - code=$exitcode\n";
       }
 
       print STDERR "\e[1;35m[server $port}]\e[m: $_\n"
