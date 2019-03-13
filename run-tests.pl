@@ -668,18 +668,6 @@ sub _run_test0
    my ( $t, $test, $req_futures ) = @_;
    my $skip_reason;
 
-   # Check if this test has been blocked by the blacklist
-   if (scalar(@TEST_BLACKLIST) and grep { $test->name =~ /\Q$_\E\z/ } @TEST_BLACKLIST) {
-      $skip_reason = "test being in blacklist\n";
-      return (0, $skip_reason);
-   }
-
-   # Check if this test has been blocked by the whitelist
-   if (scalar(@TEST_WHITELIST) and not grep { $test->name =~ /\Q$_\E\z/ } @TEST_WHITELIST) {
-      $skip_reason = "test not being in whitelist\n";
-      return (0, $skip_reason);
-   }
-
    my $success = eval {
       my @reqs;
       my $f_setup = Future->needs_all( map { without_cancel($_) } @$req_futures )
@@ -851,6 +839,16 @@ foreach my $test ( @TESTS ) {
    }
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
+
+   # Check if this test has been blocked by the blacklist. If so, mark as expected fail
+   if ( scalar( @TEST_BLACKLIST ) and grep { $test->name =~ /\Q$_\E\z/ } @TEST_BLACKLIST ) {
+      #$test->expect_fail = 1;
+   }
+
+   # Check if this test has been blocked by the whitelist. If so, mark as expected fail
+   if ( scalar( @TEST_WHITELIST ) and not grep { $test->name =~ /\Q$_\E\z/ } @TEST_WHITELIST ) {
+      #$test->expect_fail = 1;
+   }
 
    my $t = $OUTPUT->$m( $test->name, $test->expect_fail );
    local $RUNNING_TEST = $t;
