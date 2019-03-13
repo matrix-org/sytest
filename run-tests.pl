@@ -84,7 +84,7 @@ GetOptions(
 
    'n|no-tls' => sub { $WANT_TLS = 0 },
 
-   # these two are superceded by -I, but kept for backwards compat
+   # these two are superceded by -I, but kept for backwards compatability
    'dendron=s' => sub {
       $SERVER_IMPL = 'Synapse::ViaDendron' unless $SERVER_IMPL;
       push @ARGV, "--dendron-binary", $_[1];
@@ -137,7 +137,7 @@ Options:
                                   One per line. Cannot be used in conjunction
                                   with --test-blacklist-file
 
-   -B, --test-blacklist-file    - blacklist file containing test names to run
+   -B, --test-blacklist-file    - blacklist file containing test names to not run
                                   One per line. Cannot be used in conjunction
                                   with --test-whitelist-file
 
