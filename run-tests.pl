@@ -202,7 +202,7 @@ Getopt::Long::Configure("no_passthrough");
 GetOptions($HS_FACTORY->get_options()) or usage(1);
 
 # Check if both options have been set
-if (length($BLACKLIST_FILE) and length($WHITELIST_FILE)) {
+if( $BLACKLIST_FILE and $WHITELIST_FILE ) {
    print STDERR "Not allowed to set both whitelist and blacklist options.\n";
    exit 1
 }
