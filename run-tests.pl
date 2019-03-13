@@ -841,12 +841,12 @@ foreach my $test ( @TESTS ) {
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
 
    # Check if this test has been blocked by the blacklist. If so, mark as expected fail
-   if ( scalar( @TEST_BLACKLIST ) and grep { $test->name =~ /\Q$_\E\z/ } @TEST_BLACKLIST ) {
+   if ( scalar( @TEST_BLACKLIST ) and grep $test->name, @TEST_BLACKLIST ) {
       $test->expect_fail = 1;
    }
 
    # Check if this test has been blocked by the whitelist. If so, mark as expected fail
-   if ( scalar( @TEST_WHITELIST ) and not grep { $test->name =~ /\Q$_\E\z/ } @TEST_WHITELIST ) {
+   if ( scalar( @TEST_WHITELIST ) and not grep $test->name, @TEST_WHITELIST ) {
       $test->expect_fail = 1;
    }
 

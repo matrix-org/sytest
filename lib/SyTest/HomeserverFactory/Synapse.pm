@@ -102,6 +102,7 @@ sub create_server
    return $self->{impl}->new( %params );
 }
 
+
 package SyTest::HomeserverFactory::Synapse::ViaDendron;
 use base qw( SyTest::HomeserverFactory::Synapse );
 
