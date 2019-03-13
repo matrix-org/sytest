@@ -209,9 +209,9 @@ if( $BLACKLIST_FILE and $WHITELIST_FILE ) {
 
 # Read in test blacklist rules if set
 my @TEST_BLACKLIST = ();
-if (length($BLACKLIST_FILE)) {
-   open(my $blacklist_data, "<", $BLACKLIST_FILE) or die "Couldn't open blacklist file for writing: $!\n";
-   while (my $test_name = <$blacklist_data>) {
+if ( $BLACKLIST_FILE ) {
+   open( my $blacklist_data, "<", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for writing: $!\n";
+   while ( my $test_name = <$blacklist_data> ) {
       # Trim whitespace
       chomp $test_name;
       push @TEST_BLACKLIST, $test_name;
@@ -221,9 +221,9 @@ if (length($BLACKLIST_FILE)) {
 
 # Read in test whitelist rules if set
 my @TEST_WHITELIST = ();
-if (length($WHITELIST_FILE)) {
-   open(my $whitelist_data, "<", $WHITELIST_FILE) or die "Couldn't open whitelist file for writing: $!\n";
-   while (my $test_name = <$whitelist_data>) {
+if ( $WHITELIST_FILE ) {
+   open( my $whitelist_data, "<", $WHITELIST_FILE ) or die "Couldn't open whitelist file for writing: $!\n";
+   while ( my $test_name = <$whitelist_data> ) {
       # Trim whitespace
       chomp $test_name;
       push @TEST_WHITELIST, $test_name;
