@@ -18,7 +18,7 @@ $ docker run --rm -it -v /path/to/synapse\:/src -v /path/to/where/you/want/logs\
 
 This will run on the same branch in SyTest as the Synapse checkout, if possible, but will fall back to using develop.
 
-If you want to use an existing checkout of SyTest, mount it to `/test` inside the container by adding `-v /path/to/sytest\:/test` to the docker command.
+If you want to use an existing checkout of SyTest, mount it to `/test` inside the container by adding `-v /path/to/sytest\:/test` to the docker command (note that this will be written to).
 
 If you want to test against a PostgreSQL database, pass `-e POSTGRES=1` to the docker command.
 
