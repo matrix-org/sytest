@@ -157,10 +157,20 @@ sub start
         rc_message_burst_count => 1000,
         rc_registration_requests_per_second => 1000,
         rc_registration_request_burst_count => 1000,
-        rc_login_requests_per_address_per_second => 1000,
-        rc_login_request_per_address_burst_count => 1000,
-        rc_login_requests_per_user_per_second => 1000,
-        rc_login_request_per_user_burst_count => 1000,
+        rc_registration => {
+            per_second => 1000,
+            burst_count => 1000,
+        }
+        rc_login => {
+            address => {
+                per_second => 1000,
+                burst_count => 1000,
+            },
+            account => {
+                per_second => 1000,
+                burst_count => 1000,
+            }
+        }
         enable_registration => "true",
         database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
