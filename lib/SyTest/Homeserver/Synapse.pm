@@ -160,7 +160,7 @@ sub start
         rc_registration => {
             per_second => 1000,
             burst_count => 1000,
-        }
+        },
         rc_login => {
             address => {
                 per_second => 1000,
@@ -170,7 +170,7 @@ sub start
                 per_second => 1000,
                 burst_count => 1000,
             }
-        }
+        },
         enable_registration => "true",
         database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
