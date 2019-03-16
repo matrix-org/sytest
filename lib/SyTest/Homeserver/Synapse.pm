@@ -158,8 +158,20 @@ sub start
         use_insecure_ssl_client_just_for_testing_do_not_use => 1,
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
-        rc_registration_requests_per_second => 1000,
-        rc_registration_request_burst_count => 1000,
+        rc_registration => {
+            per_second => 1000,
+            burst_count => 1000,
+        },
+        rc_login => {
+            address => {
+                per_second => 1000,
+                burst_count => 1000,
+            },
+            account => {
+                per_second => 1000,
+                burst_count => 1000,
+            }
+        },
         enable_registration => "true",
         database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
