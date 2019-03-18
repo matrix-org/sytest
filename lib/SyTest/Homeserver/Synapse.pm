@@ -170,6 +170,10 @@ sub start
             account => {
                 per_second => 1000,
                 burst_count => 1000,
+            },
+            failed_attempts => {
+                per_second => 1000,
+                burst_count => 1000,
             }
         },
         enable_registration => "true",
