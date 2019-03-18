@@ -45,6 +45,7 @@ fi
 
 # We've already created the virtualenv, but lets double check we have all deps.
 /venv/bin/pip install -q --upgrade --no-cache-dir -e /src/
+/venv/bin/pip install -q --upgrade --no-cache-dir lxml psycopg2 coverage codecov
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
 dos2unix ./install-deps.pl
