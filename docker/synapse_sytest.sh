@@ -27,15 +27,12 @@ fi
 # PostgreSQL setup
 if [ -n "$POSTGRES" ]
 then
-
-    export PGDATA=/var/lib/postgresql/data
     export PGUSER=postgres
     export POSTGRES_DB_1=pg1
     export POSTGRES_DB_2=pg2
 
-    # Initialise the database files and start the database
-    su -c '/usr/lib/postgresql/9.6/bin/initdb -E "UTF-8" --lc-collate="en_US.UTF-8" --lc-ctype="en_US.UTF-8" --username=postgres' postgres
-    su -c '/usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/lib/postgresql/data start' postgres
+    # Start the database
+    su -c 'eatmydata /usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/lib/postgresql/data start' postgres
 
     # Use the Jenkins script to write out the configuration for a PostgreSQL using Synapse
     jenkins/prep_sytest_for_postgres.sh
@@ -46,25 +43,28 @@ then
 
 fi
 
-# Build the virtualenv, install extra deps that we will need for the tests
-$PYTHON -m virtualenv -p $PYTHON /venv/
-/venv/bin/pip install pip==18.1
+# We've already created the virtualenv, but lets double check we have all deps.
 /venv/bin/pip install -q --no-cache-dir -e /src/
-/venv/bin/pip install -q --no-cache-dir lxml psycopg2 coverage codecov
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
 dos2unix ./install-deps.pl
 ./install-deps.pl
 
 # Run the tests
+>&2 echo "+++ Running tests"
+
 dos2unix ./run-tests.pl
 TEST_STATUS=0
+
 if [ -n "$WORKERS" ]
 then
-    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --synapse-directory=/src --coverage --dendron-binary=/test/docker/pydron.py -O tap --all "$@" > results.tap || TEST_STATUS=$?
+    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --synapse-directory=/src --coverage --dendron-binary=/pydron.py -O tap --all "$@" > results.tap || TEST_STATUS=$?
+
 else
     ./run-tests.pl -I Synapse --python=/venv/bin/python --synapse-directory=/src --coverage -O tap --all "$@" > results.tap || TEST_STATUS=$?
 fi
+
+>&2 echo "--- Copying assets"
 
 # Copy out the logs
 mkdir -p /logs

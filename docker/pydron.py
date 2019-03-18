@@ -17,28 +17,6 @@ def _print(out):
     sys.stderr.flush()
 
 
-def wait_for_start(process, url):
-    """
-    Wait for the start of Synapse by polling its HTTP endpoint.
-    """
-    tries = 100
-    while tries != 0:
-        tries -= 1
-
-        try:
-            r = requests.get("http://" + url.replace("http://", ""), timeout=5)
-            if r.status_code:
-                # We don't care what the status code is, just that it's
-                # responding.
-                return
-        except Exception as e:
-            time.sleep(0.5)
-            pass
-
-    process.kill()
-    raise ValueError("Never started, couldn't get %s!" % (url,))
-
-
 _print("Starting pydron...")
 
 # Sort the args into key:value pairs in a dict
@@ -65,72 +43,41 @@ for x in args.keys():
 # create a map for it.
 appname_map = {"user-directory": "user_dir"}
 
-# running is where we'll keep a map of app name to the Popen object (so we can
-# terminate it later).
-running = {}
 
 try:
+    _print("Starting main process")
+
     # First, try and start Synapse (which will set up the database).
     synapse = (
         args["--synapse-python"]
-        + " -m synapse.app.homeserver --config-path="
+        + " -m synapse.app.homeserver -D --config-path="
         + args["--synapse-config"]
     )
-    syn = subprocess.Popen(
-        shlex.split(synapse), stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-    )
-    running["synapse"] = syn
-
-    # Wait for Synapse to start by polling its webserver until it responds.
-    wait_for_start(syn, urls["synapse"])
+    subprocess.run(shlex.split(synapse), check=True)
 
     # Then, start up all the workers.
     for i in configs.keys():
-
         # Get the synapse app name from the map, if needed. Otherwise, just
         # replace any dashes with underscores, so they match the Python module
         # name.
         appname = appname_map.get(i, i.replace("-", "_"))
 
+        _print("Starting %s" % (appname,))
+
         base = (
             args["--synapse-python"]
             + " -m synapse.app."
             + appname
+            + " -D --config-path="
+            + args["--synapse-config"]
             + " --config-path="
             + configs[i]
-            + " --config-path="
-            + args["--synapse-config"]
         )
-        exc = subprocess.Popen(
-            shlex.split(base), stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-        )
-        running[i] = exc
-
-        # If we've been given a url for it, poll it until it's up
-        if i in urls:
-            wait_for_start(exc, urls[i])
-
-    # Check if any have outright failed to start up (syntax errors, etc). We do
-    # this even if we've waited for them to start, because not all workers have
-    # a URL.
-    failed_units = []
-
-    for x in running.keys():
-        if x in urls:
-            wait_for_start(running[x], urls[x])
-
-        code = running[x].poll()
-
-        if code:
-            _print("%s exited uncleanly with %s!" % (x, code))
-            failed_units.append(x)
-
-    if failed_units:
-        raise ValueError("failed units: %r" % (failed_units,))
+        subprocess.run(shlex.split(base), check=True)
 
     # Nothing failed, let's say we've started and then signal we're up by
     # serving the webserver.
-    print("Synapse started!")
+    _print("Synapse started!")
 
     class WebHandler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -143,6 +90,8 @@ try:
     server = HTTPServer(('', PORT_NUMBER), WebHandler)
     server.serve_forever()
 
+except KeyboardInterrupt:
+   pass
 except BaseException as e:
     # Log a traceback for debug
     import traceback
@@ -151,17 +100,7 @@ except BaseException as e:
     # If we get told to shut down, log it
     _print("Told to quit because %s" % (repr(e)))
 
-    # Terminate all the workers as cleanly as possible.
-    for x in running.keys():
-        if not running[x].returncode:
-            _print("Killing %s" % (x,))
-            running[x].kill()
-        else:
-            _print("%s was already dead" % (x,))
-
-    # If it's keyboard interrupt, exit cleanly -- sytest is finished.
-    if isinstance(e, KeyboardInterrupt):
-        sys.exit(0)
-
     # Otherwise, something bad has happened.
     sys.exit(1)
+finally:
+   subprocess.run(["pkill", "-9", "-f", "synapse.app"])

@@ -94,6 +94,7 @@ sub start
 {
    my $self = shift;
 
+   my $hs_index = $self->{hs_index};
    my $port = $self->{ports}{synapse};
    my $output = $self->{output};
 
@@ -139,28 +140,48 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-
-   my $cert_file = $self->{paths}{cert_file} = "$hs_dir/cert.pem";
-   my $key_file  = $self->{paths}{key_file}  = "$hs_dir/key.pem";
    my $log_config_file = "$hs_dir/log.config";
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
 
+   my $cert = $self->{paths}{cert_file} = "$cwd/keys/tls-selfsigned.crt";
+   my $key  = $self->{paths}{key_file} = "$cwd/keys/tls-selfsigned.key";
+
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
-        tls_certificate_path => $cert_file,
-        tls_private_key_path => $key_file,
+        tls_certificate_path => "$cwd/keys/tls-selfsigned.crt",
+        tls_private_key_path => "$cwd/keys/tls-selfsigned.key",
         tls_dh_params_path => "$cwd/keys/tls.dh",
         use_insecure_ssl_client_just_for_testing_do_not_use => 1,
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
+        rc_registration => {
+            per_second => 1000,
+            burst_count => 1000,
+        },
+        rc_login => {
+            address => {
+                per_second => 1000,
+                burst_count => 1000,
+            },
+            account => {
+                per_second => 1000,
+                burst_count => 1000,
+            },
+            failed_attempts => {
+                per_second => 1000,
+                burst_count => 1000,
+            }
+        },
         enable_registration => "true",
         database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
         registration_shared_secret => $registration_shared_secret,
+
+        pid_file => "$hs_dir/homeserver.pid",
 
         use_frozen_events => "true",
 
@@ -223,12 +244,6 @@ sub start
       }
    }
 
-   my $pythonpath = (
-      exists $ENV{PYTHONPATH}
-      ? "$self->{synapse_dir}:$ENV{PYTHONPATH}"
-      : "$self->{synapse_dir}"
-   );
-
    my @synapse_command = ( $self->{python} );
 
    if( $self->{coverage} ) {
@@ -245,13 +260,15 @@ sub start
    $output->diag( "Generating config for port $port" );
 
    my @config_command = (
-      @synapse_command, "--generate-config", "--report-stats=no"
+      @synapse_command, "--generate-config", "--report-stats=no",
    );
 
-   my @command = $self->wrap_synapse_command( @synapse_command );
+   my @command = (
+      $self->wrap_synapse_command( @synapse_command ),
+      @{ $self->{extra_args} },
+   );
 
    my $env = {
-      "PYTHONPATH" => $pythonpath,
       "PATH" => $ENV{PATH},
       "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
    };
@@ -260,27 +277,33 @@ sub start
 
    my $started_future = $loop->new_future;
 
-   $output->diag( "Starting server with command " . join( " ", @config_command ));
+   $output->diag(
+      "Creating config for server $hs_index with command "
+         . join( " ", @config_command ),
+   );
 
-   $loop->run_child(
+   $loop->open_process(
       setup => [ env => $env ],
-
       command => [ @config_command ],
 
       on_finish => sub {
-         my ( $pid, $exitcode, $stdout, $stderr ) = @_;
+         my ( $proc, $exitcode ) = @_;
 
          if( $exitcode != 0 ) {
-            $started_future->fail( "Server failed to start: exitcode " . ( $exitcode >> 8 ));
+            $started_future->fail( "Server failed to generate config: exitcode " . ( $exitcode >> 8 ));
             return
          }
 
-         $output->diag( "Starting server for port $port" );
+         $output->diag(
+            "Starting server $hs_index for port $port with command "
+               . join( " ", @command ),
+         );
+
          $self->add_child(
             $self->{proc} = IO::Async::Process->new(
                setup => [ env => $env ],
 
-               command => [ @command, @{ $self->{extra_args} } ],
+               command => \@command,
 
                on_finish => $self->_capture_weakself( 'on_finish' ),
             )
@@ -390,16 +413,18 @@ sub on_finish
    my $self = shift;
    my ( $process, $exitcode ) = @_;
 
+   my $hs_index = $self->{hs_index};
+
    say $self->pid . " stopped";
 
    my $port = $self->{ports}{synapse};
 
    if( $exitcode > 0 ) {
       if( WIFEXITED($exitcode) ) {
-         warn "Main homeserver process exited " . WEXITSTATUS($exitcode) . "\n";
+         warn "Main homeserver process for server $hs_index exited " . WEXITSTATUS($exitcode) . "\n";
       }
       else {
-         warn "Main homeserver process failed - code=$exitcode\n";
+         warn "Main homeserver process for server $hs_index failed - code=$exitcode\n";
       }
 
       print STDERR "\e[1;35m[server $port}]\e[m: $_\n"
@@ -591,6 +616,7 @@ sub wrap_synapse_command
 
    my $bind_host = $self->{bind_host};
    my $log = $self->{paths}{log};
+   my $hsdir = $self->{hs_dir};
 
    -x $self->{dendron} or
       die "Cannot exec($self->{dendron}) - $!";
@@ -608,6 +634,7 @@ sub wrap_synapse_command
    {
       my $pusher_config_path = $self->write_yaml_file( "pusher.yaml" => {
          "worker_app"              => "synapse.app.pusher",
+         "worker_pid_file"         => "$hsdir/pusher.pid",
          "worker_log_file"         => "$log.pusher",
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
@@ -632,6 +659,7 @@ sub wrap_synapse_command
    {
       my $appservice_config_path = $self->write_yaml_file( "appservice.yaml" => {
          "worker_app"              => "synapse.app.appservice",
+         "worker_pid_file"         => "$hsdir/appservice.pid",
          "worker_log_file"         => "$log.appservice",
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
@@ -656,6 +684,7 @@ sub wrap_synapse_command
    {
       my $federation_sender_config_path = $self->write_yaml_file( "federation_sender.yaml" => {
          "worker_app"              => "synapse.app.federation_sender",
+         "worker_pid_file"         => "$hsdir/federation_sender.pid",
          "worker_log_file"         => "$log.federation_sender",
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
@@ -680,6 +709,7 @@ sub wrap_synapse_command
    {
       my $synchrotron_config_path = $self->write_yaml_file( "synchrotron.yaml" => {
          "worker_app"              => "synapse.app.synchrotron",
+         "worker_pid_file"         => "$hsdir/synchrotron.pid",
          "worker_log_file"         => "$log.synchrotron",
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
@@ -712,8 +742,10 @@ sub wrap_synapse_command
    {
       my $federation_reader_config_path = $self->write_yaml_file( "federation_reader.yaml" => {
          "worker_app"              => "synapse.app.federation_reader",
+         "worker_pid_file"         => "$hsdir/federation_reader.pid",
          "worker_log_file"         => "$log.federation_reader",
          "worker_replication_host" => "$bind_host",
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"        => [
             {
@@ -744,6 +776,7 @@ sub wrap_synapse_command
    {
       my $media_repository_config_path = $self->write_yaml_file( "media_repository.yaml" => {
          "worker_app"              => "synapse.app.media_repository",
+         "worker_pid_file"         => "$hsdir/media_repository.pid",
          "worker_log_file"         => "$log.media_repository",
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
@@ -775,11 +808,13 @@ sub wrap_synapse_command
 
    {
       my $client_reader_config_path = $self->write_yaml_file( "client_reader.yaml" => {
-         "worker_app"              => "synapse.app.client_reader",
-         "worker_log_file"         => "$log.client_reader",
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
-         "worker_listeners"        => [
+         "worker_app"                   => "synapse.app.client_reader",
+         "worker_pid_file"              => "$hsdir/client_reader.pid",
+         "worker_log_file"              => "$log.client_reader",
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_listeners"             => [
             {
                type      => "http",
                resources => [{ names => ["client"] }],
@@ -808,6 +843,7 @@ sub wrap_synapse_command
    {
       my $user_dir_config_path = $self->write_yaml_file( "user_dir.yaml" => {
          "worker_app"              => "synapse.app.user_dir",
+         "worker_pid_file"         => "$hsdir/user_dir.pid",
          "worker_log_file"         => "$log.user_dir",
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
@@ -840,6 +876,7 @@ sub wrap_synapse_command
    {
       my $event_creator_config_path = $self->write_yaml_file( "event_creator.yaml" => {
          "worker_app"                   => "synapse.app.event_creator",
+         "worker_pid_file"              => "$hsdir/event_creator.pid",
          "worker_log_file"              => "$log.event_creator",
          "worker_replication_host"      => "$bind_host",
          "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},

@@ -8,7 +8,7 @@ RUN apt-get -qq install -y \
     build-essential \
     perl \
     wget \
-    postgresql \
+    postgresql-9.6 \
     postgresql-client \
     libpq-dev \
     libssl-dev \
