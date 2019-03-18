@@ -58,9 +58,10 @@ TEST_STATUS=0
 
 if [ -n "$WORKERS" ]
 then
-    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --dendron-binary=/pydron.py -O tap --all "$@" > results.tap || TEST_STATUS=$?
+    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --synapse-directory=/src --coverage --dendron-binary=/pydron.py -O tap --all "$@" > results.tap || TEST_STATUS=$?
+
 else
-    ./run-tests.pl -I Synapse --python=/venv/bin/python -O tap --all "$@" > results.tap || TEST_STATUS=$?
+    ./run-tests.pl -I Synapse --python=/venv/bin/python --synapse-directory=/src --coverage -O tap --all "$@" > results.tap || TEST_STATUS=$?
 fi
 
 >&2 echo "--- Copying assets"
@@ -73,5 +74,13 @@ rsync --ignore-missing-args -av server-0 server-1 /logs --include "*/" --include
 # Write out JUnit for CircleCI
 mkdir -p /logs/sytest
 perl /tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
+
+# Upload coverage to codecov, if running on CircleCI
+if [ -n "$CIRCLECI" ]
+then
+    /venv/bin/coverage combine || true
+    /venv/bin/coverage xml || true
+    /venv/bin/codecov -X gcov -f coverage.xml
+fi
 
 exit $TEST_STATUS
