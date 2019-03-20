@@ -3,8 +3,7 @@ FROM debian:stretch
 ENV DEBIAN_FRONTEND noninteractive
 
 # Install base dependencies that Python or Go would require
-RUN apt-get -qq update
-RUN apt-get -qq install -y \
+RUN apt-get -qq update && apt-get -qq install -y \
     build-essential \
     perl \
     wget \
