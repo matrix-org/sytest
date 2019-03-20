@@ -194,15 +194,17 @@ sub start
 
         perspectives => { servers => {} },
 
-        # Stack traces are useful
-        full_twisted_stacktraces => "true",
-
         listeners => $listeners,
 
         # we reduce the number of bcrypt rounds to make generating users
         # faster, but note that python's bcrypt complains if rounds < 4,
         # so this is effectively the minimum.
         bcrypt_rounds => 4,
+
+        # torture the replication protocol a bit, to replicate bugs.
+        # (value is the number of ms to wait before sending out each batch of
+        # updates.)
+        replication_torture_level => 50,
 
         # If we're using dendron-style split workers, we need to disable these
         # things in the main process
