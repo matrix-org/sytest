@@ -1,13 +1,24 @@
-#! /usr/bin/env bash
+#!/bin/bash
+#
+# Fetch sytest, and then run the tests for synapse. The entrypoint for the
+# sytest-synapse docker images.
 
 set -ex
 
 # Attempt to find a sytest to use.
-# If /test/run-tests.pl exists, it means that a SyTest checkout has been mounted into the Docker image.
-if [ -e "./run-tests.pl" ]
-then
-    # If the user has mounted in a SyTest checkout, use that. We can tell this by files being in the directory.
+# If /sytest exists, it means that a SyTest checkout has been mounted into the Docker image.
+if [ -d "/sytest" ]; then
+    # If the user has mounted in a SyTest checkout, use that.
     echo "Using local sytests..."
+
+    # create ourselves a working directory and dos2unix some scripts therein
+    mkdir -p /work/jenkins
+    for i in install-deps.pl run-tests.pl tap-to-junit-xml.pl jenkins/prep_sytest_for_postgres.sh; do
+        dos2unix -n "/sytest/$i" "/work/$i"
+    done
+    ln -sf /sytest/tests /work
+    ln -sf /sytest/keys /work
+    SYTEST_LIB="/sytest/lib"
 else
     # Otherwise, try and find out what the branch that the Synapse checkout is using. Fall back to develop if it's not a branch.
     branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
@@ -20,9 +31,12 @@ else
         wget -q https://github.com/matrix-org/sytest/archive/develop.tar.gz -O sytest.tar.gz
     }
 
-    tar --strip-components=1 -xf sytest.tar.gz
-
+    mkdir -p /work
+    tar -C /work --strip-components=1 -xf sytest.tar.gz
+    SYTEST_LIB="/work/lib"
 fi
+
+cd /work
 
 # PostgreSQL setup
 if [ -n "$POSTGRES" ]
@@ -48,22 +62,24 @@ fi
 /venv/bin/pip install -q --upgrade --no-cache-dir lxml psycopg2 coverage codecov
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
-dos2unix ./install-deps.pl
 ./install-deps.pl
 
 # Run the tests
 >&2 echo "+++ Running tests"
 
-dos2unix ./run-tests.pl
+RUN_TESTS=(
+    perl -I "$SYTEST_LIB" ./run-tests.pl --python=/venv/bin/python --synapse-directory=/src --coverage -O tap --all
+)
+
 TEST_STATUS=0
 
-if [ -n "$WORKERS" ]
-then
-    ./run-tests.pl -I Synapse::ViaHaproxy --python=/venv/bin/python --synapse-directory=/src --coverage --dendron-binary=/pydron.py -O tap --all "$@" > results.tap || TEST_STATUS=$?
-
+if [ -n "$WORKERS" ]; then
+    RUN_TESTS+=(-I Synapse::ViaHaproxy --dendron-binary=/pydron.py)
 else
-    ./run-tests.pl -I Synapse --python=/venv/bin/python --synapse-directory=/src --coverage -O tap --all "$@" > results.tap || TEST_STATUS=$?
+    RUN_TESTS+=(-I Synapse)
 fi
+
+"${RUN_TESTS[@]}" "$@" > results.tap || TEST_STATUS=$?
 
 if [ $TEST_STATUS -ne 0 ]; then
     >&2 echo -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"
@@ -80,7 +96,7 @@ rsync --ignore-missing-args -av server-0 server-1 /logs --include "*/" --include
 
 # Write out JUnit for CircleCI
 mkdir -p /logs/sytest
-perl /tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
+perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
 
 # Upload coverage to codecov, if running on CircleCI
 if [ -n "$CIRCLECI" ]
