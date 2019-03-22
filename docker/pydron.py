@@ -1,5 +1,6 @@
 #!/venv/bin/python
 
+import os
 import shlex
 import subprocess
 import sys
@@ -74,12 +75,18 @@ try:
             + " --config-path="
             + configs[i]
         )
-        worker_processes[appname] = subprocess.Popen(shlex.split(base))
+        worker_processes[appname] = subprocess.Popen(
+            shlex.split(base),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
 
     # wait for them all to daemonize (ie, for the parent process to exit)
     for appname, process in worker_processes.items():
-        retcode = process.wait()
-        if retcode:
+        (output, _) = process.communicate()
+        _print("-----\n%s output:" % appname)
+        os.write(sys.stderr.fileno(), output)
+        if process.returncode:
             raise Exception("%s failed to start" % (appname, ))
 
     # Nothing failed, let's say we've started and then signal we're up by
