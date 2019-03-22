@@ -1,7 +1,7 @@
 FROM matrixdotorg/sytest:latest
 
-RUN apt-get -qq update
-RUN apt-get -qq install -y python python-dev python-virtualenv dos2unix eatmydata
+RUN apt-get -qq update && apt-get -qq install -y \
+    python python-dev python-virtualenv dos2unix eatmydata
 
 ENV PYTHON=python2
 ENV PGDATA=/var/lib/postgresql/data

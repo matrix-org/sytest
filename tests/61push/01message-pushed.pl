@@ -452,7 +452,7 @@ test "Don't get pushed for rooms you've muted",
                Future->done( $request );
             }),
             matrix_send_room_text_message( $bob, $room_id,
-               body => "Message 1",
+               body => "Initial Message",
             ),
          )
       })->then( sub {
@@ -467,7 +467,7 @@ test "Don't get pushed for rooms you've muted",
 
          assert_eq( $notification->{room_id}, $room_id, "room_id");
          assert_eq( $notification->{sender}, $bob->user_id, "sender");
-         assert_eq( $notification->{content}{body}, "Message 1", "message");
+         assert_eq( $notification->{content}{body}, "Initial Message", "message");
 
          Future->done(1);
       })->then( sub {
@@ -477,33 +477,61 @@ test "Don't get pushed for rooms you've muted",
             content => { actions => [ "dont_notify" ] },
          )
       })->then( sub {
-         Future->needs_all(
-            await_http_request( "/alice_push", sub {
-               my ( $request ) = @_;
-               my $body = $request->body_from_json;
+         # We now test that after having set dont_notify above we won't get any
+         # more pushes in that room, unless they're mentions.
+         #
+         # We do this by sending two messages, one which isn't a mention and one
+         # which is, and then asserting that we only see the mention. Since
+         # setting push rules can take a few moments to take effect, we may need
+         # to retry a few times before we see the expected behaviour.
+         retry_until_success {
+            my $push_count = 0;  # Counts the number of pushes we've seen in this loop
 
-               return unless $body->{notification}{type};
-               return unless $body->{notification}{type} eq "m.room.message";
-               return 1;
-            })->then( sub {
-               my ( $request ) = @_;
+            Future->needs_all(
+               await_http_request( "/alice_push", sub {
+                  my ( $request ) = @_;
+                  my $body = $request->body_from_json;
 
-               $request->respond_json( {} );
-               Future->done( $request );
-            }),
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message 2 (Should not be pushed)",
+                  return unless $body->{notification}{type};
+                  return unless $body->{notification}{type} eq "m.room.message";
+
+                  $push_count += 1;
+
+                  # Either: 1) we get the first message we send, i.e. the one
+                  # that we didn't expect to get pushed, so we continue waiting,
+                  # or 2) this was the second message so we stop waiting.
+                  return unless $body->{notification}{content}{expect} eq JSON::true;
+
+                  return 1;
+               })->then( sub {
+                  my ( $request ) = @_;
+
+                  $request->respond_json( {} );
+                  Future->done( $request );
+               }),
+               matrix_send_room_message( $bob, $room_id,
+                  content => {
+                     msgtype => "m.text",
+                     body    => "First message (Should not be pushed)",
+                     expect  => JSON::false,  # This shouldn't be pushed
+                  }
+               )->then( sub {
+                  matrix_send_room_message( $bob, $room_id,
+                     content => {
+                        msgtype => "m.text",
+                        body    => "Second message - " . $alice->user_id,
+                        expect  => JSON::true,  # This should be pushed
+                     }
+                  )
+               }),
             )->then( sub {
-               do_request_json_for( $alice,
-                  method  => "DELETE",
-                  uri     => "/r0/pushrules/global/room/$room_id",
-               )
-            })->then( sub {
-               matrix_send_room_text_message( $bob, $room_id,
-                  body => "Message 3",
-               )
-            }),
-         )
+               my ( $request ) = @_;
+
+               assert_eq( $push_count, 1 );
+
+               Future->done( $request );
+            })
+         }
       })->then( sub {
          my ( $request ) = @_;
          my $body = $request->body_from_json;
@@ -516,7 +544,7 @@ test "Don't get pushed for rooms you've muted",
 
          assert_eq( $notification->{room_id}, $room_id, "room_id");
          assert_eq( $notification->{sender}, $bob->user_id, "sender");
-         assert_eq( $notification->{content}{body}, "Message 3", "message");
+         assert_eq( $notification->{content}{body}, "Second message - " . $alice->user_id, "message");
 
          Future->done(1);
       });

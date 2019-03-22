@@ -65,6 +65,12 @@ else
     ./run-tests.pl -I Synapse --python=/venv/bin/python --synapse-directory=/src --coverage -O tap --all "$@" > results.tap || TEST_STATUS=$?
 fi
 
+if [ $TEST_STATUS -ne 0 ]; then
+    >&2 echo -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"
+else
+    >&2 echo -e "run-tests \e[32mPASSED\e[0m"
+fi
+
 >&2 echo "--- Copying assets"
 
 # Copy out the logs
