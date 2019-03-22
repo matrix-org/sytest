@@ -30,41 +30,45 @@ test "Notifications can be viewed with GET /notifications",
             body => "Test message 2",
          );
       })->then( sub {
-         do_request_json_for( $user1,
-            method  => "GET",
-            uri     => "/unstable/notifications",
-         );
+         retry_until_success {
+            do_request_json_for( $user1,
+               method  => "GET",
+               uri     => "/unstable/notifications",
+            )->then( sub {
+               my ( $body ) = @_;
+
+               log_if_fail( "first /notifications response", $body );
+
+               assert_json_keys( $body, "notifications" );
+
+               my $notifs = $body->{notifications};
+
+               assert_json_keys( $notifs->[0], qw( room_id actions event read ts ) );
+               assert_ok( exists $notifs->[0]{profile_tag}, "profile_tag defined" );
+
+               my $notif = $notifs->[0];
+               assert_eq( $notif->{read}, JSON::false );
+
+               matrix_advance_room_receipt( $user1, $room_id, "m.read" => $notif->{event}{event_id} );
+            });
+         }
       })->then( sub {
-         my ( $body ) = @_;
+         retry_until_success {
+            do_request_json_for( $user1,
+               method  => "GET",
+               uri     => "/unstable/notifications",
+            )->then( sub {
+               my ( $body ) = @_;
 
-         log_if_fail( "first /notifications response", $body );
+               log_if_fail( "second /notifications response", $body );
 
-         assert_json_keys( $body, "notifications" );
+               assert_json_keys( $body, "notifications" );
 
-         my $notifs = $body->{notifications};
+               assert_eq( scalar @{ $body->{notifications} }, 0 );
 
-         assert_json_keys( $notifs->[0], qw( room_id actions event read ts ) );
-         assert_ok( exists $notifs->[0]{profile_tag}, "profile_tag defined" );
-
-         my $notif = $notifs->[0];
-         assert_eq( $notif->{read}, JSON::false );
-
-         matrix_advance_room_receipt( $user1, $room_id, "m.read" => $notif->{event}{event_id} );
-      })->then( sub {
-         do_request_json_for( $user1,
-            method  => "GET",
-            uri     => "/unstable/notifications",
-         );
-      })->then( sub {
-         my ( $body ) = @_;
-
-         log_if_fail( "second /notifications response", $body );
-
-         assert_json_keys( $body, "notifications" );
-
-         assert_eq( scalar @{ $body->{notifications} }, 0 );
-
-         Future->done(1);
-      })
+               Future->done(1);
+            });
+         }
+      });
    };
 
