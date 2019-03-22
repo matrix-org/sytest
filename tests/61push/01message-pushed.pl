@@ -87,14 +87,12 @@ multi_test "Test that a message is pushed",
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
                return unless $body->{notification}{type};
                return unless $body->{notification}{type} eq "m.room.message";
                return 1;
-            })->then( sub {
-               my ( $request ) = @_;
-
-               $request->respond_json( {} );
-               Future->done( $request );
             }),
 
             matrix_send_room_text_message( $bob, $room_id,
@@ -131,13 +129,11 @@ multi_test "Test that a message is pushed",
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
                return unless $body->{notification}{counts};
                return 1;
-            })->then( sub {
-               my ( $request ) = @_;
-
-               $request->respond_json( {} );
-               Future->done( $request );
             }),
 
             # Now send a read receipt for that message
@@ -198,14 +194,12 @@ test "Invites are pushed",
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
                return unless $body->{notification}{type};
                return unless $body->{notification}{type} eq "m.room.member";
                return 1;
-            })->then( sub {
-               my ( $request ) = @_;
-
-               $request->respond_json( {} );
-               Future->done( $request );
             }),
             matrix_invite_user_to_room( $bob, $alice, $room_id ),
          );
@@ -277,14 +271,12 @@ sub check_received_push_with_name
          my ( $request ) = @_;
          my $body = $request->body_from_json;
 
+         # Respond to all requests, even if we filiter them out
+         $request->respond_json( {} );
+
          return unless $body->{notification}{type};
          return unless $body->{notification}{type} eq "m.room.message";
          return 1;
-      })->then( sub {
-         my ( $request ) = @_;
-
-         $request->respond_json( {} );
-         Future->done( $request );
       }),
       matrix_send_room_text_message( $bob, $room_id,
          body => "Message",
@@ -440,16 +432,14 @@ test "Don't get pushed for rooms you've muted",
 
                log_if_fail "Got /alice_push request";
 
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
                my $body = $request->body_from_json;
 
                return unless $body->{notification}{type};
                return unless $body->{notification}{type} eq "m.room.message";
                return 1;
-            })->then( sub {
-               my ( $request ) = @_;
-
-               $request->respond_json( {} );
-               Future->done( $request );
             }),
             matrix_send_room_text_message( $bob, $room_id,
                body => "Initial Message",
@@ -492,6 +482,11 @@ test "Don't get pushed for rooms you've muted",
                   my ( $request ) = @_;
                   my $body = $request->body_from_json;
 
+                  # Respond to all requests, even if we filiter them out
+                  $request->respond_json( {} );
+
+                  log_if_fail "Received push", $body;
+
                   return unless $body->{notification}{type};
                   return unless $body->{notification}{type} eq "m.room.message";
 
@@ -503,11 +498,6 @@ test "Don't get pushed for rooms you've muted",
                   return unless $body->{notification}{content}{expect} eq JSON::true;
 
                   return 1;
-               })->then( sub {
-                  my ( $request ) = @_;
-
-                  $request->respond_json( {} );
-                  Future->done( $request );
                }),
                matrix_send_room_message( $bob, $room_id,
                   content => {
