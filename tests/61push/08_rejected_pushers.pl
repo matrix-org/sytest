@@ -23,17 +23,15 @@ sub wait_for_push
    my ( $path, $response ) = @_;
 
    await_http_request( $path, sub {
-     my ( $request ) = @_;
-     my $body = $request->body_from_json;
-
-     return unless $body->{notification}{type};
-     return unless $body->{notification}{type} eq "m.room.message";
-     return 1;
-   })->then( sub {
       my ( $request ) = @_;
+      my $body = $request->body_from_json;
 
+      # Respond to all requests, even if we filiter them out
       $request->respond_json( $response // {} );
-      Future->done( $request );
+
+      return unless $body->{notification}{type};
+      return unless $body->{notification}{type} eq "m.room.message";
+      return 1;
    });
 }
 
@@ -74,45 +72,50 @@ multi_test "Test that rejected pushers are removed.",
          create_pusher( $alice, "sytest", "key_2", "$url/2" )
             ->SyTest::pass_on_done( "Alice's pusher 2 created" );
       })->then( sub {
-         do_request_json_for( $alice,
-              method  => "GET",
-              uri     => "/r0/pushers",
-         )->then( sub {
-            my ( $body ) = @_;
+         retry_until_success {
+            do_request_json_for( $alice,
+               method  => "GET",
+               uri     => "/r0/pushers",
+            )->then( sub {
+               my ( $body ) = @_;
 
-            assert_json_keys( $body, qw( pushers ) );
-            @{ $body->{pushers} } == 2 or die "Expected two pushers";
+               assert_json_keys( $body, qw( pushers ) );
+               @{ $body->{pushers} } == 2 or die "Expected two pushers";
 
-            Future->done(1);
-         });
+               Future->done(1);
+            });
+         }
       })->then( sub {
+         # It can take a while before we start receiving push on new pushers.
+         retry_until_success {
+            Future->needs_all(
+               wait_for_push( "/alice_push/1" ),
+               wait_for_push( "/alice_push/2" ),
+               matrix_send_room_text_message( $bob, $room_id, body => "message" )
+            )
+         }->SyTest::pass_on_done( "Message 1 Pushed" );
+      })->then( sub {
+         # Now we go and reject a push
          Future->needs_all(
-            wait_for_push( "/alice_push/1",  { rejected => [ "key_1" ] } ),
+            wait_for_push( "/alice_push/1", { rejected => [ "key_1" ] } ),
             wait_for_push( "/alice_push/2" ),
             matrix_send_room_text_message( $bob, $room_id, body => "message" )
-               ->SyTest::pass_on_done( "Message 1 Sent" ),
-         )->SyTest::pass_on_done( "Message 1 Pushed" );
-      })->then( sub {
-         # Send another push message to increase the chance that previous
-         # messages have been processed.
-         Future->needs_all(
-            wait_for_push( "/alice_push/2" ),
-            matrix_send_room_text_message( $bob, $room_id, body => "message" )
-               ->SyTest::pass_on_done( "Message 2 Sent" ),
          )->SyTest::pass_on_done( "Message 2 Pushed" );
       })->then( sub {
-         do_request_json_for( $alice,
-              method  => "GET",
-              uri     => "/r0/pushers",
-         )->then( sub {
-            my ( $body ) = @_;
+         retry_until_success {
+            do_request_json_for( $alice,
+               method  => "GET",
+               uri     => "/r0/pushers",
+            )->then( sub {
+               my ( $body ) = @_;
 
-            assert_json_keys( $body, qw( pushers ) );
-            @{ $body->{pushers} } == 1 or die "Expected one pusher";
+               assert_json_keys( $body, qw( pushers ) );
+               @{ $body->{pushers} } == 1 or die "Expected one pusher";
 
-            assert_eq( $body->{pushers}[0]{pushkey}, "key_2" );
+               assert_eq( $body->{pushers}[0]{pushkey}, "key_2" );
 
-            Future->done(1);
-         });
+               Future->done(1);
+            });
+         }
       });
    };
