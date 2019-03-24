@@ -48,7 +48,7 @@ test "Notifications can be viewed with GET /notifications",
                   my $notifs = $body->{notifications};
 
                   # We just want something to turn up
-                  scalar @{ $notifs } or die "no notificaions";
+                  scalar @{ $notifs } or die "no notifications";
 
                   Future->done( $notifs->[0] );
                });
