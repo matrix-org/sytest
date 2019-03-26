@@ -24,9 +24,6 @@ but will fall back to using develop.
 If you want to use an existing checkout of SyTest, mount it to `/sytest` inside
 the container by adding `-v /path/to/sytest\:/sytest` to the docker command.
 
-If you want to test against a PostgreSQL database, pass `-e POSTGRES=1` to the
-docker command.
-
 You can pass arguments to sytest by adding them at the end of the docker
 command.  For example, you can use
 
@@ -35,6 +32,16 @@ docker run --rm -it ... matrixdotorg/sytest-synapsepy2 tests/20profile-events.pl
 ```
 
 to run only a single test.
+
+
+### Environment variables
+
+The following environment variables can be set with `-e` to control the test run:
+
+ * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of sqlite.
+ * `WORKERS`: set non-empty to test a worker-mode deployment rather than a
+   monolith.
+ * `OFFLINE`: set non-empty to avoid updating the python or perl dependencies.
 
 ## Building the containers
 
