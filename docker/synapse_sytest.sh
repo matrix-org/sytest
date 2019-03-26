@@ -57,12 +57,26 @@ then
 
 fi
 
-# We've already created the virtualenv, but lets double check we have all deps.
-/venv/bin/pip install -q --upgrade --no-cache-dir -e /src/
-/venv/bin/pip install -q --upgrade --no-cache-dir lxml psycopg2 coverage codecov
+if [ -n "$OFFLINE" ]; then
+    # if we're in offline mode, just put synapse into the virtualenv, and
+    # hope that the deps are up-to-date.
+    #
+    # (`pip install -e` likes to reinstall setuptools even if it's already installed,
+    # so we just run setup.py explicitly.)
+    #
+    (cd /src && /venv/bin/python setup.py -q develop)
+else
+    # We've already created the virtualenv, but lets double check we have all
+    # deps.
+    /venv/bin/pip install -q --upgrade --no-cache-dir -e /src/
+    /venv/bin/pip install -q --upgrade --no-cache-dir \
+        lxml psycopg2 coverage codecov
 
-# Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
-./install-deps.pl
+    # Make sure all Perl deps are installed -- this is done in the docker build
+    # so will only install packages added since the last Docker build
+    ./install-deps.pl
+fi
+
 
 # Run the tests
 >&2 echo "+++ Running tests"
