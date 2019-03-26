@@ -24,34 +24,59 @@ test "Notifications can be viewed with GET /notifications",
       })->then( sub {
          my ( $event_id ) = @_;
 
+         # We need to send a read receipt before the server will start
+         # calculating notifications.
          matrix_advance_room_receipt( $user1, $room_id, "m.read" => $event_id );
       })->then( sub {
-         matrix_send_room_text_message( $user2, $room_id,
-            body => "Test message 2",
-         );
-      })->then( sub {
+         # It may take a while for the server to start calculating
+         # notifications, so we repeatedly send message and check if anything
+         # turns up in `/notifications`
+         #
+         # The retry loop is actually guarding two race conditions: 1) we need
+         # to repeatedly send messages as the first few might not use the new
+         # push rules and 2) we need to call /notifications repeatedly as it
+         # might take a while for messages to propagate.
+
          retry_until_success {
-            do_request_json_for( $user1,
-               method  => "GET",
-               uri     => "/unstable/notifications",
-            )->then( sub {
-               my ( $body ) = @_;
+            matrix_send_room_text_message( $user2, $room_id,
+               body => "Test message 2",
+            )->then(sub {
+               do_request_json_for( $user1,
+                  method  => "GET",
+                  uri     => "/unstable/notifications",
+               )->then( sub {
+                  my ( $body ) = @_;
 
-               log_if_fail( "first /notifications response", $body );
+                  log_if_fail( "first /notifications response", $body );
 
-               assert_json_keys( $body, "notifications" );
+                  assert_json_keys( $body, "notifications" );
 
-               my $notifs = $body->{notifications};
+                  my $notifs = $body->{notifications};
 
-               assert_json_keys( $notifs->[0], qw( room_id actions event read ts ) );
-               assert_ok( exists $notifs->[0]{profile_tag}, "profile_tag defined" );
+                  # We just want something to turn up
+                  scalar @{ $notifs } or die "no notifications";
 
-               my $notif = $notifs->[0];
-               assert_eq( $notif->{read}, JSON::false );
-
-               matrix_advance_room_receipt( $user1, $room_id, "m.read" => $notif->{event}{event_id} );
+                  Future->done( $notifs->[0] );
+               });
             });
          }
+      })->then( sub {
+         my ( $notif ) = @_;
+
+         # Check the notif has the expected keys
+         assert_json_keys( $notif, qw( room_id actions event read ts ) );
+         assert_ok( exists $notif->{profile_tag}, "profile_tag defined" );
+         assert_eq( $notif->{read}, JSON::false );
+
+         # Now we send a message and advance the read receipt up until that
+         # point, and test that notifications becomes empty
+         matrix_send_room_text_message( $user2, $room_id,
+            body => "Test message 3",
+         );
+      })->then( sub {
+         my ( $event_id ) = @_;
+
+         matrix_advance_room_receipt( $user1, $room_id, "m.read" => $event_id );
       })->then( sub {
          retry_until_success {
             do_request_json_for( $user1,
