@@ -75,7 +75,6 @@ sub print_usage
 
    -ENAME, -ENAME=VALUE         - pass extra argument NAME or NAME=VALUE to the
                                   homeserver.
-
 EOF
 }
 
@@ -112,6 +111,7 @@ sub _init
    $self->SUPER::_init( @_ );
    $self->{impl} = "SyTest::Homeserver::Synapse::ViaDendron";
    $self->{args}{dendron_binary} = "";
+   $self->{args}{torture_replication} = 0;
 }
 
 sub get_options
@@ -120,6 +120,7 @@ sub get_options
 
    return (
       'dendron-binary=s' => \$self->{args}{dendron_binary},
+      'torture-replication+' => \$self->{args}{torture_replication},
       $self->SUPER::get_options(),
    );
 }
@@ -133,6 +134,8 @@ sub print_usage
    print STDERR <<EOF;
 
        --dendron-binary PATH    - path to the 'dendron' binary
+
+       --torture-replication    - enable torturing of the replication protocol
 EOF
 }
 
