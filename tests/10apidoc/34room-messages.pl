@@ -138,12 +138,20 @@ test "GET /rooms/:room_id/messages returns a message",
       matrix_send_room_text_message( $user, $room_id,
          body => "Here is the message content",
       )->then( sub {
+         matrix_sync( $user )
+      })->then( sub {
+         my ( $sync_body ) = @_;
+         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
+
          do_request_json_for( $user,
             method => "GET",
             uri    => "/r0/rooms/$room_id/messages",
 
             # With no params this does "forwards from END"; i.e. nothing useful
-            params => { dir => "b" },
+            params => {
+                dir => "b",
+                from => $token,
+            },
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -168,14 +176,19 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
       matrix_send_room_text_message( $user, $room_id,
          body => "Here is the message content",
       )->then( sub {
+         matrix_sync( $user )
+      })->then( sub {
+         my ( $sync_body ) = @_;
+         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
+
          do_request_json_for( $user,
             method => "GET",
             uri    => "/r0/rooms/$room_id/messages",
 
-            # With no params this does "forwards from END"; i.e. nothing useful
             params => {
                dir => "b",
                filter => '{ "lazy_load_members" : true }',
+               from => $token,
             },
          )
       })->then( sub {
@@ -210,12 +223,18 @@ sub matrix_get_room_messages
 
    $params{dir} ||= "b";
 
-   do_request_json_for( $user,
-      method => "GET",
-      uri    => "/r0/rooms/$room_id/messages",
+   matrix_sync( $user )->then( sub {
+      my ( $sync_body ) = @_;
 
-      params => \%params,
-   );
+      $params{from} ||= $sync_body->{next_batch};
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/r0/rooms/$room_id/messages",
+
+         params => \%params,
+      );
+   });
 }
 
 sub matrix_send_room_text_message_synced

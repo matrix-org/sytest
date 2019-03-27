@@ -64,7 +64,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id?format=event fetches my m
       )->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( sender event_id room_id content ));
+         assert_json_keys( $body, qw( sender room_id content ));
 
          assert_eq( $body->{sender}, $user->user_id, 'event.sender' );
          assert_eq( $body->{room_id}, $room_id,      'event.room_id' );
@@ -388,7 +388,7 @@ test "POST /createRoom with creation content",
 
          content => {
             creation_content => {
-               "m.federate" => JSON::true,
+               "m.federate" => JSON::false,
             },
          },
       )->then( sub {

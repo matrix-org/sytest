@@ -158,8 +158,6 @@ sub create_event
    my $self = shift;
    my %fields = @_;
 
-   $fields{prev_state} = [] if defined $fields{state_key}; # TODO: give it a better value
-
    my @auth_events = grep { defined } (
       $self->get_current_state_event( "m.room.create" ),
       $self->get_current_state_event( "m.room.join_rules" ),
