@@ -37,6 +37,7 @@ su -c '/usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/run/postgresql/data start' 
 mkdir -p "server-0"
 cat > "server-0/database.yaml" << EOF
 args:
+    user: $PGUSER
     database: $PGUSER
     host: $PGHOST
 type: pg
@@ -44,7 +45,7 @@ EOF
 
 # Make the test databases
 su -c "psql -c \"CREATE USER dendrite PASSWORD 'itsasecret'\" postgres"
-su -c 'for i in account device mediaapi syncapi roomserver serverkey federationsender publicroomsapi appservice naffka; do psql -c "CREATE DATABASE $i OWNER dendrite;"; done' postgres
+su -c 'for i in account device mediaapi syncapi roomserver serverkey federationsender publicroomsapi appservice naffka sytest_template; do psql -c "CREATE DATABASE $i OWNER dendrite;"; done' postgres
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
 dos2unix ./install-deps.pl
@@ -53,7 +54,7 @@ dos2unix ./install-deps.pl
 # Run the tests
 dos2unix ./run-tests.pl
 TEST_STATUS=0
-./run-tests.pl -I Dendrite::Monolith -W ../dendrite/testfile -O tap --all "$@" > results.tap || TEST_STATUS=$?
+./run-tests.pl -I Dendrite::Monolith -d /src/bin -W /src/testfile -O tap --all "$@" > results.tap || TEST_STATUS=$?
 
 # Copy out the logs
 mkdir -p /logs
