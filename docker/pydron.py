@@ -1,5 +1,6 @@
 #!/venv/bin/python
 
+import os
 import shlex
 import subprocess
 import sys
@@ -55,7 +56,8 @@ try:
     )
     subprocess.run(shlex.split(synapse), check=True)
 
-    # Then, start up all the workers.
+    # Then, start up all the workers. Do these in parallel because they take a while.
+    worker_processes = {}
     for i in configs.keys():
         # Get the synapse app name from the map, if needed. Otherwise, just
         # replace any dashes with underscores, so they match the Python module
@@ -73,7 +75,19 @@ try:
             + " --config-path="
             + configs[i]
         )
-        subprocess.run(shlex.split(base), check=True)
+        worker_processes[appname] = subprocess.Popen(
+            shlex.split(base),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+
+    # wait for them all to daemonize (ie, for the parent process to exit)
+    for appname, process in worker_processes.items():
+        (output, _) = process.communicate()
+        _print("-----\n%s output:" % appname)
+        os.write(sys.stderr.fileno(), output)
+        if process.returncode:
+            raise Exception("%s failed to start" % (appname, ))
 
     # Nothing failed, let's say we've started and then signal we're up by
     # serving the webserver.

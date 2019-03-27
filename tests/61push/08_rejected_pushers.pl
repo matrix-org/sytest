@@ -26,7 +26,7 @@ sub wait_for_push
       my ( $request ) = @_;
       my $body = $request->body_from_json;
 
-      # Respond to all requests, even if we filiter them out
+      # Respond to all requests, even if we filter them out
       $request->respond_json( $response // {} );
 
       return unless $body->{notification}{type};

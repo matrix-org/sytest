@@ -41,12 +41,8 @@ RUN dos2unix ./cpanfile ./install-deps.pl
 RUN perl ./install-deps.pl
 RUN rm cpanfile install-deps.pl
 
-# Add in the TAP-JUnit converter
-ADD tap-to-junit-xml.pl /tap-to-junit-xml.pl
+# this is a dependency of the TAP-JUnit converter
 RUN cpan XML::Generator
 
 # /logs is where we should expect logs to end up
 RUN mkdir /logs
-# /test is where sytest will live
-RUN mkdir /test
-WORKDIR /test

@@ -194,9 +194,6 @@ sub start
 
         perspectives => { servers => {} },
 
-        # Stack traces are useful
-        full_twisted_stacktraces => "true",
-
         listeners => $listeners,
 
         # we reduce the number of bcrypt rounds to make generating users
@@ -229,6 +226,7 @@ sub start
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
         } qw(
+           replication_torture_level
            cas_config
            app_service_config_files
         ),
@@ -595,6 +593,12 @@ sub _init
    $self->SUPER::_init( @_ );
 
    $self->{dendron} = delete $args->{dendron_binary};
+   if( delete $args->{torture_replication} ) {
+      # torture the replication protocol a bit, to replicate bugs.
+      # (value is the number of ms to wait before sending out each batch of
+      # updates.)
+      $self->{replication_torture_level} = 50;
+   }
 
    my $idx = $self->{hs_index};
    $self->{ports}{dendron} = main::alloc_port( "dendron[$idx]" );

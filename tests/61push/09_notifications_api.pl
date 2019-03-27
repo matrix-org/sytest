@@ -31,6 +31,12 @@ test "Notifications can be viewed with GET /notifications",
          # It may take a while for the server to start calculating
          # notifications, so we repeatedly send message and check if anything
          # turns up in `/notifications`
+         #
+         # The retry loop is actually guarding two race conditions: 1) we need
+         # to repeatedly send messages as the first few might not use the new
+         # push rules and 2) we need to call /notifications repeatedly as it
+         # might take a while for messages to propagate.
+
          retry_until_success {
             matrix_send_room_text_message( $user2, $room_id,
                body => "Test message 2",
@@ -48,7 +54,7 @@ test "Notifications can be viewed with GET /notifications",
                   my $notifs = $body->{notifications};
 
                   # We just want something to turn up
-                  scalar @{ $notifs } or die "no notificaions";
+                  scalar @{ $notifs } or die "no notifications";
 
                   Future->done( $notifs->[0] );
                });
