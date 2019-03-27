@@ -24,14 +24,17 @@ else
 
 fi
 
-# PostgreSQL setup
-export PGHOST=/var/run/postgresql
-export PGDATA=$PGHOST/data
-export PGUSER=postgres
+# Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
+dos2unix ./install-deps.pl
+./install-deps.pl
 
 # Initialise the database files and start the database
 su -c '/usr/lib/postgresql/9.6/bin/initdb -E "UTF-8" --lc-collate="en_US.UTF-8" --lc-ctype="en_US.UTF-8" --username=postgres' postgres
 su -c '/usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/run/postgresql/data start' postgres
+
+# Make the test databases
+su -c "psql -c \"CREATE USER dendrite PASSWORD 'itsasecret'\" postgres"
+su -c 'for i in account device mediaapi syncapi roomserver serverkey federationsender publicroomsapi appservice naffka sytest_template; do psql -c "CREATE DATABASE $i OWNER dendrite;"; done' postgres
 
 # Write dendrite configuration
 mkdir -p "server-0"
@@ -42,14 +45,6 @@ args:
     host: $PGHOST
 type: pg
 EOF
-
-# Make the test databases
-su -c "psql -c \"CREATE USER dendrite PASSWORD 'itsasecret'\" postgres"
-su -c 'for i in account device mediaapi syncapi roomserver serverkey federationsender publicroomsapi appservice naffka sytest_template; do psql -c "CREATE DATABASE $i OWNER dendrite;"; done' postgres
-
-# Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
-dos2unix ./install-deps.pl
-./install-deps.pl
 
 # Run the tests
 dos2unix ./run-tests.pl
