@@ -28,8 +28,7 @@ fi
 dos2unix ./install-deps.pl
 ./install-deps.pl
 
-# Initialise the database files and start the database
-su -c '/usr/lib/postgresql/9.6/bin/initdb -E "UTF-8" --lc-collate="en_US.UTF-8" --lc-ctype="en_US.UTF-8" --username=postgres' postgres
+# Start the database
 su -c '/usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/run/postgresql/data start' postgres
 
 # Make the test databases
