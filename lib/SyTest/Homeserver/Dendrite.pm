@@ -113,7 +113,8 @@ sub _get_config
          $self->{recaptcha_config} ? (
             # here "true" gets written as a quote-less string, which in yaml is
             # a boolean value
-            enable_registration_captcha => "true",
+            # Disabled until #592 is resolved
+            # enable_registration_captcha => "true",
             recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
             recaptcha_public_key     => $self->{recaptcha_config}->{public_key},
             recaptcha_private_key    => $self->{recaptcha_config}->{private_key},
