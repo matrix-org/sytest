@@ -37,6 +37,8 @@ test "Guest users can send messages to guest_access rooms if joined",
       })->then( sub {
          matrix_send_room_text_message( $guest_user, $room_id, body => "sup" );
       })->then( sub {
+         # We need to repeatedly call /messages as it may take some time before
+         # the message propogates through the system.
          retry_until_success {
             matrix_get_room_messages( $user, $room_id, limit => 1 )
             ->then( sub {
