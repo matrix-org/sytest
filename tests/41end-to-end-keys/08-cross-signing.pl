@@ -129,6 +129,58 @@ test "Fails to upload self-signing keys in invalid conditions",
       });
    };
 
+test "can re-upload a self-signing key",
+   requires => [ local_user_fixture(), qw( can_upload_self_signing_keys ) ],
+
+   do => sub {
+      # Normally, uploading a self-signing key when there already is a
+      # self-signing key should fail if the client does not acknowledge the
+      # previous key.  However, if the client re-uploads the existing key, it
+      # should succeed
+      my ( $user ) = @_;
+      my $user_id = $user->user_id;
+
+      matrix_set_cross_signing_key( $user, {
+          "auth" => {
+              "type"     => "m.login.password",
+              "user"     => $user_id,
+              "password" => $user->password,
+          },
+          "self_signing_key" => {
+              # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
+              "user_id" => $user_id,
+              "usage" => ["self_signing"],
+              "keys" => {
+                  "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                      => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+              },
+          },
+      })->then( sub {
+         matrix_set_cross_signing_key( $user, {
+             "auth" => {
+                 "type"     => "m.login.password",
+                 "user"     => $user_id,
+                 "password" => $user->password,
+             },
+             "self_signing_key" => {
+                 # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
+                 "user_id" => $user_id,
+                 "usage" => ["self_signing"],
+                 "keys" => {
+                     "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                         => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+                 },
+             },
+         });
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "key query content", $content;
+
+         Future->done( 1 );
+      });
+   };
+
 test "local self-signing notifies users",
    requires => [ local_user_fixtures( 2 ), qw( can_upload_self_signing_keys ) ],
 
@@ -384,6 +436,139 @@ test "local user-signing notifies users",
              and croak "Expected signature to not be present";
 
          Future->done( 1 );
+      });
+   };
+
+test "can fetch self-signing keys over federation",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_upload_self_signing_keys) ],
+
+   do => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user1_device = $user1->device_id;
+      my $user2_id = $user2->user_id;
+      my $user2_device = $user2->device_id;
+
+      matrix_set_cross_signing_key( $user2, {
+          "auth" => {
+              "type"     => "m.login.password",
+              "user"     => $user2_id,
+              "password" => $user2->password,
+          },
+          "self_signing_key" => {
+              # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
+              "user_id" => $user2_id,
+              "usage" => ["self_signing"],
+              "keys" => {
+                  "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                      => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+              },
+          },
+      })->then( sub {
+         my ( $content ) = @_;
+
+         matrix_get_keys( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "key query content", $content;
+
+         assert_json_keys( $content, "self_signing_keys" );
+         assert_json_keys( $content->{self_signing_keys}, $user2_id );
+         assert_deeply_eq( $content->{self_signing_keys}->{$user2_id}, {
+               "user_id" => $user2_id,
+               "usage" => ["self_signing"],
+               "keys" => {
+                  "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                      => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+               },
+            },
+         );
+
+         Future->done(1);
+      });
+};
+
+test "uploading self-signing key notifies over federation",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_upload_self_signing_keys) ],
+
+   do => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user1_device = $user1->device_id;
+      my $user2_id = $user2->user_id;
+      my $user2_device = $user2->device_id;
+
+      my $room_id;
+
+      matrix_upload_device_keys( $user2, {
+             "user_id" => $user2_id,
+             "device_id" => $user2_device,
+             "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
+             "keys" => {
+                 "curve25519:".$user2_device => "curve25519+key",
+                 "ed25519:".$user2_device => "ed25519+key",
+             },
+             "signatures" => {
+                 $user2_id => {
+                     "ed25519:".$user2_device => "self+signature",
+                 },
+             },
+      } )->then( sub {
+         matrix_create_room( $user1 );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_invite_user_to_room( $user1, $user2, $room_id )
+      })->then( sub {
+         matrix_sync( $user1 );
+      })->then( sub {
+         matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_set_cross_signing_key( $user2, {
+             "auth" => {
+                 "type"     => "m.login.password",
+                  "user"     => $user2_id,
+                  "password" => $user2->password,
+             },
+             "self_signing_key" => {
+                 # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
+                 "user_id" => $user2_id,
+                 "usage" => ["self_signing"],
+                 "keys" => {
+                     "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                         => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+                 },
+             },
+         });
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_get_keys( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "key query content", $content;
+
+         assert_json_keys( $content, "self_signing_keys" );
+         assert_json_keys( $content->{self_signing_keys}, $user2_id );
+         assert_deeply_eq( $content->{self_signing_keys}->{$user2_id}, {
+               "user_id" => $user2_id,
+               "usage" => ["self_signing"],
+               "keys" => {
+                   "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                       => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+               },
+            },
+         );
+
+         Future->done(1);
       });
    };
 
