@@ -60,10 +60,18 @@ my %FIXED_BUGS;
 my $STOP_ON_FAIL;
 my $SERVER_IMPL = undef;
 
+my $WHITELIST_FILE;
+my $BLACKLIST_FILE;
+
 Getopt::Long::Configure('pass_through');
 GetOptions(
    'I|server-implementation=s' => \$SERVER_IMPL,
    'C|client-log+' => \my $CLIENT_LOG,
+
+   # Whitelist and Blacklist files with test names to run.
+   # Both cannot be set at once
+   'W|test-whitelist-file=s' => \$WHITELIST_FILE,
+   'B|test-blacklist-file=s' => \$BLACKLIST_FILE,
 
    's|stop-on-fail' => sub { $STOP_ON_FAIL = 1 },
    'a|all'          => sub { $STOP_ON_FAIL = 0 },
@@ -76,7 +84,7 @@ GetOptions(
 
    'n|no-tls' => sub { $WANT_TLS = 0 },
 
-   # these two are superceded by -I, but kept for backwards compat
+   # these two are superceded by -I, but kept for backwards compatibility
    'dendron=s' => sub {
       $SERVER_IMPL = 'Synapse::ViaDendron' unless $SERVER_IMPL;
       push @ARGV, "--dendron-binary", $_[1];
@@ -124,6 +132,14 @@ Options:
                                   Supported implementations:
                                    ~~ @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                                       shift( @homeserver_implementations ) || ''
+
+   -W, --test-whitelist-file    - whitelist file containing test names to run
+                                  One per line. Cannot be used in conjunction
+                                  with --test-blacklist-file
+
+   -B, --test-blacklist-file    - blacklist file containing test names to not run
+                                  One per line. Cannot be used in conjunction
+                                  with --test-whitelist-file
 
    -C, --client-log             - enable logging of requests made by the
                                   internal HTTP client. Also logs the internal
@@ -184,6 +200,36 @@ our $HS_FACTORY = $hs_factory_class -> new();
 
 Getopt::Long::Configure("no_passthrough");
 GetOptions($HS_FACTORY->get_options()) or usage(1);
+
+# Check if both options have been set
+if( $BLACKLIST_FILE and $WHITELIST_FILE ) {
+   die "Not allowed to set both whitelist and blacklist options.\n";
+   exit 1
+}
+
+# Read in test blacklist rules if set
+my %TEST_BLACKLIST;
+if ( $BLACKLIST_FILE ) {
+   open( my $blacklist_data, "<", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for reading: $!\n";
+   while ( my $test_name = <$blacklist_data> ) {
+      # Trim whitespace
+      chomp $test_name;
+      $TEST_BLACKLIST{$test_name} = 1;
+   }
+   close $blacklist_data;
+}
+
+# Read in test whitelist rules if set
+my %TEST_WHITELIST;
+if ( $WHITELIST_FILE ) {
+   open( my $whitelist_data, "<", $WHITELIST_FILE ) or die "Couldn't open whitelist file for reading: $!\n";
+   while ( my $test_name = <$whitelist_data> ) {
+      # Trim whitespace
+      chomp $test_name;
+      $TEST_WHITELIST{$test_name} = 1;
+   }
+   close $whitelist_data;
+}
 
 my %only_files;
 my $stop_after;
@@ -793,6 +839,16 @@ foreach my $test ( @TESTS ) {
    }
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
+
+   # Check if this test has been blocked by the blacklist. If so, mark as expected fail
+   if ( scalar( $BLACKLIST_FILE ) and exists $TEST_BLACKLIST{ $test->name } ) {
+      $test->expect_fail = 1;
+   }
+
+   # Check if this test has been blocked by the whitelist. If so, mark as expected fail
+   if ( scalar( $WHITELIST_FILE ) and not exists $TEST_WHITELIST{ $test->name } ) {
+      $test->expect_fail = 1;
+   }
 
    my $t = $OUTPUT->$m( $test->name, $test->expect_fail );
    local $RUNNING_TEST = $t;

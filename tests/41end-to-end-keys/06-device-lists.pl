@@ -76,21 +76,7 @@ test "Local device key changes appear in v2 /sync",
             }
          )
       })->then( sub {
-         matrix_sync_again( $user1 );
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, "device_lists" );
-         my $device_lists = $body->{device_lists};
-
-         log_if_fail "device_lists", $device_lists;
-
-         assert_json_keys( $device_lists, "changed" );
-
-         is_user_in_changed_list( $user2, $body )
-            or die "user not in changed list";
-
-         Future->done(1);
+         sync_until_user_in_device_list( $user1, $user2 );
       });
    };
 

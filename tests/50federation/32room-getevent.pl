@@ -24,7 +24,7 @@ test "Inbound federation can return events",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/event/$member_event->{event_id}/",
+            uri      => "/v1/event/$member_event->{event_id}/",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -73,7 +73,7 @@ test "Inbound federation redacts events from erased users",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/event/$message_id/",
+            uri      => "/v1/event/$message_id/",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -92,28 +92,30 @@ test "Inbound federation redacts events from erased users",
          # now do the erasure
          matrix_deactivate_account( $creator, erase => JSON::true );
       })->then( sub {
-         # re-fetch the event
-         $outbound_client->do_request_json(
-            method   => "GET",
-            hostname => $first_home_server,
-            uri      => "/event/$message_id/",
-         );
-      })->then( sub {
-         my ( $body ) = @_;
-         log_if_fail "Fetched event after erasure", $body;
+         # re-fetch the event and check that it is redacted.
+         retry_until_success {
+            $outbound_client->do_request_json(
+               method   => "GET",
+               hostname => $first_home_server,
+               uri      => "/v1/event/$message_id/",
+            )->then( sub {
+               my ( $body ) = @_;
+               log_if_fail "Fetched event after erasure", $body;
 
-         assert_json_keys( $body, qw( origin origin_server_ts pdus ));
-         assert_json_list( my $events = $body->{pdus} );
+               assert_json_keys( $body, qw( origin origin_server_ts pdus ));
+               assert_json_list( my $events = $body->{pdus} );
 
-         @$events == 1 or
-            die "Expected 1 event, found " . scalar(@$events);
-         my ( $event ) = @$events;
+               @$events == 1 or
+                  die "Expected 1 event, found " . scalar(@$events);
+               my ( $event ) = @$events;
 
-         # Check that the content has been redacted
-         exists $event->{content}->{body} and
-            die "Event was not redacted";
+               # Check that the content has been redacted
+               exists $event->{content}->{body} and
+                  die "Event was not redacted";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
