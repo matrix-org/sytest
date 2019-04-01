@@ -12,7 +12,7 @@ test "Can invite existing 3pid",
 
       my $room_id;
 
-      $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
+      $id_server->bind_identity( undef, "email", $invitee_email, $invitee->user_id )
       ->then( sub {
          matrix_create_and_join_room( [ $inviter ], visibility => "private" )
       })->then( sub {
@@ -52,7 +52,7 @@ test "Can invite existing 3pid with no ops",
 
       my $room_id;
 
-      $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
+      $id_server->bind_identity( undef, "email", $invitee_email, $invitee->user_id )
       ->then( sub {
          matrix_create_and_join_room( [ $creator, $inviter ], visibility => "private", with_invite => 1 )
       })->then( sub {
@@ -92,7 +92,7 @@ test "Can invite existing 3pid in createRoom",
 
       my $room_id;
 
-      $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
+      $id_server->bind_identity( undef, "email", $invitee_email, $invitee->user_id )
       ->then( sub {
          my $invite_info = {
             medium    => "email",
@@ -185,7 +185,7 @@ sub can_invite_unbound_3pid
 
    do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
    ->then( sub {
-      $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
+      $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee->user_id );
    })->then( sub {
       matrix_get_room_state( $inviter, $room_id,
          type      => "m.room.member",
@@ -228,7 +228,7 @@ test "Can invite unbound 3pid over federation with users from both servers",
             return 1;
          })
       })->then( sub {
-         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
+         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee->user_id );
       })->then( sub {
          await_event_for( $inviter, filter => sub {
             my ( $event ) = @_;
@@ -291,7 +291,7 @@ test "Can accept unbound 3pid invite after inviter leaves",
       })->then( sub {
          matrix_leave_room( $inviter, $room_id );
       })->then( sub {
-         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
+         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee->user_id );
       })->then( sub {
          matrix_join_room( $invitee, $room_id )
       })->then( sub {
@@ -378,7 +378,7 @@ test "3pid invite join with wrong but valid signature are rejected",
 
       invite_should_fail( $inviter, $invitee, $hs_uribase, $id_server, sub {
          $id_server->rotate_keys;
-         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
+         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee->user_id );
       });
    };
 
@@ -391,7 +391,7 @@ test "3pid invite join valid signature but revoked keys are rejected",
       my $hs_uribase = $info->client_location;
 
       invite_should_fail( $inviter, $invitee, $hs_uribase, $id_server, sub {
-         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee,
+         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee->user_id,
             sub { $id_server->rotate_keys } );
       });
    };
@@ -405,7 +405,7 @@ test "3pid invite join valid signature but unreachable ID server are rejected",
       my $hs_uribase = $info->client_location;
 
       invite_should_fail( $inviter, $invitee, $hs_uribase, $id_server, sub {
-         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee, sub {
+         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee->user_id, sub {
             # Stop the server listening by closing any active connections and
             # taking its handle away
 

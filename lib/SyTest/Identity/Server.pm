@@ -140,6 +140,31 @@ sub on_request
       $resp{validated_at} = 0;
       $req->respond_json( \%resp );
    }
+   elsif ( $path eq "/_matrix/identity/api/v1/3pid/bind" ) {
+      my $body = $req->body_from_form;
+      my $sid = $body->{sid};
+      my $mxid = $body->{mxid};
+
+      my $medium = $self->{validated}{$sid}{medium};
+      my $address = $self->{validated}{$sid}{address};
+
+      $self->bind_identity( undef, $medium, $address, $mxid );
+
+      $resp{medium} = $self->{validated}{$sid}{medium};
+      $resp{address} = $self->{validated}{$sid}{address};
+      $resp{mxid} = $mxid;
+      $resp{not_before} = 0;
+      $resp{not_after} = 4582425849161;
+      $resp{ts} = 0;
+
+      sign_json( \%resp,
+         secret_key => $self->{private_key},
+         origin     => $self->name,
+         key_id     => "ed25519:0",
+      );
+
+      $req->respond_json( \%resp );
+   }
    else {
       warn "Unexpected request to Identity Service for $path";
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
@@ -164,9 +189,9 @@ sub validate_identity
 sub bind_identity
 {
    my $self = shift;
-   my ( $hs_uribase, $medium, $address, $user, $before_resp ) = @_;
+   my ( $hs_uribase, $medium, $address, $user_id, $before_resp ) = @_;
 
-   $self->{bindings}{ join "\0", $medium, $address } = $user->user_id;
+   $self->{bindings}{ join "\0", $medium, $address } = $user_id;
 
    if( !defined $hs_uribase ) {
       return Future->done( 1 );
@@ -175,15 +200,15 @@ sub bind_identity
    my %resp = (
       address => $address,
       medium  => $medium,
-      mxid    => $user->user_id,
+      mxid    => $user_id,
    );
 
    my $invites = $self->invites_for( $medium, $address );
    if( defined $invites ) {
       foreach my $invite ( @$invites ) {
-         $invite->{mxid} = $user->user_id;
+         $invite->{mxid} = $user_id;
          $invite->{signed} = {
-            mxid  => $user->user_id,
+            mxid  => $user_id,
             token => $invite->{token},
          };
          $self->sign( $invite->{signed} );
