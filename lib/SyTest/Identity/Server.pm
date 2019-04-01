@@ -227,6 +227,19 @@ sub bind_identity
    );
 }
 
+sub lookup_identity
+{
+   my $self = shift;
+   my ( $medium, $address ) = @_;
+
+   my $mxid = $self->{bindings}{ join "\0", $medium, $address };
+   if ( "email" eq $medium and defined $mxid ) {
+      return $mxid;
+   }
+
+   return undef
+}
+
 sub sign
 {
    my $self = shift;
