@@ -794,7 +794,10 @@ sub SyTest::pass_on_done
 {
    my $self = shift;
    my ( $message ) = @_;
-   $self->on_done( sub { $RUNNING_TEST->ok( 1, $message ) } );
+   $self->on_done( sub {
+      log_if_fail "Passed stage: $message";
+      $RUNNING_TEST->ok( 1, $message )
+   } );
 }
 
 sub list_symbols
