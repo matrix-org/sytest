@@ -39,16 +39,13 @@ test "Users cannot kick users who have already left a room",
                     state_key => $kicked_user->user_id,
                 )->then( sub {
                     my ( $body ) = @_;
-                    $body->{membership} eq "leave" or die "";
+                    $body->{membership} eq "leave" or
+                        die "Expected kicked user membership to be 'leave'";
 
                     Future->done ( 1 );
                 })
             }
         })->then( sub {
-            my ( $body ) = @_;
-            $body->{membership} eq "leave" or
-                die "Expected kicked user membership to be 'leave'";
-
             do_request_json_for( $creator,
                 method => "POST",
                 uri    => "/r0/rooms/$room_id/kick",
