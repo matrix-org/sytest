@@ -37,7 +37,12 @@ test "Users cannot kick users who have already left a room",
                 matrix_get_room_state( $creator, $room_id,
                     type      => "m.room.member",
                     state_key => $kicked_user->user_id,
-                )
+                )->then( sub {
+                    my ( $body ) = @_;
+                    $body->{membership} eq "leave" or die "";
+
+                    Future->done ( 1 );
+                })
             }
         })->then( sub {
             my ( $body ) = @_;
