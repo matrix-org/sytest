@@ -451,6 +451,38 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
+
+=head2 wait_for_while
+
+   wait_for_while( $future, $do )
+
+Repeatedly calls function $do until $future resolves. Used when it is necessary
+to do an action several times before a condition happens.
+
+=cut
+
+sub wait_for_while
+{
+   my ( $wait_f, $do ) = @_;
+
+   my $finished = 0;
+
+   Future->needs_all(
+      $wait_f->then( sub {
+         $finished = 1;
+
+         Future->done( 1 )
+      }),
+      repeat_until_true {
+         $do->()
+         ->then( sub {
+            Future->done( $finished )
+         })
+      }
+   )
+}
+
+
 struct Fixture => [qw( name requires start result teardown )], predicate => "is_Fixture";
 
 my $fixture_count = 0;
