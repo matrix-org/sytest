@@ -26,11 +26,15 @@ sub wait_for_push
       my ( $request ) = @_;
       my $body = $request->body_from_json;
 
-      # Respond to all requests, even if we filter them out
-      $request->respond_json( $response // {} );
+      log_if_fail "Received push on $path", $body;
 
       return unless $body->{notification}{type};
       return unless $body->{notification}{type} eq "m.room.message";
+
+      # Only respond to requests which we are handling, as default handler
+      # has been installed for these paths.
+      $request->respond_json( $response // {} );
+
       return 1;
    });
 }
@@ -47,6 +51,16 @@ multi_test "Test that rejected pushers are removed.",
       my $room_id;
 
       my $url = $test_server_info->client_location . "/alice_push";
+
+      add_http_default_responder( "/alice_push/1", sub {
+         my ( $req ) = @_;
+         $req->respond_json( {} );
+      } );
+
+      add_http_default_responder( "/alice_push/2", sub {
+         my ( $req ) = @_;
+         $req->respond_json( {} );
+      } );
 
       matrix_create_room( $alice, visibility => "private" )->then( sub {
          ( $room_id ) = @_;
@@ -85,21 +99,24 @@ multi_test "Test that rejected pushers are removed.",
                Future->done(1);
             });
          }
-      })->then( sub {
+      })->SyTest::pass_on_done( "Both pushers in /r0/pushers" )
+      ->then( sub {
          # It can take a while before we start receiving push on new pushers.
-         retry_until_success {
+         wait_for_while(
             Future->needs_all(
                wait_for_push( "/alice_push/1" ),
                wait_for_push( "/alice_push/2" ),
-               matrix_send_room_text_message( $bob, $room_id, body => "message" )
-            )
-         }->SyTest::pass_on_done( "Message 1 Pushed" );
+            ),
+            sub { matrix_send_room_text_message( $bob, $room_id, body => "message 1" ) }
+         )->SyTest::pass_on_done( "Message 1 Pushed" );
       })->then( sub {
          # Now we go and reject a push
-         Future->needs_all(
-            wait_for_push( "/alice_push/1", { rejected => [ "key_1" ] } ),
-            wait_for_push( "/alice_push/2" ),
-            matrix_send_room_text_message( $bob, $room_id, body => "message" )
+         wait_for_while(
+            Future->needs_all(
+               wait_for_push( "/alice_push/1", { rejected => [ "key_1" ] } ),
+               wait_for_push( "/alice_push/2" ),
+            ),
+            sub { matrix_send_room_text_message( $bob, $room_id, body => "message 2" )->then( sub { log_if_fail "send message"; Future->done( 1 ) }) }
          )->SyTest::pass_on_done( "Message 2 Pushed" );
       })->then( sub {
          retry_until_success {
