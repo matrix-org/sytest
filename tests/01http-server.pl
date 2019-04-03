@@ -9,7 +9,9 @@ my $DIR = dirname( __FILE__ );
 
 struct Awaiter => [qw( pathmatch filter future )];
 
-push our @EXPORT, qw( ServerInfo await_http_request TEST_SERVER_INFO );
+struct DefaultResponder => [qw( pathmatch responder )];
+
+push our @EXPORT, qw( ServerInfo await_http_request add_http_default_responder TEST_SERVER_INFO );
 
 struct ServerInfo => [qw( server_name client_location federation_host federation_port )];
 
@@ -108,6 +110,8 @@ our $TEST_SERVER_INFO = fixture(
 # List of Awaiter structs
 my @pending_awaiters;
 
+my @default_responders;
+
 package SyTest::HTTPServer {
    use base qw( Net::Async::HTTP::Server );
 
@@ -160,9 +164,18 @@ package SyTest::HTTPServer {
          $awaiter->future->done( $request );
          return;
       }
-      else {
-         warn "Received spurious HTTP request to $path\n";
+
+      foreach my $responder ( reverse( @default_responders ) ) {
+         my $pathmatch = $responder->pathmatch;
+
+         next unless ( !ref $pathmatch and $path eq $pathmatch ) or
+                     ( ref $pathmatch  and $path =~ $pathmatch );
+
+         $responder->responder->( $request );
+         return;
       }
+
+      warn "Received spurious HTTP request to $path\n";
    }
 }
 
@@ -188,3 +201,25 @@ sub await_http_request
          ->then_fail( $failmsg ),
    );
 };
+
+
+=head2 add_http_default_responder
+
+   add_http_default_responder( $path, $response_fn )
+
+Adds a default handler to requests that match $path, where $response_fn is a
+function that takes the request and should respond to it.
+
+The default handler will only be called if no handlers added via
+`await_http_request` matches.
+
+Note: The default handler persists across tests.
+
+=cut
+
+sub add_http_default_responder
+{
+   my ( $pathmatch, $response_fn ) = @_;
+
+   push @default_responders, DefaultResponder( $pathmatch, $response_fn );
+}
