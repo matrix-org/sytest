@@ -335,18 +335,61 @@ test "/upgrade copies important state to the new room",
 
       # map from type to content
       my %STATE_DICT = (
-         "m.room.topic" => { topic => "topic" },
-         "m.room.name" => { name => "name" },
-         "m.room.join_rules" => { join_rule => "public" },
-         "m.room.guest_access" => { guest_access => "forbidden" },
-         "m.room.history_visibility" => { history_visibility => "joined" },
-         "m.room.avatar" => { url => "http://something" },
-         "m.room.encryption" => { algorithm => "m.megolm.v1.aes-sha2" },
-         "m.room.related_groups" => { groups => [ "+something:example.org" ] },
-         "m.room.server_acl" => { 
-            allow => [ "*" ],
-            allow_ip_literals => "false",
-            deny => [ "*.evil.com", "evil.com" ],
+         "m.room.topic" => {
+            content => { topic => "topic" },
+            state_key => "",
+         },
+         "m.room.name" => {
+            content => { name => "name" },
+            state_key => "",
+         },
+         "m.room.join_rules" => {
+            content => { join_rule => "public" },
+            state_key => "",
+         },
+         "m.room.guest_access" => {
+            content => { guest_access => "forbidden" },
+            state_key => "",
+         },
+         "m.room.history_visibility" => {
+            content => { history_visibility => "joined" },
+            state_key => "",
+         },
+         "m.room.avatar" => {
+            content => { url => "http://something" },
+            state_key => "",
+         },
+         "m.room.encryption" => {
+            content => { algorithm => "m.megolm.v1.aes-sha2" },
+            state_key => "",
+         },
+         "m.room.related_groups" => {
+            content => { groups => [ "+something:example.org" ] },
+            state_key => "",
+         },
+         "m.room.server_acl" => {
+            content => { 
+               allow => [ "*" ],
+               allow_ip_literals => "false",
+               deny => [ "*.evil.com", "evil.com" ],
+            },
+            state_key => "",
+         },
+         "im.vector.modular.widgets" => {
+            content => {
+               name => "SomeWidget",
+               type => "somewidget",
+               url => "https://example.com",
+               data => {
+                  cUrl => "https://example.com",
+               },
+               id => "somewidget%40bob%3Aexample.com_1111",
+               waitForIframeLoad => 1,
+               creatorUserId => '@bob:example.com',
+            },
+            # Don't place %-encoded stuff in here as it gets transformed
+            # somewhere, which fails the test (seems to be a Perl thing)
+            state_key => "somewidget.bob.example.com_1111",
          },
       );
 
@@ -356,7 +399,8 @@ test "/upgrade copies important state to the new room",
             matrix_put_room_state(
                $creator, $room_id,
                type => $k,
-               content => $STATE_DICT{$k},
+               content => $STATE_DICT{$k}{content},
+               state_key => $STATE_DICT{$k}{state_key},
             );
          });
       }
@@ -384,27 +428,45 @@ test "/upgrade copies important state to the new room",
       })->then( sub {
          ( $new_room_id, ) = @_;
 
-         matrix_sync_again( $creator );
-      })->then( sub {
-         my ( $sync_body ) = @_;
+         matrix_sync_again(
+            $creator
+         )->then( sub {
+            my ( $sync_body ) = @_;
 
-         log_if_fail "sync body", $sync_body;
+            log_if_fail "sync body", $sync_body;
 
-         my $room = $sync_body->{rooms}{join}{$new_room_id};
+            my $room = $sync_body->{rooms}{join}{$new_room_id};
 
-         foreach my $k ( keys %STATE_DICT ) {
-            my $event = first {
-               $_->{type} eq $k && $_->{state_key} eq '',
-            } @{ $room->{timeline}->{events} };
-
-            log_if_fail "State for $k", $event->{content};
-            assert_deeply_eq(
-               $event->{content},
-               $STATE_DICT{$k},
-               "$k in replacement room",
+            # Merge timeline and state arrays
+            my @state_events = ( 
+               @{ $room->{timeline}->{events} },
+               @{ $room->{state}->{events} },
             );
-         }
-         Future->done(1);
+
+            foreach my $k ( keys %STATE_DICT ) {
+               # Retrieve the state event
+               my $event = first {
+                  $_->{type} eq $k,
+               } @state_events;
+
+               # Check state event content
+               log_if_fail "Content for $k", $event->{content};
+               assert_deeply_eq(
+                  $event->{content},
+                  $STATE_DICT{$k}{content},
+                  "$k in replacement room",
+               );
+
+               # Check state event state key
+               log_if_fail "State key for $k", $event->{state_key};
+               assert_eq(
+                  $event->{state_key},
+                  $STATE_DICT{$k}{state_key},
+                  "state_key " . $STATE_DICT{$k}{state_key} . " in replacement room"
+               );
+            }
+            Future->done( 1 );
+         });
       });
    };
 
