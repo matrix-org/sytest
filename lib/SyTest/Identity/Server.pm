@@ -150,8 +150,8 @@ sub on_request
 
       $self->bind_identity( undef, $medium, $address, $mxid );
 
-      $resp{medium} = $self->{validated}{$sid}{medium};
-      $resp{address} = $self->{validated}{$sid}{address};
+      $resp{medium} = $medium;
+      $resp{address} = $address;
       $resp{mxid} = $mxid;
       $resp{not_before} = 0;
       $resp{not_after} = 4582425849161;
@@ -189,7 +189,15 @@ sub validate_identity
 sub bind_identity
 {
    my $self = shift;
-   my ( $hs_uribase, $medium, $address, $user_id, $before_resp ) = @_;
+   my ( $hs_uribase, $medium, $address, $user, $before_resp ) = @_;
+
+   # Correctly handle $user being either
+   my $user_id;
+   if ( ref( $user ) ne "" ) {
+      $user_id = $user->user_id;
+   } else {
+      $user_id = $user;
+   }
 
    $self->{bindings}{ join "\0", $medium, $address } = $user_id;
 
@@ -237,7 +245,7 @@ sub lookup_identity
       return $mxid;
    }
 
-   return undef
+   return undef;
 }
 
 sub sign
