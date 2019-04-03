@@ -33,22 +33,22 @@ test "Users cannot kick users who have already left a room",
 
            content => { user_id => $kicked_user->user_id, reason => "testing" },
         )->then( sub {
-            matrix_get_room_state( $creator, $room_id,
-                type      => "m.room.member",
-                state_key => $kicked_user->user_id,
-            )
+            retry_until_success {
+                matrix_get_room_state( $creator, $room_id,
+                    type      => "m.room.member",
+                    state_key => $kicked_user->user_id,
+                )
+            }
         })->then( sub {
             my ( $body ) = @_;
             $body->{membership} eq "leave" or
                 die "Expected kicked user membership to be 'leave'";
 
-            retry_until_success {
-                do_request_json_for( $creator,
-                    method => "POST",
-                    uri    => "/r0/rooms/$room_id/kick",
+            do_request_json_for( $creator,
+                method => "POST",
+                uri    => "/r0/rooms/$room_id/kick",
 
-                    content => { user_id => $kicked_user->user_id, reason => "testing" },
-                )->main::expect_http_403; # 403 for kicking a user who isn't in the room anymore
-            }
+                content => { user_id => $kicked_user->user_id, reason => "testing" },
+            )->main::expect_http_403; # 403 for kicking a user who isn't in the room anymore
         })
    };
