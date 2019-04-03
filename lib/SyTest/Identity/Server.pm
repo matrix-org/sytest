@@ -191,7 +191,8 @@ sub bind_identity
    my $self = shift;
    my ( $hs_uribase, $medium, $address, $user, $before_resp ) = @_;
 
-   # Correctly handle $user being either
+   # Correctly handle $user being either the scalar "user_id" or a ref of a User
+   # object. (We can't use is_User becuase it hasn't been defined yet).
    my $user_id;
    if ( ref( $user ) ne "" ) {
       $user_id = $user->user_id;
