@@ -165,6 +165,22 @@ sub on_request
 
       $req->respond_json( \%resp );
    }
+   elsif ( $path eq "/_matrix/identity/api/v1/3pid/unbind" ) {
+      my $body = $req->body_from_json;
+      my $mxid = $body->{mxid};
+
+      my $medium = $body->{threepid}{medium};
+      my $address = $body->{threepid}{address};
+
+      unless ($self->{bindings}{ join "\0", $medium, $address } eq $mxid ) {
+         $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
+         return;
+      }
+
+      delete($self->{bindings}{ join "\0", $medium, $address });
+
+      $req->respond_json( \%resp );
+   }
    else {
       warn "Unexpected request to Identity Service for $path";
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
