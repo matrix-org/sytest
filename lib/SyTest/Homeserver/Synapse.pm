@@ -121,7 +121,7 @@ sub start
       # must be sqlite
       %synapse_db_config = (
          name => 'sqlite3',
-         enable_federation => 'True',
+         enable_federation_can_cause_bad_perfs_with_sqlite => 'True',
          args => $db_config{args},
       );
    }
