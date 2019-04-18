@@ -103,7 +103,7 @@ sub start
    my %db_config = $self->_get_dbconfig(
       type => 'sqlite',
       args => {
-        enable_federation => "True",
+         enable_federation => "True",
          database => ":memory:", #"$hs_dir/homeserver.db",
       },
    );
