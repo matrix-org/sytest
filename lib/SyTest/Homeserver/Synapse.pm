@@ -102,7 +102,6 @@ sub start
 
    my %db_config = $self->_get_dbconfig(
       type => 'sqlite',
-      enable_federation => "True",
       args => {
          database => ":memory:", #"$hs_dir/homeserver.db",
       },
@@ -122,6 +121,7 @@ sub start
       # must be sqlite
       %synapse_db_config = (
          name => 'sqlite3',
+         enable_federation => 'True',
          args => $db_config{args},
       );
    }
