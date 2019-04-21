@@ -217,6 +217,8 @@ sub start
 
         user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
 
+        auth_profile_reqs => "False",
+
         $self->{recaptcha_config} ? (
            recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
            recaptcha_public_key     => $self->{recaptcha_config}->{public_key},
