@@ -121,7 +121,6 @@ sub start
       # must be sqlite
       %synapse_db_config = (
          name => 'sqlite3',
-         enable_federation_can_cause_bad_perfs_with_sqlite => 'True',
          args => $db_config{args},
       );
    }
@@ -217,6 +216,8 @@ sub start
         uploads_path => "$hs_dir/uploads_path",
 
         user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
+
+        enable_federation_can_cause_bad_perfs_with_sqlite => 'True',
 
         $self->{recaptcha_config} ? (
            recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
