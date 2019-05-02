@@ -230,6 +230,8 @@ sub start
            cas_config
            app_service_config_files
         ),
+
+        require_membership_for_aliases => "false",
    } );
 
    $self->{paths}{log} = $log;
