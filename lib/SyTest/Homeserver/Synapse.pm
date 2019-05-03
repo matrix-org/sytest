@@ -217,7 +217,7 @@ sub start
 
         user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
 
-        enable_federation_can_cause_bad_perfs_with_sqlite => 'True',
+        enable_federation_with_sqlite_can_cause_bad_perfs => 'True',
 
         $self->{recaptcha_config} ? (
            recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
