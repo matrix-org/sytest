@@ -201,6 +201,10 @@ sub start
         # so this is effectively the minimum.
         bcrypt_rounds => 4,
 
+        # We remove the ip range blacklist which by default blocks federation
+        # connections to local homeservers, of which sytest uses extensively
+        federation_ip_range_blacklist => [],
+
         # If we're using dendron-style split workers, we need to disable these
         # things in the main process
         start_pushers         => ( not $self->{dendron} ),
