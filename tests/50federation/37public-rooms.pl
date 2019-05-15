@@ -30,7 +30,7 @@ test "Inbound federation can get public room list",
             $outbound_client->do_request_json(
                method   => "GET",
                hostname => $first_home_server,
-               uri      => "/publicRooms",
+               uri      => "/v1/publicRooms",
             )->then( sub {
                my ( $body ) = @_;
 

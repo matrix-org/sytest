@@ -181,10 +181,9 @@ test "Ghost user must register before joining room",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type => "m.login.application_service",
             user => $unregistered_as_user_localpart,
          },
       );

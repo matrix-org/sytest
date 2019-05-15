@@ -1,4 +1,5 @@
 use Future::Utils qw( try_repeat_until_success );
+#use Devel::StackTrace;
 
 sub is_user_in_changed_list
 {
@@ -21,6 +22,9 @@ sub sync_until_user_in_device_list
 
    my $wait_for_id = $user_to_wait_for->user_id;
 
+   # my $trace = Devel::StackTrace->new(no_args => 1);
+   # log_if_fail $trace->frame(1)->as_string();
+
    $msg = "$msg: waiting for $wait_for_id in $device_list";
 
    return repeat_until_true {
@@ -38,6 +42,7 @@ sub sync_until_user_in_device_list
       });
    };
 }
+
 
 test "Local device key changes appear in v2 /sync",
    requires => [ local_user_fixtures( 2 ),
@@ -69,21 +74,7 @@ test "Local device key changes appear in v2 /sync",
             }
          )
       })->then( sub {
-         matrix_sync_again( $user1 );
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, "device_lists" );
-         my $device_lists = $body->{device_lists};
-
-         log_if_fail "device_lists", $device_lists;
-
-         assert_json_keys( $device_lists, "changed" );
-
-         is_user_in_changed_list( $user2, $body )
-            or die "user not in changed list";
-
-         Future->done(1);
+         sync_until_user_in_device_list( $user1, $user2 );
       });
    };
 
@@ -387,6 +378,71 @@ broken_test "Get notified for remote devices in /sync for invited users",
                     "test display name" );
 
          Future->done(1)
+      });
+   };
+
+
+# regression test for https://github.com/vector-im/riot-web/issues/4527
+test "Device deletion propagates over federation",
+   requires => [ local_user_fixture(), remote_user_fixture(),
+                 qw( can_upload_e2e_keys )],
+
+
+   check => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $room_id;
+
+      matrix_create_room( $user1 )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_invite_user_to_room( $user1, $user2, $room_id )
+      })->then( sub {
+         matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         matrix_sync( $user1 );
+      })->then( sub {
+         matrix_put_e2e_keys( $user2 )
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_set_device_display_name( $user2, $user2->device_id, "test display name" ),
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_delete_device( $user2, $user2->device_id, {
+             auth => {
+                 type     => "m.login.password",
+                 user     => $user2->user_id,
+                 password => $user2->password,
+             }
+         });
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         do_request_json_for( $user1,
+            method  => "POST",
+            uri     => "/unstable/keys/query",
+            content => {
+               device_keys => {
+                  $user2->user_id => {}
+               }
+            }
+         )
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "key query content", $content;
+
+         assert_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         assert_json_keys( $device_keys, $user2->user_id );
+
+         assert_deeply_eq( $device_keys->{$user2->user_id}, {},
+                           "user2's device has been deleted" );
+
+         Future->done(1);
       });
    };
 

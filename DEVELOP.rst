@@ -50,15 +50,20 @@ is described in more detail in the following sections.
     Provides an ``ARRAY`` reference giving a list of named requirements and
     fixture objects.
 
-``critical``
-    If true and the test fails, the entire test run will bail out at this
-    point; no further tests will be attempted at all.
-
 A call to ``test`` is a simplified version of ``multi_test`` which produces
 only a single line of test output indicating success or failure automatically.
 A call to ``multi_test`` can make use of additional functions within the body
 in order to report success or failure of multiple steps within it. Aside from
 this difference, the two behave identically.
+
+Different Homeserver Implementations
+------------------------------------
+
+Sytest supports running its suite of tests over multiple different homeserver
+implementations. The currently supported homeservers are Synapse and
+Dendrite, though SyTest's modular design allows for testing any
+implementation through homeserver configuration files stored in
+``lib/SyTest/Homeserver`` and ``lib/SyTest/HomeserverFactory``.
 
 Code Blocks
 -----------

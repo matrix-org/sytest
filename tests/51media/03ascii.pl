@@ -2,80 +2,67 @@ my $content_id;
 my $content_uri;
 
 test "Can upload with ASCII file name",
-   requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
-      my ( $http, $user ) = @_;
-
-      $http->do_request(
-         method       => "POST",
-         full_uri     => "/_matrix/media/r0/upload",
-         content      => "Test media file",
-         content_type => "text/plain",
-
-         params => {
-            access_token => $user->access_token,
-            filename => "ascii",
-         }
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( content_uri ));
-
-         $content_uri = $body->{content_uri};
-
-         my $parsed_uri = URI->new( $body->{content_uri} );
-         my $server = $parsed_uri->authority;
-         my $path = $parsed_uri->path;
-
-         $content_id = "$server$path";
-
-         Future->done(1)
+      my ( $user ) = @_;
+      upload_test_content( $user, filename=>"ascii" )->then( sub {
+         ( $content_id, $content_uri ) = @_;
+         Future->done(1);
       });
    };
 
-# These next two tests do the same thing with two different HTTP clients, to
-# test locally and via federation
+# we only need one user for these tests
+my $user_fixture = local_user_fixture();
 
-sub test_using_client
-{
-   my ( $client ) = @_;
+sub assert_cd_params_match_filename {
+   my ( $filename, $cd_params ) = @_;
 
-   $client->do_request(
-      method   => "GET",
-      full_uri => "/_matrix/media/r0/download/$content_id",
-   )->then( sub {
-      my ( $body, $response ) = @_;
+   # either we need a valid "filename*" param
+   if ( $cd_params->{"filename*"} ) {
+      my $f = $cd_params->{"filename*"};
+      $f =~ s/%(..)/chr hex $1/eg;
+      assert_eq( $f, "utf-8''$filename", "filename*" );
 
-      my $disposition = $response->header( "Content-Disposition" );
-      $disposition eq "inline; filename=ascii" or
-         die "Expected a UTF-8 filename parameter";
+      # there might also be a 'filename', but it doesn't really matter what it
+      # is.
+      return;
+   }
 
-      Future->done(1);
-   });
+   # or we need a valid filename
+   my $f = $cd_params->{"filename"};
+   assert_eq( $f, $filename, "filename" );
 }
 
-test "Can download with ASCII file name locally",
-   requires => [ $main::API_CLIENTS[0] ],
+foreach my $filename ( "ascii", "name with spaces", "name;with;semicolons" ) {
+   test "Can download file '$filename'",
+      requires => [
+         $user_fixture, $main::API_CLIENTS[1]
+      ],
 
-   check => sub {
-      my ( $http ) = @_;
-      test_using_client( $http )
-      ->then( sub {
-         test_using_client( $http )
-      });
-   };
+      check => sub {
+         my ( $user, $federation_client ) = @_;
 
-test "Can download with ASCII file name over federation",
-   requires => [ $main::API_CLIENTS[1] ],
+         my $content_id;
 
-   check => sub {
-      my ( $http ) = @_;
-      test_using_client( $http )
-      ->then( sub {
-         test_using_client( $http )
-      });
-   };
+         # first upload the content with the given filename
+         upload_test_content( $user, filename=>$filename )->then( sub {
+            ( $content_id ) = @_;
+
+            # try and fetch it as a local user
+            get_media( $user->http, $content_id );
+         })->then( sub {
+            assert_cd_params_match_filename( $filename, $_[0] );
+
+            # do the same over federation
+            get_media( $federation_client, $content_id );
+         })->then( sub {
+            assert_cd_params_match_filename( $filename, $_[0] );
+            Future->done(1);
+         });
+      };
+}
+
 
 test "Can download specifying a different ASCII file name",
    requires => [ $main::API_CLIENTS[0] ],
@@ -91,7 +78,7 @@ test "Can download specifying a different ASCII file name",
 
          my $disposition = $response->header( "Content-Disposition" );
          $disposition eq "inline; filename=also_ascii" or
-            die "Expected a UTF-8 filename parameter";
+            die "Expected an ASCII filename parameter";
 
          Future->done(1);
       });
@@ -102,12 +89,9 @@ test "Can send image in room message",
 
    check => sub {
       my ( $http, $user, $room_id ) = @_;
-      test_using_client( $http )
-      ->then( sub {
-         matrix_send_room_message( $user, $room_id,
-            content => { msgtype => "m.file", body => "test.txt", url => $content_uri }
-         )
-      });
+      matrix_send_room_message( $user, $room_id,
+         content => { msgtype => "m.file", body => "test.txt", url => $content_uri }
+      );
    };
 
 test "Can fetch images in room",
@@ -115,12 +99,9 @@ test "Can fetch images in room",
 
    check => sub {
       my ( $http, $user, $room_id ) = @_;
-      test_using_client( $http )
-      ->then( sub {
-         matrix_send_room_message_synced( $user, $room_id,
-            content => { msgtype => "m.text", body => "test" }
-         )
-      })->then( sub {
+      matrix_send_room_message_synced( $user, $room_id,
+         content => { msgtype => "m.text", body => "test" }
+      )->then( sub {
          matrix_send_room_message_synced( $user, $room_id,
             content => { msgtype => "m.file", body => "test.txt", url => $content_uri }
          )

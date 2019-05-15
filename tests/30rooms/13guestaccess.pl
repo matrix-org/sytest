@@ -37,28 +37,33 @@ test "Guest users can send messages to guest_access rooms if joined",
       })->then( sub {
          matrix_send_room_text_message( $guest_user, $room_id, body => "sup" );
       })->then( sub {
-         matrix_get_room_messages( $user, $room_id, limit => 1 );
-      })->then( sub {
-         my ( $body ) = @_;
-         log_if_fail "Body:", $body;
+         # We need to repeatedly call /messages as it may take some time before
+         # the message propogates through the system.
+         retry_until_success {
+            matrix_get_room_messages( $user, $room_id, limit => 1 )
+            ->then( sub {
+               my ( $body ) = @_;
+               log_if_fail "Body:", $body;
 
-         assert_json_keys( $body, qw( chunk ));
-         assert_json_list( my $chunk = $body->{chunk} );
+               assert_json_keys( $body, qw( chunk ));
+               assert_json_list( my $chunk = $body->{chunk} );
 
-         scalar @$chunk == 1 or
-            die "Expected one message";
+               scalar @$chunk == 1 or
+                  die "Expected one message";
 
-         my ( $event ) = @$chunk;
+               my ( $event ) = @$chunk;
 
-         assert_json_keys( $event, qw( type room_id user_id content ));
+               assert_json_keys( $event, qw( type room_id user_id content ));
 
-         $event->{user_id} eq $guest_user->user_id or
-            die "expected user_id to be ".$guest_user->user_id;
+               $event->{user_id} eq $guest_user->user_id or
+                  die "expected user_id to be ".$guest_user->user_id;
 
-         $event->{content}->{body} eq "sup" or
-            die "content to be sup";
+               $event->{content}->{body} eq "sup" or
+                  die "content to be sup";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -201,7 +206,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_change_room_powerlevels( $local_user, $room_id, sub {
+         matrix_change_room_power_levels( $local_user, $room_id, sub {
             my ( $levels ) = @_;
             $levels->{users}{ $remote_user->user_id } = 50;
          })->then( sub {

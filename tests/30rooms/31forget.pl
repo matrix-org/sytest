@@ -123,7 +123,7 @@ test "Can't forget room you're still in",
       })->main::expect_http_4xx;
    };
 
-test "Can re-join room if re-invited - history_visibility = shared",
+test "Can re-join room if re-invited",
    requires => [ local_user_fixture(), local_user_fixture() ],
 
    do => sub {
@@ -166,66 +166,6 @@ test "Can re-join room if re-invited - history_visibility = shared",
 
          any { $_->{type} eq "m.room.message" && $_->{content}->{body} eq "before leave" } @{ $body->{chunk} }
             or die "Should have seen before leave message";
-
-         matrix_send_room_text_message( $creator, $room_id, body => "after rejoin" );
-      })->then( sub {
-         matrix_get_room_messages( $user, $room_id, limit => 1 );
-      })->then( sub {
-         my ( $body ) = @_;
-
-         log_if_fail "body", $body;
-
-         @{ $body->{chunk} } == 1 or die "Expected event";
-         $body->{chunk}[0]->{type} eq "m.room.message" && $body->{chunk}[0]->{content}{body} eq "after rejoin"
-            or die "Got wrong event";
-
-         Future->done( 1 );
-      });
-   };
-
-test "Can re-join room if re-invited - history_visibility joined",
-   requires => [ local_user_fixture(), local_user_fixture() ],
-
-   do => sub {
-      my ( $creator, $user ) = @_;
-
-      my ( $room_id );
-
-      matrix_create_room( $creator, invite => [ $user->user_id ] )->then( sub {
-         ( $room_id ) = @_;
-
-         log_if_fail "room_id", $room_id;
-
-         matrix_put_room_state( $creator, $room_id,
-            type      => "m.room.join_rules",
-            state_key => "",
-            content   => {
-               join_rule => "invite",
-            }
-         )
-      })->then( sub {
-         matrix_set_room_history_visibility( $creator, $room_id, "joined");
-      })->then( sub {
-         matrix_join_room( $user, $room_id );
-      })->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "before leave" );
-      })->then( sub {
-         matrix_leave_room( $user, $room_id );
-      })->then( sub {
-         matrix_forget_room( $user, $room_id );
-      })->then( sub {
-         matrix_join_room( $user, $room_id )->main::expect_http_403;
-      })->then( sub {
-         matrix_invite_user_to_room( $creator, $user, $room_id );
-      })->then( sub {
-         matrix_join_room( $user, $room_id );
-      })->then( sub {
-         matrix_get_room_messages( $user, $room_id, limit => 100 );
-      })->then( sub {
-         my ( $body ) = @_;
-
-         none { $_->{type} eq "m.room.message" } @{ $body->{chunk} }
-            or die "Should not have seen any m.room.message events";
 
          matrix_send_room_text_message( $creator, $room_id, body => "after rejoin" );
       })->then( sub {

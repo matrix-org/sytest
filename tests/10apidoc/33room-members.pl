@@ -21,8 +21,6 @@ test "POST /rooms/:room_id/join can join a room",
    requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
-   critical => 1,
-
    do => sub {
       my ( $user, $room_id, undef ) = @_;
 
@@ -233,8 +231,6 @@ test "POST /rooms/:room_id/leave can leave a room",
    requires => [ local_user_fixture(), $room_fixture,
                  qw( can_get_room_membership )],
 
-   critical => 1,
-
    do => sub {
       my ( $joiner_to_leave, $room_id, undef ) = @_;
 
@@ -396,6 +392,41 @@ sub _invite_users
    );
 }
 
+=head2 matrix_create_and_join_room
+
+   matrix_create_and_join_room( [ $creator, $user2, ... ], %opts )->then( sub {
+      my ( $room_id ) = @_;
+   });
+
+   matrix_create_and_join_room( [ $creator, $user2, ... ],
+     with_alias => 1, %opts,
+   )->then( sub {
+      my ( $room_id, $room_alias ) = @_;
+   });
+
+Create a new room, and have a list of users join it.
+
+The following may be passed as optional parametrs:
+
+=over
+
+=item with_alias => SCALAR
+
+Make this truthy to return the newly created alias
+
+=item with_invite => SCALAR
+
+Make this truthy to send invites to the other users before they join.
+
+=item (everything else)
+
+Other parameters are passed into C<matrix_create_room>, whence they are
+passed on to the server.
+
+=back
+
+=cut
+
 push @EXPORT, qw( matrix_create_and_join_room );
 
 sub matrix_create_and_join_room
@@ -409,19 +440,26 @@ sub matrix_create_and_join_room
       for @other_members;
 
    my $room_id;
-   my $room_alias_fullname;
 
    my $n_joiners = scalar @other_members;
 
+   my $creator_server_name = $creator->http->server_name;
+   my $room_alias_name = sprintf "test-%s-%d", $TEST_RUN_ID, $next_alias++;
+   my $room_alias_fullname =
+      sprintf "#%s:%s", $room_alias_name, $creator_server_name;
+
+   my $with_invite = delete $options{with_invite};
+   my $with_alias = delete $options{with_alias};
+
    matrix_create_room( $creator,
       %options,
-      room_alias_name => sprintf( "test-%s-%d", $TEST_RUN_ID, $next_alias++ ),
+      room_alias_name => $room_alias_name,
    )->then( sub {
-      ( $room_id, $room_alias_fullname ) = @_;
+      ( $room_id ) = @_;
 
       log_if_fail "room_id=$room_id";
 
-      ( $options{with_invite} ?
+      ( $with_invite ?
          _invite_users( $creator, $room_id, @other_members ) :
          Future->done() )
    })->then( sub {
@@ -445,10 +483,27 @@ sub matrix_create_and_join_room
       )
    })->then( sub {
       Future->done( $room_id,
-         ( $options{with_alias} ? ( $room_alias_fullname ) : () )
+         ( $with_alias ? ( $room_alias_fullname ) : () )
       );
    });
 }
+
+=head2 room_fixture
+
+   $fixture = room_fixture( $user_fixture, %opts );
+
+Returns a Fixture, which when provisioned will create a new room on the user's
+server and return the room id.
+
+C<$user_fixture> should be a Fixture which will provide a User when
+provisioned.
+
+Any other options are passed into C<matrix_create_room>, whence they are passed
+on to the server.
+
+It is generally easier to use C<local_user_and_name_fixtures>.
+
+=cut
 
 push @EXPORT, qw( room_fixture );
 
@@ -491,17 +546,46 @@ sub magic_room_fixture
    );
 }
 
+=head2 local_user_and_room_fixtures
+
+   ( $user_fixture, $room_fixture ) = local_user_and_room_fixtures( %opts );
+
+Returns a pair of Fixtures, which when provisioned will respectively create a
+new user on the main test server (returning the User object), and use that
+user to create a new room (returning the room id).
+
+The following can be passed as optional parameters:
+
+=over
+
+=item user_opts => HASH
+
+Options to use when creating the user, such as C<displayname>. These are passed
+through to C<setup_user>.
+
+=item room_opts => HASH
+
+Options to use when creating the room. Thes are passed into into
+C<matrix_create_room>, whence they are passed on to the server.
+
+=back
+
+=cut
+
 push @EXPORT, qw( local_user_and_room_fixtures );
 
 sub local_user_and_room_fixtures
 {
    my %args = @_;
 
-   my $user_fixture = local_user_fixture( %args );
+   my $user_opts = $args{user_opts} // {};
+   my $room_opts = $args{room_opts} // {};
+
+   my $user_fixture = local_user_fixture( %$user_opts );
 
    return (
       $user_fixture,
-      room_fixture( $user_fixture, %args ),
+      room_fixture( $user_fixture, %$room_opts ),
    );
 }
 

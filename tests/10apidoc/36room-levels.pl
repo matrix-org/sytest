@@ -123,9 +123,9 @@ test "Both GET and PUT work",
       Future->done(1);
    };
 
-push our @EXPORT, qw( matrix_change_room_powerlevels );
+push our @EXPORT, qw( matrix_change_room_power_levels );
 
-sub matrix_change_room_powerlevels
+sub matrix_change_room_power_levels
 {
    my ( $user, $room_id, $func ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";

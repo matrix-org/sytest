@@ -1,3 +1,5 @@
+use URI::Escape qw( uri_escape );
+
 test "/context/ on joined room works",
    requires => [ local_user_and_room_fixtures() ],
 
@@ -11,7 +13,7 @@ test "/context/ on joined room works",
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/$event_id",
+            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -35,7 +37,7 @@ test "/context/ on non world readable room does not work",
 
          do_request_json_for( $other_user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/$event_id",
+            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
          );
       })->main::expect_http_403;
    };
@@ -73,8 +75,8 @@ test "/context/ returns correct number of events",
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/$event_middle_id",
-            args    => {
+            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_middle_id ) }",
+            params    => {
                limit => 2,
             }
          );
@@ -92,3 +94,47 @@ test "/context/ returns correct number of events",
          Future->done( 1 )
       });
    };
+
+test "/context/ with lazy_load_members filter works",
+   requires => [ local_user_and_room_fixtures(), local_user_fixtures( 2 ) ],
+
+   check => sub {
+      my ( $user, $room_id, $user2, $user3 ) = @_;
+
+      matrix_join_room( $user2, $room_id )->then( sub {
+         matrix_join_room( $user3, $room_id );
+      })->then( sub {
+         matrix_send_room_text_message( $user, $room_id,
+            body => "hello, world 1",
+         );
+      })->then( sub {
+         matrix_send_room_text_message( $user, $room_id,
+            body => "hello, world 2",
+         );
+      })->then( sub {
+         matrix_send_room_text_message( $user, $room_id,
+            body => "hello, world 3",
+         );
+      })->then( sub {
+         my ( $event_id ) = @_;
+
+         do_request_json_for( $user,
+            method  => "GET",
+            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
+            params  => {
+               limit => 2,
+               filter  => '{ "lazy_load_members" : true }',
+            }
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( state event ) );
+
+         # only the user who sent 'hello world' should be present in the state
+         assert_state_room_members_match( $body->{state}, [ $user->user_id ]);
+
+         Future->done( 1 )
+      });
+   };
+

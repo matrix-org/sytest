@@ -73,7 +73,7 @@ SyTest requires a number of dependencies that are easiest installed from CPAN.
 Installing on OS X
 ------------------
 Dependencies can be installed on OS X in the same manner, except that packages
-using NaCl / libsodium will fail. This can be worked around by:
+using NaCl / libsodium may fail. This can be worked around by:
 
 Installing libsodium manually, eg.::
 
@@ -89,6 +89,11 @@ Then force an install of Crypt::NaCl::Sodium::
 
     $ cpan
     cpan> force install Crypt::NaCl::Sodium
+
+You may also need to force install Shell::Guess, and manually install
+DBI before DBD::Pg, otherwise DBD::Pg will fail with::
+
+    No rule to make target '.../auto/DBI/Driver_xst.h'
 
 Then run install-deps.pl as normal.
 

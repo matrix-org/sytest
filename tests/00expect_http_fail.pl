@@ -1,6 +1,7 @@
 use Future 0.33; # ->then catch semantics
 
 use Carp;
+use JSON qw( decode_json );
 
 sub gen_expect_failure
 {
@@ -112,3 +113,62 @@ sub check_http_code
       },
    );
 }
+
+=head2 expect_matrix_error
+
+   http_request()->main::expect_matrix_error(
+      $http_code, $matrix_errcode,
+   )->then( sub {
+      my ( $error_body ) = @_;
+   });
+
+A decorator for a Future which we expect to return an HTTP error with a Matrix
+error code. Asserts that the HTTP error code and matrix error code were as
+expected, and if so returns the JSON-decoded body of the error (so that it can
+be checked for additional fields).
+
+=cut
+
+sub expect_matrix_error
+{
+   my ( $f, $expected_http_code, $expected_errcode ) = @_;
+
+   return $f->then_with_f(
+      sub {  # done
+         my ( undef, $response ) = @_;
+
+         log_if_fail "Response", $response;
+         Future->fail(
+            "Expected to receive an HTTP $expected_http_code failure but it succeeded"
+         );
+      },
+      http => sub {  # catch http
+         my ( $f, undef, undef, $response ) = @_;
+
+         $response and $response->code == $expected_http_code and
+            return Future->done( $response );
+
+         # if the error code doesn't match, return the failure.
+         return $f;
+      },
+   )->then( sub {
+      my ( $response ) = @_;
+      my $body = decode_json( $response->content );
+
+      log_if_fail "Error response body", $body;
+
+      assert_eq( $body->{errcode}, $expected_errcode, 'errcode' );
+      Future->done( $body );
+   });
+}
+push @EXPORT, qw( expect_matrix_error );
+
+
+sub expect_m_not_found
+{
+   my $f = shift;
+   return expect_matrix_error(
+      $f, 404, 'M_NOT_FOUND',
+   );
+}
+push @EXPORT, qw( expect_m_not_found );

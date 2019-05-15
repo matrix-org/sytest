@@ -119,7 +119,7 @@ sub send_transaction
    $self->do_request_json(
       method   => "PUT",
       hostname => $params{destination},
-      uri      => "/send/$ts/",
+      uri      => "/v1/send/$ts/",
 
       content => \%transaction,
    );
@@ -176,7 +176,7 @@ sub join_room
    $self->do_request_json(
       method   => "GET",
       hostname => $server_name,
-      uri      => "/make_join/$room_id/$user_id"
+      uri      => "/v1/make_join/$room_id/$user_id"
    )->then( sub {
       my ( $body ) = @_;
 
@@ -184,7 +184,7 @@ sub join_room
 
       my %member_event = (
          ( map { $_ => $protoevent->{$_} } qw(
-            auth_events content depth prev_events prev_state room_id sender
+            auth_events content depth prev_events room_id sender
             state_key type ) ),
 
          event_id         => $store->next_event_id,
@@ -197,7 +197,7 @@ sub join_room
       $self->do_request_json(
          method   => "PUT",
          hostname => $server_name,
-         uri      => "/send_join/$room_id/$member_event{event_id}",
+         uri      => "/v1/send_join/$room_id/$member_event{event_id}",
 
          content => \%member_event,
       )->then( sub {
@@ -220,6 +220,47 @@ sub join_room
 
          Future->done( $room );
       });
+   });
+}
+
+=head2 get_remote_forward_extremities
+
+   $client->get_remote_forward_extremities(
+      server_name => $first_home_server,
+      room_id     => $room_id,
+   )->then( sub {
+      my ( @extremity_event_ids ) = @_;
+   });
+
+Returns the remote server's idea of the current forward extremities in the
+given room.
+
+=cut
+
+
+sub get_remote_forward_extremities
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $server_name = $args{server_name};
+   my $room_id     = $args{room_id};
+
+   # we do this slightly hackily, by asking the server to make us a join event,
+   # which will handily list the forward extremities as prev_events.
+
+   my $user_id = '@fakeuser:' . $self->server_name;
+   $self->do_request_json(
+      method   => "GET",
+      hostname => $server_name,
+      uri      => "/v1/make_join/$room_id/$user_id",
+   )->then( sub {
+      my ( $resp ) = @_;
+
+      my $protoevent = $resp->{event};
+
+      my @prev_events = map { $_->[0] } @{ $protoevent->{prev_events} };
+      Future->done( @prev_events );
    });
 }
 

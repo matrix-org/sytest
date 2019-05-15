@@ -138,18 +138,71 @@ test "GET /rooms/:room_id/messages returns a message",
       matrix_send_room_text_message( $user, $room_id,
          body => "Here is the message content",
       )->then( sub {
+         matrix_sync( $user )
+      })->then( sub {
+         my ( $sync_body ) = @_;
+         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
+
          do_request_json_for( $user,
             method => "GET",
             uri    => "/r0/rooms/$room_id/messages",
 
             # With no params this does "forwards from END"; i.e. nothing useful
-            params => { dir => "b" },
+            params => {
+                dir => "b",
+                from => $token,
+            },
          )
       })->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( start end chunk ));
          assert_json_list( $body->{chunk} );
+
+         scalar @{ $body->{chunk} } > 0 or
+            die "Expected some messages but got none at all\n";
+
+         Future->done(1);
+      });
+   };
+
+test "GET /rooms/:room_id/messages lazy loads members correctly",
+   requires => [ local_user_and_room_fixtures(),
+                 qw( can_send_message )],
+
+   check => sub {
+      my ( $user, $room_id ) = @_;
+
+      matrix_send_room_text_message( $user, $room_id,
+         body => "Here is the message content",
+      )->then( sub {
+         matrix_sync( $user )
+      })->then( sub {
+         my ( $sync_body ) = @_;
+         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/messages",
+
+            params => {
+               dir => "b",
+               filter => '{ "lazy_load_members" : true }',
+               from => $token,
+            },
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( start end state chunk ));
+         assert_json_list( $body->{chunk} );
+         assert_json_list( $body->{state} );
+
+         assert_eq( scalar @{$body->{state}}, 1);
+         assert_eq( $body->{state}[0]{type}, 'm.room.member');
+         assert_eq( $body->{state}[0]{state_key}, $user->user_id);
 
          scalar @{ $body->{chunk} } > 0 or
             die "Expected some messages but got none at all\n";
@@ -170,12 +223,18 @@ sub matrix_get_room_messages
 
    $params{dir} ||= "b";
 
-   do_request_json_for( $user,
-      method => "GET",
-      uri    => "/r0/rooms/$room_id/messages",
+   matrix_sync( $user )->then( sub {
+      my ( $sync_body ) = @_;
 
-      params => \%params,
-   );
+      $params{from} ||= $sync_body->{next_batch};
+
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/r0/rooms/$room_id/messages",
+
+         params => \%params,
+      );
+   });
 }
 
 sub matrix_send_room_text_message_synced
