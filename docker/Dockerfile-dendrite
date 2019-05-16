@@ -1,0 +1,25 @@
+FROM matrixdotorg/sytest:latest
+
+RUN apt-get -qq install -y dos2unix
+
+# PostgreSQL setup
+ENV PGHOST=/var/run/postgresql
+ENV PGDATA=$PGHOST/data
+ENV PGUSER=postgres
+
+# Turn off all the fsync stuff for postgres
+RUN mkdir -p /etc/postgresql/9.6/main/conf.d/
+RUN echo "fync=off" > /etc/postgresql/9.6/main/conf.d/fsync.conf
+RUN echo "full_page_writes=off" >> /etc/postgresql/9.6/main/conf.d/fsync.conf
+
+# Initialise the database files
+RUN su -c '/usr/lib/postgresql/9.6/bin/initdb -E "UTF-8" --lc-collate="en_US.UTF-8" --lc-ctype="en_US.UTF-8" --username=postgres' postgres
+
+# This is where we expect Dendrite to be binded to from the host
+RUN mkdir -p /src
+
+# The dockerfile context, when ran by the buildscript, will actually be the
+# repo root, not the docker folder
+ADD docker/dendrite_sytest.sh /dendrite_sytest.sh
+RUN dos2unix /dendrite_sytest.sh
+ENTRYPOINT ["/dendrite_sytest.sh"]

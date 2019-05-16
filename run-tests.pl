@@ -84,7 +84,7 @@ GetOptions(
 
    'n|no-tls' => sub { $WANT_TLS = 0 },
 
-   # these two are superceded by -I, but kept for backwards compatability
+   # these two are superceded by -I, but kept for backwards compatibility
    'dendron=s' => sub {
       $SERVER_IMPL = 'Synapse::ViaDendron' unless $SERVER_IMPL;
       push @ARGV, "--dendron-binary", $_[1];
@@ -208,25 +208,25 @@ if( $BLACKLIST_FILE and $WHITELIST_FILE ) {
 }
 
 # Read in test blacklist rules if set
-my @TEST_BLACKLIST = ();
+my %TEST_BLACKLIST;
 if ( $BLACKLIST_FILE ) {
    open( my $blacklist_data, "<", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for reading: $!\n";
    while ( my $test_name = <$blacklist_data> ) {
       # Trim whitespace
       chomp $test_name;
-      push @TEST_BLACKLIST, $test_name;
+      $TEST_BLACKLIST{$test_name} = 1;
    }
    close $blacklist_data;
 }
 
 # Read in test whitelist rules if set
-my @TEST_WHITELIST = ();
+my %TEST_WHITELIST;
 if ( $WHITELIST_FILE ) {
    open( my $whitelist_data, "<", $WHITELIST_FILE ) or die "Couldn't open whitelist file for reading: $!\n";
    while ( my $test_name = <$whitelist_data> ) {
       # Trim whitespace
       chomp $test_name;
-      push @TEST_WHITELIST, $test_name;
+      $TEST_WHITELIST{$test_name} = 1;
    }
    close $whitelist_data;
 }
@@ -841,12 +841,12 @@ foreach my $test ( @TESTS ) {
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
 
    # Check if this test has been blocked by the blacklist. If so, mark as expected fail
-   if ( scalar( @TEST_BLACKLIST ) and grep $test->name, @TEST_BLACKLIST ) {
+   if ( scalar( $BLACKLIST_FILE ) and exists $TEST_BLACKLIST{ $test->name } ) {
       $test->expect_fail = 1;
    }
 
    # Check if this test has been blocked by the whitelist. If so, mark as expected fail
-   if ( scalar( @TEST_WHITELIST ) and not grep $test->name, @TEST_WHITELIST ) {
+   if ( scalar( $WHITELIST_FILE ) and not exists $TEST_WHITELIST{ $test->name } ) {
       $test->expect_fail = 1;
    }
 

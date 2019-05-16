@@ -140,6 +140,47 @@ sub on_request
       $resp{validated_at} = 0;
       $req->respond_json( \%resp );
    }
+   elsif ( $path eq "/_matrix/identity/api/v1/3pid/bind" ) {
+      my $body = $req->body_from_form;
+      my $sid = $body->{sid};
+      my $mxid = $body->{mxid};
+
+      my $medium = $self->{validated}{$sid}{medium};
+      my $address = $self->{validated}{$sid}{address};
+
+      $self->bind_identity( undef, $medium, $address, $mxid );
+
+      $resp{medium} = $medium;
+      $resp{address} = $address;
+      $resp{mxid} = $mxid;
+      $resp{not_before} = 0;
+      $resp{not_after} = 4582425849161;
+      $resp{ts} = 0;
+
+      sign_json( \%resp,
+         secret_key => $self->{private_key},
+         origin     => $self->name,
+         key_id     => "ed25519:0",
+      );
+
+      $req->respond_json( \%resp );
+   }
+   elsif ( $path eq "/_matrix/identity/api/v1/3pid/unbind" ) {
+      my $body = $req->body_from_json;
+      my $mxid = $body->{mxid};
+
+      my $medium = $body->{threepid}{medium};
+      my $address = $body->{threepid}{address};
+
+      unless ($self->{bindings}{ join "\0", $medium, $address } eq $mxid ) {
+         $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
+         return;
+      }
+
+      delete($self->{bindings}{ join "\0", $medium, $address });
+
+      $req->respond_json( \%resp );
+   }
    else {
       warn "Unexpected request to Identity Service for $path";
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
@@ -166,7 +207,16 @@ sub bind_identity
    my $self = shift;
    my ( $hs_uribase, $medium, $address, $user, $before_resp ) = @_;
 
-   $self->{bindings}{ join "\0", $medium, $address } = $user->user_id;
+   # Correctly handle $user being either the scalar "user_id" or a ref of a User
+   # object. (We can't use is_User becuase it hasn't been defined yet).
+   my $user_id;
+   if ( ref( $user ) ne "" ) {
+      $user_id = $user->user_id;
+   } else {
+      $user_id = $user;
+   }
+
+   $self->{bindings}{ join "\0", $medium, $address } = $user_id;
 
    if( !defined $hs_uribase ) {
       return Future->done( 1 );
@@ -175,15 +225,15 @@ sub bind_identity
    my %resp = (
       address => $address,
       medium  => $medium,
-      mxid    => $user->user_id,
+      mxid    => $user_id,
    );
 
    my $invites = $self->invites_for( $medium, $address );
    if( defined $invites ) {
       foreach my $invite ( @$invites ) {
-         $invite->{mxid} = $user->user_id;
+         $invite->{mxid} = $user_id;
          $invite->{signed} = {
-            mxid  => $user->user_id,
+            mxid  => $user_id,
             token => $invite->{token},
          };
          $self->sign( $invite->{signed} );
@@ -200,6 +250,19 @@ sub bind_identity
       method  => "POST",
       content => \%resp,
    );
+}
+
+sub lookup_identity
+{
+   my $self = shift;
+   my ( $medium, $address ) = @_;
+
+   my $mxid = $self->{bindings}{ join "\0", $medium, $address };
+   if ( "email" eq $medium and defined $mxid ) {
+      return $mxid;
+   }
+
+   return undef;
 }
 
 sub sign
