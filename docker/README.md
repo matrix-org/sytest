@@ -28,7 +28,7 @@ docker run --rm -it  -v /path/to/dendrite\:/src -v /path/to/where/you/want/logs\
 ```
 
 This will run on the same branch in SyTest as the checkout, if possible, but
-will fall back to using the either Synapse or Dendrite's `develop` branch.
+will fall back to using either Synapse or Dendrite's `develop` branch.
 
 If you want to use an existing checkout of SyTest, mount it to `/sytest` inside
 the container by adding `-v /path/to/sytest\:/sytest` to the docker command.
