@@ -174,7 +174,7 @@ test "Inbound federation accepts a second soft-failed event",
       #
       # Where time is flowing downwards.
       #
-      #  A   = join of remote user
+      #  J1  = join of remote user
       #  PL1 = creator of room blocks SF event sending
       #  M1  = remote user sends a permitted message
       #  SF1, SF2 = remote user sends a soft-failed message
