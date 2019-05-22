@@ -24,7 +24,7 @@ docker run --rm -it -v /path/to/synapse\:/src -v /path/to/where/you/want/logs\:/
 ### Dendrite
 
 ```
-docker run --rm -it  -v /path/to/dendrite\:/src -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-dendrite
+docker run --rm -it -v /path/to/dendrite\:/src -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-dendrite
 ```
 
 This will run on the same branch in SyTest as the checkout, if possible, but
