@@ -57,6 +57,6 @@ rsync --ignore-missing-args -av server-0 server-1 /logs --include "*/" --include
 
 # Write out JUnit for CircleCI
 mkdir -p /logs/sytest
-perl /tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
+perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
 
 exit $TEST_STATUS
