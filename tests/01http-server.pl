@@ -35,6 +35,8 @@ our $TEST_SERVER_INFO = fixture(
          my ( $listener ) = @_;
          my $sockport = $listener->read_handle->sockport;
 
+         $OUTPUT->diag( "Started test HTTPS Server at $listen_host:$sockport" );
+
          my $uri_base = "https://$listen_host:$sockport";
 
          $server_info = ServerInfo( "$listen_host:$sockport", $uri_base,
