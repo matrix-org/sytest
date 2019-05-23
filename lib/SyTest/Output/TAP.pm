@@ -131,19 +131,22 @@ package SyTest::Output::TAP::Test {
          $self->failure = "${\$self->failed} subtests failed" if $self->failed and not length $self->failure;
       }
 
+      my $name = $self->name;
+
       if( !$self->failed ) {
-         my $name = $self->name;
          $name .= " (${\$self->subnum} subtests)" if $self->multi;
 
-         print "ok ${\$self->num} $name\n";
-      }
-      else {
+         print "ok ${\$self->num} " .
+            ( $self->expect_fail ? "(expected fail) " : "" ) .
+            $name .
+            ( $self->expect_fail ? " # TODO passed but expected fail" : "" ) . "\n";
+      } else {
          # for expected fails, theoretically all we need to do is write the
          # TODO, but Jenkins' 'TAP Test results' page is arse and doesn't distinguish
          # between expected and unexpected fails, so stick it in the name too.
          print "not ok ${\$self->num} " .
             ( $self->expect_fail ? "(expected fail) " : "" ) .
-            $self->name .
+            $name .
             ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
 
          print "# $_\n" for split m/\n/, $self->failure;
