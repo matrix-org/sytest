@@ -74,6 +74,9 @@ sub matrix_join_room
    )->then( sub {
       my ( $body ) = @_;
 
+      my $user_id = $user->user_id;
+      log_if_fail "User $user_id joined room", $body;
+
       Future->done( $body->{room_id} )
    });
 }
@@ -339,7 +342,11 @@ sub matrix_invite_user_to_room
       uri    => "/r0/rooms/$room_id/invite",
 
       content => { user_id => $invitee_id }
-   )->then_done(1);
+   )->then( sub {
+      my ( $body ) = @_;
+      log_if_fail "Invited user $invitee_id to $room_id", $body;
+      Future->done(1);
+   });
 }
 
 test "POST /rooms/:room_id/ban can ban a user",
