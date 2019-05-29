@@ -60,7 +60,7 @@ test "Can invite existing 3pid with no ops",
 
          do_request_json_for( $inviter,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/invite",
+            uri    => "/r0/rooms/$room_id/invite",
 
             content => {
                id_server    => $id_server->name,
