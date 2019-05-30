@@ -14,7 +14,7 @@ else
     
     # If we're using the master branch of Dendrite, use the develop branch of sytest,
     # as master is Dendrite's development branch
-    if [ "$branch_name" == "master" ] && branch_name="develop"
+    [ "$branch_name" == "master" ] && branch_name="develop"
 
     # Try and fetch the branch
     echo "Trying to get same-named sytest branch..."
