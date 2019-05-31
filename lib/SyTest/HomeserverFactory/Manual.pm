@@ -24,9 +24,7 @@ sub _init
 {
    my $self = shift;
 
-   $self->{location} = 'https://localhost:8448';
-   $self->{server_name} = undef;
-   $self->{created} = 0;
+   $self->{servers} = [];
 
    $self->SUPER::_init( @_ );
 }
@@ -36,8 +34,7 @@ sub get_options
    my $self = shift;
 
    return (
-      'L|location=s' => \$self->{location},
-      'server-name=s' => \$self->{server_name},
+      'L|server=s' => \@{ $self->{servers} },
       $self->SUPER::get_options(),
    );
 }
@@ -45,10 +42,12 @@ sub get_options
 sub print_usage
 {
    print STDERR <<EOF
-   -L, --location URI           - URI where we can connect to the homeserver.
-                                  Defaults to 'https://localhost:8448'.
-       --server-name NAME       - Defines the way we expect the server to
-                                  identify itself.
+   -L, --server URI             - Server name and URI to connect to, in the format
+                                  "example.com=https://localhost:8448". If server
+                                  name not given, e.g. "https://localhost:8448"
+                                  then the server name is assumed to be the host
+                                  and port. Can be specified multiple times to
+                                  point at multiple running servers.
 EOF
 }
 
@@ -57,13 +56,15 @@ sub create_server
    my $self = shift;
    my %params = ( @_ );
 
-   if( $self->{created} > 0 ) {
+   my $server = shift @{ $self->{servers} };
+   if( !defined $server ) {
       die "can only create one server with -I Manual\n";
    }
-   $self->{created} ++;
+
+   my ($location, $server_name) = reverse(split(/=/, $server));
 
    my ( $https, $host, $port ) =
-      ( $self->{location} =~ m#^http(s)?://([^:/]+)(?::([0-9]+))?$# ) or
+      ( $location =~ m#^http(s)?://([^:/]+)(?::([0-9]+))?$# ) or
       die 'unable to parse location';
 
    if( !defined $port ) {
@@ -77,7 +78,7 @@ sub create_server
       $params{unsecure_port} = $port;
    }
 
-   $params{server_name} = $self->{server_name} // "$host:$port";
+   $params{server_name} = ${server_name} // "$host:$port";
 
    return SyTest::Homeserver::Manual->new( %params );
 }
