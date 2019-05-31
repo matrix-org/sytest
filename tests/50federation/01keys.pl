@@ -17,9 +17,7 @@ test "Federation key API allows unsigned requests for keys",
       # server's own key
       $client->do_request_json(
          method => "GET",
-         # TODO: strictly, a valid key ID is required here, but it's hard to
-         # know upfront what key IDs exist
-         uri => "https://$first_home_server/_matrix/key/v2/server/*",
+         uri => "https://$first_home_server/_matrix/key/v2/server",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "Key response", $body;
@@ -77,57 +75,93 @@ test "Federation key API allows unsigned requests for keys",
       });
    };
 
-test "Federation key API can act as a notary server",
-   requires => [ $main::HOMESERVER_INFO[0], $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT ],
+sub key_query_via_get {
+   my ( $http_client, $notary_server, $origin_server, $key_id ) = @_;
 
-   check => sub {
-      my ( $info, $inbound_server, $client ) = @_;
-      my $first_home_server = $info->server_name;
+   return $http_client->do_request_json(
+      method   => "GET",
+      hostname => $notary_server->server_name,
+      full_uri => "/_matrix/key/v2/query/$origin_server/$key_id",
+   );
+}
 
-      my $key_id = $inbound_server->key_id;
-      my $local_server_name = $inbound_server->server_name;
+sub key_query_via_post {
+   my ( $http_client, $notary_server, $origin_server, $key_id, %params ) = @_;
 
-      $client->do_request_json(
-         method   => "GET",
-         hostname => $first_home_server,
-         full_uri => "/_matrix/key/v2/query/$local_server_name/$key_id",
-      )->then( sub {
-         my ( $body ) = @_;
-         log_if_fail "Response", $body;
+   my $min_valid_until_ts = $params{min_valid_until_ts} // 0;
 
-         assert_json_keys( $body, qw( server_keys ));
-         assert_json_list( $body->{server_keys} );
+   return $http_client->do_request_json(
+      method   => "POST",
+      hostname => $notary_server->server_name,
+      full_uri => "/_matrix/key/v2/query",
+      content  => {
+         server_keys => {
+            $origin_server => {
+               $key_id => {
+                  minimum_valid_until_ts => $min_valid_until_ts,
+               },
+            },
+         },
+      },
+   );
+}
 
-         my $key = first {
-            $_->{server_name} eq $local_server_name and exists $_->{verify_keys}{$key_id}
-         } @{ $body->{server_keys} };
+my %FETCHERS=(
+   GET => \&key_query_via_get,
+   POST => \&key_query_via_post,
+);
 
-         $key or
-            die "Expected to find a response about $key_id from $local_server_name";
+foreach my $method (keys %FETCHERS) {
+   test "Federation key API can act as a notary server via a $method request",
+      requires => [ $main::HOMESERVER_INFO[0], $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT ],
 
-         my $first_hs_sig = $key->{signatures}{$first_home_server} or
-            die "Expected the key to be signed by the first homeserver";
+      check => sub {
+         my ( $info, $inbound_server, $client ) = @_;
+         my $first_home_server = $info->server_name;
 
-         keys %$first_hs_sig == 1 or
-            die "Expected the first homeserver to apply one signature";
+         my $key_id = $inbound_server->key_id;
+         my $local_server_name = $inbound_server->server_name;
 
-         my ( $key_id, $signature_base64 ) = %$first_hs_sig;
-
-         assert_base64_unpadded( $signature_base64 );
-         my $signature = decode_base64 $signature_base64;
-
-         my $signed_bytes = encode_json_for_signing( $key );
-
-         $client->get_key(
-            server_name => $first_home_server,
-            key_id      => $key_id,
+         $FETCHERS{$method}(
+            $client, $info, $local_server_name, $key_id
          )->then( sub {
-            my ( $server_key ) = @_;
+            my ( $body ) = @_;
+            log_if_fail "Response", $body;
 
-            $crypto_sign->verify( $signature, $signed_bytes, $server_key ) or
-               die "Signature verification failed";
+            assert_json_keys( $body, qw( server_keys ));
+            assert_json_list( $body->{server_keys} );
 
-            Future->done(1);
+            my $key = first {
+               $_->{server_name} eq $local_server_name and exists $_->{verify_keys}{$key_id}
+            } @{ $body->{server_keys} };
+
+            $key or
+               die "Expected to find a response about $key_id from $local_server_name";
+
+            my $first_hs_sig = $key->{signatures}{$first_home_server} or
+               die "Expected the key to be signed by the first homeserver";
+
+            keys %$first_hs_sig == 1 or
+               die "Expected the first homeserver to apply one signature";
+
+            my ( $key_id, $signature_base64 ) = %$first_hs_sig;
+
+            assert_base64_unpadded( $signature_base64 );
+            my $signature = decode_base64 $signature_base64;
+
+            my $signed_bytes = encode_json_for_signing( $key );
+
+            $client->get_key(
+               server_name => $first_home_server,
+               key_id      => $key_id,
+            )->then( sub {
+               my ( $server_key ) = @_;
+
+               $crypto_sign->verify( $signature, $signed_bytes, $server_key ) or
+                  die "Signature verification failed";
+
+               Future->done(1);
+            });
          });
-      });
-   };
+      };
+}
