@@ -2,7 +2,7 @@ use List::Util qw( first );
 
 use Crypt::NaCl::Sodium;
 
-use Protocol::Matrix qw( encode_json_for_signing );
+use Protocol::Matrix qw( encode_json_for_signing sign_json encode_base64_unpadded );
 
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
@@ -165,3 +165,127 @@ foreach my $method (keys %FETCHERS) {
          });
       };
 }
+
+# regression test for https://github.com/matrix-org/synapse/issues/5305
+test "Key notary server must not overwrite a valid key with a spurious result from the origin server",
+   requires => [ $main::HOMESERVER_INFO[0], $main::OUTBOUND_CLIENT, $main::TEST_SERVER_INFO ],
+
+   do => sub {
+      my ( $notary_server, $http_client, $http_server ) = @_;
+      my $test_server_name = $http_server->server_name;
+
+      # the idea of this test is that we make sure that, even if the origin
+      # server forgets about one of its old keys, the notary server does not
+      # forget that key (and cannot be made to forget that key by requests from
+      # other servers).
+      #
+      # we use two keys: key_1 is the orignal key, which disappears from the
+      # origin server, and key_2, which is just used to sign an itermediate
+      # response.
+
+      my ( $pkey1, $skey1 ) = Crypt::NaCl::Sodium->sign->keypair;
+      my $key_id_1 = "ed25519:key_1";
+      my $key1_expiry = ( time - 86400 ) * 1000; # -24h in msec
+
+      my ( $pkey2, $skey2 ) = Crypt::NaCl::Sodium->sign->keypair;
+      my $key_id_2 = "ed25519:key_2";
+
+      # start with a request for key 1
+      Future->needs_all(
+         await_http_request(
+            qr#^/_matrix/key/v2/server#, sub { 1 }
+         )->then( sub {
+            my ( $request ) = @_;
+
+            log_if_fail "Request 1 from notary server: " . $request->method . " " . $request->path;
+
+            my $key_response1 = {
+               server_name => $test_server_name,
+               valid_until_ts => $key1_expiry,
+               verify_keys => {
+                  $key_id_1 => {
+                     key => encode_base64_unpadded( $pkey1 ),
+                  },
+               },
+               old_verify_keys => {},
+            };
+            sign_json(
+               $key_response1,
+               secret_key => $skey1,
+               origin => $test_server_name,
+               key_id => $key_id_1,
+            );
+
+            $request->respond_json( $key_response1 );
+            Future->done(1);
+         }),
+
+         key_query_via_post(
+            $http_client, $notary_server, $test_server_name, $key_id_1,
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Notary response for request 1", $body;
+
+            my $res = $body->{server_keys}[0];
+            assert_eq( $res->{server_name}, $test_server_name, "server_name" );
+            assert_json_keys( $res->{verify_keys}, ( $key_id_1 ));
+            Future->done(1);
+         }),
+      )->then( sub {
+         # now make a second request, with a later min_valid_until_ts, to force a re-fetch,
+         # but return a different key to the notary server.
+         Future->needs_all(
+            await_http_request(
+               qr#^/_matrix/key/v2/server#, sub { 1 }
+            )->then( sub {
+               my ( $request ) = @_;
+
+               log_if_fail "Request 2 from notary server: " . $request->method . " " . $request->path;
+
+               my $key_response2 = {
+                  server_name => $test_server_name,
+                  valid_until_ts => $key1_expiry + 1000,
+                  verify_keys => {
+                     $key_id_2 => {
+                        key => encode_base64_unpadded( $pkey2 ),
+                     },
+                  },
+                  old_verify_keys => {},
+               };
+               sign_json(
+                  $key_response2,
+                  secret_key => $skey2,
+                  origin => $test_server_name,
+                  key_id => $key_id_2,
+                 );
+
+               $request->respond_json( $key_response2 );
+               Future->done(1);
+            }),
+
+            key_query_via_post(
+               $http_client, $notary_server, $test_server_name, $key_id_1,
+               min_valid_until_ts => time * 1000,
+            )->then( sub {
+               my ( $body ) = @_;
+               log_if_fail "Notary response for request 2", $body;
+               Future->done(1);
+            }),
+         );
+      })->then( sub {
+         # finally, make a third request for the key, but with the old min_valid_until_ts,
+         # and check it is returned.
+         key_query_via_post(
+            $http_client, $notary_server, $test_server_name, $key_id_1,
+            min_valid_until_ts => $key1_expiry,
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Notary response for request 3", $body;
+
+            my $res = $body->{server_keys}[0];
+            assert_eq( $res->{server_name}, $test_server_name, "server_name" );
+            assert_json_keys( $res->{verify_keys}, ( $key_id_1 ));
+            Future->done(1);
+         });
+      });
+   };
