@@ -197,6 +197,8 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
          )->then( sub {
             my ( $request ) = @_;
 
+            log_if_fail "Request 1 from notary server: " . $request->method . " " . $request->path;
+
             my $key_response1 = {
                server_name => $test_server_name,
                valid_until_ts => $key1_expiry,
@@ -232,29 +234,30 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
       )->then( sub {
          # now make a second request, with a later min_valid_until_ts, to force a re-fetch,
          # but return a different key to the notary server.
-
-         my $key_response2 = {
-            server_name => $test_server_name,
-            valid_until_ts => $key1_expiry + 1000,
-            verify_keys => {
-               $key_id_2 => {
-                  key => encode_base64_unpadded( $pkey2 ),
-               },
-            },
-            old_verify_keys => {},
-         };
-         sign_json(
-            $key_response2,
-            secret_key => $skey2,
-            origin => $test_server_name,
-            key_id => $key_id_2,
-         );
-
          Future->needs_all(
             await_http_request(
                qr#^/_matrix/key/v2/server#, sub { 1 }
             )->then( sub {
                my ( $request ) = @_;
+
+               log_if_fail "Request 2 from notary server: " . $request->method . " " . $request->path;
+
+               my $key_response2 = {
+                  server_name => $test_server_name,
+                  valid_until_ts => $key1_expiry + 1000,
+                  verify_keys => {
+                     $key_id_2 => {
+                        key => encode_base64_unpadded( $pkey2 ),
+                     },
+                  },
+                  old_verify_keys => {},
+               };
+               sign_json(
+                  $key_response2,
+                  secret_key => $skey2,
+                  origin => $test_server_name,
+                  key_id => $key_id_2,
+                 );
 
                $request->respond_json( $key_response2 );
                Future->done(1);
