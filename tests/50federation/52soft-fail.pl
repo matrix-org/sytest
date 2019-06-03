@@ -353,9 +353,9 @@ test "Inbound federation correctly handles soft failed events as extremities",
       #      /    \
       #    PL1     M1
       #     |      |
-      #     |     SF2
+      #     |     SF1
       #     |      |
-      #      \    SF1
+      #      \    SF2
       #       \   /
       #         M2
       #         |
@@ -371,11 +371,12 @@ test "Inbound federation correctly handles soft failed events as extremities",
       #  M2  = remote user sends a permitted message
       #  M3  = creator sends a message
       #
-       # Since the banning of SF events happens before SF1 and SF2, we expect the
+      # Since the banning of SF events happens before SF1 and SF2, we expect the
       # local server to soft fail SF1 and SF2 when they are received.
       #
-      # We should therefore end up with M2 as the forward-extremitiy of the
-      # room, and hence the prev_event of M3.
+      # M1 and PL1 will therefore become forward-extremities of the room. However, M2 will
+      # be accepted, and replace M1 and PL1 as the extremities of the room. M2 should 
+      # therefore be the sole prev_event of M3.
       #
       # (The effect of #5269 was that M1 was incorrectly included as a
       # forward-extremity.)
