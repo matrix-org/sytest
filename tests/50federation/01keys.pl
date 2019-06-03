@@ -185,7 +185,7 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
 
       my ( $pkey1, $skey1 ) = Crypt::NaCl::Sodium->sign->keypair;
       my $key_id_1 = "ed25519:key_1";
-      my $key1_expiry = ( time - 86400 ) * 1000; # -24h in msec
+      my $key1_expiry = ( int( time ) - 86400 ) * 1000; # -24h in msec
 
       my ( $pkey2, $skey2 ) = Crypt::NaCl::Sodium->sign->keypair;
       my $key_id_2 = "ed25519:key_2";
