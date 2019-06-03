@@ -11,6 +11,10 @@ then
 else
     # Otherwise, try and find out what the branch that the Dendrite checkout is using. Fall back to develop if it's not a branch.
     branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
+    
+    # If we're using the master branch of Dendrite, use the develop branch of sytest,
+    # as master is Dendrite's development branch
+    [ "$branch_name" == "master" ] && branch_name="develop"
 
     # Try and fetch the branch
     echo "Trying to get same-named sytest branch..."
