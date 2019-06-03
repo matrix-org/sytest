@@ -166,6 +166,103 @@ foreach my $method (keys %FETCHERS) {
       };
 }
 
+test "Key notary server should return an expired key if it can't find any others",
+   requires => [ $main::HOMESERVER_INFO[0], $main::OUTBOUND_CLIENT, $main::TEST_SERVER_INFO ],
+
+   do => sub {
+      my ( $notary_server, $http_client, $http_server ) = @_;
+      my $test_server_name = $http_server->server_name;
+
+      my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
+      my $key_id = "ed25519:key_0";
+      my $key_expiry = ( time - 86400 ) * 1000; # -24h in msec
+      my $key_response = build_key_response(
+         server_name => $test_server_name,
+         key => $skey,
+         key_id => $key_id,
+         valid_until_ts => $key_expiry,
+      );
+
+      # start with a regular request, to populate the notary db
+      Future->needs_all(
+         key_query_via_post(
+            $http_client, $notary_server, $test_server_name, $key_id,
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Notary response for request 1", $body;
+            Future->done(1);
+         }),
+
+         await_http_request(
+            qr#^/_matrix/key/v2/server#, sub { 1 }
+         )->then( sub {
+            my ( $request ) = @_;
+
+            log_if_fail "Request 1 from notary server: " . $request->method . " " . $request->path;
+
+            $request->respond_json( $key_response );
+            Future->done(1);
+         }),
+      )->then( sub {
+         # now make a second request, with a later min_valid_until_ts, to force a re-fetch,
+         # but give the same response back.
+         Future->needs_all(
+            key_query_via_post(
+               $http_client, $notary_server, $test_server_name, $key_id,
+               min_valid_until_ts => $key_expiry + 1000,
+            )->then( sub {
+               my ( $body ) = @_;
+               log_if_fail "Notary response for request 2", $body;
+
+               my $res = $body->{server_keys}[0];
+               assert_eq( $res->{server_name}, $test_server_name, "server_name" );
+               assert_json_keys( $res->{verify_keys}, ( $key_id ));
+               assert_eq( $res->{valid_until_ts}, $key_expiry, "validity ts" );
+               Future->done(1);
+            }),
+
+            await_http_request(
+               qr#^/_matrix/key/v2/server#, sub { 1 }
+            )->then( sub {
+               my ( $request ) = @_;
+
+               log_if_fail "Request 2 from notary server: " . $request->method . " " . $request->path;
+
+               $request->respond_json( $key_response );
+               Future->done(1);
+            }),
+         );
+      })->then( sub {
+         # finally, make another request, and 400 the request from the notary server.
+         Future->needs_all(
+            key_query_via_post(
+               $http_client, $notary_server, $test_server_name, $key_id,
+               min_valid_until_ts => $key_expiry + 1000,
+            )->then( sub {
+               my ( $body ) = @_;
+               log_if_fail "Notary response for request 3", $body;
+
+               my $res = $body->{server_keys}[0];
+               assert_eq( $res->{server_name}, $test_server_name, "server_name" );
+               assert_json_keys( $res->{verify_keys}, ( $key_id ));
+               assert_eq( $res->{valid_until_ts}, $key_expiry, "validity ts" );
+               Future->done(1);
+            }),
+
+            await_http_request(
+               qr#^/_matrix/key/v2/server#, sub { 1 }
+            )->then( sub {
+               my ( $request ) = @_;
+
+               log_if_fail "Request 3 from notary server: " . $request->method . " " . $request->path;
+
+               $request->respond_json( {}, code=>400 );
+               Future->done(1);
+            }),
+         );
+      });
+   };
+
 # regression test for https://github.com/matrix-org/synapse/issues/5305
 test "Key notary server must not overwrite a valid key with a spurious result from the origin server",
    requires => [ $main::HOMESERVER_INFO[0], $main::OUTBOUND_CLIENT, $main::TEST_SERVER_INFO ],
@@ -187,9 +284,6 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
       my $key_id_1 = "ed25519:key_1";
       my $key1_expiry = ( time - 86400 ) * 1000; # -24h in msec
 
-      my ( $pkey2, $skey2 ) = Crypt::NaCl::Sodium->sign->keypair;
-      my $key_id_2 = "ed25519:key_2";
-
       # start with a request for key 1
       Future->needs_all(
          await_http_request(
@@ -199,24 +293,12 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
 
             log_if_fail "Request 1 from notary server: " . $request->method . " " . $request->path;
 
-            my $key_response1 = {
+            $request->respond_json( build_key_response(
                server_name => $test_server_name,
-               valid_until_ts => $key1_expiry,
-               verify_keys => {
-                  $key_id_1 => {
-                     key => encode_base64_unpadded( $pkey1 ),
-                  },
-               },
-               old_verify_keys => {},
-            };
-            sign_json(
-               $key_response1,
-               secret_key => $skey1,
-               origin => $test_server_name,
+               key => $skey1,
                key_id => $key_id_1,
-            );
-
-            $request->respond_json( $key_response1 );
+               valid_until_ts => $key1_expiry,
+            ));
             Future->done(1);
          }),
 
@@ -242,24 +324,14 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
 
                log_if_fail "Request 2 from notary server: " . $request->method . " " . $request->path;
 
-               my $key_response2 = {
+               my ( $pkey2, $skey2 ) = Crypt::NaCl::Sodium->sign->keypair;
+               $request->respond_json( build_key_response(
                   server_name => $test_server_name,
+                  key => $skey2,
+                  key_id => "ed25519:key_2",
                   valid_until_ts => $key1_expiry + 1000,
-                  verify_keys => {
-                     $key_id_2 => {
-                        key => encode_base64_unpadded( $pkey2 ),
-                     },
-                  },
-                  old_verify_keys => {},
-               };
-               sign_json(
-                  $key_response2,
-                  secret_key => $skey2,
-                  origin => $test_server_name,
-                  key_id => $key_id_2,
-                 );
+               ));
 
-               $request->respond_json( $key_response2 );
                Future->done(1);
             }),
 
@@ -289,3 +361,35 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
          });
       });
    };
+
+
+sub build_key_response {
+   my ( %params ) = @_;
+
+   my $server_name = $params{server_name};
+   my $key_id = $params{key_id};
+   my $skey = $params{key};
+   my $expiry = $params{valid_until_ts};
+
+   my $pkey = Crypt::NaCl::Sodium->sign->public_key( $skey );
+
+   my $response = {
+      server_name => $server_name,
+      valid_until_ts => $expiry,
+      verify_keys => {
+         $key_id => {
+            key => encode_base64_unpadded( $pkey ),
+         },
+      },
+      old_verify_keys => {},
+   };
+
+   sign_json(
+      $response,
+      secret_key => $skey,
+      origin => $server_name,
+      key_id => $key_id,
+   );
+
+   return $response;
+}
