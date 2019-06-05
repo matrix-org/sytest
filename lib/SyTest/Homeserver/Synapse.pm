@@ -20,6 +20,8 @@ use POSIX qw( strftime WIFEXITED WEXITSTATUS );
 
 use YAML ();
 
+use SyTest::SSL qw( ensure_ssl_cert );
+
 sub _init
 {
    my $self = shift;
@@ -328,33 +330,6 @@ sub start
    );
 
    return $started_future;
-}
-
-sub ensure_ssl_cert
-{
-   my ( $cert_file, $key_file, $server_name ) = @_;
-
-   if ( ! -e $key_file ) {
-      # todo: we can do this in pure perl
-      system("openssl", "genrsa", "-out", $key_file, "2048") == 0
-         or die "openssl genrsa failed $?";
-   }
-
-   if ( ! -e $cert_file ) {
-      # generate a CSR
-      my $csr_file = "$cert_file.csr";
-      system(
-         "openssl", "req", "-new", "-key", $key_file, "-out", $csr_file,
-         "-subj", "/CN=$server_name",
-      ) == 0 or die "openssl req failed $?";
-
-      # sign it with the CA
-      system(
-         "openssl", "x509", "-req", "-in", $csr_file,
-         "-CA", "keys/ca.crt", "-CAkey", "keys/ca.key", "-set_serial", 1,
-         "-out", $cert_file,
-      ) == 0 or die "openssl x509 failed $?";
-   }
 }
 
 sub generate_listeners

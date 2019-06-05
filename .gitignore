@@ -7,6 +7,7 @@
 /results.tap
 /server-*
 /synapse
+/test-server
 /var
 \#*
 .vscode
