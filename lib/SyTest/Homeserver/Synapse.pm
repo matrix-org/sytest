@@ -145,16 +145,20 @@ sub start
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
 
-   my $cert = $self->{paths}{cert_file} = "$cwd/keys/tls-selfsigned.crt";
-   my $key  = $self->{paths}{key_file} = "$cwd/keys/tls-selfsigned.key";
+   $self->{paths}{cert_file} = "$hs_dir/tls.crt";
+   $self->{paths}{key_file} = "$hs_dir/tls.key";
+
+   ensure_ssl_cert( $self->{paths}{cert_file}, $self->{paths}{key_file}, $bind_host );
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
-        tls_certificate_path => "$cwd/keys/tls-selfsigned.crt",
-        tls_private_key_path => "$cwd/keys/tls-selfsigned.key",
-        tls_dh_params_path => "$cwd/keys/tls.dh",
+        tls_certificate_path => $self->{paths}{cert_file},
+        tls_private_key_path => $self->{paths}{key_file},
+        federation_custom_ca_list => [
+           "$cwd/keys/ca.crt",
+        ],
         use_insecure_ssl_client_just_for_testing_do_not_use => 1,
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
@@ -324,6 +328,33 @@ sub start
    );
 
    return $started_future;
+}
+
+sub ensure_ssl_cert
+{
+   my ( $cert_file, $key_file, $server_name ) = @_;
+
+   if ( ! -e $key_file ) {
+      # todo: we can do this in pure perl
+      system("openssl", "genrsa", "-out", $key_file, "2048") == 0
+         or die "openssl genrsa failed $?";
+   }
+
+   if ( ! -e $cert_file ) {
+      # generate a CSR
+      my $csr_file = "$cert_file.csr";
+      system(
+         "openssl", "req", "-new", "-key", $key_file, "-out", $csr_file,
+         "-subj", "/CN=$server_name",
+      ) == 0 or die "openssl req failed $?";
+
+      # sign it with the CA
+      system(
+         "openssl", "x509", "-req", "-in", $csr_file,
+         "-CA", "keys/ca.crt", "-CAkey", "keys/ca.key", "-set_serial", 1,
+         "-out", $cert_file,
+      ) == 0 or die "openssl x509 failed $?";
+   }
 }
 
 sub generate_listeners
