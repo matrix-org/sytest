@@ -1,6 +1,4 @@
-use Cwd qw( abs_path );
 use File::Basename qw( dirname );
-use File::Path qw( make_path );
 
 use IO::Socket::IP 0.04; # ->sockhostname
 Net::Async::HTTP->VERSION( '0.39' ); # ->GET with 'headers'
@@ -12,29 +10,15 @@ use Crypt::NaCl::Sodium;
 use SyTest::Federation::Datastore;
 use SyTest::Federation::Client;
 use SyTest::Federation::Server;
-use SyTest::SSL qw( ensure_ssl_cert );
 
 push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT create_federation_server );
 
 sub create_federation_server
 {
-   my $test_server_dir = abs_path( "test-server" );
-   -d $test_server_dir or make_path( $test_server_dir );
-
-   my $ssl_cert = "$test_server_dir/server.crt";
-   my $ssl_key = "$test_server_dir/server.key";
-   ensure_ssl_cert( $ssl_cert, $ssl_key, $BIND_HOST );
-
    my $server = SyTest::Federation::Server->new;
    $loop->add( $server );
 
-   $server->listen(
-      host          => $BIND_HOST,
-      service       => "",
-      extensions    => [qw( SSL )],
-      SSL_key_file  => $ssl_key,
-      SSL_cert_file => $ssl_cert,
-   )->on_done( sub {
+   start_test_server_ssl( $server )->on_done( sub {
       my ( $server ) = @_;
       my $sock = $server->read_handle;
 
