@@ -1,6 +1,9 @@
 test "Inbound federation correctly soft fails events",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( user_opts => { with_events => 1 }),
+                 local_user_and_room_fixtures(
+                    user_opts => { with_events => 1 },
+                    room_opts => { room_version => "1" },
+                 ),
                  federation_user_id_fixture() ],
 
    do => sub {
@@ -146,6 +149,7 @@ test "Inbound federation accepts a second soft-failed event",
       $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
       local_user_and_room_fixtures(
          user_opts => { with_events => 1 },
+         room_opts => { room_version => "1" }
       ),
       federation_user_id_fixture(),
    ],
@@ -331,6 +335,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
       $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
       local_user_and_room_fixtures(
          user_opts => { with_events => 1 },
+          room_opts => { room_version => "1" },
       ),
       federation_user_id_fixture(),
    ],
@@ -375,7 +380,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
       # local server to soft fail SF1 and SF2 when they are received.
       #
       # M1 and PL1 will therefore become forward-extremities of the room. However, M2 will
-      # be accepted, and replace M1 and PL1 as the extremities of the room. M2 should 
+      # be accepted, and replace M1 and PL1 as the extremities of the room. M2 should
       # therefore be the sole prev_event of M3.
       #
       # (The effect of #5269 was that M1 was incorrectly included as a

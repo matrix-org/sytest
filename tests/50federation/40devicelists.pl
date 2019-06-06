@@ -1,5 +1,6 @@
 test "Local device key changes get to remote servers",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER, federation_user_id_fixture(), room_alias_name_fixture() ],
+   requires => [ local_user_fixture( room_opts => { room_version => "1" } ),
+                 $main::INBOUND_SERVER, federation_user_id_fixture(), room_alias_name_fixture() ],
 
    check => sub {
       my ( $user, $inbound_server, $creator_id, $room_alias_name ) = @_;
@@ -61,7 +62,8 @@ test "Local device key changes get to remote servers",
 
 
 test "Server correctly handles incoming m.device_list_update",
-   requires => [ local_user_fixture(), $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
+   requires => [ local_user_fixture( room_opts => { room_version => "1" } ),
+                 $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
                  $main::HOMESERVER_INFO[0],  federation_user_id_fixture(),
                  room_alias_name_fixture() ],
 

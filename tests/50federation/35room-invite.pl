@@ -1,5 +1,6 @@
 test "Outbound federation can send invites",
-   requires => [ local_user_and_room_fixtures(), $main::INBOUND_SERVER, federation_user_id_fixture() ],
+   requires => [ local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 $main::INBOUND_SERVER, federation_user_id_fixture() ],
 
    do => sub {
       my ( $user, $room_id, $inbound_server, $invitee_id ) = @_;
