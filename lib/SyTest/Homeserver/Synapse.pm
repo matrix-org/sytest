@@ -156,12 +156,21 @@ sub start
         server_name => $self->server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
+
+        # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
         tls_private_key_path => $self->{paths}{key_file},
+
+        # ... and configure it to trust that CA for federation connections...
         federation_custom_ca_list => [
            "$cwd/keys/ca.crt",
         ],
+
+        # ... but synapse currently lacks such an option for non-federation
+        # connections. Instead we just turn of cert checking for them like
+        # this:
         use_insecure_ssl_client_just_for_testing_do_not_use => 1,
+
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
         rc_registration => {
