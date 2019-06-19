@@ -15,7 +15,7 @@ ENV PGUSER=postgres
 
 # Turn off all the fsync stuff for postgres
 RUN mkdir -p /etc/postgresql/9.6/main/conf.d/
-RUN echo "fync=off" > /etc/postgresql/9.6/main/conf.d/fsync.conf
+RUN echo "fsync=off" > /etc/postgresql/9.6/main/conf.d/fsync.conf
 RUN echo "full_page_writes=off" >> /etc/postgresql/9.6/main/conf.d/fsync.conf
 
 # Initialise the database files
