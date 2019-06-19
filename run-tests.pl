@@ -210,7 +210,7 @@ if( $BLACKLIST_FILE and $WHITELIST_FILE ) {
 # Read in test blacklist rules if set
 my %TEST_BLACKLIST;
 if ( $BLACKLIST_FILE ) {
-   open( my $blacklist_data, "<", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for reading: $!\n";
+   open( my $blacklist_data, "<:encoding(UTF-8)", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for reading: $!\n";
    while ( my $test_name = <$blacklist_data> ) {
       # Trim whitespace
       chomp $test_name;
@@ -222,7 +222,7 @@ if ( $BLACKLIST_FILE ) {
 # Read in test whitelist rules if set
 my %TEST_WHITELIST;
 if ( $WHITELIST_FILE ) {
-   open( my $whitelist_data, "<", $WHITELIST_FILE ) or die "Couldn't open whitelist file for reading: $!\n";
+   open( my $whitelist_data, "<:encoding(UTF-8)", $WHITELIST_FILE ) or die "Couldn't open whitelist file for reading: $!\n";
    while ( my $test_name = <$whitelist_data> ) {
       # Trim whitespace
       chomp $test_name;
