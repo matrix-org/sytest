@@ -187,6 +187,26 @@ sub can_invite_unbound_3pid
    ->then( sub {
       $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
    })->then( sub {
+      await_sync( $invitee, check => sub {
+         my ( $body ) = @_;
+
+         return 0 unless exists $body->{rooms}{invite}{$room_id};
+
+         return $body->{rooms}{invite}{$room_id};
+      })
+   })->then( sub {
+      my ( $body ) = @_;
+
+      log_if_fail "Invite", $body;
+
+      assert_json_list( $body->{invite_state}{events} );
+
+      my %members = map {
+         $_->{state_key} => $_
+      } grep { $_->{type} eq "m.room.member" } @{ $body->{invite_state}{events} };
+
+      exists $members{ $inviter->user_id } or die "No inviter member invite state";
+
       matrix_get_room_state( $inviter, $room_id,
          type      => "m.room.member",
          state_key => $invitee->user_id,
