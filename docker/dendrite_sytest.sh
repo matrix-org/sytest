@@ -54,6 +54,9 @@ dos2unix ./run-tests.pl
 TEST_STATUS=0
 ./run-tests.pl -I Dendrite::Monolith -d /src/bin -W /src/testfile -O tap --all "$@" > results.tap || TEST_STATUS=$?
 
+# Check for new tests to be added to testfile
+/src/show-expected-fail-tests.sh results.tap || TEST_STATUS=$?
+
 # Copy out the logs
 mkdir -p /logs
 cp results.tap /logs/results.tap
