@@ -1091,7 +1091,8 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/get_missing_events/     federation_reader
 ^/_matrix/federation/v1/publicRooms             federation_reader
 
-^/_matrix/client/(api/v1|r0)/publicRooms$    client_reader
+^/_matrix/client/(api/v1|r0)/publicRooms$       client_reader
+^/_matrix/client/(api/v1|r0)/rooms/.*/messages$ client_reader
 
 ^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
 
