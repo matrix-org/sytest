@@ -352,3 +352,39 @@ test "Message history can be paginated over federation",
          })
       });
    };
+
+
+test "/messages does not require a from param",
+   requires => [ magic_local_user_and_room_fixtures() ],
+
+   proves => [qw( can_paginate_room )],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      ( repeat {
+         matrix_send_room_text_message( $user, $room_id,
+            body => "Message number $_[0]"
+         )
+      } foreach => [ 1 .. 5 ] )->then( sub {
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/messages",
+            params => {
+               dir => "b",
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "First messages body", $body;
+
+         my $chunk = $body->{chunk};
+         @$chunk > 0 or
+            die "Expected messages";
+
+         assert_eq( $chunk->[0]{content}{body}, "Message number 5",
+            'chunk[0] content body' );
+
+         Future->done(1);
+      });
+   };
