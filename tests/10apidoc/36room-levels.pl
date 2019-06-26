@@ -56,7 +56,9 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
             content => $levels,
          )
       })->then( sub {
-         matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
+         }
       })->then( sub {
          my ( $levels ) = @_;
 
