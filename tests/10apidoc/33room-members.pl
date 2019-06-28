@@ -178,18 +178,18 @@ test "POST /join/:room_id can join a room with custom content",
             matrix_get_room_state( $user, $room_id,
                type      => "m.room.member",
                state_key => $user->user_id,
-            )
+            )->then( sub {
+               my ( $body ) = @_;
+
+               log_if_fail "body", $body;
+
+               assert_json_keys( $body, qw( foo membership ) );
+               assert_eq( $body->{foo}, "bar" );
+               assert_eq( $body->{membership}, "join" );
+
+               Future->done(1);
+            })
          }
-      })->then( sub {
-         my ( $body ) = @_;
-
-         log_if_fail "body", $body;
-
-         assert_json_keys( $body, qw( foo membership ) );
-         assert_eq( $body->{foo}, "bar" );
-         assert_eq( $body->{membership}, "join" );
-
-         Future->done(1);
       });
    };
 
@@ -217,18 +217,18 @@ test "POST /join/:room_alias can join a room with custom content",
             matrix_get_room_state( $user, $room_id,
                type      => "m.room.member",
                state_key => $user->user_id,
-            )
+            )->then( sub {
+               my ( $body ) = @_;
+
+               log_if_fail "body", $body;
+
+               assert_json_keys( $body, qw( foo membership ) );
+               assert_eq( $body->{foo}, "bar" );
+               assert_eq( $body->{membership}, "join" );
+
+               Future->done(1);
+            })
          }
-      })->then( sub {
-         my ( $body ) = @_;
-
-         log_if_fail "body", $body;
-
-         assert_json_keys( $body, qw( foo membership ) );
-         assert_eq( $body->{foo}, "bar" );
-         assert_eq( $body->{membership}, "join" );
-
-         Future->done(1);
       });
    };
 
@@ -254,26 +254,24 @@ test "POST /rooms/:room_id/leave can leave a room",
             matrix_get_room_state( $joiner_to_leave, $room_id,
                type      => "m.room.member",
                state_key => $joiner_to_leave->user_id,
-            )
+            )->then( sub { # then
+               my ( $body ) = @_;
+
+               $body->{membership} eq "join" and
+                  die "Expected membership not to be 'join'";
+
+               Future->done(1);
+            },
+            http => sub { # catch
+               my ( $failure, undef, $response ) = @_;
+               Future->fail( @_ ) unless $response->code == 403;
+
+               # We're expecting a 403 so that's fine
+
+               Future->done(1);
+            })
          }
-      })->then(
-         sub { # then
-            my ( $body ) = @_;
-
-            $body->{membership} eq "join" and
-               die "Expected membership not to be 'join'";
-
-            Future->done(1);
-         },
-         http => sub { # catch
-            my ( $failure, undef, $response ) = @_;
-            Future->fail( @_ ) unless $response->code == 403;
-
-            # We're expecting a 403 so that's fine
-
-            Future->done(1);
-         },
-      );
+      });
    };
 
 push @EXPORT, qw( matrix_leave_room );
@@ -319,7 +317,7 @@ test "POST /rooms/:room_id/invite can send an invite",
                   die "Expected membership to be 'invite'";
 
                Future->done(1);
-            });
+            })
          }
       });
    };
