@@ -35,7 +35,7 @@ test "POST /rooms/:room_id/join can join a room",
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
 
-         # Retry getting the state a few times, for it may take some time to
+         # Retry getting the state a few times, as it may take some time to
          # propagate in a multi-process homeserver
          retry_until_success {
             matrix_get_room_state( $user, $room_id,
@@ -99,7 +99,7 @@ test "POST /join/:room_alias can join a room",
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
 
-         # Retry getting the state a few times, for it may take some time to
+         # Retry getting the state a few times, as it may take some time to
          # propagate in a multi-process homeserver
          retry_until_success {
             matrix_get_room_state( $user, $room_id,
@@ -136,7 +136,7 @@ test "POST /join/:room_id can join a room",
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
 
-         # Retry getting the state a few times, for it may take some time to
+         # Retry getting the state a few times, as it may take some time to
          # propagate in a multi-process homeserver
          retry_until_success {
             matrix_get_room_state( $user, $room_id,
@@ -172,7 +172,7 @@ test "POST /join/:room_id can join a room with custom content",
          assert_json_keys( $body, qw( room_id ) );
          assert_eq( $body->{room_id}, $room_id );
 
-         # Retry getting the state a few times, for it may take some time to
+         # Retry getting the state a few times, as it may take some time to
          # propagate in a multi-process homeserver
          retry_until_success {
             matrix_get_room_state( $user, $room_id,
@@ -211,7 +211,7 @@ test "POST /join/:room_alias can join a room with custom content",
          assert_json_keys( $body, qw( room_id ) );
          assert_eq( $body->{room_id}, $room_id );
 
-         # Retry getting the state a few times, for it may take some time to
+         # Retry getting the state a few times, as it may take some time to
          # propagate in a multi-process homeserver
          retry_until_success {
             matrix_get_room_state( $user, $room_id,
@@ -248,7 +248,7 @@ test "POST /rooms/:room_id/leave can leave a room",
             content => {},
          )
       })->then( sub {
-         # Retry getting the state a few times, for it may take some time to
+         # Retry getting the state a few times, as it may take some time to
          # propagate in a multi-process homeserver
          retry_until_success {
             matrix_get_room_state( $joiner_to_leave, $room_id,
@@ -304,7 +304,7 @@ test "POST /rooms/:room_id/invite can send an invite",
 
          content => { user_id => $invited_user->user_id },
       )->then( sub {
-         # Retry getting the state a few times, for it may take some time to
+         # Retry getting the state a few times, as it may take some time to
          # propagate in a multi-process homeserver
          retry_until_success {
             matrix_get_room_state( $creator, $room_id,
@@ -371,7 +371,7 @@ test "POST /rooms/:room_id/ban can ban a user",
             reason  => "Just testing",
          },
       )->then( sub {
-         # Retry getting the state a few times, for it may take some time to
+         # Retry getting the state a few times, as it may take some time to
          # propagate in a multi-process homeserver
          retry_until_success {
             matrix_get_room_state( $creator, $room_id,
