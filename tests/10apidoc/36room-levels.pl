@@ -57,15 +57,17 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
          )
       })->then( sub {
          retry_until_success {
-            matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
+            matrix_get_room_state(
+               $user, $room_id, type => "m.room.power_levels"
+            )->then( sub {
+               my ( $levels ) = @_;
+
+               $levels->{users}{'@random-other-user:their.home'} == 20 or
+                  die "Expected to have set other user's level to 20";
+
+               Future->done(1);
+            })
          }
-      })->then( sub {
-         my ( $levels ) = @_;
-
-         $levels->{users}{'@random-other-user:their.home'} == 20 or
-            die "Expected to have set other user's level to 20";
-
-         Future->done(1);
       });
    };
 
