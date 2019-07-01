@@ -11,18 +11,18 @@ then
 else
     # Otherwise, try and find out what the branch that the Dendrite checkout is
     # using. If we don't know, assume it's master.
-    branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="ref/heads/develop"
+    branch_name="$(git --git-dir=/src/.git rev-parse --abbrev-ref HEAD 2>/dev/null)" || branch_name="develop"
     
     # If we're using the master branch of Dendrite, use the develop branch of sytest,
     # as master is Dendrite's development branch
-    [ "$branch_name" == "ref/heads/master" ] && branch_name="ref/heads/develop"
+    [ "$branch_name" == "master" ] && branch_name="develop"
 
     # Try and fetch the branch
     echo "Trying to get same-named sytest branch..."
     wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
         # Probably a 404, fall back to develop
         echo "Using develop instead..."
-        wget -q https://github.com/matrix-org/sytest/archive/ref/heads/develop.tar.gz -O sytest.tar.gz
+        wget -q https://github.com/matrix-org/sytest/archive/develop.tar.gz -O sytest.tar.gz
     }
 
     tar --strip-components=1 -xf sytest.tar.gz
