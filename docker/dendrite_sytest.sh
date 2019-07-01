@@ -9,8 +9,9 @@ then
     # If the user has mounted in a SyTest checkout, use that. We can tell this by files being in the directory.
     echo "Using local sytests..."
 else
-    # Otherwise, try and find out what the branch that the Dendrite checkout is using. Fall back to develop if it's not a branch.
-    branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
+    # Otherwise, try and find out what the branch that the Dendrite checkout is
+    # using. If we don't know, assume it's master.
+    branch_name="$(git --git-dir=/src/.git rev-parse --abbrev-ref HEAD 2>/dev/null)" || branch_name="develop"
     
     # If we're using the master branch of Dendrite, use the develop branch of sytest,
     # as master is Dendrite's development branch
