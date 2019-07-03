@@ -12,6 +12,8 @@ use HTTP::Headers::Util qw( join_header_words );
 
 use SyTest::Assertions qw( :all );
 
+use URI::Escape qw( uri_escape );
+
 sub configure
 {
    my $self = shift;
@@ -30,10 +32,12 @@ sub _fetch_key
    my $self = shift;
    my ( $server_name, $key_id ) = @_;
 
+   my $key_id_encoded = uri_escape($key_id);
+
    $self->do_request_json(
       method   => "GET",
       hostname => $server_name,
-      full_uri => "/_matrix/key/v2/server/$key_id",
+      full_uri => "/_matrix/key/v2/server/$key_id_encoded",
    )->then( sub {
       my ( $body ) = @_;
 
