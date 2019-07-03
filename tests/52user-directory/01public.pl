@@ -151,9 +151,6 @@ foreach my $type (qw( join_rules history_visibility )) {
    multi_test "Users appear/disappear from directory when $type are changed",
       requires => [ local_user_fixtures( 2 ) ],
 
-      # this test is currently flaky due to a synapse bug
-      bug => "synapse#2306",
-
       check => sub {
          my ( $creator, $user ) = @_;
 
@@ -248,9 +245,6 @@ foreach my $type (qw( join_rules history_visibility )) {
 
 multi_test "Users stay in directory when join_rules are changed but history_visibility is world_readable",
    requires => [ local_user_fixtures( 2 ) ],
-
-   # this test is currently flaky due to a synapse bug
-   bug => "synapse#2306",
 
    check => sub {
       my ( $creator, $user ) = @_;
