@@ -55,8 +55,6 @@ our $BIND_HOST = "localhost";
 # and the like.
 our $TEST_RUN_ID = strftime( '%Y%m%d_%H%M%S', gmtime() );
 
-my %FIXED_BUGS;
-
 my $STOP_ON_FAIL;
 my $SERVER_IMPL = undef;
 
