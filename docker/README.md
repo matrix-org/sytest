@@ -7,8 +7,7 @@ are.
 Included currently is:
 
 - matrixdotorg/sytest, a base container with SyTest dependencies installed
-- matrixdotorg/sytest-synapsepy2, a container which will run SyTest against Synapse on Python 2.7
-- matrixdotorg/sytest-synapsepy3, a container which will run SyTest against Synapse on Python 3.5
+- matrixdotorg/sytest-synapse:py35, a container which will run SyTest against Synapse on Python 3.5
 - matrixdotorg/sytest-dendrite, a container which will run SyTest against Dendrite
 
 ## Using the containers
@@ -18,7 +17,7 @@ Once pulled from Docker Hub, a container can be run on a homeserver checkout:
 ### Synapse
 
 ```
-docker run --rm -it -v /path/to/synapse\:/src -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapsepy3
+docker run --rm -it -v /path/to/synapse\:/src -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py35
 ```
 
 ### Dendrite
@@ -64,7 +63,6 @@ them up to Docker Hub:
 
 ```
 docker push matrixdotorg/sytest
-docker push matrixdotorg/sytest-synapsepy2
-docker push matrixdotorg/sytest-synapsepy3
+docker push matrixdotorg/sytest-synapse:py35
 docker push matrixdotorg/sytest-dendrite
 ```
