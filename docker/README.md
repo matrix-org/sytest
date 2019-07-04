@@ -36,7 +36,7 @@ You can pass arguments to sytest by adding them at the end of the docker
 command. For example, you can use
 
 ```
-docker run --rm -it ... matrixdotorg/sytest-synapsepy3 tests/20profile-events.pl
+docker run --rm -it ... matrixdotorg/sytest-synapse:py35 tests/20profile-events.pl
 ```
 
 to run only a single test.
