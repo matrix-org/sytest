@@ -94,7 +94,7 @@ fi
 >&2 echo "+++ Running tests"
 
 RUN_TESTS=(
-    perl -I "$SYTEST_LIB" ./run-tests.pl --python=/venv/bin/python --synapse-directory=$SYNAPSE_DIR -B /src/sytest-blacklist --coverage -O tap --all
+    perl -I "$SYTEST_LIB" ./run-tests.pl --python=/venv/bin/python --synapse-directory=$SYNAPSE_DIR -B $SYNAPSE_DIR/sytest-blacklist --coverage -O tap --all
 )
 
 TEST_STATUS=0
