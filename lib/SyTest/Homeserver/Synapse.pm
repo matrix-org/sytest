@@ -191,6 +191,13 @@ sub start
                 burst_count => 1000,
             }
         },
+
+        rc_federation => {
+           # allow 100 requests per sec instead of 10
+           sleep_limit => 100,
+           window_size => 1000,
+        },
+
         enable_registration => "true",
         database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
