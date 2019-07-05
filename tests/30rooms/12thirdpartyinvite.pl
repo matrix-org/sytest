@@ -366,28 +366,6 @@ test "Can accept third party invite with /join",
       })->followed_by( assert_membership( "join" ) );
    };
 
-test "Uses consistent guest_access_token across requests",
-   requires => [ local_user_and_room_fixtures(), local_user_and_room_fixtures(),
-                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
-
-   do => sub {
-      my ( $inviter1, $room1, $inviter2, $room2, $info, $id_server ) = @_;
-      my $hs_uribase = $info->client_location;
-
-      Future->needs_all(
-         do_3pid_invite( $inviter1, $room1, $id_server->name, $invitee_email ),
-         do_3pid_invite( $inviter2, $room2, $id_server->name, $invitee_email ),
-      )->then( sub {
-         my $invites = $id_server->invites_for( "email", $invitee_email );
-
-         log_if_fail "invites", $invites;
-         assert_eq( scalar( @$invites ), 2, "Invite count" );
-         assert_eq( $invites->[0]{guest_access_token}, $invites->[1]{guest_access_token}, "guest_access_tokens" );
-
-         Future->done( 1 );
-      });
-   };
-
 test "3pid invite join with wrong but valid signature are rejected",
    requires => [ local_user_fixtures( 2 ), $main::HOMESERVER_INFO[0],
                     id_server_fixture() ],
