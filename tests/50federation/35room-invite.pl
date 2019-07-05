@@ -27,7 +27,7 @@ test "Outbound federation can send invites",
             assert_eq( $body->{sender}, $user->user_id,
                'event sender' );
 
-            assert_json_keys( $body, qw( content state_key prev_state ));
+            assert_json_keys( $body, qw( content state_key ));
 
             assert_eq( $body->{content}{membership}, "invite",
                'event content membership' );
