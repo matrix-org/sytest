@@ -17,42 +17,53 @@ package SyTest::SSL;
 
 use Exporter 'import';
 our @EXPORT_OK = qw(
-   ensure_ssl_cert
+   ensure_ssl_key
+   create_ssl_cert
 );
 
-=head2 ensure_ssl_cert
+=head2 ensure_ssl_key
 
-    ensure_ssl_cert( $cert_file, $key_file, $server_name );
+    ensure_ssl_key( $key_file );
 
-Ensure that an SSL certificate file and key file exist. If they do not,
-generate a key and/or certificate. The certificate will be signed by the test CA.
+Create an SSL key file, if it doesn't exist.
 
 =cut
 
-sub ensure_ssl_cert
+sub ensure_ssl_key
 {
-   my ( $cert_file, $key_file, $server_name ) = @_;
+   my ( $key_file ) = @_;
 
    if ( ! -e $key_file ) {
       # todo: we can do this in pure perl
       system("openssl", "genrsa", "-out", $key_file, "2048") == 0
          or die "openssl genrsa failed $?";
    }
+}
 
-   if ( ! -e $cert_file ) {
-      # generate a CSR
-      my $csr_file = "$cert_file.csr";
-      system(
-         "openssl", "req", "-new", "-key", $key_file, "-out", $csr_file,
-         "-subj", "/CN=$server_name",
-      ) == 0 or die "openssl req failed $?";
+=head2 create_ssl_cert
 
-      # sign it with the CA
-      system(
-         "openssl", "x509", "-req", "-in", $csr_file,
-         "-CA", "keys/ca.crt", "-CAkey", "keys/ca.key", "-set_serial", 1,
-         "-out", $cert_file,
-      ) == 0 or die "openssl x509 failed $?";
-   }
+    create_ssl_cert( $cert_file, $key_file, $server_name );
+
+Create a new SSL certificate file. The certificate will be signed by the test CA.
+
+=cut
+
+sub create_ssl_cert
+{
+   my ( $cert_file, $key_file, $server_name ) = @_;
+
+   # generate a CSR
+   my $csr_file = "$cert_file.csr";
+   system(
+      "openssl", "req", "-new", "-key", $key_file, "-out", $csr_file,
+      "-subj", "/CN=$server_name",
+   ) == 0 or die "openssl req failed $?";
+
+   # sign it with the CA
+   system(
+      "openssl", "x509", "-req", "-in", $csr_file,
+      "-CA", "keys/ca.crt", "-CAkey", "keys/ca.key", "-set_serial", 1,
+      "-out", $cert_file,
+   ) == 0 or die "openssl x509 failed $?";
 }
 
