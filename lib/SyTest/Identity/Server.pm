@@ -141,7 +141,7 @@ sub on_request
       $req->respond_json( \%resp );
    }
    elsif ( $path eq "/_matrix/identity/api/v1/3pid/bind" ) {
-      my $body = $req->body_from_form;
+      my $body = $req->body_from_json;
       my $sid = $body->{sid};
       my $mxid = $body->{mxid};
 
