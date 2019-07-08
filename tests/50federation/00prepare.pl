@@ -11,10 +11,6 @@ use SyTest::Federation::Datastore;
 use SyTest::Federation::Client;
 use SyTest::Federation::Server;
 
-
-
-my $DIR = dirname( __FILE__ );
-
 push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT create_federation_server );
 
 sub create_federation_server
@@ -22,16 +18,7 @@ sub create_federation_server
    my $server = SyTest::Federation::Server->new;
    $loop->add( $server );
 
-   $server->listen(
-      host          => $BIND_HOST,
-      service       => "",
-      extensions    => [qw( SSL )],
-      # Synapse currently only talks IPv4
-      family        => "inet",
-
-      SSL_key_file  => "$DIR/server.key",
-      SSL_cert_file => "$DIR/server.crt",
-   )->on_done( sub {
+   start_test_server_ssl( $server )->on_done( sub {
       my ( $server ) = @_;
       my $sock = $server->read_handle;
 

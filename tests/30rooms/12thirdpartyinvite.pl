@@ -60,7 +60,7 @@ test "Can invite existing 3pid with no ops",
 
          do_request_json_for( $inviter,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/invite",
+            uri    => "/r0/rooms/$room_id/invite",
 
             content => {
                id_server    => $id_server->name,
@@ -187,6 +187,26 @@ sub can_invite_unbound_3pid
    ->then( sub {
       $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
    })->then( sub {
+      await_sync( $invitee, check => sub {
+         my ( $body ) = @_;
+
+         return 0 unless exists $body->{rooms}{invite}{$room_id};
+
+         return $body->{rooms}{invite}{$room_id};
+      })
+   })->then( sub {
+      my ( $body ) = @_;
+
+      log_if_fail "Invite", $body;
+
+      assert_json_list( $body->{invite_state}{events} );
+
+      my %members = map {
+         $_->{state_key} => $_
+      } grep { $_->{type} eq "m.room.member" } @{ $body->{invite_state}{events} };
+
+      exists $members{ $inviter->user_id } or die "No inviter member invite state";
+
       matrix_get_room_state( $inviter, $room_id,
          type      => "m.room.member",
          state_key => $invitee->user_id,
@@ -344,28 +364,6 @@ test "Can accept third party invite with /join",
             state_key => $invitee->user_id,
          )
       })->followed_by( assert_membership( "join" ) );
-   };
-
-test "Uses consistent guest_access_token across requests",
-   requires => [ local_user_and_room_fixtures(), local_user_and_room_fixtures(),
-                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
-
-   do => sub {
-      my ( $inviter1, $room1, $inviter2, $room2, $info, $id_server ) = @_;
-      my $hs_uribase = $info->client_location;
-
-      Future->needs_all(
-         do_3pid_invite( $inviter1, $room1, $id_server->name, $invitee_email ),
-         do_3pid_invite( $inviter2, $room2, $id_server->name, $invitee_email ),
-      )->then( sub {
-         my $invites = $id_server->invites_for( "email", $invitee_email );
-
-         log_if_fail "invites", $invites;
-         assert_eq( scalar( @$invites ), 2, "Invite count" );
-         assert_eq( $invites->[0]{guest_access_token}, $invites->[1]{guest_access_token}, "guest_access_tokens" );
-
-         Future->done( 1 );
-      });
    };
 
 test "3pid invite join with wrong but valid signature are rejected",

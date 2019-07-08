@@ -1,17 +1,51 @@
+use Cwd qw( abs_path );
 use File::Basename qw( dirname );
+use File::Path qw( make_path );
 use Net::Async::HTTP::Server 0.09;  # request_class with bugfix
 use IO::Async::SSL;
 
 use SyTest::HTTPClient;
 use SyTest::HTTPServer::Request;
+use SyTest::SSL qw( ensure_ssl_key create_ssl_cert );
 
 my $DIR = dirname( __FILE__ );
 
 struct Awaiter => [qw( pathmatch filter future )];
 
-push our @EXPORT, qw( ServerInfo await_http_request TEST_SERVER_INFO );
+push our @EXPORT, qw(
+   ServerInfo await_http_request TEST_SERVER_INFO
+   start_test_server_ssl
+);
 
 struct ServerInfo => [qw( server_name client_location federation_host federation_port )];
+
+=head2 start_test_server_ssl
+
+   my $listener = start_test_server_ssl( $server ) -> get;
+
+Creates a TLS cert signed by the CA, and configures an IO::Async::Listener to start listening with it.
+
+=cut
+
+sub start_test_server_ssl {
+   my ( $server ) = @_;
+
+   my $test_server_dir = abs_path( "test-server" );
+   -d $test_server_dir or make_path( $test_server_dir );
+
+   my $ssl_cert = "$test_server_dir/server.crt";
+   my $ssl_key = "$test_server_dir/server.key";
+   ensure_ssl_key( $ssl_key );
+   create_ssl_cert( $ssl_cert, $ssl_key, $BIND_HOST );
+
+   return $server->listen(
+      host          => $BIND_HOST,
+      service       => 0,
+      extensions    => [qw( SSL )],
+      SSL_key_file  => $ssl_key,
+      SSL_cert_file => $ssl_cert,
+   );
+}
 
 our $TEST_SERVER_INFO = fixture(
    requires => [],
@@ -25,15 +59,11 @@ our $TEST_SERVER_INFO = fixture(
       my $http_client;
       my $server_info;
 
-      $http_server->listen(
-         host => $BIND_HOST,
-         service => 0,
-         extensions => ["SSL"],
-         SSL_cert_file => "$DIR/../keys/tls-selfsigned.crt",
-         SSL_key_file => "$DIR/../keys/tls-selfsigned.key",
-      )->then( sub {
+      start_test_server_ssl( $http_server )->then( sub {
          my ( $listener ) = @_;
          my $sockport = $listener->read_handle->sockport;
+
+         $OUTPUT->diag( "Started test HTTPS Server at $listen_host:$sockport" );
 
          my $uri_base = "https://$listen_host:$sockport";
 

@@ -9,8 +9,13 @@ then
     # If the user has mounted in a SyTest checkout, use that. We can tell this by files being in the directory.
     echo "Using local sytests..."
 else
-    # Otherwise, try and find out what the branch that the Dendrite checkout is using. Fall back to develop if it's not a branch.
-    branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
+    # Otherwise, try and find out what the branch that the Dendrite checkout is
+    # using. If we don't know, assume it's master.
+    branch_name="$(git --git-dir=/src/.git rev-parse --abbrev-ref HEAD 2>/dev/null)" || branch_name="develop"
+    
+    # If we're using the master branch of Dendrite, use the develop branch of sytest,
+    # as master is Dendrite's development branch
+    [ "$branch_name" == "master" ] && branch_name="develop"
 
     # Try and fetch the branch
     echo "Trying to get same-named sytest branch..."
@@ -50,6 +55,9 @@ dos2unix ./run-tests.pl
 TEST_STATUS=0
 ./run-tests.pl -I Dendrite::Monolith -d /src/bin -W /src/testfile -O tap --all "$@" > results.tap || TEST_STATUS=$?
 
+# Check for new tests to be added to testfile
+/src/show-expected-fail-tests.sh results.tap /src/testfile || TEST_STATUS=$?
+
 # Copy out the logs
 mkdir -p /logs
 cp results.tap /logs/results.tap
@@ -57,6 +65,6 @@ rsync --ignore-missing-args -av server-0 server-1 /logs --include "*/" --include
 
 # Write out JUnit for CircleCI
 mkdir -p /logs/sytest
-perl /tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
+perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
 
 exit $TEST_STATUS
