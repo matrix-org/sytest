@@ -5,13 +5,6 @@
 
 set -ex
 
-if [ -n "$BUILDKITE" ]
-then
-    SYNAPSE_DIR=`pwd`
-else
-    SYNAPSE_DIR="/src"
-fi
-
 # Attempt to find a sytest to use.
 # If /sytest exists, it means that a SyTest checkout has been mounted into the Docker image.
 if [ -d "/sytest" ]; then
@@ -76,11 +69,11 @@ if [ -n "$OFFLINE" ]; then
     # (`pip install -e` likes to reinstall setuptools even if it's already installed,
     # so we just run setup.py explicitly.)
     #
-    (cd $SYNAPSE_DIR && /venv/bin/python setup.py -q develop)
+    (cd /src && /venv/bin/python setup.py -q develop)
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir -e $SYNAPSE_DIR
+    /venv/bin/pip install -q --upgrade --no-cache-dir -e /src
     /venv/bin/pip install -q --upgrade --no-cache-dir \
         lxml psycopg2 coverage codecov tap.py
 
@@ -94,7 +87,7 @@ fi
 >&2 echo "+++ Running tests"
 
 RUN_TESTS=(
-    perl -I "$SYTEST_LIB" ./run-tests.pl --python=/venv/bin/python --synapse-directory=$SYNAPSE_DIR -B $SYNAPSE_DIR/sytest-blacklist --coverage -O tap --all
+    perl -I "$SYTEST_LIB" ./run-tests.pl --python=/venv/bin/python --synapse-directory=/src -B /src/sytest-blacklist --coverage -O tap --all
 )
 
 TEST_STATUS=0
@@ -137,7 +130,7 @@ then
 
     if [ $TEST_STATUS -ne 0 ]; then
         # Annotate, if failure
-        /venv/bin/python $SYNAPSE_DIR/.buildkite/format_tap.py /logs/results.tap "$BUILDKITE_LABEL" | ./buildkite-agent annotate --style="error" --context="$BUILDKITE_LABEL"
+        /venv/bin/python /src/.buildkite/format_tap.py /logs/results.tap "$BUILDKITE_LABEL" | ./buildkite-agent annotate --style="error" --context="$BUILDKITE_LABEL"
     fi
 fi
 
