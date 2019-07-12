@@ -20,8 +20,13 @@ if [ -d "/sytest" ]; then
     ln -sf /sytest/keys /work
     SYTEST_LIB="/sytest/lib"
 else
-    # Otherwise, try and find out what the branch that the Synapse checkout is using. Fall back to develop if it's not a branch.
-    branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
+    if [ -n "BUILDKITE_BRANCH" ]
+    then
+        branch_name=$BUILDKITE_BRANCH
+    else
+        # Otherwise, try and find out what the branch that the Synapse checkout is using. Fall back to develop if it's not a branch.
+        branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
+    fi
 
     # Try and fetch the branch
     echo "Trying to get same-named sytest branch..."
@@ -68,9 +73,9 @@ if [ -n "$OFFLINE" ]; then
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir -e /src/
+    /venv/bin/pip install -q --upgrade --no-cache-dir -e /src
     /venv/bin/pip install -q --upgrade --no-cache-dir \
-        lxml psycopg2 coverage codecov
+        lxml psycopg2 coverage codecov tap.py
 
     # Make sure all Perl deps are installed -- this is done in the docker build
     # so will only install packages added since the last Docker build
@@ -106,18 +111,28 @@ fi
 # Copy out the logs
 mkdir -p /logs
 cp results.tap /logs/results.tap
-rsync --ignore-missing-args -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+rsync --ignore-missing-args  --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
-# Write out JUnit for CircleCI
-mkdir -p /logs/sytest
-perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
-
-# Upload coverage to codecov, if running on CircleCI
-if [ -n "$CIRCLECI" ]
+# Upload coverage to codecov and upload files, if running on Buildkite
+if [ -n "$BUILDKITE" ]
 then
     /venv/bin/coverage combine || true
     /venv/bin/coverage xml || true
     /venv/bin/codecov -X gcov -f coverage.xml
+
+    wget -O buildkite.tar.gz https://github.com/buildkite/agent/releases/download/v3.13.0/buildkite-agent-linux-amd64-3.13.0.tar.gz
+    tar xvf buildkite.tar.gz
+    chmod +x ./buildkite-agent
+
+    # Upload the files
+    ./buildkite-agent artifact upload "/logs/**/*.log*"
+    ./buildkite-agent artifact upload "/logs/results.tap"
+
+    if [ $TEST_STATUS -ne 0 ]; then
+        # Annotate, if failure
+        /venv/bin/python /src/.buildkite/format_tap.py /logs/results.tap "$BUILDKITE_LABEL" | ./buildkite-agent annotate --style="error" --context="$BUILDKITE_LABEL"
+    fi
 fi
+
 
 exit $TEST_STATUS

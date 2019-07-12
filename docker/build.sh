@@ -3,7 +3,6 @@
 set -e
 
 cd `dirname $0`
-docker build ../ -f Dockerfile -t matrixdotorg/sytest
-docker build ../ -f Dockerfile-synapsepy2 -t matrixdotorg/sytest-synapsepy2
-docker build ../ -f Dockerfile-synapsepy3 -t matrixdotorg/sytest-synapsepy3
-docker build ../ -f Dockerfile-dendrite -t matrixdotorg/sytest-dendrite
+docker build --pull ../ -f Dockerfile -t matrixdotorg/sytest:latest
+docker build ../ -f Dockerfile-synapsepy35 -t matrixdotorg/sytest-synapse:py35
+docker build ../ -f Dockerfile-dendrite -t matrixdotorg/sytest-dendrite:latest

@@ -28,4 +28,5 @@ RUN mkdir -p /src
 # repo root, not the docker folder
 ADD docker/dendrite_sytest.sh /dendrite_sytest.sh
 RUN dos2unix /dendrite_sytest.sh
-ENTRYPOINT ["/dendrite_sytest.sh"]
+
+CMD ["/usr/bin/bash" "/dendrite_sytest.sh"]
