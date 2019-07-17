@@ -159,8 +159,17 @@ sub send_event
       pdus => [ $event ],
    )->then( sub {
       my ( $body ) = @_;
+
+      assert_json_keys( $body, 'pdus' );
+      my $pdus = $body->{pdus};
+
+      # 'pdus' is a map from event id to error details. We don't know what our
+      # event id is, but there should be one entry which maps to an empty dict
+      assert_eq( length( keys %$pdus ), 1);
+      my $event_id = ( keys %$pdus )[0];
+
       assert_deeply_eq( $body,
-                        { pdus => { $event->{event_id} => {} } },
+                        { pdus => { $event_id => {} } },
                         "/send/ response" );
       Future->done;
    });
@@ -176,34 +185,36 @@ sub join_room
    my $user_id     = $args{user_id};
 
    my $store = $self->{datastore};
+   my $room_version;
 
    $self->do_request_json(
       method   => "GET",
       hostname => $server_name,
-      uri      => "/v1/make_join/$room_id/$user_id"
+      uri      => "/v1/make_join/$room_id/$user_id",
+      params   => { "ver" => [1, 5] },
    )->then( sub {
       my ( $body ) = @_;
 
+      $room_version = $body->{room_version} // 1;
+
       my $protoevent = $body->{event};
 
-      my %member_event = (
+      my ( $member_event, $event_id ) = $store->create_event(
+         room_version    => $room_version,
+
          ( map { $_ => $protoevent->{$_} } qw(
             auth_events content depth prev_events room_id sender
             state_key type ) ),
 
-         event_id         => $store->next_event_id,
          origin           => $store->server_name,
          origin_server_ts => $self->time_ms,
       );
 
-      $store->sign_event( \%member_event );
-
       $self->do_request_json(
          method   => "PUT",
          hostname => $server_name,
-         uri      => "/v1/send_join/$room_id/$member_event{event_id}",
-
-         content => \%member_event,
+         uri      => "/v1/send_join/$room_id/$event_id",
+         content  => $member_event,
       )->then( sub {
          my ( $join_body ) = @_;
          # SYN-490 workaround
@@ -212,12 +223,13 @@ sub join_room
          my $room = SyTest::Federation::Room->new(
             datastore => $store,
             room_id   => $room_id,
+            room_version => $room_version,
          );
 
-         my @events = uniq_by { $_->{event_id} } (
+         my @events = uniq_by { $room->id_for_event( $_ ) } (
             @{ $join_body->{auth_chain} },
             @{ $join_body->{state} },
-            \%member_event,
+            $member_event,
          );
 
          $room->insert_event( $_ ) for @events;
