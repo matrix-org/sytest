@@ -162,7 +162,7 @@ test "Inbound federation can backfill events",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/v1/backfill/$room_id/",
+            uri      => "/v1/backfill/$room_id",
 
             params => {
                v     => $join_event->{prev_events}[0][0],
@@ -224,7 +224,7 @@ test "Backfill checks the events requested belong to the room",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/v1/backfill/$pub_room_id/",
+            uri      => "/v1/backfill/$pub_room_id",
 
             params => {
                v     => $priv_event_id,

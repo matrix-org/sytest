@@ -123,7 +123,7 @@ sub send_transaction
    $self->do_request_json(
       method   => "PUT",
       hostname => $params{destination},
-      uri      => "/v1/send/$ts/",
+      uri      => "/v1/send/$ts",
 
       content => \%transaction,
    );

@@ -4,7 +4,7 @@ sub get_state_ids_from_server {
    return $outbound_client->do_request_json(
       method   => "GET",
       hostname => $server,
-      uri      => "/v1/state_ids/$room_id/",
+      uri      => "/v1/state_ids/$room_id",
       params   => { event_id => $event_id },
    );
 }
@@ -32,7 +32,7 @@ test "Inbound federation can get state for a room",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/v1/state/$room_id/",
+            uri      => "/v1/state/$room_id",
             params   => {
                event_id => $room->{prev_events}[-1]->{event_id},
             }
@@ -73,7 +73,7 @@ test "Inbound federation of state requires event_id as a mandatory paramater",
       $outbound_client->do_request_json(
          method   => "GET",
          hostname => $first_home_server,
-         uri      => "/v1/state/notaroombutitdoesntmatter/",
+         uri      => "/v1/state/notaroombutitdoesntmatter",
       )->main::expect_http_400();
    };
 
@@ -137,7 +137,7 @@ test "Inbound federation of state_ids requires event_id as a mandatory paramater
       $outbound_client->do_request_json(
          method   => "GET",
          hostname => $first_home_server,
-         uri      => "/v1/state_ids/notaroombutitdoesntmatter/",
+         uri      => "/v1/state_ids/notaroombutitdoesntmatter",
       )->main::expect_http_400();
    };
 
@@ -682,7 +682,7 @@ test "Getting state checks the events requested belong to the room",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/v1/state/$pub_room_id/",
+            uri      => "/v1/state/$pub_room_id",
 
             params => {
                event_id => $priv_event_id,
@@ -724,7 +724,7 @@ test "Getting state IDs checks the events requested belong to the room",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/v1/state_ids/$pub_room_id/",
+            uri      => "/v1/state_ids/$pub_room_id",
 
             params => {
                event_id => $priv_event_id,

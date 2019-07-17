@@ -73,7 +73,7 @@ test "Event size limits",
 
          do_request_json_for( $user,
             method  => "PUT",
-            uri     => "/r0/rooms/$room_id/state/oooooooh/",
+            uri     => "/r0/rooms/$room_id/state/oooooooh",
             content => {
                key => "O" x 70000,
             }

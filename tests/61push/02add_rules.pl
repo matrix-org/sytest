@@ -33,12 +33,12 @@ sub check_add_push_rule
    })->then( sub {
       do_request_json_for( $user,
          method  => "GET",
-         uri     => "/r0/pushrules/$scope/$kind/",
+         uri     => "/r0/pushrules/$scope/$kind",
       )->on_done( $check_rule_list );
    })->then( sub {
        do_request_json_for( $user,
          method  => "GET",
-         uri     => "/r0/pushrules/$scope/",
+         uri     => "/r0/pushrules/$scope",
       )->on_done( sub {
          my ( $body ) = @_;
 
