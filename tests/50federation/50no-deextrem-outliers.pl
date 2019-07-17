@@ -73,7 +73,7 @@ test "Forward extremities remain so even after the next events are populated as 
             content => {
                body => "event_c",
             },
-            # prev_events => SyTest::Federation::Room::make_event_refs( $pl_event_b ),
+            # prev_events => $room->make_event_refs( $pl_event_b ),
          );
 
          log_if_fail "Outlier event C", $outlier_event_c;

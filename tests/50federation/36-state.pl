@@ -325,7 +325,7 @@ test "Outbound federation requests missing prev_events and then asks for /state_
             content => {
                body => "event_x",
             },
-            prev_events => SyTest::Federation::Room::make_event_refs(
+            prev_events => $room->make_event_refs(
                @{ $room->{prev_events} }, $missing_event_y,
             ),
          );
@@ -352,7 +352,7 @@ test "Outbound federation requests missing prev_events and then asks for /state_
          my $sent_event_c = $room->create_and_insert_event(
             type => "m.room.message",
 
-            prev_events => SyTest::Federation::Room::make_event_refs(
+            prev_events => $room->make_event_refs(
                @{ $room->{prev_events} }, $missing_event_x,
             ),
 
@@ -567,7 +567,7 @@ test "Federation handles empty auth_events in state_ids sanely",
             content => {
                body => "event_x",
             },
-            prev_events => SyTest::Federation::Room::make_event_refs(
+            prev_events => $room->make_event_refs(
                @{ $room->{prev_events} }, $missing_event_y,
             ),
          );
@@ -576,7 +576,7 @@ test "Federation handles empty auth_events in state_ids sanely",
          my $sent_event_c = $room->create_and_insert_event(
             type => "m.room.message",
 
-            prev_events => SyTest::Federation::Room::make_event_refs(
+            prev_events => $room->make_event_refs(
                @{ $room->{prev_events} }, $missing_event_x,
             ),
 

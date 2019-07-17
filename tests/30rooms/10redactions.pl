@@ -18,6 +18,73 @@ sub make_room_and_message
    });
 }
 
+=head2 matrix_redact_event
+
+   my $redaction_event_id = matrix_redact_event(
+      $user, $room_id, $event_id,
+   )->get;
+
+Makes a /redact request
+
+=cut
+
+sub matrix_redact_event
+{
+   my ( $user, $room_id, $event_id ) = @_;
+
+   $room_id = uri_escape( $room_id );
+   my $esc_event_id = uri_escape( $event_id );
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/r0/rooms/$room_id/redact/$esc_event_id",
+      content => {},
+   )->then( sub {
+      my ( $body ) = @_;
+
+      log_if_fail "Sent redaction for $event_id", $body;
+      return Future->done( $body->{ event_id } );
+   });
+}
+
+push our @EXPORT, qw( matrix_redact_event );
+
+=head2 matrix_redact_event_synced
+
+   my $redaction_event_id = matrix_redact_event_synced(
+      $user, $room_id, $event_id,
+   )->get;
+
+Makes a /redact request and waits for it to be echoed back in a sync
+
+=cut
+
+sub matrix_redact_event_synced
+{
+   my ( $user, $room_id, $event_id ) = @_;
+
+   my $redaction_event_id;
+
+   matrix_do_and_wait_for_sync( $user,
+      do => sub {
+         matrix_redact_event( $user, $room_id, $event_id )->on_done( sub {
+            ( $redaction_event_id ) = @_;
+         });
+      }, check => sub {
+         my ( $sync_body ) = @_;
+         return sync_timeline_contains(
+            $sync_body, $room_id, sub {
+               $_[0]->{event_id} eq $redaction_event_id
+            },
+         );
+      },
+   )->then( sub {
+      return Future->done( $redaction_event_id );
+   });
+}
+
+push @EXPORT, qw( matrix_redact_event_synced );
+
 test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
    requires => [ local_user_fixtures( 2 ),
                  qw( can_send_message )],
