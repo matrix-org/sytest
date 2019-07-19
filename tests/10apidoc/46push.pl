@@ -129,6 +129,7 @@ sub matrix_get_push_rules
 {
    my ( $user ) = @_;
 
+   # Trailing slash indicates retrieving ALL push rules for this user
    do_request_json_for( $user,
       method  => "GET",
       uri     => "/r0/pushrules/",

@@ -20,6 +20,8 @@ use POSIX qw( strftime WIFEXITED WEXITSTATUS );
 
 use YAML ();
 
+use SyTest::SSL qw( ensure_ssl_key create_ssl_cert );
+
 sub _init
 {
    my $self = shift;
@@ -145,17 +147,31 @@ sub start
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
 
-   my $cert = $self->{paths}{cert_file} = "$cwd/keys/tls-selfsigned.crt";
-   my $key  = $self->{paths}{key_file} = "$cwd/keys/tls-selfsigned.key";
+   $self->{paths}{cert_file} = "$hs_dir/tls.crt";
+   $self->{paths}{key_file} = "$hs_dir/tls.key";
+
+   ensure_ssl_key( $self->{paths}{key_file} );
+   create_ssl_cert( $self->{paths}{cert_file}, $self->{paths}{key_file}, $bind_host );
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_file => "$log",
         ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
-        tls_certificate_path => "$cwd/keys/tls-selfsigned.crt",
-        tls_private_key_path => "$cwd/keys/tls-selfsigned.key",
-        tls_dh_params_path => "$cwd/keys/tls.dh",
+
+        # We configure synapse to use a TLS cert which is signed by our dummy CA...
+        tls_certificate_path => $self->{paths}{cert_file},
+        tls_private_key_path => $self->{paths}{key_file},
+
+        # ... and configure it to trust that CA for federation connections...
+        federation_custom_ca_list => [
+           "$cwd/keys/ca.crt",
+        ],
+
+        # ... but synapse currently lacks such an option for non-federation
+        # connections. Instead we just turn of cert checking for them like
+        # this:
         use_insecure_ssl_client_just_for_testing_do_not_use => 1,
+
         rc_messages_per_second => 1000,
         rc_message_burst_count => 1000,
         rc_registration => {
@@ -176,6 +192,13 @@ sub start
                 burst_count => 1000,
             }
         },
+
+        rc_federation => {
+           # allow 100 requests per sec instead of 10
+           sleep_limit => 100,
+           window_size => 1000,
+        },
+
         enable_registration => "true",
         database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,
@@ -186,7 +209,6 @@ sub start
         use_frozen_events => "true",
 
         allow_guest_access => "True",
-        invite_3pid_guest => "true",
 
         # Metrics are always useful
         enable_metrics => 1,

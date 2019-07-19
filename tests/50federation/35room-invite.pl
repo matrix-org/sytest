@@ -1,5 +1,6 @@
 test "Outbound federation can send invites",
-   requires => [ local_user_and_room_fixtures(), $main::INBOUND_SERVER, federation_user_id_fixture() ],
+   requires => [ local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 $main::INBOUND_SERVER, federation_user_id_fixture() ],
 
    do => sub {
       my ( $user, $room_id, $inbound_server, $invitee_id ) = @_;
@@ -26,7 +27,7 @@ test "Outbound federation can send invites",
             assert_eq( $body->{sender}, $user->user_id,
                'event sender' );
 
-            assert_json_keys( $body, qw( content state_key prev_state ));
+            assert_json_keys( $body, qw( content state_key ));
 
             assert_eq( $body->{content}{membership}, "invite",
                'event content membership' );

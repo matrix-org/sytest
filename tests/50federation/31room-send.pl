@@ -47,7 +47,10 @@ test "Outbound federation can send events",
 
 test "Inbound federation can receive events",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( user_opts => { with_events => 1 }),
+                 local_user_and_room_fixtures(
+                   user_opts => { with_events => 1 },
+                   room_opts => { room_version => "1" },
+                 ),
                  federation_user_id_fixture() ],
 
    do => sub {
@@ -94,7 +97,10 @@ test "Inbound federation can receive events",
 
 test "Inbound federation can receive redacted events",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( user_opts => { with_events => 1 }),
+                 local_user_and_room_fixtures(
+                   user_opts => { with_events => 1 },
+                   room_opts => { room_version => "1" },
+                 ),
                  federation_user_id_fixture() ],
 
    do => sub {

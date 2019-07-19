@@ -108,7 +108,7 @@ test "Can fetch images in room",
       })->then( sub {
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/api/v1/rooms/$room_id/messages",
+            uri    => "/r0/rooms/$room_id/messages",
             params => {
                filter => '{"contains_url":true}',
                dir    => 'b',

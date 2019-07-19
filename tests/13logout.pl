@@ -1,3 +1,5 @@
+use JSON qw( decode_json );
+
 test "Can logout current device",
    requires => [ local_user_fixture( with_events => 0 ) ],
 
@@ -26,7 +28,7 @@ test "Can logout current device",
 
          do_request_json_for( $user,
             method => "POST",
-             uri    => "/r0/logout",
+            uri    => "/r0/logout",
             content => {},
          )
       })->then( sub {
@@ -90,5 +92,44 @@ test "Can logout all devices",
                200 => "redo",
             );
          };
+      });
+   };
+
+test "Request to logout with invalid an access token is rejected",
+   requires => [ $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      $http->do_request_json(
+         method  => "POST",
+         uri     => "/r0/logout",
+         content => {},
+         params  => { access_token => "an/invalid/token" },
+      )->main::expect_http_401->then( sub {
+         my ( $resp ) = @_;
+         my $body = decode_json($resp->content);
+         assert_eq( $body->{errcode}, "M_UNKNOWN_TOKEN", "errcode" );
+
+         Future->done( 1 );
+      });
+   };
+
+test "Request to logout without an access token is rejected",
+   requires => [ $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      $http->do_request_json(
+         method  => "POST",
+         uri     => "/r0/logout",
+         content => {},
+      )->main::expect_http_401->then( sub {
+         my ( $resp ) = @_;
+         my $body = decode_json($resp->content);
+         assert_eq( $body->{errcode}, "M_MISSING_TOKEN", "errcode" );
+
+         Future->done( 1 );
       });
    };

@@ -1,6 +1,9 @@
 test "Forward extremities remain so even after the next events are populated as outliers",
       requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
+                 local_user_and_room_fixtures(
+                    user_opts => { with_events => 1 },
+                    room_opts => { room_version => "1" },
+                  ),
                  federation_user_id_fixture() ],
 
    do => sub {
@@ -70,7 +73,7 @@ test "Forward extremities remain so even after the next events are populated as 
             content => {
                body => "event_c",
             },
-            # prev_events => SyTest::Federation::Room::make_event_refs( $pl_event_b ),
+            # prev_events => $room->make_event_refs( $pl_event_b ),
          );
 
          log_if_fail "Outlier event C", $outlier_event_c;

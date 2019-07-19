@@ -202,8 +202,6 @@ test "The only membership state included in a gapped incremental sync is for sen
    requires => [ local_user_fixtures( 4 ),
                  qw( can_sync ) ],
 
-   bug => "vector-im/riot-web#7211",
-
    check => sub {
       my ( $alice, $bob, $charlie, $dave ) = @_;
 

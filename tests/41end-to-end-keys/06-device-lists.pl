@@ -27,7 +27,7 @@ sub sync_until_user_in_device_list
    # my $trace = Devel::StackTrace->new(no_args => 1);
    # log_if_fail $trace->frame(1)->as_string();
 
-   $msg = "$msg: waiting for $wait_for_id in $device_list";
+   log_if_fail "$msg: waiting for $wait_for_id in $device_list";
 
    return repeat_until_true {
       matrix_sync_again( $syncing_user, timeout => 1000 )
@@ -36,11 +36,15 @@ sub sync_until_user_in_device_list
 
          log_if_fail "$msg: body", $body;
 
-         my $res = $body->{device_lists} &&
+         if(
+            $body->{device_lists} &&
             $body->{device_lists}{$device_list} &&
-            any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} };
-
-         Future->done( $res && $body );
+            any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} }
+         ) {
+            log_if_fail "$msg: found $wait_for_id in $device_list";
+            return Future->done( $body );
+         }
+         return Future->done(0);
       });
    };
 }
@@ -373,14 +377,18 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_set_device_display_name( $remote_leaver, $remote_leaver->device_id, "test display name" ),
       })->then( sub {
+         log_if_fail "Remote_leaver " . $remote_leaver->user_id . " set display name";
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
+         log_if_fail "Remote_leaver " . $remote_leaver->user_id . " left room";
          matrix_put_e2e_keys( $remote_leaver, device_keys => { updated => "keys" } )
       })->then( sub {
+         log_if_fail "Remote_leaver " . $remote_leaver->user_id . " updated keys";
          matrix_put_e2e_keys( $remote2, device_keys => { updated => "keys" } )
       })->then( sub {
+         log_if_fail "Remote user 2 " . $remote2->user_id . " updated keys";
          sync_until_user_in_device_list( $creator, $remote2 );
       })->then( sub {
          my ( $body ) = @_;

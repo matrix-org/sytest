@@ -154,9 +154,6 @@ test "Remote room members also see posted message events",
    requires => [ $senduser_fixture, $remote_fixture, $room_fixture,
                 qw( can_receive_room_message_locally )],
 
-   # this test frequently times out for unknown reasons
-   bug => "synapse#1679",
-
    do => sub {
       my ( $senduser, $remote_user, $room_id ) = @_;
 

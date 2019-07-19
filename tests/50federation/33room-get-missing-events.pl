@@ -1,6 +1,9 @@
 test "Outbound federation can request missing events",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( user_opts => { with_events => 1 }),
+                 local_user_and_room_fixtures(
+                    user_opts => { with_events => 1 },
+                    room_opts => { room_version => "1" },
+                   ),
                  federation_user_id_fixture() ],
 
    do => sub {
@@ -102,7 +105,7 @@ test "Outbound federation can request missing events",
 foreach my $vis (qw( world_readable shared invite joined )) {
    test "Inbound federation can return missing events for $vis visibility",
       requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                    local_user_and_room_fixtures(),
+                    local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                     federation_user_id_fixture() ],
 
       do => sub {
