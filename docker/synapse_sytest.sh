@@ -82,7 +82,7 @@ else
     ./install-deps.pl
 fi
 
-if [-z "$BLACKLIST"]; then
+if [ -z "$BLACKLIST" ]; then
     BLACKLIST=sytest-blacklist
 fi
 
