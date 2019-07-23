@@ -1,10 +1,10 @@
 test "Server correctly handles transactions that break edu limits",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
-                 room_alias_name_fixture() ],
+                 federation_user_id_fixture(), room_alias_name_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $room_alias_name ) = @_;
+      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id, $room_alias_name ) = @_;
 
       my $local_server_name = $info->server_name;
 
@@ -15,14 +15,14 @@ test "Server correctly handles transactions that break edu limits",
       $outbound_client->join_room(
          server_name => $local_server_name,
          room_id     => $room_id,
-         user_id     => $creator->user_id,
+         user_id     => $user_id,
       )->then( sub {
          my ( $room ) = @_;
 
          my $new_event = $room->create_and_insert_event(
              type => "m.room.message",
 
-             sender  => $creator->user_id,
+             sender  => $user_id,
              content => {
                  body => "Message 1",
              },
