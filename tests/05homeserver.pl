@@ -4,7 +4,7 @@ use Cwd qw( abs_path );
 
 my $N_HOMESERVERS = 2;
 
-my @servers;
+our @SERVERS;
 
 # Almost like an END block, but we can't use END because we need SIGCHLD, and
 # see
@@ -14,10 +14,11 @@ main::AT_END sub {
    ( fmap_void {
       my $server = $_;
       $server->kill_and_await_finish;
-   } foreach => \@servers, concurrent => scalar @servers )->get;
+   } foreach => \@SERVERS, concurrent => scalar @SERVERS )->get;
 };
 
 push our @EXPORT, qw( HOMESERVER_INFO );
+push @EXPORT, qw( SERVERS );
 
 our @HOMESERVER_INFO = map {
    my $idx = $_;
@@ -112,7 +113,7 @@ our @HOMESERVER_INFO = map {
             );
          }
 
-         push @servers, $server;
+         push @SERVERS, $server;
 
          $OUTPUT->diag( "Starting server-$idx" );
          Future->wait_any(
