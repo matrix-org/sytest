@@ -142,7 +142,6 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $log_config_file = "$hs_dir/log.config";
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
@@ -153,10 +152,11 @@ sub start
    ensure_ssl_key( $self->{paths}{key_file} );
    create_ssl_cert( $self->{paths}{cert_file}, $self->{paths}{key_file}, $bind_host );
 
+   my $log_config_file = $self->configure_logger("homeserver");
+
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
-        log_file => "$log",
-        ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
+        log_config => $log_config_file,
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
@@ -667,7 +667,7 @@ sub wrap_synapse_command
       my $pusher_config_path = $self->write_yaml_file( "pusher.yaml" => {
          "worker_app"              => "synapse.app.pusher",
          "worker_pid_file"         => "$hsdir/pusher.pid",
-         "worker_log_file"         => "$log.pusher",
+         "worker_log_config"       => $self->configure_logger("pusher"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"        => [
@@ -692,7 +692,7 @@ sub wrap_synapse_command
       my $appservice_config_path = $self->write_yaml_file( "appservice.yaml" => {
          "worker_app"              => "synapse.app.appservice",
          "worker_pid_file"         => "$hsdir/appservice.pid",
-         "worker_log_file"         => "$log.appservice",
+         "worker_log_config"       => $self->configure_logger("appservice"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"        => [
@@ -717,7 +717,7 @@ sub wrap_synapse_command
       my $federation_sender_config_path = $self->write_yaml_file( "federation_sender.yaml" => {
          "worker_app"              => "synapse.app.federation_sender",
          "worker_pid_file"         => "$hsdir/federation_sender.pid",
-         "worker_log_file"         => "$log.federation_sender",
+         "worker_log_config"       => $self->configure_logger("federation_sender"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"        => [
@@ -742,7 +742,7 @@ sub wrap_synapse_command
       my $synchrotron_config_path = $self->write_yaml_file( "synchrotron.yaml" => {
          "worker_app"              => "synapse.app.synchrotron",
          "worker_pid_file"         => "$hsdir/synchrotron.pid",
-         "worker_log_file"         => "$log.synchrotron",
+         "worker_log_config"       => $self->configure_logger("synchrotron"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"        => [
@@ -775,7 +775,7 @@ sub wrap_synapse_command
       my $federation_reader_config_path = $self->write_yaml_file( "federation_reader.yaml" => {
          "worker_app"              => "synapse.app.federation_reader",
          "worker_pid_file"         => "$hsdir/federation_reader.pid",
-         "worker_log_file"         => "$log.federation_reader",
+         "worker_log_config"       => $self->configure_logger("federation_reader"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
@@ -809,7 +809,7 @@ sub wrap_synapse_command
       my $media_repository_config_path = $self->write_yaml_file( "media_repository.yaml" => {
          "worker_app"              => "synapse.app.media_repository",
          "worker_pid_file"         => "$hsdir/media_repository.pid",
-         "worker_log_file"         => "$log.media_repository",
+         "worker_log_config"       => $self->configure_logger("media_repository"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"        => [
@@ -842,7 +842,7 @@ sub wrap_synapse_command
       my $client_reader_config_path = $self->write_yaml_file( "client_reader.yaml" => {
          "worker_app"                   => "synapse.app.client_reader",
          "worker_pid_file"              => "$hsdir/client_reader.pid",
-         "worker_log_file"              => "$log.client_reader",
+         "worker_log_config"            => $self->configure_logger("client_reader"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
@@ -876,7 +876,7 @@ sub wrap_synapse_command
       my $user_dir_config_path = $self->write_yaml_file( "user_dir.yaml" => {
          "worker_app"              => "synapse.app.user_dir",
          "worker_pid_file"         => "$hsdir/user_dir.pid",
-         "worker_log_file"         => "$log.user_dir",
+         "worker_log_config"       => $self->configure_logger("user_dir"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"        => [
@@ -909,7 +909,7 @@ sub wrap_synapse_command
       my $event_creator_config_path = $self->write_yaml_file( "event_creator.yaml" => {
          "worker_app"                   => "synapse.app.event_creator",
          "worker_pid_file"              => "$hsdir/event_creator.pid",
-         "worker_log_file"              => "$log.event_creator",
+         "worker_log_config"            => $self->configure_logger("event_creator"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
