@@ -512,7 +512,7 @@ provisioned.
 Any other options are passed into C<matrix_create_room>, whence they are passed
 on to the server.
 
-It is generally easier to use C<local_user_and_name_fixtures>.
+It is generally easier to use C<local_user_and_room_fixtures>.
 
 =cut
 

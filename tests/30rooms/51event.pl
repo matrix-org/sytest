@@ -1,5 +1,26 @@
 use URI::Escape qw( uri_escape );
 
+=head2 matrix_get_event
+
+   my $event = matrix_get_event( $user, $room_id, $event_id ) -> get;
+
+Makes a /_matrix/client/r0/rooms/{roomId}/event/{eventId} request. Returns the event.
+
+=cut
+
+sub matrix_get_event
+{
+   my ( $user, $room_id, $event_id ) = @_;
+
+   return do_request_json_for(
+      $user,
+      method  => "GET",
+      uri     => "/r0/rooms/${ \uri_escape( $room_id ) }/event/${ \uri_escape( $event_id ) }",
+   );
+}
+
+push our @EXPORT, qw( matrix_get_event );
+
 test "/event/ on joined room works",
    requires => [ local_user_and_room_fixtures() ],
 
