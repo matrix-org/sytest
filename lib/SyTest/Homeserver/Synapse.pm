@@ -152,7 +152,11 @@ sub start
    ensure_ssl_key( $self->{paths}{key_file} );
    create_ssl_cert( $self->{paths}{cert_file}, $self->{paths}{key_file}, $bind_host );
 
-   my $log_config_file = $self->configure_logger("homeserver");
+   # make it possible to use a custom log config file
+   my $log_config_file = "$hs_dir/log.config";
+   if( ! -f $log_config_file ) {
+      $log_config_file = $self->configure_logger("homeserver");
+   }
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
