@@ -2,7 +2,7 @@ use Future::Utils qw( fmap_void );
 
 use Cwd qw( abs_path );
 
-my $N_HOMEservers = 2;
+my $N_HOMESERVERS = 2;
 
 my @servers;
 
@@ -135,4 +135,4 @@ our @HOMESERVER_INFO = map {
          })
       },
    );
-} 0 .. $N_HOMEservers-1;
+} 0 .. $N_HOMESERVERS-1;
