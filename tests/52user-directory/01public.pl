@@ -151,8 +151,8 @@ foreach my $type (qw( join_rules history_visibility )) {
    multi_test "Users appear/disappear from directory when $type are changed",
       requires => [ local_user_fixtures( 2 ) ],
 
-      # this test is currently flaky due to a synapse bug
-      bug => "synapse#2306",
+      # matrix_get_user_dir_synced creates two new users and a room, which is kinda slow.
+      timeout => 20000,
 
       check => sub {
          my ( $creator, $user ) = @_;
@@ -249,8 +249,8 @@ foreach my $type (qw( join_rules history_visibility )) {
 multi_test "Users stay in directory when join_rules are changed but history_visibility is world_readable",
    requires => [ local_user_fixtures( 2 ) ],
 
-   # this test is currently flaky due to a synapse bug
-   bug => "synapse#2306",
+   # matrix_get_user_dir_synced creates two new users and a room, which is kinda slow.
+   timeout => 20000,
 
    check => sub {
       my ( $creator, $user ) = @_;
@@ -482,11 +482,16 @@ sub matrix_get_user_dir_synced
    }) -> then( sub {
       ( $searching_user ) = @_;
 
+      log_if_fail "Created test users for user directory search: " .
+         $new_user->user_id . ", " . $searching_user->user_id;
+
       matrix_create_room( $new_user,
          preset => "public_chat",
       );
    })->then( sub {
       ( $room_id ) = @_;
+
+      log_if_fail "Created test room for user directory search: " . $room_id;
 
       matrix_join_room( $searching_user, $room_id );
    })->then( sub {

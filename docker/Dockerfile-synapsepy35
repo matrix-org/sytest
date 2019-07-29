@@ -10,7 +10,7 @@ RUN su -c '/usr/lib/postgresql/9.6/bin/initdb -E "UTF-8" --lc-collate="en_US.UTF
 
 # Turn off all the fsync stuff for postgres
 RUN mkdir -p /etc/postgresql/9.6/main/conf.d/
-RUN echo "fync=off" > /etc/postgresql/9.6/main/conf.d/fsync.conf
+RUN echo "fsync=off" > /etc/postgresql/9.6/main/conf.d/fsync.conf
 RUN echo "full_page_writes=off" >> /etc/postgresql/9.6/main/conf.d/fsync.conf
 
 # /src is where we expect Synapse to be
@@ -32,4 +32,4 @@ RUN dos2unix /synapse_sytest.sh
 
 ADD docker/pydron.py /pydron.py
 
-ENTRYPOINT ["/synapse_sytest.sh"]
+CMD ["/usr/bin/bash" "/synapse_sytest.sh"]
