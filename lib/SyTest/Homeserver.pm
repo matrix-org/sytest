@@ -211,6 +211,50 @@ sub write_json_file
    return $self->write_file( $relpath, JSON::encode_json( $content ) );
 }
 
+
+sub configure_logger
+{
+   my $self = shift;
+   my ( $log_type ) = @_;
+   my $hs_dir = $self->{hs_dir};
+
+   my $log_config_file = $self->write_yaml_file("log.config.$log_type" => {
+      version => "1",
+
+      formatters => {
+         precise => {
+            format => "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(request)s - %(message)s"
+         }
+      },
+
+      filters => {
+         context => {
+            "()" => "synapse.logging.context.LoggingContextFilter",
+            request => ""
+         }
+      },
+      handlers => {
+         file => {
+            class => "logging.FileHandler",
+            formatter => "precise",
+            filename => "$hs_dir/$log_type.log",
+            filters => ["context"],
+            encoding => "utf8"
+         }
+      },
+
+      root => {
+         level => "INFO",
+         handlers => ["file"]
+      }
+
+   });
+
+   return $log_config_file;
+
+}
+
+
 =head2 _get_dbconfig
 
    %db_config = $self->_get_dbconfig( %defaults )
