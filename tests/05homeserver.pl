@@ -2,9 +2,9 @@ use Future::Utils qw( fmap_void );
 
 use Cwd qw( abs_path );
 
-my $N_HOMESERVERS = 2;
+my $N_HOMEservers = 2;
 
-our @SERVERS;
+my @servers;
 
 # Almost like an END block, but we can't use END because we need SIGCHLD, and
 # see
@@ -14,11 +14,10 @@ main::AT_END sub {
    ( fmap_void {
       my $server = $_;
       $server->kill_and_await_finish;
-   } foreach => \@SERVERS, concurrent => scalar @SERVERS )->get;
+   } foreach => \@servers, concurrent => scalar @servers )->get;
 };
 
 push our @EXPORT, qw( HOMESERVER_INFO );
-push @EXPORT, qw( SERVERS );
 
 our @HOMESERVER_INFO = map {
    my $idx = $_;
@@ -113,7 +112,7 @@ our @HOMESERVER_INFO = map {
             );
          }
 
-         push @SERVERS, $server;
+         push @servers, $server;
 
          $OUTPUT->diag( "Starting server-$idx" );
          Future->wait_any(
@@ -136,4 +135,4 @@ our @HOMESERVER_INFO = map {
          })
       },
    );
-} 0 .. $N_HOMESERVERS-1;
+} 0 .. $N_HOMEservers-1;
