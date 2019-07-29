@@ -285,6 +285,7 @@ test "Local device key changes get to remote servers with correct prev_id",
       });
    };
 
+use Data::Dumper;
 test "Device list doesn't change if remote server is down",
    requires => [
       $main::OUTBOUND_CLIENT,
@@ -307,34 +308,35 @@ test "Device list doesn't change if remote server is down",
       my ( $first_keys_query_body, $second_keys_query_body );
 
       my $client_user_keys = {
-         device_keys => {
-            $outbound_client_user => {
-               CURIOSITY_ROVER => {
-                  user_id => $outbound_client_user,
-                  device_id => "CURIOSITY_ROVER",
-                  algorithms => ["fast", "and broken"],
-                  keys => {
-                     "curve25519:JLAFKJWSCS" => "3C5BFWi2Y8MaVvjM8M22DBmh24PmgR0nPvJOIArzgyI",
-                     "ed25519:JLAFKJWSCS" => "lEuiRJBit0IG6nUf5pUzWTUEsRVVe/HJkoKuEww9ULI"
-                  },
-                  signatures => {
-                     $outbound_client_user => {"ed25519:JLAFKJWSCS" => "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"}
-                  },
-                  unsigned => {
-                     "device_display_name" => "Curiosity Rover"
-                  },
+         user_id => $outbound_client_user,
+         stream_id => 3,
+         devices => [{
+            device_id => "CURIOSITY_ROVER",
+            keys => {
+               user_id => $outbound_client_user,
+               device_id => "CURIOSITY_ROVER",
+               algorithms => ["fast", "and broken"],
+               keys => {
+                  "c" => "sharp",
+                  "b" => "flat"
                },
-            }
-         },
+               signatures => {
+                  $outbound_client_user => {"ed25519:JLAFKJWSCS" => "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"},
+               },
+            },
+            device_display_name => "Curiosity Rover"
+         }],
       };
 
       Future->needs_all(
-         $inbound_server->await_request_user_keys_query( $outbound_client_user )->then( sub {
+         $inbound_server->await_request_user_devices( $outbound_client_user )->then( sub {
             my ( $req ) = @_;
             $req->respond_json($client_user_keys);
             Future->done(1)
          }),
 
+         # First we succesfully request the remote users keys while the remote server is up.
+         # We do this once they share a room.
          matrix_create_room(
             $local_user,
             preset => "public_chat",
@@ -358,58 +360,49 @@ test "Device list doesn't change if remote server is down",
             )
          })->then( sub {
             ( $first_keys_query_body ) = @_;
-            delete $first_keys_query_body->{failures};
-            assert_deeply_eq( $first_keys_query_body, $client_user_keys, "Local user gets federation user's keys."),
+            log_if_fail Dumper $first_keys_query_body;
             Future->done(1)
          })
       )->then( sub {
-         my $respond_503_fun = sub {
-            my ( $req ) = @_;
-            $OUTPUT->diag("responding");
-            $req->respond_json({}, code => 503);
-            Future->done(1)
-         };
+         # We take the remote server 'offline' and then make the same request for
+         # the users keys. We expect no change in the keys.
          my @respond_503 = (
             $inbound_server->await_request_user_devices( $outbound_client_user )->then( sub {
                my ( $req ) = @_;
-               $OUTPUT->diag("responding");
+               log_if_fail "Responded with 503 to /user/devices request";
                $req->respond_json({}, code => 503);
                Future->done(1)
             }),
             $inbound_server->await_request_user_keys_query()->then( sub {
                my ( $req ) = @_;
-               $OUTPUT->diag("responding");
+               log_if_fail "Responded with 503 to /user/keys/query request";
                $req->respond_json({}, code => 503);
                Future->done(1)
             })
          );
-         Future->wait_any(
-            @respond_503,
-            do_request_json_for( $local_user,
-               method  => "POST",
-               uri     => "/r0/keys/query",
-               content => {
-                  device_keys => {
-                     $outbound_client_user => {}
+         do_request_json_for( $local_user,
+            method  => "POST",
+            uri     => "/r0/keys/query",
+            content => {
+               device_keys => {
+                  $outbound_client_user => {}
+               }
+            }
+         )->then( sub {
+            ( $second_keys_query_body ) = @_;
+            map {$_->cancel} @respond_503;
+            # The unsiged field is optional in the spec so we remove it from any response.
+            foreach ($first_keys_query_body, $second_keys_query_body) {
+               while (my ($user_key, $devices) = each %{$_->{ device_keys }} ) {
+                  while (my ($device_key, $values) = each %$devices) {
+                     delete $values->{ unsigned };
                   }
                }
-            )->then( sub {
-               ( $second_keys_query_body ) = @_;
-               $OUTPUT->diag("got here");
-               map {$_->cancel} @respond_503;
-               # The unsiged field is optional in the spec so we remove it from any response.
-               foreach ($first_keys_query_body, $second_keys_query_body) {
-                  while (my ($user_key, $devices) = each %{$_->{ device_keys }} ) {
-                     while (my ($device_key, $values) = each %$devices) {
-                        delete $values->{ unsigned };
-                     }
-                  }
-               };
-               $OUTPUT->diag(Dumper $first_keys_query_body);
-               $OUTPUT->diag(Dumper $second_keys_query_body);
-               assert_deeply_eq( $second_keys_query_body, $first_keys_query_body, "Query matches while federation server is down." );
-               Future->done(1)
-            })
-         )
+            };
+
+            log_if_fail (Dumper $second_keys_query_body);
+            assert_deeply_eq( $second_keys_query_body, $first_keys_query_body, "Query matches while federation server is down." );
+            Future->done(1)
+         })
       })
    };
