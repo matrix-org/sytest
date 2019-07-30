@@ -22,7 +22,11 @@ sub create_federation_server
       my ( $server ) = @_;
       my $sock = $server->read_handle;
 
-      my $server_name = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
+      # Use $BIND_HOST here instead of $sock->sockhostname because both don't
+      # always hold the same value, the federation certificate is generated for
+      # $BIND_HOST, and we need the server's hostname to match the certificate's
+      # common name.
+      my $server_name = sprintf "%s:%d", $BIND_HOST, $sock->sockport;
 
       my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
 
