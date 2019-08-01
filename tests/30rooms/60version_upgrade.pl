@@ -343,7 +343,7 @@ test "/upgrade copies important state to the new room",
          "m.room.avatar" => { url => "http://something" },
          "m.room.encryption" => { algorithm => "m.megolm.v1.aes-sha2" },
          "m.room.related_groups" => { groups => [ "+something:example.org" ] },
-         "m.room.server_acl" => { 
+         "m.room.server_acl" => {
             allow => [ "*" ],
             allow_ip_literals => "false",
             deny => [ "*.evil.com", "evil.com" ],
@@ -466,7 +466,7 @@ test "/upgrade copies push rules to the new room",
       my ( $new_room_id );
 
       matrix_add_push_rule( $creator, "global", "room", $room_id, {
-         actions => [ "notify" ] 
+         actions => [ "notify" ]
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -811,7 +811,22 @@ test "/upgrade of a bogus room fails gracefully",
       )->main::expect_matrix_error( 404, 'M_NOT_FOUND' );
    };
 
+test "Cannot send tombstone event that points to the same room",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version can_change_power_levels ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      matrix_send_room_message( $creator, $room_id,
+         type    => "m.room.tombstone",
+         content => {
+            replacement_room => $room_id,
+         }
+      )->main::expect_http_400;
+   };
+
 # upgrade with other local users
 # upgrade with remote users
-
-
