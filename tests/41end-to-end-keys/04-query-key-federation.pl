@@ -10,14 +10,8 @@ multi_test "Can query remote device keys using POST",
       ->then( sub {
          matrix_set_device_display_name( $user, $user->device_id, "test display name" ),
       })->then( sub {
-         do_request_json_for( $remote_user,
-            method  => "POST",
-            uri     => "/unstable/keys/query",
-            content => {
-               device_keys => {
-                  $user->user_id => {}
-               }
-            }
+         matrix_get_e2e_keys(
+            $remote_user, $user->user_id
          )
       })->then( sub {
          my ( $content ) = @_;

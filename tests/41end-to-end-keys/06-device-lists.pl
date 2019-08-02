@@ -197,14 +197,8 @@ test "Can query remote device keys using POST after notification",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
-         do_request_json_for( $user1,
-            method  => "POST",
-            uri     => "/unstable/keys/query",
-            content => {
-               device_keys => {
-                  $user2->user_id => {}
-               }
-            }
+         matrix_get_e2e_keys(
+            $user1, $user2->user_id => {}
          )
       })->then( sub {
          my ( $content ) = @_;
@@ -269,14 +263,8 @@ test "Device deletion propagates over federation",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
-         do_request_json_for( $user1,
-            method  => "POST",
-            uri     => "/unstable/keys/query",
-            content => {
-               device_keys => {
-                  $user2->user_id => {}
-               }
-            }
+         matrix_get_e2e_keys(
+            $user1, $user2->user_id
          )
       })->then( sub {
          my ( $content ) = @_;

@@ -29,7 +29,7 @@ test "Can upload self-signing keys",
               },
           },
       })->then( sub {
-         matrix_get_keys( $user, $user_id );
+         matrix_get_e2e_keys( $user, $user_id );
       })->then( sub {
          my ( $content ) = @_;
 
@@ -51,14 +51,13 @@ test "Can upload self-signing keys",
       });
    };
 
-test "Fails to upload self-signing keys in invalid conditions",
+test "Fails to upload self-signing keys with no auth",
    requires => [ local_user_fixture(), qw( can_upload_self_signing_keys ) ],
 
    do => sub {
       my ( $user ) = @_;
       my $user_id = $user->user_id;
 
-      # uploading key requires auth
       matrix_set_cross_signing_key( $user, {
           "master_key" => {
               # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
@@ -70,23 +69,32 @@ test "Fails to upload self-signing keys in invalid conditions",
               },
           },
       })->main::expect_http_401->then( sub {
-         # uploading a self-signing key with no master key
-         matrix_set_cross_signing_key( $user, {
-             "auth" => {
-                 "type"     => "m.login.password",
-                 "user"     => $user_id,
-                 "password" => $user->password,
-             },
-             "self_signing_key" => {
-                 # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
-                 "user_id" => $user_id,
-                 "usage" => ["self_signing"],
-                 "keys" => {
-                     "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
-                         => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
-                 },
-             },
-         });
+         Future->done( 1 );
+      });
+   };
+
+test "Fails to upload self-signing key without master key",
+   requires => [ local_user_fixture(), qw( can_upload_self_signing_keys ) ],
+
+   do => sub {
+      my ( $user ) = @_;
+      my $user_id = $user->user_id;
+
+      matrix_set_cross_signing_key( $user, {
+          "auth" => {
+              "type"     => "m.login.password",
+              "user"     => $user_id,
+              "password" => $user->password,
+          },
+          "self_signing_key" => {
+              # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
+              "user_id" => $user_id,
+              "usage" => ["self_signing"],
+              "keys" => {
+                  "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                      => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+              },
+          },
       })->main::expect_http_400->then( sub {
          Future->done( 1 );
       });
@@ -150,9 +158,7 @@ test "local master key notifies users",
       })->then( sub {
          sync_until_user_in_device_list( $user2, $user1 );
       })->then( sub {
-         matrix_upload_device_keys( $user1, {
-             "user_id" => $user_id,
-             "device_id" => $device_id,
+         matrix_put_e2e_keys( $user1, device_keys => {
              "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
              "keys" => {
                  "curve25519:".$device_id => "curve25519+key",
@@ -203,7 +209,7 @@ test "local master key notifies users",
       })->then( sub {
          sync_until_user_in_device_list( $user2, $user1 );
       })->then( sub {
-         matrix_get_keys( $user1, $user_id );
+         matrix_get_e2e_keys( $user1, $user_id );
       })->then( sub {
          my ( $content ) = @_;
 
@@ -221,7 +227,7 @@ test "local master key notifies users",
             "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ" => $cross_signature,
          } );
 
-         matrix_get_keys( $user2, $user_id );
+         matrix_get_e2e_keys( $user2, $user_id );
       })->then( sub {
          my ( $content ) = @_;
 
@@ -356,7 +362,7 @@ test "local user-signing notifies users",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
-         matrix_get_keys( $user1, $user2_id );
+         matrix_get_e2e_keys( $user1, $user2_id );
       })->then( sub {
          my ( $content ) = @_;
 
@@ -373,7 +379,7 @@ test "local user-signing notifies users",
                  => $cross_signature,
          } );
 
-         matrix_get_keys( $user2, $user2_id );
+         matrix_get_e2e_keys( $user2, $user2_id );
       })->then( sub {
          my ( $content ) = @_;
 
@@ -435,7 +441,7 @@ test "can fetch self-signing keys over federation",
       })->then( sub {
          my ( $content ) = @_;
 
-         matrix_get_keys( $user1, $user2_id );
+         matrix_get_e2e_keys( $user1, $user2_id );
       })->then( sub {
          my ( $content ) = @_;
 
@@ -489,9 +495,7 @@ test "uploading self-signing key notifies over federation",
          origin => $user2_id, key_id => "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
           );
 
-      matrix_upload_device_keys( $user2, {
-             "user_id" => $user2_id,
-             "device_id" => $user2_device,
+      matrix_put_e2e_keys( $user2, device_keys => {
              "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
              "keys" => {
                  "curve25519:".$user2_device => "curve25519+key",
@@ -535,7 +539,7 @@ test "uploading self-signing key notifies over federation",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
-         matrix_get_keys( $user1, $user2_id );
+         matrix_get_e2e_keys( $user1, $user2_id );
       })->then( sub {
          my ( $content ) = @_;
 
@@ -578,49 +582,6 @@ sub matrix_set_cross_signing_key {
    );
 }
 
-=head2 matrix_get_keys
-
-   matrix_get_keys( $user, $keys )
-
-Get a user's keys
-
-=cut
-
-sub matrix_get_keys {
-   my ( $from_user, $target_user_id ) = @_;
-
-   do_request_json_for( $from_user,
-       method  => "POST",
-       uri     => "/unstable/keys/query",
-       content => {
-          device_keys => {
-             $target_user_id => {}
-          }
-       }
-   );
-}
-
-=head2 matrix_upload_device_key
-
-   matrix_upload_device_key( $user, $keys )
-
-upload a device key
-
-=cut
-
-sub matrix_upload_device_keys {
-   my ( $user, $keys ) = @_;
-
-   do_request_json_for(
-      $user,
-      method  => "POST",
-      uri     => "/unstable/keys/upload",
-      content => {
-         device_keys => $keys,
-      }
-   );
-}
-
 =head2 matrix_upload_signatures
 
    matrix_upload_signatures( $user, $signatures )
@@ -639,4 +600,3 @@ sub matrix_upload_signatures {
       content => $signatures,
    );
 }
-

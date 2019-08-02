@@ -61,14 +61,8 @@ test "Can query device keys using POST",
    check => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method  => "POST",
-         uri     => "/unstable/keys/query",
-         content => {
-            device_keys => {
-               $user->user_id => {}
-            }
-         }
+      matrix_get_e2e_keys(
+         $user, $user->user_id
       )->then( sub {
          my ( $content ) = @_;
 
@@ -106,14 +100,8 @@ test "Can query specific device keys using POST",
 
       my $device_id = $user->device_id;
 
-      do_request_json_for( $user,
-         method  => "POST",
-         uri     => "/unstable/keys/query",
-         content => {
-            device_keys => {
-               $user->user_id => [ $device_id ]
-            }
-         }
+      matrix_get_e2e_keys(
+         $user, $user->user_id, [ $device_id ]
       )->then( sub {
          my ( $content ) = @_;
 
@@ -135,14 +123,8 @@ test "query for user with no keys returns empty key dict",
    check => sub {
       my ( $user ) = @_;
 
-      do_request_json_for( $user,
-         method  => "POST",
-         uri     => "/unstable/keys/query",
-         content => {
-            device_keys => {
-               $user->user_id => {}
-            }
-         }
+      matrix_get_e2e_keys(
+         $user, $user->user_id
       )->then( sub {
          my ( $content ) = @_;
 
@@ -162,7 +144,7 @@ test "query for user with no keys returns empty key dict",
       })
    };
 
-push our @EXPORT, qw( matrix_put_e2e_keys );
+push our @EXPORT, qw( matrix_put_e2e_keys matrix_get_e2e_keys );
 
 sub matrix_put_e2e_keys
 {
@@ -170,20 +152,40 @@ sub matrix_put_e2e_keys
    my ( $user, %params ) = @_;
 
    my $device_keys = $params{device_keys} // {};
+   $device_keys->{user_id} = $user->user_id;
+   $device_keys->{device_id} = $user->device_id;
 
    do_request_json_for( $user,
       method => "POST",
       uri    => "/unstable/keys/upload",
 
       content => {
-         device_keys => {
-            user_id => $user->user_id,
-            device_id => $user->device_id,
-            device_keys => $device_keys,
-         },
+         device_keys => $device_keys,
          one_time_keys => {
             "my_algorithm:my_id_1" => "my+base64+key",
          }
       }
-   )->then_done(1);
+   );
+}
+
+=head2 matrix_get_e2e_keys
+
+   matrix_get_e2e_keys( $user, $keys, $devices )
+
+Get a user's keys, optionally specifying the devices
+
+=cut
+
+sub matrix_get_e2e_keys {
+   my ( $from_user, $target_user_id, $devices ) = @_;
+
+   do_request_json_for( $from_user,
+       method  => "POST",
+       uri     => "/r0/keys/query",
+       content => {
+          device_keys => {
+             $target_user_id => $devices // []
+          }
+       }
+   );
 }
