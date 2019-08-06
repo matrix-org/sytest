@@ -63,7 +63,7 @@ test "/event/ on non world readable room does not work",
             method  => "GET",
             uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id ) }",
          );
-      })->main::expect_http_403;
+      })->main::expect_http_404;
    };
 
 test "/event/ does not allow access to events before the user joined",
@@ -103,7 +103,7 @@ test "/event/ does not allow access to events before the user joined",
             method  => "GET",
             uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id_1 ) }",
          );
-      })->main::expect_http_403->then( sub {
+      })->main::expect_http_404->then( sub {
          # we should be able to get the event after we joined.
          do_request_json_for( $other_user,
             method  => "GET",
