@@ -38,7 +38,7 @@ test "/event/ on joined room works",
          )->then( sub {
             my ( $body ) = @_;
 
-            assert_json_keys( $body, qw( content type room_id sender event_id unsigned ) );
+            assert_json_keys( $body, qw( content type room_id sender event_id ) );
             assert_eq( $body->{event_id}, $event_id, "event id" );
             assert_eq( $body->{room_id}, $room_id, "room id" );
             assert_eq( $body->{content}->{body}, "hello, world", "body" );
@@ -112,7 +112,7 @@ test "/event/ does not allow access to events before the user joined",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( content type room_id sender event_id unsigned ) );
+         assert_json_keys( $body, qw( content type room_id sender event_id ) );
          assert_eq( $body->{event_id}, $event_id_2, "event id" );
          assert_eq( $body->{content}->{body}, "after join", "body" );
 
