@@ -100,7 +100,7 @@ test "Fails to upload self-signing key without master key",
       });
    };
 
-test "local master key notifies users",
+test "Changing master key notifies local users",
    requires => [ local_user_fixtures( 2 ), qw( can_upload_self_signing_keys ) ],
 
    do => sub {
@@ -249,7 +249,7 @@ test "local master key notifies users",
       });
    };
 
-test "local user-signing notifies users",
+test "Changing user-signing key notifies local users",
    requires => [ local_user_fixtures( 2 ), qw( can_upload_self_signing_keys ) ],
 
    do => sub {
