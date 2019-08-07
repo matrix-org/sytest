@@ -287,6 +287,28 @@ test "Changing user-signing key notifies local users",
             $self_signing_key, secret_key => $master_secret_key,
             origin => $user_id, key_id => "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
          );
+         matrix_set_cross_signing_key( $user1, {
+             "auth" => {
+                 "type"     => "m.login.password",
+                 "user"     => $user_id,
+                 "password" => $user1->password,
+             },
+             "master_key" => {
+                 # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
+                 "user_id" => $user_id,
+                 "usage" => ["master"],
+                 "keys" => {
+                     "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                         => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+                 },
+             },
+             "self_signing_key" => $self_signing_key
+         });
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user1 );
+      })->then( sub {
+         sync_until_user_in_device_list( $user2, $user1 );
+      })->then( sub {
          my $user_signing_key = {
              # private key: 4TL4AjRYwDVwD3pqQzcor+ez/euOB1/q78aTJ+czDNs
             "user_id" => $user_id,
@@ -306,16 +328,6 @@ test "Changing user-signing key notifies local users",
                  "user"     => $user_id,
                  "password" => $user1->password,
              },
-             "master_key" => {
-                 # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
-                 "user_id" => $user_id,
-                 "usage" => ["master"],
-                 "keys" => {
-                     "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
-                         => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
-                 },
-             },
-             "self_signing_key" => $self_signing_key,
              "user_signing_key" => $user_signing_key
          });
       })->then( sub {
@@ -340,6 +352,13 @@ test "Changing user-signing key notifies local users",
       })->then( sub {
          sync_until_user_in_device_list( $user2, $user2 );
       })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail $user2 . " sync body", $body;
+
+         any { $_ eq $user1->user_id } @{ $body->{device_lists}{changed} }
+            and die "user1 in changed list after uploading user-signing key";
+
          my $cross_signed_device = {
              "user_id" => $user2_id,
              "usage" => ["master"],
