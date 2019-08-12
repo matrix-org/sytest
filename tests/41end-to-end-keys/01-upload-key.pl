@@ -157,7 +157,7 @@ sub matrix_put_e2e_keys
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/unstable/keys/upload",
+      uri    => "/r0/keys/upload",
 
       content => {
          device_keys => $device_keys,

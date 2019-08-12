@@ -68,9 +68,7 @@ test "Fails to upload self-signing keys with no auth",
                       => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
               },
           },
-      })->main::expect_http_401->then( sub {
-         Future->done( 1 );
-      });
+      })->main::expect_http_401;
    };
 
 test "Fails to upload self-signing key without master key",
@@ -95,9 +93,7 @@ test "Fails to upload self-signing key without master key",
                       => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
               },
           },
-      })->main::expect_http_400->then( sub {
-         Future->done( 1 );
-      });
+      })->main::expect_http_400;
    };
 
 test "Changing master key notifies local users",
