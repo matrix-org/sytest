@@ -576,13 +576,23 @@ sub guest_user_fixture
    })
 }
 
-push @EXPORT, qw( matrix_set_room_guest_access );
+push @EXPORT, qw( matrix_set_room_guest_access matrix_set_room_guest_access_synced );
 
 sub matrix_set_room_guest_access
 {
    my ( $user, $room_id, $guest_access ) = @_;
 
    matrix_put_room_state( $user, $room_id,
+      type    => "m.room.guest_access",
+      content => { guest_access => $guest_access }
+   );
+}
+
+sub matrix_set_room_guest_access_synced
+{
+   my ( $user, $room_id, $guest_access ) = @_;
+
+   matrix_put_room_state_synced( $user, $room_id,
       type    => "m.room.guest_access",
       content => { guest_access => $guest_access }
    );
@@ -610,7 +620,7 @@ sub matrix_get_room_membership
 }
 
 
-push @EXPORT, qw( matrix_set_room_history_visibility );
+push @EXPORT, qw( matrix_set_room_history_visibility matrix_set_room_history_visibility_synced );
 
 sub matrix_set_room_history_visibility
 {
@@ -621,6 +631,20 @@ sub matrix_set_room_history_visibility
    }
 
    matrix_put_room_state( $user, $room_id,
+      type    => "m.room.history_visibility",
+      content => { history_visibility => $history_visibility }
+   );
+}
+
+sub matrix_set_room_history_visibility_synced
+{
+   my ( $user, $room_id, $history_visibility ) = @_;
+
+   if ( $history_visibility eq 'default') {
+       return Future->done();
+   }
+
+   matrix_put_room_state_synced( $user, $room_id,
       type    => "m.room.history_visibility",
       content => { history_visibility => $history_visibility }
    );

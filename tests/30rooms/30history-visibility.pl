@@ -50,9 +50,9 @@ sub test_history_visibility
 
          matrix_set_room_history_visibility( $creator, $room_id, $visibility )
          ->then( sub {
-            matrix_set_room_guest_access($creator, $room_id, "can_join");
+            matrix_set_room_guest_access_synced($creator, $room_id, "can_join");
          })->then( sub {
-            matrix_send_room_text_message( $creator, $room_id, body => "Before join" )
+            matrix_send_room_text_message_synced( $creator, $room_id, body => "Before join" )
                ->on_done( sub { ( $before_join_event_id ) = @_ } )
          })->then( sub {
             my $rq = matrix_get_room_messages( $joiner, $room_id, limit => 10 );
@@ -69,12 +69,12 @@ sub test_history_visibility
                 $rq->followed_by( \&expect_4xx_or_empty_chunk );
              }
          })->then( sub {
-            matrix_invite_user_to_room( $creator, $joiner, $room_id );
+            matrix_invite_user_to_room_synced( $creator, $joiner, $room_id );
          })->then( sub {
-            matrix_send_room_text_message( $creator, $room_id, body => "After invite" )
+            matrix_send_room_text_message_synced( $creator, $room_id, body => "After invite" )
                ->on_done( sub { ( $after_invite_event_id ) = @_ } )
          })->then( sub {
-            matrix_join_room( $joiner, $room_id );
+            matrix_join_room_synced( $joiner, $room_id );
          })->then( sub {
             matrix_get_room_messages( $joiner, $room_id, limit => 10 )
          })->then( sub {
@@ -142,7 +142,7 @@ foreach my $i (
          ->then( sub {
             ( $room_id ) = @_;
 
-            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+            matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" );
          })->then( sub {
             matrix_initialsync_room( $nonjoined_user, $room_id )
          })->then( sub {
@@ -253,7 +253,7 @@ foreach my $i (
 
             matrix_send_room_text_message( $user, $room_id, body => "private" );
          })->then( sub {
-            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+            matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" );
          })->then( sub {
             Future->needs_all(
                matrix_send_room_text_message( $user, $room_id, body => "public" ),
@@ -283,7 +283,7 @@ foreach my $i (
       do => sub {
          my ( $user, $room_id ) = @_;
 
-         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+         matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" );
       },
 
       check => sub {
@@ -304,7 +304,7 @@ foreach my $i (
       do => sub {
          my ( $user, $room_id ) = @_;
 
-         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+         matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" );
       },
 
       check => sub {
@@ -357,7 +357,7 @@ foreach my $i (
 
             matrix_send_room_text_message( $creating_user, $room_id, body => "private" )
          })->then( sub {
-            matrix_set_room_history_visibility( $creating_user, $room_id, "world_readable" );
+            matrix_set_room_history_visibility_synced( $creating_user, $room_id, "world_readable" );
          })->then( sub {
             matrix_send_room_text_message_synced( $creating_user, $room_id, body => "public" );
          })->then( sub {
@@ -394,8 +394,8 @@ foreach my $i (
          my ( $user, $room_id, $nonjoined_user ) = @_;
 
          Future->needs_all(
-            matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
-            matrix_set_room_guest_access( $user, $room_id, "can_join" ),
+            matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" ),
+            matrix_set_room_guest_access_synced( $user, $room_id, "can_join" ),
          )->then( sub {
             matrix_join_room( $nonjoined_user, $room_id );
          })->then( sub {
@@ -417,7 +417,7 @@ foreach my $i (
       do => sub {
          my ( $user, $room_id, $nonjoined_user ) = @_;
 
-         matrix_set_room_guest_access( $user, $room_id, "can_join" )
+         matrix_set_room_guest_access_synced( $user, $room_id, "can_join" )
          ->then( sub {
             matrix_send_room_text_message( $nonjoined_user, $room_id, body => "sup" )
                ->main::expect_http_403;
@@ -432,7 +432,7 @@ foreach my $i (
          do => sub {
             my ( $user, $room_id, $joining_user ) = @_;
 
-            matrix_set_room_guest_access( $user, $room_id, "can_join" )
+            matrix_set_room_guest_access_synced( $user, $room_id, "can_join" )
             ->then( sub {
                matrix_send_room_text_message( $user, $room_id, body => "shared" );
             })->then( sub {
@@ -494,15 +494,15 @@ test "Only see history_visibility changes on boundaries",
    do => sub {
       my ( $user, $room_id, $joining_user ) = @_;
 
-      matrix_set_room_history_visibility( $user, $room_id, "joined" )
+      matrix_set_room_history_visibility_synced( $user, $room_id, "joined" )
       ->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "1" );
       })->then( sub {
-         matrix_set_room_history_visibility( $user, $room_id, "invited" )
+         matrix_set_room_history_visibility_synced( $user, $room_id, "invited" )
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "2" );
       })->then( sub {
-         matrix_set_room_history_visibility( $user, $room_id, "shared" )
+         matrix_set_room_history_visibility_synced( $user, $room_id, "shared" )
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "3" );
       })->then( sub {
@@ -540,7 +540,7 @@ test "Backfill works correctly with history visibility set to joined",
    do => sub {
       my ( $user, $room_id, $room_alias, $another_user, $remote_user, $room_alias_name ) = @_;
 
-      matrix_set_room_history_visibility( $user, $room_id, "joined" )
+      matrix_set_room_history_visibility_synced( $user, $room_id, "joined" )
       ->then( sub {
          # Send some m.room.message that the remote server will not be able to see
          repeat( sub {
