@@ -150,6 +150,21 @@ test "POST /rooms/:room_id/redact/:event_id as random user does not redact messa
       });
    };
 
+test "POST /redact disallows redaction of event in different room",
+   requires => [ local_user_and_room_fixtures(), local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $user1, $room1, $user2, $room2 ) = @_;
+
+      matrix_send_room_text_message( $user1, $room1,
+         body => "test"
+      )->then( sub {
+         my ( $event_id ) = @_;
+
+         matrix_redact_event( $user2, $room2, $event_id )
+      })->main::expect_http_400;
+   };
+
 test "Redaction of a redaction redacts the redaction reason",
    requires => [ local_user_fixtures( 2 ),
                  qw( can_send_message )],
