@@ -17,13 +17,12 @@ sub assert_is_valid_pdu {
    my ( $event ) = @_;
 
    assert_json_keys( $event, qw(
-      auth_events content depth event_id hashes origin origin_server_ts
+      auth_events content depth hashes origin origin_server_ts
       prev_events room_id sender signatures type
    ));
 
    assert_json_list( $event->{auth_events} );
    assert_json_number( $event->{depth} );
-   assert_json_string( $event->{event_id} );
    assert_json_object( $event->{hashes} );
 
    assert_json_string( $event->{origin} );
@@ -47,6 +46,9 @@ sub assert_is_valid_pdu {
    }
 
    # TODO: Check signatures and hashes
+
+   # TODO: check the event id is valid in room v1, v2, and check it is absent
+   # in room v3 and later
 }
 push our @EXPORT, qw( assert_is_valid_pdu );
 
