@@ -28,7 +28,7 @@ test "Outbound federation sends receipts",
             },
          );
 
-         $event_id = $event->{event_id};
+         $event_id = $room->id_for_event( $event );
 
          $outbound_client->send_event(
             event => $event,
