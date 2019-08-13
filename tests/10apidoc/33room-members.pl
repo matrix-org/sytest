@@ -601,21 +601,9 @@ sub local_user_and_room_fixtures
 }
 
 push @EXPORT, qw(
-   magic_local_user_and_room_fixtures matrix_join_room_synced
+   matrix_join_room_synced
    matrix_leave_room_synced matrix_invite_user_to_room_synced
 );
-
-sub magic_local_user_and_room_fixtures
-{
-   my %args = @_;
-
-   my $user_fixture = local_user_fixture();
-
-   return (
-      $user_fixture,
-      magic_room_fixture( requires_users => [ $user_fixture ], %args ),
-   );
-}
 
 sub matrix_join_room_synced
 {
