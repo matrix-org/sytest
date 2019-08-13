@@ -1,5 +1,5 @@
 test "Outbound federation sends receipts",
-   requires => [ local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+   requires => [ local_user_and_room_fixtures(),
                  federation_user_id_fixture(),
                  $main::OUTBOUND_CLIENT,
                  $main::INBOUND_SERVER,
@@ -73,7 +73,7 @@ test "Outbound federation sends receipts",
 
 test "Inbound federation rejects receipts from wrong remote",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
 
    do => sub {

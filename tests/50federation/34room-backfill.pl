@@ -194,8 +194,8 @@ test "Inbound federation can backfill events",
 
 test "Backfill checks the events requested belong to the room",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
-                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 local_user_and_room_fixtures(),
+                 local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
    do => sub {
       my ( $outbound_client, $info, $priv_creator, $priv_room_id,

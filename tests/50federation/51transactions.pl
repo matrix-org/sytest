@@ -1,6 +1,6 @@
 test "Server correctly handles transactions that break edu limits",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 local_user_and_room_fixtures(),
                  federation_user_id_fixture(), room_alias_name_fixture() ],
 
    do => sub {

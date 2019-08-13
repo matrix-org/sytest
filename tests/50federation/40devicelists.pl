@@ -1,5 +1,5 @@
 test "Local device key changes get to remote servers",
-   requires => [ local_user_fixture( room_opts => { room_version => "1" } ),
+   requires => [ local_user_fixture(),
                  $main::INBOUND_SERVER, federation_user_id_fixture(), room_alias_name_fixture() ],
 
    check => sub {
@@ -62,7 +62,7 @@ test "Local device key changes get to remote servers",
 
 
 test "Server correctly handles incoming m.device_list_update",
-   requires => [ local_user_fixture( room_opts => { room_version => "1" } ),
+   requires => [ local_user_fixture(),
                  $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
                  $main::HOMESERVER_INFO[0],  federation_user_id_fixture(),
                  room_alias_name_fixture() ],
@@ -369,7 +369,6 @@ test "Device list doesn't change if remote server is down",
       matrix_create_room(
          $local_user,
          preset => "public_chat",
-         room_version => "5",
       )->then( sub {
          my ( $room_id ) = @_;
          $outbound_client->join_room(

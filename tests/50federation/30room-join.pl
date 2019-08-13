@@ -202,7 +202,7 @@ test "Outbound federation passes make_join failures through to the client",
 
 
 
-test "Inbound federation can receive room-join requests",
+test "Inbound federation can receive v1 room-join requests",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
@@ -385,7 +385,6 @@ test "Inbound federation rejects remote attempts to kick local users to rooms",
 
       matrix_create_room(
          $creator_user,
-         room_version => "1",
       )->then( sub {
          my ( $room_id ) = @_;
 
