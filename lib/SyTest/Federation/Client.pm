@@ -191,7 +191,7 @@ sub join_room
       method   => "GET",
       hostname => $server_name,
       uri      => "/v1/make_join/$room_id/$user_id",
-      params   => { "ver" => [1, 5] },
+      params   => { "ver" => [1, 2, 3, 4, 5] },
    )->then( sub {
       my ( $body ) = @_;
 
