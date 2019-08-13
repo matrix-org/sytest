@@ -202,7 +202,7 @@ test "An event which redacts an event in a different room should be ignored",
             },
          );
 
-         $msg_event_id = $event->{event_id};
+         $msg_event_id = $room_1->id_for_event( $event );
 
          Future->needs_all(
             $outbound_client->send_event(
@@ -224,7 +224,7 @@ test "An event which redacts an event in a different room should be ignored",
             redacts  => $msg_event_id,
          );
 
-         $redaction_event_id = $event->{event_id};
+         $redaction_event_id = $room_2->id_for_event( $event );
 
          log_if_fail "Sending redaction", $event;
 
@@ -244,7 +244,7 @@ test "An event which redacts an event in a different room should be ignored",
             },
          );
 
-         my $event_id = $event->{event_id};
+         my $event_id = $room_2->id_for_event( $event );
 
          Future->needs_all(
             $outbound_client->send_event(
