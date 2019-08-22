@@ -143,7 +143,7 @@ sub on_request
          $req->respond_json( \%resp );
       }
       elsif ( "sha256" eq $algorithm ) {
-         # If using sha256, check and return hashes
+         # If using sha256, check parameters are correct and return mappings
          my @medium_address_pepper = split ' ', $address;
 
          # Check the medium, address and pepper are in the right format
@@ -179,7 +179,7 @@ sub on_request
             my $hash = sha256( "${lookup_address} email ${lookup_pepper}" );
             $hash = encode_base64url( $hash );
 
-            # Return the hash of "testuser@example.org email matrixrocks"
+            # Return the hash of "testuser@example.org email $lookup_pepper"
             $resp{mappings} = ( { $hash => '@testuser:example.org' } );
          }
 
