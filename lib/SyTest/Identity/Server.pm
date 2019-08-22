@@ -8,8 +8,10 @@ use base qw( Net::Async::HTTP::Server );
 use Crypt::NaCl::Sodium;
 use List::Util qw( any );
 use Protocol::Matrix qw( encode_base64_unpadded sign_json );
+use MIME::Base64 qw ( encode_base64url );
 use SyTest::HTTPServer::Request;
 use HTTP::Response;
+use Digest::SHA qw( sha256 );
 
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
@@ -57,6 +59,8 @@ sub on_request
 
    my $path = $req->path;
    my %resp;
+   my $lookup_pepper = "matrixrocks";
+   my $lookup_address = 'testuser@example.org';
 
    if( $path eq "/_matrix/identity/api/v1/pubkey/isvalid" ) {
       my $is_valid = any { $_ eq $req->query_param("public_key") } values %{ $self->{keys} };
@@ -90,6 +94,104 @@ sub on_request
          );
       }
       $req->respond_json( \%resp );
+   }
+   elsif( $path eq "/_matrix/identity/v2/hash_details" ) {
+      $resp{lookup_pepper} = $lookup_pepper;
+      @resp{algorithms} = ( "none" , "sha256" );
+      $req->respond_json( \%resp );
+   }
+   elsif( $path eq "/_matrix/identity/v2/lookup" ) {
+      my ( $req ) = @_;
+
+      # Parse request parameters
+      my @addresses = $req->query_param( "addresses" );
+      my $pepper = $req->query_param( "pepper" );
+      my $algorithm = $req->query_param( "algorithm" );
+      if ( !@addresses or !defined $pepper or !defined $algorithm ) {
+         $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
+         return;
+      }
+
+      # Retrieve the first passed address
+      my $address = $addresses[0];
+
+      # If using the none algorithm, check the medium is email and return
+      if ( "none" eq $algorithm ) {
+         my @address_medium = split ' ', $address;
+
+         # Check the medium and address are in the right format
+         if ( scalar( @address_medium ) ne 2 ) {
+            $resp{error} = "First address is not two strings separated by a space";
+            $resp{errcode} = "M_UNKNOWN";
+
+            $req->respond_json( \%resp, code => 400 );
+            return;
+         }
+
+         # Parse the medium and address from the string
+         my $user_address = $address_medium[0];
+         my $user_medium = $address_medium[1];
+
+         $resp{mappings} = ();
+
+         # Check the medium is "email"
+         if ( "email" eq $user_medium ) {
+            @resp{mappings} = ( { $address => '@testuser:example.org' } );
+         }
+
+         # Return the mappings
+         $req->respond_json( \%resp );
+      }
+      elsif ( "sha256" eq $algorithm ) {
+         # If using sha256, check and return hashes
+         my @medium_address_pepper = split ' ', $address;
+
+         # Check the medium, address and pepper are in the right format
+         if ( scalar( @medium_address_pepper ) ne 3 ) {
+            $resp{error} = "First address is not three strings separated by a space";
+            $resp{errcode} = "M_UNKNOWN";
+
+            $req->respond_json( \%resp, code => 400 );
+            return;
+         }
+
+         # Extract the medium, address and pepper
+         my $user_medium = $medium_address_pepper[0];
+         my $user_address = $medium_address_pepper[1];
+         my $user_pepper = $medium_address_pepper[2];
+
+         # Check that the user provided the correct pepper
+         if ( $lookup_pepper ne $user_pepper ) {
+            # Return an error message
+            $resp{error} = "Incorrect value for lookup_pepper";
+            $resp{errcode} = "M_INVALID_PEPPER";
+            $resp{algorithm} = "sha256";
+            $resp{lookup_pepper} = $lookup_pepper;
+
+            $req->respond_json( \%resp, code => 400 );
+            return;
+         }
+
+         # Check the medium is "email"
+         $resp{mappings} = ();
+         if ( "email" eq $user_medium ) {
+            # Compute the sha256, url-safe unpadded base64 hash of "<email> email <pepper>"
+            my $hash = sha256( "${lookup_address} email ${lookup_pepper}" );
+            $hash = encode_base64url( $hash );
+
+            # Return the hash of "testuser@example.org email matrixrocks"
+            $resp{mappings} = ( { $hash => '@testuser:example.org' } );
+         }
+
+         req->respond_json( \%resp );
+      }
+      else {
+         # Unknown algorithm provided
+         $resp{error} = "Unknown algorithm";
+         $resp{errcode} = "M_INVALID_PARAM";
+
+         $req->respond_json( \%resp, code => 400 );
+      }
    }
    elsif( $path eq "/_matrix/identity/api/v1/store-invite" ) {
       my $body = $req->body_from_json;
