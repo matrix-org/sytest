@@ -98,7 +98,7 @@ sub on_request
    }
    elsif( $path eq "/_matrix/identity/v2/hash_details" ) {
       $resp{lookup_pepper} = $self->{lookup_pepper};
-      @resp{algorithms} = [ "none" ];
+      @resp{algorithms} = [ "none", "sha256" ];
       $req->respond_json( \%resp );
    }
    elsif( $path eq "/_matrix/identity/v2/lookup" ) {
@@ -132,8 +132,8 @@ sub on_request
             my $user_medium = $address_medium[1];
 
             # Extract the MXID for this address/medium combo from the bindings hash
-            # We need to swap around medium and address here as it's stored "$medium $address"
-            # locally, not "$address $medium"
+            # We need to swap around medium and address here as it's stored $medium, $address
+            # locally, not $address, $medium
             my $mxid = $self->{bindings}{ join "\0", $user_medium, $user_address };
 
             $resp{mappings}{$address} = $mxid;
