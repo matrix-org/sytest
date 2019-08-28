@@ -73,7 +73,7 @@ else
     # deps.
     /venv/bin/pip install -q --upgrade --no-cache-dir -e /src
     /venv/bin/pip install -q --upgrade --no-cache-dir \
-        lxml psycopg2 coverage codecov tap.py
+        lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
 
     # Make sure all Perl deps are installed -- this is done in the docker build
     # so will only install packages added since the last Docker build
@@ -86,6 +86,8 @@ fi
 
 # Run the tests
 echo >&2 "+++ Running tests"
+
+export COVERAGE_PROCESS_START="/src/.coveragerc"
 
 RUN_TESTS=(
     perl -I "$SYTEST_LIB" ./run-tests.pl --python=/venv/bin/python --synapse-directory=/src -B "/src/$BLACKLIST" --coverage -O tap --all
@@ -114,15 +116,12 @@ mkdir -p /logs
 cp results.tap /logs/results.tap
 rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
-# Upload coverage to codecov and upload files, if running on Buildkite
-if [ -n "$BUILDKITE" ]; then
-    /venv/bin/coverage combine || true
-    /venv/bin/coverage xml -o /logs/coverage.xml || true
+/venv/bin/coverage combine || true
+/venv/bin/coverage xml -o /logs/coverage.xml || true
 
-    if [ $TEST_STATUS -ne 0 ]; then
-        # Build the annotation
-        /venv/bin/python /src/.buildkite/format_tap.py /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
-    fi
+if [ $TEST_STATUS -ne 0 ]; then
+    # Build the annotation
+    /venv/bin/python /src/.buildkite/format_tap.py /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
 fi
 
 exit $TEST_STATUS
