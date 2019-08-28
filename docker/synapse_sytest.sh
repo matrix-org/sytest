@@ -20,8 +20,7 @@ if [ -d "/sytest" ]; then
     ln -sf /sytest/keys /work
     SYTEST_LIB="/sytest/lib"
 else
-    if [ -n "BUILDKITE_BRANCH" ]
-    then
+    if [ -n "BUILDKITE_BRANCH" ]; then
         branch_name=$BUILDKITE_BRANCH
     else
         # Otherwise, try and find out what the branch that the Synapse checkout is using. Fall back to develop if it's not a branch.
@@ -44,8 +43,7 @@ fi
 cd /work
 
 # PostgreSQL setup
-if [ -n "$POSTGRES" ]
-then
+if [ -n "$POSTGRES" ]; then
     export PGUSER=postgres
     export POSTGRES_DB_1=pg1
     export POSTGRES_DB_2=pg2
@@ -87,7 +85,7 @@ if [ -z "$BLACKLIST" ]; then
 fi
 
 # Run the tests
->&2 echo "+++ Running tests"
+echo >&2 "+++ Running tests"
 
 RUN_TESTS=(
     perl -I "$SYTEST_LIB" ./run-tests.pl --python=/venv/bin/python --synapse-directory=/src -B "/src/$BLACKLIST" --coverage -O tap --all
@@ -101,41 +99,30 @@ else
     RUN_TESTS+=(-I Synapse)
 fi
 
-"${RUN_TESTS[@]}" "$@" > results.tap || TEST_STATUS=$?
+"${RUN_TESTS[@]}" "$@" >results.tap || TEST_STATUS=$?
 
 if [ $TEST_STATUS -ne 0 ]; then
-    >&2 echo -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"
+    echo >&2 -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"
 else
-    >&2 echo -e "run-tests \e[32mPASSED\e[0m"
+    echo >&2 -e "run-tests \e[32mPASSED\e[0m"
 fi
 
->&2 echo "--- Copying assets"
+echo >&2 "--- Copying assets"
 
 # Copy out the logs
 mkdir -p /logs
 cp results.tap /logs/results.tap
-rsync --ignore-missing-args  --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
 # Upload coverage to codecov and upload files, if running on Buildkite
-if [ -n "$BUILDKITE" ]
-then
+if [ -n "$BUILDKITE" ]; then
     /venv/bin/coverage combine || true
-    /venv/bin/coverage xml || true
-    /venv/bin/codecov -X gcov -f coverage.xml
-
-    wget -O buildkite.tar.gz https://github.com/buildkite/agent/releases/download/v3.13.0/buildkite-agent-linux-amd64-3.13.0.tar.gz
-    tar xvf buildkite.tar.gz
-    chmod +x ./buildkite-agent
-
-    # Upload the files
-    ./buildkite-agent artifact upload "/logs/**/*.log*"
-    ./buildkite-agent artifact upload "/logs/results.tap"
+    /venv/bin/coverage xml -o /logs/coverage.xml || true
 
     if [ $TEST_STATUS -ne 0 ]; then
-        # Annotate, if failure
-        /venv/bin/python /src/.buildkite/format_tap.py /logs/results.tap "$BUILDKITE_LABEL" | ./buildkite-agent annotate --style="error" --context="$BUILDKITE_LABEL"
+        # Build the annotation
+        /venv/bin/python /src/.buildkite/format_tap.py /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
     fi
 fi
-
 
 exit $TEST_STATUS
