@@ -30,6 +30,9 @@ sub _init
    $self->{bindings} = {};
    $self->{invites} = {};
 
+   # String for peppering hashed lookup requests
+   $self->{lookup_pepper} = "matrixrocks";
+
    # Use 'on_request' as a configured parameter rather than a subclass method
    # so that the '$CLIENT_LOG' logic in run-tests.pl can properly put
    # debug-printing wrapping logic around it.
@@ -59,8 +62,6 @@ sub on_request
 
    my $path = $req->path;
    my %resp;
-   my $lookup_pepper = "matrixrocks";
-   my $lookup_address = 'testuser@example.org';
 
    if( $path eq "/_matrix/identity/api/v1/pubkey/isvalid" ) {
       my $is_valid = any { $_ eq $req->query_param("public_key") } values %{ $self->{keys} };
@@ -81,7 +82,7 @@ sub on_request
          $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
          return;
       }
-      my $mxid = $self->{bindings}{ join "\0", $medium, $address };
+      my $mxid = $self->{bindings}{ join " ", $medium, $address };
       if ( "email" eq $medium and defined $mxid ) {
          $resp{medium} = $medium;
          $resp{address} = $address;
@@ -96,94 +97,74 @@ sub on_request
       $req->respond_json( \%resp );
    }
    elsif( $path eq "/_matrix/identity/v2/hash_details" ) {
-      $resp{lookup_pepper} = $lookup_pepper;
-      @resp{algorithms} = ( "none" , "sha256" );
+      $resp{lookup_pepper} = $self->{lookup_pepper};
+      @resp{algorithms} = [ "none", "sha256" ];
       $req->respond_json( \%resp );
    }
    elsif( $path eq "/_matrix/identity/v2/lookup" ) {
       my ( $req ) = @_;
 
       # Parse request parameters
-      my @addresses = $req->query_param( "addresses" );
-      my $pepper = $req->query_param( "pepper" );
-      my $algorithm = $req->query_param( "algorithm" );
-      if ( !@addresses or !defined $pepper or !defined $algorithm ) {
+      my $body = $req->body_from_json;
+      my $addresses = $body->{addresses};
+      my $pepper = $body->{pepper};
+      my $algorithm = $body->{algorithm};
+      if ( !$addresses or !$pepper or !$algorithm ) {
          $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
          return;
       }
 
-      # Retrieve the first passed address
-      my $address = $addresses[0];
-
-      # If using the none algorithm, check the medium is email and return
       if ( "none" eq $algorithm ) {
-         my @address_medium = split ' ', $address;
+         foreach my $address ( @$addresses ) {
+            my @address_medium = split ' ', $address;
 
-         # Check the medium and address are in the right format
-         if ( scalar( @address_medium ) ne 2 ) {
-            $resp{error} = "First address is not two strings separated by a space";
-            $resp{errcode} = "M_UNKNOWN";
+            # Check the medium and address are in the right format
+            if ( scalar( @address_medium ) ne 2 ) {
+               $resp{error} = "Address is not two strings separated by a space: ${address}";
+               $resp{errcode} = "M_UNKNOWN";
 
-            $req->respond_json( \%resp, code => 400 );
-            return;
-         }
+               $req->respond_json( \%resp, code => 400 );
+               return;
+            }
 
-         # Parse the medium and address from the string
-         my $user_address = $address_medium[0];
-         my $user_medium = $address_medium[1];
+            # Parse the medium and address from the string
+            my $user_address = $address_medium[0];
+            my $user_medium = $address_medium[1];
 
-         $resp{mappings} = ();
+            # Extract the MXID for this address/medium combo from the bindings hash
+            $resp{bindings} = $self->{bindings};
+            $resp{user_address} = $user_address;
+            $resp{user_medium} = $user_medium;
 
-         # Check the medium is "email"
-         if ( "email" eq $user_medium ) {
-            @resp{mappings} = ( { $address => '@testuser:example.org' } );
+            # We need to swap around medium and address here as it's stored "$medium $address"
+            # locally, not "$address $medium"
+            my $mxid = $self->{bindings}{ join " ", $user_medium, $user_address };
+
+            $resp{mappings}{$address} = $mxid;
          }
 
          # Return the mappings
          $req->respond_json( \%resp );
       }
       elsif ( "sha256" eq $algorithm ) {
-         # If using sha256, check parameters are correct and return mappings
-         my @medium_address_pepper = split ' ', $address;
-
-         # Check the medium, address and pepper are in the right format
-         if ( scalar( @medium_address_pepper ) ne 3 ) {
-            $resp{error} = "First address is not three strings separated by a space";
-            $resp{errcode} = "M_UNKNOWN";
-
-            $req->respond_json( \%resp, code => 400 );
-            return;
-         }
-
-         # Extract the medium, address and pepper
-         my $user_medium = $medium_address_pepper[0];
-         my $user_address = $medium_address_pepper[1];
-         my $user_pepper = $medium_address_pepper[2];
-
          # Check that the user provided the correct pepper
-         if ( $lookup_pepper ne $user_pepper ) {
+         if ( $self->{lookup_pepper} ne $pepper ) {
             # Return an error message
             $resp{error} = "Incorrect value for lookup_pepper";
             $resp{errcode} = "M_INVALID_PEPPER";
             $resp{algorithm} = "sha256";
-            $resp{lookup_pepper} = $lookup_pepper;
+            $resp{lookup_pepper} = $self->{lookup_pepper};
 
             $req->respond_json( \%resp, code => 400 );
             return;
          }
 
-         # Check the medium is "email"
-         $resp{mappings} = ();
-         if ( "email" eq $user_medium ) {
-            # Compute the sha256, url-safe unpadded base64 hash of "<email> email <pepper>"
-            my $hash = sha256( "${lookup_address} email ${lookup_pepper}" );
-            $hash = encode_base64url( $hash );
-
-            # Return the hash of "testuser@example.org email $lookup_pepper"
-            $resp{mappings} = ( { $hash => '@testuser:example.org' } );
+         # Attempt to find the hash of each entry and return the corresponding mxid
+         foreach my $hash ( @$addresses ) {
+            $resp{mappings}{$hash} = $self->{hashes}{$hash};
          }
 
-         req->respond_json( \%resp );
+         $req->respond_json( \%resp );
       }
       else {
          # Unknown algorithm provided
@@ -204,7 +185,7 @@ sub on_request
          return;
       }
       my $token = "".$next_token++;
-      my $key = join "\0", $medium, $address;
+      my $key = join " ", $medium, $address;
       push @{ $self->{invites}->{$key} }, {
          address            => $address,
          medium             => $medium,
@@ -274,12 +255,12 @@ sub on_request
       my $medium = $body->{threepid}{medium};
       my $address = $body->{threepid}{address};
 
-      unless ($self->{bindings}{ join "\0", $medium, $address } eq $mxid ) {
+      unless ($self->{bindings}{ join " ", $medium, $address } eq $mxid ) {
          $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
          return;
       }
 
-      delete($self->{bindings}{ join "\0", $medium, $address });
+      delete($self->{bindings}{ join " ", $medium, $address });
 
       $req->respond_json( \%resp );
    }
@@ -310,7 +291,7 @@ sub bind_identity
    my ( $hs_uribase, $medium, $address, $user, $before_resp ) = @_;
 
    # Correctly handle $user being either the scalar "user_id" or a ref of a User
-   # object. (We can't use is_User becuase it hasn't been defined yet).
+   # object. (We can't use is_User because it hasn't been defined yet).
    my $user_id;
    if ( ref( $user ) ne "" ) {
       $user_id = $user->user_id;
@@ -318,7 +299,13 @@ sub bind_identity
       $user_id = $user;
    }
 
-   $self->{bindings}{ join "\0", $medium, $address } = $user_id;
+   $self->{bindings}{ join " ", $medium, $address } = $user_id;
+
+   # Hash the medium, address and pepper and store it for later lookup requests
+   my $str_to_hash = $address . " " . $medium . " " . $self->{lookup_pepper};
+   my $hash = sha256( $str_to_hash );
+   $hash = encode_base64url( $hash );
+   $self->{hashes}{$hash} = $user_id;
 
    if( !defined $hs_uribase ) {
       return Future->done( 1 );
@@ -359,7 +346,7 @@ sub lookup_identity
    my $self = shift;
    my ( $medium, $address ) = @_;
 
-   my $mxid = $self->{bindings}{ join "\0", $medium, $address };
+   my $mxid = $self->{bindings}{ join " ", $medium, $address };
    if ( "email" eq $medium and defined $mxid ) {
       return $mxid;
    }
@@ -387,7 +374,7 @@ sub invites_for
    my $self = shift;
    my ( $medium, $address ) = @_;
 
-   return $self->{invites}{ join "\0", $medium, $address };
+   return $self->{invites}{ join " ", $medium, $address };
 }
 
 sub name
