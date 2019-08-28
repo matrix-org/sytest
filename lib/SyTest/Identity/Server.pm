@@ -82,7 +82,7 @@ sub on_request
          $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
          return;
       }
-      my $mxid = $self->{bindings}{ join " ", $medium, $address };
+      my $mxid = $self->{bindings}{ join "\0", $medium, $address };
       if ( "email" eq $medium and defined $mxid ) {
          $resp{medium} = $medium;
          $resp{address} = $address;
@@ -98,7 +98,7 @@ sub on_request
    }
    elsif( $path eq "/_matrix/identity/v2/hash_details" ) {
       $resp{lookup_pepper} = $self->{lookup_pepper};
-      @resp{algorithms} = [ "none", "sha256" ];
+      @resp{algorithms} = [ "none" ];
       $req->respond_json( \%resp );
    }
    elsif( $path eq "/_matrix/identity/v2/lookup" ) {
@@ -132,13 +132,9 @@ sub on_request
             my $user_medium = $address_medium[1];
 
             # Extract the MXID for this address/medium combo from the bindings hash
-            $resp{bindings} = $self->{bindings};
-            $resp{user_address} = $user_address;
-            $resp{user_medium} = $user_medium;
-
             # We need to swap around medium and address here as it's stored "$medium $address"
             # locally, not "$address $medium"
-            my $mxid = $self->{bindings}{ join " ", $user_medium, $user_address };
+            my $mxid = $self->{bindings}{ join "\0", $user_medium, $user_address };
 
             $resp{mappings}{$address} = $mxid;
          }
@@ -185,7 +181,7 @@ sub on_request
          return;
       }
       my $token = "".$next_token++;
-      my $key = join " ", $medium, $address;
+      my $key = join "\0", $medium, $address;
       push @{ $self->{invites}->{$key} }, {
          address            => $address,
          medium             => $medium,
@@ -255,12 +251,12 @@ sub on_request
       my $medium = $body->{threepid}{medium};
       my $address = $body->{threepid}{address};
 
-      unless ($self->{bindings}{ join " ", $medium, $address } eq $mxid ) {
+      unless ($self->{bindings}{ join "\0", $medium, $address } eq $mxid ) {
          $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
          return;
       }
 
-      delete($self->{bindings}{ join " ", $medium, $address });
+      delete($self->{bindings}{ join "\0", $medium, $address });
 
       $req->respond_json( \%resp );
    }
@@ -299,7 +295,7 @@ sub bind_identity
       $user_id = $user;
    }
 
-   $self->{bindings}{ join " ", $medium, $address } = $user_id;
+   $self->{bindings}{ join "\0", $medium, $address } = $user_id;
 
    # Hash the medium, address and pepper and store it for later lookup requests
    my $str_to_hash = $address . " " . $medium . " " . $self->{lookup_pepper};
@@ -346,7 +342,7 @@ sub lookup_identity
    my $self = shift;
    my ( $medium, $address ) = @_;
 
-   my $mxid = $self->{bindings}{ join " ", $medium, $address };
+   my $mxid = $self->{bindings}{ join "\0", $medium, $address };
    if ( "email" eq $medium and defined $mxid ) {
       return $mxid;
    }
@@ -374,7 +370,7 @@ sub invites_for
    my $self = shift;
    my ( $medium, $address ) = @_;
 
-   return $self->{invites}{ join " ", $medium, $address };
+   return $self->{invites}{ join "\0", $medium, $address };
 }
 
 sub name
