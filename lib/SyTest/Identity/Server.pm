@@ -8,8 +8,10 @@ use base qw( Net::Async::HTTP::Server );
 use Crypt::NaCl::Sodium;
 use List::Util qw( any );
 use Protocol::Matrix qw( encode_base64_unpadded sign_json );
+use MIME::Base64 qw ( encode_base64url );
 use SyTest::HTTPServer::Request;
 use HTTP::Response;
+use Digest::SHA qw( sha256 );
 
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
@@ -27,6 +29,9 @@ sub _init
 
    $self->{bindings} = {};
    $self->{invites} = {};
+
+   # String for peppering hashed lookup requests
+   $self->{lookup_pepper} = "matrixrocks";
 
    # Use 'on_request' as a configured parameter rather than a subclass method
    # so that the '$CLIENT_LOG' logic in run-tests.pl can properly put
@@ -90,6 +95,80 @@ sub on_request
          );
       }
       $req->respond_json( \%resp );
+   }
+   elsif( $path eq "/_matrix/identity/v2/hash_details" ) {
+      $resp{lookup_pepper} = $self->{lookup_pepper};
+      @resp{algorithms} = [ "none", "sha256" ];
+      $req->respond_json( \%resp );
+   }
+   elsif( $path eq "/_matrix/identity/v2/lookup" ) {
+      my ( $req ) = @_;
+
+      # Parse request parameters
+      my $body = $req->body_from_json;
+      my $addresses = $body->{addresses};
+      my $pepper = $body->{pepper};
+      my $algorithm = $body->{algorithm};
+      if ( !$addresses or !$pepper or !$algorithm ) {
+         $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
+         return;
+      }
+
+      if ( "none" eq $algorithm ) {
+         foreach my $address ( @$addresses ) {
+            my @address_medium = split ' ', $address;
+
+            # Check the medium and address are in the right format
+            if ( scalar( @address_medium ) ne 2 ) {
+               $resp{error} = "Address is not two strings separated by a space: ${address}";
+               $resp{errcode} = "M_UNKNOWN";
+
+               $req->respond_json( \%resp, code => 400 );
+               return;
+            }
+
+            # Parse the medium and address from the string
+            my $user_address = $address_medium[0];
+            my $user_medium = $address_medium[1];
+
+            # Extract the MXID for this address/medium combo from the bindings hash
+            # We need to swap around medium and address here as it's stored $medium, $address
+            # locally, not $address, $medium
+            my $mxid = $self->{bindings}{ join "\0", $user_medium, $user_address };
+
+            $resp{mappings}{$address} = $mxid;
+         }
+
+         # Return the mappings
+         $req->respond_json( \%resp );
+      }
+      elsif ( "sha256" eq $algorithm ) {
+         # Check that the user provided the correct pepper
+         if ( $self->{lookup_pepper} ne $pepper ) {
+            # Return an error message
+            $resp{error} = "Incorrect value for lookup_pepper";
+            $resp{errcode} = "M_INVALID_PEPPER";
+            $resp{algorithm} = "sha256";
+            $resp{lookup_pepper} = $self->{lookup_pepper};
+
+            $req->respond_json( \%resp, code => 400 );
+            return;
+         }
+
+         # Attempt to find the hash of each entry and return the corresponding mxid
+         foreach my $hash ( @$addresses ) {
+            $resp{mappings}{$hash} = $self->{hashes}{$hash};
+         }
+
+         $req->respond_json( \%resp );
+      }
+      else {
+         # Unknown algorithm provided
+         $resp{error} = "Unknown algorithm";
+         $resp{errcode} = "M_INVALID_PARAM";
+
+         $req->respond_json( \%resp, code => 400 );
+      }
    }
    elsif( $path eq "/_matrix/identity/api/v1/store-invite" ) {
       my $body = $req->body_from_json;
@@ -208,7 +287,7 @@ sub bind_identity
    my ( $hs_uribase, $medium, $address, $user, $before_resp ) = @_;
 
    # Correctly handle $user being either the scalar "user_id" or a ref of a User
-   # object. (We can't use is_User becuase it hasn't been defined yet).
+   # object. (We can't use is_User because it hasn't been defined yet).
    my $user_id;
    if ( ref( $user ) ne "" ) {
       $user_id = $user->user_id;
@@ -217,6 +296,12 @@ sub bind_identity
    }
 
    $self->{bindings}{ join "\0", $medium, $address } = $user_id;
+
+   # Hash the medium, address and pepper and store it for later lookup requests
+   my $str_to_hash = $address . " " . $medium . " " . $self->{lookup_pepper};
+   my $hash = sha256( $str_to_hash );
+   $hash = encode_base64url( $hash );
+   $self->{hashes}{$hash} = $user_id;
 
    if( !defined $hs_uribase ) {
       return Future->done( 1 );
