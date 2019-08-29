@@ -17,6 +17,8 @@ my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 my $next_token = 0;
 
+my $id_access_token = "testing";
+
 sub _init
 {
    my $self = shift;
@@ -62,208 +64,112 @@ sub on_request
 
    my $path = $req->path;
    my %resp;
+   my $key_name;
 
-   if( $path eq "/_matrix/identity/api/v1/pubkey/isvalid" ) {
-      my $is_valid = any { $_ eq $req->query_param("public_key") } values %{ $self->{keys} };
-      $resp{valid} = $is_valid ? JSON::true : JSON::false;
-      $req->respond_json( \%resp );
+   if(
+      $path eq "/_matrix/identity/api/v1/pubkey/isvalid" or
+      $path eq "/_matrix/identity/v2/pubkey/isvalid"
+   ) {
+      is_valid( $self, $req );
    }
-   elsif( my ( $key_name ) = $path =~ m#^/_matrix/identity/api/v1/pubkey/([^/]*)$# ) {
-      if( defined $self->{keys}->{$key_name} ) {
-         $resp{public_key} = $self->{keys}{$key_name};
-      }
-      $req->respond_json( \%resp );
+   elsif( $key_name = $path =~ m#^/_matrix/identity/api/v1/pubkey/([^/]*)$# ) {
+      pubkey( $self, $req, $key_name );
+   }
+   elsif( $key_name = $path =~ m#^/_matrix/identity/v2/pubkey/([^/]*)$# ) {
+      check_v2( $req );
+      pubkey( $self, $req, $key_name );
    }
    elsif( $path eq "/_matrix/identity/api/v1/lookup" ) {
-      my ( $req ) = @_;
-      my $medium = $req->query_param( "medium" );
-      my $address = $req->query_param( "address" );
-      if ( !defined $medium or !defined $address ) {
-         $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
-         return;
-      }
-      my $mxid = $self->{bindings}{ join "\0", $medium, $address };
-      if ( "email" eq $medium and defined $mxid ) {
-         $resp{medium} = $medium;
-         $resp{address} = $address;
-         $resp{mxid} = $mxid;
-
-         sign_json( \%resp,
-            secret_key => $self->{private_key},
-            origin     => $self->name,
-            key_id     => "ed25519:0",
-         );
-      }
-      $req->respond_json( \%resp );
-   }
-   elsif( $path eq "/_matrix/identity/v2/hash_details" ) {
-      $resp{lookup_pepper} = $self->{lookup_pepper};
-      @resp{algorithms} = [ "none", "sha256" ];
-      $req->respond_json( \%resp );
+      v1_lookup( $req );
    }
    elsif( $path eq "/_matrix/identity/v2/lookup" ) {
-      my ( $req ) = @_;
-
-      # Parse request parameters
-      my $body = $req->body_from_json;
-      my $addresses = $body->{addresses};
-      my $pepper = $body->{pepper};
-      my $algorithm = $body->{algorithm};
-      if ( !$addresses or !$pepper or !$algorithm ) {
-         $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
-         return;
-      }
-
-      if ( "none" eq $algorithm ) {
-         foreach my $address ( @$addresses ) {
-            my @address_medium = split ' ', $address;
-
-            # Check the medium and address are in the right format
-            if ( scalar( @address_medium ) ne 2 ) {
-               $resp{error} = "Address is not two strings separated by a space: ${address}";
-               $resp{errcode} = "M_UNKNOWN";
-
-               $req->respond_json( \%resp, code => 400 );
-               return;
-            }
-
-            # Parse the medium and address from the string
-            my $user_address = $address_medium[0];
-            my $user_medium = $address_medium[1];
-
-            # Extract the MXID for this address/medium combo from the bindings hash
-            # We need to swap around medium and address here as it's stored $medium, $address
-            # locally, not $address, $medium
-            my $mxid = $self->{bindings}{ join "\0", $user_medium, $user_address };
-
-            $resp{mappings}{$address} = $mxid;
-         }
-
-         # Return the mappings
-         $req->respond_json( \%resp );
-      }
-      elsif ( "sha256" eq $algorithm ) {
-         # Check that the user provided the correct pepper
-         if ( $self->{lookup_pepper} ne $pepper ) {
-            # Return an error message
-            $resp{error} = "Incorrect value for lookup_pepper";
-            $resp{errcode} = "M_INVALID_PEPPER";
-            $resp{algorithm} = "sha256";
-            $resp{lookup_pepper} = $self->{lookup_pepper};
-
-            $req->respond_json( \%resp, code => 400 );
-            return;
-         }
-
-         # Attempt to find the hash of each entry and return the corresponding mxid
-         foreach my $hash ( @$addresses ) {
-            $resp{mappings}{$hash} = $self->{hashes}{$hash};
-         }
-
-         $req->respond_json( \%resp );
-      }
-      else {
-         # Unknown algorithm provided
-         $resp{error} = "Unknown algorithm";
-         $resp{errcode} = "M_INVALID_PARAM";
-
-         $req->respond_json( \%resp, code => 400 );
-      }
+      check_v2( $req );
+      v2_lookup( $self, $req );
+   }
+   elsif( $path eq "/_matrix/identity/v2/hash_details" ) {
+      check_v2( $req );
+      hash_details( $self, $req );
    }
    elsif( $path eq "/_matrix/identity/api/v1/store-invite" ) {
-      my $body = $req->body_from_json;
-      my $medium = $body->{medium};
-      my $address = $body->{address};
-      my $sender = $body->{sender};
-      my $room_id = $body->{room_id};
-      unless( ( defined $body->{medium} and defined $address and defined $sender and defined $room_id ) ) {
-         $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
-         return;
-      }
-      my $token = "".$next_token++;
-      my $key = join "\0", $medium, $address;
-      push @{ $self->{invites}->{$key} }, {
-         address            => $address,
-         medium             => $medium,
-         room_id            => $room_id,
-         sender             => $sender,
-         token              => $token,
-         guest_access_token => $body->{guest_access_token},
-      };
-      $resp{token} = $token;
-      $resp{display_name} = "Bob";
-      $resp{public_key} = $self->{keys}{"ed25519:0"};
-
-      my $key_validity_url = "https://" . $self->name . "/_matrix/identity/api/v1/pubkey/isvalid";
-
-      $resp{public_keys} = [
-         {
-            public_key => $self->{keys}{"ed25519:0"},
-            key_validity_url => $key_validity_url,
-         },
-         {
-            public_key => $self->{keys}{"ed25519:ephemeral"},
-            key_validity_url => $key_validity_url,
-         },
-      ];
-      $req->respond_json( \%resp );
+      store_invite( $self, $req );
+   }
+   elsif( $path eq "/_matrix/identity/v2/store-invite" ) {
+      check_v2( $req );
+      store_invite( $self, $req );
    }
    elsif( $path eq "/_matrix/identity/api/v1/3pid/getValidated3pid" ) {
-      my $sid = $req->query_param( "sid" );
-      unless( defined $sid and defined $self->{validated}{$sid} ) {
-         $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
-         return;
-      }
-      $resp{medium} = $self->{validated}{$sid}{medium};
-      $resp{address} = $self->{validated}{$sid}{address};
-      $resp{validated_at} = 0;
-      $req->respond_json( \%resp );
+      get_validated_3pid( $self, $req );
+   }
+   elsif( $path eq "/_matrix/identity/v2/3pid/getValidated3pid" ) {
+      check_v2( $req );
+      get_validated_3pid( $self, $req );
    }
    elsif ( $path eq "/_matrix/identity/api/v1/3pid/bind" ) {
-      my $body = $req->body_from_json;
-      my $sid = $body->{sid};
-      my $mxid = $body->{mxid};
-
-      my $medium = $self->{validated}{$sid}{medium};
-      my $address = $self->{validated}{$sid}{address};
-
-      $self->bind_identity( undef, $medium, $address, $mxid );
-
-      $resp{medium} = $medium;
-      $resp{address} = $address;
-      $resp{mxid} = $mxid;
-      $resp{not_before} = 0;
-      $resp{not_after} = 4582425849161;
-      $resp{ts} = 0;
-
-      sign_json( \%resp,
-         secret_key => $self->{private_key},
-         origin     => $self->name,
-         key_id     => "ed25519:0",
-      );
-
-      $req->respond_json( \%resp );
+      do_bind( $self, $req );
    }
-   elsif ( $path eq "/_matrix/identity/api/v1/3pid/unbind" ) {
-      my $body = $req->body_from_json;
-      my $mxid = $body->{mxid};
-
-      my $medium = $body->{threepid}{medium};
-      my $address = $body->{threepid}{address};
-
-      unless ($self->{bindings}{ join "\0", $medium, $address } eq $mxid ) {
-         $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
-         return;
-      }
-
-      delete($self->{bindings}{ join "\0", $medium, $address });
-
-      $req->respond_json( \%resp );
+   elsif ( $path eq "/_matrix/identity/v2/3pid/bind" ) {
+      check_v2( $req );
+      do_bind( $self, $req );
+   }
+   elsif (  # v2 /unbind does not require an id_access_token param
+      $path eq "/_matrix/identity/v2/3pid/unbind" or
+      $path eq "/_matrix/identity/api/v1/3pid/unbind"
+   ) {
+      unbind( $self, $req );
    }
    else {
       warn "Unexpected request to Identity Service for $path";
       $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
    }
+}
+
+sub check_v2
+{
+   # Check that either an id_access_token query parameter or JSON body key exists in the req
+   my ( $req ) = @_;
+   my %resp;
+
+   if (
+      $req->query_param("id_access_token") and
+      $req->query_param("id_access_token") eq $id_access_token
+   ) {
+      # We found it!
+      return
+   }
+
+   # Check the JSON body for the token. This isn't required for all endpoints so only try if
+   # the request has a body
+   my $found = 0;
+   eval {
+      # We use an eval in case this request doesn't have a JSON body
+      my $body = $req->body_from_json;
+      if (
+         $body->{id_access_token} and
+         $body->{id_access_token} eq $id_access_token
+      ) {
+         # We found it!
+         $found = 1;
+      }
+   };
+
+
+   # Couldn't find an access token
+   if ( !$found ) {
+      $resp{error} = "Missing id_access_token parameter";
+      $resp{errcode} = "M_MISSING_PARAM";
+      $req->respond_json( \%resp, code => 400 );
+   }
+}
+
+sub is_valid
+{
+   my $self = shift;
+   my ( $req ) = @_;
+   my %resp;
+
+   my $valid = any { $_ eq $req->query_param("public_key") } values %{ $self->{keys} };
+   $resp{valid} = $valid ? JSON::true : JSON::false;
+   $req->respond_json( \%resp );
 }
 
 sub validate_identity
@@ -279,6 +185,245 @@ sub validate_identity
    };
 
    return $sid;
+}
+
+sub pubkey
+{
+   my $self = shift;
+   my ( $req, $key_name ) = @_;
+   my %resp;
+
+   if( defined $self->{keys}->{$key_name} ) {
+      $resp{public_key} = $self->{keys}{$key_name};
+   }
+   $req->respond_json( \%resp );
+}
+
+sub v1_lookup
+{
+   my $self = shift;
+   my ( $req ) = @_;
+   my %resp;
+
+   my $medium = $req->query_param( "medium" );
+   my $address = $req->query_param( "address" );
+   if ( !defined $medium or !defined $address ) {
+      $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
+      return;
+   }
+   my $mxid = $self->{bindings}{ join "\0", $medium, $address };
+   if ( "email" eq $medium and defined $mxid ) {
+      $resp{medium} = $medium;
+      $resp{address} = $address;
+      $resp{mxid} = $mxid;
+
+      sign_json( \%resp,
+         secret_key => $self->{private_key},
+         origin     => $self->name,
+         key_id     => "ed25519:0",
+      );
+   }
+   $req->respond_json( \%resp );
+}
+
+sub hash_details
+{
+   my $self = shift;
+   my ( $req ) = @_;
+   my %resp;
+
+   $resp{lookup_pepper} = $self->{lookup_pepper};
+   @resp{algorithms} = [ "none", "sha256" ];
+   $req->respond_json( \%resp );
+}
+
+sub v2_lookup
+{
+   my $self = shift;
+   my ( $req ) = @_;
+   my %resp;
+
+   # Parse request parameters
+   my $body = $req->body_from_json;
+   my $addresses = $body->{addresses};
+   my $pepper = $body->{pepper};
+   my $algorithm = $body->{algorithm};
+   if ( !$addresses or !$pepper or !$algorithm ) {
+      $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
+      return;
+   }
+
+   if ( "none" eq $algorithm ) {
+      foreach my $address ( @$addresses ) {
+         my @address_medium = split ' ', $address;
+
+         # Check the medium and address are in the right format
+         if ( scalar( @address_medium ) ne 2 ) {
+            $resp{error} = "Address is not two strings separated by a space: ${address}";
+            $resp{errcode} = "M_UNKNOWN";
+
+            $req->respond_json( \%resp, code => 400 );
+            return;
+         }
+
+         # Parse the medium and address from the string
+         my $user_address = $address_medium[0];
+         my $user_medium = $address_medium[1];
+
+         # Extract the MXID for this address/medium combo from the bindings hash
+         # We need to swap around medium and address here as it's stored $medium, $address
+         # locally, not $address, $medium
+         my $mxid = $self->{bindings}{ join "\0", $user_medium, $user_address };
+
+         $resp{mappings}{$address} = $mxid;
+      }
+
+      # Return the mappings
+      $req->respond_json( \%resp );
+   }
+   elsif ( "sha256" eq $algorithm ) {
+      # Check that the user provided the correct pepper
+      if ( $self->{lookup_pepper} ne $pepper ) {
+         # Return an error message
+         $resp{error} = "Incorrect value for lookup_pepper";
+         $resp{errcode} = "M_INVALID_PEPPER";
+         $resp{algorithm} = "sha256";
+         $resp{lookup_pepper} = $self->{lookup_pepper};
+
+         $req->respond_json( \%resp, code => 400 );
+         return;
+      }
+
+      # Attempt to find the hash of each entry and return the corresponding mxid
+      foreach my $hash ( @$addresses ) {
+         $resp{mappings}{$hash} = $self->{hashes}{$hash};
+      }
+
+      $req->respond_json( \%resp );
+   }
+   else {
+      # Unknown algorithm provided
+      $resp{error} = "Unknown algorithm";
+      $resp{errcode} = "M_INVALID_PARAM";
+
+      $req->respond_json( \%resp, code => 400 );
+   }
+}
+
+sub store_invite
+{
+   my $self = shift;
+   my ( $req ) = @_;
+   my %resp;
+
+   my $body = $req->body_from_json;
+   my $medium = $body->{medium};
+   my $address = $body->{address};
+   my $sender = $body->{sender};
+   my $room_id = $body->{room_id};
+   unless( ( defined $body->{medium} and defined $address and defined $sender and defined $room_id ) ) {
+      $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
+      return;
+   }
+   my $token = "".$next_token++;
+   my $key = join "\0", $medium, $address;
+   push @{ $self->{invites}->{$key} }, {
+      address            => $address,
+      medium             => $medium,
+      room_id            => $room_id,
+      sender             => $sender,
+      token              => $token,
+      guest_access_token => $body->{guest_access_token},
+   };
+   $resp{token} = $token;
+   $resp{display_name} = "Bob";
+   $resp{public_key} = $self->{keys}{"ed25519:0"};
+
+   my $key_validity_url = "https://" . $self->name . "/_matrix/identity/v2/pubkey/isvalid";
+
+   $resp{public_keys} = [
+      {
+         public_key => $self->{keys}{"ed25519:0"},
+         key_validity_url => $key_validity_url,
+      },
+      {
+         public_key => $self->{keys}{"ed25519:ephemeral"},
+         key_validity_url => $key_validity_url,
+      },
+   ];
+
+   $req->respond_json( \%resp );
+}
+
+sub get_validated_3pid
+{
+   my $self = shift;
+   my ( $req ) = @_;
+   my %resp;
+
+   my $sid = $req->query_param( "sid" );
+   unless( defined $sid and defined $self->{validated}{$sid} ) {
+      $req->respond( HTTP::Response->new( 400, "Bad Request", [ Content_Length => 0 ] ) );
+      return;
+   }
+   $resp{medium} = $self->{validated}{$sid}{medium};
+   $resp{address} = $self->{validated}{$sid}{address};
+   $resp{validated_at} = 0;
+   $req->respond_json( \%resp );
+}
+
+# bind is a reserved method name
+sub do_bind
+{
+   my $self = shift;
+   my ( $req ) = @_;
+   my %resp;
+
+   my $body = $req->body_from_json;
+   my $sid = $body->{sid};
+   my $mxid = $body->{mxid};
+
+   my $medium = $self->{validated}{$sid}{medium};
+   my $address = $self->{validated}{$sid}{address};
+
+   $self->bind_identity( undef, $medium, $address, $mxid );
+
+   $resp{medium} = $medium;
+   $resp{address} = $address;
+   $resp{mxid} = $mxid;
+   $resp{not_before} = 0;
+   $resp{not_after} = 4582425849161;
+   $resp{ts} = 0;
+
+   sign_json( \%resp,
+      secret_key => $self->{private_key},
+      origin     => $self->name,
+      key_id     => "ed25519:0",
+   );
+
+   $req->respond_json( \%resp );
+}
+
+sub unbind
+{
+   my $self = shift;
+   my ( $req ) = @_;
+   my %resp;
+
+   my $body = $req->body_from_json;
+   my $mxid = $body->{mxid};
+
+   my $medium = $body->{threepid}{medium};
+   my $address = $body->{threepid}{address};
+
+   unless ($self->{bindings}{ join "\0", $medium, $address } eq $mxid ) {
+      $req->respond( HTTP::Response->new( 404, "Not Found", [ Content_Length => 0 ] ) );
+      return;
+   }
+
+   delete($self->{bindings}{ join "\0", $medium, $address });
+
+   $req->respond_json( \%resp );
 }
 
 sub bind_identity
