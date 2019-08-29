@@ -116,8 +116,9 @@ mkdir -p /logs
 cp results.tap /logs/results.tap
 rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
-/venv/bin/coverage combine || true
-/venv/bin/coverage xml -o /logs/coverage.xml || true
+cd /src
+export TOP=/src
+/venv/bin/coverage combine
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
