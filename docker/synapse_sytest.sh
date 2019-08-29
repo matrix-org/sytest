@@ -115,6 +115,7 @@ echo >&2 "--- Copying assets"
 mkdir -p /logs
 cp results.tap /logs/results.tap
 rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+cp /.coverage.* /src || true
 
 cd /src
 export TOP=/src
