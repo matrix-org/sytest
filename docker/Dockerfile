@@ -46,3 +46,7 @@ RUN cpan XML::Generator
 
 # /logs is where we should expect logs to end up
 RUN mkdir /logs
+
+# Add the bootstrap file.
+ADD docker/bootstrap.sh /bootstrap.sh
+RUN dos2unix /bootstrap.sh

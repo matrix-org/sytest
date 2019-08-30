@@ -1,46 +1,10 @@
 #!/bin/bash
 #
-# Fetch sytest, and then run the tests for synapse. The entrypoint for the
-# sytest-synapse docker images.
+# Run the sytests.
 
 set -ex
 
-# Attempt to find a sytest to use.
-# If /sytest exists, it means that a SyTest checkout has been mounted into the Docker image.
-if [ -d "/sytest" ]; then
-    # If the user has mounted in a SyTest checkout, use that.
-    echo "Using local sytests..."
-
-    # create ourselves a working directory and dos2unix some scripts therein
-    mkdir -p /work/docker
-    for i in install-deps.pl run-tests.pl tap-to-junit-xml.pl docker/prep_sytest_for_postgres.sh; do
-        dos2unix -n "/sytest/$i" "/work/$i"
-    done
-    ln -sf /sytest/tests /work
-    ln -sf /sytest/keys /work
-    SYTEST_LIB="/sytest/lib"
-else
-    if [ -n "BUILDKITE_BRANCH" ]; then
-        branch_name=$BUILDKITE_BRANCH
-    else
-        # Otherwise, try and find out what the branch that the Synapse checkout is using. Fall back to develop if it's not a branch.
-        branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
-    fi
-
-    # Try and fetch the branch
-    echo "Trying to get same-named sytest branch..."
-    wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
-        # Probably a 404, fall back to develop
-        echo "Using develop instead..."
-        wget -q https://github.com/matrix-org/sytest/archive/develop.tar.gz -O sytest.tar.gz
-    }
-
-    mkdir -p /work
-    tar -C /work --strip-components=1 -xf sytest.tar.gz
-    SYTEST_LIB="/work/lib"
-fi
-
-cd /work
+cd /sytest
 
 # PostgreSQL setup
 if [ -n "$POSTGRES" ]; then
@@ -52,6 +16,7 @@ if [ -n "$POSTGRES" ]; then
     su -c 'eatmydata /usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/lib/postgresql/data start' postgres
 
     # Write out the configuration for a PostgreSQL using Synapse
+    dos2unix docker/prep_sytest_for_postgres.sh
     docker/prep_sytest_for_postgres.sh
 
     # Make the test databases for the two Synapse servers that will be spun up
