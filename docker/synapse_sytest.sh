@@ -16,7 +16,8 @@ if [ -n "$POSTGRES" ]; then
     su -c 'eatmydata /usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/lib/postgresql/data start' postgres
 
     # Write out the configuration for a PostgreSQL using Synapse
-    cat docker/prep_sytest_for_postgres.sh | dos2unix | bash -x
+    dos2unix docker/prep_sytest_for_postgres.sh
+    docker/prep_sytest_for_postgres.sh
 
     # Make the test databases for the two Synapse servers that will be spun up
     su -c 'psql -c "CREATE DATABASE pg1;"' postgres
