@@ -2,8 +2,9 @@
 
 set -ex
 
+cd /sytest
+
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
-dos2unix ./install-deps.pl
 ./install-deps.pl
 
 # Start the database
