@@ -35,7 +35,7 @@ TEST_STATUS=0
 # Copy out the logs
 mkdir -p /logs
 cp results.tap /logs/results.tap
-rsync --ignore-missing-args -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
 # Write out JUnit for CircleCI
 mkdir -p /logs/sytest
