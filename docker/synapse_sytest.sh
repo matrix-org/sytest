@@ -12,8 +12,8 @@ if [ -d "/sytest" ]; then
     echo "Using local sytests..."
 
     # create ourselves a working directory and dos2unix some scripts therein
-    mkdir -p /work/jenkins
-    for i in install-deps.pl run-tests.pl tap-to-junit-xml.pl jenkins/prep_sytest_for_postgres.sh; do
+    mkdir -p /work/docker
+    for i in install-deps.pl run-tests.pl tap-to-junit-xml.pl docker/prep_sytest_for_postgres.sh; do
         dos2unix -n "/sytest/$i" "/work/$i"
     done
     ln -sf /sytest/tests /work
@@ -51,8 +51,8 @@ if [ -n "$POSTGRES" ]; then
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/lib/postgresql/data start' postgres
 
-    # Use the Jenkins script to write out the configuration for a PostgreSQL using Synapse
-    jenkins/prep_sytest_for_postgres.sh
+    # Write out the configuration for a PostgreSQL using Synapse
+    docker/prep_sytest_for_postgres.sh
 
     # Make the test databases for the two Synapse servers that will be spun up
     su -c 'psql -c "CREATE DATABASE pg1;"' postgres
