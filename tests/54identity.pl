@@ -7,6 +7,7 @@ test "Can bind 3PID via home server",
       my $medium = "email";
       my $address = 'bob@example.com';
       my $client_secret = "a client secret";
+      my $id_access_token = "testing";
 
       my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
 
@@ -15,9 +16,10 @@ test "Can bind 3PID via home server",
          uri    => "/r0/account/3pid",
          content => {
             three_pid_creds => {
-               id_server     => $id_server->name,
-               sid           => $sid,
-               client_secret => $client_secret,
+               id_server       => $id_server->name,
+               id_access_token => $id_access_token,
+               sid             => $sid,
+               client_secret   => $client_secret,
             },
             bind => JSON::true,
          },
@@ -40,6 +42,7 @@ test "Can bind and unbind 3PID via homeserver",
       my $medium = "email";
       my $address = 'bob@example.com';
       my $client_secret = "a client secret";
+      my $id_access_token = "testing";
 
       my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
 
@@ -48,9 +51,10 @@ test "Can bind and unbind 3PID via homeserver",
          uri    => "/r0/account/3pid",
          content => {
             three_pid_creds => {
-               id_server     => $id_server->name,
-               sid           => $sid,
-               client_secret => $client_secret,
+               id_server       => $id_server->name,
+               id_access_token => $id_access_token,
+               sid             => $sid,
+               client_secret   => $client_secret,
             },
             bind => JSON::true,
          },
@@ -115,6 +119,7 @@ test "3PIDs are unbound after account deactivation",
       my $medium = "email";
       my $address = 'bob@example.com';
       my $client_secret = "a client secret";
+      my $id_access_token = "testing";
 
       my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
 
@@ -123,9 +128,10 @@ test "3PIDs are unbound after account deactivation",
          uri    => "/r0/account/3pid",
          content => {
             three_pid_creds => {
-               id_server     => $id_server->name,
-               sid           => $sid,
-               client_secret => $client_secret,
+               id_server       => $id_server->name,
+               id_access_token => $id_access_token,
+               sid             => $sid,
+               client_secret   => $client_secret,
             },
             bind => JSON::true,
          },
