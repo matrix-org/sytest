@@ -225,7 +225,11 @@ sub create_event
 
 =head2 create_and_insert_event
 
-   $event = $room->create_and_insert_event( %fields )
+   $event = $room->create_and_insert_event( %fields );
+
+or:
+
+   ( $event, $event_id ) = $room->create_and_insert_event( %fields );
 
 Constructs a new event via C<create_event>, updates the current state, if it is a
 state event, and records the event as the room's next prev_event.
@@ -237,13 +241,14 @@ sub create_and_insert_event
    my $self = shift;
    my %fields = @_;
 
-   my $event = $self->create_event( %fields );
+   my ( $event, $event_id ) = $self->create_event( %fields );
 
    $self->_insert_event( $event );
 
    $self->{prev_events} = [ $event ];
 
-   return $event;
+   return $event unless wantarray;
+   return ( $event, $event_id );
 }
 
 sub insert_event
