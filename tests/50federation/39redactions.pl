@@ -14,34 +14,6 @@
 
 use URI::Escape qw( uri_escape );
 
-# send an event over federation and wait for it to turn up
-sub send_and_await_event {
-   my ( $outbound_client, $room, $sytest_user_id, $server_user, $server_name ) = @_;
-
-   my $event = $room->create_and_insert_event(
-      type => "m.room.message",
-      sender  => $sytest_user_id,
-      content => {
-         body => "hi",
-      },
-   );
-
-   my $event_id = $room->id_for_event( $event );
-
-   Future->needs_all(
-      $outbound_client->send_event(
-         event => $event,
-         destination => $server_name,
-      ),
-      await_sync_timeline_contains(
-         $server_user, $room->room_id, check => sub {
-            $_[0]->{event_id} eq $event_id
-         }
-      ),
-   );
-}
-
-
 test "Inbound federation ignores redactions from invalid servers room > v3",
    requires => [
       $main::OUTBOUND_CLIENT,
@@ -91,7 +63,7 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
          );
       })->then( sub {
          # send a regular message event to act as a sentinel
-         send_and_await_event( $outbound_client, $room, $user_id, $creator, $first_home_server );
+         send_and_await_event( $outbound_client, $room, $user_id, $creator );
       })->then( sub {
          # re-check the original event
          do_request_json_for( $creator,
@@ -140,7 +112,7 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
          );
       })->then( sub {
          # send another regular message
-         send_and_await_event( $outbound_client, $room, $user_id, $creator, $first_home_server );
+         send_and_await_event( $outbound_client, $room, $user_id, $creator );
       })->then( sub {
          # re-check the original event
          do_request_json_for( $creator,
