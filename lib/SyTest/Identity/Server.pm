@@ -80,7 +80,7 @@ sub on_request
       pubkey( $self, $req, $key_name );
    }
    elsif( $path eq "/_matrix/identity/api/v1/lookup" ) {
-      v1_lookup( $req );
+      v1_lookup( $self, $req );
    }
    elsif( $path eq "/_matrix/identity/v2/lookup" ) {
       check_v2( $req );
