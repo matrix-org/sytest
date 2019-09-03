@@ -193,7 +193,7 @@ sub pubkey
    my ( $req, $key_name ) = @_;
    my %resp;
 
-   if( defined $self->{keys}->{$key_name} ) {
+   if( defined $self->{keys}{$key_name} ) {
       $resp{public_key} = $self->{keys}{$key_name};
    }
    $req->respond_json( \%resp );
