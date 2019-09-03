@@ -190,6 +190,7 @@ sub create_event
       for qw( type auth_events content depth prev_events room_id sender );
 
    my $room_version = delete $fields{room_version} // 1;
+   my $event_id_suffix = delete $fields{event_id_suffix};
 
    my $event = {
       %fields,
@@ -197,20 +198,22 @@ sub create_event
       origin_server_ts => JSON::number( int( time() * 1000 )),
    };
 
-   my $event_id = delete $fields{event_id};
-   my $suffix = delete $fields{event_id_suffix};
-   if( not defined $event_id ) {
-      if( $room_version eq '1' || $room_version eq '2' ) {
-         # assign an event id
-         $event_id = $self->next_event_id( $suffix );
+   my $event_id = $fields{event_id};
+   if( $room_version eq '1' || $room_version eq '2' ) {
+      if( not defined $event_id ) {
+         # room v1/v2: assign an event id
+         $event_id = $self->next_event_id( $event_id_suffix );
          $event->{event_id} = $event_id;
-      } else {
-         # calculate the event id from the hash
-         $event_id = id_for_event( $event, $room_version );
       }
+      $self->sign_event( $event );
+   } else {
+      die "event with explicit event_id in room v$room_version"
+         if defined $event_id;
+
+      $self->sign_event( $event );
+      $event_id = id_for_event( $event, $room_version );
    }
 
-   $self->sign_event( $event );
    $self->put_event( $event_id, $event );
 
    return $event unless wantarray;
