@@ -189,7 +189,7 @@ sub can_invite_unbound_3pid
 {
    my ( $room_id, $inviter, $invitee, $hs_uribase, $id_server ) = @_;
 
-   do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+   do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
    ->then( sub {
       $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
    })->then( sub {
@@ -245,7 +245,7 @@ test "Can invite unbound 3pid over federation with users from both servers",
       ->then( sub {
          ( $room_id ) = @_;
 
-         do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+         do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
       })->then( sub {
          await_event_for( $joiner, filter => sub {
             my ( $event ) = @_;
@@ -313,7 +313,7 @@ test "Can accept unbound 3pid invite after inviter leaves",
       })->then( sub {
           matrix_join_room( $other_member, $room_id );
       })->then( sub {
-         do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+         do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
       })->then( sub {
          matrix_leave_room( $inviter, $room_id );
       })->then( sub {
@@ -342,7 +342,7 @@ test "Can accept third party invite with /join",
       ->then( sub {
          ( $room_id ) = @_;
 
-         do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+         do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
       })->then( sub {
          matrix_get_room_state( $inviter, $room_id, )
       })->then( sub {
@@ -433,7 +433,7 @@ sub invite_should_fail {
    ->then( sub {
       ( $room_id ) = @_;
       log_if_fail "Created room id $room_id";
-      do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+      do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
    })->then( sub {
       $bind_sub->( $id_server );
    })->then( sub {
@@ -470,14 +470,12 @@ sub assert_membership {
 sub do_3pid_invite {
    my ( $inviter, $room_id, $id_server, $invitee_email ) = @_;
 
-   my $id_access_token = $id_server->get_access_token();
-
    do_request_json_for( $inviter,
       method  => "POST",
       uri     => "/r0/rooms/$room_id/invite",
       content => {
-         id_server       => $id_server,
-         id_access_token => $id_access_token,
+         id_server       => $id_server->name,
+         id_access_token => $id_server->get_access_token(),
          medium          => "email",
          address         => $invitee_email,
       }
