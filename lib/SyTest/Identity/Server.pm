@@ -72,10 +72,10 @@ sub on_request
    ) {
       is_valid( $self, $req );
    }
-   elsif( $key_name = $path =~ m#^/_matrix/identity/api/v1/pubkey/([^/]*)$# ) {
+   elsif( ( $key_name ) = $path =~ m#^/_matrix/identity/api/v1/pubkey/([^/]*)$# ) {
       pubkey( $self, $req, $key_name );
    }
-   elsif( $key_name = $path =~ m#^/_matrix/identity/v2/pubkey/([^/]*)$# ) {
+   elsif( ( $key_name ) = $path =~ m#^/_matrix/identity/v2/pubkey/([^/]*)$# ) {
       check_v2( $req );
       pubkey( $self, $req, $key_name );
    }
