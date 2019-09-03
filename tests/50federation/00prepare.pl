@@ -134,7 +134,38 @@ test "Checking local federation server",
       });
    };
 
-push @EXPORT, qw( federation_user_id_fixture );
+
+# send an event over federation and wait for it to turn up. Returns the event id.
+sub send_and_await_event {
+   my ( $outbound_client, $room, $sytest_user_id, $server_user ) = @_;
+
+   my $server_name = $server_user->http->server_name;
+
+   my $event = $room->create_and_insert_event(
+      type => "m.room.message",
+      sender  => $sytest_user_id,
+      content => {
+         body => "hi",
+      },
+   );
+
+   my $event_id = $room->id_for_event( $event );
+   log_if_fail "Sending event $event_id in ".$room->room_id, $event;
+
+   Future->needs_all(
+      $outbound_client->send_event(
+         event => $event,
+         destination => $server_name,
+      ),
+      await_sync_timeline_contains(
+         $server_user, $room->room_id, check => sub {
+            $_[0]->{event_id} eq $event_id
+         }
+      ),
+   )->then_done( $event_id );
+}
+push @EXPORT, qw( send_and_await_event );
+
 
 my $next_user_id = 0;
 
@@ -160,3 +191,4 @@ sub federation_user_id_fixture
       },
    );
 }
+push @EXPORT, qw( federation_user_id_fixture );
