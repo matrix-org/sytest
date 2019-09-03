@@ -103,15 +103,13 @@ sub sync_presence_contains
 
 =head2 await_sync
 
-   my ( $action_result ) = await_sync( $user,
+   my ( $check_result ) = await_sync( $user,
       check => sub {
-         my ( $sync_body ) = @_
+         my ( $sync_body ) = @_;
 
-         # return a true value if the sync contains the action.
+         # return a true value if the sync matches.
          # return a false value if the sync isn't ready yet.
-         return check_that_action_result_appears_in_sync_body(
-            $sync_body, $action_result
-         );
+         return check_that_sync_body_is_ready( $sync_body );
       },
    )->get;
 
