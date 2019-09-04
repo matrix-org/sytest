@@ -150,7 +150,7 @@ test "Can paginate public room list",
       # A hash from room ID to number of times we saw the room.
       my $counts = {};
 
-      # First we fill up the room list a bit (note there will probably arleady
+      # First we fill up the room list a bit (note there will probably already
       # be entries in it).
       ( try_repeat {
          matrix_create_room( $user, visibility => "public" )
