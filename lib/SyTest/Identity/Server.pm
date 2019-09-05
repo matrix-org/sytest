@@ -17,7 +17,10 @@ my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 my $next_token = 0;
 
-my $id_access_token = "testing";
+# Perpetually correct access token for authenticating with v2 Identity Service API endpoints.
+# v2 endpoint calls to this identity server should include this value for their
+# `id_access_token` parameter
+my $ID_ACCESS_TOKEN = "swordfish";
 
 sub _init
 {
@@ -44,6 +47,14 @@ sub _init
    return $self->SUPER::_init( @_ );
 }
 
+=head2
+
+   $self->rotate_keys();
+
+Creates new ed25519 public/private key pairs for this server.
+
+=cut
+
 sub rotate_keys
 {
    my $self = shift;
@@ -57,65 +68,64 @@ sub rotate_keys
    };
 }
 
+=head2
+
+Handles incoming HTTP requests to this server.
+
+=cut
+
 sub on_request
 {
    my $self = shift;
    my ( $req ) = @_;
 
    my $path = $req->path;
-   my %resp;
    my $key_name;
 
    if(
       $path eq "/_matrix/identity/api/v1/pubkey/isvalid" or
       $path eq "/_matrix/identity/v2/pubkey/isvalid"
    ) {
-      is_valid( $self, $req );
+      $self->on_is_valid( $req );
    }
    elsif( ( $key_name ) = $path =~ m#^/_matrix/identity/api/v1/pubkey/([^/]*)$# ) {
-      pubkey( $self, $req, $key_name );
+      $self->on_pubkey( $req, $key_name );
    }
    elsif( ( $key_name ) = $path =~ m#^/_matrix/identity/v2/pubkey/([^/]*)$# ) {
-      check_v2( $req );
-      pubkey( $self, $req, $key_name );
+      $self->check_v2( $req ) and $self->on_pubkey( $req, $key_name );
    }
    elsif( $path eq "/_matrix/identity/api/v1/lookup" ) {
-      v1_lookup( $self, $req );
+      $self->on_v1_lookup( $req );
    }
    elsif( $path eq "/_matrix/identity/v2/lookup" ) {
-      check_v2( $req );
-      v2_lookup( $self, $req );
+      $self->check_v2( $req ) and $self->on_v2_lookup( $req );
    }
    elsif( $path eq "/_matrix/identity/v2/hash_details" ) {
-      check_v2( $req );
-      hash_details( $self, $req );
+      $self->check_v2( $req ) and $self->on_hash_details( $req );
    }
    elsif( $path eq "/_matrix/identity/api/v1/store-invite" ) {
-      store_invite( $self, $req );
+      $self->on_store_invite( $req );
    }
    elsif( $path eq "/_matrix/identity/v2/store-invite" ) {
-      check_v2( $req );
-      store_invite( $self, $req );
+      $self->check_v2( $req ) and $self->on_store_invite( $req );
    }
    elsif( $path eq "/_matrix/identity/api/v1/3pid/getValidated3pid" ) {
-      get_validated_3pid( $self, $req );
+      $self->on_get_validated_3pid( $req );
    }
    elsif( $path eq "/_matrix/identity/v2/3pid/getValidated3pid" ) {
-      check_v2( $req );
-      get_validated_3pid( $self, $req );
+      $self->check_v2( $req ) and $self->on_get_validated_3pid( $req );
    }
    elsif ( $path eq "/_matrix/identity/api/v1/3pid/bind" ) {
-      do_bind( $self, $req );
+      $self->on_bind( $req );
    }
    elsif ( $path eq "/_matrix/identity/v2/3pid/bind" ) {
-      check_v2( $req );
-      do_bind( $self, $req );
+      $self->check_v2( $req ) and $self->on_bind( $req );
    }
    elsif (  # v2 /unbind does not require an id_access_token param
       $path eq "/_matrix/identity/v2/3pid/unbind" or
       $path eq "/_matrix/identity/api/v1/3pid/unbind"
    ) {
-      unbind( $self, $req );
+      $self->on_unbind( $req );
    }
    else {
       warn "Unexpected request to Identity Service for $path";
@@ -123,45 +133,68 @@ sub on_request
    }
 }
 
+=head2 check_v2
+
+   $self->check_v2 ( $req ) and do_something_else();
+
+A helper method that takes an HTTP request and checks if an C<id_access_token> parameter
+matching C<$ID_ACCESS_TOKEN> is present in either the query parameters or the top-level JSON of
+the request body.
+
+Returns C<0> or C<1> depending on whether a correct C<id_access_token> value was found.
+
+Responds to the HTTP request with an error message if no C<id_access_token> value was found.
+
+=cut
+
 sub check_v2
 {
    # Check that either an id_access_token query parameter or JSON body key exists in the req
+   my $self = shift;
    my ( $req ) = @_;
    my %resp;
 
    if (
       $req->query_param("id_access_token") and
-      $req->query_param("id_access_token") eq $id_access_token
+      $req->query_param("id_access_token") eq $ID_ACCESS_TOKEN
    ) {
       # We found it!
-      return
+      return 1
    }
 
    # Check the JSON body for the token. This isn't required for all endpoints so only try if
    # the request has a body
-   my $found = 0;
-   eval {
-      # We use an eval in case this request doesn't have a JSON body
-      my $body = $req->body_from_json;
-      if (
-         $body->{id_access_token} and
-         $body->{id_access_token} eq $id_access_token
-      ) {
-         # We found it!
-         $found = 1;
-      }
-   };
+   my $body = eval { $req->body_from_json };
 
+   if (
+      $body and
+      $body->{id_access_token} and
+      $body->{id_access_token} eq $ID_ACCESS_TOKEN
+   ) {
+      # We found it!
+      return 1
+   }
 
    # Couldn't find an access token
-   if ( !$found ) {
-      $resp{error} = "Missing id_access_token parameter";
-      $resp{errcode} = "M_MISSING_PARAM";
-      $req->respond_json( \%resp, code => 400 );
-   }
+   $resp{error} = "Missing id_access_token parameter";
+   $resp{errcode} = "M_MISSING_PARAM";
+   $req->respond_json( \%resp, code => 400 );
+   return 0
 }
 
-sub is_valid
+=head2 on_is_valid
+
+   $self->on_is_valid( $req );
+
+Given a HTTP request, check that the value of the public_key query parameter matches a key in
+the C<$self->{keys}> dictionary.
+
+Responds to the HTTP request with JSON body C<{"valid": true}> or C<{"valid": false}> depending
+on whether a match was found.
+
+=cut
+
+sub on_is_valid
 {
    my $self = shift;
    my ( $req ) = @_;
@@ -172,22 +205,19 @@ sub is_valid
    $req->respond_json( \%resp );
 }
 
-sub validate_identity
-{
-   my $self = shift;
-   my ( $medium, $address, $client_secret ) = @_;
+=head2
 
-   my $sid = "session_${\ $self->{sid}++ }";
+   $self->on_pubkey( $req, $key_name );
 
-   $self->{validated}{$sid} = {
-      medium       => $medium,
-      address      => $address,
-   };
+Given a HTTP request and a key name, return the public key corresponding to that key name if
+known.
 
-   return $sid;
-}
+Responds to the HTTP request with JSON body C<{"public_key": "some_public_key"}> if a public
+key is found, otherwise return an empty body.
 
-sub pubkey
+=cut
+
+sub on_pubkey
 {
    my $self = shift;
    my ( $req, $key_name ) = @_;
@@ -199,7 +229,21 @@ sub pubkey
    $req->respond_json( \%resp );
 }
 
-sub v1_lookup
+=head2
+
+   $self->on_v1_lookup( $req );
+
+Given a HTTP request containing C<medium> and C<address> query parameters, look up an
+address/medium combination in the server.
+
+If found, this method will respond to the request with a signed JSON object containing the
+C<medium>, C<address> and C<mxid> of the found user.
+
+If not found, the request will be sent an empty JSON body.
+
+=cut
+
+sub on_v1_lookup
 {
    my $self = shift;
    my ( $req ) = @_;
@@ -226,7 +270,17 @@ sub v1_lookup
    $req->respond_json( \%resp );
 }
 
-sub hash_details
+=head2
+
+   $self->on_hash_details( $req );
+
+Given a HTTP request, this function will respond with a JSON body with a C<lookup_pepper>
+string containing the server's lookup pepper, and a C<algorithms> array containing all of the
+lookup algorithms the server supports.
+
+=cut
+
+sub on_hash_details
 {
    my $self = shift;
    my ( $req ) = @_;
@@ -237,7 +291,24 @@ sub hash_details
    $req->respond_json( \%resp );
 }
 
-sub v2_lookup
+=head2
+
+   $self->on_v2_lookup( $req );
+
+Given a HTTP request containing C<algorithm>, C<pepper> and C<addresses> fields in its JSON
+body, perform a v2 lookup. This involves checking the algorithm that was specified, and whether
+it matches one the identity server supports. Then depending on the algorithm, a lookup of the
+data in the C<addresses> field is carried out.
+
+If the request contains an algorithm that the identity server does not support, it will be
+responded to with a C<400 M_INVALID_PARAM>. If the request contains a pepper that doesn't match
+the server's, it will be responded to with a C<400 M_INVALID_PEPPER>. Otherwise, the request
+will be responded to with a JSON body with a C<mappings> field, which contains the results of
+the lookup on the given C<addresses>.
+
+=cut
+
+sub on_v2_lookup
 {
    my $self = shift;
    my ( $req ) = @_;
@@ -258,7 +329,7 @@ sub v2_lookup
          my @address_medium = split ' ', $address;
 
          # Check the medium and address are in the right format
-         if ( scalar( @address_medium ) ne 2 ) {
+         if ( scalar( @address_medium ) != 2 ) {
             $resp{error} = "Address is not two strings separated by a space: ${address}";
             $resp{errcode} = "M_UNKNOWN";
 
@@ -267,8 +338,7 @@ sub v2_lookup
          }
 
          # Parse the medium and address from the string
-         my $user_address = $address_medium[0];
-         my $user_medium = $address_medium[1];
+         my ( $user_address, $user_medium ) = @address_medium;
 
          # Extract the MXID for this address/medium combo from the bindings hash
          # We need to swap around medium and address here as it's stored $medium, $address
@@ -310,7 +380,18 @@ sub v2_lookup
    }
 }
 
-sub store_invite
+=head2
+
+   $self->on_store_invite( $req );
+
+Given a HTTP request with a JSON body containing C<medium>, C<address>, C<sender> and
+C<room_id> keys, create and store an invite containing them.
+
+Responds to the HTTP request with C<token>, C<display_name> and public_keys.
+
+=cut
+
+sub on_store_invite
 {
    my $self = shift;
    my ( $req ) = @_;
@@ -355,7 +436,18 @@ sub store_invite
    $req->respond_json( \%resp );
 }
 
-sub get_validated_3pid
+=head2
+
+   $self->on_get_validated_3pid( $req );
+
+Given a HTTP request with a session ID C<sid> query parameter, respond with C<medium>,
+C<address> and C<validated_at> JSON body fields corresponding to the session ID.
+
+If the session ID is unknown, respond with a HTTP C<400>.
+
+=cut
+
+sub on_get_validated_3pid
 {
    my $self = shift;
    my ( $req ) = @_;
@@ -372,8 +464,19 @@ sub get_validated_3pid
    $req->respond_json( \%resp );
 }
 
-# bind is a reserved method name
-sub do_bind
+=head2
+
+   $self->on_bind( $req );
+
+Given a HTTP request containing session ID C<sid> and Matrix ID C<mxid> JSON body fields, bind
+the medium and address corresponding to the session ID to the given Matrix ID.
+
+Responds to the HTTP request with a signed JSON body containing <medium>, C<address>, C<mxid>,
+ C<not_before>, C<not_after> and C<ts> fields.
+
+=cut
+
+sub on_bind
 {
    my $self = shift;
    my ( $req ) = @_;
@@ -404,7 +507,18 @@ sub do_bind
    $req->respond_json( \%resp );
 }
 
-sub unbind
+=head2
+
+   $self->on_unbind( $req );
+
+Given a HTTP request containing a Matrix ID C<mxid, and a threepid dictionary C<threepid>,
+which itself has C<medium> and C<address> fields, remove the binding from the server.
+
+If no binding is found, respond to the HTTP request with a C<404 Not Found> error.
+
+=cut
+
+sub on_unbind
 {
    my $self = shift;
    my ( $req ) = @_;
@@ -425,6 +539,26 @@ sub unbind
 
    $req->respond_json( \%resp );
 }
+
+=head2
+
+   $self->bind_identity( $hs_uribase, $medium, $address, $user, $before_resp );
+
+Shortcut to creating a new threepid identity binding, and calling the C<onbind> callback of a
+homeserver specified by C<hs_uribase>.
+
+Example:
+
+   $self->bind_identity( undef, "email", $invitee_email, $invitee_mxid );
+
+Store the C<medium> and C<address> as well as the hash of the address for v2 lookup. Finally,
+call the C</_matrix/federation/v1/3pid/onbind> endpoint of the HS specified by C<hs_uribase>
+(if defined).
+
+If C<$before_resp> is a function, that function will be executed before the C<onbind> call is
+made.
+
+=cut
 
 sub bind_identity
 {
@@ -482,6 +616,20 @@ sub bind_identity
    );
 }
 
+=head2
+
+   $self->lookup_identity( $medium, $address );
+
+Shortcut for finding the MXID that's been previously bound to the C<medium>, C<address> combo.
+
+Example:
+
+   $self->lookup_identity( "email", "bob@example.com" );
+
+Returns the matching Matrix ID, or C<undef> if one is not found.
+
+=cut
+
 sub lookup_identity
 {
    my $self = shift;
@@ -494,6 +642,25 @@ sub lookup_identity
 
    return undef;
 }
+
+=head2
+
+   $self->sign( $to_sign, %opts );
+
+Sign some data B<in-place> using the server's private key. Setting C<ephemeral> to C<1> will
+use the server's ephemeral private key for signing instead.
+
+Example:
+
+   my %req = (
+      mxid   => $invitee->user_id,
+      sender => $inviter->user_id,
+      token  => $token,
+   );
+
+   $self->sign( \%req, ephemeral => 1);
+
+=cut
 
 sub sign
 {
@@ -510,6 +677,21 @@ sub sign
    );
 }
 
+=head2
+
+   $self->invites_for( $medium, $address );
+
+Retrieve the invites for a C<medium>, C<address> pair.
+
+Example:
+
+   my $invites = $self->invites_for( "email", "threeheadedmonkey@island.com" );
+
+Returns a reference to an array of invites that correspond to the given C<medium>, C<address>
+pair.
+
+=cut
+
 sub invites_for
 {
    my $self = shift;
@@ -518,10 +700,29 @@ sub invites_for
    return $self->{invites}{ join "\0", $medium, $address };
 }
 
+=head2
+
+   $self->get_access_token();
+
+Returns the access token for this server. Required for making calls to authenticated V2
+Identity Service endpoints.
+
+Example:
+
+   my $access_token = $self->get_access_token();
+
+=cut
+
 sub get_access_token
 {
-   return $id_access_token;
+   return $ID_ACCESS_TOKEN;
 }
+
+=head2
+
+   $self->name():
+
+Return a string made up of the server's hostname and port, separated by a colon.
 
 sub name
 {
