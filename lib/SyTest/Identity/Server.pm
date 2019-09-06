@@ -223,12 +223,14 @@ sub validate_identity
 {
    my $self = shift;
    my ( $medium, $address, $client_secret ) = @_;
+
    my $sid = "session_${\ $self->{sid}++ }";
-   $self->on_pubkey( $req, $key_name );
+
    $self->{validated}{$sid} = {
       medium       => $medium,
       address      => $address,
    };
+
    return $sid;
 }
 
