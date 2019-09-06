@@ -207,6 +207,33 @@ sub on_is_valid
 
 =head2
 
+   $self->validate_identity( $medium, $address, $client_secret );
+
+Validates a C<medium>, C<address> combo against a given C<client_secret>.
+
+Example:
+
+   $self->validate_identity( "email", "heyitsfred@example.com", "apples" );
+
+Returns the session ID corresponding to the given parameters if one is found.
+
+=cut
+
+sub validate_identity
+{
+   my $self = shift;
+   my ( $medium, $address, $client_secret ) = @_;
+   my $sid = "session_${\ $self->{sid}++ }";
+   $self->on_pubkey( $req, $key_name );
+   $self->{validated}{$sid} = {
+      medium       => $medium,
+      address      => $address,
+   };
+   return $sid;
+}
+
+=head2
+
    $self->on_pubkey( $req, $key_name );
 
 Given a HTTP request and a key name, return the public key corresponding to that key name if
@@ -723,6 +750,8 @@ sub get_access_token
    $self->name():
 
 Return a string made up of the server's hostname and port, separated by a colon.
+
+=cut
 
 sub name
 {
