@@ -7,7 +7,7 @@ test "Can bind 3PID via home server",
       my $medium = "email";
       my $address = 'bob@example.com';
       my $client_secret = "a client secret";
-      my $id_access_token = $id_server->get_access_token();
+      my $id_access_token = $id_server->get_access_token;
 
       my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
 
@@ -42,7 +42,7 @@ test "Can bind and unbind 3PID via homeserver",
       my $medium = "email";
       my $address = 'bob@example.com';
       my $client_secret = "a client secret";
-      my $id_access_token = $id_server->get_access_token();
+      my $id_access_token = $id_server->get_access_token;
 
       my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
 
@@ -119,7 +119,7 @@ test "3PIDs are unbound after account deactivation",
       my $medium = "email";
       my $address = 'bob@example.com';
       my $client_secret = "a client secret";
-      my $id_access_token = $id_server->get_access_token();
+      my $id_access_token = $id_server->get_access_token;
 
       my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
 

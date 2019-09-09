@@ -11,7 +11,7 @@ test "Can invite existing 3pid",
       my $invitee_mxid = $invitee->user_id;
 
       my $room_id;
-      my $id_access_token = $id_server->get_access_token();
+      my $id_access_token = $id_server->get_access_token;
 
       $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
       ->then( sub {
@@ -53,7 +53,7 @@ test "Can invite existing 3pid with no ops",
       my $invitee_mxid = $invitee->user_id;
 
       my $room_id;
-      my $id_access_token = $id_server->get_access_token();
+      my $id_access_token = $id_server->get_access_token;
 
       $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
       ->then( sub {
@@ -95,7 +95,7 @@ test "Can invite existing 3pid in createRoom",
       my $invitee_mxid = $invitee->user_id;
 
       my $room_id;
-      my $id_access_token = $id_server->get_access_token();
+      my $id_access_token = $id_server->get_access_token;
 
       $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
       ->then( sub {
@@ -475,7 +475,7 @@ sub do_3pid_invite {
       uri     => "/r0/rooms/$room_id/invite",
       content => {
          id_server       => $id_server->name,
-         id_access_token => $id_server->get_access_token(),
+         id_access_token => $id_server->get_access_token,
          medium          => "email",
          address         => $invitee_email,
       }
