@@ -732,7 +732,7 @@ sub invites_for
 
 =head2 get_access_token
 
-   $server->get_access_token();
+   $server->get_access_token;
 
 Returns the access token for this server. Required for making calls to authenticated V2
 Identity Service endpoints.
@@ -750,7 +750,7 @@ sub get_access_token
 
 =head2 name
 
-   $server->name():
+   $server->name;
 
 Return a string made up of the server's hostname and port, separated by a colon.
 
