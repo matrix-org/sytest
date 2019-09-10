@@ -137,13 +137,13 @@ sub on_request
 
    $server->check_v2 ( $req ) and do_something_else();
 
-A helper method that takes an HTTP request and checks if an C<id_access_token> parameter
-matching C<$ID_ACCESS_TOKEN> is present in either the query parameters or the top-level JSON of
-the request body.
+A helper method that takes an HTTP request and checks if an C<access_token> parameter
+matching C<$ID_ACCESS_TOKEN> is present in either the query parameters or the Authorization
+header (after the Bearer declaration).
 
-Returns C<0> or C<1> depending on whether a correct C<id_access_token> value was found.
+Returns C<0> or C<1> depending on whether a correct C<access_token> value was found.
 
-Responds to the HTTP request with an error message if no C<id_access_token> value was found.
+Responds to the HTTP request with an error message if no C<access_token> value was found.
 
 =cut
 
@@ -154,24 +154,16 @@ sub check_v2
    my ( $req ) = @_;
    my %resp;
 
-   if (
-      $req->query_param("id_access_token") and
-      $req->query_param("id_access_token") eq $ID_ACCESS_TOKEN
-   ) {
+   my $query_param = $req->query_param("access_token");
+   if ( $query_param and $query_param eq $ID_ACCESS_TOKEN ) {
       # We found it!
       return 1;
    }
 
-   # Check the JSON body for the token. This isn't required for all endpoints so only try if
-   # the request has a body.
-   # We use an eval in case this request doesn't have a JSON body
-   my $body = eval { $req->body_from_json };
-
-   if (
-      $body and
-      $body->{id_access_token} and
-      $body->{id_access_token} eq $ID_ACCESS_TOKEN
-   ) {
+   # Check the Authorization header for the token
+   # Should be in the form Authorization: Bearer <access_token>
+   my $auth_header = $req->header("Authorization");
+   if ( $auth_header and $auth_header eq "Bearer " . $ID_ACCESS_TOKEN ) {
       # We found it!
       return 1;
    }
