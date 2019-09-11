@@ -3,16 +3,15 @@ test "Outbound federation sends receipts",
                  federation_user_id_fixture(),
                  $main::OUTBOUND_CLIENT,
                  $main::INBOUND_SERVER,
-                 $main::HOMESERVER_INFO[0],
                  qw( can_post_room_receipts ),
                ],
    do => sub {
-      my ( $creator_user, $room_id, $federated_user_id, $outbound_client, $inbound_server, $server_0 ) = @_;
+      my ( $creator_user, $room_id, $federated_user_id, $outbound_client, $inbound_server ) = @_;
 
       my $event_id;
 
       $outbound_client->join_room(
-         server_name => $server_0->server_name,
+         server_name => $creator_user->server_name,
          room_id     => $room_id,
          user_id     => $federated_user_id,
       )->then( sub {
@@ -32,7 +31,7 @@ test "Outbound federation sends receipts",
 
          $outbound_client->send_event(
             event => $event,
-            destination => $server_0->server_name,
+            destination => $creator_user->server_name,
          );
       })->then( sub {
          await_sync_timeline_contains( $creator_user, $room_id, check => sub {
@@ -72,14 +71,14 @@ test "Outbound federation sends receipts",
 
 
 test "Inbound federation rejects receipts from wrong remote",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
 
-      my $local_server_name = $info->server_name;
+      my $local_server_name = $creator->server_name;
       my $remote_server_name = $inbound_server->server_name;
 
       my ( $event_id, );

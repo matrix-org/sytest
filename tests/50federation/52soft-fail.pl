@@ -1,5 +1,5 @@
 test "Inbound federation correctly soft fails events",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(
                     user_opts => { with_events => 1 },
                     room_opts => { room_version => "1" },
@@ -7,10 +7,8 @@ test "Inbound federation correctly soft fails events",
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my $room;
 
@@ -146,7 +144,7 @@ test "Inbound federation correctly soft fails events",
 test "Inbound federation accepts a second soft-failed event",
    # this is mostly a regression test for https://github.com/matrix-org/synapse/issues/5090.
    requires => [
-      $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
+      $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
       local_user_and_room_fixtures(
          user_opts => { with_events => 1 },
          room_opts => { room_version => "1" }
@@ -156,12 +154,10 @@ test "Inbound federation accepts a second soft-failed event",
 
    do => sub {
       my (
-         $outbound_client, $inbound_server, $info, $creator, $room_id,
+         $outbound_client, $inbound_server, $creator, $room_id,
          $remote_user_id,
       ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my $first_home_server = $creator->server_name;
 
       my $room;
 
@@ -332,7 +328,7 @@ test "Inbound federation accepts a second soft-failed event",
 test "Inbound federation correctly handles soft failed events as extremities",
    # this is mostly a regression test for https://github.com/matrix-org/synapse/issues/5269.
    requires => [
-      $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
+      $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
       local_user_and_room_fixtures(
          user_opts => { with_events => 1 },
           room_opts => { room_version => "1" },
@@ -342,12 +338,10 @@ test "Inbound federation correctly handles soft failed events as extremities",
 
    do => sub {
       my (
-         $outbound_client, $inbound_server, $info, $creator, $room_id,
+         $outbound_client, $inbound_server, $creator, $room_id,
          $remote_user_id,
       ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my $first_home_server = $creator->server_name;
 
       my $room;
 

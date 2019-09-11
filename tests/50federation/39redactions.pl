@@ -18,7 +18,6 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
    requires => [
       $main::OUTBOUND_CLIENT,
       $main::INBOUND_SERVER,
-      $main::HOMESERVER_INFO[0],
       local_user_and_room_fixtures(
          room_opts => { room_version => "5" },
       ),
@@ -26,8 +25,8 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my ( $msg_event_id, $redaction_event_id, $room );
 
@@ -135,7 +134,6 @@ test "An event which redacts an event in a different room should be ignored",
    requires => [
       $main::OUTBOUND_CLIENT,
       $main::INBOUND_SERVER,
-      $main::HOMESERVER_INFO[0],
       $creator_fixture,
       room_fixture( $creator_fixture ),
       room_fixture( $creator_fixture ),
@@ -143,8 +141,8 @@ test "An event which redacts an event in a different room should be ignored",
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id_1, $room_id_2, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id_1, $room_id_2, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my ( $room_1, $room_2 );
       my ( $msg_event_id, $redaction_event_id );
@@ -253,14 +251,13 @@ test "An event which redacts itself should be ignored",
    requires => [
       $main::OUTBOUND_CLIENT,
       $main::INBOUND_SERVER,
-      $main::HOMESERVER_INFO[0],
       local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
       federation_user_id_fixture(),
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my ( $room );
 
@@ -302,14 +299,13 @@ test "A pair of events which redact each other should be ignored",
    requires => [
       $main::OUTBOUND_CLIENT,
       $main::INBOUND_SERVER,
-      $main::HOMESERVER_INFO[0],
       local_user_and_room_fixtures( room_opts => { room_version => "1" }),
       federation_user_id_fixture(),
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my ( $room );
 

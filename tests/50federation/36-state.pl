@@ -10,15 +10,13 @@ sub get_state_ids_from_server {
 }
 
 test "Inbound federation can get state for a room",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my $room;
 
@@ -60,15 +58,13 @@ test "Inbound federation can get state for a room",
 
 
 test "Inbound federation of state requires event_id as a mandatory paramater",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       $outbound_client->do_request_json(
          method   => "GET",
@@ -79,15 +75,13 @@ test "Inbound federation of state requires event_id as a mandatory paramater",
 
 
 test "Inbound federation can get state_ids for a room",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my $room;
 
@@ -124,15 +118,13 @@ test "Inbound federation can get state_ids for a room",
    };
 
 test "Inbound federation of state_ids requires event_id as a mandatory paramater",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       $outbound_client->do_request_json(
          method   => "GET",
@@ -142,7 +134,7 @@ test "Inbound federation of state_ids requires event_id as a mandatory paramater
    };
 
 test "Federation rejects inbound events where the prev_events cannot be found",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(
                     user_opts => { with_events => 1 },
                     room_opts => { room_version => "1" },
@@ -150,10 +142,8 @@ test "Federation rejects inbound events where the prev_events cannot be found",
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my $room;
       my $sent_event;
@@ -226,7 +216,7 @@ test "Federation rejects inbound events where the prev_events cannot be found",
 
 
 test "Outbound federation requests missing prev_events and then asks for /state_ids and resolves the state",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(
                     user_opts => { with_events => 1 },
                     room_opts => { room_version => "1" },
@@ -234,8 +224,8 @@ test "Outbound federation requests missing prev_events and then asks for /state_
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       # in this test, we're going to create a DAG like this:
       #
@@ -494,7 +484,7 @@ test "Outbound federation requests missing prev_events and then asks for /state_
 
 
 test "Federation handles empty auth_events in state_ids sanely",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(
                     user_opts => { with_events => 1 },
                     room_opts => { room_version => "1" },
@@ -502,8 +492,8 @@ test "Federation handles empty auth_events in state_ids sanely",
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       # in this test, we're going to create a DAG like this:
       #
@@ -651,16 +641,14 @@ test "Federation handles empty auth_events in state_ids sanely",
 
 
 test "Getting state checks the events requested belong to the room",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
    do => sub {
-      my ( $outbound_client, $info, $priv_creator, $priv_room_id,
+      my ( $outbound_client, $priv_creator, $priv_room_id,
            $pub_creator, $pub_room_id, $fed_user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my $first_home_server = $pub_creator->server_name;
 
       my $priv_join_event;
 
@@ -693,16 +681,14 @@ test "Getting state checks the events requested belong to the room",
 
 
 test "Getting state IDs checks the events requested belong to the room",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
    do => sub {
-      my ( $outbound_client, $info, $priv_creator, $priv_room_id,
+      my ( $outbound_client, $priv_creator, $priv_room_id,
            $pub_creator, $pub_room_id, $fed_user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my $first_home_server = $pub_creator->server_name;
 
       my $priv_join_event;
 
@@ -764,7 +750,7 @@ test "Should not be able to take over the room by pretending there is no PL even
    # unaffected.
 
    requires => [
-      $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
+      $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
       # Create user and a publicly joinable room on the synapse.
       local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
       # Pick a user_id for our evil federation user.
@@ -772,9 +758,8 @@ test "Should not be able to take over the room by pretending there is no PL even
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $evil_user_id ) = @_;
-      my $first_home_server = $info->server_name;
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $evil_user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       # Join our evil user to the room.
       $outbound_client->join_room(

@@ -44,13 +44,13 @@ test "Inbound federation can query room alias directory",
    # TODO(paul): technically this doesn't need local_user_fixture(), if we had
    #   some user we could assert can perform media/directory/etc... operations
    #   but doesn't mutate any of its own state, or join rooms, etc...
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT,
                  local_user_fixture(), room_alias_fixture(),
                  qw( can_create_room_alias )],
 
    do => sub {
-      my ( $outbound_client, $info, $user, $room_alias ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $user, $room_alias ) = @_;
+      my $first_home_server = $user->server_name;
 
       my $room_id;
 
