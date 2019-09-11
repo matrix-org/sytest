@@ -19,7 +19,7 @@ my $next_token = 0;
 
 # Perpetually correct access token for authenticating with v2 Identity Service API endpoints.
 # v2 endpoint calls to this identity server should include this value for their
-# `id_access_token` parameter
+# `access_token` parameter
 my $ID_ACCESS_TOKEN = "swordfish";
 
 sub _init
@@ -121,7 +121,7 @@ sub on_request
    elsif ( $path eq "/_matrix/identity/v2/3pid/bind" ) {
       $self->check_v2( $req ) and $self->on_bind( $req );
    }
-   elsif (  # v2 /unbind does not require an id_access_token param
+   elsif (  # v2 /unbind does not require an access_token param
       $path eq "/_matrix/identity/v2/3pid/unbind" or
       $path eq "/_matrix/identity/api/v1/3pid/unbind"
    ) {
@@ -149,7 +149,7 @@ Responds to the HTTP request with an error message if no C<access_token> value w
 
 sub check_v2
 {
-   # Check that either an id_access_token query parameter or JSON body key exists in the req
+   # Check that either an access_token query parameter or JSON body key exists in the req
    my $self = shift;
    my ( $req ) = @_;
    my %resp;
@@ -169,7 +169,7 @@ sub check_v2
    }
 
    # Couldn't find an access token
-   $resp{error} = "Missing id_access_token parameter";
+   $resp{error} = "Missing access_token parameter";
    $resp{errcode} = "M_MISSING_PARAM";
    $req->respond_json( \%resp, code => 400 );
    return 0;
