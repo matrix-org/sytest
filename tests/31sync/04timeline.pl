@@ -145,7 +145,7 @@ test "A message sent after an initial sync appears in the timeline of an increme
       })->then( sub {
          my ( $body ) = @_;
 
-         log_if_fail "Sync response", $sync_response;
+         log_if_fail "Sync response", $body;
 
          my $room = $body->{rooms}{join}{$room_id};
          assert_json_keys( $room, qw( timeline state ephemeral ));
