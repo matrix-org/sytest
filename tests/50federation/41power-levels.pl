@@ -61,17 +61,16 @@ test "Remote servers should reject attempts by non-creators to set the power lev
 
    requires => [ $main::OUTBOUND_CLIENT,
                  $main::INBOUND_SERVER,
-                 $main::HOMESERVER_INFO[0],
                  local_user_fixture(),
                  federation_user_id_fixture(),
                  federation_user_id_fixture(),
                 ],
 
    do => sub {
-      my ( $outbound_server, $inbound_server, $hs_info,
+      my ( $outbound_server, $inbound_server,
            $synapse_user, $sytest_user_id_a, $sytest_user_id_b ) = @_;
 
-      my $synapse_server_name = $synapse_user->http->server_name;
+      my $synapse_server_name = $synapse_user->server_name;
       my $outbound_client     = $inbound_server->client;
       my $sytest_server_name  = $inbound_server->server_name;
       my $datastore           = $inbound_server->datastore;
@@ -118,7 +117,7 @@ test "Remote servers should reject attempts by non-creators to set the power lev
 
          $outbound_client->send_event(
             event => $pl,
-            destination => $hs_info->server_name,
+            destination => $synapse_server_name,
          );
       })->then( sub {
          # check that synapse still doesn't have a PL event. Annoyingly we need
