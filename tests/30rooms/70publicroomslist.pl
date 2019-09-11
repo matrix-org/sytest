@@ -196,13 +196,13 @@ test "Can paginate public room list",
          log_if_fail "Forward counts", \%counts;
 
          # We expect to see every room exactly once.
-         assert_eq( scalar( %counts ), $num_rooms );
+         assert_eq( scalar( keys %counts ), $num_rooms );
          all { $_ == 1 } values %counts or die "Saw a room more than once iterating forwards";
 
          # We now reset the counts and try iterating backwards, ensuring we see
          # all but the last three rooms again.
          # Reset counts
-         %counts = {};
+         %counts = ();
 
          try_repeat {
             do_request_json_for( $user,
@@ -228,11 +228,11 @@ test "Can paginate public room list",
             })
          } until => sub { !$prev_batch };
       })->then( sub {
-         log_if_fail "Backward counts", %counts;
+         log_if_fail "Backward counts", \%counts;
 
          # We expect to see all bar the final chunk of rooms exactly once (which
          # may be up to three rooms)
-         scalar( %counts ) >= $num_rooms - 3 or die "Saw too few rooms paginating backwards";
+         scalar( keys %counts ) >= $num_rooms - 3 or die "Saw too few rooms paginating backwards";
          all { $_ == 1 } values %counts or die "Saw a room more than once iterating backwards";
 
          Future->done( 1 );
