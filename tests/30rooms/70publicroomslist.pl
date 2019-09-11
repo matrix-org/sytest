@@ -148,7 +148,7 @@ test "Can paginate public room list",
       my $prev_batch;
 
       # A hash from room ID to number of times we saw the room.
-      my $counts = {};
+      my %counts;
 
       # First we fill up the room list a bit (note there will probably already
       # be entries in it).
@@ -183,7 +183,7 @@ test "Can paginate public room list",
                scalar( @{ $body->{chunk} } ) <= 3 or die "Got too many results";
 
                foreach my $chunk ( @{ $body->{chunk} } ) {
-                  $counts->{ $chunk->{room_id} } += 1;
+                  $counts{ $chunk->{room_id} } += 1;
                }
 
                $next_batch = $body->{next_batch};
@@ -193,16 +193,16 @@ test "Can paginate public room list",
             })
          } until => sub { !$next_batch };
       })->then( sub {
-         log_if_fail "Forward counts", $counts;
+         log_if_fail "Forward counts", \%counts;
 
          # We expect to see every room exactly once.
-         assert_eq( scalar( %$counts ), $num_rooms );
-         all { $_ == 1 } values %$counts or die "Saw a room more than once iterating forwards";
+         assert_eq( scalar( %counts ), $num_rooms );
+         all { $_ == 1 } values %counts or die "Saw a room more than once iterating forwards";
 
          # We now reset the counts and try iterating backwards, ensuring we see
          # all but the last three rooms again.
          # Reset counts
-         $counts = {};
+         %counts = {};
 
          try_repeat {
             do_request_json_for( $user,
@@ -218,7 +218,7 @@ test "Can paginate public room list",
                scalar( @{ $body->{chunk} } ) <= 3 or die "Got too many results";
 
                foreach my $chunk ( @{ $body->{chunk} } ) {
-                  $counts->{ $chunk->{room_id} } += 1;
+                  $counts{ $chunk->{room_id} } += 1;
                }
 
                $next_batch = $body->{next_batch};
@@ -228,11 +228,12 @@ test "Can paginate public room list",
             })
          } until => sub { !$prev_batch };
       })->then( sub {
-         log_if_fail "Backward counts", $counts;
+         log_if_fail "Backward counts", %counts;
 
-         # We expect to see all bar three rooms exactly once.
-         assert_eq( scalar( %$counts ), $num_rooms - 3 );
-         all { $_ == 1 } values %$counts or die "Saw a room more than once iterating backwards";
+         # We expect to see all bar the final chunk of rooms exactly once (which
+         # may be up to three rooms)
+         scalar( %counts ) >= $num_rooms - 3 or die "Saw too few rooms paginating backwards";
+         all { $_ == 1 } values %counts or die "Saw a room more than once iterating backwards";
 
          Future->done( 1 );
       })
