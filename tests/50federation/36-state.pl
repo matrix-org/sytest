@@ -80,7 +80,7 @@ test "Inbound federation can get state_ids for a room",
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, $creator, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
       my $first_home_server = $creator->server_name;
 
       my $room;

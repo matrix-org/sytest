@@ -1,5 +1,6 @@
 use Protocol::Matrix qw( redact_event );
 
+
 test "Outbound federation can send events",
    requires => [ local_user_fixture(), $main::INBOUND_SERVER, federation_user_id_fixture() ],
 
