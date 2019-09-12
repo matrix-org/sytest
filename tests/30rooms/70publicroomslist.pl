@@ -29,7 +29,7 @@ test "Name/topic keys are correct",
          )
       } keys %rooms )
       ->then( sub {
-         repeat_until_true {
+         retry_until_success {
             $http->do_request_json(
                method => "GET",
                uri    => "/r0/publicRooms",
@@ -94,7 +94,9 @@ test "Name/topic keys are correct",
                   }
                }
 
-               Future->done( all { $isOK{$_} } keys %isOK );
+               all { $isOK{$_} } keys %isOK or die "Not all OK";
+
+               Future->done( 1 );
             });
          };
       });
