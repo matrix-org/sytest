@@ -161,11 +161,17 @@ test "POST /createRoom creates a room with the given version",
    do => sub {
       my ( $user ) = @_;
 
+      my $room_id;
+
       matrix_create_room_synced(
          $user,
          room_version => '2',
       )->then( sub {
-         my ( $room_id, undef, $sync_body ) = @_;
+         ( $room_id ) = @_;
+
+         matrix_sync( $user );
+      })->then( sub {
+         my ( $sync_body ) = @_;
 
          log_if_fail "sync body", $sync_body;
 
@@ -188,7 +194,7 @@ test "POST /createRoom rejects attempts to create rooms with numeric versions",
    do => sub {
       my ( $user ) = @_;
 
-      matrix_create_room_synced(
+      matrix_create_room(
          $user,
          room_version => 1,
       )->main::expect_http_400()
@@ -207,7 +213,7 @@ test "POST /createRoom rejects attempts to create rooms with unknown versions",
    do => sub {
       my ( $user ) = @_;
 
-      matrix_create_room_synced(
+      matrix_create_room(
          $user,
          room_version => "agjkyhdsghkjackljkj",
       )->main::expect_http_400()
@@ -225,6 +231,8 @@ test "POST /createRoom ignores attempts to set the room version via creation_con
    do => sub {
       my ( $user ) = @_;
 
+      my $room_id;
+
       matrix_create_room_synced(
          $user,
          creation_content => {
@@ -232,7 +240,11 @@ test "POST /createRoom ignores attempts to set the room version via creation_con
             room_version => "test",
          },
       )->then( sub {
-         my ( $room_id, undef, $sync_body ) = @_;
+         ( $room_id ) = @_;
+
+         matrix_sync( $user );
+      })->then( sub {
+         my ( $sync_body ) = @_;
 
          log_if_fail "sync body", $sync_body;
 
@@ -377,16 +389,14 @@ sub room_alias_fixture
 =head2 matrix_create_room_synced
 
     matrix_create_room_synced( $creator, %params )->then( sub {
-        my ( $room_id, $room_alias, $sync_body ) = @_;
+        my ( $room_id ) = @_;
     });
 
 Creates a new room, and waits for it to appear in the /sync response.
 
 The parameters are passed through to C<matrix_create_room>.
 
-The resultant future completes with three values: the room_id from the
-/createRoom response; the room_alias from the /createRoom response (which is
-non-standard and should not be relied upon); the /sync response.
+The resultant future completes with the room_id.
 
 =cut
 
@@ -394,14 +404,30 @@ sub matrix_create_room_synced
 {
    my ( $user, %params ) = @_;
 
-   matrix_do_and_wait_for_sync( $user,
-      do => sub {
-         matrix_create_room( $user, %params );
-      },
-      check => sub {
-         my ( $sync_body, $room_id ) = @_;
-         return 0 if not exists $sync_body->{rooms}{join}{$room_id};
-         return $sync_body;
-      },
-   );
+   # we want to make sure we have all of the room-creation events before we return.
+   # The easiest way to do that is to send a sentinel message in the room and wait for
+   # that to turn up.
+   matrix_create_room( $user, %params )->then( sub {
+      my ( $room_id ) = @_;
+
+      matrix_do_and_wait_for_sync( $user,
+         do => sub {
+            my $uri = "/r0/rooms/$room_id/send/m.room.test";
+
+            do_request_json_for(
+               $user,
+               method => "POST",
+               uri    => $uri,
+               content => {},
+            );
+         },
+         check => sub {
+            my ( $sync_body, $send_body ) = @_;
+            my $event_id = $send_body->{event_id};
+            return sync_timeline_contains( $sync_body, $room_id, sub {
+               $_[0]->{event_id} eq $event_id
+            });
+         },
+      )->then_done( $room_id );
+   });
 }
