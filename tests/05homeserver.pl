@@ -59,6 +59,10 @@ our @HOMESERVER_INFO = map {
             "http://$api_host:" . $server->unsecure_port;
 
          $server->configure(
+            smtp_server_config => $mail_server_info,
+         );
+
+         $server->configure(
             # Config for testing recaptcha. 90jira/SYT-8.pl
             recaptcha_config => {
                siteverify_api   => $test_server_info->client_location .
