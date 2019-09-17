@@ -5,24 +5,10 @@ test "Can bind 3PID via home server",
       my ( $http, $user, $id_server ) = @_;
 
       my $medium = "email";
-      my $address = 'bob@example.com';
-      my $client_secret = "a client secret";
-      my $id_access_token = $id_server->get_access_token;
+      my $address = 'bob1@example.com';
 
-      my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
-
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/account/3pid",
-         content => {
-            three_pid_creds => {
-               id_server       => $id_server->name,
-               id_access_token => $id_access_token,
-               sid             => $sid,
-               client_secret   => $client_secret,
-            },
-            bind => JSON::true,
-         },
+      add_email_for_user(
+         $user, $address, $id_server, bind => 1,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
 
@@ -40,24 +26,10 @@ test "Can bind and unbind 3PID via homeserver",
       my ( $http, $user, $id_server ) = @_;
 
       my $medium = "email";
-      my $address = 'bob@example.com';
-      my $client_secret = "a client secret";
-      my $id_access_token = $id_server->get_access_token;
+      my $address = 'bob2@example.com';
 
-      my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
-
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/account/3pid",
-         content => {
-            three_pid_creds => {
-               id_server       => $id_server->name,
-               id_access_token => $id_access_token,
-               sid             => $sid,
-               client_secret   => $client_secret,
-            },
-            bind => JSON::true,
-         },
+      add_email_for_user(
+         $user, $address, $id_server, bind => 1,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
          assert_eq( $res, $user->user_id );
@@ -86,7 +58,7 @@ test "Can unbind 3PID via homeserver when bound out of band",
       my ( $http, $user, $id_server ) = @_;
 
       my $medium = "email";
-      my $address = 'bob@example.com';
+      my $address = 'bob3@example.com';
 
       # Bind the 3PID out of band of the homeserver
       $id_server->bind_identity( undef, $medium, $address, $user->user_id );
@@ -117,24 +89,10 @@ test "3PIDs are unbound after account deactivation",
       my ( $http, $user, $id_server ) = @_;
 
       my $medium = "email";
-      my $address = 'bob@example.com';
-      my $client_secret = "a client secret";
-      my $id_access_token = $id_server->get_access_token;
+      my $address = 'bob4@example.com';
 
-      my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
-
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/account/3pid",
-         content => {
-            three_pid_creds => {
-               id_server       => $id_server->name,
-               id_access_token => $id_access_token,
-               sid             => $sid,
-               client_secret   => $client_secret,
-            },
-            bind => JSON::true,
-         },
+      add_email_for_user(
+         $user, $address, $id_server, bind => 1,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
          assert_eq( $res, $user->user_id );
@@ -157,21 +115,9 @@ test "Can bind and unbind 3PID via /unbind by specifying the identity server",
 
       my $medium = "email";
       my $address = 'bobby@example.com';
-      my $client_secret = "53kr3t";
 
-      my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
-
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/account/3pid",
-         content => {
-            three_pid_creds => {
-               id_server     => $id_server->name,
-               sid           => $sid,
-               client_secret => $client_secret,
-            },
-            bind => JSON::true,
-         },
+      add_email_for_user(
+         $user, $address, $id_server, bind => 1,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
          assert_eq( $res, $user->user_id );
@@ -201,22 +147,10 @@ test "Can bind and unbind 3PID via /unbind without specifying the identity serve
       my ( $http, $user, $id_server ) = @_;
 
       my $medium = "email";
-      my $address = 'bobby@example.com';
-      my $client_secret = "53kr3t";
+      my $address = 'bobby2@example.com';
 
-      my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
-
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/account/3pid",
-         content => {
-            three_pid_creds => {
-               id_server     => $id_server->name,
-               sid           => $sid,
-               client_secret => $client_secret,
-            },
-            bind => JSON::true,
-         },
+      add_email_for_user(
+         $user, $address, $id_server, bind => 1,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
          assert_eq( $res, $user->user_id );

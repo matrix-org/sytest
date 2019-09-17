@@ -7,11 +7,13 @@ use base qw( Net::Async::HTTP::Server );
 
 use Crypt::NaCl::Sodium;
 use List::Util qw( any );
+use List::UtilsBy qw( extract_first_by );
 use Protocol::Matrix qw( encode_base64_unpadded sign_json );
 use MIME::Base64 qw ( encode_base64url );
 use SyTest::HTTPServer::Request;
 use HTTP::Response;
 use Digest::SHA qw( sha256 );
+use Struct::Dumb qw( struct );
 
 my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
@@ -21,6 +23,8 @@ my $next_token = 0;
 # v2 endpoint calls to this identity server should include this value for their
 # `access_token` parameter
 my $ID_ACCESS_TOKEN = "swordfish";
+
+struct Awaiter => [qw( future path_match )];
 
 sub _init
 {
@@ -34,6 +38,7 @@ sub _init
 
    $self->{bindings} = {};
    $self->{invites} = {};
+   $self->{awaiters} = [];
 
    # String for peppering hashed lookup requests
    $self->{lookup_pepper} = "matrixrocks";
@@ -68,6 +73,34 @@ sub rotate_keys
    };
 }
 
+=head2 await_request
+
+   $server->await_request(
+      path => "/_matrix/identity/api/v1/"
+   )->then( sub {
+        my ( $req ) = @_;
+   });
+
+Wait for a request to arrive at the identity server.
+
+=cut
+
+sub await_request
+{
+   my ( $self, %params ) = @_;
+
+   my $path_match = $params{path};
+   my $f = $self->loop->new_future;
+   my $awaiter = Awaiter( $f, $path_match );
+   push @{$self->{awaiters}}, $awaiter;
+
+   $f->on_cancel( sub {
+      extract_first_by { $_ == $awaiter } @{$self->{awaiters}};
+   });
+
+   return $f;
+}
+
 =head2 on_request
 
 Handles incoming HTTP requests to this server.
@@ -80,6 +113,17 @@ sub on_request
    my ( $req ) = @_;
 
    my $path = $req->path;
+
+   # first see if we've got an awaiter for this request
+   my $awaiter = extract_first_by {
+      $_->path_match eq $path
+   } @{$self->{awaiters}};
+
+   if( $awaiter ) {
+      $awaiter->future->done( $req );
+      return;
+   }
+
    my $key_name;
 
    if(
