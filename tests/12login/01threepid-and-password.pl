@@ -18,15 +18,12 @@ test "Can login with 3pid and password using m.login.password",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/account/3pid",
+         uri    => "/unstable/account/3pid/bind",
          content => {
-            three_pid_creds => {
-               id_server       => $id_server->name,
-               id_access_token => $id_access_token,
-               sid             => $sid,
-               client_secret   => $client_secret,
-            },
-            bind => JSON::false,
+            id_server       => $id_server->name,
+            id_access_token => $id_access_token,
+            sid             => $sid,
+            client_secret   => $client_secret,
          },
       )->then( sub {
          $http->do_request_json(

@@ -13,15 +13,12 @@ test "Can bind 3PID via home server",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/account/3pid",
+         uri    => "/unstable/account/3pid/bind",
          content => {
-            three_pid_creds => {
-               id_server       => $id_server->name,
-               id_access_token => $id_access_token,
-               sid             => $sid,
-               client_secret   => $client_secret,
-            },
-            bind => JSON::true,
+            id_server       => $id_server->name,
+            id_access_token => $id_access_token,
+            sid             => $sid,
+            client_secret   => $client_secret,
          },
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
@@ -48,15 +45,12 @@ test "Can bind and unbind 3PID via homeserver",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/account/3pid",
+         uri    => "/unstable/account/3pid/bind",
          content => {
-            three_pid_creds => {
-               id_server       => $id_server->name,
-               id_access_token => $id_access_token,
-               sid             => $sid,
-               client_secret   => $client_secret,
-            },
-            bind => JSON::true,
+            id_server       => $id_server->name,
+            id_access_token => $id_access_token,
+            sid             => $sid,
+            client_secret   => $client_secret,
          },
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
@@ -125,15 +119,12 @@ test "3PIDs are unbound after account deactivation",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/account/3pid",
+         uri    => "/unstable/account/3pid/bind",
          content => {
-            three_pid_creds => {
-               id_server       => $id_server->name,
-               id_access_token => $id_access_token,
-               sid             => $sid,
-               client_secret   => $client_secret,
-            },
-            bind => JSON::true,
+            id_server       => $id_server->name,
+            id_access_token => $id_access_token,
+            sid             => $sid,
+            client_secret   => $client_secret,
          },
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
@@ -158,19 +149,18 @@ test "Can bind and unbind 3PID via /unbind by specifying the identity server",
       my $medium = "email";
       my $address = 'bobby@example.com';
       my $client_secret = "53kr3t";
+      my $id_access_token = $id_server->get_access_token();
 
       my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/account/3pid",
+         uri    => "/unstable/account/3pid/bind",
          content => {
-            three_pid_creds => {
-               id_server     => $id_server->name,
-               sid           => $sid,
-               client_secret => $client_secret,
-            },
-            bind => JSON::true,
+            id_server       => $id_server->name,
+            id_access_token => $id_access_token,
+            sid             => $sid,
+            client_secret   => $client_secret,
          },
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
@@ -203,19 +193,18 @@ test "Can bind and unbind 3PID via /unbind without specifying the identity serve
       my $medium = "email";
       my $address = 'bobby@example.com';
       my $client_secret = "53kr3t";
+      my $id_access_token = $id_server->get_access_token();
 
       my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/account/3pid",
+         uri    => "/unstable/account/3pid/bind",
          content => {
-            three_pid_creds => {
-               id_server     => $id_server->name,
-               sid           => $sid,
-               client_secret => $client_secret,
-            },
-            bind => JSON::true,
+            id_server       => $id_server->name,
+            id_access_token => $id_access_token,
+            sid             => $sid,
+            client_secret   => $client_secret,
          },
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
