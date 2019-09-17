@@ -18,34 +18,26 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
    requires => [
       $main::OUTBOUND_CLIENT,
       $main::INBOUND_SERVER,
-      local_user_and_room_fixtures(
+      federated_rooms_fixture(
          room_opts => { room_version => "5" },
       ),
-      federation_user_id_fixture()
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $inbound_server, $creator, $user_id, $room ) = @_;
       my $first_home_server = $creator->server_name;
+      my $room_id = $room->room_id;
 
-      my ( $msg_event_id, $redaction_event_id, $room );
+      my ( $msg_event_id, $redaction_event_id );
 
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $user_id,
+      Future->needs_all(
+         matrix_send_room_text_message( $creator, $room_id, body => "Hello" )
+            -> on_done( sub {
+               ( $msg_event_id ) = @_;
+               log_if_fail "Sent message: $msg_event_id";
+            }),
+         $inbound_server->await_event( "m.room.message", $room_id, sub {1} ),
       )->then( sub {
-         ( $room ) = @_;
-
-         Future->needs_all(
-            matrix_send_room_text_message( $creator, $room_id, body => "Hello" )
-               -> on_done( sub {
-                  ( $msg_event_id ) = @_;
-                  log_if_fail "Sent message: $msg_event_id";
-               }),
-            $inbound_server->await_event( "m.room.message", $room_id, sub {1} ),
-         );
-      })->then( sub {
          # now spoof a redaction from our side.
          my $event = $room->create_and_insert_event(
             type => "m.room.redaction",
@@ -133,59 +125,39 @@ my $creator_fixture = local_user_fixture();
 test "An event which redacts an event in a different room should be ignored",
    requires => [
       $main::OUTBOUND_CLIENT,
-      $main::INBOUND_SERVER,
-      $creator_fixture,
-      room_fixture( $creator_fixture ),
-      room_fixture( $creator_fixture ),
-      federation_user_id_fixture(),
+      federated_rooms_fixture(
+         room_count => 2,
+      ),
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $creator, $room_id_1, $room_id_2, $user_id ) = @_;
+      my ( $outbound_client, $creator, $user_id, $room_1, $room_2 ) = @_;
       my $first_home_server = $creator->server_name;
 
-      my ( $room_1, $room_2 );
       my ( $msg_event_id, $redaction_event_id );
 
-      # join both rooms
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id_1,
-         user_id     => $user_id,
-      )->then( sub {
-         ( $room_1 ) = @_;
+      # send an event in one room
+      my $event = $room_1->create_and_insert_event(
+         type => "m.room.message",
+         sender  => $user_id,
+         content => {
+            body => "hi",
+         },
+      );
 
-         $outbound_client->join_room(
-            server_name => $first_home_server,
-            room_id     => $room_id_2,
-            user_id     => $user_id,
-         );
-      })->then( sub {
-         ( $room_2 ) = @_;
+      $msg_event_id = $room_1->id_for_event( $event );
 
-         # send an event in one room
-         my $event = $room_1->create_and_insert_event(
-            type => "m.room.message",
-            sender  => $user_id,
-            content => {
-               body => "hi",
-            },
-         );
-
-         $msg_event_id = $room_1->id_for_event( $event );
-
-         Future->needs_all(
-            $outbound_client->send_event(
-               event => $event,
-               destination => $first_home_server,
-            ),
-            await_sync_timeline_contains(
-               $creator, $room_id_1, check => sub {
-                  $_[0]->{event_id} eq $msg_event_id
-               }
-            ),
+      Future->needs_all(
+         $outbound_client->send_event(
+            event => $event,
+            destination => $first_home_server,
          ),
-      })->then( sub {
+         await_sync_timeline_contains(
+            $creator, $room_1->room_id, check => sub {
+               $_[0]->{event_id} eq $msg_event_id
+            }
+         ),
+      )->then( sub {
          # now send an event in another room which claims to redact it
          my $event = $room_2->create_and_insert_event(
             type     => "m.room.redaction",
@@ -222,7 +194,7 @@ test "An event which redacts an event in a different room should be ignored",
                destination => $first_home_server,
             ),
             await_sync_timeline_contains(
-               $creator, $room_id_2, check => sub {
+               $creator, $room_2->room_id, check => sub {
                   my ( $ev ) = @_;
                   if ( $ev->{event_id} eq $redaction_event_id ) {
                      log_if_fail "Received redaction :/", $ev;
@@ -234,7 +206,7 @@ test "An event which redacts an event in a different room should be ignored",
          );
       })->then( sub {
          # now fetch the original event again, and check it's not redacted
-         matrix_get_event( $creator, $room_id_1, $msg_event_id );
+         matrix_get_event( $creator, $room_1->room_id, $msg_event_id );
       })->then( sub {
          my ( $fetched ) = @_;
 
@@ -250,44 +222,33 @@ test "An event which redacts an event in a different room should be ignored",
 test "An event which redacts itself should be ignored",
    requires => [
       $main::OUTBOUND_CLIENT,
-      $main::INBOUND_SERVER,
-      local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+      federated_rooms_fixture( room_opts => { room_version => "1" } ),
       federation_user_id_fixture(),
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $creator, $user_id, $room ) = @_;
       my $first_home_server = $creator->server_name;
-
-      my ( $room );
 
       my $event_id = '$lolredact:' . $outbound_client->server_name;
 
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $user_id,
+      # create an event which claims to redact itself.
+      my $event = $room->create_and_insert_event(
+         event_id => $event_id,
+         type     => "m.room.redaction",
+         sender   => $user_id,
+         redacts  => $event_id,
+         content  => {},
+      );
+
+      log_if_fail "Sending redaction inception", $event;
+
+      $outbound_client->send_event(
+         event => $event,
+         destination => $first_home_server,
       )->then( sub {
-         ( $room ) = @_;
-
-         # create an event which claims to redact itself.
-         my $event = $room->create_and_insert_event(
-            event_id => $event_id,
-            type     => "m.room.redaction",
-            sender   => $user_id,
-            redacts  => $event_id,
-            content  => {},
-         );
-
-         log_if_fail "Sending redaction inception", $event;
-
-         $outbound_client->send_event(
-            event => $event,
-            destination => $first_home_server,
-         );
-      })->then( sub {
          await_sync_timeline_contains(
-            $creator, $room_id, check => sub {
+            $creator, $room->room_id, check => sub {
                $_[0]->{event_id} eq $event_id
             }
          )
@@ -298,42 +259,31 @@ test "An event which redacts itself should be ignored",
 test "A pair of events which redact each other should be ignored",
    requires => [
       $main::OUTBOUND_CLIENT,
-      $main::INBOUND_SERVER,
-      local_user_and_room_fixtures( room_opts => { room_version => "1" }),
+      federated_rooms_fixture( room_opts => { room_version => "1" }),
       federation_user_id_fixture(),
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $creator, $user_id, $room ) = @_;
       my $first_home_server = $creator->server_name;
-
-      my ( $room );
 
       my $redaction1 = $outbound_client->{datastore}->next_event_id( "redaction1" );
       my $redaction2 = $outbound_client->{datastore}->next_event_id( "redaction2" );
 
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $user_id,
+      my $event1 = $room->create_and_insert_event(
+         event_id => $redaction1,
+         type     => "m.room.redaction",
+         sender   => $user_id,
+         redacts  => $redaction2,
+         content  => {},
+      );
+
+      log_if_fail "Sending first redaction", $event1;
+
+      $outbound_client->send_event(
+         event => $event1,
+         destination => $first_home_server,
       )->then( sub {
-         ( $room ) = @_;
-
-         my $event1 = $room->create_and_insert_event(
-            event_id => $redaction1,
-            type     => "m.room.redaction",
-            sender   => $user_id,
-            redacts  => $redaction2,
-            content  => {},
-         );
-
-         log_if_fail "Sending first redaction", $event1;
-
-         $outbound_client->send_event(
-            event => $event1,
-            destination => $first_home_server,
-         );
-      })->then( sub {
          my $event2 = $room->create_and_insert_event(
             event_id => $redaction2,
             type     => "m.room.redaction",
@@ -350,7 +300,7 @@ test "A pair of events which redact each other should be ignored",
          );
       })->then( sub {
          await_sync_timeline_contains(
-            $creator, $room_id, check => sub {
+            $creator, $room->room_id, check => sub {
                $_[0]->{event_id} eq $redaction2
             }
          )
