@@ -1,21 +1,116 @@
 my $password = "my secure password";
 
+=head2 validate_email_for_user
 
-test "Can login with 3pid and password using m.login.password",
-   requires => [ local_user_fixture( password => $password ), id_server_fixture() ],
+   validate_email_for_user(
+      $user, $address, $id_server,
+   )->then( sub {
+      my ( $sid, $client_secret ) = @_;
+   });
 
-   check => sub {
-      my ( $user, $id_server ) = @_;
+Runs through the `/r0/account/3pid/email/requestToken` flow for verifying
+that an email address belongs to the user. Doesn't add the address to the
+account.
 
-      my $http = $user->http;
+Returns the session id and client secret which can then be used for binding
+the address.
 
-      my $medium = "email";
-      my $address = 'bob@example.com';
-      my $client_secret = "a client secret";
-      my $id_access_token = $id_server->get_access_token();
+=cut
 
-      my $sid = $id_server->validate_identity( $medium, $address, $client_secret );
+sub validate_email_for_user {
+   my ( $user, $address, $id_server ) = @_;
 
+   # fixme: synapse screws up the escaping of non-alpha chars.
+   my $client_secret = join "", map { chr 65 + rand 26 } 1 .. 20;
+
+   my $sid;
+
+   return Future->needs_all(
+      do_request_json_for(
+         $user,
+         method => "POST",
+         uri    => "/r0/account/3pid/email/requestToken",
+         content => {
+            client_secret   => $client_secret,
+            email           => $address,
+            send_attempt    => 1,
+            id_server       => $id_server->name,
+            id_access_token => $id_server->get_access_token(),
+         },
+      )->then( sub {
+         my ( $resp ) = @_;
+         log_if_fail "requestToken response", $resp;
+
+         $sid = $resp->{sid};
+         Future->done;
+      }),
+
+      # we now expect a callout to our test ID server.
+      await_id_validation( $id_server, $address ),
+   )->then( sub {
+      Future->done( $sid, $client_secret );
+   });
+}
+
+push our @EXPORT, qw( validate_email_for_user );
+
+# wait for a call to /requestToken on the test IS, and act as if the
+# email has been validated.
+sub await_id_validation {
+   my ( $id_server, $address ) = @_;
+
+   $id_server->await_request(
+      path=>"/_matrix/identity/api/v1/validate/email/requestToken",
+   )->then( sub {
+      my ( $req ) = @_;
+      my $body = $req->body_from_json;
+
+      log_if_fail "ID server /requestToken request", $body;
+      assert_eq( $body->{email}, $address );
+      my $sid = $id_server->validate_identity( 'email', $address, $body->{client_secret} );
+      $req->respond_json({
+         sid => $sid,
+      });
+      Future->done();
+   });
+}
+
+=head2 add_email_for_user
+
+   add_email_for_user(
+      $user, $address, $id_server, %params
+   );
+
+Add the given email address to the homeserver account, including the
+verfication steps.
+
+C<%params> may include:
+
+=over
+
+=item bind => SCALAR
+
+If truthy, we will ask the server to ask the IS to bind the email
+address. False by default.
+
+=back
+
+=cut
+
+sub add_email_for_user {
+   my ( $user, $address, $id_server, %params ) = @_;
+
+   my $bind = $params{bind} // 0;
+
+   my $id_access_token = $id_server->get_access_token();
+
+   # start by requesting an email validation.
+   validate_email_for_user(
+      $user, $address, $id_server,
+   )->then( sub {
+      my ( $sid, $client_secret ) = @_;
+
+      # now tell the HS to add the 3pid
       do_request_json_for( $user,
          method => "POST",
          uri    => "/r0/account/3pid",
@@ -26,16 +121,33 @@ test "Can login with 3pid and password using m.login.password",
                sid             => $sid,
                client_secret   => $client_secret,
             },
-            bind => JSON::false,
+            bind => $bind ? JSON::true : JSON::false,
          },
-      )->then( sub {
+      );
+   });
+}
+
+push @EXPORT, qw( add_email_for_user );
+
+test "Can login with 3pid and password using m.login.password",
+   requires => [ local_user_fixture( password => $password ), id_server_fixture() ],
+
+   check => sub {
+      my ( $user, $id_server ) = @_;
+
+      my $http = $user->http;
+
+      my $address = 'bob@example.com';
+
+      add_email_for_user( $user, $address, $id_server )
+      ->then( sub {
          $http->do_request_json(
             method => "POST",
             uri    => "/r0/login",
 
             content => {
                type     => "m.login.password",
-               medium   => $medium,
+               medium   => 'email',
                address  => $address,
                password => $password,
             }
