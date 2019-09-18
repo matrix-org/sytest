@@ -84,23 +84,10 @@ sub await_id_validation {
 Add the given email address to the homeserver account, including the
 verfication steps.
 
-C<%params> may include:
-
-=over
-
-=item bind => SCALAR
-
-If truthy, we will ask the server to ask the IS to bind the email
-address. False by default.
-
-=back
-
 =cut
 
 sub add_email_for_user {
    my ( $user, $address, $id_server, %params ) = @_;
-
-   my $bind = $params{bind} // 0;
 
    my $id_access_token = $id_server->get_access_token();
 
@@ -121,7 +108,6 @@ sub add_email_for_user {
                sid             => $sid,
                client_secret   => $client_secret,
             },
-            bind => $bind ? JSON::true : JSON::false,
          },
       );
    });
