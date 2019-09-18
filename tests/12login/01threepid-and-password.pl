@@ -45,17 +45,53 @@ sub validate_email_for_user {
          Future->done;
       }),
 
-      # we now expect a callout to our test ID server.
-      await_id_validation( $id_server, $address ),
+      # depending on the server under test, we should expect either a callout to
+      # our test ID server, or an email from the homeserver.
+      #
+      Future->wait_any(
+         await_and_confirm_email( $address, $user->http ),
+         await_id_validation( $id_server, $address ),
+      ),
    )->then( sub {
       Future->done( $sid, $client_secret );
    });
 }
-
 push our @EXPORT, qw( validate_email_for_user );
 
 # wait for a call to /requestToken on the test IS, and act as if the
 # email has been validated.
+sub await_and_confirm_email {
+   my ( $address, $http ) = @_;
+
+   my $confirm_uri;
+
+   return await_email_to( $address )->then( sub {
+      my ( $from, $email ) = @_;
+      log_if_fail "got email from $from";
+
+      $email->walk_parts( sub {
+         my ( $part ) = @_;
+         return if $part->subparts; # multipart
+         if ( $part->content_type =~ m[text/plain]i ) {
+            my $body = $part->body;
+            log_if_fail "got email body", $body;
+
+            unless( $body =~ /(http\S*)/ ) {
+               die "confirmation URI not found in email body";
+            }
+
+            $confirm_uri = $1;
+         }
+      });
+
+      # do an http hit on the confirmation url
+      $http->do_request(
+         method   => "GET",
+         full_uri => $confirm_uri,
+      );
+   });
+}
+
 sub await_id_validation {
    my ( $id_server, $address ) = @_;
 
