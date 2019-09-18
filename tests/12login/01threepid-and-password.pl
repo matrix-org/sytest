@@ -9,7 +9,7 @@ my $password = "my secure password";
    });
 
 Runs through the `/r0/account/3pid/email/requestToken` flow for verifying
-that an email address belogs to the user. Doesn't add the address to the
+that an email address belongs to the user. Doesn't add the address to the
 account.
 
 Returns the session id and client secret which can then be used for binding
