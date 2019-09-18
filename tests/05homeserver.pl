@@ -25,10 +25,10 @@ our @HOMESERVER_INFO = map {
    fixture(
       name => "HOMESERVER_$idx",
 
-      requires => [ $main::TEST_SERVER_INFO, @main::AS_INFO ],
+      requires => [ $main::TEST_SERVER_INFO, $main::MAIL_SERVER_INFO, @main::AS_INFO ],
 
       setup => sub {
-         my ( $test_server_info, @as_infos ) = @_;
+         my ( $test_server_info, $mail_server_info, @as_infos ) = @_;
 
          $OUTPUT->diag( "Starting Homeserver using $HS_FACTORY" );
 
