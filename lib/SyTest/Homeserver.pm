@@ -64,6 +64,23 @@ validate recaptcha submissions.
 
 =back
 
+=head2 smtp_server_config => HASH
+
+Details of an smtp server for things like 3pid validation. Should include the
+following keys:
+
+=over
+
+=item C<host>
+
+The hostname where the SMTP server can be reached.
+
+=item C<port>
+
+The port where the SMTP server can be reached.
+
+=back
+
 =head2 cas_config => HASH
 
 Parameters for testing the server's CAS integration. Should include the
@@ -149,7 +166,7 @@ sub configure
    my %params = @_;
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
-      recaptcha_config cas_config
+      recaptcha_config cas_config smtp_server_config
       app_service_config_files
    );
 
