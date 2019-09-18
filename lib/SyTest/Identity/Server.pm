@@ -76,7 +76,7 @@ sub rotate_keys
 =head2 await_request
 
    $server->await_request(
-      path => "/_matrix/identity/api/v1/"
+      path => "/_matrix/identity/...",
    )->then( sub {
         my ( $req ) = @_;
    });
