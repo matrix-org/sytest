@@ -261,7 +261,7 @@ sub start
            email => {
               smtp_host => $self->{smtp_server_config}->{host},
               smtp_port => $self->{smtp_server_config}->{port},
-              notif_from => 'syanapse@localhost',
+              notif_from => 'synapse@localhost',
            },
         ) : (),
 
