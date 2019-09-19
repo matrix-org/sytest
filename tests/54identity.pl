@@ -124,7 +124,7 @@ test "Can bind and unbind 3PID via /unbind by specifying the identity server",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/account/3pid/unbind",
+            uri    => "/unstable/account/3pid/unbind",
             content => {
                id_server => $id_server->name,
                medium    => $medium,
@@ -157,7 +157,7 @@ test "Can bind and unbind 3PID via /unbind without specifying the identity serve
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/account/3pid/unbind",
+            uri    => "/unstable/account/3pid/unbind",
             content => {
                medium  => $medium,
                address => $address,
