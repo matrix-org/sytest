@@ -1,3 +1,26 @@
+sub bind_email_for_user {
+   my ( $user, $address, $id_server, %params ) = @_;
+
+   my $client_secret = join "", map { chr 40 + rand 86 } 1 .. 20;
+
+   my $id_access_token = $id_server->get_access_token();
+
+   my $sid = $id_server->validate_identity( 'email', $address, $client_secret );
+
+   do_request_json_for(
+      $user,
+      method => "POST",
+      uri    => "/unstable/account/3pid/bind",
+      content => {
+         id_server       => $id_server->name,
+         id_access_token => $id_access_token,
+         sid             => $sid,
+         client_secret   => $client_secret,
+      },
+   );
+}
+
+
 test "Can bind 3PID via home server",
    requires => [ $main::HTTP_CLIENT, local_user_fixture(), id_server_fixture() ],
 
@@ -7,8 +30,8 @@ test "Can bind 3PID via home server",
       my $medium = "email";
       my $address = 'bob1@example.com';
 
-      add_email_for_user(
-         $user, $address, $id_server, bind => 1,
+      bind_email_for_user(
+         $user, $address, $id_server,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
 
@@ -28,8 +51,8 @@ test "Can bind and unbind 3PID via homeserver",
       my $medium = "email";
       my $address = 'bob2@example.com';
 
-      add_email_for_user(
-         $user, $address, $id_server, bind => 1,
+      bind_email_for_user(
+         $user, $address, $id_server,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
          assert_eq( $res, $user->user_id );
@@ -91,8 +114,8 @@ test "3PIDs are unbound after account deactivation",
       my $medium = "email";
       my $address = 'bob4@example.com';
 
-      add_email_for_user(
-         $user, $address, $id_server, bind => 1,
+      bind_email_for_user(
+         $user, $address, $id_server,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
          assert_eq( $res, $user->user_id );
@@ -116,8 +139,8 @@ test "Can bind and unbind 3PID via /unbind by specifying the identity server",
       my $medium = "email";
       my $address = 'bobby@example.com';
 
-      add_email_for_user(
-         $user, $address, $id_server, bind => 1,
+      bind_email_for_user(
+         $user, $address, $id_server,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
          assert_eq( $res, $user->user_id );
@@ -149,8 +172,8 @@ test "Can bind and unbind 3PID via /unbind without specifying the identity serve
       my $medium = "email";
       my $address = 'bobby2@example.com';
 
-      add_email_for_user(
-         $user, $address, $id_server, bind => 1,
+      bind_email_for_user(
+         $user, $address, $id_server,
       )->then( sub {
          my $res = $id_server->lookup_identity( $medium, $address );
          assert_eq( $res, $user->user_id );
