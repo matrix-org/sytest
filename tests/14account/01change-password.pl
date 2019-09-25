@@ -97,7 +97,13 @@ test "After changing password, a different session no longer works",
       })->then( sub {
          matrix_set_password( $user, $password, "my new password" )
       })->then( sub {
-         matrix_sync( $other_login )->main::expect_http_401;
+         # our access token should be invalidated
+         repeat_until_true {
+            matrix_sync( $other_login )->main::check_http_code(
+               401 => "ok",
+               200 => "redo",
+            );
+         };
       })->then_done(1);
    };
 
@@ -176,4 +182,3 @@ test "Pushers created with a the same access token are not deleted on password c
          );
       })->then_done(1);
    };
-

@@ -8,16 +8,11 @@ use Carp;
 use List::Util qw( max );
 use List::UtilsBy qw( extract_by );
 
+use SyTest::Federation::Protocol;
+
 =head1 NAME
 
 C<SyTest::Federation::Room> - represent a single Room instance
-
-=cut
-
-sub make_event_refs
-{
-   [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
-}
 
 =head1 CONSTRUCTOR
 
@@ -25,7 +20,11 @@ sub make_event_refs
 
 =head2 new
 
-   $room = SyTest::Federation::Room->new( room_id => $room_id, datastore => $store )
+   $room = SyTest::Federation::Room->new(
+      room_id => $room_id,
+      datastore => $store,
+      [ room_version => $room_version, ]
+   )
 
 Constructs a new Room instance, initially blank containing no state or events.
 
@@ -43,10 +42,12 @@ sub new
       croak "Require a 'datastore'";
 
    my $room_id = $args{room_id} // $datastore->next_room_id;
+   my $room_version = $args{room_version} // 1;
 
    return bless {
       room_id   => $room_id,
       datastore => $datastore,
+      room_version => $room_version,
 
       current_state => {},
       prev_events => [],
@@ -55,7 +56,56 @@ sub new
 
 =head1 METHODS
 
+=head2 make_event_refs
+
+   $refs = $room->make_event_refs( $event1, $event2, ... );
+
+Given a set of events, create a list of either (event_id, hash) tuples or
+straight event_ids, suitable for inclusion in prev_events or auth_events for
+this room.
+
+Each C<$event> param should be a HASH reference for an event.
+
+Returns an ARRAY reference.
+
 =cut
+
+sub make_event_refs
+{
+   my $self = shift;
+   my @events = @_;
+
+   if ( $self->room_version eq "1" || $self->room_version eq "2" ) {
+      # room versions 1 and 2 use [ event_id, hash ] pairs.
+      return [ map { [ $_->{event_id}, $_->{hashes} ] } @_ ];
+   } else {
+      # other room versions just use event ids.
+      return [ map { $self->id_for_event( $_ ) } @_ ];
+   }
+}
+
+=head2 event_ids_from_refs
+
+   $event_ids = $room->event_ids_from_refs( [ $ref1, $ref2 ] );
+
+Performs the reverse operation to C<make_event_refs>: unpacks a C<prev_events>
+or C<auth_events> list and returns an ARRAY ref of event ids.
+
+=cut
+
+sub event_ids_from_refs
+{
+   my $self = shift;
+   my ( $event_refs ) = @_;
+
+   my @event_ids;
+   if ( $self->room_version eq "1" || $self->room_version eq "2" ) {
+      @event_ids = map { $_->[0] } @$event_refs;
+      return \@event_ids;
+   }
+
+   return $event_refs;
+}
 
 =head2 room_id
 
@@ -69,6 +119,21 @@ sub room_id
 {
    return $_[0]->{room_id};
 }
+
+
+=head2 room_version
+
+    $room_version = $room->room_version;
+
+Accessor to return the room version.
+
+=cut
+
+sub room_version
+{
+   return $_[0]->{room_version};
+}
+
 
 =head2 next_depth
 
@@ -111,15 +176,22 @@ sub create_initial_events
    my $creator = $args{creator} or
       croak "Require a 'creator'";
 
-   $self->create_event(
+   my $room_version = $args{room_version} // (
+      $self->room_version == 1 ? undef : $self->room_version
+   );
+
+   $self->create_and_insert_event(
       type => "m.room.create",
 
-      content     => { creator => $creator },
+      content     => {
+         creator => $creator,
+         defined( $room_version ) ? ( room_version => $room_version ) : (),
+      },
       sender      => $creator,
       state_key   => "",
    );
 
-   $self->create_event(
+   $self->create_and_insert_event(
       type => "m.room.member",
 
       content     => { membership => "join" },
@@ -127,7 +199,7 @@ sub create_initial_events
       state_key   => $creator,
    );
 
-   $self->create_event(
+   $self->create_and_insert_event(
       type => "m.room.join_rules",
 
       content     => { join_rule => "public" },
@@ -138,14 +210,17 @@ sub create_initial_events
 
 =head2 create_event
 
-   $event = $room->create_event( %fields )
+   $event = $room->create_event( %fields );
 
-Constructs a new event in the room and updates the current state, if it is a
-state event. This helper also fills in the C<depth>, C<prev_events> and
-C<auth_events> lists if they are absent from C<%fields>, meaning the caller
-does not have to. Any values that are passed are used instead, even if they
-are somehow invalid - this allows callers to construct intentionally-invalid
-events for testing purposes.
+or:
+
+   ( $event, $event_id ) = $room->create_event( %fields );
+
+Constructs a new event in the room. This helper also fills in the C<depth>,
+C<prev_events> and C<auth_events> lists if they are absent from C<%fields>,
+meaning the caller does not have to. Any values that are passed are used
+instead, even if they are somehow invalid - this allows callers to construct
+intentionally-invalid events for testing purposes.
 
 =cut
 
@@ -154,28 +229,51 @@ sub create_event
    my $self = shift;
    my %fields = @_;
 
-   $fields{prev_state} = [] if defined $fields{state_key}; # TODO: give it a better value
-
    my @auth_events = grep { defined } (
       $self->get_current_state_event( "m.room.create" ),
+      $self->get_current_state_event( "m.room.join_rules" ),
+      $self->get_current_state_event( "m.room.power_levels" ),
       $self->get_current_state_event( "m.room.member", $fields{sender} ),
    );
-   $fields{auth_events} //= make_event_refs( @auth_events ),
+   $fields{auth_events} //= $self->make_event_refs( @auth_events ),
 
-   $fields{depth} //= $self->next_depth;
+   $fields{depth} //= JSON::number($self->next_depth);
 
-   $fields{prev_events} //= make_event_refs( @{ $self->{prev_events} } );
+   $fields{prev_events} //= $self->make_event_refs( @{ $self->{prev_events} } );
 
-   my $event = $self->{datastore}->create_event(
+   return $self->{datastore}->create_event(
+      room_version => $self->room_version,
       room_id => $self->room_id,
       %fields,
    );
+}
+
+=head2 create_and_insert_event
+
+   $event = $room->create_and_insert_event( %fields );
+
+or:
+
+   ( $event, $event_id ) = $room->create_and_insert_event( %fields );
+
+Constructs a new event via C<create_event>, updates the current state, if it is a
+state event, and records the event as the room's next prev_event.
+
+=cut
+
+sub create_and_insert_event
+{
+   my $self = shift;
+   my %fields = @_;
+
+   my ( $event, $event_id ) = $self->create_event( %fields );
 
    $self->_insert_event( $event );
 
    $self->{prev_events} = [ $event ];
 
-   return $event;
+   return $event unless wantarray;
+   return ( $event, $event_id );
 }
 
 sub insert_event
@@ -190,14 +288,17 @@ sub insert_event
 
    # Remove from $self->{prev_events} any event IDs that are now recursively
    # implied by this new event.
-   my %to_remove = map { $_->[0] => 1 } @{ $event->{prev_events} };
-   extract_by { $to_remove{ $_->{event_id} } } @$prev_events;
+   my @event_ids_to_remove = @{ $self->event_ids_from_refs( $event->{prev_events} ) };
+   my %to_remove = map { $_ => 1 } @event_ids_to_remove;
+   extract_by { $to_remove{ $self->id_for_event($_) } } @$prev_events;
 }
 
 sub _insert_event
 {
    my $self = shift;
    my ( $event ) = @_;
+
+   croak "Event not ref" unless ref $event;
 
    if( defined $event->{state_key} ) {
       $self->{current_state}{ join "\0", $event->{type}, $event->{state_key} }
@@ -267,14 +368,36 @@ sub make_join_protoevent
    return {
       type => "m.room.member",
 
-      auth_events      => make_event_refs( @auth_events ),
+      auth_events      => $self->make_event_refs( @auth_events ),
       content          => { membership => "join" },
-      depth            => $self->next_depth,
-      prev_events      => make_event_refs( @{ $self->{prev_events} } ),
+      depth            => JSON::number($self->next_depth),
+      prev_events      => $self->make_event_refs( @{ $self->{prev_events} } ),
       room_id          => $self->room_id,
       sender           => $user_id,
       state_key        => $user_id,
    };
+}
+
+=head2 id_for_event
+
+    $event_id = $room->id_for_event( $event );
+
+Gets a the event_id for the given event. For room version 1 and 2, the event_id
+is pulled out of the event structure. For other room versions, it is calculated
+from the hash of the event.
+
+Fetches or calculates the event_id for the given event
+
+=cut
+
+sub id_for_event
+{
+   my $self = shift;
+   my ( $event ) = @_;
+
+   return SyTest::Federation::Protocol::id_for_event(
+      $event, $self->room_version,
+   );
 }
 
 1;

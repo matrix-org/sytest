@@ -1,40 +1,52 @@
-FROM ubuntu:14.04
+FROM debian:stretch
 
-ENV PERL5LIB=$HOME/lib/perl5
-ENV PERL_MB_OPT=--install_base=$HOME
-ENV PERL_MM_OPT=INSTALL_BASE=$HOME
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND noninteractive
 
-ADD MyConfig.pm /root/.cpan/CPAN/MyConfig.pm
+# Install base dependencies that Python or Go would require
+RUN apt-get -qq update && apt-get -qq install -y \
+    build-essential \
+    perl \
+    wget \
+    postgresql-9.6 \
+    postgresql-client \
+    libpq-dev \
+    libssl-dev \
+    libz-dev \
+    libffi-dev \
+    sqlite3 \
+    libjpeg-dev \
+    libxslt1-dev \
+    git \
+    locales \
+    haproxy \
+    jq \
+    dos2unix
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install -y \
-        build-essential \
-        python2.7-dev \
-        libffi-dev \
-        python-pip \
-        python-setuptools \
-        sqlite3 \
-        libssl-dev \
-        python-virtualenv \
-        libjpeg-dev \
-        libxslt1-dev \
-        git \
-        postgresql \
-        libpq-dev \
-    && cd /root \
-    && git clone https://github.com/matrix-org/sytest \
-    && git clone https://github.com/matrix-org/synapse \
-    && pip install --upgrade setuptools \
-    && mkdir -p /root/.cpan/CPAN \
-    && cd /root/sytest \
-    && ./install-deps.pl \
-    && cd ../synapse \
-    && git checkout develop \
-    && python synapse/python_dependencies.py | xargs -n1 pip install \
-    && pip install lxml \
-    && python setup.py develop --user \
-    && python setup.py test
+# Set up the locales, as the default Debian image only has C, and PostgreSQL needs the correct locales to make a UTF-8 database
+RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
+    dpkg-reconfigure --frontend=noninteractive locales && \
+    update-locale LANG=en_US.UTF-8
 
-WORKDIR /root/sytest
+# Set the locales in the environment
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+# Copy in the sytest dependencies and install them
+# The dockerfile context, when run by the buildscript, will actually be the
+# repo root, not the docker folder
+ADD install-deps.pl ./install-deps.pl
+ADD cpanfile ./cpanfile
+RUN dos2unix ./cpanfile ./install-deps.pl
+RUN perl ./install-deps.pl
+RUN rm cpanfile install-deps.pl
+
+# this is a dependency of the TAP-JUnit converter
+RUN cpan XML::Generator
+
+# /logs is where we should expect logs to end up
+RUN mkdir /logs
+
+# Add the bootstrap file.
+ADD docker/bootstrap.sh /bootstrap.sh
+RUN dos2unix /bootstrap.sh

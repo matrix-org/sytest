@@ -10,15 +10,34 @@ use List::UtilsBy qw( uniq_by );
 use MIME::Base64 qw( decode_base64 );
 use HTTP::Headers::Util qw( join_header_words );
 
+use SyTest::Assertions qw( :all );
+
+use URI::Escape qw( uri_escape );
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   # there may be multiple concurrent requests; for example, while processing a
+   # /send request, synapse may send us back a /get_missing_events/ request, which
+   # we have to authenticate, so make a /keys request.
+   $params{max_connections_per_host} //= 0;
+
+   return $self->SUPER::configure( %params );
+}
+
 sub _fetch_key
 {
    my $self = shift;
    my ( $server_name, $key_id ) = @_;
 
+   my $key_id_encoded = uri_escape($key_id);
+
    $self->do_request_json(
       method   => "GET",
       hostname => $server_name,
-      full_uri => "/_matrix/key/v2/server/$key_id",
+      full_uri => "/_matrix/key/v2/server/$key_id_encoded",
    )->then( sub {
       my ( $body ) = @_;
 
@@ -104,10 +123,10 @@ sub send_transaction
    $self->do_request_json(
       method   => "PUT",
       hostname => $params{destination},
-      uri      => "/send/$ts/",
+      uri      => "/v1/send/$ts",
 
       content => \%transaction,
-   )->then_done(); # response body is empty
+   );
 }
 
 sub send_edu
@@ -125,7 +144,7 @@ sub send_edu
             destination => $params{destination},
          }
       ],
-   );
+   )->then_done(); # TODO: check response
 }
 
 sub send_event
@@ -133,10 +152,27 @@ sub send_event
    my $self = shift;
    my %params = @_;
 
+   my $event = delete $params{event};
+
    $self->send_transaction(
       %params,
-      pdus => [ $params{event} ],
-   );
+      pdus => [ $event ],
+   )->then( sub {
+      my ( $body ) = @_;
+
+      assert_json_keys( $body, 'pdus' );
+      my $pdus = $body->{pdus};
+
+      # 'pdus' is a map from event id to error details. We don't know what our
+      # event id is, but there should be one entry which maps to an empty dict
+      assert_eq( length( keys %$pdus ), 1);
+      my $event_id = ( keys %$pdus )[0];
+
+      assert_deeply_eq( $body,
+                        { pdus => { $event_id => {} } },
+                        "/send/ response" );
+      Future->done;
+   });
 }
 
 sub join_room
@@ -149,34 +185,36 @@ sub join_room
    my $user_id     = $args{user_id};
 
    my $store = $self->{datastore};
+   my $room_version;
 
    $self->do_request_json(
       method   => "GET",
       hostname => $server_name,
-      uri      => "/make_join/$room_id/$user_id"
+      uri      => "/v1/make_join/$room_id/$user_id",
+      params   => { "ver" => [1, 2, 3, 4, 5] },
    )->then( sub {
       my ( $body ) = @_;
 
+      $room_version = $body->{room_version} // 1;
+
       my $protoevent = $body->{event};
 
-      my %member_event = (
+      my ( $member_event, $event_id ) = $store->create_event(
+         room_version    => $room_version,
+
          ( map { $_ => $protoevent->{$_} } qw(
-            auth_events content depth prev_events prev_state room_id sender
+            auth_events content depth prev_events room_id sender
             state_key type ) ),
 
-         event_id         => $store->next_event_id,
          origin           => $store->server_name,
          origin_server_ts => $self->time_ms,
       );
 
-      $store->sign_event( \%member_event );
-
       $self->do_request_json(
          method   => "PUT",
          hostname => $server_name,
-         uri      => "/send_join/$room_id/$member_event{event_id}",
-
-         content => \%member_event,
+         uri      => "/v1/send_join/$room_id/$event_id",
+         content  => $member_event,
       )->then( sub {
          my ( $join_body ) = @_;
          # SYN-490 workaround
@@ -185,18 +223,60 @@ sub join_room
          my $room = SyTest::Federation::Room->new(
             datastore => $store,
             room_id   => $room_id,
+            room_version => $room_version,
          );
 
-         my @events = uniq_by { $_->{event_id} } (
+         my @events = uniq_by { $room->id_for_event( $_ ) } (
             @{ $join_body->{auth_chain} },
             @{ $join_body->{state} },
-            \%member_event,
+            $member_event,
          );
 
          $room->insert_event( $_ ) for @events;
 
          Future->done( $room );
       });
+   });
+}
+
+=head2 get_remote_forward_extremities
+
+   $client->get_remote_forward_extremities(
+      server_name => $first_home_server,
+      room_id     => $room_id,
+   )->then( sub {
+      my ( @extremity_event_ids ) = @_;
+   });
+
+Returns the remote server's idea of the current forward extremities in the
+given room.
+
+=cut
+
+
+sub get_remote_forward_extremities
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $server_name = $args{server_name};
+   my $room_id     = $args{room_id};
+
+   # we do this slightly hackily, by asking the server to make us a join event,
+   # which will handily list the forward extremities as prev_events.
+
+   my $user_id = '@fakeuser:' . $self->server_name;
+   $self->do_request_json(
+      method   => "GET",
+      hostname => $server_name,
+      uri      => "/v1/make_join/$room_id/$user_id",
+   )->then( sub {
+      my ( $resp ) = @_;
+
+      my $protoevent = $resp->{event};
+
+      my @prev_events = map { $_->[0] } @{ $protoevent->{prev_events} };
+      Future->done( @prev_events );
    });
 }
 

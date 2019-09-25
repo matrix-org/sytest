@@ -3,59 +3,59 @@ use File::Basename qw( dirname );
 use IO::Socket::IP 0.04; # ->sockhostname
 Net::Async::HTTP->VERSION( '0.39' ); # ->GET with 'headers'
 
+require IO::Async::SSL;
+
 use Crypt::NaCl::Sodium;
 
 use SyTest::Federation::Datastore;
 use SyTest::Federation::Client;
 use SyTest::Federation::Server;
 
-my $DIR = dirname( __FILE__ );
+push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT create_federation_server );
 
-push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT );
+sub create_federation_server
+{
+   my $server = SyTest::Federation::Server->new;
+   $loop->add( $server );
+
+   start_test_server_ssl( $server )->on_done( sub {
+      my ( $server ) = @_;
+      my $sock = $server->read_handle;
+
+      # Use $BIND_HOST here instead of $sock->sockhostname because both don't
+      # always hold the same value, the federation certificate is generated for
+      # $BIND_HOST, and we need the server's hostname to match the certificate's
+      # common name.
+      my $server_name = sprintf "%s:%d", $BIND_HOST, $sock->sockport;
+
+      my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
+
+      my $datastore = SyTest::Federation::Datastore->new(
+         server_name => $server_name,
+         key_id      => "ed25519:1",
+         public_key  => $pkey,
+         secret_key  => $skey,
+      );
+
+      my $outbound_client = SyTest::Federation::Client->new(
+         datastore => $datastore,
+         uri_base  => "/_matrix/federation",
+        );
+      $loop->add( $outbound_client );
+
+      $server->configure(
+         datastore => $datastore,
+         client    => $outbound_client,
+        );
+
+      Future->done($server)
+   });
+}
 
 our $INBOUND_SERVER = fixture(
    setup => sub {
-      my $inbound_server = SyTest::Federation::Server->new;
-      $loop->add( $inbound_server );
-
-      require IO::Async::SSL;
-
-      $inbound_server->listen(
-         host          => $BIND_HOST,
-         service       => "",
-         extensions    => [qw( SSL )],
-         # Synapse currently only talks IPv4
-         family        => "inet",
-
-         SSL_key_file  => "$DIR/server.key",
-         SSL_cert_file => "$DIR/server.crt",
-      )->on_done( sub {
-         my ( $inbound_server ) = @_;
-         my $sock = $inbound_server->read_handle;
-
-         my $server_name = sprintf "%s:%d", $sock->sockhostname, $sock->sockport;
-
-         my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
-
-         my $datastore = SyTest::Federation::Datastore->new(
-            server_name => $server_name,
-            key_id      => "ed25519:1",
-            public_key  => $pkey,
-            secret_key  => $skey,
-         );
-
-         my $outbound_client = SyTest::Federation::Client->new(
-            datastore => $datastore,
-            uri_base  => "/_matrix/federation/v1",
-         );
-         $loop->add( $outbound_client );
-
-         $inbound_server->configure(
-            datastore => $datastore,
-            client    => $outbound_client,
-         );
-      });
-   },
+      create_federation_server();
+   }
 );
 
 our $OUTBOUND_CLIENT = fixture(
@@ -134,7 +134,38 @@ test "Checking local federation server",
       });
    };
 
-push @EXPORT, qw( federation_user_id_fixture );
+
+# send an event over federation and wait for it to turn up. Returns the event id.
+sub send_and_await_event {
+   my ( $outbound_client, $room, $sytest_user_id, $server_user ) = @_;
+
+   my $server_name = $server_user->http->server_name;
+
+   my $event = $room->create_and_insert_event(
+      type => "m.room.message",
+      sender  => $sytest_user_id,
+      content => {
+         body => "hi",
+      },
+   );
+
+   my $event_id = $room->id_for_event( $event );
+   log_if_fail "Sending event $event_id in ".$room->room_id, $event;
+
+   Future->needs_all(
+      $outbound_client->send_event(
+         event => $event,
+         destination => $server_name,
+      ),
+      await_sync_timeline_contains(
+         $server_user, $room->room_id, check => sub {
+            $_[0]->{event_id} eq $event_id
+         }
+      ),
+   )->then_done( $event_id );
+}
+push @EXPORT, qw( send_and_await_event );
+
 
 my $next_user_id = 0;
 
@@ -160,3 +191,95 @@ sub federation_user_id_fixture
       },
    );
 }
+push @EXPORT, qw( federation_user_id_fixture );
+
+
+=head2 federated_rooms_fixture
+
+   test "foo",
+       requires => [ federated_rooms_fixture( %options ) ],
+       do => sub {
+           my ( $creator_user, $joining_user_id, $room1, $room2, ... ) = @_;
+       };
+
+Returns a new Fixture, which:
+
+=over
+
+=item * creates a user on the main test server
+
+=item * uses that user to create one or more rooms
+
+=item * uses a test user to join those rooms over federation
+
+=back
+
+The results of the Fixture are:
+
+=over
+
+=item * A User struct for the user on the server under test
+
+=item * A string giving the user id of the sytest user which has joined the rooms
+
+=item * A SyTest::Federation::Room object for each room
+
+=back
+
+The following options are supported:
+
+=over
+
+=item room_count => SCALAR
+
+The number of rooms to be created. Defaults to 1.
+
+=item room_opts => HASH
+
+A set of options to be passed into C<matrix_create_room> for all of the rooms.
+
+=back
+
+=cut
+
+sub federated_rooms_fixture {
+   my %options = @_;
+
+   my $room_count = $options{room_count} // 1;
+   my $room_opts = $options{room_opts} // {};
+
+   return fixture(
+      requires => [
+         local_user_fixture(),
+         $main::OUTBOUND_CLIENT,
+         federation_user_id_fixture(),
+      ],
+
+      setup => sub {
+         my ( $synapse_user, $outbound_client, $sytest_user_id ) = @_;
+         my $synapse_server_name = $synapse_user->http->server_name;
+
+         my @rooms;
+
+         repeat( sub {
+            my ( $idx ) = @_;
+            matrix_create_room( $synapse_user, %$room_opts )->then( sub {
+               my ( $room_id ) = @_;
+               $outbound_client->join_room(
+                  server_name => $synapse_server_name,
+                  room_id     => $room_id,
+                  user_id     => $sytest_user_id,
+               );
+            })->on_done( sub {
+               my ( $room ) = @_;
+               log_if_fail "Joined room $idx: " . $room->room_id;
+               push @rooms, $room;
+            });
+         }, foreach => [ 1 .. $room_count ]) -> then( sub {
+            Future->done( $synapse_user, $sytest_user_id, @rooms );
+         });
+      },
+   );
+}
+
+push @EXPORT, qw( federated_rooms_fixture );

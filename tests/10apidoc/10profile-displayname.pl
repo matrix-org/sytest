@@ -63,3 +63,19 @@ test "GET /profile/:user_id/displayname publicly accessible",
          Future->done(1);
       });
    };
+
+
+push our @EXPORT, qw( matrix_set_displayname );
+
+
+sub matrix_set_displayname
+{
+   my ( $user, $displayname ) = @_;
+
+   do_request_json_for( $user,
+      method => "PUT",
+      uri    => "/r0/profile/:user_id/displayname",
+
+      content => { displayname => $displayname },
+   );
+}

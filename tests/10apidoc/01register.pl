@@ -1,17 +1,33 @@
+use utf8;
+
 use Digest::HMAC_SHA1 qw( hmac_sha1_hex );
+use JSON qw( decode_json );
 
 test "GET /register yields a set of flows",
    requires => [ $main::API_CLIENTS[0] ],
 
-   proves => [qw( can_register_password_flow )],
+   proves => [qw( can_register_dummy_flow )],
 
    check => sub {
       my ( $http ) = @_;
 
       $http->do_request_json(
-         uri => "/api/v1/register",
-      )->then( sub {
-         my ( $body ) = @_;
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {},
+      )->main::expect_http_401
+      ->then( sub {
+         my ( $response ) = @_;
+
+         # Despite being an HTTP failure, the body is still JSON encoded and
+         # has useful information
+         assert_eq( $response->content_type, "application/json",
+            'POST /r0/register results in application/json 401 failure'
+         );
+
+         my $body = decode_json( $response->content );
+         log_if_fail "/r0/register flow information", $body;
 
          assert_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
@@ -28,8 +44,7 @@ test "GET /register yields a set of flows",
                die "Expected flow[$idx] to have 'stages' as a list or a 'type'";
 
             $has_register_flow++ if
-               $flow->{type} eq "m.login.password" or
-               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.password";
+               @{ $flow->{stages} } == 1 && $flow->{stages}[0] eq "m.login.dummy";
          }
 
          Future->done( $has_register_flow );
@@ -38,21 +53,21 @@ test "GET /register yields a set of flows",
 
 test "POST /register can create a user",
    requires => [ $main::API_CLIENTS[0],
-                 qw( can_register_password_flow ) ],
-
-   critical => 1,
+                 qw( can_register_dummy_flow ) ],
 
    do => sub {
       my ( $http ) = @_;
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type     => "m.login.password",
-            user     => "01register-user",
-            password => "s3kr1t",
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "01register-user-".$TEST_RUN_ID,
+            password => "sUp3rs3kr1t",
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -63,15 +78,122 @@ test "POST /register can create a user",
       });
    };
 
+test "POST /register downcases capitals in usernames",
+   requires => [ $main::API_CLIENTS[0],
+                 qw( can_register_dummy_flow ) ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "user-UPPER",
+            password => "sUp3rs3kr1t",
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id access_token ));
+         assert_eq( $body->{user_id}, '@user-upper:' . $http->{server_name}, 'user_id' );
+
+         Future->done( 1 );
+      });
+   };
+
+test "POST /register returns the same device_id as that in the request",
+   requires => [ $main::API_CLIENTS[0],
+                 qw( can_register_dummy_flow ) ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      my $device_id = "my_device_id";
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "mycooluser",
+            password => "sUp3rs3kr1t",
+            device_id => $device_id,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( device_id ));
+         assert_eq( $body->{device_id}, $device_id, 'device_id' );
+
+         Future->done( 1 );
+      });
+   };
+
+
+foreach my $chr (split '', '!":?\@[]{|}£é' . "\n'" ) {
+   my $q = $chr; $q =~ s/\n/\\n/;
+
+   test "POST /register rejects registration of usernames with '$q'",
+      requires => [ $main::API_CLIENTS[0],
+                    qw( can_register_dummy_flow ) ],
+
+      do => sub {
+         my ( $http ) = @_;
+
+         my $reqbody = {
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => 'chrtestuser-'.ord($chr)."-",
+            password => "sUp3rs3kr1t",
+         };
+
+         # registration without the dodgy char should be ok
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => $reqbody,
+         )->then( sub {
+            # registration with the dodgy char should 400
+            $reqbody->{username} .= $chr;
+            $http->do_request_json(
+               method => "POST",
+               uri    => "/r0/register",
+               content => $reqbody,
+            );
+         })->main::expect_http_400()
+            ->then( sub {
+               my ( $response ) = @_;
+               my $body = decode_json( $response->content );
+               assert_eq( $body->{errcode}, "M_INVALID_USERNAME", 'responsecode' );
+               Future->done( 1 );
+            });
+      };
+}
+
 push our @EXPORT, qw( localpart_fixture );
 
 my $next_anon_uid = 1;
+
+sub sprintf_localpart
+{
+   sprintf "anon-%s-%d", $TEST_RUN_ID, $next_anon_uid++
+}
 
 sub localpart_fixture
 {
    fixture(
       setup => sub {
-         Future->done( sprintf "ANON-%d", $next_anon_uid++ );
+         Future->done( sprintf_localpart() );
       },
    );
 }
@@ -103,12 +225,17 @@ sub matrix_register_user
       my ( $body ) = @_;
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $body->{device_id},
-                       $password, $access_token, undef, undef, undef, [], undef );
+      my $user = new_User(
+         http         => $http,
+         user_id      => $body->{user_id},
+         device_id    => $body->{device_id},
+         password     => $password,
+         access_token => $access_token,
+      );
 
       my $f = Future->done;
 
-      if( $opts{with_events} // 1 ) {
+      if( $opts{with_events} ) {
          $f = $f->then( sub {
             $http->do_request_json(
                method => "GET",
@@ -124,14 +251,14 @@ sub matrix_register_user
 
       return $f->then_done( $user )
          ->on_done( sub {
-            log_if_fail "Registered new user $uid";
+            log_if_fail "Registered new user ". $user->user_id;
          });
    });
 }
 
-push @EXPORT, qw( matrix_register_user_via_secret );
+shared_secret_tests( "/r0/admin/register", \&matrix_admin_register_user_via_secret);
 
-sub matrix_register_user_via_secret
+sub matrix_admin_register_user_via_secret
 {
    my ( $http, $uid, %opts ) = @_;
 
@@ -141,58 +268,119 @@ sub matrix_register_user_via_secret
    defined $uid or
       croak "Require UID for matrix_register_user_via_secret";
 
-   my $mac = hmac_sha1_hex(
-      join( "\0", $uid, $password, $is_admin ? "admin" : "notadmin" ),
-      "reg_secret"
-   );
-
    $http->do_request_json(
-      method => "POST",
-      uri    => "/api/v1/register",
+      method => "GET",
+      uri    => "/r0/admin/register",
+   )->then( sub{
+      my ( $nonce ) = @_;
 
-      content => {
-        type     => "org.matrix.login.shared_secret",
-        user     => $uid,
-        password => $password,
-        admin    => $is_admin ? JSON::true : JSON::false,
-        mac      => $mac,
-      },
-   )->then( sub {
+      my $mac = hmac_sha1_hex(
+         join( "\0", $nonce->{nonce}, $uid, $password, $is_admin ? "admin" : "notadmin" ),
+         "reg_secret"
+      );
+
+      return $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/admin/register",
+
+         content => {
+           nonce    => $nonce->{nonce},
+           username => $uid,
+           password => $password,
+           admin    => $is_admin ? JSON::true : JSON::false,
+           mac      => $mac,
+         },
+      )
+   })->then( sub {
       my ( $body ) = @_;
 
       assert_json_keys( $body, qw( user_id access_token ));
 
       my $access_token = $body->{access_token};
 
-      my $user = User( $http, $body->{user_id}, $body->{device_id},
-                       $password, $access_token, undef, undef, undef, [], undef );
+      my $user = new_User(
+         http         => $http,
+         user_id      => $body->{user_id},
+         device_id    => $body->{device_id},
+         password     => $password,
+         access_token => $access_token,
+      );
 
       return Future->done( $user )
         ->on_done( sub {
-           log_if_fail "Registered new user (via secret) $uid";
+           log_if_fail "Registered new user (via secret) " . $user->user_id;
         });
    });
 }
 
-test "POST /register with shared secret",
-   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+sub shared_secret_tests {
+   my ( $ep_name, $register_func ) = @_;
 
-   proves => [qw( can_register_with_secret )],
+   test "POST $ep_name with shared secret",
+      requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
-   do => sub {
-       my ( $http, $uid ) = @_;
+      proves => [qw( can_register_with_secret )],
 
-       matrix_register_user_via_secret( $http, $uid, is_admin => 0 );
-   };
+      do => sub {
+         my ( $http, $uid ) = @_;
 
-test "POST /register admin with shared secret",
-   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+         $register_func->( $http, $uid, is_admin => 0 )
+         ->then( sub {
+            my ( $user ) = @_;
+            assert_eq( $user->user_id, "\@$uid:" . $http->{server_name}, 'userid' );
+            Future->done( 1 );
+         });
+      };
 
-   do => sub {
-       my ( $http, $uid ) = @_;
+   test "POST $ep_name admin with shared secret",
+      requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
-       matrix_register_user_via_secret( $http, $uid, is_admin => 1 );
-   };
+      do => sub {
+         my ( $http, $uid ) = @_;
+
+         $register_func->( $http, $uid, is_admin => 1 )
+         ->then( sub {
+            my ( $user ) = @_;
+            assert_eq( $user->user_id, "\@$uid:" . $http->{server_name}, 'userid' );
+            # TODO: test it is actually an admin
+            Future->done( 1 );
+         });
+      };
+
+   test "POST $ep_name with shared secret downcases capitals",
+      requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+      proves => [qw( can_register_with_secret )],
+
+      do => sub {
+         my ( $http, $localpart ) = @_;
+
+         $register_func->( $http, $localpart . "A", is_admin => 0 )
+         ->then( sub {
+            my ( $user ) = @_;
+            assert_eq( $user->user_id, '@' . $localpart . 'a:' . $http->{server_name}, 'userid' );
+            Future->done( 1 );
+         });
+      };
+
+   test "POST $ep_name with shared secret disallows symbols",
+      requires => [ $main::API_CLIENTS[0] ],
+
+      proves => [qw( can_register_with_secret )],
+
+      do => sub {
+         my ( $http ) = @_;
+
+         $register_func->( $http, "us,er", is_admin => 0 )
+         ->main::expect_http_400()
+         ->then( sub {
+            my ( $response ) = @_;
+            my $body = decode_json( $response->content );
+            assert_eq( $body->{errcode}, "M_INVALID_USERNAME", 'errcode' );
+            Future->done( 1 );
+         });
+      };
+}
 
 push @EXPORT, qw( local_user_fixture local_user_fixtures local_admin_fixture );
 
@@ -201,6 +389,8 @@ sub local_user_fixture
    my %args = @_;
 
    fixture(
+      name => 'local_user_fixture',
+
       requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
 
       setup => sub {
@@ -221,7 +411,7 @@ sub local_admin_fixture
       setup => sub {
          my ( $http, $localpart ) = @_;
 
-         matrix_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
+         matrix_admin_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
       },
    );
 }
@@ -240,6 +430,8 @@ sub remote_user_fixture
    my %args = @_;
 
    fixture(
+      name => "remote_user_fixture",
+
       requires => [ $main::API_CLIENTS[1], localpart_fixture() ],
 
       setup => sub {
@@ -255,7 +447,7 @@ sub setup_user
    my ( $http, $localpart, %args ) = @_;
 
    matrix_register_user( $http, $localpart,
-      with_events => $args{with_events} // 1,
+      with_events => $args{with_events} // 0,
       password => $args{password},
    )->then_with_f( sub {
       my $f = shift;
@@ -295,6 +487,17 @@ sub setup_user
       )->then_done( $user );
    });
 }
+
+
+push @EXPORT, qw( matrix_create_user_on_server );
+
+sub matrix_create_user_on_server
+{
+   my ( $http, %args ) = @_;
+
+   setup_user( $http, sprintf_localpart(), %args )
+}
+
 
 push @EXPORT, qw( SPYGLASS_USER );
 

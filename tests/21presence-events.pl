@@ -1,16 +1,20 @@
 # Eventually this will be changed; see SPEC-53
 my $PRESENCE_LIST_URI = "/r0/presence/list/:user_id";
 
-my $fixture = local_user_fixture();
 
 test "initialSync sees my presence status",
-   requires => [ $fixture,
+   requires => [ local_user_fixture( with_events => 1 ),
                  qw( can_initial_sync )],
 
    check => sub {
       my ( $user ) = @_;
 
-      matrix_initialsync( $user )->then( sub {
+      # We add a filler account data entry to ensure that replication is up to
+      # date with account creation. Really this should be a synced presence
+      # set
+      matrix_add_filler_account_data_synced ( $user )->then( sub {
+         matrix_initialsync( $user )
+      })->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( presence ));
@@ -36,7 +40,7 @@ test "initialSync sees my presence status",
 my $status_msg = "A status set by 21presence-events.pl";
 
 test "Presence change reports an event to myself",
-   requires => [ $fixture,
+   requires => [ local_user_fixture(),
                  qw( can_set_presence )],
 
    do => sub {
@@ -45,14 +49,15 @@ test "Presence change reports an event to myself",
       matrix_set_presence_status( $user, "online",
          status_msg => $status_msg,
       )->then( sub {
-         await_event_for( $user, filter => sub {
+         await_sync_presence_contains( $user, check => sub {
             my ( $event ) = @_;
-            next unless $event->{type} eq "m.presence";
-            my $content = $event->{content};
-            next unless $content->{user_id} eq $user->user_id;
 
-            $content->{status_msg} eq $status_msg or
-               die "Expected status_msg to be '$status_msg'";
+            log_if_fail "Event", $event;
+
+            return 0 unless $event->{sender} eq $user->user_id;
+
+            my $content = $event->{content};
+            assert_eq( $content->{status_msg} // "", $status_msg);
 
             return 1;
          });
@@ -62,7 +67,7 @@ test "Presence change reports an event to myself",
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
-   requires => [ $fixture, local_user_fixture(),
+   requires => [ local_user_fixture(), local_user_fixture(),
                  qw( can_set_presence can_invite_presence )],
 
    do => sub {
@@ -76,20 +81,20 @@ test "Friends presence changes reports events",
             invite => [ $friend->user_id ],
          }
       )->then( sub {
-         flush_events_for( $user )
+         matrix_sync( $user )
       })->then( sub {
          matrix_set_presence_status( $friend, "online",
             status_msg => $friend_status,
          );
       })->then( sub {
-         await_event_for( $user, filter => sub {
+         await_sync_presence_contains( $user, check => sub {
             my ( $event ) = @_;
-            return unless $event->{type} eq "m.presence";
+
+            assert_json_keys( $event, qw( sender ));
+
+            return unless $event->{sender} eq $friend->user_id;
 
             my $content = $event->{content};
-            assert_json_keys( $content, qw( user_id ));
-
-            return unless $content->{user_id} eq $friend->user_id;
 
             assert_json_keys( $content, qw( presence status_msg ));
             $content->{presence} eq "online" or

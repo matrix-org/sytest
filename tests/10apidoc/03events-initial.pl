@@ -4,8 +4,6 @@ use Future::Utils qw( repeat );
 test "GET /events initially",
    requires => [ $main::SPYGLASS_USER ],
 
-   critical => 1,
-
    check => sub {
       my ( $user ) = @_;
 
@@ -75,22 +73,28 @@ sub matrix_initialsync
 # A useful function which keeps track of the current eventstream token and
 #   fetches new events since it
 # $room_id may be undefined, in which case it gets events for all joined rooms.
+#
+# Note that this calls the deprecated /r0/events, which you probably don't want.
+# Try await_sync instead.
 sub GET_new_events_for
 {
    my ( $user, %params ) = @_;
 
    return $user->pending_get_events //=
       matrix_get_events( $user,
-         %params,
          from    => $user->eventstream_token,
          timeout => 500,
+         %params,
       )->on_ready( sub {
          undef $user->pending_get_events;
       })->then( sub {
          my ( $body ) = @_;
+
+         log_if_fail "GET_new_events_for ${\$user->user_id}:", $body;
+
          $user->eventstream_token = $body->{end};
 
-         my @events = ( @{ $user->saved_events }, @{ $body->{chunk} } );
+         my @events = ( @{ $user->saved_events //= [] }, @{ $body->{chunk} } );
          @{ $user->saved_events } = ();
 
          Future->done( @events );
@@ -111,6 +115,9 @@ push our @EXPORT, qw(
 
 Returns a response body which should contain the start and end tokens, and a
 chunk of data as an ARRAY reference.
+
+Note that this calls the deprecated /r0/events, which you probably don't want.
+Try matrix_sync instead.
 
 =cut
 
@@ -133,14 +140,33 @@ sub flush_events_for
    ->then( sub {
       my ( $body ) = @_;
       $user->eventstream_token = $body->{end};
-      @{ $user->saved_events } = ();
+      @{ $user->saved_events //= [] } = ();
 
       Future->done;
    });
 }
 
-# Note that semantics are undefined if calls are interleaved with differing
-# $room_ids for the same user.
+# return any saved events for this user, and clear the store.
+sub get_saved_events_for
+{
+   my ( $user ) = @_;
+   my @result = splice @{ $user->saved_events //= [] }; # fetch-and-clear
+   log_if_fail "get_saved_events_for ${\$user->user_id}:", @result;
+   return @result;
+}
+
+=head2 await_event_for
+
+   $future = await_event_for( $user, %params )
+
+Note that semantics are undefined if calls are interleaved with differing
+$room_ids for the same user.
+
+Note that this calls the deprecated /r0/events, which you probably don't want.
+Try await_sync_timeline_contains instead.
+
+=cut
+
 sub await_event_for
 {
    my ( $user, %params ) = @_;
@@ -152,10 +178,10 @@ sub await_event_for
 
    my $f = repeat {
       # Just replay saved ones the first time around, if there are any
-      my $replay_saved = !shift && scalar @{ $user->saved_events };
+      my $replay_saved = !shift && scalar @{ $user->saved_events //= [] };
 
       ( $replay_saved
-         ? Future->done( splice @{ $user->saved_events } )  # fetch-and-clear
+         ? Future->done( get_saved_events_for( $user ) )
          : GET_new_events_for( $user, %params )
       )->then( sub {
          my @events = @_;
@@ -163,7 +189,7 @@ sub await_event_for
          my $found = extract_first_by { $filter->( $_ ) } @events;
 
          # Save the rest for next time
-         push @{ $user->saved_events }, @events;
+         push @{ $user->saved_events //= [] }, @events;
 
          Future->done( $found );
       });

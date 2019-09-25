@@ -118,18 +118,16 @@ test "User sees updates to presence from other users in the incremental sync.",
          # Set user B's presence to online by syncing.
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         matrix_sync_again( $user_a, filter => $filter_id_a );
-      })->then( sub {
-         my ( $body ) = @_;
+         await_sync_presence_contains( $user_a, check => sub {
+            my ( $presence ) = @_;
 
-         my $events = $body->{presence}{events};
-         my $presence = first { $_->{type} eq "m.presence" } @$events
-            or die "Expected to see B's presence";
+            log_if_fail "Presence event", $presence;
 
-         $presence->{sender} eq $user_b->user_id or die "Unexpected sender";
-         $presence->{content}{presence} eq "online"
-            or die "Expected B to be online";
+            return unless $presence->{sender} eq $user_b->user_id;
 
-         Future->done(1);
+            assert_eq( $presence->{content}{presence}, "online");
+
+            return 1;
+         });
       })
    };

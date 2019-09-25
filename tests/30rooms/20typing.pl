@@ -22,11 +22,11 @@ sub matrix_typing
 }
 
 
-my $typing_user_fixture = local_user_fixture();
+my $typing_user_fixture = local_user_fixture( with_events => 1 );
 
-my $local_user_fixture = local_user_fixture();
+my $local_user_fixture = local_user_fixture( with_events => 1 );
 
-my $remote_user_fixture = remote_user_fixture();
+my $remote_user_fixture = remote_user_fixture( with_events => 1 );
 
 my $room_fixture = magic_room_fixture(
    requires_users => [
@@ -131,68 +131,5 @@ test "Typing can be explicitly stopped",
                return 1;
             })
          } $typinguser, $local_user );
-      });
-   };
-
-
-multi_test "Typing notifications timeout and can be resent",
-   requires => [ $typing_user_fixture, $room_fixture,
-                qw( can_set_room_typing )],
-
-   timeout => 100,
-
-   do => sub {
-      my ( $user, $room_id ) = @_;
-
-      my $start_time = time();
-
-      flush_events_for( $user )->then( sub {
-         matrix_typing( $user, $room_id,
-            typing => 1,
-            timeout => 10000, # msec; i.e. very long
-         );
-      })->then( sub {
-         pass( "Sent typing notification" );
-
-         # start typing
-         await_event_for( $user, filter => sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.typing";
-            return unless $event->{room_id} eq $room_id;
-
-            return unless scalar @{ $event->{content}{user_ids} };
-
-            pass( "Received start notification" );
-            return 1;
-         });
-      })->then( sub {
-         matrix_typing( $user, $room_id,
-            typing => 1,
-            timeout => 100, # msec; i.e. very short
-         );
-      })->then( sub {
-         # stop typing
-         await_event_for( $user, filter => sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.typing";
-            return unless $event->{room_id} eq $room_id;
-
-            return if scalar @{ $event->{content}{user_ids} };
-
-            ( time() - $start_time ) < 0.5 or
-               die "Took too long to time out";
-
-            pass( "Received stop notification" );
-            return 1;
-         });
-      })->then( sub {
-         matrix_typing( $user, $room_id,
-            typing => 1,
-            timeout => 10000,
-         );
-      })->then( sub {
-         pass( "Sent second notification" );
-
-         Future->done(1);
       });
    };

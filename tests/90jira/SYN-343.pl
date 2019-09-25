@@ -12,7 +12,7 @@ multi_test "Non-present room members cannot ban others",
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_change_room_powerlevels( $creator, $room_id, sub {
+         matrix_change_room_power_levels( $creator, $room_id, sub {
             my ( $levels ) = @_;
             $levels->{users}{ $testuser->user_id } = 100;
          })->SyTest::pass_on_done( "Set powerlevel" )

@@ -1,4 +1,4 @@
-use Future::Utils qw( try_repeat_until_success repeat );
+use Future::Utils qw( repeat );
 
 test "Guest user cannot call /events globally",
    requires => [ guest_user_fixture() ],
@@ -37,28 +37,33 @@ test "Guest users can send messages to guest_access rooms if joined",
       })->then( sub {
          matrix_send_room_text_message( $guest_user, $room_id, body => "sup" );
       })->then( sub {
-         matrix_get_room_messages( $user, $room_id, limit => 1 );
-      })->then( sub {
-         my ( $body ) = @_;
-         log_if_fail "Body:", $body;
+         # We need to repeatedly call /messages as it may take some time before
+         # the message propogates through the system.
+         retry_until_success {
+            matrix_get_room_messages( $user, $room_id, limit => 1 )
+            ->then( sub {
+               my ( $body ) = @_;
+               log_if_fail "Body:", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
-         assert_json_list( my $chunk = $body->{chunk} );
+               assert_json_keys( $body, qw( chunk ));
+               assert_json_list( my $chunk = $body->{chunk} );
 
-         scalar @$chunk == 1 or
-            die "Expected one message";
+               scalar @$chunk == 1 or
+                  die "Expected one message";
 
-         my ( $event ) = @$chunk;
+               my ( $event ) = @$chunk;
 
-         assert_json_keys( $event, qw( type room_id user_id content ));
+               assert_json_keys( $event, qw( type room_id user_id content ));
 
-         $event->{user_id} eq $guest_user->user_id or
-            die "expected user_id to be ".$guest_user->user_id;
+               $event->{user_id} eq $guest_user->user_id or
+                  die "expected user_id to be ".$guest_user->user_id;
 
-         $event->{content}->{body} eq "sup" or
-            die "content to be sup";
+               $event->{content}->{body} eq "sup" or
+                  die "content to be sup";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -156,7 +161,8 @@ test "Guest user can set display names",
       )})->then( sub {
          my ( $body ) = @_;
 
-         defined $body->{displayname} and die "Didn't expect displayname";
+         # We used to assert here that the initial displayname was undefined, but as
+         # we let homeservers set sensible defaults these days, it's been relaxed.
 
          do_request_json_for( $guest_user,
             method  => "PUT",
@@ -200,7 +206,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_change_room_powerlevels( $local_user, $room_id, sub {
+         matrix_change_room_power_levels( $local_user, $room_id, sub {
             my ( $levels ) = @_;
             $levels->{users}{ $remote_user->user_id } = 50;
          })->then( sub {
@@ -224,18 +230,18 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
 
                # This may fail a few times if the power level event hasn't federated yet.
                # So we retry.
-               try_repeat_until_success( sub {
+               retry_until_success {
                   matrix_set_room_guest_access( $remote_user, $room_id, "forbidden" );
-               }),
+               },
             );
          })->then( sub {
-            matrix_get_room_membership( $local_user, $room_id, $guest_user );
-         })->then( sub {
-            my ( $membership ) = @_;
-
-            assert_eq( $membership, "leave", "membership" );
-
-            Future->done(1);
+            repeat_until_true {
+               matrix_get_room_membership( $local_user, $room_id, $guest_user )
+               ->then( sub {
+                  my ( $membership ) = @_;
+                  Future->done( $membership eq "leave" );
+               })
+            };
          });
       })
    };
@@ -350,55 +356,54 @@ test "GET /publicRooms lists rooms",
             );
          }),
       )->then( sub {
-         $http->do_request_json(
-            method => "GET",
-            uri    => "/r0/publicRooms",
-      )})->then( sub {
-         my ( $body ) = @_;
+         repeat_until_true {
+            $http->do_request_json(
+               method => "GET",
+               uri    => "/r0/publicRooms",
+            )->then( sub {
+               my ( $body ) = @_;
 
-         log_if_fail "publicRooms", $body;
+               log_if_fail "publicRooms", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
-         assert_json_list( $body->{chunk} );
+               assert_json_keys( $body, qw( chunk ));
+               assert_json_list( $body->{chunk} );
 
-         my %seen = (
-            listingtest0 => 0,
-            listingtest1 => 0,
-            listingtest2 => 0,
-            listingtest3 => 0,
-            listingtest4 => 0,
-         );
+               my %isOK = (
+                  listingtest0 => 0,
+                  listingtest1 => 0,
+                  listingtest2 => 0,
+                  listingtest3 => 0,
+                  listingtest4 => 0,
+               );
 
-         foreach my $room ( @{ $body->{chunk} } ) {
-            my $aliases = $room->{aliases};
-            assert_json_boolean( my $world_readable = $room->{world_readable} );
-            assert_json_boolean( my $guest_can_join = $room->{guest_can_join} );
+               foreach my $room ( @{ $body->{chunk} } ) {
+                  my $aliases = $room->{aliases};
+                  assert_json_boolean( my $world_readable = $room->{world_readable} );
+                  assert_json_boolean( my $guest_can_join = $room->{guest_can_join} );
 
-            foreach my $alias ( @{$aliases} ) {
-               if( $alias =~ m/^\Q#listingtest0:/ ) {
-                  $seen{listingtest0} = !$world_readable && !$guest_can_join;
+                  foreach my $alias ( @{$aliases} ) {
+                     if( $alias =~ m/^\Q#listingtest0:/ ) {
+                        $isOK{listingtest0} = !$world_readable && !$guest_can_join;
+                     }
+                     elsif( $alias =~ m/^\Q#listingtest1:/ ) {
+                        $isOK{listingtest1} = $world_readable && !$guest_can_join;
+                     }
+                     elsif( $alias =~ m/^\Q#listingtest2:/ ) {
+                        $isOK{listingtest2} = !$world_readable && !$guest_can_join;
+                     }
+                     elsif( $alias =~ m/^\Q#listingtest3:/ ) {
+                        $isOK{listingtest3} = !$world_readable && $guest_can_join;
+                     }
+                     elsif( $alias =~ m/^\Q#listingtest4:/ ) {
+                        $isOK{listingtest4} = $world_readable && $guest_can_join;
+                     }
+                  }
                }
-               elsif( $alias =~ m/^\Q#listingtest1:/ ) {
-                  $seen{listingtest1} = $world_readable && !$guest_can_join;
-               }
-               elsif( $alias =~ m/^\Q#listingtest2:/ ) {
-                  $seen{listingtest2} = !$world_readable && !$guest_can_join;
-               }
-               elsif( $alias =~ m/^\Q#listingtest3:/ ) {
-                  $seen{listingtest3} = !$world_readable && $guest_can_join;
-               }
-               elsif( $alias =~ m/^\Q#listingtest4:/ ) {
-                  $seen{listingtest4} = $world_readable && $guest_can_join;
-               }
-            }
-         }
 
-         foreach my $key ( keys %seen ) {
-            $seen{$key} or die "Wrong for $key";
-         }
-
-         Future->done(1);
-      });
+               Future->done( all { $isOK{$_} } keys %isOK );
+            })
+         };
+      })
    };
 
 test "GET /publicRooms includes avatar URLs",
@@ -441,44 +446,100 @@ test "GET /publicRooms includes avatar URLs",
             );
          }),
       )->then( sub {
-         $http->do_request_json(
-            method => "GET",
-            uri    => "/r0/publicRooms",
-      )})->then( sub {
-         my ( $body ) = @_;
+         repeat_until_true {
+            $http->do_request_json(
+               method => "GET",
+               uri    => "/r0/publicRooms",
+            )->then( sub {
+               my ( $body ) = @_;
 
-         log_if_fail "publicRooms", $body;
+               log_if_fail "publicRooms", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
-         assert_json_list( $body->{chunk} );
+               assert_json_keys( $body, qw( chunk ));
+               assert_json_list( $body->{chunk} );
 
-         my %seen = (
-            worldreadable    => 0,
-            nonworldreadable => 0,
-         );
+               my %isOK = (
+                  worldreadable    => 0,
+                  nonworldreadable => 0,
+               );
 
-         foreach my $room ( @{ $body->{chunk} } ) {
-            my $aliases = $room->{aliases};
+               foreach my $room ( @{ $body->{chunk} } ) {
+                  my $aliases = $room->{aliases};
 
-            foreach my $alias ( @{$aliases} ) {
-               if( $alias =~ m/^\Q#worldreadable:/ ) {
-                  assert_json_keys( $room, qw( avatar_url ) );
-                  assert_eq( $room->{avatar_url}, "https://example.com/ringtails.jpg", "avatar_url" );
-                  $seen{worldreadable} = 1;
+                  foreach my $alias ( @{$aliases} ) {
+                     if( $alias =~ m/^\Q#worldreadable:/ ) {
+                        $isOK{worldreadable} =
+                           ( $room->{avatar_url} eq "https://example.com/ringtails.jpg" );
+                     }
+                     elsif( $alias =~ m/^\Q#nonworldreadable:/ ) {
+                        $isOK{nonworldreadable} =
+                           ( $room->{avatar_url} eq "https://example.com/ruffed.jpg" );
+                     }
+                  }
                }
-               elsif( $alias =~ m/^\Q#nonworldreadable:/ ) {
-                  assert_json_keys( $room, qw( avatar_url ) );
-                  assert_eq( $room->{avatar_url}, "https://example.com/ruffed.jpg", "avatar_url" );
-                  $seen{nonworldreadable} = 1;
-               }
+
+               Future->done( all { $isOK{$_} } keys %isOK );
+            });
+         };
+      });
+   };
+
+test "Guest users can accept invites to private rooms over federation",
+   requires => [ remote_user_fixture(), guest_user_fixture() ],
+
+   do => sub {
+      my ( $remote_user, $local_guest ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_room( $remote_user )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_put_room_state( $remote_user, $room_id,
+            type      => "m.room.join_rules",
+            state_key => "",
+            content   => {
+               join_rule => "invite",
             }
-         }
+         )
+      })->then( sub {
+         matrix_set_room_guest_access( $remote_user, $room_id, "can_join" )
+      })->then( sub {
+         matrix_invite_user_to_room( $remote_user, $local_guest, $room_id )
+      })->then( sub {
+         matrix_join_room( $local_guest, $room_id );
+      })->then( sub {
+         Future->done( 1 );
+      });
+   };
 
-         foreach my $key ( keys %seen ) {
-            $seen{$key} or die "Didn't see $key";
-         }
+test "Guest users denied access over federation if guest access prohibited",
+   requires => [ remote_user_fixture(), guest_user_fixture() ],
 
-         Future->done(1);
+   do => sub {
+      my ( $remote_user, $local_guest ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_room( $remote_user )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_put_room_state( $remote_user, $room_id,
+            type      => "m.room.join_rules",
+            state_key => "",
+            content   => {
+               join_rule => "invite",
+            }
+         )
+      })->then( sub {
+         matrix_set_room_guest_access( $remote_user, $room_id, "forbidden" )
+      })->then( sub {
+         matrix_invite_user_to_room( $remote_user, $local_guest, $room_id )
+      })->then( sub {
+         matrix_join_room( $local_guest, $room_id )
+         ->main::expect_http_403
+      })->then( sub {
+         Future->done( 1 );
       });
    };
 
@@ -503,20 +564,33 @@ sub guest_user_fixture
             my ( $body ) = @_;
             my $access_token = $body->{access_token};
 
-            Future->done( User( $http, $body->{user_id},
-                                $body->{device_id},
-                                undef, $access_token, undef, undef, undef, [], undef ) );
+            Future->done( new_User(
+               http         => $http,
+               user_id      => $body->{user_id},
+               device_id    => $body->{device_id},
+               access_token => $access_token,
+            ));
          });
    })
 }
 
-push @EXPORT, qw( matrix_set_room_guest_access );
+push @EXPORT, qw( matrix_set_room_guest_access matrix_set_room_guest_access_synced );
 
 sub matrix_set_room_guest_access
 {
    my ( $user, $room_id, $guest_access ) = @_;
 
    matrix_put_room_state( $user, $room_id,
+      type    => "m.room.guest_access",
+      content => { guest_access => $guest_access }
+   );
+}
+
+sub matrix_set_room_guest_access_synced
+{
+   my ( $user, $room_id, $guest_access ) = @_;
+
+   matrix_put_room_state_synced( $user, $room_id,
       type    => "m.room.guest_access",
       content => { guest_access => $guest_access }
    );
@@ -544,7 +618,7 @@ sub matrix_get_room_membership
 }
 
 
-push @EXPORT, qw( matrix_set_room_history_visibility );
+push @EXPORT, qw( matrix_set_room_history_visibility matrix_set_room_history_visibility_synced );
 
 sub matrix_set_room_history_visibility
 {
@@ -555,6 +629,20 @@ sub matrix_set_room_history_visibility
    }
 
    matrix_put_room_state( $user, $room_id,
+      type    => "m.room.history_visibility",
+      content => { history_visibility => $history_visibility }
+   );
+}
+
+sub matrix_set_room_history_visibility_synced
+{
+   my ( $user, $room_id, $history_visibility ) = @_;
+
+   if ( $history_visibility eq 'default') {
+       return Future->done();
+   }
+
+   matrix_put_room_state_synced( $user, $room_id,
       type    => "m.room.history_visibility",
       content => { history_visibility => $history_visibility }
    );

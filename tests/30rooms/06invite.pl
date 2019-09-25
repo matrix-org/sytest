@@ -11,9 +11,7 @@ sub inviteonly_room_fixture
          my ( $creator ) = @_;
 
          matrix_create_room( $creator,
-            # visibility: "private" actually means join_rule: "invite"
-            # See SPEC-74
-            visibility => "private",
+            preset => "private_chat",
          )->then( sub {
             my ( $room_id ) = @_;
 
@@ -54,26 +52,14 @@ multi_test "Can invite users to invite-only rooms",
       matrix_invite_user_to_room( $creator, $invitee, $room_id )
          ->SyTest::pass_on_done( "Sent invite" )
       ->then( sub {
-         await_event_for( $invitee, filter => sub {
-            my ( $event ) = @_;
+         await_sync( $invitee, check => sub {
+            my ( $body ) = @_;
 
-            assert_json_keys( $event, qw( type ));
-            return 0 unless $event->{type} eq "m.room.member";
-
-            assert_json_keys( $event, qw( room_id state_key ));
-            return 0 unless $event->{room_id} eq $room_id;
-            return 0 unless $event->{state_key} eq $invitee->user_id;
+            return 0 unless exists $body->{rooms}{invite}{$room_id};
 
             return 1;
          })
       })->then( sub {
-         my ( $event ) = @_;
-
-         assert_json_keys( my $content = $event->{content}, qw( membership ));
-
-         $content->{membership} eq "invite" or
-            die "Expected membership to be 'invite'";
-
          matrix_join_room( $invitee, $room_id )
             ->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
@@ -121,6 +107,29 @@ test "Invited user can reject invite over federation",
       }
    ],
    do => \&invited_user_can_reject_invite;
+
+test "Invited user can reject invite over federation several times",
+   # https://github.com/matrix-org/synapse/issues/1987
+   requires => [ remote_user_fixture(),
+      do {
+         my $creator = local_user_fixture();
+         $creator, inviteonly_room_fixture( creator => $creator );
+      }
+   ],
+   do => sub {
+      my ( $invitee, $creator, $room_id ) = @_;
+
+      # we just do an invite/reject cycle three times
+      my $runner = sub {
+         return invited_user_can_reject_invite(
+            $invitee, $creator, $room_id
+           );
+      };
+
+      $runner->()
+        ->then( $runner )
+        ->then( $runner );
+   };
 
 sub invited_user_can_reject_invite
 {
@@ -227,7 +236,7 @@ test "Invited user can reject local invite after originator leaves",
    };
 
 test "Invited user can see room metadata",
-   requires => [ magic_local_user_and_room_fixtures(), local_user_fixture() ],
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
 
    do => sub {
       my ( $creator, $room_id, $invitee ) = @_;
@@ -246,28 +255,100 @@ test "Invited user can see room metadata",
       )->then( sub {
          matrix_invite_user_to_room( $creator, $invitee, $room_id );
       })->then( sub {
-         await_event_for( $invitee, filter => sub {
-            my ( $event ) = @_;
-            return $event->{type} eq "m.room.member" &&
-                   $event->{room_id} eq $room_id;
-         });
+         await_sync( $invitee, check => sub {
+            my ( $body ) = @_;
+
+            return 0 unless exists $body->{rooms}{invite}{$room_id};
+
+            return $body->{rooms}{invite}{$room_id};
+         })
       })->then( sub {
-         my ( $event ) = @_;
+         my ( $body ) = @_;
 
          # invite_room_state is optional
-         if( !$event->{invite_room_state} ) {
+         if( !$body->{invite_state} ) {
             return Future->done();
          }
 
-         assert_json_list( $event->{invite_room_state} );
+         log_if_fail "Invite", $body;
+
+         assert_json_list( $body->{invite_state}{events} );
 
          my %state_by_type = map {
             $_->{type} => $_
-         } @{ $event->{invite_room_state} };
+         } @{ $body->{invite_state}{events} };
 
          $state_by_type{$_} or die "Did not receive $_ state"
             for qw( m.room.join_rules m.room.name
-                    m.room.canonical_alias m.room.avatar );
+                    m.room.avatar );
+
+         my @futures = ();
+
+         foreach my $event_type ( keys %state_by_type ) {
+            push @futures, matrix_get_room_state( $creator, $room_id,
+               type      => $event_type,
+               state_key => $state_by_type{$event_type}{state_key},
+            )->then( sub {
+               my ( $room_content ) = @_;
+
+               my $invite_content = $state_by_type{$event_type}{content};
+
+               assert_deeply_eq( $room_content, $invite_content,
+                  'invite content' );
+
+               Future->done();
+            });
+         }
+
+         Future->needs_all( @futures )
+            ->then_done(1);
+      });
+   };
+
+test "Remote invited user can see room metadata",
+   requires => [ local_user_and_room_fixtures(), remote_user_fixture() ],
+
+   do => sub {
+      my ( $creator, $room_id, $invitee ) = @_;
+
+      Future->needs_all(
+         matrix_put_room_state( $creator, $room_id,
+            type => "m.room.name",
+            content => { name => "The room name" },
+         ),
+         matrix_put_room_state( $creator, $room_id,
+            type => "m.room.avatar",
+            content => { url => "http://something" },
+         ),
+      )->then( sub {
+         matrix_invite_user_to_room( $creator, $invitee, $room_id );
+      })->then( sub {
+         await_sync( $invitee, check => sub {
+            my ( $body ) = @_;
+
+            return 0 unless exists $body->{rooms}{invite}{$room_id};
+
+            return $body->{rooms}{invite}{$room_id};
+         });
+      })->then( sub {
+         my ( $body ) = @_;
+
+         # invite_room_state is optional
+         if( !$body->{invite_state} ) {
+            return Future->done();
+         }
+
+         log_if_fail "Invite", $body;
+
+         assert_json_list( $body->{invite_state}{events} );
+
+         my %state_by_type = map {
+            $_->{type} => $_
+         } @{ $body->{invite_state}{events} };
+
+         $state_by_type{$_} or die "Did not receive $_ state"
+            for qw( m.room.join_rules m.room.name
+                    m.room.avatar );
 
          my @futures = ();
 

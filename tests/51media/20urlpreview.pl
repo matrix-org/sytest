@@ -22,7 +22,7 @@ EOHTML
 
 my $DIR = dirname __FILE__;
 
-multi_test "Test that a message is pushed",
+multi_test "Test URL preview",
    requires => [
       local_user_fixture( with_events => 0 ), $main::TEST_SERVER_INFO,
    ],

@@ -87,14 +87,12 @@ multi_test "Test that a message is pushed",
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
                return unless $body->{notification}{type};
                return unless $body->{notification}{type} eq "m.room.message";
                return 1;
-            })->then( sub {
-               my ( $request ) = @_;
-
-               $request->respond_json( {} );
-               Future->done( $request );
             }),
 
             matrix_send_room_text_message( $bob, $room_id,
@@ -131,13 +129,11 @@ multi_test "Test that a message is pushed",
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
                return unless $body->{notification}{counts};
                return 1;
-            })->then( sub {
-               my ( $request ) = @_;
-
-               $request->respond_json( {} );
-               Future->done( $request );
             }),
 
             # Now send a read receipt for that message
@@ -198,14 +194,12 @@ test "Invites are pushed",
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
                return unless $body->{notification}{type};
                return unless $body->{notification}{type} eq "m.room.member";
                return 1;
-            })->then( sub {
-               my ( $request ) = @_;
-
-               $request->respond_json( {} );
-               Future->done( $request );
             }),
             matrix_invite_user_to_room( $bob, $alice, $room_id ),
          );
@@ -222,6 +216,325 @@ test "Invites are pushed",
          assert_eq( $notification->{user_is_target}, JSON::true, "user_is_target");
          assert_eq( $notification->{room_id}, $room_id, "room_id");
          assert_eq( $notification->{sender}, $bob->user_id, "sender");
+
+         Future->done(1);
+      });
+   };
+
+
+=head2 setup_push
+
+   setup_push( $alice, $bob, $test_server_info, $loc )
+
+Sets up push for $alice and creates a room with $alice and $bob. Returns a
+future with the room_id of the newly created room.
+
+=cut
+
+sub setup_push
+{
+   my ( $alice, $bob, $test_server_info, $loc ) = @_;
+   my $room_id;
+
+   do_request_json_for( $alice,
+      method  => "POST",
+      uri     => "/r0/pushers/set",
+      content => {
+         profile_tag         => "tag",
+         kind                => "http",
+         app_id              => "sytest",
+         app_display_name    => "sytest_display_name",
+         device_display_name => "device_display_name",
+         pushkey             => "a_push_key",
+         lang                => "en",
+         data                => {
+            url => $test_server_info->client_location . $loc,
+         },
+      },
+   )->then( sub {
+      matrix_create_room( $bob );
+   })->then( sub {
+      ( $room_id ) = @_;
+
+      matrix_join_room( $alice, $room_id )
+   })->then( sub {
+      Future->done( $room_id )
+   })
+}
+
+sub check_received_push_with_name
+{
+   my ( $bob, $room_id, $loc, $room_name ) = @_;
+
+   Future->needs_all(
+      await_http_request( $loc, sub {
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
+
+         # Respond to all requests, even if we filiter them out
+         $request->respond_json( {} );
+
+         return unless $body->{notification}{type};
+         return unless $body->{notification}{type} eq "m.room.message";
+         return 1;
+      }),
+      matrix_send_room_text_message( $bob, $room_id,
+         body => "Message",
+      ),
+   )->then( sub {
+      my ( $request ) = @_;
+      my $body = $request->body_from_json;
+
+      log_if_fail "Message push request body", $body;
+
+      assert_json_keys( my $notification = $body->{notification}, qw(
+         id room_id type sender content devices counts
+      ));
+
+      assert_eq( $notification->{room_id}, $room_id, "room_id");
+      assert_eq( $notification->{sender}, $bob->user_id, "sender");
+      assert_eq( $notification->{room_name}, $room_name, "room_name");
+
+      Future->done(1);
+   });
+}
+
+test "Rooms with aliases are correctly named in pushed",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ), room_alias_fixture(),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $room_alias, $test_server_info ) = @_;
+      my $room_id;
+
+      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $bob,
+            method => "PUT",
+            uri    => "/r0/directory/room/$room_alias",
+
+            content => { room_id => $room_id },
+         )
+      })->then( sub {
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
+      });
+   };
+
+test "Rooms with names are correctly named in pushed",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $test_server_info ) = @_;
+      my $room_id;
+
+      my $name = "Test Name";
+
+      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_put_room_state( $bob, $room_id,
+            type    => "m.room.name",
+            content => { name => $name },
+         );
+      })->then( sub {
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $name )
+      });
+   };
+
+test "Rooms with canonical alias are correctly named in pushed",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ), room_alias_fixture(),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $room_alias, $test_server_info ) = @_;
+      my $room_id;
+
+      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $bob,
+            method => "PUT",
+            uri    => "/r0/directory/room/$room_alias",
+
+            content => { room_id => $room_id },
+         )
+      })->then( sub {
+         matrix_put_room_state( $bob, $room_id,
+            type    => "m.room.canonical_alias",
+            content => { alias => $room_alias },
+         );
+      })->then( sub {
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
+      });
+   };
+
+test "Rooms with many users are correctly pushed",
+   requires => [
+      local_user_fixtures( 3, with_events => 0 ), room_alias_fixture(),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $charlie, $room_alias, $test_server_info ) = @_;
+      my $room_id;
+
+      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_join_room( $charlie, $room_id)
+      })->then( sub {
+         do_request_json_for( $bob,
+            method => "PUT",
+            uri    => "/r0/directory/room/$room_alias",
+
+            content => { room_id => $room_id },
+         )
+      })->then( sub {
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
+      });
+   };
+
+test "Don't get pushed for rooms you've muted",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ), $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $test_server_info ) = @_;
+      my $room_id;
+
+      # The idea is to set up push, send a message "1", then disable push,
+      # send "2" then enable and send "3", and assert that only messages 1 and 3
+      # are received by push. This is because its "impossible" to test for the
+      # absence of second push without doing a third.
+
+      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         log_if_fail "room_id", $room_id;
+
+         Future->needs_all(
+            await_http_request( "/alice_push", sub {
+               my ( $request ) = @_;
+
+               log_if_fail "Got /alice_push request";
+
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
+               my $body = $request->body_from_json;
+
+               return unless $body->{notification}{type};
+               return unless $body->{notification}{type} eq "m.room.message";
+               return 1;
+            }),
+            matrix_send_room_text_message( $bob, $room_id,
+               body => "Initial Message",
+            ),
+         )
+      })->then( sub {
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
+
+         log_if_fail "Message push request body", $body;
+
+         assert_json_keys( my $notification = $body->{notification}, qw(
+            id room_id type sender content devices counts
+         ));
+
+         assert_eq( $notification->{room_id}, $room_id, "room_id");
+         assert_eq( $notification->{sender}, $bob->user_id, "sender");
+         assert_eq( $notification->{content}{body}, "Initial Message", "message");
+
+         Future->done(1);
+      })->then( sub {
+         do_request_json_for( $alice,
+            method  => "PUT",
+            uri     => "/r0/pushrules/global/room/$room_id",
+            content => { actions => [ "dont_notify" ] },
+         )
+      })->then( sub {
+         # We now test that after having set dont_notify above we won't get any
+         # more pushes in that room, unless they're mentions.
+         #
+         # We do this by sending two messages, one which isn't a mention and one
+         # which is, and then asserting that we only see the mention. Since
+         # setting push rules can take a few moments to take effect, we may need
+         # to retry a few times before we see the expected behaviour.
+         retry_until_success {
+            my $push_count = 0;  # Counts the number of pushes we've seen in this loop
+
+            Future->needs_all(
+               await_http_request( "/alice_push", sub {
+                  my ( $request ) = @_;
+                  my $body = $request->body_from_json;
+
+                  # Respond to all requests, even if we filiter them out
+                  $request->respond_json( {} );
+
+                  log_if_fail "Received push", $body;
+
+                  return unless $body->{notification}{type};
+                  return unless $body->{notification}{type} eq "m.room.message";
+
+                  $push_count += 1;
+
+                  # Either: 1) we get the first message we send, i.e. the one
+                  # that we didn't expect to get pushed, so we continue waiting,
+                  # or 2) this was the second message so we stop waiting.
+                  return unless $body->{notification}{content}{expect} eq JSON::true;
+
+                  return 1;
+               }),
+               matrix_send_room_message( $bob, $room_id,
+                  content => {
+                     msgtype => "m.text",
+                     body    => "First message (Should not be pushed)",
+                     expect  => JSON::false,  # This shouldn't be pushed
+                  }
+               )->then( sub {
+                  matrix_send_room_message( $bob, $room_id,
+                     content => {
+                        msgtype => "m.text",
+                        body    => "Second message - " . $alice->user_id,
+                        expect  => JSON::true,  # This should be pushed
+                     }
+                  )
+               }),
+            )->then( sub {
+               my ( $request ) = @_;
+
+               assert_eq( $push_count, 1 );
+
+               Future->done( $request );
+            })
+         }
+      })->then( sub {
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
+
+         log_if_fail "Message push request body", $body;
+
+         assert_json_keys( my $notification = $body->{notification}, qw(
+            id room_id type sender content devices counts
+         ));
+
+         assert_eq( $notification->{room_id}, $room_id, "room_id");
+         assert_eq( $notification->{sender}, $bob->user_id, "sender");
+         assert_eq( $notification->{content}{body}, "Second message - " . $alice->user_id, "message");
 
          Future->done(1);
       });

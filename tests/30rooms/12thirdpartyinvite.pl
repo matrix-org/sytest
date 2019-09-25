@@ -1,3 +1,5 @@
+#use Data::Dump qw( pp );
+
 my $invitee_email = 'lemurs@monkeyworld.org';
 
 test "Can invite existing 3pid",
@@ -9,6 +11,7 @@ test "Can invite existing 3pid",
       my $invitee_mxid = $invitee->user_id;
 
       my $room_id;
+      my $id_access_token = $id_server->get_access_token;
 
       $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
       ->then( sub {
@@ -21,9 +24,10 @@ test "Can invite existing 3pid",
             uri    => "/r0/rooms/$room_id/invite",
 
             content => {
-               id_server    => $id_server->name,
-               medium       => "email",
-               address      => $invitee_email,
+               id_server       => $id_server->name,
+               id_access_token => $id_access_token,
+               medium          => "email",
+               address         => $invitee_email,
             },
          );
       })->then( sub {
@@ -49,6 +53,7 @@ test "Can invite existing 3pid with no ops",
       my $invitee_mxid = $invitee->user_id;
 
       my $room_id;
+      my $id_access_token = $id_server->get_access_token;
 
       $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
       ->then( sub {
@@ -58,12 +63,13 @@ test "Can invite existing 3pid with no ops",
 
          do_request_json_for( $inviter,
             method => "POST",
-            uri    => "/api/v1/rooms/$room_id/invite",
+            uri    => "/r0/rooms/$room_id/invite",
 
             content => {
-               id_server    => $id_server->name,
-               medium       => "email",
-               address      => $invitee_email,
+               id_server       => $id_server->name,
+               id_access_token => $id_access_token,
+               medium          => "email",
+               address         => $invitee_email,
             },
          );
       })->then( sub {
@@ -89,6 +95,7 @@ test "Can invite existing 3pid in createRoom",
       my $invitee_mxid = $invitee->user_id;
 
       my $room_id;
+      my $id_access_token = $id_server->get_access_token;
 
       $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
       ->then( sub {
@@ -96,6 +103,7 @@ test "Can invite existing 3pid in createRoom",
             medium    => "email",
             address   => $invitee_email,
             id_server => $id_server->name,
+            id_access_token => $id_access_token,
          };
          matrix_create_room( $inviter, invite_3pid => [ $invite_info ] );
       })->then( sub {
@@ -181,10 +189,30 @@ sub can_invite_unbound_3pid
 {
    my ( $room_id, $inviter, $invitee, $hs_uribase, $id_server ) = @_;
 
-   do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+   do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
    ->then( sub {
       $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
    })->then( sub {
+      await_sync( $invitee, check => sub {
+         my ( $body ) = @_;
+
+         return 0 unless exists $body->{rooms}{invite}{$room_id};
+
+         return $body->{rooms}{invite}{$room_id};
+      })
+   })->then( sub {
+      my ( $body ) = @_;
+
+      log_if_fail "Invite", $body;
+
+      assert_json_list( $body->{invite_state}{events} );
+
+      my %members = map {
+         $_->{state_key} => $_
+      } grep { $_->{type} eq "m.room.member" } @{ $body->{invite_state}{events} };
+
+      exists $members{ $inviter->user_id } or die "No inviter member invite state";
+
       matrix_get_room_state( $inviter, $room_id,
          type      => "m.room.member",
          state_key => $invitee->user_id,
@@ -204,6 +232,69 @@ sub can_invite_unbound_3pid
    })->followed_by( assert_membership( "join" ) );
 }
 
+test "Can invite unbound 3pid over federation with users from both servers",
+   requires => [ local_user_fixture(), remote_user_fixture(), remote_user_fixture(),
+                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
+
+   do => sub {
+      my ( $inviter, $invitee, $joiner, $info, $id_server ) = @_;
+      my $hs_uribase = $info->client_location;
+      my $room_id;
+
+      matrix_create_and_join_room( [ $inviter, $joiner ], visibility => "private", with_invite => 1 )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
+      })->then( sub {
+         await_event_for( $joiner, filter => sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.third_party_invite";
+
+            return 1;
+         })
+      })->then( sub {
+         $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
+      })->then( sub {
+         await_event_for( $inviter, filter => sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{state_key} eq $invitee->user_id;
+
+            assert_eq( $event->{content}{membership}, "invite" );
+
+            return 1;
+         })
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "m.room.member invite", $body;
+         assert_eq( $body->{third_party_invite}{display_name}, 'Bob', 'invite display name' );
+
+         matrix_join_room( $invitee, $room_id )
+      })->then( sub {
+         await_event_for( $inviter, filter => sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{state_key} eq $invitee->user_id;
+
+            assert_eq( $event->{content}{membership},  "join" );
+
+            return 1;
+         })
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )
+      })->followed_by( assert_membership( "join" ) );
+   };
+
 test "Can accept unbound 3pid invite after inviter leaves",
    requires => [ local_user_fixtures( 3 ), $main::HOMESERVER_INFO[0],
                     id_server_fixture() ],
@@ -222,7 +313,7 @@ test "Can accept unbound 3pid invite after inviter leaves",
       })->then( sub {
           matrix_join_room( $other_member, $room_id );
       })->then( sub {
-         do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+         do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
       })->then( sub {
          matrix_leave_room( $inviter, $room_id );
       })->then( sub {
@@ -251,7 +342,7 @@ test "Can accept third party invite with /join",
       ->then( sub {
          ( $room_id ) = @_;
 
-         do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+         do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
       })->then( sub {
          matrix_get_room_state( $inviter, $room_id, )
       })->then( sub {
@@ -279,28 +370,6 @@ test "Can accept third party invite with /join",
             state_key => $invitee->user_id,
          )
       })->followed_by( assert_membership( "join" ) );
-   };
-
-test "Uses consistent guest_access_token across requests",
-   requires => [ local_user_and_room_fixtures(), local_user_and_room_fixtures(),
-                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
-
-   do => sub {
-      my ( $inviter1, $room1, $inviter2, $room2, $info, $id_server ) = @_;
-      my $hs_uribase = $info->client_location;
-
-      Future->needs_all(
-         do_3pid_invite( $inviter1, $room1, $id_server->name, $invitee_email ),
-         do_3pid_invite( $inviter2, $room2, $id_server->name, $invitee_email ),
-      )->then( sub {
-         my $invites = $id_server->invites_for( "email", $invitee_email );
-
-         log_if_fail "invites", $invites;
-         assert_eq( scalar( @$invites ), 2, "Invite count" );
-         assert_eq( $invites->[0]{guest_access_token}, $invites->[1]{guest_access_token}, "guest_access_tokens" );
-
-         Future->done( 1 );
-      });
    };
 
 test "3pid invite join with wrong but valid signature are rejected",
@@ -341,11 +410,19 @@ test "3pid invite join valid signature but unreachable ID server are rejected",
 
       invite_should_fail( $inviter, $invitee, $hs_uribase, $id_server, sub {
          $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee, sub {
-            # Stop the server listening by taking its handle away
+            # Stop the server listening by closing any active connections and
+            # taking its handle away
+
+            foreach my $c ($id_server->children()) {
+               if( $c->can( 'close' )) {
+                  $c->close();
+               }
+            }
             $id_server->configure( handle => undef );
          });
       });
    };
+
 
 sub invite_should_fail {
    my ( $inviter, $invitee, $hs_base_url, $id_server, $bind_sub ) = @_;
@@ -355,8 +432,8 @@ sub invite_should_fail {
    matrix_create_room( $inviter, visibility => "private" )
    ->then( sub {
       ( $room_id ) = @_;
-
-      do_3pid_invite( $inviter, $room_id, $id_server->name, $invitee_email )
+      log_if_fail "Created room id $room_id";
+      do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
    })->then( sub {
       $bind_sub->( $id_server );
    })->then( sub {
@@ -397,9 +474,14 @@ sub do_3pid_invite {
       method  => "POST",
       uri     => "/r0/rooms/$room_id/invite",
       content => {
-         id_server    => $id_server,
-         medium       => "email",
-         address      => $invitee_email,
+         id_server       => $id_server->name,
+         id_access_token => $id_server->get_access_token,
+         medium          => "email",
+         address         => $invitee_email,
       }
-   )
+   )->then( sub {
+      my ( $result ) = @_;
+      log_if_fail "sent 3pid invite for $invitee_email to $id_server";
+      Future->done( 1 );
+   });
 }

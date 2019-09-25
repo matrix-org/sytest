@@ -56,16 +56,65 @@ test "PUT /rooms/:room_id/state/m.room.power_levels can set levels",
             content => $levels,
          )
       })->then( sub {
-         matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
-      })->then( sub {
-         my ( $levels ) = @_;
+         retry_until_success {
+            matrix_get_room_state(
+               $user, $room_id, type => "m.room.power_levels"
+            )->then( sub {
+               my ( $levels ) = @_;
 
-         $levels->{users}{'@random-other-user:their.home'} == 20 or
-            die "Expected to have set other user's level to 20";
+               $levels->{users}{'@random-other-user:their.home'} == 20 or
+                  die "Expected to have set other user's level to 20";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
+
+test "PUT power_levels should not explode if the old power levels were empty",
+   requires => [ $user_fixture, $room_fixture,
+                 qw( can_get_power_levels )],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      # absence of an 'events' key
+      matrix_put_room_state(
+         $user,
+         $room_id,
+         type      => "m.room.power_levels",
+         state_key => "",
+         content   => {
+            users => {
+               $user->user_id => 100,
+            },
+         },
+      )->then( sub {
+         # absence of a 'users' key
+         matrix_put_room_state(
+            $user,
+            $room_id,
+            type      => "m.room.power_levels",
+            state_key => "",
+            content   => {
+            },
+         );
+      })->then( sub {
+         # this should now give a 403 (not a 500)
+         matrix_put_room_state(
+            $user,
+            $room_id,
+            type      => "m.room.power_levels",
+            state_key => "",
+            content   => {
+               users => {},
+            },
+         ) -> main::expect_http_403;
+      })->then( sub {
+         matrix_get_room_state( $user, $room_id, type => "m.room.power_levels" )
+      });
+   };
+
 
 test "Both GET and PUT work",
    requires => [qw( can_get_power_levels can_set_power_levels )],
@@ -78,9 +127,9 @@ test "Both GET and PUT work",
       Future->done(1);
    };
 
-push our @EXPORT, qw( matrix_change_room_powerlevels );
+push our @EXPORT, qw( matrix_change_room_power_levels );
 
-sub matrix_change_room_powerlevels
+sub matrix_change_room_power_levels
 {
    my ( $user, $room_id, $func ) = @_;
    is_User( $user ) or croak "Expected a User; got $user";

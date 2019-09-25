@@ -120,8 +120,8 @@ sub _assert_deeply_eq
             croak "Got a value for '$key' that was not expected at $outerkeystr for $name";
       }
    }
-   elsif( $wanttype eq JSON_BOOLEAN_CLASS ) {
-      ref $got eq JSON_BOOLEAN_CLASS and $got eq $want or
+   elsif( $wanttype eq JSON_BOOLEAN_CLASS or $wanttype eq "JSON::number" ) {
+      $got eq $want or
          croak "Got ${\ pp $got }, expected ${\ pp $want } at $outerkeystr for $name";
    }
    else {
@@ -164,7 +164,7 @@ sub assert_json_keys
    my ( $obj, @keys ) = @_;
    assert_json_object( $obj );
    foreach ( @keys ) {
-      defined $obj->{$_} or croak "Expected a '$_' key";
+      exists $obj->{$_} or croak "Expected a '$_' key";
    }
 }
 

@@ -1,16 +1,17 @@
-use Future::Utils 0.18 qw( try_repeat );
 use List::Util qw( first );
 use List::UtilsBy qw( partition_by );
 
 my $creator_fixture = local_user_fixture(
    # Some of these tests depend on the user having a displayname
    displayname => "My name here",
-   avatar_url => "mxc://foo/bar",
+   avatar_url  => "mxc://foo/bar",
+   with_events => 1,
 );
 
 my $remote_user_fixture = remote_user_fixture(
    displayname => "My remote name here",
-   avatar_url => "mxc://foo/remote",
+   avatar_url  => "mxc://foo/remote",
+   with_events => 1,
 );
 
 my $room_fixture = fixture(
@@ -93,25 +94,27 @@ test "New room members see existing members' presence in room initialSync",
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
-      try_repeat {
+      ( repeat_until_true {
          matrix_initialsync_room( $user, $room_id )->then( sub {
             my ( $body ) = @_;
 
             my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
             $presence{$first_user->user_id} or
-               die "Expected to find initial user's presence";
+               return Future->done( undef );  # try again
 
-            assert_json_keys( $presence{ $first_user->user_id },
-               qw( type content ));
-            assert_json_keys( $presence{ $first_user->user_id }{content},
-               qw( presence last_active_ago ));
+            return Future->done( \%presence );
+         })
+      })->then( sub {
+         my ( $presencemap ) = @_;
 
-            Future->done(1);
-         })->else_with_f( sub {
-            my ( $f ) = @_; delay( 0.2 )->then( sub { $f } );
-         });
-      } until => sub { !$_[0]->failure };
+         assert_json_keys( $presencemap->{ $first_user->user_id },
+            qw( type content ));
+         assert_json_keys( $presencemap->{ $first_user->user_id }{content},
+            qw( presence last_active_ago ));
+
+         Future->done(1);
+      });
    };
 
 test "Existing members see new members' join events",

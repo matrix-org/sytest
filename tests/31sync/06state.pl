@@ -1,30 +1,5 @@
 use Future::Utils qw( repeat );
 
-# call /sync repeatedly until it returns a result
-# with an event in the given room
-# TODO: it might be good to combine this with await_event_for() at some point.
-sub wait_for_event_in_room {
-    my ($user, $room_id, %params) = @_;
-
-    my $sync_params = $params{sync_params} || {};
-
-    repeat(sub {
-        # returns the sync body if the event happened, else undef
-        matrix_sync( $user, %{ $sync_params } )->then( sub {
-            my ( $body ) = @_;
-
-            my $room = $body->{rooms}{join}{$room_id};
-
-            if( $room && (scalar @{ $room->{timeline}{events}} ||
-                          scalar @{ $room->{state}{events}})) {
-                Future->done($body);
-            } else {
-                delay(0.1)->then_done(undef);
-            }
-        });
-    }, while => sub {!$_[0]->failure and !$_[0]->get});
-}
-
 test "State is included in the timeline in the initial sync",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
@@ -567,8 +542,6 @@ test "A change to displayname should appear in incremental /sync",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
 
-   bug => "SYN-707",
-
    check => sub {
       my ( $user ) = @_;
 
@@ -591,7 +564,8 @@ test "A change to displayname should appear in incremental /sync",
             state_key => $user->user_id,
          );
       })->then( sub {
-         ( $event_id_1 ) = @_;
+         my ( $result ) = @_;
+         $event_id_1 = $result->{event_id};
 
          matrix_send_room_text_message_synced( $user, $room_id,
             body => "A message to wait on because the m.room.member might not come down /sync"
@@ -609,8 +583,8 @@ test "A change to displayname should appear in incremental /sync",
          log_if_fail "Room", $room;
 
          assert_eq( scalar @{ $timeline }, 2, "Expected 2 events");
-         assert_eq( $timeline->[0]{event_id}, $event_id_1 );
-         assert_eq( $timeline->[1]{event_id}, $event_id_2 );
+         assert_eq( $timeline->[0]{event_id}, $event_id_1, "First event ID" );
+         assert_eq( $timeline->[1]{event_id}, $event_id_2, "Second event ID" );
 
          Future->done(1);
       });
@@ -744,5 +718,171 @@ test "When user joins and leaves a room in the same batch, the full state is sti
             or die "Unexpected event content";
 
          Future->done(1);
+      })
+   };
+
+# Test to check that current state events appear in the timeline,
+# even if they were set during a period the user couldn't see.
+# See bug https://github.com/matrix-org/matrix-ios-sdk/issues/341
+test "Current state appears in timeline in private history",
+   requires => [ local_user_fixtures( 3, with_events => 0 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $creator, $syncer, $invitee ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_room( $creator )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_join_room( $syncer, $room_id )
+      })->then( sub {
+         matrix_set_room_history_visibility( $creator, $room_id, "joined" )
+      })->then( sub {
+         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+      })->then( sub {
+         matrix_sync( $syncer )
+      })->then( sub {
+         matrix_leave_room( $syncer, $room_id )
+      })->then( sub {
+         matrix_join_room( $invitee, $room_id )
+      })->then( sub {
+         matrix_join_room_synced( $syncer, $room_id )
+      })->then( sub {
+         matrix_sync_again( $syncer )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{join}{$room_id};
+
+         # Check that we see invitee join event
+         any {
+            $_->{type} eq "m.room.member"
+            && $_->{state_key} eq $invitee->user_id
+            && $_->{content}{membership} eq "join"
+         } @{ $room->{timeline}{events} }
+            or die "No join for joined user";
+
+         Future->done( 1 );
+      })
+   };
+
+test "Current state appears in timeline in private history with many messages before",
+   requires => [ local_user_fixtures( 3, with_events => 0 ),
+                 qw( can_sync ) ],
+
+   # sending 50 messages can take a while
+   timeout => 20000,
+
+   check => sub {
+      my ( $creator, $syncer, $invitee ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_room( $creator )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_join_room( $syncer, $room_id )
+      })->then( sub {
+         matrix_set_room_history_visibility( $creator, $room_id, "joined" )
+      })->then( sub {
+         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+      })->then( sub {
+         matrix_sync( $syncer )
+      })->then( sub {
+         repeat( sub {
+            my $msgnum = $_[0];
+
+            matrix_send_room_text_message( $creator, $room_id,
+               body => "Message $msgnum",
+            )->on_done( sub {
+               log_if_fail "Sent msg $msgnum / 50";
+            });
+         }, foreach => [ 1 .. 50 ])
+      })->then( sub {
+         matrix_leave_room( $syncer, $room_id )
+      })->then( sub {
+         matrix_join_room( $invitee, $room_id )
+      })->then( sub {
+         matrix_join_room_synced( $syncer, $room_id )
+      })->then( sub {
+         matrix_sync_again( $syncer )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{join}{$room_id};
+
+         # Check that we see invitee join event
+         any {
+            $_->{type} eq "m.room.member"
+            && $_->{state_key} eq $invitee->user_id
+            && $_->{content}{membership} eq "join"
+         } @{ $room->{timeline}{events} }
+            or die "No join for joined user";
+
+         Future->done( 1 );
+      })
+   };
+
+
+
+test "Current state appears in timeline in private history with many messages after",
+   requires => [ local_user_fixtures( 3, with_events => 0 ),
+                 qw( can_sync ) ],
+
+   # sending 50 messages can take a while
+   timeout => 20000,
+
+   check => sub {
+      my ( $creator, $syncer, $invitee ) = @_;
+
+      my ( $room_id );
+
+      matrix_create_room( $creator )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_join_room( $syncer, $room_id )
+      })->then( sub {
+         matrix_set_room_history_visibility( $creator, $room_id, "joined" )
+      })->then( sub {
+         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+      })->then( sub {
+         matrix_sync( $syncer )
+      })->then( sub {
+         matrix_leave_room( $syncer, $room_id )
+      })->then( sub {
+         matrix_join_room( $invitee, $room_id )
+      })->then( sub {
+         repeat( sub {
+            my $msgnum = $_[0];
+
+            matrix_send_room_text_message( $creator, $room_id,
+               body => "Message $msgnum",
+            )->on_done( sub {
+               log_if_fail "Sent msg $msgnum / 50";
+            });
+         }, foreach => [ 1 .. 50 ])
+      })->then( sub {
+         matrix_join_room_synced( $syncer, $room_id )
+      })->then( sub {
+         matrix_sync_again( $syncer )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{join}{$room_id};
+
+         # Check that we see invitee join event
+         any {
+            $_->{type} eq "m.room.member"
+            && $_->{state_key} eq $invitee->user_id
+            && $_->{content}{membership} eq "join"
+         } @{ $room->{timeline}{events} }
+            or die "No join for joined user";
+
+         Future->done( 1 );
       })
    };

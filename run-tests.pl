@@ -14,6 +14,7 @@ use SyTest::Assertions qw( :all );
 use SyTest::JSONSensible;
 
 use Future;
+use Future::Utils qw( try_repeat repeat );
 use IO::Async::Loop;
 
 use Data::Dump qw( pp );
@@ -24,6 +25,7 @@ use List::Util 1.33 qw( first all any maxstr max );
 use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
 use Time::HiRes qw( time );
+use POSIX qw( strftime );
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
@@ -37,37 +39,42 @@ use Module::Pluggable
    search_path => [ "SyTest::Output" ],
    require     => 1;
 
-# A number of commandline arguments exist simply for passing values through to
-# the way that synapse is started by tests/05synapse.pl. We'll collect them
-# all in one place for neatness
-our %SYNAPSE_ARGS = (
-   directory  => "../synapse",
-   python     => "python",
-   extra_args => [],
+use Module::Pluggable
+   sub_name    => "homeserver_factories",
+   search_path => [ "SyTest::HomeserverFactory" ],
+   require     => 1;
 
-   log        => 0,
-   log_filter => [],
-   coverage   => 0,
-   dendron    => "",
-   pusher     => 0,
 
-   synchrotron       => 0,
-   federation_reader => 0,
-);
+binmode(STDOUT, ":utf8");
 
 our $WANT_TLS = 1;  # This is shared with the test scripts
 
 our $BIND_HOST = "localhost";
 
-my %FIXED_BUGS;
+# a unique ID for this test run. It is used in some tests to create user IDs
+# and the like.
+our $TEST_RUN_ID = strftime( '%Y%m%d_%H%M%S', gmtime() );
 
 my $STOP_ON_FAIL;
+my $SERVER_IMPL = undef;
 
+my $WHITELIST_FILE;
+my $BLACKLIST_FILE;
+
+# the room version that we use for the majority of our tests (those which do
+# not requires a specific room version). 'undef' means 'use the default from
+# the server under test'.
+our $TEST_ROOM_VERSION;
+
+Getopt::Long::Configure('pass_through');
 GetOptions(
+   'I|server-implementation=s' => \$SERVER_IMPL,
    'C|client-log+' => \my $CLIENT_LOG,
-   'S|server-log+' => \$SYNAPSE_ARGS{log},
-   'server-grep=s' => \$SYNAPSE_ARGS{log_filter},
-   'd|synapse-directory=s' => \$SYNAPSE_ARGS{directory},
+
+   # Whitelist and Blacklist files with test names to run.
+   # Both cannot be set at once
+   'W|test-whitelist-file=s' => \$WHITELIST_FILE,
+   'B|test-blacklist-file=s' => \$BLACKLIST_FILE,
 
    's|stop-on-fail' => sub { $STOP_ON_FAIL = 1 },
    'a|all'          => sub { $STOP_ON_FAIL = 0 },
@@ -80,54 +87,63 @@ GetOptions(
 
    'n|no-tls' => sub { $WANT_TLS = 0 },
 
-   'python=s' => \$SYNAPSE_ARGS{python},
+   'room-version=s' => \$TEST_ROOM_VERSION,
 
-   'coverage+' => \$SYNAPSE_ARGS{coverage},
+   # these two are superceded by -I, but kept for backwards compatibility
+   'dendron=s' => sub {
+      $SERVER_IMPL = 'Synapse::ViaDendron' unless $SERVER_IMPL;
+      push @ARGV, "--dendron-binary", $_[1];
+   },
+   'haproxy'   => sub {
+      $SERVER_IMPL = 'Synapse::ViaHaproxy' unless $SERVER_IMPL;
+   },
 
-   'dendron=s' => \$SYNAPSE_ARGS{dendron},
 
-   'pusher+' => \$SYNAPSE_ARGS{pusher},
-
-   'synchrotron+' => \$SYNAPSE_ARGS{synchrotron},
-
-   'federation-reader+' => \$SYNAPSE_ARGS{federation_reader},
+   # These are now unused, but retaining arguments for commandline parsing support
+   'pusher+'            => sub {},
+   'synchrotron+'       => sub {},
+   'federation-reader+' => sub {},
+   'media-repository+'  => sub {},
+   'appservice+'        => sub {},
+   'federation-sender+' => sub {},
+   'client-reader+'     => sub {},
 
    'bind-host=s' => \$BIND_HOST,
 
    'p|port-range=s' => \(my $PORT_RANGE = "8800:8899"),
 
-   'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
-
-   'E=s' => sub { # process -Eoption=value
-      my @more = split m/=/, $_[1];
-
-      # Turn single-letter into -X but longer into --NAME
-      $_ = ( length > 1 ? "--$_" : "-$_" ) for $more[0];
-
-      push @{ $SYNAPSE_ARGS{extra_args} }, @more;
-   },
-
    'h|help' => sub { usage(0) },
 ) or usage(1);
 
-my %only_files;
-my $stop_after;
-if( @ARGV ) {
-   $only_files{$_}++ for @ARGV;
-
-   $stop_after = maxstr keys %only_files;
-}
-
-push @{ $SYNAPSE_ARGS{extra_args} }, "-v" if $VERBOSE;
 
 sub usage
 {
    my ( $exitcode ) = @_;
 
-   print STDERR <<'EOF';
+   my @output_formats =
+      map { $_->FORMAT }
+      grep { $_->can( "FORMAT" ) } output_formats();
+
+   my @homeserver_implementations =
+      map { $_->name() } homeserver_factories();
+
+   format STDERR =
 run-tests.pl: [options...] [test-file]
 
 Options:
+   -I, --server-implementation  - specify the type of homeserver to start.
+                                  Supported implementations:
+                                   ~~ @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                                      shift( @homeserver_implementations ) || ''
+
+   -W, --test-whitelist-file    - whitelist file containing test names to run
+                                  One per line. Cannot be used in conjunction
+                                  with --test-blacklist-file
+
+   -B, --test-blacklist-file    - blacklist file containing test names to not run
+                                  One per line. Cannot be used in conjunction
+                                  with --test-whitelist-file
+
    -C, --client-log             - enable logging of requests made by the
                                   internal HTTP client. Also logs the internal
                                   HTTP server.
@@ -137,14 +153,15 @@ Options:
        --server-grep PATTERN    - additionally, filter the server passthrough
                                   for matches of this pattern
 
-   -d, --synapse-directory DIR  - path to the checkout directory of synapse
-
    -s, --stop-on-fail           - stop after the first failed test
 
    -a, --all                    - don't stop after the first failed test;
                                   attempt as many as possible
 
-   -O, --output-format FORMAT   - set the style of test output report
+   -O, --output-format FORMAT   - set the style of test output report.
+                                  Supported formats:
+                                   ~~ @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                                      shift( @output_formats ) || ''
 
    -w, --wait-at-end            - pause for input before shutting down testing
                                   synapse servers
@@ -155,24 +172,78 @@ Options:
    -n, --no-tls                 - prefer plaintext client connections where
                                   possible
 
-       --python PATH            - path to the 'python' binary
-
-       --coverage               - generate code coverage stats for synapse
+       --bind-host HOST         - when starting listeners (eg homeservers or
+                                  test httpds), bind to this hostname instead of
+                                  'localhost'.
 
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
-   -F, --fixed BUGS             - bug names that are expected to be fixed
-                                  (ignores 'bug' declarations with these names)
+   --room-version VERSION       - use the given room version for the majority of
+                                  tests
+.
+   write STDERR;
 
-   -ENAME,  -ENAME=VALUE        - pass extra argument NAME or NAME=VALUE
-
-EOF
+   foreach my $hs (homeserver_factories()) {
+      print STDERR "Options for -I ", $hs->name(), "\n";
+      $hs -> print_usage();
+      print STDERR "\n";
+   }
 
    exit $exitcode;
 }
 
 my $OUTPUT = first { $_->can( "FORMAT") and $_->FORMAT eq $OUTPUT_FORMAT } output_formats()
    or die "Unrecognised output format $OUTPUT_FORMAT\n";
+
+$SERVER_IMPL = 'Synapse' unless $SERVER_IMPL;
+my $hs_factory_class = first { $_->name() eq $SERVER_IMPL } homeserver_factories()
+   or die "Unrecognised server implementation $SERVER_IMPL\n";
+our $HS_FACTORY = $hs_factory_class -> new();
+
+Getopt::Long::Configure("no_passthrough");
+GetOptions($HS_FACTORY->get_options()) or usage(1);
+
+# Check if both options have been set
+if( $BLACKLIST_FILE and $WHITELIST_FILE ) {
+   die "Not allowed to set both whitelist and blacklist options.\n";
+   exit 1
+}
+
+# Read in test blacklist rules if set
+my %TEST_BLACKLIST;
+if ( $BLACKLIST_FILE ) {
+   open( my $blacklist_data, "<:encoding(UTF-8)", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for reading: $!\n";
+   while ( my $test_name = <$blacklist_data> ) {
+      # Trim whitespace
+      chomp $test_name;
+      $TEST_BLACKLIST{$test_name} = 1;
+   }
+   close $blacklist_data;
+}
+
+# Read in test whitelist rules if set
+my %TEST_WHITELIST;
+if ( $WHITELIST_FILE ) {
+   open( my $whitelist_data, "<:encoding(UTF-8)", $WHITELIST_FILE ) or die "Couldn't open whitelist file for reading: $!\n";
+   while ( my $test_name = <$whitelist_data> ) {
+      # Trim whitespace
+      chomp $test_name;
+      $TEST_WHITELIST{$test_name} = 1;
+   }
+   close $whitelist_data;
+}
+
+my %only_files;
+my $stop_after;
+if( @ARGV ) {
+   $only_files{$_}++ for @ARGV;
+
+   $stop_after = maxstr keys %only_files;
+}
+
+if( $VERBOSE && $HS_FACTORY->can( 'set_verbosity' )) {
+   $HS_FACTORY->set_verbosity( $VERBOSE );
+}
 
 # Turn warnings into $OUTPUT->diag calls
 $SIG{__WARN__} = sub {
@@ -196,6 +267,17 @@ if( $CLIENT_LOG ) {
          my $request_uri = $request->uri;
 
          my $request_user = $args{request_user};
+
+         my $original_on_redirect = $args{on_redirect};
+         $args{on_redirect} = sub {
+             my ( $response, $to ) = @_;
+             print STDERR "\e[1;33mRedirect\e[m from ${ \$request->method } ${ \$request->uri->path }:\n";
+             print STDERR "  $_\n" for split m/\n/, $response->as_string;
+             print STDERR "-- \n";
+             if ( $original_on_redirect ) {
+                 $original_on_redirect->( $response, $to );
+             }
+         };
 
          if( $request_uri->path =~ m{/events$} ) {
             my %params = $request_uri->query_form;
@@ -308,6 +390,57 @@ sub delay
    $loop->delay_future( after => $secs );
 }
 
+# Handy utility wrapper around Future::Utils::try_repeat_until_success which
+# includes a delay on retry
+sub retry_until_success(&)
+{
+   my ( $code ) = @_;
+
+   my $delay = 0.1;
+
+   try_repeat {
+      my $prev_f = shift;
+
+      ( $prev_f ?
+            delay( $delay *= 1.5 ) :
+            Future->done )
+         ->then( $code );
+   }  until => sub { !$_[0]->failure };
+}
+
+# Another wrapper which repeats (with delay) until the block returns a true
+# value. If the block fails entirely then it aborts, does not retry.
+sub repeat_until_true(&)
+{
+   my ( $code ) = @_;
+
+   my $delay = 0.1;
+
+   repeat {
+      my $prev_f = shift;
+
+      ( $prev_f ?
+            delay( $delay *= 1.5 ) :
+            Future->done )
+         ->then( $code );
+   }  until => sub { $_[0]->get };
+}
+
+# wrapper around Future::with_cancel which works around a bug whereby the
+# returned future does not keep a reference to the old future, which means it
+# may get garbage-collected.
+# (Ref: https://rt.cpan.org/Ticket/Display.html?id=122920)
+#
+# (also sets the label as a potential debugging aid)
+sub without_cancel
+{
+   my ( $future ) = @_;
+   my $new = $future->without_cancel;
+   $new->{oldref} = $future;
+   $new->set_label( "without_cancel(" . ( $future->label // $future ) . ")" );
+   return $new;
+}
+
 my @log_if_fail_lines;
 my $test_start_time;
 
@@ -320,11 +453,16 @@ sub log_if_fail
    push @log_if_fail_lines, split m/\n/, pp( $structure ) if @_ > 1;
 }
 
-struct Fixture => [qw( requires start result teardown )], predicate => "is_Fixture";
+struct Fixture => [qw( name requires start result teardown )], predicate => "is_Fixture";
 
+my $fixture_count = 0;
 sub fixture
 {
    my %args = @_;
+
+   # make up an id for later labelling etc
+   my $count = $fixture_count++;
+   my $name = $args{name} // "FIXTURE-$count";
 
    my $setup = $args{setup} or croak "fixture needs a 'setup' block";
    ref( $setup ) eq "CODE" or croak "Expected fixture 'setup' block to be CODE";
@@ -344,7 +482,7 @@ sub fixture
 
             $req->start->( $env );
             $req->result;
-         });
+         })->set_label( "$name->" . $req->name );
       }
       else {
          push @requires, $req;
@@ -361,22 +499,43 @@ sub fixture
    # actually invoke $setup
    @req_futures or push @req_futures, $f_start;
 
+   my $start = sub {
+      return if $f_start->is_ready;   # already started
+      $OUTPUT->diag( "Starting fixture $name" ) if ( $VERBOSE >= 2 );
+      $f_start->done( @_ );
+   };
+
    return Fixture(
+      $name,
+
       \@requires,
 
-      sub { $f_start->done( @_ ) unless $f_start->is_ready },
+      $start,
 
-      Future->needs_all( @req_futures )
-         ->then( $setup ),
+      Future->needs_all( map { without_cancel($_) } @req_futures )
+         ->on_fail( sub {
+            my ( $reason ) = @_;
+
+            warn( "$name: input fixture failed with $reason" )
+               if ( $VERBOSE >= 3 );
+         })->then( $setup )
+         ->on_done( sub {
+            $OUTPUT->diag( "Fixture $name now ready" ) if ( $VERBOSE >= 2 );
+         })->set_label( $name ),
 
       $teardown ? sub {
          my ( $self ) = @_;
+
+         $OUTPUT->diag( "Tearing down fixture $name" ) if ( $VERBOSE >= 2 );
+
+         # replace the result with a failure so that the fixture will fail
+         # if reused.
          my $result_f = $self->result;
          $self->result = Future->fail(
             "This Fixture has been torn down and cannot be used again"
          );
 
-         if( $self->result->is_ready ) {
+         if( $result_f->is_done ) {
             return $teardown->( $result_f->get );
          }
          else {
@@ -417,7 +576,7 @@ sub require_stub
 }
 
 struct Test => [qw(
-   file name multi expect_fail critical proves requires check do timeout
+   file name multi expect_fail proves requires check do timeout
 )];
 
 my @TESTS;
@@ -426,17 +585,13 @@ sub _push_test
 {
    my ( $filename, $multi, $name, %params ) = @_;
 
-   # We expect this test to fail if it's declared to be dependent on a bug that
-   # is not yet fixed
-   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
-
    if( %only_files and not exists $only_files{$filename} ) {
       $proven{$_} = PRESUMED for @{ $params{proves} // [] };
       return;
    }
 
    push @TESTS, Test( $filename, $name, $multi,
-      @params{qw( expect_fail critical proves requires check do timeout )} );
+      @params{qw( expect_fail proves requires check do timeout )} );
 }
 
 sub _run_test
@@ -445,6 +600,8 @@ sub _run_test
 
    undef @log_if_fail_lines;
    $test_start_time = time();
+
+   $OUTPUT->diag( "Starting test ${ \$t->name }" ) if ( $VERBOSE >= 2 );
 
    local $MORE_STUBS = [];
 
@@ -460,7 +617,7 @@ sub _run_test
          push @req_futures, $f_start->then( sub {
             $fixture->start->( \%proven );
             $fixture->result;
-         });
+         })->set_label( "run_test->" . $fixture->name );
       }
       else {
          if( !exists $proven{$req} ) {
@@ -471,14 +628,61 @@ sub _run_test
       }
    }
 
-   $t->start;
    $f_start->done;
+
+   my ( $success, $reason ) = _run_test0( $t, $test, \@req_futures );
+
+   Future->needs_all( map {
+      if( is_Fixture( $_ ) and $_->teardown ) {
+         $_->teardown->( $_ );
+      }
+      else {
+         ();
+      }
+   } @requires )->get;
+
+   if( !defined $success ) {
+      $t->fail( $reason );
+   }
+   elsif( $success ) {
+      $proven{$_} = PROVEN for @{ $test->proves // [] };
+      $t->pass;
+   }
+   else {
+      $t->skip( $reason );
+   }
+}
+
+# Helper for _run_test. Waits for the req_futures to become ready, then runs
+# the test itself and waits for the test to complete.
+#
+# returns a pair ($res, $reason) where $res is one of:
+#  1 - success
+#  0 - skipped
+#  undef - failure
+#
+sub _run_test0
+{
+   my ( $t, $test, $req_futures ) = @_;
+   my $skip_reason;
 
    my $success = eval {
       my @reqs;
-      my $f_setup = Future->needs_all( @req_futures )
+      my $f_setup = Future->needs_all( map { without_cancel($_) } @$req_futures )
          ->on_done( sub { @reqs = @_ } )
-         ->on_fail( sub { die "fixture failed - $_[0]\n" } );
+         ->else( sub {
+            my ( $reason ) = @_;
+
+            warn( "Fixture failed with $reason" ) if ( $VERBOSE >= 2 );
+
+            # if any of the fixtures failed with a special 'SKIP' result, then skip
+            # the test rather than failing it.
+            if ( $reason =~ /^SKIP(: *(.*))?$/ ) {
+               $skip_reason = "failing fixture";
+               $skip_reason .= ": $2" if defined $2;
+            }
+            die "fixture failed - $_[0]\n"
+         } );
 
       my $f_test = $f_setup;
 
@@ -534,23 +738,12 @@ sub _run_test
       1;
    };
 
-   Future->needs_all( map {
-      if( is_Fixture( $_ ) and $_->teardown ) {
-         $_->teardown->( $_ );
-      }
-      else {
-         ();
-      }
-   } @requires )->get;
+   if( $skip_reason ) {
+      return ( 0, $skip_reason );
+   }
 
-   if( $success ) {
-      $proven{$_} = PROVEN for @{ $test->proves // [] };
-      $t->pass;
-   }
-   else {
-      my $e = $@; chomp $e;
-      $t->fail( $e );
-   }
+   my $e = $@; chomp $e;
+   return ( $success, $e );
 }
 
 our $RUNNING_TEST;
@@ -625,11 +818,13 @@ TEST: {
 my $done_count = 0;
 my $failed_count = 0;
 my $expected_fail_count = 0;
+my $passed_count = 0;
 my $skipped_count = 0;
 
 $OUTPUT->status(
    tests   => scalar @TESTS,
    done    => $done_count,
+   passed  => $passed_count,
    failed  => $failed_count,
    skipped => $skipped_count,
 );
@@ -643,14 +838,30 @@ foreach my $test ( @TESTS ) {
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
 
+   # Check if this test has been blocked by the blacklist. If so, mark as expected fail
+   if ( scalar( $BLACKLIST_FILE ) and exists $TEST_BLACKLIST{ $test->name } ) {
+      $test->expect_fail = 1;
+   }
+
+   # Check if this test has been blocked by the whitelist. If so, mark as expected fail
+   if ( scalar( $WHITELIST_FILE ) and not exists $TEST_WHITELIST{ $test->name } ) {
+      $test->expect_fail = 1;
+   }
+
    my $t = $OUTPUT->$m( $test->name, $test->expect_fail );
    local $RUNNING_TEST = $t;
+
+   $t->start;
 
    _run_test( $t, $test );
 
    $t->leave;
 
    $done_count++;
+
+   if( $t->passed ) {
+      $passed_count++;
+   }
 
    if( $t->skipped ) {
       $skipped_count++;
@@ -662,16 +873,12 @@ foreach my $test ( @TESTS ) {
       $OUTPUT->diag( $_ ) for @log_if_fail_lines;
 
       last if $STOP_ON_FAIL and not $test->expect_fail;
-
-      if( $test->critical ) {
-         warn "This CRITICAL test has failed - bailing out\n";
-         last;
-      }
    }
 
    $OUTPUT->status(
       tests   => scalar @TESTS,
       done    => $done_count,
+      passed  => $passed_count,
       failed  => $failed_count,
       skipped => $skipped_count,
    );
@@ -718,7 +925,7 @@ if( $failed_count ) {
    exit 1;
 }
 else {
-   $OUTPUT->final_pass( $expected_fail_count, $skipped_count );
+   $OUTPUT->final_pass( $expected_fail_count, $passed_count, $skipped_count );
    exit 0;
 }
 

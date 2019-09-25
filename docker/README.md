@@ -1,40 +1,70 @@
-# SyTest Docker
+# SyTest Docker Images
 
-Herein lies a Dockerfile for building a functional SyTest test environment.
-SyTest and synapse are cloned from the HEAD of their develop branches. You can
-run the tests as follows:
+These Dockerfiles create containers for running SyTest in various
+configurations. SyTest is not included in these images, but its dependencies
+are.
 
-```
-cd /path/to/sytest/docker
-docker build -t sytest .
-docker run --rm -it sytest bash
-```
+Included currently is:
 
-And then at the shell prompt:
+- matrixdotorg/sytest, a base container with SyTest dependencies installed
+- matrixdotorg/sytest-synapse:py35, a container which will run SyTest against Synapse on Python 3.5
+- matrixdotorg/sytest-dendrite, a container which will run SyTest against Dendrite
 
-```
-./run-tests.pl
-```
+## Using the containers
 
-Or other commands as per [the main SyTest
-documentation](https://github.com/matrix-org/sytest#running).
+Once pulled from Docker Hub, a container can be run on a homeserver checkout:
 
-Alternatively:
+### Synapse
 
 ```
-docker run --rm sytest <command>
+docker run --rm -it -v /path/to/synapse\:/src -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py35
 ```
 
-Where `<command>` is `./run-tests.pl` or similar.
-
-
-To use sytest and synapse from the host, so that you can iterate on test
-implementation and execute the tests in the container, you can do as follows:
+### Dendrite
 
 ```
-docker run --rm -it -v /path/to/sytest:/src/sytest -v /path/to/synapse:/src/synapse sytest bash
+docker run --rm -it -v /path/to/dendrite\:/src -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-dendrite
 ```
 
-Then at the prompt, `cd /src/sytest` and then you can run `./run-tests.pl` and
-iterate developing a new test or modifying an existing test using your
-favourite editor on your host.
+This will run on the same branch in SyTest as the checkout, if possible, but
+will fall back to using either Synapse or Dendrite's `develop` branch.
+
+If you want to use an existing checkout of SyTest, mount it to `/sytest` inside
+the container by adding `-v /path/to/sytest\:/sytest` to the docker command.
+
+You can pass arguments to sytest by adding them at the end of the docker
+command. For example, you can use
+
+```
+docker run --rm -it ... matrixdotorg/sytest-synapse:py35 tests/20profile-events.pl
+```
+
+to run only a single test.
+
+### Environment variables
+
+The following environment variables can be set with `-e` to control the test run:
+
+Synapse:
+
+ * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of sqlite.
+ * `WORKERS`: set non-empty to test a worker-mode deployment rather than a
+   monolith.
+ * `OFFLINE`: set non-empty to avoid updating the python or perl dependencies.
+ * `BLACKLIST`: set non-empty to change the default blacklist file to the
+   specified path relative to the Synapse directory
+
+Dendrite:
+
+Dendrite does not currently make use of any environment variables.
+
+## Building the containers
+
+The containers are built by executing `build.sh`. You will then have to push
+them up to Docker Hub:
+
+```
+docker push matrixdotorg/sytest
+docker push matrixdotorg/sytest-synapse:py35
+docker push matrixdotorg/sytest-dendrite
+```

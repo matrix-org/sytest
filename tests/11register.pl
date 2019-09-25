@@ -1,3 +1,4 @@
+use utf8;
 use JSON qw( decode_json );
 use URI;
 
@@ -111,7 +112,7 @@ test "registration is idempotent, without username specified",
          my ( $body ) = @_;
 
          # check that worked okay...
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          $user_id = $body->{user_id};
 
@@ -133,7 +134,7 @@ test "registration is idempotent, without username specified",
 
          # we should have got an equivalent response
          # (ie. success, and the same user id)
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          assert_eq( $body->{user_id}, $user_id );
 
@@ -185,7 +186,7 @@ test "registration is idempotent, with username specified",
          my ( $body ) = @_;
 
          # check that worked okay...
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          # now try to register again with the same session
          $http->do_request_json(
@@ -206,7 +207,7 @@ test "registration is idempotent, with username specified",
 
          # we should have got an equivalent response
          # (ie. success, and the same user id)
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          my $actual_user_id = $body->{user_id};
          my $home_server = $body->{home_server};
@@ -259,7 +260,7 @@ test "registration remembers parameters",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( user_id home_server access_token refresh_token ));
+         assert_json_keys( $body, qw( user_id home_server access_token ));
 
          my $actual_user_id = $body->{user_id};
          my $home_server = $body->{home_server};
@@ -267,13 +268,12 @@ test "registration remembers parameters",
          assert_eq( $actual_user_id, "\@$localpart:$home_server",
             "registered user ID" );
 
-         my $user = User( $http, $actual_user_id,
-                          $body->{device_id},
-                          undef,
-                          $body->{access_token},
-                          $body->{refresh_token},
-                          undef, undef, [], undef );
-
+         my $user = new_User(
+            http          => $http,
+            user_id       => $actual_user_id,
+            device_id     => $body->{device_id},
+            access_token  => $body->{access_token},
+         );
          # check that the right device_id was registered
          matrix_get_device( $user, "xyzzy" );
       })->then( sub {
@@ -281,4 +281,113 @@ test "registration remembers parameters",
          assert_eq( $device->{display_name}, "display_name");
          Future->done( 1 );
       });
+   };
+
+test "registration accepts non-ascii passwords",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   do => sub {
+      my ( $http, $localpart ) = @_;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            username => $localpart,
+            password => "übers3kr1t",
+            device_id => "xyzzy",
+            initial_device_display_name => "display_name",
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session ));
+
+         my $session = $body->{session};
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id home_server access_token ));
+         Future->done( 1 );
+      });
+   };
+
+test "registration with inhibit_login inhibits login",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+
+   do => sub {
+      my ( $http, $localpart ) = @_;
+
+      my $session;
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            username => $localpart,
+            password => "s3kr1t",
+            inhibit_login => 1,
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session ));
+
+         $session = $body->{session};
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => {
+               auth     => {
+                  session => $session,
+                  type    => "m.login.dummy",
+               }
+            },
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id home_server ));
+         foreach ( qw( device_id access_token )) {
+            exists $body->{$_} and die "Got an unexpected a '$_' key";
+         }
+
+         my $actual_user_id = $body->{user_id};
+         my $home_server = $body->{home_server};
+
+         assert_eq( $actual_user_id, "\@$localpart:$home_server",
+            "registered user ID" );
+
+         Future->done( 1 );
+      });
+   };
+
+test "User signups are forbidden from starting with '_'",
+   requires => [ $main::API_CLIENTS[0] ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      matrix_register_user( $http, "_badname_here" )
+         ->main::expect_http_4xx;
    };

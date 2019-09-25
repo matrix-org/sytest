@@ -1,7 +1,7 @@
 use JSON qw( decode_json );
 
 # Doesn't matter what this is, but later tests will use it.
-my $password = "s3kr1t";
+my $password = "sup3r s3kr1t";
 
 my $registered_user_fixture = fixture(
    requires => [ $main::API_CLIENTS[0] ],
@@ -11,11 +11,13 @@ my $registered_user_fixture = fixture(
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/api/v1/register",
+         uri    => "/r0/register",
 
          content => {
-            type     => "m.login.password",
-            user     => "02login",
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "02login",
             password => $password,
          },
       )->then( sub {
@@ -94,6 +96,38 @@ test "POST /login can log in as a user",
       });
    };
 
+test "POST /login returns the same device_id as that in the request",
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
+                 qw( can_login_password_flow )],
+
+   proves => [qw( can_login )],
+
+   do => sub {
+      my ( $http, $user_id ) = @_;
+
+      my $device_id = "my_super_id";
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/login",
+
+         content => {
+            type     => "m.login.password",
+            user     => $user_id,
+            password => $password,
+            device_id => $device_id,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( device_id ));
+
+         assert_eq( $body->{device_id}, $device_id, 'device_id' );
+
+         Future->done(1);
+      });
+   };
+
 test "POST /login can log in as a user with just the local part of the id",
    requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
                  qw( can_login_password_flow )],
@@ -129,8 +163,6 @@ test "POST /login can log in as a user with just the local part of the id",
 test "POST /login as non-existing user is rejected",
    requires => [ $main::API_CLIENTS[0],
                  qw( can_login_password_flow )],
-
-   bug => "SYN-680",
 
    do => sub {
       my ( $http ) = @_;
@@ -179,54 +211,6 @@ test "POST /login wrong password is rejected",
       });
    };
 
-test "POST /tokenrefresh invalidates old refresh token",
-   requires => [ $main::API_CLIENTS[0], $registered_user_fixture ],
-
-   do => sub {
-      my ( $http, $user_id ) = @_;
-
-      my $first_body;
-
-      $http->do_request_json(
-         method => "POST",
-         uri    => "/r0/login",
-
-         content => {
-            type     => "m.login.password",
-            user     => $user_id,
-            password => $password,
-         },
-      )->then( sub {
-         ( $first_body ) = @_;
-
-         $http->do_request_json(
-            method => "POST",
-            uri    => "/v2_alpha/tokenrefresh",
-
-            content => {
-               refresh_token => $first_body->{refresh_token},
-            },
-         )
-      })->then(
-         sub {
-            my ( $second_body ) = @_;
-
-            assert_json_keys( $second_body, qw( access_token refresh_token ));
-
-            $second_body->{$_} ne $first_body->{$_} or
-               die "Expected new '$_'" for qw( access_token refresh_token );
-
-            $http->do_request_json(
-               method => "POST",
-               uri    => "/v2_alpha/tokenrefresh",
-
-               content => {
-                  refresh_token => $first_body->{refresh_token},
-               },
-            )->main::expect_http_403;
-         }
-      );
-   };
 
 our @EXPORT = qw( matrix_login_again_with_user );
 
@@ -247,10 +231,15 @@ sub matrix_login_again_with_user
    )->then( sub {
       my ( $body ) = @_;
 
-      assert_json_keys( $body, qw( access_token home_server refresh_token ));
+      assert_json_keys( $body, qw( access_token home_server ));
 
-      my $new_user = User( $user->http, $user->user_id, $body->{device_id},
-                           $user->password, $body->{access_token}, $body->{refresh_token}, undef, undef, [], undef );
+      my $new_user = new_User(
+         http          => $user->http,
+         user_id       => $user->user_id,
+         device_id     => $body->{device_id},
+         password      => $user->password,
+         access_token  => $body->{access_token},
+      );
 
       Future->done( $new_user );
    });

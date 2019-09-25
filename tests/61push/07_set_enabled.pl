@@ -51,6 +51,7 @@ test "Can enable/disable default rules",
 
             my ( $kind, $rule_id ) = @$to_check;
 
+            log_if_fail("testing $rule_id");
             check_enable_disable_rule( $user, "global", $kind, $rule_id );
          } foreach => \@to_check;
       });
@@ -58,8 +59,6 @@ test "Can enable/disable default rules",
 
 test "Enabling an unknown default rule fails with 404",
    requires => [ local_user_fixture() ],
-
-   bug => "SYN-676",
 
    check => sub {
       my ( $user ) = @_;

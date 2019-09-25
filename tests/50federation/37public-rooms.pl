@@ -1,11 +1,11 @@
 test "Inbound federation can get public room list",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
+   requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
 
    do => sub {
-     my ( $outbound_client, $info, $creator, $room_id, $user_id ) = @_;
-     my $first_home_server = $info->server_name;
+     my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+     my $first_home_server = $creator->server_name;
 
      my $local_server_name = $outbound_client->server_name;
 
@@ -25,22 +25,21 @@ test "Inbound federation can get public room list",
              visibility => "public",
           },
         );
-     })->then( sub {
-        $outbound_client->do_request_json(
-          method   => "GET",
-          hostname => $first_home_server,
-          uri      => "/publicRooms",
-       )
-     })->then( sub {
-        my ( $body ) = @_;
+      })->then( sub {
+         repeat_until_true {
+            $outbound_client->do_request_json(
+               method   => "GET",
+               hostname => $first_home_server,
+               uri      => "/v1/publicRooms",
+            )->then( sub {
+               my ( $body ) = @_;
 
-         log_if_fail "Body", $body;
+               log_if_fail "Body", $body;
 
-        assert_json_keys( $body, qw( chunk start end ) );
+               assert_json_keys( $body, qw( chunk ) );
 
-        any { $_->{room_id} eq $room_id } @{ $body->{chunk} }
-          or die "Room not in returned list";
-
-        Future->done( 1 );
-     });
+               Future->done( any { $_->{room_id} eq $room_id } @{ $body->{chunk} } );
+            })
+         };
+      });
    };

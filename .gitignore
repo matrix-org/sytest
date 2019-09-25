@@ -1,6 +1,14 @@
+*~
 .*.swp
-/localhost-*
-/server-*
-/media_store
 /.synapse-base
+/localhost-*
+/logs/
+/media_store
+/results.tap
+/server-*
 /synapse
+/test-server
+/var
+\#*
+.vscode
+.coverage*

@@ -49,7 +49,7 @@ multi_test "Read receipts are visible to /initialSync",
          my ( $member_event ) = @_;
          $member_event_id = $member_event->{event_id};
 
-         matrix_advance_room_receipt( $user, $room_id, "m.read" => $member_event_id )
+         matrix_advance_room_receipt_synced( $user, $room_id, "m.read" => $member_event_id )
       })->then( sub {
          matrix_initialsync( $user, limit => $initial_sync_limit++ );  # Change the limit to defeat caching
       })->then( sub {
@@ -79,7 +79,7 @@ multi_test "Read receipts are visible to /initialSync",
       })->then( sub {
          ( $message_event_id ) = @_;
 
-         matrix_advance_room_receipt( $user, $room_id, "m.read" => $message_event_id );
+         matrix_advance_room_receipt_synced( $user, $room_id, "m.read" => $message_event_id );
       })->then( sub {
          matrix_initialsync( $user, limit => $initial_sync_limit++ );  # Change the limit to defeat caching
       })->then( sub {
@@ -117,7 +117,7 @@ multi_test "Read receipts are visible to /initialSync",
    };
 
 test "Read receipts are sent as events",
-   requires => [ local_user_and_room_fixtures(),
+   requires => [ local_user_and_room_fixtures( user_opts => { with_events => 1 }),
                  qw( can_post_room_receipts )],
 
    do => sub {

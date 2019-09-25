@@ -73,16 +73,27 @@ SyTest requires a number of dependencies that are easiest installed from CPAN.
 Installing on OS X
 ------------------
 Dependencies can be installed on OS X in the same manner, except that packages
-using NaCl / libsodium will fail. This can be worked around by:
+using NaCl / libsodium may fail. This can be worked around by:
 
 Installing libsodium manually, eg.::
 
     $ brew install libsodium
 
-...and force installing Crypt::NaCl::Sodium::
+and confirm it is installed correctly and visible to pkg-config. It should give
+some configuration output, rather than an error::
+
+    $ pkg-config --libs libsodium
+    -L/usr/local/Cellar/libsodium/1.0.8/lib -lsodium
+
+Then force an install of Crypt::NaCl::Sodium::
 
     $ cpan
     cpan> force install Crypt::NaCl::Sodium
+
+You may also need to force install Shell::Guess, and manually install
+DBI before DBD::Pg, otherwise DBD::Pg will fail with::
+
+    No rule to make target '.../auto/DBI/Driver_xst.h'
 
 Then run install-deps.pl as normal.
 
@@ -135,3 +146,15 @@ Developing
 
 For more information on developing SyTest itself (maintaining or writing new
 tests) see the `DEVELOP.rst` file.
+
+
+Postgres Template Database
+--------------------------
+
+When testing with postgres SyTest will check if there is a database named
+`sytest_template` and will create the test databases using that as a template.
+This can be used to greatly reduce the time to create databases as they don't
+need to be created from scratch.
+
+The easiest way to create the template database is to start a HS pointing at
+the database and stop it once the database has been created.

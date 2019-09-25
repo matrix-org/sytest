@@ -145,13 +145,13 @@ test "Newly joined room has correct timeline in incremental sync",
          matrix_create_room( $user_a )->on_done( sub { ( $room_id ) = @_ } );
       })->then( sub {
          Future->needs_all( map {
-            matrix_send_room_text_message( $user_a, $room_id, body => "test" );
+            matrix_send_room_text_message( $user_a, $room_id, body => "test1-$_" );
          } 0 .. 3 );
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
          Future->needs_all( map {
-            matrix_send_room_text_message( $user_a, $room_id, body => "test" );
+            matrix_send_room_text_message( $user_a, $room_id, body => "test2-$_" );
          } 0 .. 3 );
       })->then( sub {
          matrix_join_room_synced( $user_b, $room_id );
@@ -273,9 +273,13 @@ test "Get presence for newly joined members in incremental sync",
          my $presence = $body->{presence}{events};
          log_if_fail "Presence", $presence;
 
-         assert_eq( scalar @$presence, 1, "number of presence events" );
+         my @filtered_presence = grep {
+            $_->{sender} ne $user_a->user_id
+         } @$presence;
 
-         my $presence_event = $presence->[0];
+         assert_eq( scalar @filtered_presence, 1, "number of presence events" );
+
+         my $presence_event = $filtered_presence[0];
 
          assert_json_keys( $presence_event, qw( type sender content ) );
          assert_eq( $presence_event->{type}, "m.presence" );

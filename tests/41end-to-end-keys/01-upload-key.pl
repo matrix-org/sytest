@@ -33,6 +33,25 @@ test "Can upload device keys",
 
          Future->done(1)
       })
+  };
+
+test "Should reject keys claiming to belong to a different user",
+   requires => [ $fixture ],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      do_request_json_for(
+         $user,
+         method  => "POST",
+         uri     => "/unstable/keys/upload",
+         content => {
+            device_keys => {
+               user_id => "\@50-e2e-alice:localhost:8480",
+               device_id => "alices_first_device",
+            },
+         }
+      )->main::expect_http_4xx;
    };
 
 test "Can query device keys using POST",
@@ -44,7 +63,7 @@ test "Can query device keys using POST",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/unstable/keys/query/",
+         uri     => "/unstable/keys/query",
          content => {
             device_keys => {
                $user->user_id => {}
@@ -53,6 +72,8 @@ test "Can query device keys using POST",
       )->then( sub {
          my ( $content ) = @_;
 
+         log_if_fail( "/query response", $content );
+
          assert_json_keys( $content, "device_keys" );
 
          my $device_keys = $content->{device_keys};
@@ -60,7 +81,18 @@ test "Can query device keys using POST",
 
          my $alice_keys = $device_keys->{ $user->user_id };
          assert_json_keys( $alice_keys, $user->device_id );
+
+         my $alice_device_keys = $alice_keys->{ $user->device_id };
+         assert_json_keys( $alice_device_keys, "unsigned" );
+
+         my $unsigned = $alice_device_keys->{unsigned};
+
+         # display_name should not be present by default
+         exists $unsigned->{device_display_name} and
+           die "Expected to get no device_display_name";
+
          # TODO: Check that the content matches what we uploaded.
+
          Future->done(1)
       })
    };
@@ -76,7 +108,7 @@ test "Can query specific device keys using POST",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/unstable/keys/query/",
+         uri     => "/unstable/keys/query",
          content => {
             device_keys => {
                $user->user_id => [ $device_id ]
@@ -97,18 +129,24 @@ test "Can query specific device keys using POST",
       })
    };
 
-test "Can query device keys using GET",
-   requires => [ $fixture,
-                 qw( can_upload_e2e_keys )],
+test "query for user with no keys returns empty key dict",
+   requires => [ local_user_fixture() ],
 
    check => sub {
       my ( $user ) = @_;
 
       do_request_json_for( $user,
-         method => "GET",
-         uri    => "/unstable/keys/query/${\$user->user_id}"
+         method  => "POST",
+         uri     => "/unstable/keys/query",
+         content => {
+            device_keys => {
+               $user->user_id => {}
+            }
+         }
       )->then( sub {
          my ( $content ) = @_;
+
+         log_if_fail( "/query response", $content );
 
          assert_json_keys( $content, "device_keys" );
 
@@ -116,8 +154,10 @@ test "Can query device keys using GET",
          assert_json_keys( $device_keys, $user->user_id );
 
          my $alice_keys = $device_keys->{ $user->user_id };
-         assert_json_keys( $alice_keys, $user->device_id );
-         # TODO: Check that the content matches what we uploaded.
+
+         assert_json_object( $alice_keys );
+         assert_ok( !%{$alice_keys}, "unexpected keys" );
+
          Future->done(1)
       })
    };
@@ -127,7 +167,9 @@ push our @EXPORT, qw( matrix_put_e2e_keys );
 sub matrix_put_e2e_keys
 {
    # TODO(paul): I don't really know what's parametric about this
-   my ( $user ) = @_;
+   my ( $user, %params ) = @_;
+
+   my $device_keys = $params{device_keys} // {};
 
    do_request_json_for( $user,
       method => "POST",
@@ -137,6 +179,7 @@ sub matrix_put_e2e_keys
          device_keys => {
             user_id => $user->user_id,
             device_id => $user->device_id,
+            device_keys => $device_keys,
          },
          one_time_keys => {
             "my_algorithm:my_id_1" => "my+base64+key",

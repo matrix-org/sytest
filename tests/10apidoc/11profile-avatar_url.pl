@@ -42,6 +42,8 @@ test "GET /profile/:user_id/avatar_url publicly accessible",
    requires => [ $main::API_CLIENTS[0], $user_fixture,
                  qw( can_set_avatar_url )],
 
+   proves => [qw( can_get_avatar_url )],
+
    check => sub {
       my ( $http, $user ) = @_;
       my $user_id = $user->user_id;

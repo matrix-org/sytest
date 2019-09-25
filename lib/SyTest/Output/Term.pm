@@ -76,7 +76,7 @@ my $PREVLINE = "\eM";
 
    sub _clearstatus
    {
-      print $CLEARLINE . $PREVLINE if length $status;
+      print $CLEARLINE if length $status;
       undef $status;
    }
 }
@@ -108,10 +108,13 @@ sub enter_multi_test
 sub final_pass
 {
    shift;
-   my ( $expected_fail, $skipped_count ) = @_;
+   my ( $expected_fail, $passed_count, $skipped_count ) = @_;
    print "\n${GREEN_B}All tests PASSED${RESET}";
    if( $expected_fail ) {
       print " (with $expected_fail expected failures)";
+   }
+   if( $passed_count ) {
+      print " (with $passed_count passes)";
    }
    if( $skipped_count ) {
       print " (with ${YELLOW_B}$skipped_count skipped${RESET} tests)";
@@ -152,6 +155,8 @@ sub status
       sprintf( "Tests: %d / %d", $args{done}, $args{tests} ),
       ( $args{failed} ? sprintf( "${RED_B}%d FAIL${RESET_FG}", $args{failed} )
                       : "OK" ),
+      ( $args{passed} ? sprintf( "${GREEN_B}%d PASSED${RESET_FG}", $args{passed} )
+                       : () ),
       ( $args{skipped} ? sprintf( "${YELLOW_B}%d SKIPPED${RESET_FG}", $args{skipped} )
                        : () );
 
@@ -171,6 +176,7 @@ package SyTest::Output::Term::Test {
    sub name            { shift->{name}        }
    sub expect_fail     { shift->{expect_fail} }
    sub multi           { shift->{multi}       }
+   sub passed :lvalue  { shift->{passed}      }
    sub skipped :lvalue { shift->{skipped}     }
    sub failed :lvalue  { shift->{failed}      }
    sub failure :lvalue { shift->{failure}     }
@@ -185,7 +191,10 @@ package SyTest::Output::Term::Test {
          _morepartial $message;
    }
 
-   sub pass { }
+   sub pass {
+      my $self = shift;
+      $self->passed++;
+   }
 
    sub fail
    {
@@ -213,20 +222,20 @@ package SyTest::Output::Term::Test {
       my $self = shift;
       my ( $reason ) = @_;
 
-      _printline "  ${YELLOW_B}SKIP${RESET} ${\$self->name} due to $reason\n";
-
-      $self->skipped++;
+      $self->skipped .= $reason;
    }
 
    sub leave
    {
       my $self = shift;
 
-      return if $self->skipped;
-
       _morepartial "   ${CYAN}+--- " if $self->multi;
 
-      if( !$self->failed ) {
+      if( $self->skipped ) {
+         my $reason = $self->skipped;
+         _finishpartial "${YELLOW_B}SKIP${RESET} due to $reason";
+      }
+      elsif( !$self->failed ) {
          _finishpartial "${GREEN}PASS${RESET}";
 
          if( $self->expect_fail ) {
