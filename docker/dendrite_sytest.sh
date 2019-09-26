@@ -37,7 +37,7 @@ mkdir -p /logs
 cp results.tap /logs/results.tap
 rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
-# Write out JUnit for CircleCI
+# Write out JUnit
 mkdir -p /logs/sytest
 perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
 
