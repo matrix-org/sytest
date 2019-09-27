@@ -540,7 +540,6 @@ test "User signups are forbidden from starting with '_'",
          ->main::expect_http_4xx;
    };
 
-
 test "Can register using an email address",
    requires => [ $main::API_CLIENTS[0], localpart_fixture(), id_server_fixture() ],
 
@@ -601,8 +600,9 @@ test "Can register using an email address",
                         id_server     => $id_server,
                      },
                   },
-                  username  => "bobthesnob",
-                  password  => "ilovemydoggo123",
+                  username  => $localpart,
+                  password => "noobers3kr1t",
+                  device_id => "xyzzy",
                },
             )
          })
@@ -613,5 +613,3 @@ test "Can register using an email address",
          Future->done( 1 );
       });
    };
-
-# test "Can register using a MSISDN",
