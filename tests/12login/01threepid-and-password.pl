@@ -1,24 +1,22 @@
 my $password = "my secure password";
 
-=head2 validate_email_for_user
+=head2 validate_email
 
-   validate_email_for_user(
-      $user, $address, $id_server,
+   validate_email(
+      $http, $address, $id_server, $path,
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
    });
 
-Runs through the `/r0/account/3pid/email/requestToken` flow for verifying
-that an email address belongs to the user. Doesn't add the address to the
-account.
+Runs through a `.../requestToken` flow specified by $path for verifying that an email address
+belongs to the user. Doesn't add the address to the account.
 
-Returns the session id and client secret which can then be used for binding
-the address.
+Returns the session id and client secret which can then be used for binding the address.
 
 =cut
 
-sub validate_email_for_user {
-   my ( $user, $address, $id_server ) = @_;
+sub validate_email {
+   my ( $http, $address, $id_server, $path ) = @_;
 
    # fixme: synapse screws up the escaping of non-alpha chars.
    my $client_secret = join "", map { chr 65 + rand 26 } 1 .. 20;
@@ -26,10 +24,9 @@ sub validate_email_for_user {
    my $sid;
 
    return Future->needs_all(
-      do_request_json_for(
-         $user,
+      $http->do_request_json(
          method => "POST",
-         uri    => "/r0/account/3pid/email/requestToken",
+         uri    => $path,
          content => {
             client_secret   => $client_secret,
             email           => $address,
@@ -49,14 +46,14 @@ sub validate_email_for_user {
       # our test ID server, or an email from the homeserver.
       #
       Future->wait_any(
-         await_and_confirm_email( $address, $user->http ),
+         await_and_confirm_email( $address, $http ),
          await_id_validation( $id_server, $address ),
       ),
    )->then( sub {
       Future->done( $sid, $client_secret );
    });
 }
-push our @EXPORT, qw( validate_email_for_user );
+push our @EXPORT, qw( validate_email );
 
 # wait for a call to /requestToken on the test IS, and act as if the
 # email has been validated.
@@ -128,8 +125,8 @@ sub add_email_for_user {
    my $id_access_token = $id_server->get_access_token();
 
    # start by requesting an email validation.
-   validate_email_for_user(
-      $user, $address, $id_server,
+   validate_email(
+      $user->http, $address, $id_server, "/r0/account/3pid/email/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
 
