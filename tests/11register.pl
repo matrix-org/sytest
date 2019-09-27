@@ -391,3 +391,79 @@ test "User signups are forbidden from starting with '_'",
       matrix_register_user( $http, "_badname_here" )
          ->main::expect_http_4xx;
    };
+
+
+test "Can register using an email address",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture(), id_server_fixture() ],
+
+   do => sub {
+      my ( $http, $localpart, $id_server ) = @_;
+
+      my $email_address = 'testemail@example.com';
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            username => $localpart,
+            password => "noobers3kr1t",
+            device_id => "xyzzy",
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session flows ));
+
+         log_if_fail "No single m.login.email.identity stage registration flow found";
+
+         # Check that one of the flows' stages contains an "m.login.email.identity" stage
+         my $has_email_flow;
+         foreach my $idx ( 0 .. $#{ $body->{flows} } ) {
+            my $flow = $body->{flows}[$idx];
+            my $stages = $flow->{stages} || [];
+
+            $has_email_flow++ if
+               @$stages == 1 && $stages->[0] eq "m.login.email.identity";
+         }
+
+         assert_eq( $has_email_flow, 1 );
+
+         validate_email(
+            $http,
+            $email_address,
+            $id_server,
+            "/r0/register/email/requestToken",
+         )->then( sub {
+            my ( $sid_email, $client_secret ) = @_;
+
+            # attempt to register with the 3pid
+            do_request_json(
+               method => "POST",
+               uri    => "/r0/register",
+               content => {
+                  auth => {
+                     type           => "m.login.email.identity",
+                     session        => $body->{session},
+                     threepid_creds => {
+                        sid           => $sid_email,
+                        client_secret => $client_secret,
+                        id_server     => $id_server,
+                     },
+                  },
+                  username  => "bobthesnob",
+                  password  => "ilovemydoggo123",
+               },
+            )
+         })
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id home_server ) );
+         Future->done( 1 );
+      });
+   };
+
+# test "Can register using a MSISDN",
