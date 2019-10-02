@@ -13,7 +13,9 @@ sub gen_client_secret {
 =head2 validate_email
 
    validate_email(
-      $http, $address, $id_server, path => "/r0/account/3pid/email/requestToken",
+      $http, $address,
+      id_server => $id_server,
+      path => "/r0/account/3pid/email/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
    });
@@ -26,7 +28,7 @@ Returns the session id and client secret which can then be used for binding the 
 =cut
 
 sub validate_email {
-   my ( $http, $address, $id_server, %params ) = @_;
+   my ( $http, $address, %params ) = @_;
 
    my $client_secret = gen_client_secret();
    my $sid;
@@ -39,8 +41,8 @@ sub validate_email {
             client_secret   => $client_secret,
             email           => $address,
             send_attempt    => 1,
-            id_server       => $id_server->name,
-            id_access_token => $id_server->get_access_token(),
+            id_server       => $params{id_server}->name,
+            id_access_token => $params{id_server}->get_access_token(),
          },
       )->then( sub {
          my ( $resp ) = @_;
@@ -55,7 +57,7 @@ sub validate_email {
       #
       Future->wait_any(
          await_and_confirm_email( $address, $http ),
-         await_id_validation_email( $id_server, $address ),
+         await_id_validation_email( $params{id_server}, $address ),
       ),
    )->then( sub {
       Future->done( $sid, $client_secret );
@@ -212,7 +214,9 @@ sub add_email_for_user {
 
    # start by requesting an email validation.
    validate_email(
-      $user->http, $address, $id_server, path => "/r0/account/3pid/email/requestToken",
+      $user->http, $address,
+      id_server => $id_server,
+      path => "/r0/account/3pid/email/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
 
@@ -663,8 +667,8 @@ test "Can register using an email address",
          validate_email(
             $http,
             $email_address,
-            $id_server,
-            "/r0/register/email/requestToken",
+            id_server => $id_server,
+            path => "/r0/register/email/requestToken",
          )->then( sub {
             my ( $sid_email, $client_secret ) = @_;
 
@@ -738,8 +742,8 @@ test "Can register using a phone number",
             $http,
             $phone_number,
             $phone_number_country,
-            $id_server,
-            "/r0/register/msisdn/requestToken",
+            id_server => $id_server,
+            path => "/r0/register/msisdn/requestToken",
          )->then( sub {
             my ( $sid_email, $client_secret ) = @_;
 
