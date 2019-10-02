@@ -673,7 +673,7 @@ test "Can register using an email address",
             my ( $sid_email, $client_secret ) = @_;
 
             # attempt to register with the 3pid
-            do_request_json(
+            $http->do_request_json(
                method => "POST",
                uri    => "/r0/register",
                content => {
