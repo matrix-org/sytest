@@ -4,6 +4,12 @@ use URI;
 
 # See also 10apidoc/01register.pl
 
+# Generate a client_secret for 3pid operations
+sub gen_client_secret {
+   # fixme: synapse screws up the escaping of non-alpha chars.
+   return join "", map { chr 65 + rand 26 } 1 .. 20;
+}
+
 =head2 validate_email
 
    validate_email(
@@ -20,17 +26,15 @@ Returns the session id and client secret which can then be used for binding the 
 =cut
 
 sub validate_email {
-   my ( $http, $address, $id_server, $path ) = @_;
+   my ( $http, $address, $id_server, %params ) = @_;
 
-   # fixme: synapse screws up the escaping of non-alpha chars.
-   my $client_secret = join "", map { chr 65 + rand 26 } 1 .. 20;
-
+   my $client_secret = gen_client_secret();
    my $sid;
 
    return Future->needs_all(
       $http->do_request_json(
          method => "POST",
-         uri    => $path,
+         uri    => $params{path},
          content => {
             client_secret   => $client_secret,
             email           => $address,
@@ -51,13 +55,65 @@ sub validate_email {
       #
       Future->wait_any(
          await_and_confirm_email( $address, $http ),
-         await_id_validation( $id_server, $address ),
+         await_id_validation_email( $id_server, $address ),
       ),
    )->then( sub {
       Future->done( $sid, $client_secret );
    });
 }
 push our @EXPORT, qw( validate_email );
+
+=head2 validate_msisdn
+
+   validate_msisdn(
+      $http, $phone_number, $country_code, %params
+   )->then( sub {
+      my ( $sid, $client_secret ) = @_;
+   });
+
+Runs through a `.../requestToken` flow specified by $path for verifying that a phone number
+belongs to the user. Doesn't add the number to the account.
+
+Returns the session id and client secret which can then be used for binding the phone number.
+
+=cut
+
+sub validate_msisdn {
+   my ( $http, $phone_number, $country_code, %params ) = @_;
+
+   my $client_secret = gen_client_secret();
+   my $sid;
+   my $id_server = $params{id_server};
+   my $path = $params{path};
+
+   return Future->needs_all(
+      $http->do_request_json(
+         method => "POST",
+         uri    => $path,
+         content => {
+            client_secret   => $client_secret,
+            phone_number    => $phone_number,
+            country_code    => $country_code,
+            send_attempt    => 1,
+            id_server       => $id_server->name,
+            id_access_token => $id_server->get_access_token(),
+         },
+      )->then( sub {
+         my ( $resp ) = @_;
+         log_if_fail "requestToken response", $resp;
+
+         $sid = $resp->{sid};
+         Future->done;
+      }),
+
+      # TODO: Test receiving SMS once Synapse has the ability to send them
+      Future->wait_any(
+         await_id_validation_msisdn( $id_server, $phone_number, $country_code ),
+      ),
+   )->then( sub {
+      Future->done( $sid, $client_secret );
+   });
+}
 
 # wait for a call to /requestToken on the test IS, and act as if the
 # email has been validated.
@@ -93,7 +149,8 @@ sub await_and_confirm_email {
    });
 }
 
-sub await_id_validation {
+# wait for a requestToken call to the built-in identity server
+sub await_id_validation_email {
    my ( $id_server, $address ) = @_;
 
    $id_server->await_request(
@@ -102,9 +159,32 @@ sub await_id_validation {
       my ( $req ) = @_;
       my $body = $req->body_from_json;
 
-      log_if_fail "ID server /requestToken request", $body;
+      log_if_fail "ID server email /requestToken request", $body;
       assert_eq( $body->{email}, $address );
-      my $sid = $id_server->validate_identity( 'email', $address, $body->{client_secret} );
+      my $sid = $id_server->validate_email( $address, $body->{client_secret} );
+      $req->respond_json({
+         sid => $sid,
+      });
+      Future->done();
+   });
+}
+
+# wait for a requestToken call to the built-in identity server
+sub await_id_validation_msisdn {
+   my ( $id_server, $phone_number, $country_code ) = @_;
+
+   $id_server->await_request(
+      path=>"/_matrix/identity/api/v1/validate/msisdn/requestToken",
+   )->then( sub {
+      my ( $req ) = @_;
+      my $body = $req->body_from_json;
+
+      log_if_fail "ID server msisdn /requestToken request", $body;
+      assert_eq( $body->{phone_number}, $phone_number );
+      assert_eq( $body->{country_code}, $country_code );
+      my $sid = $id_server->validate_msisdn(
+         $phone_number, $country_code, $body->{client_secret}
+      );
       $req->respond_json({
          sid => $sid,
       });
@@ -130,7 +210,7 @@ sub add_email_for_user {
 
    # start by requesting an email validation.
    validate_email(
-      $user->http, $address, $id_server, "/r0/account/3pid/email/requestToken",
+      $user->http, $address, $id_server, path => "/r0/account/3pid/email/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
 
