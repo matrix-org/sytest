@@ -29,8 +29,16 @@ dos2unix ./run-tests.pl
 TEST_STATUS=0
 ./run-tests.pl -I Dendrite::Monolith -d /src/bin -W /src/testfile -O tap --all "$@" > results.tap || TEST_STATUS=$?
 
+if [ $TEST_STATUS -ne 0 ]; then
+    echo >&2 -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"
+else
+    echo >&2 -e "run-tests \e[32mPASSED\e[0m"
+fi
+
 # Check for new tests to be added to testfile
 /src/show-expected-fail-tests.sh results.tap /src/testfile || TEST_STATUS=$?
+
+echo >&2 "--- Copying assets"
 
 # Copy out the logs
 mkdir -p /logs
@@ -40,5 +48,10 @@ rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include 
 # Write out JUnit
 mkdir -p /logs/sytest
 perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
+
+if [ $TEST_STATUS -ne 0 ]; then
+    # Build the annotation
+    perl /format_tap.pl results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
+fi
 
 exit $TEST_STATUS
