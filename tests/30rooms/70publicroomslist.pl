@@ -103,6 +103,7 @@ test "Name/topic keys are correct",
                Future->done( 1 );
             })->on_fail( sub {
                my ( $exc ) = @_;
+               chomp $exc;
                log_if_fail "Iteration $iter: not ready yet: $exc";
             });
          };
