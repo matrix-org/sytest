@@ -37,28 +37,33 @@ test "Guest users can send messages to guest_access rooms if joined",
       })->then( sub {
          matrix_send_room_text_message( $guest_user, $room_id, body => "sup" );
       })->then( sub {
-         matrix_get_room_messages( $user, $room_id, limit => 1 );
-      })->then( sub {
-         my ( $body ) = @_;
-         log_if_fail "Body:", $body;
+         # We need to repeatedly call /messages as it may take some time before
+         # the message propogates through the system.
+         retry_until_success {
+            matrix_get_room_messages( $user, $room_id, limit => 1 )
+            ->then( sub {
+               my ( $body ) = @_;
+               log_if_fail "Body:", $body;
 
-         assert_json_keys( $body, qw( chunk ));
-         assert_json_list( my $chunk = $body->{chunk} );
+               assert_json_keys( $body, qw( chunk ));
+               assert_json_list( my $chunk = $body->{chunk} );
 
-         scalar @$chunk == 1 or
-            die "Expected one message";
+               scalar @$chunk == 1 or
+                  die "Expected one message";
 
-         my ( $event ) = @$chunk;
+               my ( $event ) = @$chunk;
 
-         assert_json_keys( $event, qw( type room_id user_id content ));
+               assert_json_keys( $event, qw( type room_id user_id content ));
 
-         $event->{user_id} eq $guest_user->user_id or
-            die "expected user_id to be ".$guest_user->user_id;
+               $event->{user_id} eq $guest_user->user_id or
+                  die "expected user_id to be ".$guest_user->user_id;
 
-         $event->{content}->{body} eq "sup" or
-            die "content to be sup";
+               $event->{content}->{body} eq "sup" or
+                  die "content to be sup";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -463,12 +468,10 @@ test "GET /publicRooms includes avatar URLs",
 
                   foreach my $alias ( @{$aliases} ) {
                      if( $alias =~ m/^\Q#worldreadable:/ ) {
-                        assert_json_keys( $room, qw( avatar_url ) );
                         $isOK{worldreadable} =
                            ( $room->{avatar_url} eq "https://example.com/ringtails.jpg" );
                      }
                      elsif( $alias =~ m/^\Q#nonworldreadable:/ ) {
-                        assert_json_keys( $room, qw( avatar_url ) );
                         $isOK{nonworldreadable} =
                            ( $room->{avatar_url} eq "https://example.com/ruffed.jpg" );
                      }
@@ -483,8 +486,6 @@ test "GET /publicRooms includes avatar URLs",
 
 test "Guest users can accept invites to private rooms over federation",
    requires => [ remote_user_fixture(), guest_user_fixture() ],
-
-   bug => "synapse#2065",
 
    do => sub {
       my ( $remote_user, $local_guest ) = @_;
@@ -573,13 +574,23 @@ sub guest_user_fixture
    })
 }
 
-push @EXPORT, qw( matrix_set_room_guest_access );
+push @EXPORT, qw( matrix_set_room_guest_access matrix_set_room_guest_access_synced );
 
 sub matrix_set_room_guest_access
 {
    my ( $user, $room_id, $guest_access ) = @_;
 
    matrix_put_room_state( $user, $room_id,
+      type    => "m.room.guest_access",
+      content => { guest_access => $guest_access }
+   );
+}
+
+sub matrix_set_room_guest_access_synced
+{
+   my ( $user, $room_id, $guest_access ) = @_;
+
+   matrix_put_room_state_synced( $user, $room_id,
       type    => "m.room.guest_access",
       content => { guest_access => $guest_access }
    );
@@ -607,7 +618,7 @@ sub matrix_get_room_membership
 }
 
 
-push @EXPORT, qw( matrix_set_room_history_visibility );
+push @EXPORT, qw( matrix_set_room_history_visibility matrix_set_room_history_visibility_synced );
 
 sub matrix_set_room_history_visibility
 {
@@ -618,6 +629,20 @@ sub matrix_set_room_history_visibility
    }
 
    matrix_put_room_state( $user, $room_id,
+      type    => "m.room.history_visibility",
+      content => { history_visibility => $history_visibility }
+   );
+}
+
+sub matrix_set_room_history_visibility_synced
+{
+   my ( $user, $room_id, $history_visibility ) = @_;
+
+   if ( $history_visibility eq 'default') {
+       return Future->done();
+   }
+
+   matrix_put_room_state_synced( $user, $room_id,
       type    => "m.room.history_visibility",
       content => { history_visibility => $history_visibility }
    );

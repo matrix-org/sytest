@@ -1,5 +1,6 @@
 test "Outbound federation can send invites",
-   requires => [ local_user_and_room_fixtures(), $main::INBOUND_SERVER, federation_user_id_fixture() ],
+   requires => [ local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 $main::INBOUND_SERVER, federation_user_id_fixture() ],
 
    do => sub {
       my ( $user, $room_id, $inbound_server, $invitee_id ) = @_;
@@ -26,7 +27,7 @@ test "Outbound federation can send invites",
             assert_eq( $body->{sender}, $user->user_id,
                'event sender' );
 
-            assert_json_keys( $body, qw( content state_key prev_state ));
+            assert_json_keys( $body, qw( content state_key ));
 
             assert_eq( $body->{content}{membership}, "invite",
                'event content membership' );
@@ -264,7 +265,9 @@ foreach my $error_code ( 403, 500, -1 ) {
    # backoff list and subsequent tests fail.
    my $temp_federation_server_fixture = fixture(
       setup => sub {
-         create_federation_server()
+         create_federation_server()->on_done(sub {
+            log_if_fail "Started temporary federation server " . $_[0]->server_name;
+         });
       },
       teardown => sub {
          my ($server) = @_;
@@ -272,8 +275,8 @@ foreach my $error_code ( 403, 500, -1 ) {
       }
    );
 
-   test "Inbound federation can receive invite and reject when "
-         . ( $error_code >= 0 ? "remote replies with a $error_code" :
+   test "Inbound federation can receive invite and reject when remote "
+         . ( $error_code >= 0 ? "replies with a $error_code" :
              "is unreachable" ),
       requires => [ local_user_fixture( with_events => 1 ), $temp_federation_server_fixture ],
 
@@ -300,12 +303,17 @@ foreach my $error_code ( 403, 500, -1 ) {
             if( $error_code < 0 ) {
                # now shut down the remote server, so that we get an 'unreachable'
                # error on make_leave
+               log_if_fail "Stopping temporary fed server " . $federation_server->server_name;
                $federation_server->close();
 
                # close any connected sockets too, otherwise synapse will
                # just reuse the connection.
                foreach my $child ( $federation_server->children() ) {
-                  log_if_fail "closing", $child;
+                  # each child should be a Net::Async::HTTP::Server::Protocol
+                  my $rh = $child->read_handle;
+                  log_if_fail sprintf(
+                     "closing HTTP connection from %s:%i", $rh->peerhost(), $rh->peerport(),
+                  );
                   $child->close();
                }
 

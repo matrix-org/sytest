@@ -25,10 +25,10 @@ our @HOMESERVER_INFO = map {
    fixture(
       name => "HOMESERVER_$idx",
 
-      requires => [ $main::TEST_SERVER_INFO, @main::AS_INFO ],
+      requires => [ $main::TEST_SERVER_INFO, $main::MAIL_SERVER_INFO, @main::AS_INFO ],
 
       setup => sub {
-         my ( $test_server_info, @as_infos ) = @_;
+         my ( $test_server_info, $mail_server_info, @as_infos ) = @_;
 
          $OUTPUT->diag( "Starting Homeserver using $HS_FACTORY" );
 
@@ -57,6 +57,10 @@ our @HOMESERVER_INFO = map {
          my $location = $WANT_TLS ?
             "https://$api_host:" . $server->secure_port :
             "http://$api_host:" . $server->unsecure_port;
+
+         $server->configure(
+            smtp_server_config => $mail_server_info,
+         );
 
          $server->configure(
             # Config for testing recaptcha. 90jira/SYT-8.pl

@@ -4,40 +4,31 @@ sub get_state_ids_from_server {
    return $outbound_client->do_request_json(
       method   => "GET",
       hostname => $server,
-      uri      => "/v1/state_ids/$room_id/",
+      uri      => "/v1/state_ids/$room_id",
       params   => { event_id => $event_id },
    );
 }
 
 test "Inbound federation can get state for a room",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
-                 federation_user_id_fixture() ],
+   requires => [
+      $main::OUTBOUND_CLIENT,
+      federated_rooms_fixture( room_opts => { room_version => "1" } ),
+   ],
 
    do => sub {
-      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $creator, $user_id, $room ) = @_;
+      my $first_home_server = $creator->server_name;
 
-      my $local_server_name = $outbound_client->server_name;
+      my $room_id = $room->room_id;
 
-      my $room;
-
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $user_id,
+      $outbound_client->do_request_json(
+         method   => "GET",
+         hostname => $first_home_server,
+         uri      => "/v1/state/$room_id",
+         params   => {
+            event_id => $room->{prev_events}[-1]->{event_id},
+         }
       )->then( sub {
-         ( $room ) = @_;
-
-         $outbound_client->do_request_json(
-            method   => "GET",
-            hostname => $first_home_server,
-            uri      => "/v1/state/$room_id/",
-            params   => {
-               event_id => $room->{prev_events}[-1]->{event_id},
-            }
-         );
-      })->then( sub {
          my ( $body ) = @_;
          log_if_fail "Body", $body;
 
@@ -60,49 +51,38 @@ test "Inbound federation can get state for a room",
 
 
 test "Inbound federation of state requires event_id as a mandatory paramater",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
+   requires => [ $main::OUTBOUND_CLIENT,
+                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       $outbound_client->do_request_json(
          method   => "GET",
          hostname => $first_home_server,
-         uri      => "/v1/state/notaroombutitdoesntmatter/",
+         uri      => "/v1/state/notaroombutitdoesntmatter",
       )->main::expect_http_400();
    };
 
 
 test "Inbound federation can get state_ids for a room",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
-                 federation_user_id_fixture() ],
+   requires => [
+      $main::OUTBOUND_CLIENT,
+      federated_rooms_fixture( room_opts => { room_version => "1" } ),
+   ],
 
    do => sub {
-      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $creator, $user_id, $room ) = @_;
+      my $first_home_server = $creator->server_name;
 
-      my $local_server_name = $outbound_client->server_name;
+      my $room_id = $room->room_id;
 
-      my $room;
-
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $user_id,
+      get_state_ids_from_server(
+         $outbound_client, $first_home_server,
+         $room_id, $room->{prev_events}[-1]->{event_id},
       )->then( sub {
-         ( $room ) = @_;
-
-         get_state_ids_from_server(
-            $outbound_client, $first_home_server,
-            $room_id, $room->{prev_events}[-1]->{event_id},
-         );
-      })->then( sub {
          my ( $body ) = @_;
          log_if_fail "Body", $body;
 
@@ -124,33 +104,32 @@ test "Inbound federation can get state_ids for a room",
    };
 
 test "Inbound federation of state_ids requires event_id as a mandatory paramater",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
+   requires => [ $main::OUTBOUND_CLIENT,
+                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       $outbound_client->do_request_json(
          method   => "GET",
          hostname => $first_home_server,
-         uri      => "/v1/state_ids/notaroombutitdoesntmatter/",
+         uri      => "/v1/state_ids/notaroombutitdoesntmatter",
       )->main::expect_http_400();
    };
 
 test "Federation rejects inbound events where the prev_events cannot be found",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 local_user_and_room_fixtures(
+                    user_opts => { with_events => 1 },
+                    room_opts => { room_version => "1" },
+                 ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my $room;
       my $sent_event;
@@ -223,13 +202,16 @@ test "Federation rejects inbound events where the prev_events cannot be found",
 
 
 test "Outbound federation requests missing prev_events and then asks for /state_ids and resolves the state",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 local_user_and_room_fixtures(
+                    user_opts => { with_events => 1 },
+                    room_opts => { room_version => "1" },
+                  ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       # in this test, we're going to create a DAG like this:
       #
@@ -319,7 +301,7 @@ test "Outbound federation requests missing prev_events and then asks for /state_
             content => {
                body => "event_x",
             },
-            prev_events => SyTest::Federation::Room::make_event_refs(
+            prev_events => $room->make_event_refs(
                @{ $room->{prev_events} }, $missing_event_y,
             ),
          );
@@ -346,7 +328,7 @@ test "Outbound federation requests missing prev_events and then asks for /state_
          my $sent_event_c = $room->create_and_insert_event(
             type => "m.room.message",
 
-            prev_events => SyTest::Federation::Room::make_event_refs(
+            prev_events => $room->make_event_refs(
                @{ $room->{prev_events} }, $missing_event_x,
             ),
 
@@ -488,13 +470,16 @@ test "Outbound federation requests missing prev_events and then asks for /state_
 
 
 test "Federation handles empty auth_events in state_ids sanely",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 local_user_and_room_fixtures(
+                    user_opts => { with_events => 1 },
+                    room_opts => { room_version => "1" },
+                 ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       # in this test, we're going to create a DAG like this:
       #
@@ -558,7 +543,7 @@ test "Federation handles empty auth_events in state_ids sanely",
             content => {
                body => "event_x",
             },
-            prev_events => SyTest::Federation::Room::make_event_refs(
+            prev_events => $room->make_event_refs(
                @{ $room->{prev_events} }, $missing_event_y,
             ),
          );
@@ -567,7 +552,7 @@ test "Federation handles empty auth_events in state_ids sanely",
          my $sent_event_c = $room->create_and_insert_event(
             type => "m.room.message",
 
-            prev_events => SyTest::Federation::Room::make_event_refs(
+            prev_events => $room->make_event_refs(
                @{ $room->{prev_events} }, $missing_event_x,
             ),
 
@@ -642,16 +627,14 @@ test "Federation handles empty auth_events in state_ids sanely",
 
 
 test "Getting state checks the events requested belong to the room",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
-                 local_user_and_room_fixtures(),
+   requires => [ $main::OUTBOUND_CLIENT,
+                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
    do => sub {
-      my ( $outbound_client, $info, $priv_creator, $priv_room_id,
+      my ( $outbound_client, $priv_creator, $priv_room_id,
            $pub_creator, $pub_room_id, $fed_user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my $first_home_server = $pub_creator->server_name;
 
       my $priv_join_event;
 
@@ -673,7 +656,7 @@ test "Getting state checks the events requested belong to the room",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/v1/state/$pub_room_id/",
+            uri      => "/v1/state/$pub_room_id",
 
             params => {
                event_id => $priv_event_id,
@@ -684,16 +667,14 @@ test "Getting state checks the events requested belong to the room",
 
 
 test "Getting state IDs checks the events requested belong to the room",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(),
-                 local_user_and_room_fixtures(),
+   requires => [ $main::OUTBOUND_CLIENT,
+                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
    do => sub {
-      my ( $outbound_client, $info, $priv_creator, $priv_room_id,
+      my ( $outbound_client, $priv_creator, $priv_room_id,
            $pub_creator, $pub_room_id, $fed_user_id ) = @_;
-      my $first_home_server = $info->server_name;
-
-      my $local_server_name = $outbound_client->server_name;
+      my $first_home_server = $pub_creator->server_name;
 
       my $priv_join_event;
 
@@ -715,7 +696,7 @@ test "Getting state IDs checks the events requested belong to the room",
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/v1/state_ids/$pub_room_id/",
+            uri      => "/v1/state_ids/$pub_room_id",
 
             params => {
                event_id => $priv_event_id,
@@ -755,150 +736,138 @@ test "Should not be able to take over the room by pretending there is no PL even
    # unaffected.
 
    requires => [
-      $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-      # Create user and a publicly joinable room on the synapse.
-      local_user_and_room_fixtures(),
-      # Pick a user_id for our evil federation user.
-      federation_user_id_fixture()
+      $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+      federated_rooms_fixture( room_opts => { room_version => "1" } ),
    ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $evil_user_id ) = @_;
-      my $first_home_server = $info->server_name;
-      my $local_server_name = $outbound_client->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $evil_user_id, $room ) = @_;
+      my $first_home_server = $creator->server_name;
+      my $room_id = $room->room_id;
 
-      # Join our evil user to the room.
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $evil_user_id,
+      # Fetch the create event and our evil user's join event.
+      my $create = $room->get_current_state_event("m.room.create");
+      my $join = $room->get_current_state_event("m.room.member", $evil_user_id);
+
+      my $evil_power_level_event_x = $room->create_event(
+         event_id_suffix => "pl_x",
+
+         # Pick a depth of 0 so that this event apears before the
+         # real m.room.power_levels event when doing state resolution.
+         # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/state/v1.py#L256
+         # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/state/v1.py#L301
+         depth => 0,
+         # Refer to an event that doesn't exist so that synapse has to rely
+         # on the auth_events we supply to auth this event.
+         prev_events => [["\$this:event.does.not.exist", {}]],
+         type => "m.room.power_levels",
+         state_key => "",
+         sender => $evil_user_id,
+         content => {
+            users => {
+               # Give ourselves all the power in the room.
+               $evil_user_id => 100,
+               # Set the creator's power level to 0 so that the real
+               # m.room.power_levels event fails auth checks when compared
+               # to our power_level event.
+               $creator->user_id => 0,
+            },
+         },
+      );
+
+      my $evil_message_event_c = $room->create_event(
+         event_id_suffix => 'msg_c',
+
+         # Pick a depth high enough to avoid the min_depth check.
+         # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/handlers/federation.py#L245
+         depth => 10,
+         # Reference an event that doesn't exist so that we can pick the
+         # state at this event.
+         prev_events => [["\$this:event.does.not.exist", {}]],
+         sender => $evil_user_id,
+         type => "m.room.message",
+         content => {
+            # Suitably evil laughter.
+            body => "hehehe...",
+         },
+      );
+
+      my $msg_d = $room->create_event(
+         event_id_suffix => 'msg_d',
+
+         depth => 11,
+         prev_events => [[$evil_message_event_c->{event_id}, {}]],
+         sender => $evil_user_id,
+         type => "m.room.message",
+         content => {
+            body => "totes legit",
+         },
+      );
+
+      my $msg_e = $room->create_event(
+         event_id_suffix => 'msg_e',
+         depth => 11,
+         prev_events => [[$msg_d->{event_id}, {}]],
+         sender => $evil_user_id,
+         type => "m.room.message",
+         content => {
+            body => "nothing to see",
+         },
+      );
+
+      Future->needs_all(
+         # Send the event using the federation send API.
+         $outbound_client->send_event(
+            event => $msg_e,
+            destination => $first_home_server,
+         ),
+
+         # Synapse will request the missing events between the most recent
+         # event and the event we gave it.
+         # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/handlers/federation.py#L266
+         # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/handlers/federation.py#L507
+         $inbound_server->await_request_get_missing_events( $room_id )->then( sub {
+            my ( $req ) = @_;
+
+            my $body = $req->body_from_json;
+            log_if_fail "/get_missing_events request", $body;
+
+            assert_deeply_eq(
+               $body->{latest_events},
+               [ $msg_e->{event_id } ],
+               "latest_events in /get_missing_events request",
+            );
+
+            # just return D
+            $req->respond_json( {
+               events => [ $msg_d ],
+            } );
+
+            Future->done(1);
+         }),
+
+         # Synapse will ask us for the state at C.
+         # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/handlers/federation.py#L355
+         $inbound_server->await_request_state_ids( $room_id, $evil_message_event_c->{event_id} )->then( sub {
+            my ( $req ) = @_;
+            $req->respond_json( {
+               # We tell it that the state is only our join event, the
+               # create event, and our evil power level event.
+               pdu_ids => [
+                  $create->{event_id},
+                  $join->{event_id},
+                  $evil_power_level_event_x->{event_id},
+               ],
+               # We need to give it our join event so that the evil power
+               # level event passes the auth checks.
+               auth_chain_ids => [
+                  $create->{event_id},
+                  $join->{event_id},
+               ],
+            });
+            Future->done(1);
+         }),
       )->then( sub {
-         my ( $room ) = @_;
-
-         # Fetch the create event and our evil user's join event.
-         my $create = $room->get_current_state_event("m.room.create");
-         my $join = $room->get_current_state_event("m.room.member", $evil_user_id);
-
-         my $evil_power_level_event_x = $room->create_event(
-            event_id_suffix => "pl_x",
-
-            # Pick a depth of 0 so that this event apears before the
-            # real m.room.power_levels event when doing state resolution.
-            # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/state/v1.py#L256
-            # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/state/v1.py#L301
-            depth => 0,
-            # Refer to an event that doesn't exist so that synapse has to rely
-            # on the auth_events we supply to auth this event.
-            prev_events => [["\$this:event.does.not.exist", {}]],
-            type => "m.room.power_levels",
-            state_key => "",
-            sender => $evil_user_id,
-            content => {
-               users => {
-                  # Give ourselves all the power in the room.
-                  $evil_user_id => 100,
-                  # Set the creator's power level to 0 so that the real
-                  # m.room.power_levels event fails auth checks when compared
-                  # to our power_level event.
-                  $creator->user_id => 0,
-               },
-            },
-         );
-
-         my $evil_message_event_c = $room->create_event(
-            event_id_suffix => 'msg_c',
-
-            # Pick a depth high enough to avoid the min_depth check.
-            # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/handlers/federation.py#L245
-            depth => 10,
-            # Reference an event that doesn't exist so that we can pick the
-            # state at this event.
-            prev_events => [["\$this:event.does.not.exist", {}]],
-            sender => $evil_user_id,
-            type => "m.room.message",
-            content => {
-               # Suitably evil laughter.
-               body => "hehehe...",
-            },
-         );
-
-         my $msg_d = $room->create_event(
-            event_id_suffix => 'msg_d',
-
-            depth => 11,
-            prev_events => [[$evil_message_event_c->{event_id}, {}]],
-            sender => $evil_user_id,
-            type => "m.room.message",
-            content => {
-               body => "totes legit",
-            },
-         );
-
-         my $msg_e = $room->create_event(
-            event_id_suffix => 'msg_e',
-            depth => 11,
-            prev_events => [[$msg_d->{event_id}, {}]],
-            sender => $evil_user_id,
-            type => "m.room.message",
-            content => {
-               body => "nothing to see",
-            },
-         );
-
-         Future->needs_all(
-            # Send the event using the federation send API.
-            $outbound_client->send_event(
-               event => $msg_e,
-               destination => $first_home_server,
-            ),
-
-            # Synapse will request the missing events between the most recent
-            # event and the event we gave it.
-            # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/handlers/federation.py#L266
-            # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/handlers/federation.py#L507
-            $inbound_server->await_request_get_missing_events( $room_id )->then( sub {
-               my ( $req ) = @_;
-
-               my $body = $req->body_from_json;
-               log_if_fail "/get_missing_events request", $body;
-
-               assert_deeply_eq(
-                  $body->{latest_events},
-                  [ $msg_e->{event_id } ],
-                  "latest_events in /get_missing_events request",
-               );
-
-               # just return D
-               $req->respond_json( {
-                  events => [ $msg_d ],
-               } );
-
-               Future->done(1);
-            }),
-
-            # Synapse will ask us for the state at C.
-            # https://github.com/matrix-org/synapse/blob/v0.33.7/synapse/handlers/federation.py#L355
-            $inbound_server->await_request_state_ids( $room_id, $evil_message_event_c->{event_id} )->then( sub {
-               my ( $req ) = @_;
-               $req->respond_json( {
-                  # We tell it that the state is only our join event, the
-                  # create event, and our evil power level event.
-                  pdu_ids => [
-                     $create->{event_id},
-                     $join->{event_id},
-                     $evil_power_level_event_x->{event_id},
-                  ],
-                  # We need to give it our join event so that the evil power
-                  # level event passes the auth checks.
-                  auth_chain_ids => [
-                     $create->{event_id},
-                     $join->{event_id},
-                  ],
-               });
-               Future->done(1);
-            }),
-         );
-      })->then( sub {
          # Now check that our our evil power_level hasn't won the state resolution.
          matrix_get_room_state( $creator, $room_id,
             type => "m.room.power_levels",

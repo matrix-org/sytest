@@ -154,9 +154,6 @@ test "Remote room members also see posted message events",
    requires => [ $senduser_fixture, $remote_fixture, $room_fixture,
                 qw( can_receive_room_message_locally )],
 
-   # this test frequently times out for unknown reasons
-   bug => "synapse#1679",
-
    do => sub {
       my ( $senduser, $remote_user, $room_id ) = @_;
 
@@ -206,7 +203,7 @@ test "Remote room members can get room messages",
    };
 
 test "Message history can be paginated",
-   requires => [ magic_local_user_and_room_fixtures() ],
+   requires => [ local_user_and_room_fixtures() ],
 
    proves => [qw( can_paginate_room )],
 

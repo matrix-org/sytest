@@ -1,5 +1,8 @@
 package SyTest::Output::TAP;
 
+use POSIX qw( strftime );
+use Time::HiRes qw( time );
+
 use strict;
 use warnings;
 
@@ -84,11 +87,13 @@ package SyTest::Output::TAP::Test {
    sub failed  :lvalue { shift->{failed}      }
    sub failure :lvalue { shift->{failure}     }
    sub subnum  :lvalue { shift->{subnum}      }
+   sub starttime :lvalue { shift->{starttime}   }
 
    sub start {
       my $self = shift;
 
       print STDERR "    Test ${\$self->num} ${\$self->name}...\n";
+      $self->starttime = Time::HiRes::time;
    }
 
    sub pass { }
@@ -120,6 +125,14 @@ package SyTest::Output::TAP::Test {
       $self->skipped++;
    }
 
+   sub format_time
+   {
+      my $self = shift;
+      my ( $time ) = @_;
+      return POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime($time)) . "."
+          . sprintf("%03d", int(($time - int($time))*1000));
+   }
+
    sub leave
    {
       my $self = shift;
@@ -131,20 +144,27 @@ package SyTest::Output::TAP::Test {
          $self->failure = "${\$self->failed} subtests failed" if $self->failed and not length $self->failure;
       }
 
+      my $name = $self->name;
+
       if( !$self->failed ) {
-         my $name = $self->name;
          $name .= " (${\$self->subnum} subtests)" if $self->multi;
 
-         print "ok ${\$self->num} $name\n";
-      }
-      else {
+         print "ok ${\$self->num} " .
+            ( $self->expect_fail ? "(expected fail) " : "" ) .
+            $name .
+            ( $self->expect_fail ? " # TODO passed but expected fail" : "" ) . "\n";
+      } else {
          # for expected fails, theoretically all we need to do is write the
          # TODO, but Jenkins' 'TAP Test results' page is arse and doesn't distinguish
          # between expected and unexpected fails, so stick it in the name too.
          print "not ok ${\$self->num} " .
             ( $self->expect_fail ? "(expected fail) " : "" ) .
-            $self->name .
+            $name .
             ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
+         my $starttime = $self->starttime;
+         print "# Started: " . $self->format_time($starttime) . "\n";
+         my $endtime = Time::HiRes::time;
+         print "# Ended: " . $self->format_time($endtime) . "\n";
 
          print "# $_\n" for split m/\n/, $self->failure;
       }

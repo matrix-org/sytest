@@ -1,7 +1,7 @@
 our @EXPORT = qw( User is_User do_request_json_for new_User );
 
 my @KEYS = qw(
-   http user_id device_id password access_token eventstream_token
+   http user_id server_name device_id password access_token eventstream_token
    sync_next_batch saved_events pending_get_events device_message_next_batch
 );
 
@@ -33,6 +33,7 @@ sub do_request_json_for
 sub new_User
 {
    my ( %params ) = @_;
+   $params{server_name} //= $params{http}->server_name;
 
    my $user = User( delete @params{ @KEYS } );
 

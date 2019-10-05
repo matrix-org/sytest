@@ -1,11 +1,14 @@
 test "Forward extremities remain so even after the next events are populated as outliers",
-      requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( user_opts => { with_events => 1 } ),
+      requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 local_user_and_room_fixtures(
+                    user_opts => { with_events => 1 },
+                    room_opts => { room_version => "1" },
+                  ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       # Here we create a straightforward dag like this:
       #
@@ -70,7 +73,7 @@ test "Forward extremities remain so even after the next events are populated as 
             content => {
                body => "event_c",
             },
-            # prev_events => SyTest::Federation::Room::make_event_refs( $pl_event_b ),
+            # prev_events => $room->make_event_refs( $pl_event_b ),
          );
 
          log_if_fail "Outlier event C", $outlier_event_c;

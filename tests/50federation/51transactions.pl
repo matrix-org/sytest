@@ -1,27 +1,26 @@
 test "Server correctly handles transactions that break edu limits",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(), room_alias_name_fixture() ],
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 local_user_and_room_fixtures(),
+                 federation_user_id_fixture(), room_alias_name_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $room_alias_name ) = @_;
-
-      my $local_server_name = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id, $room_alias_name ) = @_;
 
       my $remote_server_name = $inbound_server->server_name;
 
       my $room_alias = "#$room_alias_name:$remote_server_name";
 
       $outbound_client->join_room(
-         server_name => $local_server_name,
+         server_name => $creator->server_name,
          room_id     => $room_id,
-         user_id     => $creator->user_id,
+         user_id     => $user_id,
       )->then( sub {
          my ( $room ) = @_;
 
          my $new_event = $room->create_and_insert_event(
              type => "m.room.message",
 
-             sender  => $creator->user_id,
+             sender  => $user_id,
              content => {
                  body => "Message 1",
              },
@@ -36,13 +35,13 @@ test "Server correctly handles transactions that break edu limits",
             # Send the transaction to the client and expect a fail
             $outbound_client->send_transaction(
                 pdus => \@bad_pdus,
-                destination => $local_server_name,
+                destination => $creator->server_name,
             )->main::expect_http_400(),
 
             # Send the transaction to the client and expect a succeed
             $outbound_client->send_transaction(
                 pdus => \@good_pdus,
-                destination => $local_server_name,
+                destination => $creator->server_name,
             )->then( sub {
                 my ( $response ) = @_;
 

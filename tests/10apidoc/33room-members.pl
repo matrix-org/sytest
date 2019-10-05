@@ -35,23 +35,21 @@ test "POST /rooms/:room_id/join can join a room",
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
 
-         Future->done(1);
-      });
-   },
+         # Retry getting the state a few times, as it may take some time to
+         # propagate in a multi-process homeserver
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-   check => sub {
-      my ( $user, $room_id, undef ) = @_;
+               $body->{membership} eq "join" or
+                  die "Expected membership to be 'join'";
 
-      matrix_get_room_state( $user, $room_id,
-         type      => "m.room.member",
-         state_key => $user->user_id,
-      )->then( sub {
-         my ( $body ) = @_;
-
-         $body->{membership} eq "join" or
-            die "Expected membership to be 'join'";
-
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -73,6 +71,9 @@ sub matrix_join_room
       content => \%content,
    )->then( sub {
       my ( $body ) = @_;
+
+      my $user_id = $user->user_id;
+      log_if_fail "User $user_id joined room", $body;
 
       Future->done( $body->{room_id} )
    });
@@ -98,23 +99,21 @@ test "POST /join/:room_alias can join a room",
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
 
-         Future->done(1);
-      });
-   },
+         # Retry getting the state a few times, as it may take some time to
+         # propagate in a multi-process homeserver
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-   check => sub {
-      my ( $user, $room_id, undef ) = @_;
+               $body->{membership} eq "join" or
+                  die "Expected membership to be 'join'";
 
-      matrix_get_room_state( $user, $room_id,
-         type      => "m.room.member",
-         state_key => $user->user_id,
-      )->then( sub {
-         my ( $body ) = @_;
-
-         $body->{membership} eq "join" or
-            die "Expected membership to be 'join'";
-
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -137,23 +136,21 @@ test "POST /join/:room_id can join a room",
          $body->{room_id} eq $room_id or
             die "Expected 'room_id' to be $room_id";
 
-         Future->done(1);
-      });
-   },
+         # Retry getting the state a few times, as it may take some time to
+         # propagate in a multi-process homeserver
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-   check => sub {
-      my ( $user, $room_id, undef ) = @_;
+               $body->{membership} eq "join" or
+                  die "Expected membership to be 'join'";
 
-      matrix_get_room_state( $user, $room_id,
-         type      => "m.room.member",
-         state_key => $user->user_id,
-      )->then( sub {
-         my ( $body ) = @_;
-
-         $body->{membership} eq "join" or
-            die "Expected membership to be 'join'";
-
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -175,20 +172,24 @@ test "POST /join/:room_id can join a room with custom content",
          assert_json_keys( $body, qw( room_id ) );
          assert_eq( $body->{room_id}, $room_id );
 
-         matrix_get_room_state( $user, $room_id,
-            type      => "m.room.member",
-            state_key => $user->user_id,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
+         # Retry getting the state a few times, as it may take some time to
+         # propagate in a multi-process homeserver
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         log_if_fail "body", $body;
+               log_if_fail "body", $body;
 
-         assert_json_keys( $body, qw( foo membership ) );
-         assert_eq( $body->{foo}, "bar" );
-         assert_eq( $body->{membership}, "join" );
+               assert_json_keys( $body, qw( foo membership ) );
+               assert_eq( $body->{foo}, "bar" );
+               assert_eq( $body->{membership}, "join" );
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -210,20 +211,24 @@ test "POST /join/:room_alias can join a room with custom content",
          assert_json_keys( $body, qw( room_id ) );
          assert_eq( $body->{room_id}, $room_id );
 
-         matrix_get_room_state( $user, $room_id,
-            type      => "m.room.member",
-            state_key => $user->user_id,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
+         # Retry getting the state a few times, as it may take some time to
+         # propagate in a multi-process homeserver
+         retry_until_success {
+            matrix_get_room_state( $user, $room_id,
+               type      => "m.room.member",
+               state_key => $user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         log_if_fail "body", $body;
+               log_if_fail "body", $body;
 
-         assert_json_keys( $body, qw( foo membership ) );
-         assert_eq( $body->{foo}, "bar" );
-         assert_eq( $body->{membership}, "join" );
+               assert_json_keys( $body, qw( foo membership ) );
+               assert_eq( $body->{foo}, "bar" );
+               assert_eq( $body->{membership}, "join" );
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -241,30 +246,32 @@ test "POST /rooms/:room_id/leave can leave a room",
             uri    => "/r0/rooms/$room_id/leave",
 
             content => {},
-         );
-      })->then( sub {
-         matrix_get_room_state( $joiner_to_leave, $room_id,
-            type      => "m.room.member",
-            state_key => $joiner_to_leave->user_id,
          )
-      })->then(
-         sub { # then
-            my ( $body ) = @_;
+      })->then( sub {
+         # Retry getting the state a few times, as it may take some time to
+         # propagate in a multi-process homeserver
+         retry_until_success {
+            matrix_get_room_state( $joiner_to_leave, $room_id,
+               type      => "m.room.member",
+               state_key => $joiner_to_leave->user_id,
+            )->then( sub { # then
+               my ( $body ) = @_;
 
-            $body->{membership} eq "join" and
-               die "Expected membership not to be 'join'";
+               $body->{membership} eq "join" and
+                  die "Expected membership not to be 'join'";
 
-            Future->done(1);
-         },
-         http => sub { # catch
-            my ( $failure, undef, $response ) = @_;
-            Future->fail( @_ ) unless $response->code == 403;
+               Future->done(1);
+            },
+            http => sub { # catch
+               my ( $failure, undef, $response ) = @_;
+               Future->fail( @_ ) unless $response->code == 403;
 
-            # We're expecting a 403 so that's fine
+               # We're expecting a 403 so that's fine
 
-            Future->done(1);
-         },
-      );
+               Future->done(1);
+            })
+         }
+      });
    };
 
 push @EXPORT, qw( matrix_leave_room );
@@ -296,22 +303,22 @@ test "POST /rooms/:room_id/invite can send an invite",
          uri    => "/r0/rooms/$room_id/invite",
 
          content => { user_id => $invited_user->user_id },
-      );
-   },
-
-   check => sub {
-      my ( $creator, $invited_user, $room_id, undef ) = @_;
-
-      matrix_get_room_state( $creator, $room_id,
-         type      => "m.room.member",
-         state_key => $invited_user->user_id,
       )->then( sub {
-         my ( $body ) = @_;
+         # Retry getting the state a few times, as it may take some time to
+         # propagate in a multi-process homeserver
+         retry_until_success {
+            matrix_get_room_state( $creator, $room_id,
+               type      => "m.room.member",
+               state_key => $invited_user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         $body->{membership} eq "invite" or
-            die "Expected membership to be 'invite'";
+               $body->{membership} eq "invite" or
+                  die "Expected membership to be 'invite'";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -339,7 +346,11 @@ sub matrix_invite_user_to_room
       uri    => "/r0/rooms/$room_id/invite",
 
       content => { user_id => $invitee_id }
-   )->then_done(1);
+   )->then( sub {
+      my ( $body ) = @_;
+      log_if_fail "Invited user $invitee_id to $room_id", $body;
+      Future->done(1);
+   });
 }
 
 test "POST /rooms/:room_id/ban can ban a user",
@@ -359,22 +370,22 @@ test "POST /rooms/:room_id/ban can ban a user",
             user_id => $banned_user->user_id,
             reason  => "Just testing",
          },
-      );
-   },
-
-   check => sub {
-      my ( $creator, $banned_user, $room_id, undef ) = @_;
-
-      matrix_get_room_state( $creator, $room_id,
-         type      => "m.room.member",
-         state_key => $banned_user->user_id,
       )->then( sub {
-         my ( $body ) = @_;
+         # Retry getting the state a few times, as it may take some time to
+         # propagate in a multi-process homeserver
+         retry_until_success {
+            matrix_get_room_state( $creator, $room_id,
+               type      => "m.room.member",
+               state_key => $banned_user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         $body->{membership} eq "ban" or
-            die "Expecting membership to be 'ban'";
+               $body->{membership} eq "ban" or
+                  die "Expecting membership to be 'ban'";
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -501,7 +512,7 @@ provisioned.
 Any other options are passed into C<matrix_create_room>, whence they are passed
 on to the server.
 
-It is generally easier to use C<local_user_and_name_fixtures>.
+It is generally easier to use C<local_user_and_room_fixtures>.
 
 =cut
 
@@ -528,6 +539,38 @@ sub room_fixture
       }
    );
 }
+
+=head2 magic_room_fixture
+
+   $fixture = magic_room_fixture(
+       requires_users => [ $creator_fixture, $other_user_fixture ],
+       %opts
+   );
+
+Returns a Fixture, which when provisioned will create a new room on the user's
+server and return the room id (and optionally the room alias).
+
+The following may be passed as named parameters:
+
+=over
+
+=item requires_users => LIST
+
+This should contain a list of user fixtures giving members of the new room. The
+first user is the creator of the room; the others are joined to the room after creation.
+
+=item with_alias => SCALAR
+
+This is passed into C<matrix_create_and_join_room>, and will make the result include
+the room alias as well as the room id.
+
+=item (everything else)
+
+Other parameters are passed into C<matrix_create_and_join_room>.
+
+=back
+
+=cut
 
 push @EXPORT, qw( magic_room_fixture );
 
@@ -590,21 +633,9 @@ sub local_user_and_room_fixtures
 }
 
 push @EXPORT, qw(
-   magic_local_user_and_room_fixtures matrix_join_room_synced
+   matrix_join_room_synced
    matrix_leave_room_synced matrix_invite_user_to_room_synced
 );
-
-sub magic_local_user_and_room_fixtures
-{
-   my %args = @_;
-
-   my $user_fixture = local_user_fixture();
-
-   return (
-      $user_fixture,
-      magic_room_fixture( requires_users => [ $user_fixture ], %args ),
-   );
-}
 
 sub matrix_join_room_synced
 {
