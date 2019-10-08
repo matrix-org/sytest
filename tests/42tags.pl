@@ -436,11 +436,55 @@ test "/upgrade copies user tags to the new room",
 
          log_if_fail "sync body", $sync_body;
 
-         my $room = $sync_body->{rooms}{join}{$new_room_id};
-
          matrix_list_tags( $user, $new_room_id );
       })->then( sub {
          my ( $tags ) = @_;
+
+         keys %{ $tags } == 1 or die "Expected one tag in the upgraded room";
+         defined $tags->{test_tag} or die "Unexpected tag";
+
+         Future->done(1);
+      });
+   };
+
+test "/upgrade on a remote room copies user tags to the new room",
+   requires => [
+      local_user_and_room_fixtures(),
+      remote_user_fixture(),
+      qw( can_upgrade_room_version can_add_tag ),
+   ],
+
+   do => sub {
+      my ( $local_user, $room_id, $remote_user ) = @_;
+      my ( $new_room_id );
+
+      matrix_add_tag(
+         $remote_user, $room_id, "test_tag", {}
+      )->then( sub {
+         matrix_sync( $remote_user );
+      })->then( sub {
+         upgrade_room_synced(
+            $local_user, $room_id,
+            new_version => $main::TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ($new_room_id,) = @_;
+
+         matrix_sync_again($remote_user);
+      })->then( sub {
+         matrix_invite_user_to_room_synced( $local_user, $remote_user, $new_room_id );
+      })->then( sub {
+         matrix_join_room_synced( $remote_user, $new_room_id );
+      })->then( sub {
+         my ( $sync_body ) = @_;
+
+         log_if_fail "sync body", $sync_body;
+
+         matrix_list_tags( $remote_user, $new_room_id );
+      })->then( sub {
+         my ( $tags ) = @_;
+
+         log_if_fail "upgraded room tags", $tags;
 
          keys %{ $tags } == 1 or die "Expected one tag in the upgraded room";
          defined $tags->{test_tag} or die "Unexpected tag";

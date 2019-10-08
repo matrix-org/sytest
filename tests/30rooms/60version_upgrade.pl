@@ -501,9 +501,59 @@ test "/upgrade copies push rules to the new room",
                }
             } foreach => \@to_check;
 
-            if ( $found == 1 ) {
-               Future->done(1);
+            Future->done( $found );
+         })
+      });
+   };
+
+test "/upgrade on a remote room copies push rules to the new room",
+   requires => [
+      local_user_and_room_fixtures(),
+      remote_user_fixture(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $local_user, $room_id, $remote_user ) = @_;
+      my ( $new_room_id );
+
+      matrix_add_push_rule( $remote_user, "global", "room", $room_id, {
+         actions => [ "notify" ]
+      })->then( sub {
+         matrix_sync( $remote_user );
+      })->then( sub {
+         upgrade_room_synced(
+            $local_user, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id, ) = @_;
+
+         matrix_get_push_rules( $remote_user )->then( sub {
+            my ( $body ) = @_;
+
+            my @to_check;
+
+            foreach my $kind ( keys %{ $body->{global} } ) {
+               foreach my $rule ( @{ $body->{global}{$kind} } ) {
+                  push @to_check, [ $kind, $rule->{rule_id} ];
+               }
             }
+
+            my $found = 0;
+            try_repeat {
+               my $to_check = shift;
+
+               my ( $kind, $rule_id ) = @$to_check;
+
+               log_if_fail("testing $rule_id against $new_room_id");
+
+               if ( $rule_id eq $new_room_id ) {
+                  $found = 1;
+               }
+            } foreach => \@to_check;
+
+            Future->done( $found );
          })
       });
    };
@@ -829,4 +879,3 @@ test "Cannot send tombstone event that points to the same room",
    };
 
 # upgrade with other local users
-# upgrade with remote users
