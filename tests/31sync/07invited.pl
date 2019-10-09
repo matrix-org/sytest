@@ -93,3 +93,51 @@ test "Rooms a user is invited to appear in an incremental sync",
          Future->done(1);
       })
    };
+
+
+test "Newly joined room is included in an incremental sync after invite",
+   # matrix-org/synapse#4422
+   requires => [
+      local_user_and_room_fixtures(),
+      local_user_fixture( with_events => 0 ),
+      qw( can_sync ),
+   ],
+
+   check => sub {
+      my ( $creator, $room_id, $user ) = @_;
+
+      matrix_sync( $user )->then( sub {
+         matrix_invite_user_to_room_synced(
+            $creator, $user, $room_id,
+         );
+      })->then( sub {
+         matrix_sync_again( $user );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "post-invite sync", $body;
+
+         my $room = $body->{rooms}{invite}{$room_id};
+         assert_json_keys( $room, qw( invite_state ) );
+         assert_json_keys( $room->{invite_state}, qw( events ) );
+
+         # accept the invite
+         matrix_join_room( $user, $room_id );
+      })->then( sub {
+         # wait for the sync to turn up
+         await_sync( $user,
+            check => sub {
+               return $_[0]->{rooms}{join}{$room_id};
+            },
+         );
+      })->then( sub {
+         my ( $room ) = @_;
+         log_if_fail "post-join sync", $room;
+
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         assert_json_keys( $room->{state}, qw( events ));
+         assert_json_keys( $room->{ephemeral}, qw( events ));
+
+         Future->done(1);
+      })
+   };
