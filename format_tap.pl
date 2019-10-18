@@ -1,4 +1,4 @@
-#!/usr/bin/perl -l
+#!/usr/bin/perl
 use strict;
 use warnings FATAL => 'all';
 
@@ -42,8 +42,7 @@ while ( my $result = $parser->next ) {
    }
 }
 
-# Print out the contents of @out, leaving off the last little formatting bits
+# Print out the contents of @out, cutting off the final "----" and newlines
 foreach my $line ( @out[0..$#out-3] ) {
-   # The -l in the hashbang makes print append a newline to the content
-   print $line;
+   print $line . "\n";
 }
