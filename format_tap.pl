@@ -16,8 +16,8 @@ while ( my $result = $parser->next ) {
    if ( $result->is_test ) {
       # End an existing error block
       if ( $in_error == 1 ) {
-         push ( @out, "" );
-         push ( @out, "</pre></code></details>" );
+         push( @out, "" );
+         push( @out, "</pre></code></details>" );
          push( @out, "" );
          push( @out, "----" );
          push( @out, "" );
@@ -38,7 +38,7 @@ while ( my $result = $parser->next ) {
       }
    } elsif ( $result->is_comment and $in_error == 1 ) {
       # Print error contents
-      push ( @out, $result->raw );
+      push( @out, $result->raw );
    }
 }
 
