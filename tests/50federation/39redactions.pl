@@ -54,7 +54,7 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
          );
       })->then( sub {
          # send a regular message event to act as a sentinel
-         send_and_await_event( $outbound_client, $room, $user_id, $creator );
+         send_and_await_event( $outbound_client, $room, $creator, sender => $user_id );
       })->then( sub {
          # re-check the original event
          do_request_json_for( $creator,
@@ -103,7 +103,7 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
          );
       })->then( sub {
          # send another regular message
-         send_and_await_event( $outbound_client, $room, $user_id, $creator );
+         send_and_await_event( $outbound_client, $room, $creator, sender => $user_id );
       })->then( sub {
          # re-check the original event
          do_request_json_for( $creator,
