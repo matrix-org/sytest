@@ -111,7 +111,7 @@ perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sy
 if [ -n "$BUILDKITE" ] && [ $TEST_STATUS -ne 0 ]
 then
     # Build the annotation
-    perl ./format_tap.pl /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
+    perl ./scripts/format_tap.pl /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
 fi
 
 # Upload coverage to codecov, if running on CircleCI
