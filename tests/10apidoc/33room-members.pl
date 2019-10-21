@@ -61,12 +61,17 @@ sub matrix_join_room
    is_User( $user ) or croak "Expected a User; got $user";
 
    my %content;
+   my %params;
+   if ( defined $opts{server_name} ) {
+      $params{server_name} = $opts{server_name};
+   }
 
    defined $opts{third_party_signed} and $content{third_party_signed} = $opts{third_party_signed};
 
    do_request_json_for( $user,
       method => "POST",
       uri    => "/r0/join/$room",
+      params => \%params,
 
       content => \%content,
    )->then( sub {
