@@ -62,10 +62,8 @@ sub matrix_join_room
 
    my %content;
    my %params;
-   if ( defined $opts{server_name} ) {
-      $params{server_name} = $opts{server_name};
-   }
 
+   defined $opts{server_name} and $params{server_name} = $opts{server_name};
    defined $opts{third_party_signed} and $content{third_party_signed} = $opts{third_party_signed};
 
    do_request_json_for( $user,
