@@ -64,6 +64,23 @@ validate recaptcha submissions.
 
 =back
 
+=head2 smtp_server_config => HASH
+
+Details of an smtp server for things like 3pid validation. Should include the
+following keys:
+
+=over
+
+=item C<host>
+
+The hostname where the SMTP server can be reached.
+
+=item C<port>
+
+The port where the SMTP server can be reached.
+
+=back
+
 =head2 cas_config => HASH
 
 Parameters for testing the server's CAS integration. Should include the
@@ -149,7 +166,7 @@ sub configure
    my %params = @_;
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
-      recaptcha_config cas_config
+      recaptcha_config cas_config smtp_server_config
       app_service_config_files
    );
 
@@ -210,6 +227,56 @@ sub write_json_file
 
    return $self->write_file( $relpath, JSON::encode_json( $content ) );
 }
+
+
+sub configure_logger
+{
+   my $self = shift;
+   my ( $log_type ) = @_;
+   my $hs_dir = $self->{hs_dir};
+
+   my $log_config_file = $self->write_yaml_file("log.config.$log_type" => {
+      version => "1",
+
+      formatters => {
+         precise => {
+            format => "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(request)s - %(message)s"
+         }
+      },
+
+      filters => {
+         context => {
+            "()" => "synapse.logging.context.LoggingContextFilter",
+            request => ""
+         }
+      },
+      handlers => {
+         file => {
+            class => "logging.FileHandler",
+            formatter => "precise",
+            filename => "$hs_dir/$log_type.log",
+            filters => ["context"],
+            encoding => "utf8"
+         }
+      },
+
+      loggers => {
+         synapse => {
+            level => "INFO"
+         }
+      },
+
+      root => {
+         level => "INFO",
+         handlers => ["file"]
+      }
+
+   });
+
+   return $log_config_file;
+
+}
+
 
 =head2 _get_dbconfig
 

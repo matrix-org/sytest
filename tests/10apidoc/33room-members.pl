@@ -512,7 +512,7 @@ provisioned.
 Any other options are passed into C<matrix_create_room>, whence they are passed
 on to the server.
 
-It is generally easier to use C<local_user_and_name_fixtures>.
+It is generally easier to use C<local_user_and_room_fixtures>.
 
 =cut
 
@@ -539,6 +539,38 @@ sub room_fixture
       }
    );
 }
+
+=head2 magic_room_fixture
+
+   $fixture = magic_room_fixture(
+       requires_users => [ $creator_fixture, $other_user_fixture ],
+       %opts
+   );
+
+Returns a Fixture, which when provisioned will create a new room on the user's
+server and return the room id (and optionally the room alias).
+
+The following may be passed as named parameters:
+
+=over
+
+=item requires_users => LIST
+
+This should contain a list of user fixtures giving members of the new room. The
+first user is the creator of the room; the others are joined to the room after creation.
+
+=item with_alias => SCALAR
+
+This is passed into C<matrix_create_and_join_room>, and will make the result include
+the room alias as well as the room id.
+
+=item (everything else)
+
+Other parameters are passed into C<matrix_create_and_join_room>.
+
+=back
+
+=cut
 
 push @EXPORT, qw( magic_room_fixture );
 
@@ -601,21 +633,9 @@ sub local_user_and_room_fixtures
 }
 
 push @EXPORT, qw(
-   magic_local_user_and_room_fixtures matrix_join_room_synced
+   matrix_join_room_synced
    matrix_leave_room_synced matrix_invite_user_to_room_synced
 );
-
-sub magic_local_user_and_room_fixtures
-{
-   my %args = @_;
-
-   my $user_fixture = local_user_fixture();
-
-   return (
-      $user_fixture,
-      magic_room_fixture( requires_users => [ $user_fixture ], %args ),
-   );
-}
 
 sub matrix_join_room_synced
 {

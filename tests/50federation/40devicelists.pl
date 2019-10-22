@@ -1,5 +1,5 @@
 test "Local device key changes get to remote servers",
-   requires => [ local_user_fixture( room_opts => { room_version => "1" } ),
+   requires => [ local_user_fixture(),
                  $main::INBOUND_SERVER, federation_user_id_fixture(), room_alias_name_fixture() ],
 
    check => sub {
@@ -62,17 +62,17 @@ test "Local device key changes get to remote servers",
 
 
 test "Server correctly handles incoming m.device_list_update",
-   requires => [ local_user_fixture( room_opts => { room_version => "1" } ),
+   requires => [ local_user_fixture(),
                  $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
-                 $main::HOMESERVER_INFO[0],  federation_user_id_fixture(),
+                 federation_user_id_fixture(),
                  room_alias_name_fixture() ],
 
    check => sub {
-      my ( $user, $inbound_server, $outbound_client, $info, $creator_id, $room_alias_name ) = @_;
+      my ( $user, $inbound_server, $outbound_client, $creator_id, $room_alias_name ) = @_;
 
       my ( $room_id );
 
-      my $local_server_name = $info->server_name;
+      my $local_server_name = $user->server_name;
 
       my $remote_server_name = $inbound_server->server_name;
       my $datastore          = $inbound_server->datastore;
@@ -283,4 +283,151 @@ test "Local device key changes get to remote servers with correct prev_id",
             matrix_put_e2e_keys( $user1, device_keys => { updated => "keys" } )
          )
       });
+   };
+
+use Data::Dumper;
+test "Device list doesn't change if remote server is down",
+   requires => [
+      $main::OUTBOUND_CLIENT,
+      $main::INBOUND_SERVER,
+      local_user_fixture,
+      federation_user_id_fixture(),
+      qw( can_upload_e2e_keys )
+   ],
+
+   check => sub {
+      my (
+         $outbound_client,
+         $inbound_server,
+         $local_user,
+         $outbound_client_user
+      ) = @_;
+
+      my ( $first_keys_query_body, $second_keys_query_body, @respond_503 );
+
+      my $client_user_devices = {
+         user_id => $outbound_client_user,
+         stream_id => 3,
+         devices => [{
+            device_id => "CURIOSITY_ROVER",
+            keys => {
+               user_id => $outbound_client_user,
+               device_id => "CURIOSITY_ROVER",
+               algorithms => ["fast", "and broken"],
+               keys => {
+                  "c" => "sharp",
+                  "b" => "flat"
+               },
+               signatures => {
+                  $outbound_client_user => {"ed25519:JLAFKJWSCS" => "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"},
+               },
+            },
+            device_display_name => "Curiosity Rover"
+         }],
+      };
+
+      my $client_user_keys = {
+         device_keys => {
+            $outbound_client_user => {
+               CURIOSITY_ROVER => {
+                  user_id => $outbound_client_user,
+                  device_id => "CURIOSITY_ROVER",
+                  algorithms => ["fast", "and broken"],
+                  keys => {
+                     "c" => "sharp",
+                     "b" => "flat"
+                  },
+                  signatures => {
+                     $outbound_client_user => {"ed25519:JLAFKJWSCS" => "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"}
+                  },
+                  unsigned => {
+                     "device_display_name" => "Curiosity Rover"
+                  },
+               },
+            },
+         },
+      };
+
+
+      my @respond_with_keys = (
+         $inbound_server->await_request_user_devices( $outbound_client_user )->then( sub {
+            my ( $req ) = @_;
+            $req->respond_json($client_user_devices);
+            Future->done(1)
+         }),
+         $inbound_server->await_request_user_keys_query( $outbound_client_user )->then( sub {
+            my ( $req ) = @_;
+            $req->respond_json($client_user_keys);
+            Future->done(1)
+         })
+      );
+
+      # First we succesfully request the remote users keys while the remote server is up.
+      # We do this once they share a room.
+      matrix_create_room(
+         $local_user,
+         preset => "public_chat",
+      )->then( sub {
+         my ( $room_id ) = @_;
+         $outbound_client->join_room(
+            server_name => $local_user->server_name,
+            room_id     => $room_id,
+            user_id     => $outbound_client_user,
+         )
+      })->then( sub {
+         do_request_json_for( $local_user,
+            method  => "POST",
+            uri     => "/r0/keys/query",
+            content => {
+               device_keys => {
+                  $outbound_client_user => {}
+               }
+            }
+         )
+      })->then( sub {
+         ( $first_keys_query_body ) = @_;
+         map {$_->cancel} @respond_with_keys;
+         log_if_fail (Dumper $first_keys_query_body);
+
+         # We take the remote server 'offline' and then make the same request for
+         # the users keys. We expect no change in the keys.
+         @respond_503 = (
+            $inbound_server->await_request_user_devices( $outbound_client_user )->then( sub {
+               my ( $req ) = @_;
+               log_if_fail "Responded with 503 to /user/devices request";
+               $req->respond_json({}, code => 503);
+               Future->done(1)
+            }),
+            $inbound_server->await_request_user_keys_query()->then( sub {
+               my ( $req ) = @_;
+               log_if_fail "Responded with 503 to /user/keys/query request";
+               $req->respond_json({}, code => 503);
+               Future->done(1)
+            })
+         );
+         do_request_json_for( $local_user,
+            method  => "POST",
+            uri     => "/r0/keys/query",
+            content => {
+               device_keys => {
+                  $outbound_client_user => {}
+               }
+            }
+         )
+      })->then( sub {
+         ( $second_keys_query_body ) = @_;
+         map {$_->cancel} @respond_503;
+         # The unsiged field is optional in the spec so we remove it from any response.
+         foreach ($first_keys_query_body, $second_keys_query_body) {
+            while (my ($user_key, $devices) = each %{$_->{ device_keys }} ) {
+               while (my ($device_key, $values) = each %$devices) {
+                  delete $values->{ unsigned };
+               }
+            }
+         };
+
+         log_if_fail (Dumper $second_keys_query_body);
+         assert_deeply_eq( $second_keys_query_body, $first_keys_query_body, "Query matches while federation server is down." );
+         Future->done(1)
+      })
    };

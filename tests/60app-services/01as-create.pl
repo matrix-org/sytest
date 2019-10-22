@@ -142,7 +142,7 @@ test "AS can make room aliases",
             assert_json_list( my $aliases = $content->{aliases} );
 
             grep { $_ eq $room_alias } @$aliases or
-               die "EXpected to find our alias in the aliases list";
+               die "Expected to find our alias in the aliases list";
 
             Future->done;
          }),

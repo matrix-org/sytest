@@ -1,5 +1,26 @@
 use URI::Escape qw( uri_escape );
 
+=head2 matrix_get_event
+
+   my $event = matrix_get_event( $user, $room_id, $event_id ) -> get;
+
+Makes a /_matrix/client/r0/rooms/{roomId}/event/{eventId} request. Returns the event.
+
+=cut
+
+sub matrix_get_event
+{
+   my ( $user, $room_id, $event_id ) = @_;
+
+   return do_request_json_for(
+      $user,
+      method  => "GET",
+      uri     => "/r0/rooms/${ \uri_escape( $room_id ) }/event/${ \uri_escape( $event_id ) }",
+   );
+}
+
+push our @EXPORT, qw( matrix_get_event );
+
 test "/event/ on joined room works",
    requires => [ local_user_and_room_fixtures() ],
 
@@ -17,7 +38,7 @@ test "/event/ on joined room works",
          )->then( sub {
             my ( $body ) = @_;
 
-            assert_json_keys( $body, qw( content type room_id sender event_id unsigned ) );
+            assert_json_keys( $body, qw( content type room_id sender event_id ) );
             assert_eq( $body->{event_id}, $event_id, "event id" );
             assert_eq( $body->{room_id}, $room_id, "room id" );
             assert_eq( $body->{content}->{body}, "hello, world", "body" );
@@ -42,7 +63,7 @@ test "/event/ on non world readable room does not work",
             method  => "GET",
             uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id ) }",
          );
-      })->main::expect_http_403;
+      })->main::expect_http_404;
    };
 
 test "/event/ does not allow access to events before the user joined",
@@ -82,7 +103,7 @@ test "/event/ does not allow access to events before the user joined",
             method  => "GET",
             uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id_1 ) }",
          );
-      })->main::expect_http_403->then( sub {
+      })->main::expect_http_404->then( sub {
          # we should be able to get the event after we joined.
          do_request_json_for( $other_user,
             method  => "GET",
@@ -91,7 +112,7 @@ test "/event/ does not allow access to events before the user joined",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( content type room_id sender event_id unsigned ) );
+         assert_json_keys( $body, qw( content type room_id sender event_id ) );
          assert_eq( $body->{event_id}, $event_id_2, "event id" );
          assert_eq( $body->{content}->{body}, "after join", "body" );
 

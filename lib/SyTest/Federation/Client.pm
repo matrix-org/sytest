@@ -7,6 +7,7 @@ use base qw( SyTest::Federation::_Base SyTest::HTTPClient );
 
 use List::UtilsBy qw( uniq_by );
 
+use Data::Dump 'pp';
 use MIME::Base64 qw( decode_base64 );
 use HTTP::Headers::Util qw( join_header_words );
 
@@ -167,10 +168,9 @@ sub send_event
       # event id is, but there should be one entry which maps to an empty dict
       assert_eq( length( keys %$pdus ), 1);
       my $event_id = ( keys %$pdus )[0];
-
-      assert_deeply_eq( $body,
-                        { pdus => { $event_id => {} } },
-                        "/send/ response" );
+      if( keys %{ $pdus->{ $event_id } } ) {
+         die "Unexpected response from /send: ". pp $body;
+      }
       Future->done;
    });
 }
@@ -191,7 +191,7 @@ sub join_room
       method   => "GET",
       hostname => $server_name,
       uri      => "/v1/make_join/$room_id/$user_id",
-      params   => { "ver" => [1, 5] },
+      params   => { "ver" => [1, 2, 3, 4, 5] },
    )->then( sub {
       my ( $body ) = @_;
 

@@ -2,35 +2,9 @@
 
 set -ex
 
-# Attempt to find a sytest to use.
-# If /test/run-tests.pl exists, it means that a SyTest checkout has been mounted into the Docker image.
-if [ -e "./run-tests.pl" ]
-then
-    # If the user has mounted in a SyTest checkout, use that. We can tell this by files being in the directory.
-    echo "Using local sytests..."
-else
-    # Otherwise, try and find out what the branch that the Dendrite checkout is
-    # using. If we don't know, assume it's master.
-    branch_name="$(git --git-dir=/src/.git rev-parse --abbrev-ref HEAD 2>/dev/null)" || branch_name="develop"
-    
-    # If we're using the master branch of Dendrite, use the develop branch of sytest,
-    # as master is Dendrite's development branch
-    [ "$branch_name" == "master" ] && branch_name="develop"
-
-    # Try and fetch the branch
-    echo "Trying to get same-named sytest branch..."
-    wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
-        # Probably a 404, fall back to develop
-        echo "Using develop instead..."
-        wget -q https://github.com/matrix-org/sytest/archive/develop.tar.gz -O sytest.tar.gz
-    }
-
-    tar --strip-components=1 -xf sytest.tar.gz
-
-fi
+cd /sytest
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
-dos2unix ./install-deps.pl
 ./install-deps.pl
 
 # Start the database
@@ -61,9 +35,9 @@ TEST_STATUS=0
 # Copy out the logs
 mkdir -p /logs
 cp results.tap /logs/results.tap
-rsync --ignore-missing-args -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
-# Write out JUnit for CircleCI
+# Write out JUnit
 mkdir -p /logs/sytest
 perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
 

@@ -1,11 +1,11 @@
 test "Inbound federation can get public room list",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+   requires => [ $main::OUTBOUND_CLIENT,
+                 local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
 
    do => sub {
-     my ( $outbound_client, $info, $creator, $room_id, $user_id ) = @_;
-     my $first_home_server = $info->server_name;
+     my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+     my $first_home_server = $creator->server_name;
 
      my $local_server_name = $outbound_client->server_name;
 

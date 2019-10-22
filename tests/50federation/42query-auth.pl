@@ -1,14 +1,14 @@
 use Future::Utils qw( repeat );
 
 test "Querying auth checks the events requested belong to the room",
-   requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
-                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+   requires => [ $main::OUTBOUND_CLIENT,
+                 local_user_and_room_fixtures(),
+                 local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
    do => sub {
-      my ( $outbound_client, $info, $priv_creator, $priv_room_id,
+      my ( $outbound_client, $priv_creator, $priv_room_id,
            $pub_creator, $pub_room_id, $fed_user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my $first_home_server = $pub_creator->server_name;
 
       my $local_server_name = $outbound_client->server_name;
 

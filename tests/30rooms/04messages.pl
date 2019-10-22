@@ -203,7 +203,7 @@ test "Remote room members can get room messages",
    };
 
 test "Message history can be paginated",
-   requires => [ magic_local_user_and_room_fixtures() ],
+   requires => [ local_user_and_room_fixtures() ],
 
    proves => [qw( can_paginate_room )],
 
