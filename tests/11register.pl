@@ -34,6 +34,8 @@ sub validate_email {
    my $sid;
 
    return Future->needs_all(
+      await_confirmation_email( $address, $http ),
+
       $http->do_request_json(
          method => "POST",
          uri    => $params{path},
@@ -51,15 +53,17 @@ sub validate_email {
          $sid = $resp->{sid};
          Future->done;
       }),
-
-      # depending on the server under test, we should expect either a callout to
-      # our test ID server, or an email from the homeserver.
-      #
-      Future->wait_any(
-         await_and_confirm_email( $address, $http ),
-         await_id_validation_email( $params{id_server}, $address ),
-      ),
    )->then( sub {
+      my ( $confirm_uri ) = @_;
+
+      log_if_fail "Confirm uri", $confirm_uri;
+
+      # do an http hit on the confirmation url
+      $http->do_request(
+         method   => "GET",
+         full_uri => $confirm_uri,
+      );
+   })->then( sub {
       Future->done( $sid, $client_secret );
    });
 }
@@ -119,9 +123,8 @@ sub validate_msisdn {
    });
 }
 
-# wait for a call to /requestToken on the test IS, and act as if the
-# email has been validated.
-sub await_and_confirm_email {
+# Wait for a confirmation email and return the confirmation URI.
+sub await_confirmation_email {
    my ( $address, $http ) = @_;
 
    my $confirm_uri;
@@ -145,11 +148,7 @@ sub await_and_confirm_email {
          }
       });
 
-      # do an http hit on the confirmation url
-      $http->do_request(
-         method   => "GET",
-         full_uri => $confirm_uri,
-      );
+      Future->done( $confirm_uri );
    });
 }
 

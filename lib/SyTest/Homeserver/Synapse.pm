@@ -311,6 +311,7 @@ sub start
    my $env = {
       "PATH" => $ENV{PATH},
       "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
+      "SYNAPSE_TEST_PATCH_LOG_CONTEXTS" => 1,
    };
 
    my $loop = $self->loop;
