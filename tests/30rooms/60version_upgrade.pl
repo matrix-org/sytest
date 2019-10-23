@@ -182,6 +182,8 @@ test "/upgrade creates a new room",
       matrix_create_room_synced( $user )->then( sub {
          ( $old_room_id ) = @_;
 
+         matrix_sync( $user );
+      })->then ( sub {
          upgrade_room_synced(
             $user, $old_room_id,
             new_version => $TEST_NEW_VERSION,
@@ -345,7 +347,7 @@ test "/upgrade copies important state to the new room",
          "m.room.avatar" => { url => "http://something" },
          "m.room.encryption" => { algorithm => "m.megolm.v1.aes-sha2" },
          "m.room.related_groups" => { groups => [ "+something:example.org" ] },
-         "m.room.server_acl" => { 
+         "m.room.server_acl" => {
             allow => [ "*" ],
             allow_ip_literals => "false",
             deny => [ "*.evil.com", "evil.com" ],
@@ -468,7 +470,7 @@ test "/upgrade copies push rules to the new room",
       my ( $new_room_id );
 
       matrix_add_push_rule( $creator, "global", "room", $room_id, {
-         actions => [ "notify" ] 
+         actions => [ "notify" ]
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -815,5 +817,3 @@ test "/upgrade of a bogus room fails gracefully",
 
 # upgrade with other local users
 # upgrade with remote users
-
-
