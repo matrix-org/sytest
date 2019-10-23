@@ -51,7 +51,7 @@ perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sy
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
-    perl /format_tap.pl results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
+    perl /scripts/format_tap.pl results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
 fi
 
 exit $TEST_STATUS
