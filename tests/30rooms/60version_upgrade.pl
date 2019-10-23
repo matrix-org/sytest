@@ -169,17 +169,19 @@ sub upgrade_room_synced {
 
 test "/upgrade creates a new room",
    requires => [
-      local_user_and_room_fixtures(),
+      local_user_fixture(),
       qw( can_create_versioned_room ),
    ],
 
    proves => [ qw( can_upgrade_room_version ) ],
 
    do => sub {
-      my ( $user, $old_room_id ) = @_;
-      my ( $new_room_id );
+      my ( $user ) = @_;
+      my ( $old_room_id, $new_room_id );
 
-      matrix_sync( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
+         ( $old_room_id ) = @_;
+
          upgrade_room_synced(
             $user, $old_room_id,
             new_version => $TEST_NEW_VERSION,

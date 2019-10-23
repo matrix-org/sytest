@@ -55,18 +55,22 @@ sub test_history_visibility
             matrix_send_room_text_message( $creator, $room_id, body => "Before join" )
                ->on_done( sub { ( $before_join_event_id ) = @_ } )
          })->then( sub {
-            my $rq = matrix_get_room_messages( $joiner, $room_id, limit => 10 );
-            if( $permitted->{see_without_join} ) {
-                $rq->then( sub {
-                    my ( $body ) = @_;
-                    my %visible_events = map { $_->{event_id} => $_ } @{ $body->{chunk} };
+            retry_until_success {
+                my $rq = matrix_get_room_messages( $joiner, $room_id, limit => 10 );
+                if( $permitted->{see_without_join} ) {
+                    $rq->then( sub {
+                        my ( $body ) = @_;
+                        my %visible_events = map { $_->{event_id} => $_ } @{ $body->{chunk} };
 
-                    assert_eq( exists $visible_events{$before_join_event_id}, 1,
-                               "visibility without join'" );
-                    Future->done();
-                 });
-             } else {
-                $rq->followed_by( \&expect_4xx_or_empty_chunk );
+                        log_if_fail "/messages body", $body;
+
+                        assert_eq( exists $visible_events{$before_join_event_id}, 1,
+                                   "visibility without join'" );
+                        Future->done();
+                     });
+                 } else {
+                    $rq->followed_by( \&expect_4xx_or_empty_chunk );
+                 }
              }
          })->then( sub {
             matrix_invite_user_to_room( $creator, $joiner, $room_id );
