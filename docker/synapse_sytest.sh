@@ -20,16 +20,12 @@ if [ -d "/sytest" ]; then
     ln -sf /sytest/keys /work
     SYTEST_LIB="/sytest/lib"
 else
-    # Otherwise, try and find out what the branch that the Synapse checkout is using. Fall back to develop if it's not a branch.
-    branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
+    # Otherwise, try and find out what the branch that the Synapse checkout is using. Fall back to dinsic if it's not a branch.
+    branch_name="$BUILDKITE_BRANCH" || branch_name="dinsic"
 
     # Try and fetch the branch
-    echo "Trying to get same-named sytest branch..."
-    wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
-        # Probably a 404, fall back to dinsic
-        echo "Using dinsic instead..."
-        wget -q https://github.com/matrix-org/sytest/archive/dinsic.tar.gz -O sytest.tar.gz
-    }
+    echo "Trying to get same-named sytest branch (or the dinsic one)..."
+    wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz
 
     mkdir -p /work
     tar -C /work --strip-components=1 -xf sytest.tar.gz
@@ -70,7 +66,7 @@ else
     # deps.
     /venv/bin/pip install -q --upgrade --no-cache-dir -e /src/
     /venv/bin/pip install -q --upgrade --no-cache-dir \
-        lxml psycopg2 coverage codecov
+        lxml psycopg2 coverage codecov tap.py
 
     # Make sure all Perl deps are installed -- this is done in the docker build
     # so will only install packages added since the last Docker build
@@ -111,6 +107,12 @@ rsync --ignore-missing-args -av server-0 server-1 /logs --include "*/" --include
 # Write out JUnit for CircleCI
 mkdir -p /logs/sytest
 perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
+
+if [ -n "$BUILDKITE" ] && [ $TEST_STATUS -ne 0 ]
+then
+    # Build the annotation
+    /venv/bin/python /src/.buildkite/format_tap.py /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
+fi
 
 # Upload coverage to codecov, if running on CircleCI
 if [ -n "$CIRCLECI" ]
