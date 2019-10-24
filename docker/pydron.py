@@ -54,7 +54,7 @@ try:
         + " -m synapse.app.homeserver -D --config-path="
         + args["--synapse-config"]
     )
-    subprocess.run(shlex.split(synapse), check=True)
+    subprocess.call(shlex.split(synapse))
 
     # Then, start up all the workers. Do these in parallel because they take a while.
     worker_processes = {}
@@ -117,4 +117,4 @@ except BaseException as e:
     # Otherwise, something bad has happened.
     sys.exit(1)
 finally:
-   subprocess.run(["pkill", "-9", "-f", "synapse.app"])
+   subprocess.call(["pkill", "-9", "-f", "synapse.app"])
