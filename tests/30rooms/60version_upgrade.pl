@@ -13,7 +13,7 @@
 # limitations under the License.
 
 use Future::Utils qw( repeat );
-use List::Util qw( all first );
+use List::Util qw( all first none );
 
 push our @EXPORT, qw ( upgrade_room_synced $TEST_NEW_VERSION );
 
@@ -828,5 +828,105 @@ test "Cannot send tombstone event that points to the same room",
       )->main::expect_http_400;
    };
 
-# upgrade with other local users
-# upgrade with remote users
+test "Local and remote users' homeservers removes a room from its public directory on upgrade",
+   requires => [
+      local_user_fixture(), remote_user_fixture(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $remote_joiner ) = @_;
+      my ( $room_id, $new_room_id, $pl_event_id );
+
+      matrix_create_room( $creator,
+         visibility => "public",
+      )->then( sub {
+         ( $room_id, ) = @_;
+
+         matrix_invite_user_to_room_synced(
+            $creator, $remote_joiner, $room_id,
+         );
+      })->then( sub {
+         matrix_join_room_synced(
+            $remote_joiner, $room_id, ( server_name => $creator->server_name, ),
+         );
+      })->then( sub {
+         matrix_change_room_power_levels( $creator, $room_id, sub {
+            my ( $levels ) = @_;
+            $levels->{users}{$remote_joiner->user_id} = 100;
+         });
+      })->then(sub {
+         ( $pl_event_id, ) = @_;
+
+         # Extract event_id from response object
+         $pl_event_id = $pl_event_id->{event_id};
+
+         # Wait for the power level change to appear on the remote side
+         await_sync_timeline_contains( $remote_joiner, $room_id, check => sub {
+            say "We want: " . $pl_event_id . ", we got: " . $_[0]->{type};
+            return $_[0]->{event_id} eq $pl_event_id;
+         });
+      })->then(sub {
+         do_request_json_for( $remote_joiner,
+            method => "PUT",
+            uri    => "/r0/directory/list/room/$room_id",
+
+            content => {
+               visibility => "public",
+            }
+         )
+      })->then(sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $main::TEST_NEW_VERSION,
+         );
+      })->then(sub {
+         ( $new_room_id ) = @_;
+
+         matrix_join_room_synced(
+            $remote_joiner, $new_room_id, ( server_name => $creator->server_name, )
+         );
+      })->then(sub {
+         do_request_json_for( $creator,
+            method => "GET",
+            uri    => "/r0/publicRooms",
+         );
+      })->then( sub {
+         # Check public rooms list for local user
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( chunk ) );
+
+         # Check that the room list contains new room id
+         any { $new_room_id eq $_->{room_id} } @{ $body->{chunk} }
+            or die "Local room list did not include expected room id $new_room_id";
+
+         # Check that the room list doesn't contain old room id
+         none { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+            or die "Local room list included unexpected room id $room_id";
+
+         do_request_json_for( $remote_joiner,
+            method => "GET",
+            uri    => "/r0/publicRooms",
+         );
+      })->then( sub {
+         # Check public rooms list for remote user
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( chunk ) );
+
+         # Check that the room list contains new room id
+         any { $new_room_id eq $_->{room_id} } @{ $body->{chunk} }
+            or die "Remote room list did not include expected room id $new_room_id";
+
+         # Check that the room list doesn't contain old room id
+         none { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+            or die "Remote room list included unexpected room id $room_id";
+
+         Future->done( 1 );
+      });
+   }
