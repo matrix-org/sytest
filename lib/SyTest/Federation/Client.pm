@@ -7,12 +7,15 @@ use base qw( SyTest::Federation::_Base SyTest::HTTPClient );
 
 use List::UtilsBy qw( uniq_by );
 
+use Data::Dump 'pp';
 use MIME::Base64 qw( decode_base64 );
 use HTTP::Headers::Util qw( join_header_words );
 
 use SyTest::Assertions qw( :all );
 
 use URI::Escape qw( uri_escape );
+
+use constant SUPPORTED_ROOM_VERSIONS => [1, 2, 3, 4, 5];
 
 sub configure
 {
@@ -167,10 +170,9 @@ sub send_event
       # event id is, but there should be one entry which maps to an empty dict
       assert_eq( length( keys %$pdus ), 1);
       my $event_id = ( keys %$pdus )[0];
-
-      assert_deeply_eq( $body,
-                        { pdus => { $event_id => {} } },
-                        "/send/ response" );
+      if( keys %{ $pdus->{ $event_id } } ) {
+         die "Unexpected response from /send: ". pp $body;
+      }
       Future->done;
    });
 }
@@ -191,7 +193,7 @@ sub join_room
       method   => "GET",
       hostname => $server_name,
       uri      => "/v1/make_join/$room_id/$user_id",
-      params   => { "ver" => [1, 2, 3, 4, 5] },
+      params   => { "ver" => SUPPORTED_ROOM_VERSIONS },
    )->then( sub {
       my ( $body ) = @_;
 
@@ -270,13 +272,20 @@ sub get_remote_forward_extremities
       method   => "GET",
       hostname => $server_name,
       uri      => "/v1/make_join/$room_id/$user_id",
+      params   => { "ver" => SUPPORTED_ROOM_VERSIONS },
    )->then( sub {
       my ( $resp ) = @_;
 
       my $protoevent = $resp->{event};
+      my $room_version = $resp->{room_version} // 1;
 
-      my @prev_events = map { $_->[0] } @{ $protoevent->{prev_events} };
-      Future->done( @prev_events );
+      if( $room_version eq "1" || $room_version eq "2" ) {
+         # room versions 1 and 2 use [ event_id, hash ] pairs.
+         my @prev_events = map { $_->[0] } @{ $protoevent->{prev_events} };
+         Future->done( @prev_events );
+      } else {
+         Future->done( @{ $protoevent->{prev_events} } );
+      }
    });
 }
 
