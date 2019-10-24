@@ -110,7 +110,7 @@ test "Outbound federation can send room-join requests",
             );
 
             $req->respond_json(
-               # TODO(paul): This workaround is for SYN-490
+               # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
                my $response = [ 200, {
                   auth_chain => \@auth_chain,
                   state      => [ $room->current_state_events ],
@@ -222,10 +222,6 @@ test "Inbound federation can receive v1 room-join requests",
          my ( $body ) = @_;
          log_if_fail "make_join body", $body;
 
-         # TODO(paul): This is all entirely cargoculted guesswork based on
-         #   observing what Synapse actually does, because the entire make_join
-         #   API is entirely undocumented. See SPEC-241
-
          assert_json_keys( $body, qw( event ));
 
          my $protoevent = $body->{event};
@@ -283,15 +279,11 @@ test "Inbound federation can receive v1 room-join requests",
       })->then( sub {
          my ( $response ) = @_;
 
-         # $response seems to arrive with an extraneous layer of wrapping as
-         # the result of a synapse implementation bug (SYN-490).
-         if( ref $response eq "ARRAY" ) {
-            $response->[0] == 200 or
-               die "Expected first response element to be 200";
+         # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
+         $response->[0] == 200 or
+            die "Expected first response element to be 200";
 
-            warn "SYN-490 detected; deploying workaround\n";
-            $response = $response->[1];
-         }
+         $response = $response->[1];
 
          assert_json_keys( $response, qw( auth_chain state ));
 
@@ -664,7 +656,7 @@ test "Outbound federation rejects send_join responses with no m.room.create even
             @auth_chain = grep { $_->{type} ne 'm.room.create' } @auth_chain;
 
             $req->respond_json(
-               # TODO(paul): This workaround is for SYN-490
+               # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
                my $response = [ 200, {
                   auth_chain => \@auth_chain,
                   state      => [ $room->current_state_events ],
@@ -752,7 +744,7 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
             );
 
             $req->respond_json(
-               # TODO(paul): This workaround is for SYN-490
+               # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
                my $response = [ 200, {
                   auth_chain => \@auth_chain,
                   state      => [ $room->current_state_events ],
