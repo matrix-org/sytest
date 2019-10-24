@@ -272,6 +272,57 @@ foreach my $vis ( qw( public private ) ) {
       };
 }
 
+test "/upgrade copies >100 power levels to the new room",
+   requires => [
+      local_user_fixture(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub() {
+      my ( $creator ) = @_;
+
+      my $room_id;
+      my $new_room_id;
+
+      my $user_power_levels = {
+         $creator->user_id => 500,
+      };
+
+      matrix_create_room_synced(
+         $creator,
+         power_level_content_override => { users => $user_power_levels },
+      )->then( sub() {
+         ( $room_id ) = @_;
+
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub() {
+         ( $new_room_id, ) = @_;
+
+         matrix_sync_again( $creator );
+      })->then( sub() {
+         my ( $sync_body ) = @_;
+
+         log_if_fail "new room sync body doesn't contain correct power levels", $sync_body;
+
+         my $room = $sync_body->{rooms}{join}{$new_room_id};
+         my $pl_event = first {
+            $_->{type} eq 'm.room.power_levels'
+         } reverse @{ $room->{timeline}->{events} };
+
+         log_if_fail "PL event in new room", $pl_event;
+
+         assert_deeply_eq(
+            $pl_event->{content}{users},
+            $user_power_levels,
+            "power levels in replacement room",
+         );
+         Future->done(1);
+      })
+   };
+
 test "/upgrade copies the power levels to the new room",
    requires => [
       local_user_and_room_fixtures(),
@@ -285,9 +336,9 @@ test "/upgrade copies the power levels to the new room",
 
       matrix_change_room_power_levels(
          $creator, $room_id, sub {
-             ( $pl_content ) = @_;
-             $pl_content->{users}->{'@test:xyz'} = 40;
-             log_if_fail "PL content in old room", $pl_content;
+            ( $pl_content ) = @_;
+            $pl_content->{users}->{'@test:xyz'} = 40;
+            log_if_fail "PL content in old room", $pl_content;
          }
       )->then( sub {
          matrix_sync( $creator );
@@ -321,7 +372,6 @@ test "/upgrade copies the power levels to the new room",
          Future->done(1);
       });
    };
-
 
 test "/upgrade copies important state to the new room",
    requires => [
