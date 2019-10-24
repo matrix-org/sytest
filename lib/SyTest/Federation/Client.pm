@@ -15,6 +15,8 @@ use SyTest::Assertions qw( :all );
 
 use URI::Escape qw( uri_escape );
 
+use constant SUPPORTED_ROOM_VERSIONS => [1, 2, 3, 4, 5];
+
 sub configure
 {
    my $self = shift;
@@ -191,7 +193,7 @@ sub join_room
       method   => "GET",
       hostname => $server_name,
       uri      => "/v1/make_join/$room_id/$user_id",
-      params   => { "ver" => [1, 2, 3, 4, 5] },
+      params   => { "ver" => SUPPORTED_ROOM_VERSIONS },
    )->then( sub {
       my ( $body ) = @_;
 
@@ -270,13 +272,20 @@ sub get_remote_forward_extremities
       method   => "GET",
       hostname => $server_name,
       uri      => "/v1/make_join/$room_id/$user_id",
+      params   => { "ver" => SUPPORTED_ROOM_VERSIONS },
    )->then( sub {
       my ( $resp ) = @_;
 
       my $protoevent = $resp->{event};
+      my $room_version = $resp->{room_version} // 1;
 
-      my @prev_events = map { $_->[0] } @{ $protoevent->{prev_events} };
-      Future->done( @prev_events );
+      if( $room_version eq "1" || $room_version eq "2" ) {
+         # room versions 1 and 2 use [ event_id, hash ] pairs.
+         my @prev_events = map { $_->[0] } @{ $protoevent->{prev_events} };
+         Future->done( @prev_events );
+      } else {
+         Future->done( @{ $protoevent->{prev_events} } );
+      }
    });
 }
 
