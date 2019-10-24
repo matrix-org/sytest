@@ -1,4 +1,4 @@
-FROM matrixdotorg/sytest:latest
+FROM matrixdotorg/sytest:dinsic
 
 RUN apt-get -qq update && apt-get -qq install -y \
     python python-dev python-virtualenv eatmydata
