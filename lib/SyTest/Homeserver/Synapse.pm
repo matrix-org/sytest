@@ -76,6 +76,10 @@ sub _init
       event_creator_metrics => main::alloc_port( "event_creator[$idx].metrics" ),
       event_creator_manhole => main::alloc_port( "event_creator[$idx].manhole" ),
 
+      frontend_proxy         => main::alloc_port( "frontend_proxy[$idx]" ),
+      frontend_proxy_metrics => main::alloc_port( "frontend_proxy[$idx].metrics" ),
+      frontend_proxy_manhole => main::alloc_port( "frontend_proxy[$idx].manhole" ),
+
       haproxy => main::alloc_port( "haproxy[$idx]" ),
    };
 }
@@ -279,7 +283,7 @@ sub start
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
-      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator ) ) {
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator frontend_proxy ) ) {
          open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
       }
    }
@@ -954,6 +958,41 @@ sub wrap_synapse_command
          "--event-creator-url" => "http://$bind_host:$self->{ports}{event_creator}";
    }
 
+   {
+      my $frontend_proxy_config_path = $self->write_yaml_file( "frontend_proxy.yaml" => {
+         "worker_app"                   => "synapse.app.frontend_proxy",
+         "worker_pid_file"              => "$hsdir/frontend_proxy.pid",
+         "worker_log_config"            => $self->configure_logger("frontend_proxy"),
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
+         "worker_listeners"             => [
+            {
+               type      => "http",
+               resources => [{ names => ["client"] }],
+               port      => $self->{ports}{frontend_proxy},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{frontend_proxy},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{frontend_proxy_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      } );
+
+      push @command,
+         "--frontend-proxy-config" => $frontend_proxy_config_path,
+         "--frontend-proxy-url" => "http://$bind_host:$self->{ports}{frontend_proxy}";
+   }
+
    return @command;
 }
 
@@ -1092,6 +1131,9 @@ backend user_dir
 
 backend event_creator
     server event_creator ${bind_host}:$ports->{event_creator}
+
+backend frontend_proxy
+    server frontend_proxy ${bind_host}:$ports->{frontend_proxy}
 
 EOCONFIG
 }
