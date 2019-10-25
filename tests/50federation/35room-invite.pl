@@ -37,7 +37,7 @@ test "Outbound federation can send invites",
             $inbound_server->datastore->sign_event( $body );
 
             $req->respond_json(
-               # SYN-490
+               # /v1/invite has an extraneous [ 200, ... ] wrapper (fixed in /v2)
                [ 200, { event => $body } ]
             );
 

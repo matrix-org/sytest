@@ -219,8 +219,9 @@ sub join_room
          content  => $member_event,
       )->then( sub {
          my ( $join_body ) = @_;
-         # SYN-490 workaround
-         $join_body = $join_body->[1] if ref $join_body eq "ARRAY";
+
+         # /v1/send_join has an extraneous [ 200, ... ] wrapper (see MSC1802)
+         $join_body = $join_body->[1];
 
          my $room = SyTest::Federation::Room->new(
             datastore => $store,
