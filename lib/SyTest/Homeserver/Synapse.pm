@@ -1099,25 +1099,54 @@ EOCONFIG
 sub generate_haproxy_map
 {
     return <<'EOCONFIG';
-^/_matrix/client/(v2_alpha|r0)/sync$            synchrotron
-^/_matrix/client/(api/v1|v2_alpha|r0)/events$   synchrotron
-# We need to catch global and per room, so just match based on ending.
-^/_matrix/client/.*/initialSync$                synchrotron
+^/_matrix/client/(v2_alpha|r0)/sync$                  synchrotron
+^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
+^/_matrix/client/(api/v1|r0)/initialSync$             synchrotron
+^/_matrix/client/(api/v1|r0)/rooms/[^/]+/initialSync$ synchrotron
 
 ^/_matrix/media/    media_repository
 
-^/_matrix/federation/v1/event/                  federation_reader
-^/_matrix/federation/v1/state/                  federation_reader
-^/_matrix/federation/v1/state_ids/              federation_reader
-^/_matrix/federation/v1/backfill/               federation_reader
-^/_matrix/federation/v1/get_missing_events/     federation_reader
-^/_matrix/federation/v1/publicRooms             federation_reader
+^/_matrix/federation/v1/event/                        federation_reader
+^/_matrix/federation/v1/state/                        federation_reader
+^/_matrix/federation/v1/state_ids/                    federation_reader
+^/_matrix/federation/v1/backfill/                     federation_reader
+^/_matrix/federation/v1/get_missing_events/           federation_reader
+^/_matrix/federation/v1/publicRooms                   federation_reader
+^/_matrix/federation/v1/query/                        federation_reader
+^/_matrix/federation/v1/make_join/                    federation_reader
+^/_matrix/federation/v1/make_leave/                   federation_reader
+^/_matrix/federation/v1/send_join/                    federation_reader
+^/_matrix/federation/v1/send_leave/                   federation_reader
+^/_matrix/federation/v1/invite/                       federation_reader
+^/_matrix/federation/v1/query_auth/                   federation_reader
+^/_matrix/federation/v1/event_auth/                   federation_reader
+^/_matrix/federation/v1/exchange_third_party_invite/  federation_reader
+^/_matrix/federation/v1/send/                         federation_reader
+^/_matrix/key/v2/query                                federation_reader
 
-^/_matrix/client/(api/v1|r0)/publicRooms$    client_reader
+^/_matrix/client/(api/v1|r0|unstable)/publicRooms$                client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/joined_members$    client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/context/.*$        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/members$           client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/state$             client_reader
+^/_matrix/client/(api/v1|r0|unstable)/login$                      client_reader
+^/_matrix/client/(api/v1|r0|unstable)/account/3pid$               client_reader
+^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 client_reader
+^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               client_reader
+^/_matrix/client/versions$                                        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/voip/turnServer$            client_reader
+^/_matrix/client/(r0|unstable)/register$                          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/messages$          client_reader
+
+^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
 ^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
 
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send      event_creator
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send                                 event_creator
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
+^/_matrix/client/(api/v1|r0|unstable)/join/                                         event_creator
+^/_matrix/client/(api/v1|r0|unstable)/profile/                                      event_creator
+
 EOCONFIG
 }
 
