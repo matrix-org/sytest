@@ -327,7 +327,7 @@ test "Inbound federation can receive v1 room-join requests",
    };
 
 
-test "Inbound federation rejects remote attempts to join local users to rooms",
+test "Inbound /v1/make_join rejects remote attempts to join local users to rooms",
    requires => [ $main::OUTBOUND_CLIENT,
                  local_user_fixture(),
                  local_user_fixture(),
@@ -357,6 +357,185 @@ test "Inbound federation rejects remote attempts to join local users to rooms",
          log_if_fail "error body", $body;
          assert_eq( $body->{errcode}, "M_FORBIDDEN", 'responsecode' );
          Future->done( 1 );
+      });
+   };
+
+
+test "Inbound /v1/send_join rejects incorrectly-signed joins",
+   requires => [
+      $main::OUTBOUND_CLIENT,
+      local_user_fixture(),
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $outbound_client, $creator_user, $user_id ) = @_;
+      my $sytest_server_name = $outbound_client->server_name;
+      my $server_name = $creator_user->server_name;
+      my $room_id;
+      my $join_event;
+
+      matrix_create_room(
+         $creator_user,
+      )->then( sub {
+         ( $room_id ) = @_;
+
+         $outbound_client->make_join(
+            server_name => $server_name,
+            room_id     => $room_id,
+            user_id     => $user_id,
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "make_join body", $body;
+
+         my $room_version = $body->{room_version} // 1;
+
+         $join_event = $body->{event};
+
+         $join_event->{origin} = $sytest_server_name;
+         $join_event->{origin_server_ts} = $outbound_client->time_ms;
+
+         if( $room_version eq '1' || $room_version eq '2' ) {
+            # room v1/v2: assign an event id
+            $join_event->{event_id} = $outbound_client->datastore->next_event_id();
+         }
+
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $server_name,
+            uri      => "/v1/send_join/$room_id/xxx",
+            content  => $join_event,
+         );
+      })->main::expect_http_403()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "unsigned event: error body", $body;
+         assert_eq( $body->{errcode}, "M_FORBIDDEN", 'responsecode' );
+
+         # try a fake signature
+         $join_event->{signatures} = {
+            $sytest_server_name => {
+               $outbound_client->datastore->key_id => "a" x 86,
+            },
+         };
+
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $server_name,
+            uri      => "/v1/send_join/$room_id/xxx",
+            content  => $join_event,
+         );
+      })->main::expect_http_403()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "bad signature: error body", $body;
+         assert_eq( $body->{errcode}, "M_FORBIDDEN", 'responsecode' );
+
+         # TODO: it would be nice to test that we reject a join event, sent
+         # from server A, for a user on server A, with a signature from server
+         # B (and not A). That probably entails spinning up a second test
+         # federation server to partake in our conspiracy.
+
+         # make sure that it gets accepted once we sign it
+         $outbound_client->datastore->sign_event( $join_event );
+
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $server_name,
+            uri      => "/v1/send_join/$room_id/xxx",
+            content  => $join_event,
+         );
+
+      })->then( sub {
+         my ( $response ) = @_;
+
+         # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
+         $response->[0] == 200 or
+            die "Expected first response element to be 200";
+
+         $response = $response->[1];
+
+         assert_json_keys( $response, qw( auth_chain state ));
+
+         Future->done( 1 );
+      });
+   };
+
+
+test "Inbound /v1/send_join rejects joins from other servers",
+   # we start by getting the two test servers to join a room, and join it ourselves;
+   # we then get the second server to leave the room, and replay the second server's
+   # join to the first.
+
+   requires => [
+      $main::OUTBOUND_CLIENT,
+      $main::INBOUND_SERVER,
+      local_user_fixture(),
+      remote_user_fixture(),
+      federation_user_id_fixture(),
+      qw( can_join_remote_room_by_alias ),
+   ],
+
+   do => sub {
+      my ( $outbound_client, $inbound_server, $creator_user, $joiner_user, $federation_user_id ) = @_;
+      my ( $room, $room_id );
+      my ( $join_event );
+
+      matrix_create_and_join_room(
+         [ $creator_user, $joiner_user ],
+      )->then( sub {
+         ( $room_id ) = @_;
+
+         # we join via the joiner_user to make sure that that server receives our join
+         # before the user leaves (otherwise we might not get a copy of the leave)
+         $outbound_client->join_room(
+            server_name => $joiner_user->server_name,
+            room_id => $room_id,
+            user_id => $federation_user_id,
+         );
+      })->then( sub {
+         ( $room ) = @_;
+
+         my $join_event = $room->get_current_state_event( 'm.room.member', $joiner_user->user_id );
+         die "can't find joining membership event" unless $join_event;
+
+         log_if_fail "Found join event", $join_event;
+
+         Future->needs_all(
+            matrix_leave_room( $joiner_user, $room_id ),
+
+            # make sure that the leave propagates back to server-0
+            await_sync_timeline_contains(
+               $creator_user, $room_id, check => sub {
+                  my ( $ev ) = @_;
+                  log_if_fail "creator user received event over sync", $ev;
+                  return $ev->{type} eq 'm.room.member' &&
+                     $ev->{state_key} eq $joiner_user->user_id &&
+                     $ev->{content}{membership} eq 'leave';
+               },
+            ),
+         );
+      })->then( sub {
+         log_if_fail "Second user left room; now replaying join";
+
+         my $event_id = $room->id_for_event( $join_event );
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $creator_user->server_name,
+            uri      => "/v1/send_join/$room_id/$event_id",
+            content  => $join_event,
+         );
+      })->main::expect_http_403()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "error body", $body;
+         assert_eq( $body->{errcode}, "M_FORBIDDEN", 'responsecode' );
+
+         Future->done;
       });
    };
 
