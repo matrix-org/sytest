@@ -1,6 +1,43 @@
 use JSON qw( decode_json );
 
 
+1 || test "Outbound federation rejects /invite responses which are not correctly signed",
+   requires => [
+      # TODO: create await_request_v2_invite to hande /v2/invite and thus
+      # support other room versions here
+      local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+      $main::INBOUND_SERVER,
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $user, $room_id, $inbound_server, $invitee_id ) = @_;
+
+      Future->needs_all(
+         matrix_invite_user_to_room( $user, $invitee_id, $room_id )->
+         # currently synapse fails with a 500 which is kinda stupid
+         main::expect_http_error(),
+
+         $inbound_server->await_request_invite( $room_id )->then( sub {
+            my ( $req, undef ) = @_;
+
+            my $body = $req->body_from_json;
+            log_if_fail "Invitation", $body;
+
+
+            # just send the invite back without signing it
+
+            $req->respond_json(
+               # /v1/invite has an extraneous [ 200, ... ] wrapper (fixed in /v2)
+               [ 200, { event => $body } ]
+            );
+
+            Future->done;
+         }),
+      );
+   };
+
+
 test "Outbound federation can send invites",
    requires => [ local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  $main::INBOUND_SERVER, federation_user_id_fixture() ],

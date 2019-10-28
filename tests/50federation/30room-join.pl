@@ -499,7 +499,7 @@ test "Inbound /v1/send_join rejects joins from other servers",
       })->then( sub {
          ( $room ) = @_;
 
-         my $join_event = $room->get_current_state_event( 'm.room.member', $joiner_user->user_id );
+         $join_event = $room->get_current_state_event( 'm.room.member', $joiner_user->user_id );
          die "can't find joining membership event" unless $join_event;
 
          log_if_fail "Found join event", $join_event;
