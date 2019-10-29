@@ -264,28 +264,30 @@ test "Can search public room list",
       )->then( sub {
          ( $room_id ) = @_;
 
-         do_request_json_for( $local_user,
-            method => "POST",
-            uri    => "/r0/publicRooms",
+         retry_until_success {
+            do_request_json_for( $local_user,
+               method => "POST",
+               uri    => "/r0/publicRooms",
 
-            content => {
-               filter => {
-                  generic_search_term => "wombles",  # Search case insesitively
-               }
-            },
-         )
-      })->then( sub {
-         my ( $body ) = @_;
+               content => {
+                  filter => {
+                     generic_search_term => "wombles",  # Search case insesitively
+                  }
+               },
+               )->then( sub {
+               my ( $body ) = @_;
 
-         log_if_fail "Body", $body;
+               log_if_fail "Body", $body;
 
-         assert_json_keys( $body, qw( chunk ) );
+               assert_json_keys( $body, qw( chunk ) );
 
-         # We only expect to find a single result
-         assert_eq( scalar @{ $body->{chunk} }, 1 );
+               # We only expect to find a single result
+               assert_eq( scalar @{ $body->{chunk} }, 1 );
 
-         assert_eq( $body->{chunk}[0]{room_id}, $room_id );
+               assert_eq( $body->{chunk}[0]{room_id}, $room_id );
 
-         Future->done( 1 );
+               Future->done( 1 );
+            })
+         }
       })
    };
