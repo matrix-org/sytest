@@ -248,3 +248,44 @@ test "Can paginate public room list",
          Future->done( 1 );
       })
    };
+
+test "Can search public room list",
+   requires => [ $main::HOMESERVER_INFO[0], local_user_fixture() ],
+
+   check => sub {
+      my ( $info, $local_user ) = @_;
+
+      my $room_id;
+
+      matrix_create_room( $local_user,
+         visibility      => "public",
+         name            => "Test Name",
+         topic           => "Test Topic Wombles",
+      )->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $local_user,
+            method => "POST",
+            uri    => "/r0/publicRooms",
+
+            content => {
+               filter => {
+                  generic_search_term => "wombles",  # Search case insesitively
+               }
+            },
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+
+         assert_json_keys( $body, qw( chunk ) );
+
+         # We only expect to find a single result
+         assert_eq( scalar @{ $body->{chunk} }, 1 );
+
+         assert_eq( $body->{chunk}[0]{room_id}, $room_id );
+
+         Future->done( 1 );
+      })
+   };
