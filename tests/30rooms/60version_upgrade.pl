@@ -428,8 +428,6 @@ test "/upgrade copies ban events to the new room",
          type => "m.room.member",
          content => $content,
          state_key => '@bob:matrix.org',
-      )->then( sub {
-         matrix_sync( $creator );
       })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
@@ -474,14 +472,10 @@ foreach my $user_type ( qw ( local remote ) ) {
                $joiner, $room_id, ( server_name => $creator->server_name, ),
             );
          })->then( sub {
-            matrix_sync( $joiner );
-         })->then( sub {
             matrix_add_push_rule(
                $joiner, "global", "room", $room_id,
                { actions => [ "notify" ] },
             );
-         })->then(sub {
-            matrix_sync( $joiner );
          })->then(sub {
             upgrade_room_synced(
                $creator, $room_id,
