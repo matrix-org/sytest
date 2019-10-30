@@ -1,3 +1,43 @@
+use JSON qw( decode_json );
+
+
+1 || test "Outbound federation rejects /invite responses which are not correctly signed",
+   requires => [
+      # TODO: create await_request_v2_invite to hande /v2/invite and thus
+      # support other room versions here
+      local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+      $main::INBOUND_SERVER,
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $user, $room_id, $inbound_server, $invitee_id ) = @_;
+
+      Future->needs_all(
+         matrix_invite_user_to_room( $user, $invitee_id, $room_id )->
+         # currently synapse fails with a 500 which is kinda stupid
+         main::expect_http_error(),
+
+         $inbound_server->await_request_invite( $room_id )->then( sub {
+            my ( $req, undef ) = @_;
+
+            my $body = $req->body_from_json;
+            log_if_fail "Invitation", $body;
+
+
+            # just send the invite back without signing it
+
+            $req->respond_json(
+               # /v1/invite has an extraneous [ 200, ... ] wrapper (fixed in /v2)
+               [ 200, { event => $body } ]
+            );
+
+            Future->done;
+         }),
+      );
+   };
+
+
 test "Outbound federation can send invites",
    requires => [ local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  $main::INBOUND_SERVER, federation_user_id_fixture() ],
@@ -167,7 +207,7 @@ sub invite_server
      }),
 
      $do_invite_request->(
-         $room, $user, $inbound_server, $invitation,
+         $room, $first_home_server, $outbound_client, $invitation,
      )->then( sub {
          my ( $response ) = @_;
 
@@ -190,7 +230,7 @@ sub invite_server
 
 =head2 do_v1_invite_request
 
-   do_v1_invite_request( $room, $user, $inbound_server, $invitation )
+   do_v1_invite_request( $room, $target_server, $outbound_client, $invitation )
 
 Send an invite event via the V1 API
 
@@ -198,10 +238,8 @@ Send an invite event via the V1 API
 
 sub do_v1_invite_request
 {
-   my ( $room, $user, $inbound_server, $invitation ) = @_;
+   my ( $room, $first_home_server, $outbound_client, $invitation ) = @_;
 
-   my $outbound_client = $inbound_server->client;
-   my $first_home_server = $user->http->server_name;
    my $room_id = $room->room_id;
 
    $outbound_client->do_request_json(
@@ -228,7 +266,7 @@ sub do_v1_invite_request
 
 =head2 do_v2_invite_request
 
-   do_v2_invite_request( $room, $user, $inbound_server, $invitation )
+   do_v2_invite_request( $room, $target_server, $outbound_client, $invitation )
 
 Send an invite event via the V2 API
 
@@ -236,10 +274,8 @@ Send an invite event via the V2 API
 
 sub do_v2_invite_request
 {
-   my ( $room, $user, $inbound_server, $invitation ) = @_;
+   my ( $room, $first_home_server, $outbound_client, $invitation ) = @_;
 
-   my $outbound_client = $inbound_server->client;
-   my $first_home_server = $user->http->server_name;
    my $room_id = $room->room_id;
 
    my $create_event = $room->get_current_state_event( "m.room.create" );
@@ -345,3 +381,361 @@ foreach my $error_code ( 403, 500, -1 ) {
          });
       };
 }
+
+
+test "Inbound federation rejects invites which are not signed by the sender",
+   requires => [
+      $main::OUTBOUND_CLIENT, local_user_fixture(), federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $outbound_client, $user, $sytest_user_id ) = @_;
+
+      my $server_name = $user->server_name;
+      my $sytest_server_name = $outbound_client->server_name;
+      my $datastore = $outbound_client->datastore;
+
+      my $room = $datastore->create_room(
+         creator => $sytest_user_id,
+      );
+
+      my $invite = $room->create_event(
+         type => "m.room.member",
+         content   => { membership => "invite" },
+         sender    => $sytest_user_id,
+         state_key => $user->user_id,
+      );
+
+      # remove the signature
+      my %sigs = %{$invite->{signatures}};
+      $invite->{signatures} = {};
+
+      do_v1_invite_request( $room, $server_name, $outbound_client, $invite )
+      ->main::expect_http_403()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "error body", $body;
+         assert_eq( $body->{errcode}, "M_FORBIDDEN", 'responsecode' );
+
+         # check it is accepted when the sig is reinstated
+         $invite->{signatures} = \%sigs;
+         do_v1_invite_request( $room, $server_name, $outbound_client, $invite );
+      });
+   };
+
+
+test "Inbound federation can receive invite rejections",
+   requires => [
+      # TODO: create await_request_v2_invite to hande /v2/invite and thus
+      # support other room versions here
+      local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+      $main::INBOUND_SERVER,
+      $main::OUTBOUND_CLIENT,
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $user, $room_id, $inbound_server, $outbound_client, $invitee_id ) = @_;
+
+      Future->needs_all(
+         matrix_invite_user_to_room( $user, $invitee_id, $room_id ),
+
+         $inbound_server->await_request_invite( $room_id )->then( sub {
+            my ( $req, undef ) = @_;
+
+            my $body = $req->body_from_json;
+            log_if_fail "Invitation", $body;
+
+            # accept the invite event and send it back
+            $inbound_server->datastore->sign_event( $body );
+
+            $req->respond_json(
+               # /v1/invite has an extraneous [ 200, ... ] wrapper (fixed in /v2)
+               [ 200, { event => $body } ]
+            );
+
+            Future->done;
+         }),
+      )->then( sub {
+         # now let's reject the event: start by asking the server to build us a
+         # leave event
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $user->server_name,
+            uri      => "/v1/make_leave/$room_id/$invitee_id",
+         );
+      })->then( sub {
+         my ( $resp ) = @_;
+         log_if_fail "/make_leave response", $resp;
+
+         my $protoevent = $resp->{event};
+         assert_json_keys( $protoevent, qw(
+            event_id origin room_id sender type content state_key depth prev_events auth_events
+         ));
+
+         assert_eq( $protoevent->{type}, "m.room.member", 'event type' );
+         assert_eq( $protoevent->{room_id}, $room_id, 'event room_id' );
+         assert_eq( $protoevent->{sender}, $invitee_id, 'event sender' );
+         assert_eq( $protoevent->{content}{membership}, "leave", 'event content membership' );
+         assert_eq( $protoevent->{state_key}, $invitee_id, 'event state_key' );
+
+         my ( $event, $event_id ) = $inbound_server->datastore->create_event(
+            map { $_ => $protoevent->{$_} } qw(
+               auth_events content depth prev_events room_id sender
+               state_key type
+            ),
+         );
+
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $user->server_name,
+            uri      => "/v1/send_leave/$room_id/$event_id",
+            content => $event,
+           )
+      })->then( sub {
+         my ( $resp ) = @_;
+         log_if_fail "/send_leave response", $resp;
+
+
+         # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
+         assert_json_list( $resp );
+         $resp->[0] == 200 or
+            die "Expected first response element to be 200";
+
+         $resp = $resp->[1];
+         assert_json_object( $resp );
+
+         # now wait for the leave event to come down /sync to $user
+         await_sync_timeline_contains(
+            $user, $room_id, check => sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.member";
+               return unless $event->{content}{membership} eq "leave";
+               return 1;
+            }
+         );
+      });
+   };
+
+test "Inbound federation rejects incorrectly-signed invite rejections",
+   requires => [
+      # TODO: create await_request_v2_invite to hande /v2/invite and thus
+      # support other room versions here
+      local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+      $main::INBOUND_SERVER,
+      $main::OUTBOUND_CLIENT,
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $user, $room_id, $inbound_server, $outbound_client, $invitee_id ) = @_;
+
+      my ( $leave_event, $leave_event_id );
+
+      Future->needs_all(
+         matrix_invite_user_to_room( $user, $invitee_id, $room_id ),
+
+         $inbound_server->await_request_invite( $room_id )->then( sub {
+            my ( $req, undef ) = @_;
+
+            my $body = $req->body_from_json;
+            log_if_fail "Invitation", $body;
+
+            # accept the invite event and send it back
+            $inbound_server->datastore->sign_event( $body );
+
+            $req->respond_json(
+               # /v1/invite has an extraneous [ 200, ... ] wrapper (fixed in /v2)
+               [ 200, { event => $body } ]
+            );
+
+            Future->done;
+         }),
+      )->then( sub {
+         # now let's reject the event: start by asking the server to build us a
+         # leave event
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $user->server_name,
+            uri      => "/v1/make_leave/$room_id/$invitee_id",
+         );
+      })->then( sub {
+         my ( $resp ) = @_;
+         log_if_fail "/make_leave response", $resp;
+
+         $leave_event = $resp->{event};
+
+         $leave_event->{origin} = $outbound_client->server_name;
+         $leave_event->{origin_server_ts} = $outbound_client->time_ms;
+         $leave_event->{event_id} = $leave_event_id = $outbound_client->datastore->next_event_id();
+
+         # let's start by sending it back without any signatures
+         log_if_fail "Sending event with no signature", $leave_event;
+
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $user->server_name,
+            uri      => "/v1/send_leave/$room_id/$leave_event_id",
+            content => $leave_event,
+        );
+      })->main::expect_http_403()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "unsigned event: error body", $body;
+         assert_eq( $body->{errcode}, "M_FORBIDDEN", 'responsecode' );
+
+         # try a fake signature
+         $leave_event->{signatures} = {
+            $outbound_client->server_name => {
+               $outbound_client->datastore->key_id => "a" x 86,
+            }
+         };
+
+         log_if_fail "Sending event with bad signature", $leave_event;
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $user->server_name,
+            uri      => "/v1/send_leave/$room_id/$leave_event_id",
+            content  => $leave_event,
+         );
+      })->main::expect_http_403()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "bad signature: error body", $body;
+         assert_eq( $body->{errcode}, "M_FORBIDDEN", 'responsecode' );
+
+         # make sure that it gets accepted once we sign it
+         $outbound_client->datastore->sign_event( $leave_event );
+
+         log_if_fail "Sending correctly-signed leave event", $leave_event;
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $user->server_name,
+            uri      => "/v1/send_leave/$room_id/$leave_event_id",
+            content  => $leave_event,
+           );
+      })->then( sub {
+         my ( $resp ) = @_;
+
+         # /v1/send_leave has an extraneous [200, ...] wrapper (see MSC1802)
+         assert_json_list( $resp );
+         $resp->[0] == 200 or
+            die "Expected first response element to be 200";
+
+         $resp = $resp->[1];
+         assert_json_object( $resp );
+
+         # now wait for the leave event to come down /sync to $user
+         await_sync_timeline_contains(
+            $user, $room_id, check => sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.member";
+               return unless $event->{content}{membership} eq "leave";
+               return 1;
+            }
+         );
+      });
+   };
+
+test "Inbound /v1/send_leave rejects leaves from other servers",
+   # we start by getting the two test servers to join a room, and join it
+   # ourselves; we then get the second server to leave and rejoin the room, and
+   # replay the second server's leave to the first.
+
+   requires => [
+      $main::OUTBOUND_CLIENT,
+      $main::INBOUND_SERVER,
+      local_user_fixture(),
+      remote_user_fixture(),
+      federation_user_id_fixture(),
+      qw( can_join_remote_room_by_alias ),
+   ],
+
+   do => sub {
+      my ( $outbound_client, $inbound_server, $creator_user, $joiner_user, $federation_user_id ) = @_;
+      my ( $room, $room_id );
+      my ( $leave_event );
+
+      matrix_create_and_join_room(
+         [ $creator_user, $joiner_user ],
+      )->then( sub {
+         ( $room_id ) = @_;
+
+         # we join via the joiner_user to make sure that that server receives our join
+         # before the user leaves (otherwise we might not get a copy of the leave)
+         $outbound_client->join_room(
+            server_name => $joiner_user->server_name,
+            room_id => $room_id,
+            user_id => $federation_user_id,
+         );
+      })->then( sub {
+         ( $room ) = @_;
+         log_if_fail "All users joined room; initiating leave";
+         Future->needs_all(
+            matrix_leave_room( $joiner_user, $room_id ),
+
+            # make sure that the leave propagates back to the sytest server...
+            $inbound_server->await_event(
+               "m.room.member", $room_id, sub {
+                  my ( $ev ) = @_;
+                  log_if_fail "received event over federation", $ev;
+                  return $ev->{state_key} eq $joiner_user->user_id &&
+                     $ev->{content}{membership} eq 'leave';
+               }
+            ),
+
+            # and to server-0 (it can get held up behind the sytest server's
+            # join, which triggers a different bug where rejoins aren't sent
+            # out over federation)
+            await_sync_timeline_contains(
+               $creator_user, $room_id, check => sub {
+                  my ( $ev ) = @_;
+                  log_if_fail "creator user received event over sync", $ev;
+                  return $ev->{type} eq 'm.room.member' &&
+                     $ev->{state_key} eq $joiner_user->user_id &&
+                     $ev->{content}{membership} eq 'leave';
+               },
+            ),
+         );
+      })->then( sub {
+         $leave_event = $room->get_current_state_event( 'm.room.member', $joiner_user->user_id );
+         die "can't find leaving membership event" unless $leave_event;
+         log_if_fail "Got leave event for second user", $leave_event;
+
+         # now that we've got the leave event, rejoin
+         Future->needs_all(
+            matrix_join_room( $joiner_user, $room_id, server_name => $creator_user->server_name ),
+            $inbound_server->await_event(
+               "m.room.member", $room_id, sub {
+                  my ( $ev ) = @_;
+                  log_if_fail "received event", $ev;
+                  return $ev->{state_key} eq $joiner_user->user_id &&
+                     $ev->{content}{membership} eq 'join';
+               }
+            ),
+         );
+      })->then( sub {
+         log_if_fail "Second user rejoined room; now replaying leave";
+         # now replay the leave via /send_leave
+         my $event_id = $room->id_for_event( $leave_event );
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $creator_user->server_name,
+            uri      => "/v1/send_leave/$room_id/$event_id",
+            content  => $leave_event,
+         );
+      })->main::expect_http_403()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "error body", $body;
+         assert_eq( $body->{errcode}, "M_FORBIDDEN", 'responsecode' );
+         Future->done;
+      });
+   },
+
+   # this test is a bit slooow
+   timeout => 20;

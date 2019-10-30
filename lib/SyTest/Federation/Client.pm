@@ -177,7 +177,23 @@ sub send_event
    });
 }
 
-sub join_room
+=head2 make_join
+
+   $client->make_join(
+      server_name => $first_home_server,
+      room_id     => $room_id,
+      user_id     => $user_id
+   )->then( sub {
+      my ( $body ) = @_;
+      my $room_version = $body->{room_version} // 1;
+      my $protoevent = $body->{event};
+   });
+
+Invokes /make_join on the remote server to get a join protoevent.
+
+=cut
+
+sub make_join
 {
    my $self = shift;
    my %args = @_;
@@ -186,15 +202,29 @@ sub join_room
    my $room_id     = $args{room_id};
    my $user_id     = $args{user_id};
 
-   my $store = $self->{datastore};
-   my $room_version;
-
    $self->do_request_json(
       method   => "GET",
       hostname => $server_name,
       uri      => "/v1/make_join/$room_id/$user_id",
       params   => { "ver" => SUPPORTED_ROOM_VERSIONS },
-   )->then( sub {
+   )->on_done( sub {
+      my ( $body ) = @_;
+      assert_json_keys( $body, 'event' );
+   });
+}
+
+sub join_room
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $server_name = $args{server_name};
+   my $room_id     = $args{room_id};
+
+   my $store = $self->{datastore};
+   my $room_version;
+
+   $self->make_join( %args )->then( sub {
       my ( $body ) = @_;
 
       $room_version = $body->{room_version} // 1;
