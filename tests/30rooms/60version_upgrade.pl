@@ -428,7 +428,7 @@ test "/upgrade copies ban events to the new room",
          type => "m.room.member",
          content => $content,
          state_key => '@bob:matrix.org',
-      })->then( sub {
+      )->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
