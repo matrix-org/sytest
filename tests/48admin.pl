@@ -447,3 +447,30 @@ sub await_message_in_room
       log_if_fail "Found event $event_id for $user_id";
    })
 }
+
+
+test "/purge_room",
+   requires => [ local_admin_fixture(), local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $admin, $user, $room_id ) = @_;
+
+      matrix_leave_room( $user, $room_id )
+      ->then( sub {
+         do_request_json_for( $user,
+            method   => "POST",
+            full_uri => "/_synapse/admin/v1/purge_room",
+            content  => {
+               room_id => $room_id,
+            }
+         )->main::expect_http_403;  # Must be server admin
+      })->then( sub {
+         do_request_json_for( $admin,
+            method   => "POST",
+            full_uri => "/_synapse/admin/v1/purge_room",
+            content  => {
+               room_id => $room_id,
+            }
+         )
+      })
+   };
