@@ -274,7 +274,7 @@ test "Can search public room list",
                      generic_search_term => "wombles",  # Search case insesitively
                   }
                },
-               )->then( sub {
+            )->then( sub {
                my ( $body ) = @_;
 
                log_if_fail "Body", $body;
@@ -283,11 +283,14 @@ test "Can search public room list",
 
                # We only expect to find a single result
                assert_eq( scalar @{ $body->{chunk} }, 1 );
-
                assert_eq( $body->{chunk}[0]{room_id}, $room_id );
 
                Future->done( 1 );
-            })
+            })->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Failed to search room dir: $exc";
+            });
          }
       })
    };
