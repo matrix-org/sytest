@@ -863,7 +863,7 @@ test "Local and remote users' homeservers remove a room from their public direct
 
          # Wait for the power level change to appear on the remote side
          await_sync_timeline_contains( $remote_joiner, $room_id, check => sub {
-            say "We want: " . $pl_event_id . ", we got: " . $_[0]->{type};
+            log_if_fail "We want: " . $pl_event_id . ", we got: " . $_[0]->{type};
             return $_[0]->{event_id} eq $pl_event_id;
          });
       })->then(sub {
@@ -895,7 +895,7 @@ test "Local and remote users' homeservers remove a room from their public direct
          # Check public rooms list for local user
          my ( $body ) = @_;
 
-         log_if_fail "Body", $body;
+         log_if_fail "Public rooms list for local user", $body;
 
          assert_json_keys( $body, qw( chunk ) );
 
@@ -915,7 +915,7 @@ test "Local and remote users' homeservers remove a room from their public direct
          # Check public rooms list for remote user
          my ( $body ) = @_;
 
-         log_if_fail "Body", $body;
+         log_if_fail "Public rooms list for remote user", $body;
 
          assert_json_keys( $body, qw( chunk ) );
 
