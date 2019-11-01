@@ -828,7 +828,7 @@ test "Cannot send tombstone event that points to the same room",
       )->main::expect_http_400;
    };
 
-test "Local and remote users' homeservers removes a room from its public directory on upgrade",
+test "Local and remote users' homeservers remove a room from their public directory on upgrade",
    requires => [
       local_user_fixture(), remote_user_fixture(),
       qw( can_upgrade_room_version ),
