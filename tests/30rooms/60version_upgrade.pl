@@ -429,8 +429,6 @@ test "/upgrade copies ban events to the new room",
          content => $content,
          state_key => '@bob:matrix.org',
       )->then( sub {
-         matrix_sync( $creator );
-      })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
@@ -455,58 +453,70 @@ test "/upgrade copies ban events to the new room",
       });
    };
 
-test "/upgrade copies push rules to the new room",
-   requires => [
-      local_user_and_room_fixtures(),
-      qw( can_upgrade_room_version ),
-   ],
+# These tests are run against a local and remote room
+foreach my $user_type ( qw ( local remote ) ) {
+   test "$user_type user has push rules copied to upgraded room",
+      requires => [
+         local_user_and_room_fixtures(),
+         ( $user_type eq "local" ? local_user_fixture() : remote_user_fixture() ),
+      ],
 
-   do => sub {
-      my ( $creator, $room_id ) = @_;
-      my ( $new_room_id );
+      do => sub {
+         my ( $creator, $room_id, $joiner ) = @_;
+         my ( $new_room_id );
 
-      matrix_add_push_rule( $creator, "global", "room", $room_id, {
-         actions => [ "notify" ]
-      })->then( sub {
-         matrix_sync( $creator );
-      })->then( sub {
-         upgrade_room_synced(
-            $creator, $room_id,
-            new_version => $TEST_NEW_VERSION,
-         );
-      })->then( sub {
-         ( $new_room_id, ) = @_;
+         matrix_invite_user_to_room_synced(
+            $creator, $joiner, $room_id,
+         )->then( sub {
+            matrix_join_room_synced(
+               $joiner, $room_id, ( server_name => $creator->server_name, ),
+            );
+         })->then( sub {
+            matrix_add_push_rule(
+               $joiner, "global", "room", $room_id,
+               { actions => [ "notify" ] },
+            );
+         })->then(sub {
+            upgrade_room_synced(
+               $creator, $room_id,
+               new_version => $TEST_NEW_VERSION,
+            );
+         })->then(sub {
+            ( $new_room_id, ) = @_;
 
-         matrix_get_push_rules( $creator )->then( sub {
-            my ( $body ) = @_;
+            matrix_join_room_synced(
+               $joiner, $new_room_id, ( server_name => $creator->server_name, )
+            );
+         })->then(sub {
+            matrix_get_push_rules( $joiner )->then( sub {
+               my ( $body ) = @_;
 
-            my @to_check;
+               my @to_check;
 
-            foreach my $kind ( keys %{ $body->{global} } ) {
-               foreach my $rule ( @{ $body->{global}{$kind} } ) {
-                  push @to_check, [ $kind, $rule->{rule_id} ];
+               foreach my $kind ( keys %{ $body->{global} }) {
+                  foreach my $rule ( @{ $body->{global}{$kind} } ) {
+                     push @to_check, [ $kind, $rule->{rule_id} ];
+                  }
                }
-            }
 
-            my $found = 0;
-            try_repeat {
-               my $to_check = shift;
+               my $found = 0;
+               try_repeat {
+                  my $to_check = shift;
 
-               my ( $kind, $rule_id ) = @$to_check;
+                  my ( $kind, $rule_id ) = @$to_check;
 
-               log_if_fail("testing $rule_id against $new_room_id");
+                  log_if_fail( "testing $rule_id against $new_room_id" );
 
-               if ( $rule_id eq $new_room_id ) {
-                  $found = 1;
-               }
-            } foreach => \@to_check;
+                  if ( $rule_id eq $new_room_id ) {
+                     $found = 1;
+                  }
+               } foreach => \@to_check;
 
-            if ( $found == 1 ) {
-               Future->done(1);
-            }
-         })
-      });
-   };
+               Future->done( $found );
+            })
+         });
+      };
+}
 
 test "/upgrade moves aliases to the new room",
    requires => [
