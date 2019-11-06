@@ -177,6 +177,10 @@ sub start
             per_second => 1000,
             burst_count => 1000,
         },
+        rc_third_party_invite => {
+           per_second => 1000,
+           burst_count => 1000,
+        },
         rc_login => {
             address => {
                 per_second => 1000,
