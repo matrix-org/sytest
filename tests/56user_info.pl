@@ -1,6 +1,6 @@
 use URI::Escape qw( uri_escape );
 
-=head2 matrix_add_tag
+=head2 matrix_get_user_info
 
    my $info = matrix_get_user_info( $as_user, $user );
 
