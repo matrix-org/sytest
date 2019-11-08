@@ -24,8 +24,12 @@ else
     branch_name="$BUILDKITE_BRANCH" || branch_name="dinsic"
 
     # Try and fetch the branch
-    echo "Trying to get same-named sytest branch (or the dinsic one)..."
-    wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz
+    echo "Trying to get same-named sytest branch..."
+    wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
+        # Probably a 404, fall back to dinsic
+        echo "Using dinsic instead..."
+        wget -q https://github.com/matrix-org/sytest/archive/dinsic.tar.gz -O sytest.tar.gz
+    }
 
     mkdir -p /work
     tar -C /work --strip-components=1 -xf sytest.tar.gz
