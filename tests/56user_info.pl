@@ -76,41 +76,43 @@ foreach my $user_type ( qw ( local remote ) ) {
 foreach my $user_type ( qw ( local remote ) ) {
    test "User info endpoint correctly specifies an expired $user_type user",
       requires => [
-         local_admin_fixture(),
-         ( $ user_type eq "local" ? local_user_fixture() : remote_user_fixture() ),
+         ( $user_type eq "local" ? local_admin_fixture() : remote_admin_fixture() ),
+         ( $user_type eq "local" ? local_user_fixture() : remote_user_fixture() ),
       ],
 
       do => sub {
-         my ( $user1, $user2 ) = @_;
+         my ( $admin, $user ) = @_;
 
          # Check if the user is expired (they should not be)
          matrix_get_user_info(
-            $user1, $user2
+            $admin, $user
          )->then( sub {
             my ( $body, ) = @_;
 
-            assert_eq( $body->{expired}, JSON::false );
+            assert_eq( $body->{expired}, JSON::false, "user status before expiration" );
+
+            log_if_fail $user->user_id, "username";
 
             # Expire the user
-            do_request_json_for( $user1,
-               method  => "GET",
+            do_request_json_for( $admin,
+               method  => "POST",
                full_uri => "/_synapse/admin/v1/account_validity/validity",
                content => {
-                  "user_id" => $user2->user_id,
+                  "user_id" => $user->user_id,
                   "expiration_ts" => 0,
                },
             );
          })->then( sub {
             my ( $body, ) = @_;
 
-            assert_eq( $body->{expiration_ts}, 0);
+            assert_eq( $body->{expiration_ts}, 0 );
 
             # Check if the user is deactivated again (they should be)
-            matrix_get_user_info( $user1, $user2 );
+            matrix_get_user_info( $admin, $user );
          })->then( sub {
             my ( $body, ) = @_;
 
-            assert_eq( $body->{expired}, JSON::true );
+            assert_eq( $body->{expired}, JSON::true, "user status after expiration" );
 
             Future->done( 1 );
          });
