@@ -40,35 +40,79 @@ test "User info endpoint requires authentication",
       )->main::expect_http_401;
    };
 
-test "User info endpoint correctly specifies a deactivated user",
-   requires => [
-      local_user_fixture(),
-      local_user_fixture(),
-   ],
+foreach my $user_type ( qw ( local remote ) ) {
+   test "User info endpoint correctly specifies a deactivated $user_type user",
+      requires => [
+         local_user_fixture(),
+         ( $ user_type eq "local" ? local_user_fixture() : remote_user_fixture() ),
+      ],
 
-   do => sub {
-      my ( $user1, $user2 ) = @_;
+      do => sub {
+         my ( $user1, $user2 ) = @_;
 
-      # Check if the user is deactivated (they should not be)
-      matrix_get_user_info(
-         $user1, $user2
-      )->then( sub {
-         my ( $body, ) = @_;
+         # Check if the user is deactivated (they should not be)
+         matrix_get_user_info(
+            $user1, $user2
+         )->then( sub {
+            my ( $body, ) = @_;
 
-         assert_eq( $body->{deactivated}, JSON::false );
+            assert_eq( $body->{deactivated}, JSON::false );
 
-         # Deactivate the user
-         matrix_deactivate_account( $user2 );
-      })->then( sub {
-         # Check if the user is deactivated again (they should be)
-         matrix_get_user_info( $user1, $user2 );
-      })->then( sub {
-         my ( $body, ) = @_;
+            # Deactivate the user
+            matrix_deactivate_account( $user2 );
+         })->then( sub {
+            # Check if the user is deactivated again (they should be)
+            matrix_get_user_info( $user1, $user2 );
+         })->then( sub {
+            my ( $body, ) = @_;
 
-         assert_eq( $body->{deactivated}, JSON::true );
+            assert_eq( $body->{deactivated}, JSON::true );
 
-         Future->done( 1 );
-      });
-   };
+            Future->done( 1 );
+         });
+      };
+};
 
-#test "User info endpoint correctly specifies an expired user",
+foreach my $user_type ( qw ( local remote ) ) {
+   test "User info endpoint correctly specifies an expired $user_type user",
+      requires => [
+         local_admin_fixture(),
+         ( $ user_type eq "local" ? local_user_fixture() : remote_user_fixture() ),
+      ],
+
+      do => sub {
+         my ( $user1, $user2 ) = @_;
+
+         # Check if the user is expired (they should not be)
+         matrix_get_user_info(
+            $user1, $user2
+         )->then( sub {
+            my ( $body, ) = @_;
+
+            assert_eq( $body->{expired}, JSON::false );
+
+            # Expire the user
+            do_request_json_for( $user1,
+               method  => "GET",
+               full_uri => "/_synapse/admin/v1/account_validity/validity",
+               content => {
+                  "user_id" => $user2->user_id,
+                  "expiration_ts" => 0,
+               },
+            );
+         })->then( sub {
+            my ( $body, ) = @_;
+
+            assert_eq( $body->{expiration_ts}, 0);
+
+            # Check if the user is deactivated again (they should be)
+            matrix_get_user_info( $user1, $user2 );
+         })->then( sub {
+            my ( $body, ) = @_;
+
+            assert_eq( $body->{expired}, JSON::true );
+
+            Future->done( 1 );
+         });
+      };
+};
