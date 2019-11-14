@@ -56,7 +56,7 @@ foreach my $user_type ( qw ( local remote ) ) {
          )->then( sub {
             my ( $body, ) = @_;
 
-            assert_eq( $body->{deactivated}, JSON::false );
+            assert_eq( $body->{deactivated}, JSON::false, "user status before deactivation" );
 
             # Deactivate the user
             matrix_deactivate_account( $user2 );
@@ -66,7 +66,7 @@ foreach my $user_type ( qw ( local remote ) ) {
          })->then( sub {
             my ( $body, ) = @_;
 
-            assert_eq( $body->{deactivated}, JSON::true );
+            assert_eq( $body->{deactivated}, JSON::true, "user status after deactivation" );
 
             Future->done( 1 );
          });
