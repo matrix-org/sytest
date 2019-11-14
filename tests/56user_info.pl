@@ -44,7 +44,7 @@ foreach my $user_type ( qw ( local remote ) ) {
    test "User info endpoint correctly specifies a deactivated $user_type user",
       requires => [
          local_user_fixture(),
-         ( $ user_type eq "local" ? local_user_fixture() : remote_user_fixture() ),
+         ( $user_type eq "local" ? local_user_fixture() : remote_user_fixture() ),
       ],
 
       do => sub {
