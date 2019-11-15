@@ -13,7 +13,7 @@
 # limitations under the License.
 
 use Future::Utils qw( repeat );
-use List::Util qw( all first );
+use List::Util qw( all first none );
 
 push our @EXPORT, qw ( upgrade_room_synced $TEST_NEW_VERSION );
 
@@ -429,8 +429,6 @@ test "/upgrade copies ban events to the new room",
          content => $content,
          state_key => '@bob:matrix.org',
       )->then( sub {
-         matrix_sync( $creator );
-      })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
@@ -455,58 +453,70 @@ test "/upgrade copies ban events to the new room",
       });
    };
 
-test "/upgrade copies push rules to the new room",
-   requires => [
-      local_user_and_room_fixtures(),
-      qw( can_upgrade_room_version ),
-   ],
+# These tests are run against a local and remote room
+foreach my $user_type ( qw ( local remote ) ) {
+   test "$user_type user has push rules copied to upgraded room",
+      requires => [
+         local_user_and_room_fixtures(),
+         ( $user_type eq "local" ? local_user_fixture() : remote_user_fixture() ),
+      ],
 
-   do => sub {
-      my ( $creator, $room_id ) = @_;
-      my ( $new_room_id );
+      do => sub {
+         my ( $creator, $room_id, $joiner ) = @_;
+         my ( $new_room_id );
 
-      matrix_add_push_rule( $creator, "global", "room", $room_id, {
-         actions => [ "notify" ]
-      })->then( sub {
-         matrix_sync( $creator );
-      })->then( sub {
-         upgrade_room_synced(
-            $creator, $room_id,
-            new_version => $TEST_NEW_VERSION,
-         );
-      })->then( sub {
-         ( $new_room_id, ) = @_;
+         matrix_invite_user_to_room_synced(
+            $creator, $joiner, $room_id,
+         )->then( sub {
+            matrix_join_room_synced(
+               $joiner, $room_id, ( server_name => $creator->server_name, ),
+            );
+         })->then( sub {
+            matrix_add_push_rule(
+               $joiner, "global", "room", $room_id,
+               { actions => [ "notify" ] },
+            );
+         })->then(sub {
+            upgrade_room_synced(
+               $creator, $room_id,
+               new_version => $TEST_NEW_VERSION,
+            );
+         })->then(sub {
+            ( $new_room_id, ) = @_;
 
-         matrix_get_push_rules( $creator )->then( sub {
-            my ( $body ) = @_;
+            matrix_join_room_synced(
+               $joiner, $new_room_id, ( server_name => $creator->server_name, )
+            );
+         })->then(sub {
+            matrix_get_push_rules( $joiner )->then( sub {
+               my ( $body ) = @_;
 
-            my @to_check;
+               my @to_check;
 
-            foreach my $kind ( keys %{ $body->{global} } ) {
-               foreach my $rule ( @{ $body->{global}{$kind} } ) {
-                  push @to_check, [ $kind, $rule->{rule_id} ];
+               foreach my $kind ( keys %{ $body->{global} }) {
+                  foreach my $rule ( @{ $body->{global}{$kind} } ) {
+                     push @to_check, [ $kind, $rule->{rule_id} ];
+                  }
                }
-            }
 
-            my $found = 0;
-            try_repeat {
-               my $to_check = shift;
+               my $found = 0;
+               try_repeat {
+                  my $to_check = shift;
 
-               my ( $kind, $rule_id ) = @$to_check;
+                  my ( $kind, $rule_id ) = @$to_check;
 
-               log_if_fail("testing $rule_id against $new_room_id");
+                  log_if_fail( "testing $rule_id against $new_room_id" );
 
-               if ( $rule_id eq $new_room_id ) {
-                  $found = 1;
-               }
-            } foreach => \@to_check;
+                  if ( $rule_id eq $new_room_id ) {
+                     $found = 1;
+                  }
+               } foreach => \@to_check;
 
-            if ( $found == 1 ) {
-               Future->done(1);
-            }
-         })
-      });
-   };
+               Future->done( $found );
+            })
+         });
+      };
+}
 
 test "/upgrade moves aliases to the new room",
    requires => [
@@ -828,5 +838,105 @@ test "Cannot send tombstone event that points to the same room",
       )->main::expect_http_400;
    };
 
-# upgrade with other local users
-# upgrade with remote users
+test "Local and remote users' homeservers remove a room from their public directory on upgrade",
+   requires => [
+      local_user_fixture(), remote_user_fixture(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $remote_joiner ) = @_;
+      my ( $room_id, $new_room_id, $pl_event_id );
+
+      matrix_create_room( $creator,
+         visibility => "public",
+      )->then( sub {
+         ( $room_id, ) = @_;
+
+         matrix_invite_user_to_room_synced(
+            $creator, $remote_joiner, $room_id,
+         );
+      })->then( sub {
+         matrix_join_room_synced(
+            $remote_joiner, $room_id, ( server_name => $creator->server_name, ),
+         );
+      })->then( sub {
+         matrix_change_room_power_levels( $creator, $room_id, sub {
+            my ( $levels ) = @_;
+            $levels->{users}{$remote_joiner->user_id} = 100;
+         });
+      })->then(sub {
+         ( $pl_event_id, ) = @_;
+
+         # Extract event_id from response object
+         $pl_event_id = $pl_event_id->{event_id};
+
+         # Wait for the power level change to appear on the remote side
+         await_sync_timeline_contains( $remote_joiner, $room_id, check => sub {
+            log_if_fail "We want: " . $pl_event_id . ", we got: " . $_[0]->{type};
+            return $_[0]->{event_id} eq $pl_event_id;
+         });
+      })->then(sub {
+         do_request_json_for( $remote_joiner,
+            method => "PUT",
+            uri    => "/r0/directory/list/room/$room_id",
+
+            content => {
+               visibility => "public",
+            }
+         )
+      })->then(sub {
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $main::TEST_NEW_VERSION,
+         );
+      })->then(sub {
+         ( $new_room_id ) = @_;
+
+         matrix_join_room_synced(
+            $remote_joiner, $new_room_id, ( server_name => $creator->server_name, )
+         );
+      })->then(sub {
+         do_request_json_for( $creator,
+            method => "GET",
+            uri    => "/r0/publicRooms",
+         );
+      })->then( sub {
+         # Check public rooms list for local user
+         my ( $body ) = @_;
+
+         log_if_fail "Public rooms list for local user", $body;
+
+         assert_json_keys( $body, qw( chunk ) );
+
+         # Check that the room list contains new room id
+         any { $new_room_id eq $_->{room_id} } @{ $body->{chunk} }
+            or die "Local room list did not include expected room id $new_room_id";
+
+         # Check that the room list doesn't contain old room id
+         none { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+            or die "Local room list included unexpected room id $room_id";
+
+         do_request_json_for( $remote_joiner,
+            method => "GET",
+            uri    => "/r0/publicRooms",
+         );
+      })->then( sub {
+         # Check public rooms list for remote user
+         my ( $body ) = @_;
+
+         log_if_fail "Public rooms list for remote user", $body;
+
+         assert_json_keys( $body, qw( chunk ) );
+
+         # Check that the room list contains new room id
+         any { $new_room_id eq $_->{room_id} } @{ $body->{chunk} }
+            or die "Remote room list did not include expected room id $new_room_id";
+
+         # Check that the room list doesn't contain old room id
+         none { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+            or die "Remote room list included unexpected room id $room_id";
+
+         Future->done( 1 );
+      });
+   }

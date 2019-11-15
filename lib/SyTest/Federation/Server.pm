@@ -305,7 +305,7 @@ sub on_request_federation_v1_send_join
 
    $room->insert_event( $event );
 
-   # SYN-490
+   # /v1/send_join has an extraneous [ 200, ... ] wrapper (see MSC1802)
    Future->done( json => [ 200, {
       auth_chain => \@auth_chain,
       state      => \@state_events,

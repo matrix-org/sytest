@@ -88,7 +88,7 @@ export TOP=/src
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
-    /venv/bin/python /src/.buildkite/format_tap.py /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
+    perl /sytest/scripts/format_tap.pl /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
 fi
 
 exit $TEST_STATUS
