@@ -649,7 +649,7 @@ test "Can register using an email address",
 
          assert_json_keys( $body, qw( session flows ));
 
-         log_if_fail "No single m.login.email.identity stage registration flow found";
+         log_if_fail "No single m.login.email.identity stage registration flow found", $body;
 
          # Check that one of the flows' stages contains an "m.login.email.identity" stage
          my $has_flow;
@@ -698,77 +698,3 @@ test "Can register using an email address",
       });
    };
 
-test "Can register using a phone number",
-   requires => [ $main::API_CLIENTS[0], localpart_fixture(), id_server_fixture() ],
-
-   do => sub {
-      my ( $http, $localpart, $id_server ) = @_;
-
-      my $phone_number = "1234567890";
-      my $phone_number_country = "US";
-
-      $http->do_request_json(
-         method => "POST",
-         uri    => "/r0/register",
-
-         content => {
-            username => $localpart,
-            password => "noobers3kr1t",
-            device_id => "xyzzy",
-         },
-      )->main::expect_http_401->then( sub {
-         my ( $response ) = @_;
-
-         my $body = decode_json $response->content;
-
-         assert_json_keys( $body, qw( session flows ));
-
-         log_if_fail "No single m.login.msisdn stage registration flow found", $body;
-
-         # Check that one of the flows' stages contains an "m.login.msisdn" stage
-         my $has_flow;
-         foreach my $idx ( 0 .. $#{ $body->{flows} } ) {
-            my $flow = $body->{flows}[$idx];
-            my $stages = $flow->{stages} || [];
-
-            $has_flow++ if
-               @$stages == 1 && $stages->[0] eq "m.login.msisdn";
-         }
-
-         assert_eq( $has_flow, 1 );
-
-         validate_msisdn(
-            $http,
-            $phone_number,
-            $phone_number_country,
-            id_server => $id_server,
-            path => "/r0/register/msisdn/requestToken",
-         )->then( sub {
-            my ( $sid_email, $client_secret ) = @_;
-
-            # attempt to register with the 3pid
-            do_request_json(
-               method => "POST",
-               uri    => "/r0/register",
-               content => {
-                  auth => {
-                     type           => "m.login.msisdn",
-                     session        => $body->{session},
-                     threepid_creds => {
-                        sid           => $sid_email,
-                        client_secret => $client_secret,
-                        id_server     => $id_server,
-                     },
-                  },
-                  username  => "bobthesnob",
-                  password  => "ilovemydoggo123",
-               },
-            )
-         })
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( user_id home_server ) );
-         Future->done( 1 );
-      });
-   };
