@@ -685,7 +685,7 @@ test "Can register using an email address",
                      },
                   },
                   username  => $localpart,
-                  password => "noobers3kr1t",
+                  password  => "noobers3kr1t",
                   device_id => "xyzzy",
                },
             )
@@ -723,7 +723,7 @@ test "Can register using a phone number",
 
          assert_json_keys( $body, qw( session flows ));
 
-         log_if_fail "No single m.login.msisdn stage registration flow found";
+         log_if_fail "No single m.login.msisdn stage registration flow found", $body;
 
          # Check that one of the flows' stages contains an "m.login.msisdn" stage
          my $has_flow;
