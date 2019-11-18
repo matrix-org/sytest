@@ -38,7 +38,7 @@ ENV LC_ALL en_US.UTF-8
 ADD install-deps.pl ./install-deps.pl
 ADD cpanfile ./cpanfile
 RUN dos2unix ./cpanfile ./install-deps.pl
-RUN perl ./install-deps.pl
+RUN perl ./install-deps.pl -T
 RUN rm cpanfile install-deps.pl
 
 # this is a dependency of the TAP-JUnit converter
@@ -50,3 +50,5 @@ RUN mkdir /logs
 # Add the bootstrap file.
 ADD docker/bootstrap.sh /bootstrap.sh
 RUN dos2unix /bootstrap.sh
+
+ENV POSTGRES_VERSION 11
