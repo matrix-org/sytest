@@ -294,14 +294,14 @@ test "/upgrade copies >100 power levels to the new room",
       )->then( sub() {
          ( $room_id ) = @_;
 
-         upgrade_room_synced(
+         upgrade_room(
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
          );
       })->then( sub() {
          ( $new_room_id, ) = @_;
 
-         matrix_sync_again( $creator );
+         matrix_sync( $creator );
       })->then( sub() {
          my ( $sync_body ) = @_;
 
@@ -345,7 +345,7 @@ test "/upgrade copies the power levels to the new room",
       })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
-            expected_event_counts => { 'm.room.power_levels' => 2 },
+            expected_event_counts => { 'm.room.power_levels' => 1 },
             new_version => $TEST_NEW_VERSION,
          );
       })->then( sub {
