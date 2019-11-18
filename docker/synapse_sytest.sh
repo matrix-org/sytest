@@ -13,7 +13,7 @@ if [ -n "$POSTGRES" ]; then
     export POSTGRES_DB_2=pg2
 
     # Start the database
-    su -c 'eatmydata /usr/lib/postgresql/$POSTGRES_VERSION/bin/pg_ctl -w -D /var/lib/postgresql/data start' postgres
+    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
     # Write out the configuration for a PostgreSQL using Synapse
     dos2unix docker/prep_sytest_for_postgres.sh
