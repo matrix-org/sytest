@@ -1,17 +1,11 @@
-FROM matrixdotorg/sytest:stretch
+ARG DEBIAN_VERSION=buster
+
+FROM matrixdotorg/sytest:${DEBIAN_VERSION}
 
 RUN apt-get -qq update && apt-get -qq install -y \
     python3 python3-dev python3-virtualenv eatmydata
 
 ENV PYTHON=python3
-ENV PGDATA=/var/lib/postgresql/data
-
-RUN su -c '/usr/lib/postgresql/9.6/bin/initdb -E "UTF-8" --lc-collate="en_US.UTF-8" --lc-ctype="en_US.UTF-8" --username=postgres' postgres
-
-# Turn off all the fsync stuff for postgres
-RUN mkdir -p /etc/postgresql/9.6/main/conf.d/
-RUN echo "fsync=off" > /etc/postgresql/9.6/main/conf.d/fsync.conf
-RUN echo "full_page_writes=off" >> /etc/postgresql/9.6/main/conf.d/fsync.conf
 
 # /src is where we expect Synapse to be
 RUN mkdir /src

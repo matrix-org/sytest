@@ -1,4 +1,6 @@
-FROM debian:stretch
+ARG DEBIAN_VERSION=buster
+
+FROM debian:${DEBIAN_VERSION}
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -7,8 +9,7 @@ RUN apt-get -qq update && apt-get -qq install -y \
     build-essential \
     perl \
     wget \
-    postgresql-9.6 \
-    postgresql-client \
+    postgresql \
     libpq-dev \
     libssl-dev \
     libz-dev \
@@ -51,4 +52,11 @@ RUN mkdir /logs
 ADD docker/bootstrap.sh /bootstrap.sh
 RUN dos2unix /bootstrap.sh
 
-ENV POSTGRES_VERSION 9.6
+# PostgreSQL setup
+ENV PGHOST=/var/run/postgresql
+ENV PGDATA=$PGHOST/data
+ENV PGUSER=postgres
+RUN for ver in `ls /usr/lib/postgresql | head -n 1`; do su -c '/usr/lib/postgresql/'$ver'/bin/initdb -E "UTF-8" --lc-collate="en_US.UTF-8" --lc-ctype="en_US.UTF-8" --username=postgres' postgres; done
+
+# Turn off all the fsync stuff for postgres
+RUN for ver in /etc/postgresql/*/main; do mkdir -p $ver/conf.d/; echo -e "fsync=off\nfull_page_writes=off" >> $ver/conf.d/fsync.conf; done
