@@ -1,4 +1,6 @@
-FROM debian:stretch
+ARG DEBIAN_VERSION=buster
+
+FROM debian:${DEBIAN_VERSION}
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -7,8 +9,7 @@ RUN apt-get -qq update && apt-get -qq install -y \
     build-essential \
     perl \
     wget \
-    postgresql-9.6 \
-    postgresql-client \
+    postgresql \
     libpq-dev \
     libssl-dev \
     libz-dev \
