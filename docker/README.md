@@ -6,9 +6,11 @@ are.
 
 Included currently is:
 
-- matrixdotorg/sytest, a base container with SyTest dependencies installed
-- matrixdotorg/sytest-synapse:py35, a container which will run SyTest against Synapse on Python 3.5
-- matrixdotorg/sytest-dendrite, a container which will run SyTest against Dendrite
+- matrixdotorg/sytest:stretch and matrixdotorg/sytest:buster, base containers with SyTest dependencies installed
+- matrixdotorg/sytest-synapse:py35, a container which will run SyTest against Synapse on Python 3.5 + Stretch
+- matrixdotorg/sytest-synapse:py37, a container which will run SyTest against Synapse on Python 3.7 + Buster
+- matrixdotorg/sytest-dendrite:go110, a container which will run SyTest against Dendrite on Go 1.10 + Stretch
+- matrixdotorg/sytest-dendrite:go113, a container which will run SyTest against Dendrite on Go 1.13 + Buster
 
 ## Using the containers
 
@@ -64,7 +66,10 @@ The containers are built by executing `build.sh`. You will then have to push
 them up to Docker Hub:
 
 ```
-docker push matrixdotorg/sytest
+docker push matrixdotorg/sytest:stretch
+docker push matrixdotorg/sytest:buster
 docker push matrixdotorg/sytest-synapse:py35
-docker push matrixdotorg/sytest-dendrite
+docker push matrixdotorg/sytest-synapse:py37
+docker push matrixdotorg/sytest-dendrite:go110
+docker push matrixdotorg/sytest-dendrite:go113
 ```

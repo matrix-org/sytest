@@ -1,4 +1,4 @@
-FROM matrixdotorg/sytest:latest
+FROM matrixdotorg/sytest:stretch
 
 RUN apt-get -qq update && apt-get -qq install -y \
     python3 python3-dev python3-virtualenv eatmydata

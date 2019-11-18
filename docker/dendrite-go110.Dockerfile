@@ -1,8 +1,8 @@
-FROM matrixdotorg/sytest:latest
+FROM matrixdotorg/sytest:stretch
 
 # Install Go 1.11
 RUN mkdir -p /goroot /gopath
-RUN wget -q https://dl.google.com/go/go1.11.10.linux-amd64.tar.gz -O go.tar.gz
+RUN wget -q https://dl.google.com/go/go1.11.13.linux-amd64.tar.gz -O go.tar.gz
 RUN tar xf go.tar.gz -C /goroot --strip-components=1
 ENV GOROOT=/goroot
 ENV GOPATH=/gopath
