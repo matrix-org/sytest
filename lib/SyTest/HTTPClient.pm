@@ -157,7 +157,7 @@ sub SvPOK {
 sub wrap_numbers
 {
    my ( $d ) = @_;
-   if( defined $d and !ref $d and !SvPOK( $d )) {
+   if( defined $d and !ref $d and !SvPOK $d ) {
       return JSON::number( $d );
    }
    elsif( ref $d eq "ARRAY" ) {
