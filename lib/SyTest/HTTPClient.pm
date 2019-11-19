@@ -17,7 +17,7 @@ my $json = JSON->new->convert_blessed(1)->utf8(1);
 use Future 0.33; # ->catch
 use List::Util qw( any );
 use Net::SSLeay 1.59; # TLSv1.2
-use Scalar::Util qw( blessed looks_like_number );
+use Scalar::Util qw( blessed );
 
 use SyTest::JSONSensible;
 
@@ -147,10 +147,17 @@ sub do_request_json
    $self->do_request( %params );
 }
 
+# A terrible internals hack that relies on the dualvar nature of the ^ operator.
+# Returns true if perl thinks the argument is a string.
+sub SvPOK {
+   my ( $s ) = @_;
+   return utf8::is_utf8( $s ) || ( $s ^ $s ) ne "0";
+}
+
 sub wrap_numbers
 {
    my ( $d ) = @_;
-   if( defined $d and !ref $d and looks_like_number( $d )) {
+   if( defined $d and !ref $d and !SvPOK $d ) {
       return JSON::number( $d );
    }
    elsif( ref $d eq "ARRAY" ) {
