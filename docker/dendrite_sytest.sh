@@ -8,7 +8,7 @@ cd /sytest
 ./install-deps.pl
 
 # Start the database
-su -c '/usr/lib/postgresql/9.6/bin/pg_ctl -w -D /var/run/postgresql/data start' postgres
+su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
 # Make the test databases
 su -c "psql -c \"CREATE USER dendrite PASSWORD 'itsasecret'\" postgres"
