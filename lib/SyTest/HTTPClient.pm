@@ -17,7 +17,7 @@ my $json = JSON->new->convert_blessed(1)->utf8(1);
 use Future 0.33; # ->catch
 use List::Util qw( any );
 use Net::SSLeay 1.59; # TLSv1.2
-use Scalar::Util qw( blessed looks_like_number );
+use Scalar::Util qw( blessed );
 
 use SyTest::JSONSensible;
 
