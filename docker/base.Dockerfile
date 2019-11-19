@@ -7,21 +7,24 @@ ENV DEBIAN_FRONTEND noninteractive
 # Install base dependencies that Python or Go would require
 RUN apt-get -qq update && apt-get -qq install -y \
     build-essential \
-    perl \
-    wget \
-    postgresql \
-    libpq-dev \
-    libssl-dev \
-    libz-dev \
-    libffi-dev \
-    sqlite3 \
-    libjpeg-dev \
-    libxslt1-dev \
+    dos2unix \
+    eatmydata \
     git \
-    locales \
     haproxy \
     jq \
-    dos2unix
+    libffi-dev \
+    libjpeg-dev \
+    libpq-dev \
+    libssl-dev \
+    libxslt1-dev \
+    libz-dev \
+    locales \
+    perl \
+    postgresql \
+    rsync \
+    sqlite3 \
+    wget \
+ && rm -rf /var/lib/apt/lists/*
 
 # Set up the locales, as the default Debian image only has C, and PostgreSQL needs the correct locales to make a UTF-8 database
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
