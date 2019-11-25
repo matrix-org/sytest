@@ -525,10 +525,11 @@ test "uploading self-signing key notifies over federation",
          matrix_create_room( $user1 );
       })->then( sub {
          ( $room_id ) = @_;
-
+         matrix_sync( $user1 );
+      })->then( sub {
          matrix_invite_user_to_room( $user1, $user2, $room_id )
       })->then( sub {
-         matrix_sync( $user1 );
+         sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
          matrix_join_room( $user2, $room_id );
       })->then( sub {
