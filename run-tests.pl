@@ -66,6 +66,9 @@ my $BLACKLIST_FILE;
 # the server under test'.
 our $TEST_ROOM_VERSION;
 
+# where we put working files (server configs, mostly)
+our $WORK_DIR = ".";
+
 Getopt::Long::Configure('pass_through');
 GetOptions(
    'I|server-implementation=s' => \$SERVER_IMPL,
@@ -86,6 +89,8 @@ GetOptions(
    'v|verbose+' => \(my $VERBOSE = 0),
 
    'n|no-tls' => sub { $WANT_TLS = 0 },
+
+   'work-directory=s' => \$WORK_DIR,
 
    'room-version=s' => \$TEST_ROOM_VERSION,
 
@@ -177,6 +182,9 @@ Options:
                                   'localhost'.
 
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
+
+   --work-directory DIR         - where we put working files (server configs,
+                                  mostly). Defaults to '.'.
 
    --room-version VERSION       - use the given room version for the majority of
                                   tests
