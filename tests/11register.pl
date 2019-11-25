@@ -13,7 +13,9 @@ sub gen_client_secret {
 =head2 validate_email
 
    validate_email(
-      $http, $address, $id_server, $path,
+      $http, $address,
+      id_server => $id_server,
+      path => "/r0/account/3pid/email/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
    });
@@ -26,7 +28,7 @@ Returns the session id and client secret which can then be used for binding the 
 =cut
 
 sub validate_email {
-   my ( $http, $address, $id_server, %params ) = @_;
+   my ( $http, $address, %params ) = @_;
 
    my $client_secret = gen_client_secret();
    my $sid;
@@ -41,8 +43,8 @@ sub validate_email {
             client_secret   => $client_secret,
             email           => $address,
             send_attempt    => 1,
-            id_server       => $id_server->name,
-            id_access_token => $id_server->get_access_token(),
+            id_server       => $params{id_server}->name,
+            id_access_token => $params{id_server}->get_access_token(),
          },
       )->then( sub {
          my ( $resp ) = @_;
@@ -70,7 +72,9 @@ push our @EXPORT, qw( validate_email );
 =head2 validate_msisdn
 
    validate_msisdn(
-      $http, $phone_number, $country_code, %params
+      $http, $phone_number, $country_code,
+      id_server => $id_server,
+      path => "/r0/account/3pid/email/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
    });
@@ -209,7 +213,9 @@ sub add_email_for_user {
 
    # start by requesting an email validation.
    validate_email(
-      $user->http, $address, $id_server, path => "/r0/account/3pid/email/requestToken",
+      $user->http, $address,
+      id_server => $id_server,
+      path => "/r0/account/3pid/email/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
 
@@ -618,3 +624,77 @@ test "User signups are forbidden from starting with '_'",
       matrix_register_user( $http, "_badname_here" )
          ->main::expect_http_4xx;
    };
+
+test "Can register using an email address",
+   requires => [ $main::API_CLIENTS[0], localpart_fixture(), id_server_fixture() ],
+
+   do => sub {
+      my ( $http, $localpart, $id_server ) = @_;
+
+      my $email_address = 'testemail@example.com';
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            username => $localpart,
+            password => "noobers3kr1t",
+            device_id => "xyzzy",
+         },
+      )->main::expect_http_401->then( sub {
+         my ( $response ) = @_;
+
+         my $body = decode_json $response->content;
+
+         assert_json_keys( $body, qw( session flows ));
+
+         log_if_fail "No single m.login.email.identity stage registration flow found", $body;
+
+         # Check that one of the flows' stages contains an "m.login.email.identity" stage
+         my $has_flow;
+         foreach my $idx ( 0 .. $#{ $body->{flows} } ) {
+            my $flow = $body->{flows}[$idx];
+            my $stages = $flow->{stages} || [];
+
+            $has_flow++ if
+               @$stages == 1 && $stages->[0] eq "m.login.email.identity";
+         }
+
+         assert_eq( $has_flow, 1 );
+
+         validate_email(
+            $http,
+            $email_address,
+            id_server => $id_server,
+            path => "/r0/register/email/requestToken",
+         )->then( sub {
+            my ( $sid_email, $client_secret ) = @_;
+
+            # attempt to register with the 3pid
+            $http->do_request_json(
+               method => "POST",
+               uri    => "/r0/register",
+               content => {
+                  auth => {
+                     type           => "m.login.email.identity",
+                     session        => $body->{session},
+                     threepid_creds => {
+                        sid           => $sid_email,
+                        client_secret => $client_secret,
+                     },
+                  },
+                  username  => $localpart,
+                  password  => "noobers3kr1t",
+                  device_id => "xyzzy",
+               },
+            )
+         })
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( user_id home_server ) );
+         Future->done( 1 );
+      });
+   };
+
