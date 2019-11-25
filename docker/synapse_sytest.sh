@@ -80,12 +80,12 @@ fi
 echo >&2 "--- Copying assets"
 
 # Copy out the logs
-rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
-cp /.coverage.* /src || true
+rsync --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+#cp /.coverage.* /src || true
 
-cd /src
-export TOP=/src
-/venv/bin/coverage combine
+#cd /src
+#export TOP=/src
+#/venv/bin/coverage combine
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
