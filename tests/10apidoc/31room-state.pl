@@ -159,13 +159,12 @@ test "GET /rooms/:room_id/initialSync fetches initial sync state",
    };
 
 test "GET /publicRooms lists newly-created room",
-   # requires => [ $main::API_CLIENTS[0], $room_fixture ],
-   requires => [ $user_fixture, $room_fixture ],
+   requires => [ $main::API_CLIENTS[0], $room_fixture ],
 
    check => sub {
       my ( $user, $room_id, undef ) = @_;
 
-      do_request_json_for( $user,
+      do_request_json(
          method => "GET",
          uri    => "/r0/publicRooms",
       )->then( sub {
