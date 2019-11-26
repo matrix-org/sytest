@@ -51,7 +51,7 @@ rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include 
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
-    perl /sytest/scripts/format_tap.pl results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
+    perl /sytest/scripts/format_tap.pl /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
 fi
 
 exit $TEST_STATUS
