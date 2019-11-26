@@ -34,7 +34,7 @@ test "Name/topic keys are correct",
       ->then( sub {
          my $iter = 0;
          retry_until_success {
-            $http->do_request_json(
+            $http->do_request_json_for( $user,
                method => "GET",
                uri    => "/r0/publicRooms",
             )->then( sub {

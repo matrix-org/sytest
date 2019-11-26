@@ -164,7 +164,7 @@ test "GET /publicRooms lists newly-created room",
    check => sub {
       my ( $http, $room_id, undef ) = @_;
 
-      $http->do_request_json(
+      $http->do_request_json_for( $user,
          method => "GET",
          uri    => "/r0/publicRooms",
       )->then( sub {

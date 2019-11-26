@@ -351,7 +351,7 @@ test "GET /publicRooms lists rooms",
          my $iter = 0;
          retry_until_success {
             $iter++;
-            $http->do_request_json(
+            $http->do_request_json_for( $user,
                method => "GET",
                uri    => "/r0/publicRooms",
             )->then( sub {
@@ -445,7 +445,7 @@ test "GET /publicRooms includes avatar URLs",
          }),
       )->then( sub {
          repeat_until_true {
-            $http->do_request_json(
+            $http->do_request_json_for( $user,
                method => "GET",
                uri    => "/r0/publicRooms",
             )->then( sub {
