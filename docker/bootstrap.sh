@@ -35,9 +35,5 @@ fi
 export SYTEST_LIB="/sytest/lib"
 SYTEST_SCRIPT="/sytest/docker/$1_sytest.sh"
 
-# dos2unix files that need to be UNIX line ending
-dos2unix $SYTEST_SCRIPT
-dos2unix /sytest/*.pl
-
 # Run the sytest script
 $SYTEST_SCRIPT "${@:2}"
