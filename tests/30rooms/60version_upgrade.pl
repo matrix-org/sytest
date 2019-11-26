@@ -345,7 +345,7 @@ test "/upgrade copies the power levels to the new room",
       })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
-            expected_event_counts => { 'm.room.power_levels' => 2 },
+            expected_event_counts => { 'm.room.power_levels' => 1 },
             new_version => $TEST_NEW_VERSION,
          );
       })->then( sub {
@@ -794,7 +794,7 @@ test "/upgrade restricts power levels in the old room when the old PLs are unusu
       )->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
-            expected_event_counts => { 'm.room.power_levels' => 2 },
+            expected_event_counts => { 'm.room.power_levels' => 1 },
             new_version => $TEST_NEW_VERSION,
          );
       })->then( sub {
