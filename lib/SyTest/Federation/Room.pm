@@ -268,7 +268,7 @@ sub create_and_insert_event
 
    my ( $event, $event_id ) = $self->create_event( %fields );
 
-   $self->_insert_event( $event );
+   $self->insert_outlier_event( $event );
 
    $self->{prev_events} = [ $event ];
 
@@ -276,12 +276,20 @@ sub create_and_insert_event
    return ( $event, $event_id );
 }
 
+=head2 insert_event
+
+   $event = $room->insert_event( $event );
+
+Inserts a new event into the database, updating prev_events.
+
+=cut
+
 sub insert_event
 {
    my $self = shift;
    my ( $event ) = @_;
 
-   $self->_insert_event( $event );
+   $self->insert_outlier_event( $event );
 
    my $prev_events = $self->{prev_events};
    push @$prev_events, $event;
@@ -293,7 +301,16 @@ sub insert_event
    extract_by { $to_remove{ $self->id_for_event($_) } } @$prev_events;
 }
 
-sub _insert_event
+
+=head2 insert_outlier_event
+
+   $event = $room->insert_outlier_event( $event );
+
+Inserts a new event into the database, without updating prev_events.
+
+=cut
+
+sub insert_outlier_event
 {
    my $self = shift;
    my ( $event ) = @_;
