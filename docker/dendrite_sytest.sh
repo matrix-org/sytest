@@ -42,7 +42,7 @@ else
 fi
 
 # Check for new tests to be added to testfile
-/src/show-expected-fail-tests.sh results.tap /src/testfile || TEST_STATUS=$?
+/src/show-expected-fail-tests.sh /logs/results.tap /src/testfile || TEST_STATUS=$?
 
 echo >&2 "--- Copying assets"
 
