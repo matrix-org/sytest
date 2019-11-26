@@ -247,6 +247,9 @@ sub start
         media_store_path => "$hs_dir/media_store",
         uploads_path => "$hs_dir/uploads_path",
 
+         allow_public_rooms_over_federation => "true",
+        allow_public_rooms_without_auth => "true",
+
         user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
 
         require_membership_for_aliases => "false",
