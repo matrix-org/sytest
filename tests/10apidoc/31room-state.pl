@@ -162,9 +162,9 @@ test "GET /publicRooms lists newly-created room",
    requires => [ $main::API_CLIENTS[0], $room_fixture ],
 
    check => sub {
-      my ( $user, $room_id, undef ) = @_;
+      my ( $http, $room_id, undef ) = @_;
 
-      do_request_json(
+      $http->do_request_json(
          method => "GET",
          uri    => "/r0/publicRooms",
       )->then( sub {
