@@ -6,6 +6,8 @@ set -ex
 
 cd /sytest
 
+mkdir /work
+
 # PostgreSQL setup
 if [ -n "$POSTGRES" ]; then
     export PGUSER=postgres
@@ -16,7 +18,6 @@ if [ -n "$POSTGRES" ]; then
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
     # Write out the configuration for a PostgreSQL using Synapse
-    dos2unix docker/prep_sytest_for_postgres.sh
     docker/prep_sytest_for_postgres.sh
 
     # Make the test databases for the two Synapse servers that will be spun up
@@ -36,7 +37,7 @@ if [ -n "$OFFLINE" ]; then
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir -e /src
+    /venv/bin/pip install -q --upgrade --no-cache-dir /src
     /venv/bin/pip install -q --upgrade --no-cache-dir \
         lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
 
@@ -55,10 +56,9 @@ echo >&2 "+++ Running tests"
 export COVERAGE_PROCESS_START="/src/.coveragerc"
 
 RUN_TESTS=(
-    perl -I "$SYTEST_LIB" ./run-tests.pl --python=/venv/bin/python --synapse-directory=/src -B "/src/$BLACKLIST" --coverage -O tap --all
+    perl -I "$SYTEST_LIB" /sytest/run-tests.pl --python=/venv/bin/python --synapse-directory=/src -B "/src/$BLACKLIST" --coverage -O tap --all
+    --work-directory="/work"
 )
-
-TEST_STATUS=0
 
 if [ -n "$WORKERS" ]; then
     RUN_TESTS+=(-I Synapse::ViaHaproxy --dendron-binary=/pydron.py)
@@ -66,7 +66,10 @@ else
     RUN_TESTS+=(-I Synapse)
 fi
 
-"${RUN_TESTS[@]}" "$@" >results.tap || TEST_STATUS=$?
+mkdir -p /logs
+
+TEST_STATUS=0
+"${RUN_TESTS[@]}" "$@" >/logs/results.tap || TEST_STATUS=$?
 
 if [ $TEST_STATUS -ne 0 ]; then
     echo >&2 -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"
@@ -77,14 +80,12 @@ fi
 echo >&2 "--- Copying assets"
 
 # Copy out the logs
-mkdir -p /logs
-cp results.tap /logs/results.tap
-rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
-cp /.coverage.* /src || true
+rsync --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+#cp /.coverage.* /src || true
 
-cd /src
-export TOP=/src
-/venv/bin/coverage combine
+#cd /src
+#export TOP=/src
+#/venv/bin/coverage combine
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation

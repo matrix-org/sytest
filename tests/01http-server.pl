@@ -30,7 +30,7 @@ Creates a TLS cert signed by the CA, and configures an IO::Async::Listener to st
 sub start_test_server_ssl {
    my ( $server ) = @_;
 
-   my $test_server_dir = abs_path( "test-server" );
+   my $test_server_dir = abs_path( $main::WORK_DIR."/test-server" );
    -d $test_server_dir or make_path( $test_server_dir );
 
    my $ssl_cert = "$test_server_dir/server.crt";
