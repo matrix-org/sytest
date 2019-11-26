@@ -200,6 +200,81 @@ test "Federation rejects inbound events where the prev_events cannot be found",
    };
 
 
+foreach my $type ( qw( message state ) ) {
+   test "Room state at a rejected $type event is the same as its predecessor",
+      requires => [
+         $main::OUTBOUND_CLIENT,
+         federated_rooms_fixture(),
+      ],
+
+      do => sub {
+         my ( $outbound_client, $creator_user, $sytest_user_id, $room ) = @_;
+
+         my $first_home_server = $creator_user->server_name;
+
+         my @initial_state_events = sort map { $room->id_for_event( $_ ) }
+            values %{ $room->{current_state} };
+
+         # we send a rejected event, and a regular event, and check that the end
+         # state is the same as the initial state.
+
+         my ( $rejected_event, $rejected_event_id ) = $room->create_and_insert_event(
+            type => "m.room.$type",
+            $type eq 'state' ? ( state_key => "" ) : (),
+
+            sender  => '@fake_sender:' . $outbound_client->server_name,
+            content => {
+               body => "Rejected",
+            },
+            auth_events => $room->make_event_refs(
+               $room->get_current_state_event( "m.room.create" ),
+               $room->get_current_state_event( "m.room.power_levels" ),
+            ),
+         );
+
+         my ( $regular_event, $regular_event_id ) = $room->create_and_insert_event(
+            type => "m.room.message",
+            sender  => $sytest_user_id,
+            content => {
+               body => "Hello",
+            },
+         );
+
+         log_if_fail "sending rejected event $rejected_event_id", $rejected_event;
+
+         $outbound_client->send_event(
+            event => $rejected_event,
+            destination => $first_home_server,
+         )->then( sub {
+            log_if_fail "sending regular event $regular_event_id", $regular_event;
+
+            $outbound_client->send_event(
+              event => $regular_event,
+              destination => $first_home_server,
+            );
+         })->then( sub {
+            log_if_fail "sent events";
+            await_sync_timeline_contains( $creator_user, $room->room_id, check => sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.message";
+               return unless $event->{content}->{body} eq "Hello";
+               return 1;
+            });
+         })->then( sub {
+            get_state_ids_from_server(
+               $outbound_client, $first_home_server, $room->room_id, $regular_event_id
+            );
+         })->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "state_ids response", $body;
+
+            my @sorted_state = sort @{ $body->{pdu_ids} };
+            assert_deeply_eq( \@sorted_state, \@initial_state_events );
+            Future->done;
+         });
+      };
+}
+
 
 test "Outbound federation requests missing prev_events and then asks for /state_ids and resolves the state",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
