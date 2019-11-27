@@ -1,10 +1,17 @@
 #!/bin/bash
 #
+# This script is run by the bootstrap.sh script in the docker image.
+#
+# It expects to find the synapse source in /src, and a virtualenv in /venv.
+# It installs synapse into the virtualenv, configures sytest according to the
+# env vars, and runs sytest.
+#
+
 # Run the sytests.
 
 set -ex
 
-cd /sytest
+cd "$(dirname $0)/.."
 
 mkdir /work
 
@@ -18,7 +25,7 @@ if [ -n "$POSTGRES" ]; then
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
     # Write out the configuration for a PostgreSQL using Synapse
-    docker/prep_sytest_for_postgres.sh
+    ./scripts/prep_sytest_for_postgres.sh
 
     # Make the test databases for the two Synapse servers that will be spun up
     su -c 'psql -c "CREATE DATABASE pg1;"' postgres
