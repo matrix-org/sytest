@@ -77,3 +77,28 @@ test "After deactivating account, can't log in with password",
          )->main::expect_http_4xx;
       });
    };
+
+test "After deactivating account, can't log in with an email",
+   requires => [ local_user_fixture(), id_server_fixture() ],
+
+   check => sub {
+      my ( $user, $id_server ) = @_;
+
+      add_email_for_user(
+         $user, 'bob@example.com', $id_server,
+      )->then( sub {
+         matrix_deactivate_account( $user )
+      })->then( sub {
+         do_request_json_for( $user,
+            method  => "POST",
+            uri     => "/r0/login",
+            content => {
+               identifier => {
+                  "type"    => "m.id.thirdparty",
+                  "medium"  => "email",
+                  "address" => 'bob@example.com',
+               }
+            }
+         );
+      })->main::expect_http_4xx;
+   };
