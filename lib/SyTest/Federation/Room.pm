@@ -278,9 +278,11 @@ sub create_and_insert_event
 
 =head2 insert_event
 
-   $event = $room->insert_event( $event );
+   $room->insert_event( $event );
 
-Inserts a new event into the database, updating prev_events.
+Inserts a new event into the database, updating the rooms view of the forward
+extremities (i.e. event IDs to use as the prev events of the the next
+generated event).
 
 =cut
 
@@ -304,9 +306,11 @@ sub insert_event
 
 =head2 insert_outlier_event
 
-   $event = $room->insert_outlier_event( $event );
+   $room->insert_outlier_event( $event );
 
-Inserts a new event into the database, without updating prev_events.
+Inserts a new event into the database, without updating the rooms forward
+extremities (i.e. event IDs to use as the prev events of the the next
+generated event).
 
 =cut
 
