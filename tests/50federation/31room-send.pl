@@ -155,6 +155,7 @@ test "Ephemeral messages received from servers are correctly expired",
       my ( $local_user, $room_id, $federated_user, $outbound_client ) = @_;
 
       my $now_ms = int( time() * 1000 );
+      my $filter = '{"types":["m.room.message"]}';
 
       $outbound_client->join_room(
          server_name => $local_user->server_name,
@@ -179,7 +180,7 @@ test "Ephemeral messages received from servers are correctly expired",
             destination => $local_user->server_name,
          );
       })->then( sub {
-          matrix_get_room_messages($local_user, $room_id, limit => 1)
+          matrix_get_room_messages( $local_user, $room_id, filter => $filter )
       })->then( sub {
          my ( $body ) = @_;
          log_if_fail "Response body", $body;
@@ -194,7 +195,7 @@ test "Ephemeral messages received from servers are correctly expired",
 
          sleep( 2 );
 
-         matrix_get_room_messages( $local_user, $room_id, limit => 1 )
+         matrix_get_room_messages( $local_user, $room_id, filter => $filter )
       })->then( sub {
          my ( $body ) = @_;
          log_if_fail "Response body", $body;

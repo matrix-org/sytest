@@ -357,6 +357,7 @@ test "Ephemeral messages received from clients are correctly expired",
       my ( $user, $room_id ) = @_;
 
       my $now_ms = int( time() * 1000 );
+      my $filter = '{"types":["m.room.message"]}';
 
       matrix_send_room_message( $user, $room_id,
          content => {
@@ -365,7 +366,7 @@ test "Ephemeral messages received from clients are correctly expired",
             "org.matrix.self_destruct_after" => $now_ms + 1000,
          },
       )->then( sub {
-          matrix_get_room_messages($user, $room_id, limit => 1)
+          matrix_get_room_messages( $user, $room_id, filter => $filter )
       })->then( sub {
          my ( $body ) = @_;
          log_if_fail "Response body", $body;
@@ -380,7 +381,7 @@ test "Ephemeral messages received from clients are correctly expired",
 
          sleep( 2 );
 
-         matrix_get_room_messages( $user, $room_id, limit => 1 )
+         matrix_get_room_messages($user, $room_id, filter => $filter )
       })->then( sub {
          my ( $body ) = @_;
          log_if_fail "Response body", $body;
