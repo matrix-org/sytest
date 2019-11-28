@@ -222,9 +222,14 @@ my %TEST_BLACKLIST;
 if ( $BLACKLIST_FILE ) {
    open( my $blacklist_data, "<:encoding(UTF-8)", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for reading: $!\n";
    while ( my $test_name = <$blacklist_data> ) {
-      # Trim whitespace
+      # Trim whitespace and comments
       chomp $test_name;
-      $TEST_BLACKLIST{$test_name} = 1;
+      $test_name =~ s/#.*//;
+      $test_name =~ s/^\s*//;
+      $test_name =~ s/\s*$//;
+      if($test_name) {
+         $TEST_BLACKLIST{$test_name} = 1;
+      }
    }
    close $blacklist_data;
 }
@@ -234,9 +239,14 @@ my %TEST_WHITELIST;
 if ( $WHITELIST_FILE ) {
    open( my $whitelist_data, "<:encoding(UTF-8)", $WHITELIST_FILE ) or die "Couldn't open whitelist file for reading: $!\n";
    while ( my $test_name = <$whitelist_data> ) {
-      # Trim whitespace
+      # Trim whitespace and comments
       chomp $test_name;
-      $TEST_WHITELIST{$test_name} = 1;
+      $test_name =~ s/#.*//;
+      $test_name =~ s/^\s*//;
+      $test_name =~ s/\s*$//;
+      if($test_name) {
+         $TEST_WHITELIST{$test_name} = 1;
+      }
    }
    close $whitelist_data;
 }
