@@ -369,7 +369,7 @@ test "Ephemeral messages received from clients are correctly expired",
           matrix_get_room_messages( $user, $room_id, filter => $filter )
       })->then( sub {
          my ( $body ) = @_;
-         log_if_fail "Response body", $body;
+         log_if_fail "Response body before expiry", $body;
 
          my $chunk = $body->{chunk};
          @$chunk == 1 or
@@ -384,7 +384,7 @@ test "Ephemeral messages received from clients are correctly expired",
          matrix_get_room_messages($user, $room_id, filter => $filter )
       })->then( sub {
          my ( $body ) = @_;
-         log_if_fail "Response body", $body;
+         log_if_fail "Response body after expiry", $body;
 
          my $chunk = $body->{chunk};
          @$chunk == 1 or
