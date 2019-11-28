@@ -195,18 +195,22 @@ test "Ephemeral messages received from servers are correctly expired",
 
          sleep( 2 );
 
-         matrix_get_room_messages( $local_user, $room_id, filter => $filter )
-      })->then( sub {
-         my ( $body ) = @_;
-         log_if_fail "Response body after expiry", $body;
+         retry_until_success {
+             matrix_get_room_messages(
+                 $local_user, $room_id, filter => $filter,
+             )->then( sub {
+                 ( $body ) = @_;
+                 log_if_fail "Response body after expiry", $body;
 
-         my $chunk = $body->{chunk};
-         @$chunk == 1 or
-            die "Expected 1 message";
+                 $chunk = $body->{chunk};
 
-         # Check that we can't read the message's content after its expiry.
-         assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
+                 assert_eq( @$chunk, 1, 'chunk length' );
 
-         Future->done(1);
+                 # Check that we can't read the message's content after its expiry.
+                 assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
+
+                 Future->done(1);
+             })
+         }
       });
    };
