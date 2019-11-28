@@ -349,3 +349,49 @@ test "Message history can be paginated over federation",
          })
       });
    };
+
+test "Ephemeral messages received from clients are correctly expired",
+   requires => [ local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      my $now_ms = int( time() * 1000 );
+
+      matrix_send_room_message( $user, $room_id,
+         content => {
+            msgtype                          => "m.text",
+            body                             => "This is a message",
+            "org.matrix.self_destruct_after" => $now_ms + 1000,
+         },
+      )->then( sub {
+          matrix_get_room_messages($user, $room_id, limit => 1)
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Response body", $body;
+
+         my $chunk = $body->{chunk};
+         @$chunk == 1 or
+            die "Expected 1 message";
+
+         # Make sure we can read the message's content before it expires.
+         assert_eq( $chunk->[0]{content}{body}, "This is a message",
+            'chunk[0] content body' );
+
+         sleep( 2 );
+
+         matrix_get_room_messages( $user, $room_id, limit => 1 )
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Response body", $body;
+
+         my $chunk = $body->{chunk};
+         @$chunk == 1 or
+            die "Expected 1 message";
+
+         # Check that we can't read the message's content after its expiry.
+         assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
+
+         Future->done(1);
+      });
+   };

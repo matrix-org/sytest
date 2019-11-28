@@ -1,3 +1,4 @@
+use Time::HiRes qw( time );
 use Protocol::Matrix qw( redact_event );
 
 
@@ -143,5 +144,68 @@ test "Inbound federation can receive redacted events",
 
             Future->done(1);
          });
+      });
+   };
+
+test "Ephemeral messages received from servers are correctly expired",
+   requires => [ local_user_and_room_fixtures(), federation_user_id_fixture(),
+                 $main::OUTBOUND_CLIENT ],
+
+   do => sub {
+      my ( $local_user, $room_id, $federated_user, $outbound_client ) = @_;
+
+      my $now_ms = int( time() * 1000 );
+
+      $outbound_client->join_room(
+         server_name => $local_user->server_name,
+         room_id     => $room_id,
+         user_id     => $federated_user,
+      )->then( sub {
+         my ( $room ) = @_;
+
+         my $event = $room->create_and_insert_event(
+            type => "m.room.message",
+
+            sender  => $federated_user,
+            content => {
+                msgtype                          => "m.text",
+                body                             => "This is a message",
+                "org.matrix.self_destruct_after" => $now_ms + 1000,
+            },
+         );
+
+         $outbound_client->send_event(
+            event => $event,
+            destination => $local_user->server_name,
+         );
+      })->then( sub {
+          matrix_get_room_messages($local_user, $room_id, limit => 1)
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Response body", $body;
+
+         my $chunk = $body->{chunk};
+         @$chunk == 1 or
+            die "Expected 1 message";
+
+         # Make sure we can read the message's content before it expires.
+         assert_eq( $chunk->[0]{content}{body}, "This is a message",
+            'chunk[0] content body' );
+
+         sleep( 2 );
+
+         matrix_get_room_messages( $local_user, $room_id, limit => 1 )
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Response body", $body;
+
+         my $chunk = $body->{chunk};
+         @$chunk == 1 or
+            die "Expected 1 message";
+
+         # Check that we can't read the message's content after its expiry.
+         assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
+
+         Future->done(1);
       });
    };
