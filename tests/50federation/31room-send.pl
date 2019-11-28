@@ -203,8 +203,8 @@ test "Ephemeral messages received from servers are correctly expired",
                  log_if_fail "Response body after expiry", $body;
 
                  $chunk = $body->{chunk};
-
-                 assert_eq( @$chunk, 1, 'chunk length' );
+                 @$chunk == 1 or
+                    die "Expected 1 message";
 
                  # Check that we can't read the message's content after its expiry.
                  assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
