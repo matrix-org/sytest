@@ -255,6 +255,8 @@ sub start
 
         require_membership_for_aliases => "false",
 
+        enable_ephemeral_messages => "true",
+
         $self->{recaptcha_config} ? (
            recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
            recaptcha_public_key     => $self->{recaptcha_config}->{public_key},
