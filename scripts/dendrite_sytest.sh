@@ -1,4 +1,9 @@
-#! /usr/bin/env bash
+#!/bin/bash
+#
+# This script is run by the bootstrap.sh script in the docker image.
+#
+# It expects to find a built dendrite in /src/bin. It sets up the
+# postgres database and runs sytest against dendrite.
 
 set -ex
 
