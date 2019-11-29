@@ -33,7 +33,7 @@ our @HOMESERVER_INFO = map {
          $OUTPUT->diag( "Starting Homeserver using $HS_FACTORY" );
 
          my $server = eval { $HS_FACTORY->create_server(
-            hs_dir              => abs_path( "server-$idx" ),
+            hs_dir              => abs_path( $main::WORK_DIR . "/server-$idx" ),
             hs_index            => $idx,
             bind_host           => $BIND_HOST,
             output              => $OUTPUT,

@@ -19,20 +19,20 @@ Once pulled from Docker Hub, a container can be run on a homeserver checkout:
 ### Synapse
 
 ```
-docker run --rm -it -v /path/to/synapse\:/src -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py35
+docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py35
 ```
 
 ### Dendrite
 
 ```
-docker run --rm -it -v /path/to/dendrite\:/src -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-dendrite
+docker run --rm -it -v /path/to/dendrite\:/src:ro -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-dendrite
 ```
 
 This will run on the same branch in SyTest as the checkout, if possible, but
 will fall back to using either Synapse or Dendrite's `develop` branch.
 
 If you want to use an existing checkout of SyTest, mount it to `/sytest` inside
-the container by adding `-v /path/to/sytest\:/sytest` to the docker command.
+the container by adding `-v /path/to/sytest\:/sytest:ro` to the docker command.
 
 You can pass arguments to sytest by adding them at the end of the docker
 command. For example, you can use
@@ -70,6 +70,7 @@ docker push matrixdotorg/sytest:stretch
 docker push matrixdotorg/sytest:buster
 docker push matrixdotorg/sytest-synapse:py35
 docker push matrixdotorg/sytest-synapse:py37
+docker push matrixdotorg/sytest-dendrite:latest
 docker push matrixdotorg/sytest-dendrite:go110
 docker push matrixdotorg/sytest-dendrite:go113
 ```
