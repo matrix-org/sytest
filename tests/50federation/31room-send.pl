@@ -169,29 +169,10 @@ test "Ephemeral messages received from servers are correctly expired",
             },
          )
       })->then( sub {
-         my $iter = 0;
-         retry_until_success {
-            matrix_get_room_messages( $local_user, $room_id, filter => $filter )->then( sub {
-               $iter++;
-               my ( $body ) = @_;
-               log_if_fail "Iteration $iter: response body before expiry", $body;
-
-               my $chunk = $body->{chunk};
-
-               @$chunk == 1 or
-                  die "Expected 1 message";
-
-               # Make sure we can read the message's content before it expires.
-               assert_eq( $chunk->[0]{content}{body}, "This is a message",
-                  'chunk[0] content body' );
-
-               Future->done( 1 )
-            })->on_fail( sub {
-               my ( $exc ) = @_;
-               chomp $exc;
-               log_if_fail "Iteration $iter: not ready yet: $exc";
-            });
-         }
+         await_sync_timeline_contains($local_user, $room_id, check => sub {
+            my ($event) = @_;
+            return $event->{content}{body} eq "This is a message"
+         })
       })->then( sub {
          # wait for the message to expire
          delay( 1.5 )
