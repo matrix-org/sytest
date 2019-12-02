@@ -147,38 +147,27 @@ test "Inbound federation can receive redacted events",
       });
    };
 
+# Test for MSC2228 for messages received through federation.
 test "Ephemeral messages received from servers are correctly expired",
-   requires => [ local_user_and_room_fixtures(), federation_user_id_fixture(),
-                 $main::OUTBOUND_CLIENT ],
+   requires => [ local_user_and_room_fixtures(), remote_user_fixture() ],
 
    do => sub {
-      my ( $local_user, $room_id, $federated_user, $outbound_client ) = @_;
+      my ( $local_user, $room_id, $federated_user ) = @_;
 
-      my $now_ms = int( time() * 1000 );
       my $filter = '{"types":["m.room.message"]}';
 
-      $outbound_client->join_room(
-         server_name => $local_user->server_name,
-         room_id     => $room_id,
-         user_id     => $federated_user,
-      )->then( sub {
-         my ( $room ) = @_;
+      matrix_invite_user_to_room( $local_user, $federated_user, $room_id )->then( sub {
+         matrix_join_room( $federated_user, $room_id )
+      })->then( sub {
+         my $now_ms = int( time() * 1000 );
 
-         my $event = $room->create_and_insert_event(
-            type => "m.room.message",
-
-            sender  => $federated_user,
+         matrix_send_room_message( $local_user, $room_id,
             content => {
-                msgtype                          => "m.text",
-                body                             => "This is a message",
-                "org.matrix.self_destruct_after" => $now_ms + 1000,
+               msgtype                          => "m.text",
+               body                             => "This is a message",
+               "org.matrix.self_destruct_after" => $now_ms + 250,
             },
-         );
-
-         $outbound_client->send_event(
-            event => $event,
-            destination => $local_user->server_name,
-         );
+         )
       })->then( sub {
           matrix_get_room_messages( $local_user, $room_id, filter => $filter )
       })->then( sub {
@@ -193,24 +182,29 @@ test "Ephemeral messages received from servers are correctly expired",
          assert_eq( $chunk->[0]{content}{body}, "This is a message",
             'chunk[0] content body' );
 
-         sleep( 2 );
+         # wait for the message to expire
+         delay( 0.5 );
 
+         my $iter = 0;
          retry_until_success {
-             matrix_get_room_messages(
-                 $local_user, $room_id, filter => $filter,
-             )->then( sub {
-                 ( $body ) = @_;
-                 log_if_fail "Response body after expiry", $body;
+            matrix_get_room_messages( $local_user, $room_id, filter => $filter )->then( sub {
+               ( $body ) = @_;
+               log_if_fail "Iteration $iter: response body after expiry", $body;
 
-                 $chunk = $body->{chunk};
-                 @$chunk == 1 or
-                    die "Expected 1 message";
+               $chunk = $body->{chunk};
 
-                 # Check that we can't read the message's content after its expiry.
-                 assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
+               @$chunk == 1 or
+                  die "Expected 1 message";
 
-                 Future->done(1);
-             })
+               # Check that we can't read the message's content after its expiry.
+               assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
+
+               Future->done(1);
+            })->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Iteration $iter: not ready yet: $exc";
+            });
          }
-      });
+      })
    };

@@ -350,6 +350,7 @@ test "Message history can be paginated over federation",
       });
    };
 
+# Test for MSC2228 for local messages.
 test "Ephemeral messages received from clients are correctly expired",
    requires => [ local_user_and_room_fixtures() ],
 
@@ -363,10 +364,10 @@ test "Ephemeral messages received from clients are correctly expired",
          content => {
             msgtype                          => "m.text",
             body                             => "This is a message",
-            "org.matrix.self_destruct_after" => $now_ms + 1000,
+            "org.matrix.self_destruct_after" => $now_ms + 250,
          },
       )->then( sub {
-          matrix_get_room_messages( $user, $room_id, filter => $filter )
+         matrix_get_room_messages( $user, $room_id, filter => $filter )
       })->then( sub {
          my ( $body ) = @_;
          log_if_fail "Response body before expiry", $body;
@@ -379,25 +380,31 @@ test "Ephemeral messages received from clients are correctly expired",
          assert_eq( $chunk->[0]{content}{body}, "This is a message",
             'chunk[0] content body' );
 
-         sleep( 2 );
+         # wait for the message to expire
+         delay( 0.5 );
 
-         retry_until_success {
-             matrix_get_room_messages(
-                 $user, $room_id, filter => $filter,
-             )->then( sub {
-                 ( $body ) = @_;
-                 log_if_fail "Response body after expiry", $body;
+         my $iter = 0;
+         retry_until_success( sub {
+            matrix_get_room_messages(
+               $user, $room_id, filter => $filter,
+            )->then( sub {
+               ( $body ) = @_;
+               log_if_fail "Iteration $iter: response body after expiry", $body;
 
-                 $chunk = $body->{chunk};
+               $chunk = $body->{chunk};
 
-                 @$chunk == 1 or
-                    die "Expected 1 message";
+               @$chunk == 1 or
+                  die "Expected 1 message";
 
-                 # Check that we can't read the message's content after its expiry.
-                 assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
+               # Check that we can't read the message's content after its expiry.
+               assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
 
-                 Future->done(1);
-             })
-         }
+               Future->done(1);
+            })
+         })->on_fail( sub {
+            my ( $exc ) = @_;
+            chomp $exc;
+            log_if_fail "Iteration $iter: not ready yet: $exc";
+         })
       });
    };
