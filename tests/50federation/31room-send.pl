@@ -165,7 +165,7 @@ test "Ephemeral messages received from servers are correctly expired",
             content => {
                msgtype                          => "m.text",
                body                             => "This is a message",
-               "org.matrix.self_destruct_after" => $now_ms + 2000,
+               "org.matrix.self_destruct_after" => $now_ms + 1500,
             },
          )
       })->then( sub {
@@ -194,7 +194,7 @@ test "Ephemeral messages received from servers are correctly expired",
          }
       })->then( sub {
          # wait for the message to expire
-         delay( 2.5 );
+         delay( 2 );
 
          my $iter = 0;
          retry_until_success {
