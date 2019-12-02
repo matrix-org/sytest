@@ -392,8 +392,8 @@ test "Ephemeral messages received from clients are correctly expired",
          }
       })->then( sub {
          # wait for the message to expire
-         delay( 1.5 );
-
+         delay( 1.5 )
+      })->then( sub {
          my $iter = 0;
          retry_until_success {
             matrix_get_room_messages( $user, $room_id, filter => $filter )->then( sub {
