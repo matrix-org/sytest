@@ -364,34 +364,44 @@ test "Ephemeral messages received from clients are correctly expired",
          content => {
             msgtype                          => "m.text",
             body                             => "This is a message",
-            "org.matrix.self_destruct_after" => $now_ms + 250,
+            "org.matrix.self_destruct_after" => $now_ms + 1000,
          },
       )->then( sub {
-         matrix_get_room_messages( $user, $room_id, filter => $filter )
+         my $iter = 0;
+         retry_until_success {
+            matrix_get_room_messages( $user, $room_id, filter => $filter )->then( sub {
+               $iter++;
+               my ( $body ) = @_;
+               log_if_fail "Iteration $iter: response body before expiry", $body;
+
+               my $chunk = $body->{chunk};
+
+               @$chunk == 1 or
+                  die "Expected 1 message";
+
+               # Make sure we can read the message's content before it expires.
+               assert_eq( $chunk->[0]{content}{body}, "This is a message",
+                  'chunk[0] content body' );
+
+               Future->done( 1 )
+            })->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Iteration $iter: not ready yet: $exc";
+            });
+         }
       })->then( sub {
-         my ( $body ) = @_;
-         log_if_fail "Response body before expiry", $body;
-
-         my $chunk = $body->{chunk};
-         @$chunk == 1 or
-            die "Expected 1 message";
-
-         # Make sure we can read the message's content before it expires.
-         assert_eq( $chunk->[0]{content}{body}, "This is a message",
-            'chunk[0] content body' );
-
          # wait for the message to expire
-         delay( 0.5 );
+         delay( 1.5 );
 
          my $iter = 0;
-         retry_until_success( sub {
-            matrix_get_room_messages(
-               $user, $room_id, filter => $filter,
-            )->then( sub {
-               ( $body ) = @_;
+         retry_until_success {
+            matrix_get_room_messages( $user, $room_id, filter => $filter )->then( sub {
+               $iter++;
+               my ( $body ) = @_;
                log_if_fail "Iteration $iter: response body after expiry", $body;
 
-               $chunk = $body->{chunk};
+               my $chunk = $body->{chunk};
 
                @$chunk == 1 or
                   die "Expected 1 message";
@@ -400,11 +410,11 @@ test "Ephemeral messages received from clients are correctly expired",
                assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
 
                Future->done(1);
-            })
-         })->on_fail( sub {
-            my ( $exc ) = @_;
-            chomp $exc;
-            log_if_fail "Iteration $iter: not ready yet: $exc";
-         })
+            })->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Iteration $iter: not ready yet: $exc";
+            });
+         }
       });
    };

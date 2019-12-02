@@ -255,6 +255,7 @@ sub start
 
         require_membership_for_aliases => "false",
 
+        # Enable ephemeral message support (MSC2228)
         enable_ephemeral_messages => "true",
 
         $self->{recaptcha_config} ? (
