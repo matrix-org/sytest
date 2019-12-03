@@ -165,7 +165,7 @@ test "Ephemeral messages received from servers are correctly expired",
             content => {
                msgtype                          => "m.text",
                body                             => "This is a message",
-               "org.matrix.self_destruct_after" => $now_ms + 500,
+               "org.matrix.self_destruct_after" => $now_ms + 1000,
             },
          )
       })->then( sub {
