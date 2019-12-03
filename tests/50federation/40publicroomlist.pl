@@ -59,9 +59,7 @@ test "Name/topic keys are correct",
             my $canonical_alias = $room->{canonical_alias};
 
             my $aliases = $room->{aliases};
-            if( not defined $aliases ) {
-               next;
-            }
+            defined $aliases or next;
 
             foreach my $alias ( @{$aliases} ) {
                foreach my $alias_local ( keys %rooms ) {
@@ -72,8 +70,8 @@ test "Name/topic keys are correct",
                   log_if_fail "Alias", $alias_local;
                   log_if_fail "Room", $room;
 
-                  assert_eq( $canonical_alias, $alias, "Incorrect canonical_alias" );
-                  assert_eq( $room->{num_joined_members}, 1, "Incorrect member count" );
+                  assert_eq( $canonical_alias, $alias, "canonical alias" );
+                  assert_eq( $room->{num_joined_members}, 1, "num_joined_members" );
 
                   if( defined $name ) {
                      assert_eq( $room_config->{name}, $name, 'room name' );
@@ -90,6 +88,7 @@ test "Name/topic keys are correct",
                   }
 
                   $seen{$alias_local} = 1;
+                  last;
                }
             }
          }
