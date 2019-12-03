@@ -76,6 +76,10 @@ sub _init
       event_creator_metrics => main::alloc_port( "event_creator[$idx].metrics" ),
       event_creator_manhole => main::alloc_port( "event_creator[$idx].manhole" ),
 
+      frontend_proxy         => main::alloc_port( "frontend_proxy[$idx]" ),
+      frontend_proxy_metrics => main::alloc_port( "frontend_proxy[$idx].metrics" ),
+      frontend_proxy_manhole => main::alloc_port( "frontend_proxy[$idx].manhole" ),
+
       haproxy => main::alloc_port( "haproxy[$idx]" ),
    };
 }
@@ -279,7 +283,7 @@ sub start
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
-      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator ) ) {
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator frontend_proxy ) ) {
          open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
       }
    }
@@ -311,6 +315,7 @@ sub start
    my $env = {
       "PATH" => $ENV{PATH},
       "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
+      "SYNAPSE_TEST_PATCH_LOG_CONTEXTS" => 1,
    };
 
    my $loop = $self->loop;
@@ -953,6 +958,41 @@ sub wrap_synapse_command
          "--event-creator-url" => "http://$bind_host:$self->{ports}{event_creator}";
    }
 
+   {
+      my $frontend_proxy_config_path = $self->write_yaml_file( "frontend_proxy.yaml" => {
+         "worker_app"                   => "synapse.app.frontend_proxy",
+         "worker_pid_file"              => "$hsdir/frontend_proxy.pid",
+         "worker_log_config"            => $self->configure_logger("frontend_proxy"),
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
+         "worker_listeners"             => [
+            {
+               type      => "http",
+               resources => [{ names => ["client"] }],
+               port      => $self->{ports}{frontend_proxy},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{frontend_proxy},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{frontend_proxy_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      } );
+
+      push @command,
+         "--frontend-proxy-config" => $frontend_proxy_config_path,
+         "--frontend-proxy-url" => "http://$bind_host:$self->{ports}{frontend_proxy}";
+   }
+
    return @command;
 }
 
@@ -1092,31 +1132,63 @@ backend user_dir
 backend event_creator
     server event_creator ${bind_host}:$ports->{event_creator}
 
+backend frontend_proxy
+    server frontend_proxy ${bind_host}:$ports->{frontend_proxy}
+
 EOCONFIG
 }
 
 sub generate_haproxy_map
 {
     return <<'EOCONFIG';
-^/_matrix/client/(v2_alpha|r0)/sync$            synchrotron
-^/_matrix/client/(api/v1|v2_alpha|r0)/events$   synchrotron
-# We need to catch global and per room, so just match based on ending.
-^/_matrix/client/.*/initialSync$                synchrotron
+^/_matrix/client/(v2_alpha|r0)/sync$                  synchrotron
+^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
+^/_matrix/client/(api/v1|r0)/initialSync$             synchrotron
+^/_matrix/client/(api/v1|r0)/rooms/[^/]+/initialSync$ synchrotron
 
 ^/_matrix/media/    media_repository
 
-^/_matrix/federation/v1/event/                  federation_reader
-^/_matrix/federation/v1/state/                  federation_reader
-^/_matrix/federation/v1/state_ids/              federation_reader
-^/_matrix/federation/v1/backfill/               federation_reader
-^/_matrix/federation/v1/get_missing_events/     federation_reader
-^/_matrix/federation/v1/publicRooms             federation_reader
+^/_matrix/federation/v1/event/                        federation_reader
+^/_matrix/federation/v1/state/                        federation_reader
+^/_matrix/federation/v1/state_ids/                    federation_reader
+^/_matrix/federation/v1/backfill/                     federation_reader
+^/_matrix/federation/v1/get_missing_events/           federation_reader
+^/_matrix/federation/v1/publicRooms                   federation_reader
+^/_matrix/federation/v1/query/                        federation_reader
+^/_matrix/federation/v1/make_join/                    federation_reader
+^/_matrix/federation/v1/make_leave/                   federation_reader
+^/_matrix/federation/v1/send_join/                    federation_reader
+^/_matrix/federation/v1/send_leave/                   federation_reader
+^/_matrix/federation/v1/invite/                       federation_reader
+^/_matrix/federation/v1/query_auth/                   federation_reader
+^/_matrix/federation/v1/event_auth/                   federation_reader
+^/_matrix/federation/v1/exchange_third_party_invite/  federation_reader
+^/_matrix/federation/v1/send/                         federation_reader
+^/_matrix/key/v2/query                                federation_reader
 
-^/_matrix/client/(api/v1|r0)/publicRooms$    client_reader
+^/_matrix/client/(api/v1|r0|unstable)/publicRooms$                client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/joined_members$    client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/context/.*$        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/members$           client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/state$             client_reader
+^/_matrix/client/(api/v1|r0|unstable)/login$                      client_reader
+^/_matrix/client/(api/v1|r0|unstable)/account/3pid$               client_reader
+^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 client_reader
+^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               client_reader
+^/_matrix/client/versions$                                        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/voip/turnServer$            client_reader
+^/_matrix/client/(r0|unstable)/register$                          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/messages$          client_reader
+
+^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
 ^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
 
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send      event_creator
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send                                 event_creator
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
+^/_matrix/client/(api/v1|r0|unstable)/join/                                         event_creator
+^/_matrix/client/(api/v1|r0|unstable)/profile/                                      event_creator
+
 EOCONFIG
 }
 

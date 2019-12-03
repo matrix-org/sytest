@@ -66,6 +66,9 @@ my $BLACKLIST_FILE;
 # the server under test'.
 our $TEST_ROOM_VERSION;
 
+# where we put working files (server configs, mostly)
+our $WORK_DIR = ".";
+
 Getopt::Long::Configure('pass_through');
 GetOptions(
    'I|server-implementation=s' => \$SERVER_IMPL,
@@ -86,6 +89,8 @@ GetOptions(
    'v|verbose+' => \(my $VERBOSE = 0),
 
    'n|no-tls' => sub { $WANT_TLS = 0 },
+
+   'work-directory=s' => \$WORK_DIR,
 
    'room-version=s' => \$TEST_ROOM_VERSION,
 
@@ -178,6 +183,9 @@ Options:
 
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
+   --work-directory DIR         - where we put working files (server configs,
+                                  mostly). Defaults to '.'.
+
    --room-version VERSION       - use the given room version for the majority of
                                   tests
 .
@@ -214,9 +222,14 @@ my %TEST_BLACKLIST;
 if ( $BLACKLIST_FILE ) {
    open( my $blacklist_data, "<:encoding(UTF-8)", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for reading: $!\n";
    while ( my $test_name = <$blacklist_data> ) {
-      # Trim whitespace
+      # Trim whitespace and comments
       chomp $test_name;
-      $TEST_BLACKLIST{$test_name} = 1;
+      $test_name =~ s/#.*//;
+      $test_name =~ s/^\s*//;
+      $test_name =~ s/\s*$//;
+      if($test_name) {
+         $TEST_BLACKLIST{$test_name} = 1;
+      }
    }
    close $blacklist_data;
 }
@@ -226,9 +239,14 @@ my %TEST_WHITELIST;
 if ( $WHITELIST_FILE ) {
    open( my $whitelist_data, "<:encoding(UTF-8)", $WHITELIST_FILE ) or die "Couldn't open whitelist file for reading: $!\n";
    while ( my $test_name = <$whitelist_data> ) {
-      # Trim whitespace
+      # Trim whitespace and comments
       chomp $test_name;
-      $TEST_WHITELIST{$test_name} = 1;
+      $test_name =~ s/#.*//;
+      $test_name =~ s/^\s*//;
+      $test_name =~ s/\s*$//;
+      if($test_name) {
+         $TEST_WHITELIST{$test_name} = 1;
+      }
    }
    close $whitelist_data;
 }
