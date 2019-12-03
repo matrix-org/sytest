@@ -349,3 +349,53 @@ test "Message history can be paginated over federation",
          })
       });
    };
+
+# Test for MSC2228 for local messages.
+test "Ephemeral messages received from clients are correctly expired",
+   requires => [ local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      my $now_ms = int( time() * 1000 );
+      my $filter = '{"types":["m.room.message"]}';
+
+      matrix_send_room_message( $user, $room_id,
+         content => {
+            msgtype                          => "m.text",
+            body                             => "This is a message",
+            "org.matrix.self_destruct_after" => $now_ms + 1000,
+         },
+      )->then( sub {
+         await_sync_timeline_contains($user, $room_id, check => sub {
+            my ($event) = @_;
+            return $event->{content}{body} eq "This is a message"
+         })
+      })->then( sub {
+         # wait for the message to expire
+         delay( 1.5 )
+      })->then( sub {
+         my $iter = 0;
+         retry_until_success {
+            matrix_get_room_messages( $user, $room_id, filter => $filter )->then( sub {
+               $iter++;
+               my ( $body ) = @_;
+               log_if_fail "Iteration $iter: response body after expiry", $body;
+
+               my $chunk = $body->{chunk};
+
+               @$chunk == 1 or
+                  die "Expected 1 message";
+
+               # Check that we can't read the message's content after its expiry.
+               assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
+
+               Future->done(1);
+            })->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Iteration $iter: not ready yet: $exc";
+            });
+         }
+      });
+   };
