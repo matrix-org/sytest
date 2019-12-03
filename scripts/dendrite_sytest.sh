@@ -1,4 +1,9 @@
-#! /usr/bin/env bash
+#!/bin/bash
+#
+# This script is run by the bootstrap.sh script in the docker image.
+#
+# It expects to find a built dendrite in /src/bin. It sets up the
+# postgres database and runs sytest against dendrite.
 
 set -ex
 
@@ -42,20 +47,16 @@ else
 fi
 
 # Check for new tests to be added to testfile
-/src/show-expected-fail-tests.sh results.tap /src/testfile || TEST_STATUS=$?
+/src/show-expected-fail-tests.sh /logs/results.tap /src/testfile || TEST_STATUS=$?
 
 echo >&2 "--- Copying assets"
 
 # Copy out the logs
 rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
-# Write out JUnit
-mkdir -p /logs/sytest
-perl ./tap-to-junit-xml.pl --puretap --input=/logs/results.tap --output=/logs/sytest/results.xml "SyTest"
-
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
-    perl /sytest/scripts/format_tap.pl results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
+    perl /sytest/scripts/format_tap.pl /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
 fi
 
 exit $TEST_STATUS
