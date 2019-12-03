@@ -262,10 +262,11 @@ sub join_room
          my @events = uniq_by { $room->id_for_event( $_ ) } (
             @{ $join_body->{auth_chain} },
             @{ $join_body->{state} },
-            $member_event,
          );
 
-         $room->insert_event( $_ ) for @events;
+         $room->insert_outlier_event( $_ ) for @events;
+
+         $room->insert_event( $member_event );
 
          Future->done( $room );
       });
