@@ -364,7 +364,7 @@ test "Ephemeral messages received from clients are correctly expired",
          content => {
             msgtype                          => "m.text",
             body                             => "This is a message",
-            "org.matrix.self_destruct_after" => $now_ms + 1000,
+            "org.matrix.self_destruct_after" => $now_ms + 500,
          },
       )->then( sub {
          await_sync_timeline_contains($user, $room_id, check => sub {
@@ -373,7 +373,7 @@ test "Ephemeral messages received from clients are correctly expired",
          })
       })->then( sub {
          # wait for the message to expire
-         delay( 1.5 )
+         delay( 1 )
       })->then( sub {
          my $iter = 0;
          retry_until_success {
