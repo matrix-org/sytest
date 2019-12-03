@@ -8,14 +8,14 @@ test "Name/topic keys are correct",
       my $server_name = $user->server_name;
 
       my %rooms = (
-         publicroomalias_no_name => {},
-         publicroomalias_with_name => {
+         publicroomalias_no_name_30_70_test => {},
+         publicroomalias_with_name_30_70_test => {
             name => "name_1",
          },
-         publicroomalias_with_topic => {
+         publicroomalias_with_topic_30_70_test => {
             topic => "topic_1",
          },
-         publicroomalias_with_name_topic => {
+         publicroomalias_with_name_topic_30_70_test => {
             name => "name_2",
             topic => "topic_2",
          },
