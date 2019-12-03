@@ -1,11 +1,11 @@
 # Copied from 30rooms/70publicroomslist.pl, modified to test the federation publicRooms API
 test "Name/topic keys are correct",
-   requires => [ local_user_fixture(), $main::HOMESERVER_INFO[0], $main::HTTP_CLIENT ],
+   requires => [ local_user_fixture(), $main::OUTBOUND_CLIENT ],
 
    check => sub {
-      my ( $user, $info, $client ) = @_;
+      my ( $user, $client ) = @_;
 
-      my $server_name = $info->server_name;
+      my $server_name = $user->server_name;
 
       my %rooms = (
          publicroomalias_no_name => {},
@@ -28,22 +28,21 @@ test "Name/topic keys are correct",
          matrix_create_room( $user,
             visibility      => "public",
             room_alias_name => $alias_local,
-            name            => $room->{name},
-            topic           => $room->{topic},
+            %$room,
          )
       } keys %rooms )
       ->then( sub {
          $client->do_request_json(
-            method => "GET",
-            uri    => "/r0/publicRooms",
-            uri => "https://$server_name/_matrix/federation/v1/publicRooms",
+            method   => "GET",
+            hostname => $server_name,
+            uri      => "/v1/publicRooms",
          )
       })->then( sub {
          my ( $body ) = @_;
 
          log_if_fail "publicRooms", $body;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( chunk ));
          assert_json_list( $body->{chunk} );
 
          my %seen = map {
