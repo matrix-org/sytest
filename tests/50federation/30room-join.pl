@@ -96,7 +96,7 @@ test "Outbound federation can send room-join requests",
             Future->done;
          }),
 
-         $inbound_server->await_request_send_join( $room_id )->then( sub {
+         $inbound_server->await_request_v2_send_join( $room_id )->then( sub {
             my ( $req, $room_id, $event_id ) = @_;
 
             $req->method eq "PUT" or
@@ -110,11 +110,10 @@ test "Outbound federation can send room-join requests",
             );
 
             $req->respond_json(
-               # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
-               my $response = [ 200, {
+               my $response = {
                   auth_chain => \@auth_chain,
                   state      => [ $room->current_state_events ],
-               } ]
+               }
             );
 
             log_if_fail "send_join response", $response;
@@ -444,6 +443,106 @@ test "Inbound federation supports v2 /send_join",
          # TODO: lots more checking. Requires spec though
          Future->done(1);
       });
+   };
+
+
+
+test "Outbound federation falls back to v1 /send_join if v2 isn't available",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      my $room = SyTest::Federation::Room->new(
+         datastore => $datastore,
+      );
+
+      $room->create_initial_events(
+         server  => $inbound_server,
+         creator => $creator_id,
+      );
+
+      my $room_id = $room->room_id;
+
+      my $room_alias = "#50fed-room-alias:$local_server_name";
+      $datastore->{room_aliases}{$room_alias} = $room_id;
+
+      Future->needs_all(
+         # Await PDU?
+
+         $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
+            my ( $req, $room_id, $user_id ) = @_;
+
+            my $proto = $room->make_join_protoevent(
+               user_id => $user_id,
+            );
+
+            $proto->{origin}           = $inbound_server->server_name;
+            $proto->{origin_server_ts} = $inbound_server->time_ms;
+
+            $req->respond_json( {
+               event => $proto,
+            } );
+
+            Future->done;
+         }),
+
+         $inbound_server->await_request_send_join( $room_id )->then( sub {
+            my ( $req, $room_id, $event_id ) = @_;
+
+            $req->method eq "PUT" or
+               die "Expected send_join method to be PUT";
+
+            my $event = $req->body_from_json;
+            log_if_fail "send_join event", $event;
+
+            my @auth_chain = $datastore->get_auth_chain_events(
+               map { $_->[0] } @{ $event->{auth_events} }
+            );
+
+            $req->respond_json(
+               # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
+               my $response = [ 200, {
+                  auth_chain => \@auth_chain,
+                  state      => [ $room->current_state_events ],
+               } ]
+            );
+
+            log_if_fail "send_join response", $response;
+
+            Future->done;
+         }),
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/join/$room_alias",
+
+            content => {},
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Join response", $body;
+
+            assert_json_keys( $body, qw( room_id ));
+
+            $body->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+
+            matrix_get_my_member_event( $user, $room_id )
+         })->then( sub {
+            my ( $event ) = @_;
+
+            # The joining HS (i.e. the SUT) should have invented the event ID
+            # for my membership event.
+
+            # TODO - sanity check the $event
+
+            Future->done(1);
+         }),
+      )
    };
 
 
