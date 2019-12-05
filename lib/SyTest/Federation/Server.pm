@@ -402,22 +402,20 @@ sub mk_await_request_pair
       }
    };
 
-   # Don't specify the version prefix in the function name if the version is v1 so we
-   # don't break existing function calls.
-   my ( $await_request_function_name, $on_request_function_name );
+   # Don't specify the version prefix in the await function name if the version is v1 so
+   # we don't break existing function calls.
+   my ( $await_request_function_name );
    if( $versionprefix eq "v1" ) {
       $await_request_function_name = "await_request_$shortname";
-      $on_request_function_name = "on_request_federation_$shortname"
    }
    else {
       $await_request_function_name = "await_request_$versionprefix\_$shortname";
-      $on_request_function_name = "on_request_federation_$versionprefix\_$shortname";
    }
 
    no strict 'refs';
    no warnings 'redefine';
    *{"${class}::$await_request_function_name"} = $awaitfunc;
-   *{"${class}::$on_request_function_name"} = $on_requestfunc;
+   *{"${class}::on_request_federation_$versionprefix\_$shortname"} = $on_requestfunc;
 }
 
 __PACKAGE__->mk_await_request_pair(
