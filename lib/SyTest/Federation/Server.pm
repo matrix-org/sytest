@@ -315,10 +315,10 @@ sub on_request_federation_v1_send_join
 sub mk_await_request_pair
 {
    my $class = shift;
-   my ( $shortname, $paramnames ) = @_;
+   my ( $shortname, $versionprefix, $paramnames ) = @_;
    my @paramnames = @$paramnames;
 
-   my $okey = "awaiting_$shortname";
+   my $okey = "awaiting_$versionprefix\_$shortname";
 
    my $awaitfunc = sub {
       my $self = shift;
@@ -336,7 +336,9 @@ sub mk_await_request_pair
          });
    };
 
-   my $was_on_requestfunc = $class->can( "on_request_federation_v1_$shortname" );
+   my $was_on_requestfunc = $class->can(
+      "on_request_federation_$versionprefix\_$shortname"
+   );
    my $on_requestfunc = sub {
       my $self = shift;
       my ( $req, @pathvalues ) = @_;
@@ -380,59 +382,59 @@ sub mk_await_request_pair
 }
 
 __PACKAGE__->mk_await_request_pair(
-   query_directory => [qw( ?room_alias )],
+   query_directory => "v1", [qw( ?room_alias )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   query_profile => [qw( ?user_id )],
+   query_profile => "v1", [qw( ?user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   make_join => [qw( :room_id :user_id )],
+   make_join => "v1", [qw( :room_id :user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   make_leave => [qw( :room_id :user_id )],
+   make_leave => "v1", [qw( :room_id :user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   send_join => [qw( :room_id )],
+   send_join => "v1", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   state_ids => [qw( :room_id ?event_id )],
+   state_ids => "v1", [qw( :room_id ?event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   state => [qw( :room_id )],
+   state => "v1", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   get_missing_events => [qw( :room_id )],
+   get_missing_events => "v1", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   event_auth => [qw( :room_id :event_id )],
+   event_auth => "v1", [qw( :room_id :event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   backfill => [qw( :room_id )],
+   backfill => "v1", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   invite => [qw( :room_id )],
+   invite => "v1", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   event => [qw( :event_id )],
+   event => "v1", [qw( :event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   user_devices => [qw( :user_id )],
+   user_devices => "v1", [qw( :user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   user_keys_query => [qw( )],
+   user_keys_query => "v1", [qw( )],
 );
 
 sub on_request_federation_v1_send
