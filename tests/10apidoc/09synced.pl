@@ -335,8 +335,8 @@ push @EXPORT, qw( assert_state_room_members_match );
 sub assert_state_room_members_match {
    my ( $events, $memberships ) = @_;
 
-   log_if_fail "expected members:", $memberships;
-   log_if_fail "state:", $events;
+   log_if_fail "assert_state_room_members_match: expected members:", $memberships;
+   log_if_fail "assert_state_room_members_match: actual state:", $events;
 
    my ( $member_ids );
    if ( ref($memberships) eq 'ARRAY' ) {
