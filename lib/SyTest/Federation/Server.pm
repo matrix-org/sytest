@@ -312,6 +312,33 @@ sub on_request_federation_v1_send_join
    } ] );
 }
 
+sub on_request_federation_v2_send_join
+{
+   my $self = shift;
+   my ( $req, $room_id ) = @_;
+
+   my $store = $self->{datastore};
+
+   my $room = $store->get_room( $room_id ) or
+      return Future->done( response => HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+   my $event = $req->body_from_json;
+
+   my @auth_chain = $store->get_auth_chain_events(
+      map { $_->[0] } @{ $event->{auth_events} }
+   );
+   my @state_events = $room->current_state_events;
+
+   $room->insert_event( $event );
+
+   Future->done( json => {
+      auth_chain => \@auth_chain,
+      state      => \@state_events,
+   } );
+}
+
 sub mk_await_request_pair
 {
    my $class = shift;
@@ -399,6 +426,10 @@ __PACKAGE__->mk_await_request_pair(
 
 __PACKAGE__->mk_await_request_pair(
    send_join => "v1", [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   send_join => "v2", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
