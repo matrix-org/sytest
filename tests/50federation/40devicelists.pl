@@ -441,15 +441,6 @@ test "If a device list update goes missing, the server resyncs on the next one",
                  federation_user_id_fixture(),
                  room_alias_name_fixture() ],
 
-   # create stub server
-   # create local synapse
-   # create room on stub server with stub user joined to it
-   # create user on local synapse
-   # invite user on local synapse to room
-   # send device list EDU from stub to local synapse
-   # send device list EDU after a deliberate gap to local synapse
-   # check local synapse re-requests full device list.
-
    check => sub {
       my ( $user, $inbound_server, $outbound_client, $creator_id, $room_alias_name ) = @_;
 
@@ -535,11 +526,6 @@ test "If a device list update goes missing, the server resyncs on the next one",
          # in stream_id 2, we add keys to the device but deliberately don't
          # tell the remote server about it.
 
-         # then in stream_id 3, we rename the device
-         # await a hit to federation/query, responding with stream ID 3
-         $client_user_devices->{ stream_id } = 3;
-         $client_user_devices->{ devices }->[0]->{ device_display_name } = "New device name";
-
          Future->needs_all(
             $inbound_server->await_request_user_devices( $creator_id )->then( sub {
                my ( $req ) = @_;
@@ -550,6 +536,11 @@ test "If a device list update goes missing, the server resyncs on the next one",
                   "curve25519:JJQDHPZKYD" => "MAtX5CLJXvHJ4wjvMBwc53+NnMceHiFch5r4mxOnOCA",
                   "ed25519:JJQDHPZKYD" => "LOu9tc6Sg7+mCEu3elrps3IiiotpefyaNnScTpSRQbU"
                };
+
+               # then in stream_id 3, we rename the device
+               # await a hit to federation/query, responding with stream ID 3
+               $client_user_devices->{ stream_id } = 3;
+               $client_user_devices->{ devices }->[0]->{ device_display_name } = "New device name";
 
                $req->respond_json($client_user_devices);
                Future->done(1)
@@ -613,8 +604,22 @@ test "If a device list update goes missing, the server resyncs on the next one",
       });
    };
 
+# for https://github.com/matrix-org/synapse/issues/6399
+# test "When a room is upgraded to E2E, device lists caches should be flushed"
+# in practice, if you share a room with a user, your device list should be synced
+# irrespective of E2E, so let's not bother testing this now
 
-# test "When a room is upgraded to E2E, device lists get refreshed" # for https://github.com/matrix-org/synapse/issues/6399
-# test "Device lists get refreshed when you re-encounter a user" # for https://github.com/matrix-org/synapse/issues/6399
+# for https://github.com/matrix-org/synapse/issues/6399
+#
+# If you see you have a room in common with a user, you blindly assume you
+# have been receiving device_list updates for them.  But this fails if there
+# was some period where you didn't have a room in common (or if an EDU got dropped).
+# So instead, we should either flush the devicelist cache when we stop sharing a room
+# with a user, or flush it when we start sharing a room.
+#
+# test "Device lists caches should be flushed when you re-encounter a user"
+
 # test "Device lists get refreshed when you encounter an unrecognised device" # for https://github.com/matrix-org/synapse/issues/5095#issuecomment-501512352
+# however, this doesn't help us if the keys just change
+
 # test "If you send >20 device lists updates in a row, they don't get lost?" # for https://github.com/matrix-org/synapse/issues/5153
