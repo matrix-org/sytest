@@ -237,6 +237,8 @@ sub start
 
         media_store_path => "$hs_dir/media_store",
         uploads_path => "$hs_dir/uploads_path",
+        max_avatar_size => "1M",
+        allowed_avatar_mimetypes => "[\"image/jpeg\", \"image/png\", \"image/gif\"]",
 
         user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
 

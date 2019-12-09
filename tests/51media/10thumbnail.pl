@@ -1,7 +1,4 @@
-use File::Basename qw( dirname );
-use File::Slurper qw( read_binary );
 
-my $dir = dirname __FILE__;
 
 test "POSTed media can be thumbnailed",
    requires => [ $main::API_CLIENTS[0], local_user_fixture(),
@@ -33,30 +30,6 @@ test "Remote media can be thumbnailed",
       });
    };
 
-
-sub upload_test_image
-{
-   my ( $user ) = @_;
-
-   my $pngdata = read_binary( "$dir/test.png" );
-
-   # Because we're POST'ing non-JSON
-   return $user->http->do_request(
-      method => "POST",
-      full_uri => "/_matrix/media/r0/upload",
-      params => {
-         access_token => $user->access_token,
-      },
-
-      content_type => "image/png",
-      content      => $pngdata,
-   )->then( sub {
-       my ( $body ) = @_;
-       log_if_fail "Upload response", $body;
-       my $content_uri = URI->new( $body->{content_uri} );
-       Future->done( $content_uri );
-    });
-}
 
 sub fetch_and_validate_thumbnail
 {
