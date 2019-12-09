@@ -287,29 +287,13 @@ sub on_request_federation_v1_make_join
 sub on_request_federation_v1_send_join
 {
    my $self = shift;
-   my ( $req, $room_id ) = @_;
 
-   my $store = $self->{datastore};
+   $self->on_request_federation_v2_send_join( @_ )->then( sub {
+      my $res = @_;
 
-   my $room = $store->get_room( $room_id ) or
-      return Future->done( response => HTTP::Response->new(
-         404, "Not found", [ Content_length => 0 ], "",
-      ) );
-
-   my $event = $req->body_from_json;
-
-   my @auth_chain = $store->get_auth_chain_events(
-      map { $_->[0] } @{ $event->{auth_events} }
-   );
-   my @state_events = $room->current_state_events;
-
-   $room->insert_event( $event );
-
-   # /v1/send_join has an extraneous [ 200, ... ] wrapper (see MSC1802)
-   Future->done( json => [ 200, {
-      auth_chain => \@auth_chain,
-      state      => \@state_events,
-   } ] );
+      # /v1/send_join has an extraneous [ 200, ... ] wrapper (see MSC1802)
+      Future->done( json => [ 200, $res ] );
+   })
 }
 
 sub on_request_federation_v2_send_join
@@ -342,10 +326,10 @@ sub on_request_federation_v2_send_join
 sub mk_await_request_pair
 {
    my $class = shift;
-   my ( $shortname, $versionprefix, $paramnames ) = @_;
+   my ( $versionprefix, $shortname, $paramnames ) = @_;
    my @paramnames = @$paramnames;
 
-   my $okey = "awaiting_$versionprefix\_$shortname";
+   my $okey = "awaiting_${versionprefix}_${shortname}";
 
    my $awaitfunc = sub {
       my $self = shift;
@@ -364,7 +348,7 @@ sub mk_await_request_pair
    };
 
    my $was_on_requestfunc = $class->can(
-      "on_request_federation_$versionprefix\_$shortname"
+      "on_request_federation_${versionprefix}_${shortname}"
    );
    my $on_requestfunc = sub {
       my $self = shift;
@@ -402,80 +386,72 @@ sub mk_await_request_pair
       }
    };
 
-   # Don't specify the version prefix in the await function name if the version is v1 so
-   # we don't break existing function calls.
-   my ( $await_request_function_name );
-   if( $versionprefix eq "v1" ) {
-      $await_request_function_name = "await_request_$shortname";
-   }
-   else {
-      $await_request_function_name = "await_request_$versionprefix\_$shortname";
-   }
-
    no strict 'refs';
    no warnings 'redefine';
-   *{"${class}::$await_request_function_name"} = $awaitfunc;
-   *{"${class}::on_request_federation_$versionprefix\_$shortname"} = $on_requestfunc;
+   *{"${class}::await_request_${versionprefix}_${shortname}"} = $awaitfunc;
+   # Deprecated alternative name for v1 endpoints.
+   *{"${class}::await_request_${shortname}"} = $awaitfunc if ${versionprefix} eq "v1";
+   *{"${class}::on_request_federation_${versionprefix}_${shortname}"} = $on_requestfunc;
 }
 
 __PACKAGE__->mk_await_request_pair(
-   query_directory => "v1", [qw( ?room_alias )],
+   "v1", "query_directory", [qw( ?room_alias )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   query_profile => "v1", [qw( ?user_id )],
+   "v1", "query_profile", [qw( ?user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   make_join => "v1", [qw( :room_id :user_id )],
+   "v1", "make_join", [qw( :room_id :user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   make_leave => "v1", [qw( :room_id :user_id )],
+   "v1", "make_leave", [qw( :room_id :user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   send_join => "v1", [qw( :room_id )],
+   "v1", "send_join", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   send_join => "v2", [qw( :room_id )],
+   "v2", "send_join", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   state_ids => "v1", [qw( :room_id ?event_id )],
+   "v1", "state_ids", [qw( :room_id ?event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   state => "v1", [qw( :room_id )],
+   "v1", "state", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   get_missing_events => "v1", [qw( :room_id )],
+   "v1", "get_missing_events", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   event_auth => "v1", [qw( :room_id :event_id )],
+   "v1", "event_auth", [qw( :room_id :event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   backfill => "v1", [qw( :room_id )],
+   "v1", "backfill", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   invite => "v1", [qw( :room_id )],
+   "v1", "invite", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   event => "v1", [qw( :event_id )],
+   "v1", "event", [qw( :event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   user_devices => "v1", [qw( :user_id )],
+   "v1", "user_devices", [qw( :user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   user_keys_query => "v1", [qw( )],
+   "v1", "user_keys_query", [qw( )],
 );
 
 sub on_request_federation_v1_send
