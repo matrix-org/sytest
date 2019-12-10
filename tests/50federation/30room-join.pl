@@ -53,7 +53,7 @@ sub assert_is_valid_pdu {
 push our @EXPORT, qw( assert_is_valid_pdu );
 
 foreach my $versionprefix ( qw( v1 v2 ) ) {
-   test "Inbound federation supports $versionprefix /send_join",
+   test "Outbound federation can query $versionprefix /send_join",
       requires => [ local_user_fixture(), $main::INBOUND_SERVER,
                     federation_user_id_fixture() ],
 
@@ -217,7 +217,7 @@ test "Outbound federation passes make_join failures through to the client",
 
 
 foreach my $versionprefix ( qw ( v1 v2 ) ) {
-   test "Inbound federation supports $versionprefix /send_join",
+   test "Outbound federation can receive $versionprefix /send_join",
       requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                     local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                     federation_user_id_fixture() ],
