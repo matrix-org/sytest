@@ -217,7 +217,7 @@ test "Outbound federation passes make_join failures through to the client",
 
 
 foreach my $versionprefix ( qw ( v1 v2 ) ) {
-   test "Outbound federation can receive $versionprefix /send_join",
+   test "Inbound federation can receive $versionprefix /send_join",
       requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                     local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                     federation_user_id_fixture() ],
