@@ -80,6 +80,12 @@ foreach my $versionprefix ( qw( v1 v2 ) ) {
          my $await_request_send_join;
 
          if( $versionprefix eq "v1" ) {
+            # If we only expect a response on the v1 endpoint, the homeserver will try to
+            # hit the v2 one, get a 404 from SyTest (because we didn't call
+            # await_request_v2_send_join), then fall back to the v1 endpoint. We rely on
+            # that 404 response from SyTest and that fallback mechanism to test that the
+            # homeserver can query the v1 endpoint, and correctly handles responses from
+            # it.
             $await_request_send_join = $inbound_server->await_request_v1_send_join( $room_id );
          }
          elsif( $versionprefix eq "v2" ) {
