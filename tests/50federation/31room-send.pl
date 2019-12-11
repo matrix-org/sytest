@@ -170,8 +170,9 @@ test "Ephemeral messages received from servers are correctly expired",
          )
       })->then( sub {
          await_sync_timeline_contains($local_user, $room_id, check => sub {
-            my ($event) = @_;
-            return $event->{content}{body} eq "This is a message"
+            my ( $event ) = @_;
+            my $body = $event->{content}{body} // "";
+            return $body eq "This is a message";
          })
       })->then( sub {
          # wait for the message to expire
