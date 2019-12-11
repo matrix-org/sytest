@@ -74,7 +74,7 @@ push our @EXPORT, qw( validate_email );
    validate_msisdn(
       $http, $phone_number, $country_code,
       id_server => $id_server,
-      path => "/r0/account/3pid/email/requestToken",
+      path => "/r0/account/3pid/msisdn/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
    });
