@@ -385,14 +385,21 @@ sub make_join_protoevent
       $self->get_current_state_event( "m.room.create" ),
       $self->get_current_state_event( "m.room.join_rules" ),
    );
+   my $auth_events = $self->make_event_refs( @auth_events );
+
+   my @prev_events = @{ $self->{prev_events} };
+   for my $ev ( @prev_events ) {
+      die "undefined prev_event" if not defined $ev;
+   }
+   my $prev_events = $self->make_event_refs( @prev_events );
 
    return {
       type => "m.room.member",
 
-      auth_events      => $self->make_event_refs( @auth_events ),
+      auth_events      => $auth_events,
       content          => { membership => "join" },
       depth            => JSON::number($self->next_depth),
-      prev_events      => $self->make_event_refs( @{ $self->{prev_events} } ),
+      prev_events      => $prev_events,
       room_id          => $self->room_id,
       sender           => $user_id,
       state_key        => $user_id,
@@ -415,6 +422,8 @@ sub id_for_event
 {
    my $self = shift;
    my ( $event ) = @_;
+
+   croak "Require an event" unless ref $event eq 'HASH';
 
    return SyTest::Federation::Protocol::id_for_event(
       $event, $self->room_version,
