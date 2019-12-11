@@ -38,55 +38,71 @@ use JSON qw( decode_json );
    };
 
 
-test "Outbound federation can send invites",
-   requires => [ local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
-                 $main::INBOUND_SERVER, federation_user_id_fixture() ],
+foreach my $prefix ( qw( v1 v2 )) {
+   my %room_opts;
+   $room_opts{room_version} = "2" if $prefix eq 'v1';
 
-   do => sub {
-      my ( $user, $room_id, $inbound_server, $invitee_id ) = @_;
+   test "Outbound federation can send invites via $prefix API",
+      requires => [
+         local_user_and_room_fixtures( room_opts => \%room_opts ),
+         $main::INBOUND_SERVER, federation_user_id_fixture()
+      ],
 
-      Future->needs_all(
-         $inbound_server->await_request_invite( $room_id )->then( sub {
-            my ( $req, undef ) = @_;
+      do => sub {
+         my ( $user, $room_id, $inbound_server, $invitee_id ) = @_;
 
-            assert_eq( $req->method, "PUT",
-               'request method' );
+         my $await_func = "await_request_${prefix}_invite";
+         Future->needs_all(
+            $inbound_server->$await_func( $room_id )->then( sub {
+               my ( $req, undef ) = @_;
 
-            my $body = $req->body_from_json;
-            log_if_fail "Invitation", $req->body_from_json;
+               assert_eq( $req->method, "PUT",
+                  'request method' );
 
-            # this should be a member event
-            assert_json_keys( $body, qw( event_id origin room_id sender type ));
+               my $body = $req->body_from_json;
+               log_if_fail "Invitation", $req->body_from_json;
 
-            assert_eq( $body->{type}, "m.room.member",
-               'event type' );
-            assert_eq( $body->{origin}, $user->http->server_name,
-               'event origin' );
-            assert_eq( $body->{room_id}, $room_id,
-               'event room_id' );
-            assert_eq( $body->{sender}, $user->user_id,
-               'event sender' );
+               if( $prefix eq 'v2' ) {
+                  assert_json_keys( $body, qw( room_version event ));
+                  $body = $body->{event};
+               }
 
-            assert_json_keys( $body, qw( content state_key ));
+               # this should be a member event
+               assert_json_keys( $body, qw( origin room_id sender type ));
 
-            assert_eq( $body->{content}{membership}, "invite",
-               'event content membership' );
-            assert_eq( $body->{state_key}, $invitee_id,
-               'event state_key' );
+               assert_eq( $body->{type}, "m.room.member",
+                  'event type' );
+               assert_eq( $body->{origin}, $user->http->server_name,
+                  'event origin' );
+               assert_eq( $body->{room_id}, $room_id,
+                  'event room_id' );
+               assert_eq( $body->{sender}, $user->user_id,
+                  'event sender' );
 
-            $inbound_server->datastore->sign_event( $body );
+               assert_json_keys( $body, qw( content state_key ));
 
-            $req->respond_json(
-               # /v1/invite has an extraneous [ 200, ... ] wrapper (fixed in /v2)
-               [ 200, { event => $body } ]
-            );
+               assert_eq( $body->{content}{membership}, "invite",
+                  'event content membership' );
+               assert_eq( $body->{state_key}, $invitee_id,
+                  'event state_key' );
 
-            Future->done;
-         }),
+               $inbound_server->datastore->sign_event( $body );
 
-         matrix_invite_user_to_room( $user, $invitee_id, $room_id )
-      );
-   };
+               my $resp = { event => $body };
+
+               if( $prefix eq 'v1' ) {
+                  # /v1/invite has an extraneous [ 200, ... ] wrapper (fixed in /v2)
+                  $resp = [ 200, $resp ];
+               }
+               $req->respond_json( $resp );
+
+               Future->done;
+            }),
+
+            matrix_invite_user_to_room( $user, $invitee_id, $room_id )
+         );
+      };
+}
 
 test "Inbound federation can receive invites via v1 API",
    requires => [ local_user_fixture( with_events => 1 ), $main::INBOUND_SERVER,

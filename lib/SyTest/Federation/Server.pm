@@ -443,6 +443,10 @@ __PACKAGE__->mk_await_request_pair(
 );
 
 __PACKAGE__->mk_await_request_pair(
+   "v2", "invite", [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
    "v1", "event", [qw( :event_id )],
 );
 
