@@ -285,6 +285,9 @@ test "The only membership state included in a gapped incremental sync is for sen
 
 
 test "Gapped incremental syncs include all state changes",
+   # sending 50 messages can take a while
+   timeout => 20000,
+
    requires => [ local_user_fixtures( 4 ),
                  qw( can_sync ) ],
 
@@ -339,13 +342,16 @@ test "Gapped incremental syncs include all state changes",
             )
          }, foreach => [ 1 .. 10 ])
       })->then( sub {
+         log_if_fail "Alice's first sync...";
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [ $alice->user_id, $bob->user_id ]);
 
+         log_if_fail "Dave joins the room...";
          matrix_join_room_synced( $dave, $room_id );
       })->then( sub {
+         log_if_fail "Charlie sends a load of messages...";
          repeat( sub {
             my $msgnum = $_[0];
 
@@ -354,13 +360,16 @@ test "Gapped incremental syncs include all state changes",
             )
          }, foreach => [ 1 .. 20 ])
       })->then( sub {
+         log_if_fail "Alice's second sync...";
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [ $charlie->user_id, $dave->user_id ]);
 
+         log_if_fail "Dave leaves the room...";
          matrix_leave_room_synced( $dave, $room_id );
       })->then( sub {
+         log_if_fail "Charlie sends another load of messages...";
          repeat( sub {
             my $msgnum = $_[0];
 
@@ -369,6 +378,7 @@ test "Gapped incremental syncs include all state changes",
             )
          }, foreach => [ 1 .. 20 ])
       })->then( sub {
+         log_if_fail "Alice's third sync...";
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
