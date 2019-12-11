@@ -23,7 +23,7 @@ test "Can logout current device",
          log_if_fail ("/devices response (1): ", $devices);
          my $my_device_id = $user->device_id;
          if ( not any { $_->{device_id} eq $my_device_id } @{ $devices->{devices} } ) {
-            die 'Original device $my_device_id did not appear in device list';
+            die "Original device $my_device_id did not appear in device list";
          }
 
          do_request_json_for( $user,
@@ -51,9 +51,10 @@ test "Can logout current device",
          log_if_fail ("/devices response (2): ", $devices);
          my $my_device_id = $user->device_id;
          if ( any { $_->{device_id} eq $my_device_id } @{ $devices->{devices} } ) {
-            die 'Original device $my_device_id still appears in device list';
+            die "Original device $my_device_id still appears in device list";
          }
 
+         # we should still be able to sync with the other login
          matrix_sync( $other_login );
       });
    };
