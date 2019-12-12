@@ -253,10 +253,7 @@ sub on_request_federation_v1_event
    my $self = shift;
    my ( $req, $event_id ) = @_;
 
-   my $event = $self->{datastore}->get_event( $event_id ) or
-      return Future->done( response => HTTP::Response->new(
-         404, "Not found", [ Content_length => 0 ], "",
-      ) );
+   my $event = $self->{datastore}->get_event( $event_id );
 
    Future->done( json => {
       origin           => $self->server_name,
