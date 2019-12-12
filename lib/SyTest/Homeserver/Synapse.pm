@@ -650,11 +650,12 @@ sub _init
    $self->SUPER::_init( @_ );
 
    $self->{dendron} = delete $args->{dendron_binary};
-   if( delete $args->{torture_replication} ) {
+
+   if( my $level = delete $args->{torture_replication} ) {
       # torture the replication protocol a bit, to replicate bugs.
       # (value is the number of ms to wait before sending out each batch of
       # updates.)
-      $self->{replication_torture_level} = 50;
+      $self->{replication_torture_level} = $level;
    }
 
    my $idx = $self->{hs_index};
