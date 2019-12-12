@@ -2,7 +2,7 @@ my $user_fixture = local_user_fixture();
 
 my $room_fixture = room_fixture( $user_fixture );
 
-multi_test "Inviting an AS-hosted user asks the AS server",
+test "Inviting an AS-hosted user asks the AS server",
    requires => [ $main::AS_USER[0], $main::APPSERV[0], $user_fixture, $room_fixture,
                  qw( can_invite_room )],
 
@@ -22,24 +22,25 @@ multi_test "Inviting an AS-hosted user asks the AS server",
             });
          });
 
-      matrix_invite_user_to_room( $creator, $user_id, $room_id )
-         ->SyTest::pass_on_done( "Sent invite" )
-      ->then( sub {
+      Future->needs_all(
          $appserv->await_event( "m.room.member" )
-      })->then( sub {
-         my ( $event ) = @_;
+         ->then( sub {
+            my ( $event ) = @_;
 
-         log_if_fail "Event", $event;
+            log_if_fail "Event", $event;
 
-         assert_json_keys( $event, qw( content room_id user_id ));
+            assert_json_keys( $event, qw( content room_id user_id ));
 
-         $event->{room_id} eq $room_id or
-            die "Expected room_id to be $room_id";
-         $event->{state_key} eq $user_id or
-            die "Expected user_id to be $user_id";
+            $event->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+            $event->{state_key} eq $user_id or
+               die "Expected user_id to be $user_id";
 
-         Future->done;
-      });
+            Future->done;
+         }),
+
+         matrix_invite_user_to_room( $creator, $user_id, $room_id ),
+      );
    };
 
 multi_test "Accesing an AS-hosted room alias asks the AS server",
