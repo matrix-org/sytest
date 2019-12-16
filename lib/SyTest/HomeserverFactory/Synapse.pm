@@ -109,7 +109,7 @@ sub get_options
 
    return (
       'dendron-binary=s' => \$self->{args}{dendron_binary},
-      'torture-replication+' => \$self->{args}{torture_replication},
+      'torture-replication:50' => \$self->{args}{torture_replication},
       $self->SUPER::get_options(),
    );
 }
@@ -124,7 +124,7 @@ sub print_usage
 
        --dendron-binary PATH    - path to the 'dendron' binary
 
-       --torture-replication    - enable torturing of the replication protocol
+       --torture-replication[=LEVEL] - enable torturing of the replication protocol
 EOF
 }
 
