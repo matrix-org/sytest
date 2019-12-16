@@ -8,15 +8,20 @@ test "Outbound federation sends receipts",
    do => sub {
       my ( $creator_user, $room_id, $federated_user_id, $outbound_client, $inbound_server ) = @_;
 
-      my $event_id;
+      my ( $event_id, $room );
 
       $outbound_client->join_room(
          server_name => $creator_user->server_name,
          room_id     => $room_id,
          user_id     => $federated_user_id,
       )->then( sub {
+         ( $room ) = @_;
+         log_if_fail "Joined room $room_id";
+
+         # workaround for https://github.com/matrix-org/synapse/issues/6536
+         delay( 0.5 );
+      })->then( sub {
          # send a message from the federated user
-         my ( $room ) = @_;
 
          my $event = $room->create_and_insert_event(
             type => "m.room.message",
