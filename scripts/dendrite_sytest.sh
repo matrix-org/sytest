@@ -52,7 +52,12 @@ fi
 echo >&2 "--- Copying assets"
 
 # Copy out the logs
-rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --include="dendrite-logs/*.log" --exclude="*"
+lsb_release -a
+pwd
+apt update
+apt install tree
+tree /work
+rsync --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
