@@ -378,7 +378,7 @@ sub _get_dbconfigs
    }
    else {
       YAML::DumpFile( "$hs_dir/database.yaml", \%defaults );
-      %db_config = %defaults;
+      $db_configs{"main"} = \%defaults;
    }
 
    # Go through each database and check the config and clear the database.
