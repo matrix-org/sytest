@@ -376,6 +376,10 @@ sub _get_dbconfigs
 
       $db_configs{"main"} = \%db_config;
    }
+   else {
+      YAML::DumpFile( "$hs_dir/database.yaml", \%defaults );
+      %db_config = %defaults;
+   }
 
    # Go through each database and check the config and clear the database.
    foreach my $db ( keys %db_configs ) {
