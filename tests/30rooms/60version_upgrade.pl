@@ -337,7 +337,7 @@ test "/upgrade copies the power levels to the new room",
       matrix_change_room_power_levels(
          $creator, $room_id, sub {
             ( $pl_content ) = @_;
-            $pl_content->{users}->{'@test:xyz'} = 40;
+            $pl_content->{users}->{'@test:xyz'} = JSON::number(40);
             log_if_fail "PL content in old room", $pl_content;
          }
       )->then( sub {
@@ -369,6 +369,81 @@ test "/upgrade copies the power levels to the new room",
             $pl_content,
             "power levels in replacement room",
          );
+         Future->done(1);
+      });
+   };
+
+test "/upgrade preserves the power level of the upgrading user in old and new rooms",
+   requires => [
+      local_user_and_room_fixtures(),
+      local_user_fixture(),
+      qw( can_upgrade_room_version can_change_power_levels ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id, $upgrader ) = @_;
+
+      my ( $pl_content, $new_room_id );
+
+      # Note that this test assumes that moderators by default are allowed to upgrade rooms
+
+      matrix_join_room_synced(
+         $upgrader, $room_id
+      )->then( sub {
+         # Make the joined user a moderator
+         matrix_change_room_power_levels(
+            $creator, $room_id, sub {
+               ( $pl_content ) = @_;
+               $pl_content->{users}->{$upgrader->user_id} = JSON::number(50);
+               log_if_fail "PL content in old room", $pl_content;
+            }
+         )
+      })->then( sub {
+         matrix_sync( $upgrader );
+      })->then( sub {
+         upgrade_room_synced(
+            $upgrader, $room_id,
+            expected_event_counts => { 'm.room.power_levels' => 1 },
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id, ) = @_;
+
+         matrix_sync_again( $upgrader );
+      })->then( sub {
+         my ( $sync_body ) = @_;
+
+         log_if_fail "sync body", $sync_body;
+
+         # Two power level events will be sent in the new room. The first is to make the
+         # upgrader user (previously a moderator) an Administrator (which can only be done
+         # when creating the room). This is such that they could send the initial state
+         # events. The second power level event is to downgrade the upgrader user from a
+         # Administrator to a Moderator again to keep a consistent state with the old room
+
+         # Check the contents of the latest power level event
+         my $new_room = $sync_body->{rooms}{join}{$new_room_id};
+         my $new_room_pl_event = first {
+            $_->{type} eq 'm.room.power_levels'
+         } reverse @{ $new_room->{timeline}->{events} };
+
+         log_if_fail "PL event in new room", $new_room_pl_event;
+
+         # Check that the power levels in the new room match the original PLs
+         assert_deeply_eq(
+            $new_room_pl_event->{content},
+            $pl_content,
+            "power levels in replacement room",
+         );
+
+         # Check that the power levels in the old room have not changed
+         # by making sure there is not a power levels event for the old room
+         # in the sync response
+         my $old_room = $sync_body->{rooms}{join}{$room_id};
+         my $old_room_pl_event = none {
+            $_->{type} eq 'm.room.power_levels'
+         } @{ $old_room->{timeline}->{events} };
+
          Future->done(1);
       });
    };
