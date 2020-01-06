@@ -296,6 +296,10 @@ It returns the config hash.
 
 =cut
 
+# This is now only used for Dendrite, as synapse uses `_get_dbconfigs`. It
+# probably makes more sense to have a dendrite specific handling, rather than
+# using synapse config format and then parsing and converting it into dendrite
+# config.
 sub _get_dbconfig
 {
    my $self = shift;
