@@ -216,7 +216,7 @@ sub start
 
         pid_file => "$hs_dir/homeserver.pid",
 
-        use_frozen_events => "true",
+        use_frozen_dicts => "true",
 
         allow_guest_access => "True",
 
