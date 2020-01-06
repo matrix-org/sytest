@@ -165,7 +165,7 @@ package SyTest::Output::TAP::Test {
             print STDERR "EXPECTED FAIL\n";
             print "not ok ${\$self->num} (expected fail) $name # TODO expected fail\n";
          } else {
-            print STDERR "EXPECTED FAIL\n";
+            print STDERR "FAIL\n";
             print "not ok ${\$self->num} $name\n";
          }
 
