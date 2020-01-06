@@ -26,10 +26,12 @@ if [ -n "$MULTI_POSTGRES" ]; then
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
     # Make the test databases for the two Synapse servers that will be spun up
-    su -c 'psql -c "CREATE DATABASE pg1_main;"' postgres
-    su -c 'psql -c "CREATE DATABASE pg1_state;"' postgres
-    su -c 'psql -c "CREATE DATABASE pg2_main;"' postgres
-    su -c 'psql -c "CREATE DATABASE pg2_state;"' postgres
+    su -c psql postgres <<EOF
+CREATE DATABASE pg1_main;
+CREATE DATABASE pg1_state;
+CREATE DATABASE pg2_main;
+CREATE DATABASE pg2_state;
+EOF
 
     mkdir -p "/work/server-0"
     mkdir -p "/work/server-1"

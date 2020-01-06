@@ -369,14 +369,20 @@ sub _get_dbconfigs
    # Try and load the configs from the various locations.
    my ( %db_configs );
    if ( -f "$hs_dir/databases.yaml") {
+      $self->{output}->diag( "Using DB config from $hs_dir/databases.yaml" );
+
       %db_configs = %{ YAML::LoadFile( "$hs_dir/databases.yaml" ) };
    }
    elsif( -f "$hs_dir/database.yaml" ) {
+      $self->{output}->diag( "Using DB config from $hs_dir/database.yaml" );
+
       my %db_config = %{ YAML::LoadFile( "$hs_dir/database.yaml" ) };
 
       $db_configs{"main"} = \%db_config;
    }
    else {
+      $self->{output}->diag( "Using default DB config and writing to $hs_dir/database.yaml" );
+
       YAML::DumpFile( "$hs_dir/database.yaml", \%defaults );
       $db_configs{"main"} = \%defaults;
    }
