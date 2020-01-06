@@ -296,6 +296,10 @@ It returns the config hash.
 
 =cut
 
+# This is now only used for Dendrite, as synapse uses `_get_dbconfigs`. It
+# probably makes more sense to have a dendrite specific handling, rather than
+# using synapse config format and then parsing and converting it into dendrite
+# config.
 sub _get_dbconfig
 {
    my $self = shift;
@@ -339,6 +343,85 @@ sub _get_dbconfig
 
    return %db_config;
 }
+
+
+=head2 _get_dbconfigs
+
+   %db_configs = $self->_get_dbconfigs( %defaults )
+
+This method loads the database configs from either C<databases.yaml> or
+C<database.yaml>, using the default if it doesn't exist.
+
+It then passes the loaded configs to C<_check_db_config> for
+sanity-checking. That method may be overridden by subclasses, and should C<die>
+if there is a problem with the config.
+
+Finally, it calls the relevant clear_db method on each database to clear out
+the configured databases.
+
+It returns the configs as a hash of database name to config hashref.
+
+=cut
+
+sub _get_dbconfigs
+{
+   my $self = shift;
+   my ( %defaults ) = @_;
+
+   my $hs_dir = $self->{hs_dir};
+
+   # Try and load the configs from the various locations.
+   my ( %db_configs );
+   if ( -f "$hs_dir/databases.yaml") {
+      $self->{output}->diag( "Using DB config from $hs_dir/databases.yaml" );
+
+      %db_configs = %{ YAML::LoadFile( "$hs_dir/databases.yaml" ) };
+   }
+   elsif( -f "$hs_dir/database.yaml" ) {
+      $self->{output}->diag( "Using DB config from $hs_dir/database.yaml" );
+
+      my %db_config = %{ YAML::LoadFile( "$hs_dir/database.yaml" ) };
+
+      $db_configs{"main"} = \%db_config;
+   }
+   else {
+      $self->{output}->diag( "Using default DB config and writing to $hs_dir/database.yaml" );
+
+      YAML::DumpFile( "$hs_dir/database.yaml", \%defaults );
+      $db_configs{"main"} = \%defaults;
+   }
+
+   # Go through each database and check the config and clear the database.
+   foreach my $db ( keys %db_configs ) {
+      my $db_config = $db_configs{$db};
+
+      # backwards-compatibility hacks
+      my $db_name = delete $db_config->{name};
+      if( defined $db_name ) {
+         if( $db_name eq 'psycopg2' ) {
+            $db_config->{type} = 'pg';
+         }
+         elsif( $db_name eq 'sqlite3' ) {
+            $db_config->{type} = 'sqlite';
+         }
+         else {
+            die "Unrecognised DB name '$db_name'";
+         }
+      }
+
+      eval {
+         $self->_check_db_config( %{ $db_config } );
+         1;
+      } or die "Error loading db config: $@";
+
+      my $db_type = $db_config->{type};
+      my $clear_meth = "_clear_db_${db_type}";
+      $self->$clear_meth( %{ $db_config->{args} } );
+   }
+
+   return %db_configs;
+}
+
 
 sub _check_db_config
 {
