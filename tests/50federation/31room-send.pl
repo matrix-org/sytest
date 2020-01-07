@@ -202,3 +202,94 @@ test "Ephemeral messages received from servers are correctly expired",
          }
       });
    };
+
+
+test "Events whose auth_events are in the wrong room do not mess up the room state",
+   requires => [
+      $main::OUTBOUND_CLIENT,
+      federated_rooms_fixture( room_count => 2 ),
+   ],
+
+   do => sub {
+      my ( $outbound_client, $creator_user, $sytest_user_id, $room1, $room2 ) = @_;
+
+      my ( $event_P, $event_id_P );
+
+      # We're going to create and send an event P in room 2, whose auth_events
+      # refer to an event in room 1.
+      #
+      # P will be accepted, but we check that it doesn't leave room 1 in a messed-up state.
+
+      # update the state in room 1 to avoid duplicate key errors.
+      my $old_state = $room1->get_current_state_event( "m.room.member", $sytest_user_id );
+
+      matrix_put_room_state_synced(
+         $creator_user,
+         $room1->room_id,
+         type      => "m.room.join_rules",
+         state_key => "",
+         content   => {
+            join_rule => "public",
+            test => "test",
+         },
+      )->then( sub {
+         matrix_put_room_state_synced(
+            $creator_user,
+            $room1->room_id,
+            type      => "m.room.member",
+            state_key => $creator_user->user_id,
+            content   => {
+               membership => "join",
+               displayname => "Overridden",
+            },
+         );
+      })->then( sub {
+         # create and send an event in room 2, using an event in room 1 as an auth event
+         my @auth_events = (
+            $room2->get_current_state_event( "m.room.create" ),
+            $room2->get_current_state_event( "m.room.join_rules" ),
+            $room2->get_current_state_event( "m.room.power_levels" ),
+            $old_state,
+         );
+
+         ( $event_P, $event_id_P ) = $room2->create_and_insert_event(
+            type        => "m.room.message",
+            sender      => $sytest_user_id,
+            content     => { body => "event P" },
+            auth_events => $room2->make_event_refs( @auth_events ),
+         );
+
+         log_if_fail "sending dodgy event $event_id_P in ".$room2->room_id, $event_P;
+
+         $outbound_client->send_event(
+            event => $event_P,
+            destination => $creator_user->http->server_name,
+         );
+      })->then( sub {
+         await_sync_timeline_contains(
+            $creator_user, $room2->room_id, check => sub {
+               $_[0]->{event_id} eq $event_id_P,
+            },
+         );
+
+         # now check that the state in room 2 looks correct.
+         matrix_get_room_state_by_type(
+            $creator_user, $room2->room_id,
+         );
+      })->then( sub {
+         my ( $state ) = @_;
+
+         log_if_fail "state in room 2", $state;
+
+         my $state_event = $state->{'m.room.member'}{$sytest_user_id};
+         my $expected_state_event = $room2->get_current_state_event(
+            'm.room.member', $sytest_user_id
+         );
+         assert_eq(
+            $state_event->{event_id},
+            $room2->id_for_event( $expected_state_event ),
+            "event id for room 2 membership event",
+         );
+         Future->done;
+      });
+   };
