@@ -66,8 +66,10 @@ tree /workdir
 tree /src
 # TODO: Change /work/server-1 to /work/server-1/dendrite-logs once sytest is capable of
 #  spinning up multiple dendrites
-rsync --ignore-missing-args --min-size=1B -av /work/server-0/dendrite-logs /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 tree /logs
+cat /work/dendrite.yaml
+cat /work/database.yaml
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
