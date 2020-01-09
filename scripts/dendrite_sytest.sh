@@ -33,7 +33,9 @@ EOF
 
 # Build dendrite
 echo >&2 "--- Building dendrite from source"
+cd /src
 /src/build.sh
+cd -
 
 # Run the tests
 mkdir -p /logs
