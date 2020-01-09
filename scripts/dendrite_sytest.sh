@@ -17,7 +17,13 @@ mkdir /work
 # Start the database
 su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
+export PGUSER=postgres
+export POSTGRES_DB_1=pg1
+export POSTGRES_DB_2=pg2
+
 # Write out the configuration for a PostgreSQL Dendrite
+# Note: Dendrite can run entirely within a single database as all of the tables have
+# component prefixes
 ./scripts/prep_sytest_for_postgres.sh
 
 # Build dendrite
