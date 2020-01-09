@@ -17,6 +17,9 @@ mkdir /work
 # Start the database
 su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
+# Create required databases
+su -c 'for i in pg1 pg2 sytest_template; do psql -c "CREATE DATABASE $i;"; done' postgres
+
 export PGUSER=postgres
 export POSTGRES_DB_1=pg1
 export POSTGRES_DB_2=pg2
