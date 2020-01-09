@@ -31,6 +31,9 @@ args:
 type: pg
 EOF
 
+# Build dendrite
+echo >&2 "--- Building dendrite from source"
+/src/build.sh
 
 # Run the tests
 mkdir -p /logs
