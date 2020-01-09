@@ -17,19 +17,8 @@ mkdir /work
 # Start the database
 su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
-# Make the test databases
-su -c "psql -c \"CREATE USER dendrite PASSWORD 'itsasecret'\" postgres"
-su -c 'for i in account device mediaapi syncapi roomserver serverkey federationsender publicroomsapi appservice naffka sytest_template; do psql -c "CREATE DATABASE $i OWNER dendrite;"; done' postgres
-
-# Write dendrite configuration
-mkdir -p "/work/server-0"
-cat > "/work/server-0/database.yaml" << EOF
-args:
-    user: $PGUSER
-    database: $PGUSER
-    host: $PGHOST
-type: pg
-EOF
+# Write out the configuration for a PostgreSQL Dendrite
+./scripts/prep_sytest_for_postgres.sh
 
 # Build dendrite
 echo >&2 "--- Building dendrite from source"
@@ -62,7 +51,6 @@ pwd
 apt update
 apt install tree
 tree /work
-tree /workdir
 tree /src
 # TODO: Change /work/server-1 to /work/server-1/dendrite-logs once sytest is capable of
 #  spinning up multiple dendrites
