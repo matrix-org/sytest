@@ -57,6 +57,8 @@ pwd
 apt update
 apt install tree
 tree /work
+tree /workdir
+tree /src
 rsync --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
 if [ $TEST_STATUS -ne 0 ]; then
