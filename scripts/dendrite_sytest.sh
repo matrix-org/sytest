@@ -31,6 +31,8 @@ args:
 type: pg
 EOF
 
+# Run the tests
+echo >&2 "+++ Running tests"
 
 # Run the tests
 mkdir -p /logs
