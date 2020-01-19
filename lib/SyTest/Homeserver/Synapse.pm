@@ -276,6 +276,11 @@ sub start
            },
         ) : (),
 
+        limit_usage_by_mau => "true",
+        max_mau_value => 5000,
+        mau_trial_days => 2,
+        mau_limit_alerting: false,
+
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
         } qw(
