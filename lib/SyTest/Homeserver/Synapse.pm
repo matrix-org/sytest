@@ -279,7 +279,7 @@ sub start
         limit_usage_by_mau => "true",
         max_mau_value => 5000,
         mau_trial_days => 2,
-        mau_limit_alerting: false,
+        mau_limit_alerting => "true",
 
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
