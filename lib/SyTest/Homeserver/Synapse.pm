@@ -276,6 +276,9 @@ sub start
            },
         ) : (),
 
+        limit_usage_by_mau => "true",
+        max_mau_value => 50000000,
+
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
         } qw(
