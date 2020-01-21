@@ -36,9 +36,10 @@ cd /src
 cd -
 
 # Run the tests
-mkdir -p /logs
+echo >&2 "+++ Running tests"
 
 TEST_STATUS=0
+mkdir -p /logs
 ./run-tests.pl -I Dendrite::Monolith -d /src/bin -W /src/testfile -O tap --all \
     --work-directory="/work" \
     "$@" > /logs/results.tap || TEST_STATUS=$?

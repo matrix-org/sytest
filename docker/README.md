@@ -62,15 +62,5 @@ Dendrite does not currently make use of any environment variables.
 
 ## Building the containers
 
-The containers are built by executing `build.sh`. You will then have to push
-them up to Docker Hub:
-
-```
-docker push matrixdotorg/sytest:stretch
-docker push matrixdotorg/sytest:buster
-docker push matrixdotorg/sytest-synapse:py35
-docker push matrixdotorg/sytest-synapse:py37
-docker push matrixdotorg/sytest-dendrite:latest
-docker push matrixdotorg/sytest-dendrite:go110
-docker push matrixdotorg/sytest-dendrite:go113
-```
+The containers are built by executing `./build.sh`. You will then have to push
+them up to Docker Hub with `./push.sh`.
