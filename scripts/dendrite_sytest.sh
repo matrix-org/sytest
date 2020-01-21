@@ -56,18 +56,7 @@ fi
 echo >&2 "--- Copying assets"
 
 # Copy out the logs
-lsb_release -a
-pwd
-apt update
-apt install tree
-tree /work
-tree /src
-# TODO: Change /work/server-1 to /work/server-1/dendrite-logs once sytest is capable of
-#  spinning up multiple dendrites
 rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
-tree /logs
-cat /work/server-0/dendrite.yaml
-cat /work/server-0/database.yaml
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
