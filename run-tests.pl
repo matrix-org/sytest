@@ -211,12 +211,6 @@ our $HS_FACTORY = $hs_factory_class -> new();
 Getopt::Long::Configure("no_passthrough");
 GetOptions($HS_FACTORY->get_options()) or usage(1);
 
-# Check if both options have been set
-if( $BLACKLIST_FILE and $WHITELIST_FILE ) {
-   die "Not allowed to set both whitelist and blacklist options.\n";
-   exit 1
-}
-
 # Read in test blacklist rules if set
 my %TEST_BLACKLIST;
 if ( $BLACKLIST_FILE ) {
