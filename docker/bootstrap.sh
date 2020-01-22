@@ -13,7 +13,7 @@ if [ -d "/sytest" ]; then
 else
     echo "--- Trying to get same-named sytest branch..."
 
-    if [ -n "BUILDKITE_BRANCH" ]; then
+    if [ -n "$BUILDKITE_BRANCH" ]; then
         branch_name=$BUILDKITE_BRANCH
     else
         # Otherwise, try and find out what the branch that the Synapse/Dendrite checkout is using. Fall back to develop if it's not a branch.
