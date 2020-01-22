@@ -1,7 +1,7 @@
 sub bind_email_for_user {
    my ( $user, $address, $id_server, %params ) = @_;
 
-   my $client_secret = join "", map { chr 40 + rand 86 } 1 .. 20;
+   my $client_secret = join "", map { chr 48 + rand 10 } 1 .. 20;
 
    my $id_access_token = $id_server->get_access_token();
 
