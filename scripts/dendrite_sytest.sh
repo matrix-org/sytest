@@ -50,8 +50,8 @@ else
     echo >&2 -e "run-tests \e[32mPASSED\e[0m"
 fi
 
-# Check for new tests to be added to testfile
-/src/show-expected-fail-tests.sh /logs/results.tap /src/testfile || TEST_STATUS=$?
+# Check for new tests to be added to the test whitelist
+/src/show-expected-fail-tests.sh /logs/results.tap /src/sytest-whitelist || TEST_STATUS=$?
 
 echo >&2 "--- Copying assets"
 
