@@ -51,7 +51,8 @@ else
 fi
 
 # Check for new tests to be added to the test whitelist
-/src/show-expected-fail-tests.sh /logs/results.tap /src/sytest-whitelist || TEST_STATUS=$?
+/src/show-expected-fail-tests.sh /logs/results.tap /src/sytest-whitelist \
+    /src/sytest-blacklist || TEST_STATUS=$?
 
 echo >&2 "--- Copying assets"
 
