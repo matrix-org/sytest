@@ -304,7 +304,7 @@ test "Device list doesn't change if remote server is down",
          $outbound_client_user
       ) = @_;
 
-      my ( $first_keys_query_body, $second_keys_query_body, @respond_503 );
+      my ( $first_keys_query_body, $second_keys_query_body, @respond_429 );
 
       my $client_user_devices = {
          user_id => $outbound_client_user,
@@ -390,19 +390,20 @@ test "Device list doesn't change if remote server is down",
          map {$_->cancel} @respond_with_keys;
          log_if_fail (Dumper $first_keys_query_body);
 
-         # We take the remote server 'offline' and then make the same request for
-         # the users keys. We expect no change in the keys.
-         @respond_503 = (
+         # We take the remote server 'offline' and then make the same request
+         # for the users keys. We expect no change in the keys. We respond with
+         # 429 instead of 503 to avoid the server being marked as down.
+         @respond_429 = (
             $inbound_server->await_request_user_devices( $outbound_client_user )->then( sub {
                my ( $req ) = @_;
-               log_if_fail "Responded with 503 to /user/devices request";
-               $req->respond_json({}, code => 503);
+               log_if_fail "Responded with 429 to /user/devices request";
+               $req->respond_json({}, code => 429);
                Future->done(1)
             }),
             $inbound_server->await_request_user_keys_query()->then( sub {
                my ( $req ) = @_;
-               log_if_fail "Responded with 503 to /user/keys/query request";
-               $req->respond_json({}, code => 503);
+               log_if_fail "Responded with 429 to /user/keys/query request";
+               $req->respond_json({}, code => 429);
                Future->done(1)
             })
          );
@@ -417,7 +418,7 @@ test "Device list doesn't change if remote server is down",
          )
       })->then( sub {
          ( $second_keys_query_body ) = @_;
-         map {$_->cancel} @respond_503;
+         map {$_->cancel} @respond_429;
          # The unsiged field is optional in the spec so we remove it from any response.
          foreach ($first_keys_query_body, $second_keys_query_body) {
             while (my ($user_key, $devices) = each %{$_->{ device_keys }} ) {
@@ -428,7 +429,7 @@ test "Device list doesn't change if remote server is down",
          };
 
          log_if_fail (Dumper $second_keys_query_body);
-         assert_deeply_eq( $second_keys_query_body, $first_keys_query_body, "Query matches while federation server is down." );
+         assert_deeply_eq( $second_keys_query_body->{ device_keys }, $first_keys_query_body->{ device_keys }, "Query matches while federation server is down." );
          Future->done(1)
       })
    };
