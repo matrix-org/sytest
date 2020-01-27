@@ -276,6 +276,9 @@ sub start
            },
         ) : (),
 
+        # We use a high limit so the limit is never reached, but enabling the
+        # limit ensures that the code paths get hit. This helps testing the
+        # feature with worker mode.
         limit_usage_by_mau => "true",
         max_mau_value => 50000000,
 
