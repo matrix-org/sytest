@@ -455,7 +455,7 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
          assert_deeply_eq(
             $old_room_pl_content,
             $pl_content,
-            "power levels in replacement room",
+            "power levels in old room",
          );
 
          Future->done(1);
