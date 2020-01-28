@@ -14,6 +14,7 @@
 
 use Future::Utils qw( repeat );
 use List::Util qw( all first none );
+use URI::Escape qw( uri_escape );
 
 push our @EXPORT, qw ( upgrade_room_synced $TEST_NEW_VERSION );
 
@@ -421,28 +422,41 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
          # events. The second power level event is to downgrade the upgrader user from a
          # Administrator to a Moderator again to keep a consistent state with the old room
 
-         # Check the contents of the latest power level event
-         my $new_room = $sync_body->{rooms}{join}{$new_room_id};
-         my $new_room_pl_event = first {
-            $_->{type} eq 'm.room.power_levels'
-         } reverse @{ $new_room->{timeline}->{events} };
-
-         log_if_fail "PL event in new room", $new_room_pl_event;
+         # Grab the latest power level state of the new room
+         my $url_encoded_new_room_id = uri_escape( $new_room_id );
+         do_request_json_for(
+            $upgrader,
+            method  => "GET",
+            uri     => "/r0/rooms/$url_encoded_new_room_id/state/m.room.power_levels/",
+            content => {},
+         );
+      })->then( sub {
+         my ( $new_room_pl_content ) = @_;
 
          # Check that the power levels in the new room match the original PLs
          assert_deeply_eq(
-            $new_room_pl_event->{content},
+            $new_room_pl_content,
             $pl_content,
             "power levels in replacement room",
          );
 
+         # Grab the latest power level state of the old room
+         my $url_encoded_old_room_id = uri_escape( $room_id );
+         do_request_json_for(
+            $upgrader,
+            method => "GET",
+            uri    => "/r0/rooms/$url_encoded_old_room_id/state/m.room.power_levels/",
+            content => {},
+         );
+      })->then( sub {
+         my ( $old_room_pl_content ) = @_;
+
          # Check that the power levels in the old room have not changed
-         # by making sure there is not a power levels event for the old room
-         # in the sync response
-         my $old_room = $sync_body->{rooms}{join}{$room_id};
-         my $old_room_pl_event = none {
-            $_->{type} eq 'm.room.power_levels'
-         } @{ $old_room->{timeline}->{events} };
+         assert_deeply_eq(
+            $old_room_pl_content,
+            $pl_content,
+            "power levels in replacement room",
+         );
 
          Future->done(1);
       });
