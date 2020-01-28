@@ -13,16 +13,19 @@ if [ -d "/sytest" ]; then
 else
     echo "--- Trying to get same-named sytest branch..."
 
-    if [ -n "BUILDKITE_BRANCH" ]; then
+    # Check if we're running in buildkite, if so it can tell us what
+    # Synapse/Dendrite branch we're running
+    if [ -n "$BUILDKITE_BRANCH" ]; then
         branch_name=$BUILDKITE_BRANCH
     else
-        # Otherwise, try and find out what the branch that the Synapse/Dendrite checkout is using. Fall back to develop if it's not a branch.
+        # Otherwise, try and find the branch that the Synapse/Dendrite checkout
+        # is using. Fall back to develop if unknown.
         branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
+    fi
 
-        if [ "$SYTEST_TARGET" == "dendrite" ] && [ branch_name == "master" ]; then
-            # Dendrite uses master as its main branch. If the branch is master, we probably want sytest develop
-            branch_name="develop"
-        fi
+    if [ "$SYTEST_TARGET" == "dendrite" ] && [ "$branch_name" == "master" ]; then
+        # Dendrite uses master as its main branch. If the branch is master, we probably want sytest develop
+        branch_name="develop"
     fi
 
     # Try and fetch the branch

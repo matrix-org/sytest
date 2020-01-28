@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-set -e
+set -ex
 
 cd $(dirname $0)
 docker build --pull ../ -f base.Dockerfile --build-arg DEBIAN_VERSION=stretch -t matrixdotorg/sytest:stretch
