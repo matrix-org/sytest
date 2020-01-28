@@ -338,7 +338,6 @@ test "/upgrade copies the power levels to the new room",
          $creator, $room_id, sub {
             ( $pl_content ) = @_;
             $pl_content->{users}->{'@test:xyz'} = 40;
-            log_if_fail "PL content in old room", $pl_content;
          }
       )->then( sub {
          matrix_sync( $creator );
