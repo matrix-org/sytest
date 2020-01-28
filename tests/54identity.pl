@@ -1,7 +1,8 @@
 sub bind_email_for_user {
    my ( $user, $address, $id_server, %params ) = @_;
 
-   my $client_secret = join "", map { chr 40 + rand 86 } 1 .. 20;
+   # Generate a client secret that is just numerics with `"Az.=_-"` on the end.
+   my $client_secret = (join "", map { chr 48 + rand 10 } 1 .. 20) . "Az.=_-";
 
    my $id_access_token = $id_server->get_access_token();
 
