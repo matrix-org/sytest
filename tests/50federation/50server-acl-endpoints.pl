@@ -15,6 +15,8 @@
 # the test routines should behave as similarly as they can for the expect_ban
 # case and the control case.
 
+use SyTest::Federation::Client;
+
 my @TESTS = (
    [ "send events", *can_send_event ],
    [ "/make_join",  *can_make_join ],
@@ -72,7 +74,7 @@ sub can_make_join {
          method   => "GET",
          hostname => $params{dest_server},
          uri      => "/v1/make_join/$room_id/$sytest_user_id",
-         params   => { "ver" => [1, 2, 3, 4, 5] },
+         params   => { "ver" => SyTest::Federation::Client::SUPPORTED_ROOM_VERSIONS, },
       ), $params{expect_ban}, "/make_join",
    );
 }
