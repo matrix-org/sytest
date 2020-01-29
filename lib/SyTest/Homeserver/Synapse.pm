@@ -106,29 +106,26 @@ sub start
 
    my $hs_dir = $self->{hs_dir};
 
-   my %db_config = $self->_get_dbconfig(
+   my %db_configs = $self->_get_dbconfigs(
       type => 'sqlite',
       args => {
          database => ":memory:", #"$hs_dir/homeserver.db",
       },
    );
 
-   my $db_type = $db_config{type};
+   # convert sytest db args onto synapse db args
+   for my $db ( keys %db_configs ) {
+      my %db_config = %{ $db_configs{$db} };
 
-   # map sytest db args onto synapse db args
-   my %synapse_db_config;
-   if( $db_type eq "pg" ) {
-      %synapse_db_config = (
-         name => 'psycopg2',
-         args => $db_config{args},
-      );
-   }
-   else {
-      # must be sqlite
-      %synapse_db_config = (
-         name => 'sqlite3',
-         args => $db_config{args},
-      );
+      my $db_type = $db_config{type};
+
+      if( $db_type eq "pg" ) {
+         $db_configs{$db}{name} = 'psycopg2';
+      }
+      else {
+         # must be sqlite
+         $db_configs{$db}{name} = 'sqlite3';
+      }
    }
 
    # Clean up the media_store directory each time, or else it fills up with
@@ -210,13 +207,13 @@ sub start
         },
 
         enable_registration => "true",
-        database => \%synapse_db_config,
+        databases => \%db_configs,
         macaroon_secret_key => $macaroon_secret_key,
         registration_shared_secret => $registration_shared_secret,
 
         pid_file => "$hs_dir/homeserver.pid",
 
-        use_frozen_events => "true",
+        use_frozen_dicts => "true",
 
         allow_guest_access => "True",
 
@@ -278,6 +275,12 @@ sub start
               notif_from => 'synapse@localhost',
            },
         ) : (),
+
+        # We use a high limit so the limit is never reached, but enabling the
+        # limit ensures that the code paths get hit. This helps testing the
+        # feature with worker mode.
+        limit_usage_by_mau => "true",
+        max_mau_value => 50000000,
 
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()

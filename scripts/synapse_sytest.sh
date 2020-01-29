@@ -16,7 +16,75 @@ cd "$(dirname $0)/.."
 mkdir /work
 
 # PostgreSQL setup
-if [ -n "$POSTGRES" ]; then
+if [ -n "$MULTI_POSTGRES" ]; then
+    # In this mode we want to run synapse against multiple split out databases.
+
+    # We increase the max connections as we have more databases.
+    echo -e "max_connections=1000" >> /var/run/postgresql/data/postgresql.conf
+
+    # Start the database
+    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
+
+    # Make the test databases for the two Synapse servers that will be spun up
+    su -c psql postgres <<EOF
+CREATE DATABASE pg1_main;
+CREATE DATABASE pg1_state;
+CREATE DATABASE pg2_main;
+CREATE DATABASE pg2_state;
+EOF
+
+    mkdir -p "/work/server-0"
+    mkdir -p "/work/server-1"
+
+    # We leave user, password, host blank to use the defaults (unix socket and
+    # local auth)
+    cat > "/work/server-0/databases.yaml" << EOF
+main:
+    name: psycopg2
+    data_stores:
+        - main
+    args:
+        database: pg1_main
+        user: postgres
+        password: $PGPASSWORD
+        host: localhost
+        sslmode: disable
+state_db:
+    name: psycopg2
+    data_stores:
+        - state
+    args:
+        database: pg1_state
+        user: postgres
+        password: $PGPASSWORD
+        host: localhost
+        sslmode: disable
+EOF
+
+    cat > "/work/server-1/databases.yaml" << EOF
+main:
+    name: psycopg2
+    data_stores:
+        - main
+    args:
+        database: pg2_main
+        user: postgres
+        password: $PGPASSWORD
+        host: localhost
+        sslmode: disable
+state_db:
+    name: psycopg2
+    data_stores:
+        - state
+    args:
+        database: pg2_state
+        user: postgres
+        password: $PGPASSWORD
+        host: localhost
+        sslmode: disable
+EOF
+
+elif [ -n "$POSTGRES" ]; then
     export PGUSER=postgres
     export POSTGRES_DB_1=pg1
     export POSTGRES_DB_2=pg2
