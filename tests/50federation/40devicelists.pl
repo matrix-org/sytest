@@ -266,6 +266,119 @@ test "Server correctly resyncs when client query keys and there is no remote cac
    };
 
 
+test "Server correctly resyncs when server leaves and rejoins a room",
+   requires => [ $main::INBOUND_SERVER, federated_rooms_fixture() ],
+
+   check => sub {
+      my ( $inbound_server, $user, $federated_user_id, $room ) = @_;
+
+      # At first the server shares a room with the federated user, who at that
+      # point has a single device. The server will then leave and then rejoin
+      # the room, in the mean time the federated user has added a device, but
+      # won't have poked the server as they didn't share a room.
+      #
+      # When the server rejoins the subsequent calls by clients to fetch keys
+      # should result in the server resyncing the device lists.
+      my $device_id1 = "random_device_id1";
+      my $device_id2 = "random_device_id2";
+
+      Future->needs_all(
+         $inbound_server->await_request_user_devices( $federated_user_id )
+         ->then( sub {
+            my ( $req, undef ) = @_;
+
+            assert_eq( $req->method, "GET", 'request method' );
+
+            $req->respond_json( {
+               user_id   => $federated_user_id,
+               stream_id => 1,
+               devices   => [
+                  {
+                     device_id => $device_id1,
+                     keys      => { device_keys => {} },
+                  },
+               ],
+            } );
+            Future->done(1);
+         }),
+         do_request_json_for( $user,
+            method  => "POST",
+            uri     => "/r0/keys/query",
+            content => {
+               device_keys => {
+                  $federated_user_id => [],
+               },
+            },
+         ),
+      )->then( sub {
+         my ( $first, $content ) = @_;
+
+         log_if_fail "first query response", $content;
+
+         assert_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         assert_json_keys( $device_keys, $federated_user_id );
+
+         my $alice_keys = $device_keys->{ $federated_user_id };
+         assert_json_keys( $alice_keys, ( $device_id1 ) );
+
+         matrix_leave_room( $user, $room->room_id )
+      })->then( sub {
+         matrix_join_room( $user, $room->room_id,
+            server_name => $inbound_server->server_name,
+         )
+      })->then( sub {
+         Future->needs_all(
+            $inbound_server->await_request_user_devices( $federated_user_id )
+            ->then( sub {
+               my ( $req, undef ) = @_;
+
+               assert_eq( $req->method, "GET", 'request method' );
+
+               $req->respond_json( {
+                  user_id   => $federated_user_id,
+                  stream_id => 1,
+                  devices   => [
+                     {
+                        device_id => $device_id1,
+                        keys      => { device_keys => {} },
+                     },
+                     {
+                        device_id => $device_id2,
+                        keys      => { device_keys => {} },
+                     },
+                  ],
+               } );
+               Future->done(1);
+            }),
+            do_request_json_for( $user,
+               method  => "POST",
+               uri     => "/r0/keys/query",
+               content => {
+                  device_keys => {
+                     $federated_user_id => [],
+                  },
+               },
+            ),
+         )
+      })->then( sub {
+         my ( $first, $content ) = @_;
+
+         log_if_fail "second query response", $content;
+
+         assert_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         assert_json_keys( $device_keys, $federated_user_id );
+
+         my $alice_keys = $device_keys->{ $federated_user_id };
+         assert_json_keys( $alice_keys, ( $device_id1, $device_id2 ) );
+
+         Future->done( 1 )
+      });
+   };
+
 test "Local device key changes get to remote servers with correct prev_id",
    requires => [ local_user_fixtures( 2 ), $main::INBOUND_SERVER, federation_user_id_fixture(), room_alias_name_fixture() ],
 
