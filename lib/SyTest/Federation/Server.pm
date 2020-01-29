@@ -274,10 +274,13 @@ sub on_request_federation_v1_make_join
          404, "Not found", [ Content_length => 0 ], "",
       ) );
 
+   my $room_version = $room->room_version;
+
    Future->done( json => {
       event => $room->make_join_protoevent(
          user_id => $user_id,
       ),
+      room_version => "$room_version",
    } );
 }
 
@@ -308,7 +311,7 @@ sub on_request_federation_v2_send_join
    my $event = $req->body_from_json;
 
    my @auth_chain = $store->get_auth_chain_events(
-      map { $_->[0] } @{ $event->{auth_events} }
+      @{ $room->event_ids_from_refs( $event->{auth_events} ) }
    );
    my @state_events = $room->current_state_events;
 
@@ -477,6 +480,15 @@ sub on_request_federation_v1_send
 
    # A PDU is an event
    foreach my $event ( @{ $body->{pdus} } ) {
+      my $room = $self->{datastore}->get_room( $event->{room_id} );
+
+      if ( $room ) {
+         my $event_id = $room->id_for_event( $event );
+         $room->insert_event( $event );
+      } else {
+         warn "Unknown room ${ $event->{room_id} }"
+      }
+
       next if $self->on_event( $event );
 
       warn "TODO: Unhandled incoming event of type '$event->{type}'";

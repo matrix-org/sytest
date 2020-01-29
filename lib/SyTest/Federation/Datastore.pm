@@ -301,7 +301,10 @@ sub get_auth_chain_events
    while( @event_ids ) {
       my $event = $events_by_id{shift @event_ids};
 
-      my @auth_ids = map { $_->[0] } @{ $event->{auth_events} };
+      my $room = $self->get_room( $event->{room_id} ) or
+         croak "Unknown room $event->{room_id}";
+
+      my @auth_ids = @{ $room->event_ids_from_refs( $event->{auth_events} ) };
 
       foreach my $id ( @auth_ids ) {
          next if $events_by_id{$id};
