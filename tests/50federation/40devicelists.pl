@@ -131,7 +131,7 @@ test "Server correctly handles incoming m.device_list_update",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/unstable/keys/query",
+            uri     => "/r0/keys/query",
             content => {
                device_keys => {
                   $creator_id => [ "random_device_id" ],
@@ -169,7 +169,7 @@ test "Server correctly handles incoming m.device_list_update",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/unstable/keys/query",
+            uri     => "/r0/keys/query",
             content => {
                device_keys => {
                   $creator_id => [ "random_device_id" ],
@@ -202,20 +202,10 @@ test "Server correctly handles incoming m.device_list_update",
 
 
 test "Server correctly resyncs when client query keys and there is no remote cache",
-   requires => [ local_user_fixture(),
-                 $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
-                 federation_user_id_fixture(),
-                 room_alias_name_fixture() ],
+   requires => [ $main::INBOUND_SERVER, federated_rooms_fixture() ],
 
    check => sub {
-      my ( $user, $inbound_server, $outbound_client, $creator_id, $room_alias_name ) = @_;
-
-      my ( $room_id );
-
-      my $remote_server_name = $inbound_server->server_name;
-      my $datastore          = $inbound_server->datastore;
-
-      my $room_alias = "#$room_alias_name:$remote_server_name";
+      my ( $inbound_server, $user, $federated_user_id ) = @_;
 
       # We return two devices, as there was a bug in synapse which correctly
       # handled returning one device but not two.
@@ -227,54 +217,39 @@ test "Server correctly resyncs when client query keys and there is no remote cac
       # relaying any device keys, and then a client of synapse requests the keys
       # for that user. This should cause synapse to do a resync and cache those
       # keys correctly.
-      my $room = $datastore->create_room(
-         creator => $creator_id,
-         alias   => $room_alias,
-      );
+      Future->needs_all(
+         $inbound_server->await_request_user_devices( $federated_user_id )
+         ->then( sub {
+            my ( $req, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/join/$room_alias",
+            assert_eq( $req->method, "GET", 'request method' );
 
-         content => {},
-      )->then( sub {
-         Future->needs_all(
-            $inbound_server->await_request_user_devices( $creator_id )
-            ->then( sub {
-               my ( $req, undef ) = @_;
-
-               assert_eq( $req->method, "GET", 'request method' );
-
-               $req->respond_json( {
-                  user_id   => $creator_id,
-                  stream_id => 1,
-                  devices   => [ {
+            $req->respond_json( {
+               user_id   => $federated_user_id,
+               stream_id => 1,
+               devices   => [
+                  {
                      device_id => $device_id1,
-
-                     keys => {
-                        device_keys => {}
-                     }
-                  }, {
+                     keys      => { device_keys => {} },
+                  },
+                  {
                      device_id => $device_id2,
-
-                     keys => {
-                        device_keys => {}
-                     }
-                  } ]
-               } );
-               Future->done(1);
-            }),
-            do_request_json_for( $user,
-               method  => "POST",
-               uri     => "/unstable/keys/query",
-               content => {
-                  device_keys => {
-                     $creator_id => [],
+                     keys      => { device_keys => {} },
                   }
+               ]
+            } );
+            Future->done(1);
+         }),
+         do_request_json_for( $user,
+            method  => "POST",
+            uri     => "/r0/keys/query",
+            content => {
+               device_keys => {
+                  $federated_user_id => [],
                }
-            )
+            }
          )
-      })->then( sub {
+      )->then( sub {
          my ( $first, $content ) = @_;
 
          log_if_fail "query response", $content;
@@ -282,9 +257,9 @@ test "Server correctly resyncs when client query keys and there is no remote cac
          assert_json_keys( $content, "device_keys" );
 
          my $device_keys = $content->{device_keys};
-         assert_json_keys( $device_keys, $creator_id );
+         assert_json_keys( $device_keys, $federated_user_id );
 
-         my $alice_keys = $device_keys->{ $creator_id };
+         my $alice_keys = $device_keys->{ $federated_user_id };
          assert_json_keys( $alice_keys, ( $device_id1, $device_id2 ) );
 
          Future->done( 1 )
@@ -660,7 +635,7 @@ test "If a device list update goes missing, the server resyncs on the next one",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/unstable/keys/query",
+            uri     => "/r0/keys/query",
             content => {
                device_keys => {
                   $creator_id => [ $device_id ],
