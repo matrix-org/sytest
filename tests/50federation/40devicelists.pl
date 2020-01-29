@@ -205,13 +205,12 @@ test "Server correctly resyncs when client query keys and there is no remote cac
    requires => [ $main::INBOUND_SERVER, federated_rooms_fixture() ],
 
    check => sub {
-      my ( $inbound_server, $user, $federated_user_id ) = @_;
+      my ( $inbound_server, $user, $federated_user_id, undef) = @_;
 
       # We return two devices, as there was a bug in synapse which correctly
       # handled returning one device but not two.
       my $device_id1 = "random_device_id1";
       my $device_id2 = "random_device_id2";
-
 
       # We set up a situation where sytest joins a room with a user without
       # relaying any device keys, and then a client of synapse requests the keys
@@ -235,8 +234,8 @@ test "Server correctly resyncs when client query keys and there is no remote cac
                   {
                      device_id => $device_id2,
                      keys      => { device_keys => {} },
-                  }
-               ]
+                  },
+               ],
             } );
             Future->done(1);
          }),
@@ -246,9 +245,9 @@ test "Server correctly resyncs when client query keys and there is no remote cac
             content => {
                device_keys => {
                   $federated_user_id => [],
-               }
-            }
-         )
+               },
+            },
+         ),
       )->then( sub {
          my ( $first, $content ) = @_;
 
