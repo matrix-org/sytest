@@ -131,7 +131,7 @@ test "Server correctly handles incoming m.device_list_update",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/unstable/keys/query",
+            uri     => "/r0/keys/query",
             content => {
                device_keys => {
                   $creator_id => [ "random_device_id" ],
@@ -169,7 +169,7 @@ test "Server correctly handles incoming m.device_list_update",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/unstable/keys/query",
+            uri     => "/r0/keys/query",
             content => {
                device_keys => {
                   $creator_id => [ "random_device_id" ],
@@ -195,6 +195,71 @@ test "Server correctly handles incoming m.device_list_update",
          my $unsigned = $alice_device_keys->{unsigned};
 
          assert_eq( $unsigned->{device_display_name}, "test display name" );
+
+         Future->done( 1 )
+      });
+   };
+
+
+test "Server correctly resyncs when client query keys and there is no remote cache",
+   requires => [ $main::INBOUND_SERVER, federated_rooms_fixture() ],
+
+   check => sub {
+      my ( $inbound_server, $user, $federated_user_id, undef) = @_;
+
+      # We return two devices, as there was a bug in synapse which correctly
+      # handled returning one device but not two.
+      my $device_id1 = "random_device_id1";
+      my $device_id2 = "random_device_id2";
+
+      # We set up a situation where sytest joins a room with a user without
+      # relaying any device keys, and then a client of synapse requests the keys
+      # for that user. This should cause synapse to do a resync and cache those
+      # keys correctly.
+      Future->needs_all(
+         $inbound_server->await_request_user_devices( $federated_user_id )
+         ->then( sub {
+            my ( $req, undef ) = @_;
+
+            assert_eq( $req->method, "GET", 'request method' );
+
+            $req->respond_json( {
+               user_id   => $federated_user_id,
+               stream_id => 1,
+               devices   => [
+                  {
+                     device_id => $device_id1,
+                     keys      => { device_keys => {} },
+                  },
+                  {
+                     device_id => $device_id2,
+                     keys      => { device_keys => {} },
+                  },
+               ],
+            } );
+            Future->done(1);
+         }),
+         do_request_json_for( $user,
+            method  => "POST",
+            uri     => "/r0/keys/query",
+            content => {
+               device_keys => {
+                  $federated_user_id => [],
+               },
+            },
+         ),
+      )->then( sub {
+         my ( $first, $content ) = @_;
+
+         log_if_fail "query response", $content;
+
+         assert_json_keys( $content, "device_keys" );
+
+         my $device_keys = $content->{device_keys};
+         assert_json_keys( $device_keys, $federated_user_id );
+
+         my $alice_keys = $device_keys->{ $federated_user_id };
+         assert_json_keys( $alice_keys, ( $device_id1, $device_id2 ) );
 
          Future->done( 1 )
       });
@@ -569,7 +634,7 @@ test "If a device list update goes missing, the server resyncs on the next one",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/unstable/keys/query",
+            uri     => "/r0/keys/query",
             content => {
                device_keys => {
                   $creator_id => [ $device_id ],
