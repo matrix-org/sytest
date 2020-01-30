@@ -63,19 +63,13 @@ foreach my $versionprefix ( qw( v1 v2 ) ) {
          my $local_server_name = $inbound_server->server_name;
          my $datastore         = $inbound_server->datastore;
 
-         my $room = SyTest::Federation::Room->new(
-            datastore => $datastore,
-         );
-
-         $room->create_initial_events(
-            server  => $inbound_server,
+         my $room_alias = "#50fed-room-alias:$local_server_name";
+         my $room = $datastore->create_room(
             creator => $creator_id,
+            alias   => $room_alias,
          );
 
          my $room_id = $room->room_id;
-
-         my $room_alias = "#50fed-room-alias:$local_server_name";
-         $datastore->{room_aliases}{$room_alias} = $room_id;
 
          my $await_request_send_join;
 
@@ -86,7 +80,18 @@ foreach my $versionprefix ( qw( v1 v2 ) ) {
             # that 404 response from SyTest and that fallback mechanism to test that the
             # homeserver can query the v1 endpoint, and correctly handles responses from
             # it.
-            $await_request_send_join = $inbound_server->await_request_v1_send_join( $room_id );
+            $await_request_send_join = Future->needs_all(
+               $inbound_server->await_request_v2_send_join( $room_id )
+               ->then( sub {
+                  my ( $req, $room_id, $event_id ) = @_;
+                  $req->respond( HTTP::Response->new(
+                     404, "Not found", [ Content_length => 0 ], "",
+                  ) );
+
+                  Future->done
+               }),
+               $inbound_server->await_request_v1_send_join( $room_id )
+            );
          }
          elsif( $versionprefix eq "v2" ) {
             $await_request_send_join = $inbound_server->await_request_v2_send_join( $room_id );
@@ -811,18 +816,13 @@ test "Outbound federation rejects send_join responses with no m.room.create even
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
-      my $room = SyTest::Federation::Room->new(
-         datastore => $datastore,
-      );
-
-      $room->create_initial_events(
+      my $room_alias = "#no_create_event:$local_server_name";
+      my $room = $datastore->create_room(
          creator => $creator_id,
+         alias   => $room_alias,
       );
 
       my $room_id = $room->room_id;
-
-      my $room_alias = "#no_create_event:$local_server_name";
-      $datastore->{room_aliases}{$room_alias} = $room_id;
 
       Future->needs_all(
          $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
@@ -839,10 +839,12 @@ test "Outbound federation rejects send_join responses with no m.room.create even
                event => $proto,
             } );
 
+            log_if_fail "make_join resp", $proto;
+
             Future->done;
          }),
 
-         $inbound_server->await_request_send_join( $room_id )->then( sub {
+         $inbound_server->await_request_v2_send_join( $room_id )->then( sub {
             my ( $req, $room_id, $event_id ) = @_;
 
             $req->method eq "PUT" or
@@ -859,11 +861,10 @@ test "Outbound federation rejects send_join responses with no m.room.create even
             @auth_chain = grep { $_->{type} ne 'm.room.create' } @auth_chain;
 
             $req->respond_json(
-               # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
-               my $response = [ 200, {
+               my $response = {
                   auth_chain => \@auth_chain,
                   state      => [ $room->current_state_events ],
-               } ]
+               }
             );
 
             log_if_fail "send_join response", $response;
@@ -901,19 +902,15 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
-      my $room = SyTest::Federation::Room->new(
-         datastore => $datastore,
-      );
-
-      $room->create_initial_events(
+      my $room_alias = "#no_create_event:$local_server_name";
+      my $room = $datastore->create_room(
          creator => $creator_id,
+         alias   => $room_alias,
+
          room_version => 'sytest-room-ver',
       );
 
       my $room_id = $room->room_id;
-
-      my $room_alias = "#inconsistent-room-ver:$local_server_name";
-      $datastore->{room_aliases}{$room_alias} = $room_id;
 
       Future->needs_all(
          $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
@@ -933,7 +930,7 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
             Future->done;
          }),
 
-         $inbound_server->await_request_send_join( $room_id )->then( sub {
+         $inbound_server->await_request_v2_send_join( $room_id )->then( sub {
             my ( $req, $room_id, $event_id ) = @_;
 
             $req->method eq "PUT" or
@@ -943,15 +940,14 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
             log_if_fail "send_join event", $event;
 
             my @auth_chain = $datastore->get_auth_chain_events(
-               map { $_->[0] } @{ $event->{auth_events} }
+               @{ $room->event_ids_from_refs( $event->{auth_events} ) }
             );
 
             $req->respond_json(
-               # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
-               my $response = [ 200, {
+               my $response = {
                   auth_chain => \@auth_chain,
                   state      => [ $room->current_state_events ],
-               } ]
+               }
             );
 
             log_if_fail "send_join response", $response;
