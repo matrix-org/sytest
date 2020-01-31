@@ -96,8 +96,8 @@ sub test_history_visibility
 }
 
 foreach my $i (
-   [ "Guest", sub { guest_user_fixture( with_events => 1 ) } ],
-   [ "Real", sub { local_user_fixture( with_events => 1 ) } ]
+   [ "Guest", sub { guest_user_fixture() } ],
+   [ "Real", sub { local_user_fixture() } ]
 ) {
    my ( $name, $fixture ) = @$i;
 
@@ -233,42 +233,6 @@ foreach my $i (
                   }),
                );
             });
-         });
-      },
-   );
-
-   test(
-      "$name non-joined user doesn't get events before room made world_readable",
-
-      requires => [ $fixture->(), local_user_fixture( with_events => 1 ) ],
-
-      do => sub {
-         my ( $nonjoined_user, $user ) = @_;
-
-         my $room_id;
-
-         matrix_create_and_join_room( [ $user ] )
-         ->then( sub {
-            ( $room_id ) = @_;
-
-            matrix_send_room_text_message( $user, $room_id, body => "private" );
-         })->then( sub {
-            matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" );
-         })->then( sub {
-            Future->needs_all(
-               matrix_send_room_text_message( $user, $room_id, body => "public" ),
-
-               # The client is allowed to see exactly two events, the
-               # m.room.history_visibility event and the public message.
-               # The server is free to return these in separate calls to
-               # /events, so we try at most two times to get the events we expect.
-               check_events( $nonjoined_user, $room_id )
-               ->then( sub {
-                  Future->done(1);
-               }, sub {
-                  check_events( $nonjoined_user, $room_id );
-               }),
-            );
          });
       },
    );
@@ -579,33 +543,6 @@ test "Backfill works correctly with history visibility set to joined",
          Future->done( 1 );
       })
    };
-
-sub check_events
-{
-   my ( $user, $room_id ) = @_;
-
-   matrix_get_events( $user, limit => 3, dir => "b", room_id => $room_id )
-   ->then( sub {
-      my ( $body ) = @_;
-
-      log_if_fail "Body", $body;
-
-      assert_json_keys( $body, qw( chunk ) );
-      @{ $body->{chunk} } >= 1 or die "Want at least one event";
-      @{ $body->{chunk} } < 3 or die "Want at most two events";
-
-      my $found = 0;
-      foreach my $event ( @{ $body->{chunk} } ) {
-         next if !exists $event->{content};
-         next if !exists $event->{content}{body};
-
-         $found = 1 if $event->{content}{body} eq "public";
-         die "Should not have found private" if $event->{content}{body} eq "private";
-      }
-
-      Future->done( $found );
-   }),
-}
 
 sub ignore_presence_for
 {
