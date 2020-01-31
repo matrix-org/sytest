@@ -274,7 +274,7 @@ test "Server correctly resyncs when server leaves and rejoins a room",
 
       # At first the server shares a room with the federated user, who at that
       # point has a single device. The server will then leave and then rejoin
-      # the room, in the mean time the federated user has added a device, but
+      # the room. In the mean time the federated user has added a device, but
       # won't have poked the server as they didn't share a room.
       #
       # When the server rejoins the subsequent calls by clients to fetch keys
