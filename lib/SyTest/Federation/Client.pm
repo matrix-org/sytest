@@ -248,10 +248,13 @@ sub join_room
       $self->do_request_json(
          method   => "PUT",
          hostname => $server_name,
-         uri      => "/v2/send_join/$room_id/$event_id",
+         uri      => "/v1/send_join/$room_id/$event_id",
          content  => $member_event,
       )->then( sub {
          my ( $join_body ) = @_;
+
+         # /v1/send_join has an extraneous [ 200, ... ] wrapper (see MSC1802)
+         $join_body = $join_body->[1];
 
          my $room = SyTest::Federation::Room->new(
             datastore => $store,

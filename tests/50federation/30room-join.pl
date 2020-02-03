@@ -74,24 +74,11 @@ foreach my $versionprefix ( qw( v1 v2 ) ) {
          my $await_request_send_join;
 
          if( $versionprefix eq "v1" ) {
-            # If we only expect a response on the v1 endpoint, the homeserver will try to
-            # hit the v2 one, get a 404 from SyTest (because we didn't call
-            # await_request_v2_send_join), then fall back to the v1 endpoint. We rely on
-            # that 404 response from SyTest and that fallback mechanism to test that the
-            # homeserver can query the v1 endpoint, and correctly handles responses from
-            # it.
-            $await_request_send_join = Future->needs_all(
-               $inbound_server->await_request_v2_send_join( $room_id )
-               ->then( sub {
-                  my ( $req, $room_id, $event_id ) = @_;
-                  $req->respond( HTTP::Response->new(
-                     404, "Not found", [ Content_length => 0 ], "",
-                  ) );
-
-                  Future->done
-               }),
-               $inbound_server->await_request_v1_send_join( $room_id )
-            );
+            # We need to use the `_reject_v2` form here as otherwise SyTest
+            # will respond to /v2/send_join and v1 endpoint will never get
+            # called.
+            $await_request_send_join =
+               $inbound_server->await_request_v1_send_join_reject_v2($room_id );
          }
          elsif( $versionprefix eq "v2" ) {
             $await_request_send_join = $inbound_server->await_request_v2_send_join( $room_id );
@@ -844,7 +831,7 @@ test "Outbound federation rejects send_join responses with no m.room.create even
             Future->done;
          }),
 
-         $inbound_server->await_request_v2_send_join( $room_id )->then( sub {
+         $inbound_server->await_request_v1_send_join_reject_v2( $room_id )->then( sub {
             my ( $req, $room_id, $event_id ) = @_;
 
             $req->method eq "PUT" or
@@ -861,10 +848,10 @@ test "Outbound federation rejects send_join responses with no m.room.create even
             @auth_chain = grep { $_->{type} ne 'm.room.create' } @auth_chain;
 
             $req->respond_json(
-               my $response = {
+               my $response = [ 200, {
                   auth_chain => \@auth_chain,
                   state      => [ $room->current_state_events ],
-               }
+               } ]
             );
 
             log_if_fail "send_join response", $response;

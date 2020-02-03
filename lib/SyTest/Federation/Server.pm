@@ -557,4 +557,40 @@ sub on_event
    return 1;
 }
 
+=head2 await_request_v1_send_join_reject_v2
+
+   $fut = $server->await_request_v1_send_join_reject_v2( $room_id )
+
+Awaits inbound request for /v1/send_join endpoint while rejecting inbound
+requests to /v2/send_join. Using the C<await_request_v1_send_join> standard
+has the problem that C<SyTest::Federation::Server> will handle /v2/send_join
+appropriately unless overriden, and so remote servers that use v2 will never
+call v1 endpoint in such a case.
+
+=cut
+
+sub await_request_v1_send_join_reject_v2 {
+   my $self = shift;
+   my ( $room_id ) = @_;
+
+   my $v2_fut = $self->await_request_v2_send_join( $room_id )
+   ->then( sub {
+      my ( $req, $room_id, $event_id ) = @_;
+      $req->respond( HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+      Future->done
+   });
+
+   $self->await_request_v1_send_join( $room_id )
+   ->then( sub {
+      my ( $req, $room_id, $event_id ) = @_;
+
+      $v2_fut->cancel();
+
+      Future->done( $req, $room_id, $event_id )
+   })
+}
+
 1;
