@@ -374,94 +374,6 @@ test "/upgrade copies the power levels to the new room",
       });
    };
 
-test "/upgrade preserves the power level of the upgrading user in old and new rooms",
-   requires => [
-      local_user_and_room_fixtures(),
-      local_user_fixture(),
-      qw( can_upgrade_room_version can_change_power_levels ),
-   ],
-
-   do => sub {
-      my ( $creator, $room_id, $upgrader ) = @_;
-
-      my ( $pl_content, $new_room_id );
-
-      # Note that this test assumes that moderators by default are allowed to upgrade rooms
-
-      matrix_join_room_synced(
-         $upgrader, $room_id
-      )->then( sub {
-         # Make the joined user a moderator
-         matrix_change_room_power_levels(
-            $creator, $room_id, sub {
-               ( $pl_content ) = @_;
-               $pl_content->{users}->{$upgrader->user_id} = JSON::number(50);
-               log_if_fail "PL content in old room", $pl_content;
-            }
-         )
-      })->then( sub {
-         matrix_sync( $upgrader );
-      })->then( sub {
-         upgrade_room_synced(
-            $upgrader, $room_id,
-            expected_event_counts => { 'm.room.power_levels' => 1 },
-            new_version => $TEST_NEW_VERSION,
-         );
-      })->then( sub {
-         ( $new_room_id, ) = @_;
-
-         matrix_sync_again( $upgrader );
-      })->then( sub {
-         my ( $sync_body ) = @_;
-
-         log_if_fail "sync body", $sync_body;
-
-         # Two power level events will be sent in the new room. The first is to make the
-         # upgrader user (previously a moderator) an Administrator (which can only be done
-         # when creating the room). This is such that they could send the initial state
-         # events. The second power level event is to downgrade the upgrader user from a
-         # Administrator to a Moderator again to keep a consistent state with the old room
-
-         # Grab the latest power level state of the new room
-         my $url_encoded_new_room_id = uri_escape( $new_room_id );
-         do_request_json_for(
-            $upgrader,
-            method  => "GET",
-            uri     => "/r0/rooms/$url_encoded_new_room_id/state/m.room.power_levels/",
-            content => {},
-         );
-      })->then( sub {
-         my ( $new_room_pl_content ) = @_;
-
-         # Check that the power levels in the new room match the original PLs
-         assert_deeply_eq(
-            $new_room_pl_content,
-            $pl_content,
-            "power levels in replacement room",
-         );
-
-         # Grab the latest power level state of the old room
-         my $url_encoded_old_room_id = uri_escape( $room_id );
-         do_request_json_for(
-            $upgrader,
-            method => "GET",
-            uri    => "/r0/rooms/$url_encoded_old_room_id/state/m.room.power_levels/",
-            content => {},
-         );
-      })->then( sub {
-         my ( $old_room_pl_content ) = @_;
-
-         # Check that the power levels in the old room have not changed
-         assert_deeply_eq(
-            $old_room_pl_content,
-            $pl_content,
-            "power levels in old room",
-         );
-
-         Future->done(1);
-      });
-   };
-
 test "/upgrade copies important state to the new room",
    requires => [
       local_user_and_room_fixtures(),
@@ -510,6 +422,9 @@ test "/upgrade copies important state to the new room",
                foreach my $k ( keys %STATE_DICT ) {
                   $levels->{events}->{$k} = 80;
                }
+               # Modify tombstone requirements to 50 so we are able to upgrade the room
+               $levels->{events}->{"m.room.tombstone"} = 50;
+
                $levels->{users}->{$creator->user_id} = 50;
             },
          );
