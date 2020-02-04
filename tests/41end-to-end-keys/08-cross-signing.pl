@@ -605,17 +605,19 @@ test "uploading signed devices gets propagated over federation",
          },
       };
       sign_json(
-         $self_signing_key, secret_key => $master_secret_key,
-         origin => $user2_id, key_id => "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
-          );
+         $self_signing_key,
+         secret_key => $master_secret_key,
+         origin => $user2_id,
+         key_id => "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+      );
 
       my $device = {
           "user_id" => $user2_id,
           "device_id" => $user2_device,
           "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
           "keys" => {
-              "curve25519:".$user2_device => "curve25519+key",
-              "ed25519:".$user2_device => "ed25519+key",
+              "curve25519:$user2_device" => "curve25519+key",
+              "ed25519:$user2_device" => "ed25519+key",
           }
       };
       my $cross_signature;
