@@ -559,7 +559,8 @@ sub on_event
 
 =head2 await_request_v1_send_join_reject_v2
 
-   $fut = $server->await_request_v1_send_join_reject_v2( $room_id )
+   $fut = $server->await_request_v1_send_join_reject_v2( $room_id );
+   my ( $request, $room_id, $event_id ) = $fut->get;
 
 Awaits inbound request for /v1/send_join endpoint while rejecting inbound
 requests to /v2/send_join. Using the C<await_request_v1_send_join> standard
