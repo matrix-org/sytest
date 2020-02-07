@@ -1183,6 +1183,7 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/exchange_third_party_invite/  federation_reader
 ^/_matrix/federation/v1/send/                         federation_reader
 ^/_matrix/federation/v1/get_groups_publicised         federation_reader
+^/_matrix/federation/v1/user/devices/                 federation_reader
 ^/_matrix/key/v2/query                                federation_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/publicRooms$                client_reader
