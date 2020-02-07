@@ -1064,6 +1064,7 @@ sub start
 
       $self->{paths}{pem_file} = $self->write_file( "combined.pem", $cert . $key );
       $self->{paths}{path_map_file} = $self->write_file( "path_map_file", $self->generate_haproxy_map );
+      $self->{paths}{get_path_map_file} = $self->write_file( "get_path_map_file", $self->generate_haproxy_get_map );
 
       $self->{haproxy_config} = $self->write_file( "haproxy.conf", $self->generate_haproxy_config );
 
@@ -1123,6 +1124,9 @@ defaults
 frontend http-in
     bind ${bind_host}:$ports->{haproxy} ssl crt $self->{paths}{pem_file}
 
+    acl has_get_map path -m reg -M -f $self->{paths}{get_path_map_file}
+    use_backend %[path,map_reg($self->{paths}{get_path_map_file},synapse)] if has_get_map METH_GET
+
     use_backend %[path,map_reg($self->{paths}{path_map_file},synapse)]
 
 backend synapse
@@ -1178,6 +1182,7 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/event_auth/                   federation_reader
 ^/_matrix/federation/v1/exchange_third_party_invite/  federation_reader
 ^/_matrix/federation/v1/send/                         federation_reader
+^/_matrix/federation/v1/get_groups_publicised         federation_reader
 ^/_matrix/key/v2/query                                federation_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/publicRooms$                client_reader
@@ -1193,6 +1198,8 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/voip/turnServer$            client_reader
 ^/_matrix/client/(r0|unstable)/register$                          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/messages$          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/get_groups_publicised$      client_reader
+^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
@@ -1202,6 +1209,16 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/join/                                         event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/profile/                                      event_creator
+
+EOCONFIG
+}
+
+sub generate_haproxy_get_map
+{
+    return <<'EOCONFIG';
+^/_matrix/federation/v1/groups/                 federation_reader
+
+^/_matrix/client/(api/v1|r0|unstable)/groups/   client_reader
 
 EOCONFIG
 }
