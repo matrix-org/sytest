@@ -697,19 +697,21 @@ test "/upgrade moves aliases to the new room",
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
             expected_event_counts => {
-               'm.room.aliases' => 1, 'm.room.canonical_alias' => 1,
+               'm.room.aliases' => 0, 'm.room.canonical_alias' => 1,
             },
          );
       })->then( sub {
          ( $new_room_id ) = @_;
 
-         matrix_get_room_state(
-            $creator, $room_id,
-            type=>'m.room.aliases', state_key=>$server_name,
-         );
-      })->then( sub {
-         my ( $old_aliases ) = @_;
-         assert_deeply_eq( $old_aliases, {aliases => []}, "aliases on old room" );
+      # m.room.aliases are filtered out until MSC2261 lands
+      #
+      #    matrix_get_room_state(
+      #       $creator, $room_id,
+      #       type=>'m.room.aliases', state_key=>$server_name,
+      #    );
+      # })->then( sub {
+      #    my ( $old_aliases ) = @_;
+      #    assert_deeply_eq( $old_aliases, {aliases => []}, "aliases on old room" );
 
          matrix_get_room_state( $creator, $room_id, type=>'m.room.canonical_alias' );
       })->then( sub {
@@ -718,17 +720,19 @@ test "/upgrade moves aliases to the new room",
             $old_canonical_alias, {}, "canonical_alias on old room",
          );
 
-         matrix_get_room_state(
-            $creator, $new_room_id,
-            type=>'m.room.aliases', state_key=>$server_name,
-         );
-      })->then( sub {
-         my ( $new_aliases ) = @_;
-         assert_deeply_eq(
-            [ sort( @{ $new_aliases->{aliases} } ) ],
-            [ sort( $room_alias_1, $room_alias_2 ) ],
-            "aliases on new room",
-         );
+      # m.room.aliases are filtered out until MSC2261 lands
+      #
+      #    matrix_get_room_state(
+      #       $creator, $new_room_id,
+      #       type=>'m.room.aliases', state_key=>$server_name,
+      #    );
+      # })->then( sub {
+      #    my ( $new_aliases ) = @_;
+      #    assert_deeply_eq(
+      #       [ sort( @{ $new_aliases->{aliases} } ) ],
+      #       [ sort( $room_alias_1, $room_alias_2 ) ],
+      #       "aliases on new room",
+      #    );
 
          matrix_get_room_state(
             $creator, $new_room_id, type=>'m.room.canonical_alias',
