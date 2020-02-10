@@ -703,7 +703,7 @@ test "/upgrade moves aliases to the new room",
       })->then( sub {
          ( $new_room_id ) = @_;
 
-      # m.room.aliases are filtered out until MSC2261 lands
+      # m.room.aliases are filtered out until a better solution to mitigating abuse is is specced.
       #
       #    matrix_get_room_state(
       #       $creator, $room_id,
@@ -720,7 +720,7 @@ test "/upgrade moves aliases to the new room",
             $old_canonical_alias, {}, "canonical_alias on old room",
          );
 
-      # m.room.aliases are filtered out until MSC2261 lands
+      # m.room.aliases are filtered out until a better solution to mitigating abuse is is specced.
       #
       #    matrix_get_room_state(
       #       $creator, $new_room_id,
