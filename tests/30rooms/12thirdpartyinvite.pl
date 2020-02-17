@@ -44,6 +44,53 @@ test "Can invite existing 3pid",
       });
    };
 
+test "Can invite existing 3pid with no ops into a private room",
+   requires => [ local_user_fixtures( 3 ), id_server_fixture() ],
+
+   do => sub {
+      my ( $creator, $inviter, $invitee, $id_server ) = @_;
+
+      my $invitee_mxid = $invitee->user_id;
+
+      my $room_id;
+      my $id_access_token = $id_server->get_access_token;
+
+      $id_server->bind_identity( undef, "email", $invitee_email, $invitee )
+      ->then( sub {
+         matrix_create_and_join_room(
+            [ $creator, $inviter ],
+            visibility => "private",
+            preset => "private_chat",
+            with_invite => 1,
+         )
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $inviter,
+            method => "POST",
+            uri    => "/r0/rooms/$room_id/invite",
+
+            content => {
+               id_server       => $id_server->name,
+               id_access_token => $id_access_token,
+               medium          => "email",
+               address         => $invitee_email,
+            },
+         );
+      })->then( sub {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee_mxid,
+         );
+      })->on_done( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "Body", $body;
+         assert_eq( $body->{membership}, "invite",
+            'invited user membership' );
+      });
+   };
+
 test "Can invite existing 3pid in createRoom",
    requires => [ local_user_fixtures( 2 ), id_server_fixture() ],
 
@@ -109,6 +156,44 @@ test "Can invite unbound 3pid over federation",
       ->then( sub {
          my ( $room_id ) = @_;
 
+         can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
+      });
+   };
+
+test "Can invite unbound 3pid with no ops into a private room",
+   requires => [ local_user_fixtures( 3 ), $main::HOMESERVER_INFO[0],
+                 id_server_fixture() ],
+
+   do => sub {
+      my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;
+      my $hs_uribase = $info->client_location;
+
+      matrix_create_and_join_room(
+         [ $creator, $inviter ],
+         visibility => "private",
+         preset => "private_chat",
+         with_invite => 1,
+      )->then( sub {
+         my ( $room_id ) = @_;
+         can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
+      });
+   };
+
+test "Can invite unbound 3pid over federation with no ops into a private room",
+   requires => [ local_user_fixtures( 2 ), remote_user_fixture(),
+                 $main::HOMESERVER_INFO[1], id_server_fixture() ],
+
+   do => sub {
+      my ( $creator, $inviter, $invitee, $info, $id_server ) = @_;
+      my $hs_uribase = $info->client_location;
+
+      matrix_create_and_join_room(
+         [ $creator, $inviter ],
+         visibility => "private",
+         preset => "private_chat",
+         with_invite => 1,
+      )->then( sub {
+         my ( $room_id ) = @_;
          can_invite_unbound_3pid( $room_id, $inviter, $invitee, $hs_uribase, $id_server );
       });
    };
