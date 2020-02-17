@@ -205,7 +205,6 @@ sub start
         use_frozen_events => "true",
 
         allow_guest_access => "True",
-        invite_3pid_guest => "true",
 
         # Metrics are always useful
         enable_metrics => 1,
