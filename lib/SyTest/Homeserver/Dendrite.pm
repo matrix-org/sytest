@@ -102,6 +102,12 @@ sub _get_config
       $db_uri .= sprintf( " sslmode=%s", $db_config{args}->{sslmode} );
    }
 
+   # POSTGRES not set or is 0, use sqlite
+   if( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') {
+      print STDERR "\nUsing sqlite database\n";
+      $db_uri = "file:dendrite.db";
+   }
+
    return (
       version => 0,
       matrix => {
