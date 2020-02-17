@@ -55,8 +55,6 @@ our $BIND_HOST = "localhost";
 # and the like.
 our $TEST_RUN_ID = strftime( '%Y%m%d_%H%M%S', gmtime() );
 
-my %FIXED_BUGS;
-
 my $STOP_ON_FAIL;
 my $SERVER_IMPL = undef;
 
@@ -106,8 +104,6 @@ GetOptions(
    'bind-host=s' => \$BIND_HOST,
 
    'p|port-range=s' => \(my $PORT_RANGE = "8800:8899"),
-
-   'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
    'h|help' => sub { usage(0) },
 ) or usage(1);
@@ -174,9 +170,6 @@ Options:
                                   'localhost'.
 
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
-
-   -F, --fixed BUGS             - bug names that are expected to be fixed
-                                  (ignores 'bug' declarations with these names)
 
 .
    write STDERR;
@@ -582,10 +575,6 @@ my @TESTS;
 sub _push_test
 {
    my ( $filename, $multi, $name, %params ) = @_;
-
-   # We expect this test to fail if it's declared to be dependent on a bug that
-   # is not yet fixed
-   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
    if( %only_files and not exists $only_files{$filename} ) {
       $proven{$_} = PRESUMED for @{ $params{proves} // [] };

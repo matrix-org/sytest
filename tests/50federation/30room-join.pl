@@ -39,14 +39,11 @@ sub assert_is_valid_pdu {
    # for event types which are known to be state events, check that they
    # have the relevant keys
    if ( $STATE_EVENT_TYPES{ $event->{type} }) {
-      # XXX richvdh: I'm unconvinced prev_state is required here - I think
-      # it's deprecated. It's certainly not mentioned in the spec.
       assert_json_keys( $event, qw(
-         state_key prev_state
+         state_key
       ));
 
       assert_json_string( $event->{state_key} );
-      assert_json_list( $event->{prev_state} );
    }
 
    # TODO: Check signatures and hashes
@@ -233,7 +230,7 @@ test "Inbound federation can receive room-join requests",
          my $protoevent = $body->{event};
 
          assert_json_keys( $protoevent, qw(
-            auth_events content depth prev_state room_id sender state_key type
+            auth_events content depth room_id sender state_key type
          ));
 
          assert_json_nonempty_list( my $auth_events = $protoevent->{auth_events} );
@@ -265,7 +262,7 @@ test "Inbound federation can receive room-join requests",
 
          my %event = (
             ( map { $_ => $protoevent->{$_} } qw(
-               auth_events content depth prev_events prev_state room_id sender
+               auth_events content depth prev_events room_id sender
                state_key type ) ),
 
             event_id         => $datastore->next_event_id,

@@ -20,7 +20,7 @@ use POSIX qw( strftime WIFEXITED WEXITSTATUS );
 
 use YAML ();
 
-use SyTest::SSL qw( ensure_ssl_cert );
+use SyTest::SSL qw( ensure_ssl_key create_ssl_cert );
 
 sub _init
 {
@@ -150,7 +150,8 @@ sub start
    $self->{paths}{cert_file} = "$hs_dir/tls.crt";
    $self->{paths}{key_file} = "$hs_dir/tls.key";
 
-   ensure_ssl_cert( $self->{paths}{cert_file}, $self->{paths}{key_file}, $bind_host );
+   ensure_ssl_key( $self->{paths}{key_file} );
+   create_ssl_cert( $self->{paths}{cert_file}, $self->{paths}{key_file}, $bind_host );
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
@@ -195,6 +196,13 @@ sub start
                 burst_count => 1000,
             }
         },
+
+        rc_federation => {
+           # allow 100 requests per sec instead of 10
+           sleep_limit => 100,
+           window_size => 1000,
+        },
+
         enable_registration => "true",
         database => \%synapse_db_config,
         macaroon_secret_key => $macaroon_secret_key,

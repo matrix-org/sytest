@@ -220,7 +220,7 @@ sub matrix_register_user
 
       return $f->then_done( $user )
          ->on_done( sub {
-            log_if_fail "Registered new user $uid";
+            log_if_fail "Registered new user ". $user->user_id;
          });
    });
 }
@@ -277,7 +277,7 @@ sub matrix_admin_register_user_via_secret
 
       return Future->done( $user )
         ->on_done( sub {
-           log_if_fail "Registered new user (via secret) $uid";
+           log_if_fail "Registered new user (via secret) " . $user->user_id;
         });
    });
 }

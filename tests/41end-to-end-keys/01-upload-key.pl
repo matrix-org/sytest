@@ -38,8 +38,6 @@ test "Can upload device keys",
 test "Should reject keys claiming to belong to a different user",
    requires => [ $fixture ],
 
-   bug => "synapse#1396",
-
    do => sub {
       my ( $user ) = @_;
 
