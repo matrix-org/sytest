@@ -51,7 +51,6 @@ test "Forward extremities remain so even after the next events are populated as 
          ->on_done( sub {
             my ( $pl_event_b ) = @_;
             $pl_event_b_id = $room->id_for_event( $pl_event_b );
-            $room->insert_event( $pl_event_b );
          }),
       )->then( sub {
          my %state_before_c = %{ $room->{current_state} };

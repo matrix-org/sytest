@@ -321,6 +321,10 @@ sub insert_outlier_event
 
    croak "Event not ref" unless ref $event;
 
+   my $event_id = $self->id_for_event( $event );
+
+   $self->{datastore}->put_event( $event_id, $event );
+
    if( defined $event->{state_key} ) {
       $self->{current_state}{ join "\0", $event->{type}, $event->{state_key} }
          = $event;
