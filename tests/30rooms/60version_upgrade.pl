@@ -505,7 +505,7 @@ test "/upgrade copies important state to the new room",
 
       $f->then( sub {
          matrix_sync( $creator );
-      }->then( sub {
+      })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
