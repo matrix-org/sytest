@@ -60,7 +60,7 @@ test "Can invite existing 3pid with no ops into a private room",
          matrix_create_and_join_room(
             [ $creator, $inviter ],
             visibility => "private",
-            preset => "private_chat",
+            preset => "private_chat",  # Allow default PL users to invite others
             with_invite => 1,
          )
       })->then( sub {
@@ -171,7 +171,7 @@ test "Can invite unbound 3pid with no ops into a private room",
       matrix_create_and_join_room(
          [ $creator, $inviter ],
          visibility => "private",
-         preset => "private_chat",
+         preset => "private_chat",  # Allow default PL users to invite others
          with_invite => 1,
       )->then( sub {
          my ( $room_id ) = @_;
