@@ -505,24 +505,6 @@ test "/upgrade copies important state to the new room",
       }
 
       $f->then( sub {
-         # to make things harder, we now restrict our ability to change each of
-         # those states: the server should make sure it sets up the state
-         # *before* it replicates the PL.
-         matrix_change_room_power_levels(
-            $creator, $room_id, sub {
-               my ( $levels ) = @_;
-               foreach my $k ( keys %STATE_DICT ) {
-                  $levels->{events}->{$k} = 80;
-               }
-               # Modify tombstone requirements to 50 so we are able to upgrade the room
-               $levels->{events}->{"m.room.tombstone"} = 50;
-
-               $levels->{users}->{$creator->user_id} = 50;
-            },
-         );
-      })->then( sub {
-         matrix_sync( $creator );
-      })->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
