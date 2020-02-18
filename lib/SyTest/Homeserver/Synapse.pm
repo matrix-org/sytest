@@ -1201,6 +1201,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/messages$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/get_groups_publicised$      client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
+^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
