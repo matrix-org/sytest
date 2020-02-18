@@ -465,7 +465,6 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
       });
    };
 
-
 test "/upgrade copies important state to the new room",
    requires => [
       local_user_and_room_fixtures(),
