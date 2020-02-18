@@ -13,6 +13,8 @@ sub do_request_json_for
    my ( $user, %args ) = @_;
    is_User( $user ) or croak "Expected a User";
 
+   croak "must give a method" unless $args{method};
+
    my $user_id = $user->user_id;
    ( my $uri = delete $args{uri} ) =~ s/:user_id/$user_id/g;
 
