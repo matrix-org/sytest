@@ -334,3 +334,33 @@ test "Alias creators can delete canonical alias with no ops",
          Future->done(1);
       })
    };
+
+
+test "Only room members can list aliases of a room",
+   requires => [
+      $creator_fixture, $second_user_fixture, local_user_fixture(),
+   ],
+
+   do => sub {
+      my ( $creator, $other_user, $third_user ) = @_;
+      my ( $room_id );
+
+      matrix_create_and_join_room(
+         [ $creator, $other_user ],
+      )->then( sub {
+         ( $room_id ) = @_;
+         do_request_json_for(
+            $other_user,
+            uri  => "/r0/rooms/$room_id/aliases",
+         );
+      })->then( sub {
+         my ( $res ) = @_;
+         log_if_fail "/aliases response for member", $res;
+         assert_json_nonempty_list( $res->{aliases} );
+
+         do_request_json_for(
+            $third_user,
+            uri  => "/r0/rooms/$room_id/aliases",
+         );
+      })->main::expect_http_403;
+   };
