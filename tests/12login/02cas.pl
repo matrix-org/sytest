@@ -33,6 +33,7 @@ test "login types include SSO",
       my ( $http ) = @_;
 
       $http->do_request_json(
+         method => "GET",
          uri => "/r0/login",
       )->then( sub {
          my ( $body ) = @_;
@@ -55,6 +56,7 @@ my $cas_login_fixture = fixture(
       my ( $http ) = @_;
 
       $http->do_request_json(
+         method => "GET",
          uri => "/r0/login",
       )->then( sub {
          my ( $body ) = @_;

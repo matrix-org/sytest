@@ -37,6 +37,7 @@ test "GET /login yields a set of flows",
       my ( $http ) = @_;
 
       $http->do_request_json(
+         method => "GET",
          uri => "/r0/login",
       )->then( sub {
          my ( $body ) = @_;
