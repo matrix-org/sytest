@@ -392,15 +392,15 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
          # Make the joined user a moderator
          matrix_change_room_power_levels(
             $creator, $room_id, sub {
-            ( $pl_content ) = @_;
-            $pl_content->{users}->{$upgrader->user_id} = JSON::number(50);
+               ( $pl_content ) = @_;
+               $pl_content->{users}->{$upgrader->user_id} = JSON::number(50);
 
-            # Note that this test assumes that moderators by default are allowed to upgrade rooms
-            # Change the PL rules to allow moderators to send tombstones
-            $pl_content->{events}->{"m.room.tombstone"} = JSON::number(50);
+               # Note that this test assumes that moderators by default are allowed to upgrade rooms
+               # Change the PL rules to allow moderators to send tombstones
+               $pl_content->{events}->{"m.room.tombstone"} = JSON::number(50);
 
-            log_if_fail "PL content in old room", $pl_content;
-         }
+               log_if_fail "PL content in old room", $pl_content;
+            }
          )
       })->then( sub {
          matrix_sync( $upgrader );
@@ -504,6 +504,8 @@ test "/upgrade copies important state to the new room",
       }
 
       $f->then( sub {
+         matrix_sync( $creator );
+      }->then( sub {
          upgrade_room_synced(
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
