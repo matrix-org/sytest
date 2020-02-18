@@ -89,27 +89,6 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
             Future->done;
          }),
 
-         $appserv->await_event( "m.room.aliases" )->then( sub {
-            my ( $event ) = @_;
-
-            log_if_fail "Event", $event;
-
-            assert_json_keys( $event, qw( content room_id user_id ));
-
-            $event->{room_id} eq $room_id or
-               die "Expected room_id to be $room_id";
-            $event->{user_id} eq $as_user->user_id or
-               die "Expected user_id to be ${\$as_user->user_id}";
-
-            assert_json_keys( my $content = $event->{content}, qw( aliases ));
-            assert_json_list( my $aliases = $content->{aliases} );
-
-            grep { $_ eq $room_alias } @$aliases or
-               die "Expected to find our alias in the aliases list";
-
-            Future->done;
-         }),
-
          do_request_json_for( $local_user,
             method => "POST",
             uri    => "/r0/join/$room_alias",
