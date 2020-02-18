@@ -177,20 +177,6 @@ sub _test_can_create_and_delete_alias {
 
       content => { room_id => $room_id },
    )->then( sub {
-      matrix_get_room_state( $user, $room_id,
-         type      => "m.room.aliases",
-         state_key => $server_name,
-      )
-   })->then( sub {
-      my ( $body ) = @_;
-
-      log_if_fail "Aliases after adding alias", $body;
-
-      assert_json_keys( $body, qw( aliases ) );
-      assert_json_list( my $aliases = $body->{aliases} );
-
-      any { $_ eq $alias } @$aliases or die "Expected alias to be in list";
-
       do_request_json_for( $user,
         method => "DELETE",
         uri    => "/r0/directory/room/$alias",
@@ -198,19 +184,6 @@ sub _test_can_create_and_delete_alias {
         content => {},
       )
    })->then( sub {
-      matrix_get_room_state( $user, $room_id,
-         type      => "m.room.aliases",
-         state_key => $server_name,
-      )
-   })->then( sub {
-      my ( $body ) = @_;
-
-      log_if_fail "Aliases after deleting alias", $body;
-      assert_json_keys( $body, qw( aliases ) );
-      assert_json_list( my $aliases = $body->{aliases} );
-
-      none { $_ eq $alias } @$aliases or die "Expected alias to not be in list";
-
       Future->done;
    });
 }
@@ -278,18 +251,6 @@ test "Can delete canonical alias",
             content => { alias => $room_alias }
          )
       })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.aliases",
-            state_key => $server_name,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( aliases ) );
-         assert_json_list( my $aliases = $body->{aliases} );
-
-         any { $_ eq $room_alias } @$aliases or die "Expected alias to be in list";
-
          do_request_json_for( $creator,
            method => "DELETE",
            uri    => "/r0/directory/room/$room_alias",
@@ -297,18 +258,6 @@ test "Can delete canonical alias",
            content => {},
          )
       })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.aliases",
-            state_key => $server_name,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( aliases ) );
-         assert_json_list( my $aliases = $body->{aliases} );
-
-         none { $_ eq $room_alias } @$aliases or die "Expected alias to not be in list";
-
          matrix_get_room_state( $creator, $room_id,
             type      => "m.room.canonical_alias",
          )
@@ -340,18 +289,6 @@ test "Alias creators can delete alias with no ops",
             content => { room_id => $room_id },
          )
       })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.aliases",
-            state_key => $server_name,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( aliases ) );
-         assert_json_list( my $aliases = $body->{aliases} );
-
-         any { $_ eq $room_alias } @$aliases or die "Expected alias to be in list";
-
          do_request_json_for( $other_user,
            method => "DELETE",
            uri    => "/r0/directory/room/$room_alias",
@@ -359,18 +296,6 @@ test "Alias creators can delete alias with no ops",
            content => {},
          )
       })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.aliases",
-            state_key => $server_name,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( aliases ) );
-         assert_json_list( my $aliases = $body->{aliases} );
-
-         none { $_ eq $room_alias } @$aliases or die "Expected alias to not be in list";
-
          Future->done(1);
       })
    };
@@ -399,18 +324,6 @@ test "Alias creators can delete canonical alias with no ops",
             content => { alias => $room_alias }
          )
       })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.aliases",
-            state_key => $server_name,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( aliases ) );
-         assert_json_list( my $aliases = $body->{aliases} );
-
-         any { $_ eq $room_alias } @$aliases or die "Expected alias to be in list";
-
          do_request_json_for( $other_user,
            method => "DELETE",
            uri    => "/r0/directory/room/$room_alias",
@@ -418,18 +331,6 @@ test "Alias creators can delete canonical alias with no ops",
            content => {},
          )
       })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.aliases",
-            state_key => $server_name,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( aliases ) );
-         assert_json_list( my $aliases = $body->{aliases} );
-
-         none { $_ eq $room_alias } @$aliases or die "Expected alias to not be in list";
-
          Future->done(1);
       })
    };
