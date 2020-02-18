@@ -374,6 +374,7 @@ test "/upgrade copies the power levels to the new room",
       });
    };
 
+# See https://github.com/matrix-org/synapse/issues/6632 for details
 test "/upgrade preserves the power level of the upgrading user in old and new rooms",
    requires => [
       local_user_and_room_fixtures(),
@@ -386,8 +387,6 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
 
       my ( $pl_content, $new_room_id );
 
-      # Note that this test assumes that moderators by default are allowed to upgrade rooms
-
       matrix_join_room_synced(
          $upgrader, $room_id
       )->then( sub {
@@ -396,6 +395,11 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
             $creator, $room_id, sub {
                ( $pl_content ) = @_;
                $pl_content->{users}->{$upgrader->user_id} = JSON::number(50);
+
+               # Note that this test assumes that moderators by default are allowed to upgrade rooms
+               # Change the PL rules to allow moderators to send tombstones
+               $pl_content->{events}->{"m.room.tombstone"} = JSON::number(50);
+
                log_if_fail "PL content in old room", $pl_content;
             }
          )
@@ -501,19 +505,6 @@ test "/upgrade copies important state to the new room",
       }
 
       $f->then( sub {
-         # to make things harder, we now restrict our ability to change each of
-         # those states: the server should make sure it sets up the state
-         # *before* it replicates the PL.
-         matrix_change_room_power_levels(
-            $creator, $room_id, sub {
-               my ( $levels ) = @_;
-               foreach my $k ( keys %STATE_DICT ) {
-                  $levels->{events}->{$k} = 80;
-               }
-               $levels->{users}->{$creator->user_id} = 50;
-            },
-         );
-      })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
          upgrade_room_synced(
@@ -546,7 +537,6 @@ test "/upgrade copies important state to the new room",
          Future->done(1);
       });
    };
-
 
 test "/upgrade copies ban events to the new room",
    requires => [
