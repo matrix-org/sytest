@@ -374,6 +374,7 @@ test "/upgrade copies the power levels to the new room",
       });
    };
 
+# See https://github.com/matrix-org/synapse/issues/6632 for details
 test "/upgrade preserves the power level of the upgrading user in old and new rooms",
    requires => [
       local_user_and_room_fixtures(),
