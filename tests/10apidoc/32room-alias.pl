@@ -63,7 +63,7 @@ test "GET /rooms/:room_id/aliases lists aliases",
          do_request_json_for(
             $user,
             method => "GET",
-            uri => "/r0/rooms/$room_id/aliases",
+            uri => "/unstable/org.matrix.msc2432/rooms/$room_id/aliases",
          );
       })->then( sub {
          my ( $res ) = @_;
@@ -84,7 +84,7 @@ test "GET /rooms/:room_id/aliases lists aliases",
          do_request_json_for(
             $user,
             method => "GET",
-            uri => "/r0/rooms/$room_id/aliases",
+            uri => "/unstable/org.matrix.msc2432/rooms/$room_id/aliases",
          );
       })->then( sub {
          my ( $res ) = @_;
