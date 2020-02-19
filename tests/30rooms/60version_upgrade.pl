@@ -679,7 +679,8 @@ test "/upgrade moves aliases to the new room",
          matrix_put_room_state( $creator, $room_id,
             type    => "m.room.canonical_alias",
             content => {
-               alias => $room_alias_1,
+                alias => $room_alias_1,
+                alt_aliases => [$room_alias_2],
             },
          );
       })->then( sub {
@@ -692,37 +693,12 @@ test "/upgrade moves aliases to the new room",
          );
       })->then( sub {
          ( $new_room_id ) = @_;
-
-      # m.room.aliases are filtered out until a better solution to mitigating abuse is is specced.
-      #
-      #    matrix_get_room_state(
-      #       $creator, $room_id,
-      #       type=>'m.room.aliases', state_key=>$server_name,
-      #    );
-      # })->then( sub {
-      #    my ( $old_aliases ) = @_;
-      #    assert_deeply_eq( $old_aliases, {aliases => []}, "aliases on old room" );
-
          matrix_get_room_state( $creator, $room_id, type=>'m.room.canonical_alias' );
       })->then( sub {
          my ( $old_canonical_alias ) = @_;
          assert_deeply_eq(
             $old_canonical_alias, {}, "canonical_alias on old room",
          );
-
-      # m.room.aliases are filtered out until a better solution to mitigating abuse is is specced.
-      #
-      #    matrix_get_room_state(
-      #       $creator, $new_room_id,
-      #       type=>'m.room.aliases', state_key=>$server_name,
-      #    );
-      # })->then( sub {
-      #    my ( $new_aliases ) = @_;
-      #    assert_deeply_eq(
-      #       [ sort( @{ $new_aliases->{aliases} } ) ],
-      #       [ sort( $room_alias_1, $room_alias_2 ) ],
-      #       "aliases on new room",
-      #    );
 
          matrix_get_room_state(
             $creator, $new_room_id, type=>'m.room.canonical_alias',
@@ -731,7 +707,10 @@ test "/upgrade moves aliases to the new room",
          my ( $new_canonical_alias ) = @_;
          assert_deeply_eq(
             $new_canonical_alias,
-            { alias => $room_alias_1 },
+            {
+               alias => $room_alias_1,
+               alt_aliases => [$room_alias_2],
+            },
             "canonical_alias on new room",
          );
 
