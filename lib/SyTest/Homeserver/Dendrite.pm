@@ -102,12 +102,6 @@ sub _get_config
       $db_uri .= sprintf( " sslmode=%s", $db_config{args}->{sslmode} );
    }
 
-   # POSTGRES not set or is 0, use sqlite
-   if( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') {
-      print STDERR "\nUsing sqlite database\n";
-      $db_uri = "file:dendrite.db";
-   }
-
    return (
       version => 0,
       matrix => {
@@ -142,7 +136,10 @@ sub _get_config
       },
 
       database => {
-         map { $_ => $db_uri } qw(
+         # POSTGRES not set or is 0, use sqlite, which has separate .db files for each server
+         map { ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+         ($_ => "file:$self->{hs_dir}/" . $_ . ".db") :
+         ($_ => $db_uri) } qw(
             account device media_api sync_api room_server server_key
             federation_sender public_rooms_api naffka appservice
          ),
