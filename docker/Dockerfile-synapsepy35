@@ -32,4 +32,4 @@ RUN dos2unix /synapse_sytest.sh
 
 ADD docker/pydron.py /pydron.py
 
-ENTRYPOINT ["/synapse_sytest.sh"]
+CMD ["/usr/bin/bash" "/synapse_sytest.sh"]
