@@ -1,5 +1,8 @@
 package SyTest::Output::TAP;
 
+use POSIX qw( strftime );
+use Time::HiRes qw( time );
+
 use strict;
 use warnings;
 
@@ -84,11 +87,13 @@ package SyTest::Output::TAP::Test {
    sub failed  :lvalue { shift->{failed}      }
    sub failure :lvalue { shift->{failure}     }
    sub subnum  :lvalue { shift->{subnum}      }
+   sub starttime :lvalue { shift->{starttime}   }
 
    sub start {
       my $self = shift;
 
       print STDERR "    Test ${\$self->num} ${\$self->name}...\n";
+      $self->starttime = Time::HiRes::time;
    }
 
    sub pass { }
@@ -120,6 +125,14 @@ package SyTest::Output::TAP::Test {
       $self->skipped++;
    }
 
+   sub format_time
+   {
+      my $self = shift;
+      my ( $time ) = @_;
+      return POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime($time)) . "."
+          . sprintf("%03d", int(($time - int($time))*1000));
+   }
+
    sub leave
    {
       my $self = shift;
@@ -148,6 +161,10 @@ package SyTest::Output::TAP::Test {
             ( $self->expect_fail ? "(expected fail) " : "" ) .
             $name .
             ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
+         my $starttime = $self->starttime;
+         print "# Started: " . $self->format_time($starttime) . "\n";
+         my $endtime = Time::HiRes::time;
+         print "# Ended: " . $self->format_time($endtime) . "\n";
 
          print "# $_\n" for split m/\n/, $self->failure;
       }

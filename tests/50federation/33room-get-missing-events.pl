@@ -105,7 +105,7 @@ test "Outbound federation can request missing events",
 foreach my $vis (qw( world_readable shared invite joined )) {
    test "Inbound federation can return missing events for $vis visibility",
       requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                    local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                    local_user_and_room_fixtures(),
                     federation_user_id_fixture() ],
 
       do => sub {
@@ -142,8 +142,8 @@ foreach my $vis (qw( world_readable shared invite joined )) {
                uri      => "/v1/get_missing_events/" . $room->room_id,
 
                content => {
-                  earliest_events => [ $creation_event->{event_id} ],
-                  latest_events   => [ $member_event->{event_id} ],
+                  earliest_events => [ $room->id_for_event( $creation_event )],
+                  latest_events   => [ $room->id_for_event( $member_event )],
                   limit           => 10,
 
                   # XXX: min_depth requests the remote server to filter by depth

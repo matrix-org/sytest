@@ -1,6 +1,6 @@
 test "Inbound federation can return events",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
 
    do => sub {
@@ -9,22 +9,24 @@ test "Inbound federation can return events",
 
       my $local_server_name = $outbound_client->server_name;
 
-      my $member_event;
+      my ( $member_event, $room );
 
       $outbound_client->join_room(
          server_name => $first_home_server,
          room_id     => $room_id,
          user_id     => $user_id,
       )->then( sub {
-         my ( $room ) = @_;
+         ( $room ) = @_;
 
          $member_event = $room->get_current_state_event( "m.room.member", $user_id );
          log_if_fail "Member event", $member_event;
 
+         my $event_id = $room->id_for_event( $member_event );
+
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $first_home_server,
-            uri      => "/v1/event/$member_event->{event_id}",
+            uri      => "/v1/event/$event_id",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -39,7 +41,11 @@ test "Inbound federation can return events",
 
          # Check that the string fields seem right
          assert_eq( $event->{$_}, $member_event->{$_},
-            "event $_" ) for qw( depth event_id origin room_id sender state_key type );
+            "event $_" ) for qw( depth origin room_id sender state_key type );
+
+         if ( $room->room_version eq "1" || $room->room_version eq "2" ) {
+            assert_eq( $event->{event_id}, $member_event->{event_id}, "event_id" );
+         }
 
          Future->done(1);
       });
@@ -48,7 +54,7 @@ test "Inbound federation can return events",
 
 test "Inbound federation redacts events from erased users",
    requires => [ $main::OUTBOUND_CLIENT, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
+                 local_user_and_room_fixtures(),
                  federation_user_id_fixture() ],
 
    do => sub {

@@ -61,6 +61,11 @@ my $SERVER_IMPL = undef;
 my $WHITELIST_FILE;
 my $BLACKLIST_FILE;
 
+# the room version that we use for the majority of our tests (those which do
+# not requires a specific room version). 'undef' means 'use the default from
+# the server under test'.
+our $TEST_ROOM_VERSION;
+
 Getopt::Long::Configure('pass_through');
 GetOptions(
    'I|server-implementation=s' => \$SERVER_IMPL,
@@ -81,6 +86,8 @@ GetOptions(
    'v|verbose+' => \(my $VERBOSE = 0),
 
    'n|no-tls' => sub { $WANT_TLS = 0 },
+
+   'room-version=s' => \$TEST_ROOM_VERSION,
 
    # these two are superceded by -I, but kept for backwards compatibility
    'dendron=s' => sub {
@@ -171,6 +178,8 @@ Options:
 
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
+   --room-version VERSION       - use the given room version for the majority of
+                                  tests
 .
    write STDERR;
 

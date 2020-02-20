@@ -272,6 +272,9 @@ The following options have defaults:
    visibility => 'private'
    preset => 'public_chat'
 
+'room_version' will also be set if an explicit room version was given on the
+commandline.
+
 The resultant future completes with two values: the room_id from the
 /createRoom response; the room_alias from the /createRoom response (which is
 non-standard and its use is deprecated).
@@ -287,6 +290,10 @@ sub matrix_create_room
 
    $opts{visibility} //= "private";
    $opts{preset} //= "public_chat";
+
+   if( defined $TEST_ROOM_VERSION ) {
+      $opts{room_version} //= $TEST_ROOM_VERSION;
+   }
 
    do_request_json_for( $user,
       method => "POST",

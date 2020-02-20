@@ -815,5 +815,22 @@ test "/upgrade of a bogus room fails gracefully",
       )->main::expect_matrix_error( 404, 'M_NOT_FOUND' );
    };
 
+test "Cannot send tombstone event that points to the same room",
+   requires => [
+      local_user_and_room_fixtures(),
+      qw( can_upgrade_room_version can_change_power_levels ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id ) = @_;
+
+      matrix_send_room_message( $creator, $room_id,
+         type    => "m.room.tombstone",
+         content => {
+            replacement_room => $room_id,
+         }
+      )->main::expect_http_400;
+   };
+
 # upgrade with other local users
 # upgrade with remote users
