@@ -679,8 +679,8 @@ test "/upgrade moves aliases to the new room",
          matrix_put_room_state( $creator, $room_id,
             type    => "m.room.canonical_alias",
             content => {
-                alias => $room_alias_1,
-                alt_aliases => [$room_alias_2],
+               alias => $room_alias_1,
+               alt_aliases => [ $room_alias_2 ],
             },
          );
       })->then( sub {
@@ -709,7 +709,7 @@ test "/upgrade moves aliases to the new room",
             $new_canonical_alias,
             {
                alias => $room_alias_1,
-               alt_aliases => [$room_alias_2],
+               alt_aliases => [ $room_alias_2 ],
             },
             "canonical_alias on new room",
          );
