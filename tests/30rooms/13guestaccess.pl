@@ -365,29 +365,27 @@ test "GET /publicRooms lists rooms",
                my %isOK = map { $_ => 0 } keys %rooms;
 
                foreach my $room ( @{ $body->{chunk} } ) {
-                  my $aliases = $room->{aliases};
+                  my $canonical_alias = $room->{canonical_alias};
                   assert_json_boolean( my $world_readable = $room->{world_readable} );
                   assert_json_boolean( my $guest_can_join = $room->{guest_can_join} );
 
-                  foreach my $alias ( @{$aliases} ) {
-                     my $alias_local = first { $alias =~ m/^#$_:/ } keys %rooms;
-                     next unless $alias_local;
-                     my $settings = $rooms{$alias_local};
+                  my $alias_local = first { $canonical_alias =~ m/^#$_:/ } keys %rooms;
+                  next unless $alias_local;
+                  my $settings = $rooms{$alias_local};
 
-                     if(( $settings->{history_visibility} // "" ) eq "world_readable" ) {
-                        $world_readable or die "Expected $alias_local to be world_readable";
-                     } else {
-                        $world_readable and die "Expected $alias_local not to be world_readable";
-                     }
-
-                     if(( $settings->{guest_access} // "" ) eq "can_join" ) {
-                        $guest_can_join or die "Expected $alias_local to be guest-joinable";
-                     } else {
-                        $guest_can_join and die "Expected $alias_local not to be guest-joinable";
-                     }
-
-                     $isOK{$alias_local} = 1;
+                  if(( $settings->{history_visibility} // "" ) eq "world_readable" ) {
+                     $world_readable or die "Expected $alias_local to be world_readable";
+                  } else {
+                     $world_readable and die "Expected $alias_local not to be world_readable";
                   }
+
+                  if(( $settings->{guest_access} // "" ) eq "can_join" ) {
+                     $guest_can_join or die "Expected $alias_local to be guest-joinable";
+                  } else {
+                     $guest_can_join and die "Expected $alias_local not to be guest-joinable";
+                  }
+
+                  $isOK{$alias_local} = 1;
                }
 
                foreach my $alias ( keys %rooms ) {
@@ -462,17 +460,15 @@ test "GET /publicRooms includes avatar URLs",
                );
 
                foreach my $room ( @{ $body->{chunk} } ) {
-                  my $aliases = $room->{aliases};
+                  my $canonical_alias = $room->{canonical_alias};
 
-                  foreach my $alias ( @{$aliases} ) {
-                     if( $alias =~ m/^\Q#worldreadable:/ ) {
-                        $isOK{worldreadable} =
-                           ( $room->{avatar_url} eq "https://example.com/ringtails.jpg" );
-                     }
-                     elsif( $alias =~ m/^\Q#nonworldreadable:/ ) {
-                        $isOK{nonworldreadable} =
-                           ( $room->{avatar_url} eq "https://example.com/ruffed.jpg" );
-                     }
+                  if( $canonical_alias =~ m/^\Q#worldreadable:/ ) {
+                     $isOK{worldreadable} =
+                        ( $room->{avatar_url} eq "https://example.com/ringtails.jpg" );
+                  }
+                  elsif( $canonical_alias =~ m/^\Q#nonworldreadable:/ ) {
+                     $isOK{nonworldreadable} =
+                        ( $room->{avatar_url} eq "https://example.com/ruffed.jpg" );
                   }
                }
 
