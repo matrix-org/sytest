@@ -59,40 +59,32 @@ test "Name/topic keys are correct",
                   my $topic = $room->{topic};
                   my $canonical_alias = $room->{canonical_alias};
 
-                  my $aliases = $room->{aliases};
-                  if( not defined $aliases ) {
-                     next;
-                  }
+                  foreach my $alias_local ( keys %rooms ) {
+                     $canonical_alias =~ m/^\Q#$alias_local:\E/ or next;
 
-                  foreach my $alias ( @{$aliases} ) {
-                     foreach my $alias_local ( keys %rooms ) {
-                        $alias =~ m/^\Q#$alias_local:\E/ or next;
+                     my $room_config = $rooms{$alias_local};
 
-                        my $room_config = $rooms{$alias_local};
+                     assert_eq( $room->{num_joined_members}, 1, "member count for '$alias_local'" );
 
-                        assert_eq( $canonical_alias, $alias, "canonical_alias" );
-                        assert_eq( $room->{num_joined_members}, 1, "member count for '$alias_local'" );
+                     # The rooms should get created "atomically", so we should never
+                     # see any out of the public rooms list in the wrong state. If
+                     # we see a room we expect it to already be in the right state.
 
-                        # The rooms should get created "atomically", so we should never
-                        # see any out of the public rooms list in the wrong state. If
-                        # we see a room we expect it to already be in the right state.
-
-                        if( defined $name ) {
-                           assert_eq( $room_config->{name}, $name, "room name for '$alias_local'" );
-                        }
-                        else {
-                           defined $room_config->{name} and die "Expected not to find a name for '$alias_local'";
-                        }
-
-                        if( defined $topic ) {
-                           assert_eq( $room_config->{topic}, $topic, "room topic for '$alias_local'" );
-                        }
-                        else {
-                           defined $room_config->{topic} and die "Expected not to find a topic for '$alias_local'";
-                        }
-
-                        $isOK{$alias_local} = 1;
+                     if( defined $name ) {
+                        assert_eq( $room_config->{name}, $name, "room name for '$alias_local'" );
                      }
+                     else {
+                        defined $room_config->{name} and die "Expected not to find a name for '$alias_local'";
+                     }
+
+                     if( defined $topic ) {
+                        assert_eq( $room_config->{topic}, $topic, "room topic for '$alias_local'" );
+                     }
+                     else {
+                        defined $room_config->{topic} and die "Expected not to find a topic for '$alias_local'";
+                     }
+
+                     $isOK{$alias_local} = 1;
                   }
                }
 
