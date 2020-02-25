@@ -226,6 +226,37 @@ test "Users can't delete other's aliases",
       })
    };
 
+test "Users with sufficient power-level can delete other's aliases",
+   requires => [ $creator_fixture, $room_fixture, local_user_fixture(), room_alias_fixture(),
+                 qw( can_create_room_alias )],
+
+   do => sub {
+      my ( $user, $room_id, $other_user, $room_alias ) = @_;
+      my $server_name = $user->http->server_name;
+
+      matrix_change_room_power_levels(
+         $user, $room_id, sub {
+            $_[0]->{users}->{$other_user->user_id} = 100;
+         },
+      )->then( sub {
+         do_request_json_for( $user,
+           method => "PUT",
+           uri    => "/r0/directory/room/$room_alias",
+
+           content => { room_id => $room_id },
+         )
+      })->then( sub {
+         do_request_json_for( $other_user,
+           method => "DELETE",
+           uri    => "/r0/directory/room/$room_alias",
+
+           content => {},
+         )
+      })->then( sub {
+         Future->done(1);
+      })
+   };
+
 test "Can delete canonical alias",
    requires => [ local_user_fixture( with_events => 0 ), room_alias_fixture(),
                  qw( can_create_room_alias )],
