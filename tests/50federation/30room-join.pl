@@ -870,7 +870,7 @@ test "Outbound federation rejects send_join responses with no m.room.create even
 
             # XXX currently synapse fails with a 500 here. I'm not really convinced that's
             # a thing we want to enforce, but we don't really have a specced way to say
-            # "a remote server did something wierd".
+            # "a remote server did something weird".
             Future->done(1);
          }),
       )
@@ -953,7 +953,117 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
 
             # XXX currently synapse fails with a 500 here. I'm not really convinced that's
             # a thing we want to enforce, but we don't really have a specced way to say
-            # "a remote server did something wierd".
+            # "a remote server did something weird".
+            Future->done(1);
+         }),
+      )
+   };
+
+test "Outbound federation event from other origin",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $versionprefix     = "v2";
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      my $room_alias = "#50fed-room-alias:$local_server_name";
+      my $room = $datastore->create_room(
+         creator => $creator_id,
+         alias   => $room_alias,
+      );
+
+      my $room_id = $room->room_id;
+
+      my $event = $room->create_and_insert_event(
+         sender      => "\@test:$local_server_name",
+         type        => "test",
+         room_id     => $room_id,
+         state_key   => "",
+         content     => {
+            body    => "Test",
+         },
+      );
+
+      # The event was generated with a valid signature, modify it with an
+      # invalid signature.
+      $event->{origin} = "other-server:12345";
+
+      my $await_request_send_join;
+
+      $await_request_send_join = $inbound_server->await_request_v2_send_join( $room_id );
+
+      Future->needs_all(
+         # Await PDU?
+
+         $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
+            my ( $req, $room_id, $user_id ) = @_;
+
+            my $proto = $room->make_join_protoevent(
+               user_id => $user_id,
+            );
+
+            $proto->{origin}           = $inbound_server->server_name;
+            $proto->{origin_server_ts} = $inbound_server->time_ms;
+
+            $req->respond_json( {
+               event => $proto,
+            } );
+
+            Future->done;
+         }),
+
+         $await_request_send_join->then( sub {
+            my ( $req, $room_id, $event_id ) = @_;
+
+            $req->method eq "PUT" or
+               die "Expected send_join method to be PUT";
+
+            my $event = $req->body_from_json;
+            log_if_fail "send_join event", $event;
+
+            my @auth_chain = $datastore->get_auth_chain_events(
+               map { $_->[0] } @{ $event->{auth_events} }
+            );
+
+            my $response = {
+               auth_chain => \@auth_chain,
+               state      => [ $room->current_state_events ],
+            };
+
+            $req->respond_json($response);
+
+            log_if_fail "send_join response", $response;
+
+            Future->done;
+         }),
+
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/join/$room_alias",
+
+            content => {},
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Join response", $body;
+
+            assert_json_keys( $body, qw( room_id ));
+
+            $body->{room_id} eq $room_id or
+               die "Expected room_id to be $room_id";
+
+            matrix_get_my_member_event( $user, $room_id )
+         })->then( sub {
+            my ( $event ) = @_;
+
+            # The joining HS (i.e. the SUT) should have invented the event ID
+            # for my membership event.
+
+            # TODO - sanity check the $event
+
             Future->done(1);
          }),
       )
