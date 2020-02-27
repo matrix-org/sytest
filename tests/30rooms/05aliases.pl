@@ -254,8 +254,15 @@ test "Users with sufficient power-level can delete other's aliases",
            content => {},
          )
       })->then( sub {
-         Future->done(1);
-      })
+         my ( $res ) = @_;
+         log_if_fail "Unable to delete alias", $res;
+
+         do_request_json_for(
+            $user,
+            method => "GET",
+            uri  => "/r0/directory/room/$room_alias",
+         );
+      })->main::expect_http_404;
    };
 
 test "Can delete canonical alias",
