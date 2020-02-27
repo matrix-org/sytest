@@ -222,17 +222,24 @@ test "Users can't delete other's aliases",
    };
 
 test "Users with sufficient power-level can delete other's aliases",
-   requires => [ $creator_fixture, $room_fixture, local_user_fixture(), room_alias_fixture(),
+   requires => [ $creator_fixture, local_user_fixture(), room_alias_fixture(),
                  qw( can_create_room_alias )],
 
    do => sub {
-      my ( $user, $room_id, $other_user, $room_alias ) = @_;
+      my ( $user, $other_user, $room_alias ) = @_;
+      my $room_id;
 
-      matrix_change_room_power_levels(
-         $user, $room_id, sub {
-            $_[0]->{users}->{$other_user->user_id} = 100;
-         },
+      matrix_create_and_join_room(
+         [ $user, $other_user ],
       )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_change_room_power_levels(
+            $user, $room_id, sub {
+               $_[0]->{users}->{$other_user->user_id} = 100;
+            },
+         )
+      })->then( sub {
          do_request_json_for( $user,
            method => "PUT",
            uri    => "/r0/directory/room/$room_alias",
