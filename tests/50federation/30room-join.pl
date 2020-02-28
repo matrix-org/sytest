@@ -959,14 +959,13 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
       )
    };
 
-test "Outbound federation event from other origin",
+test "Outbound federation event with an invalid signature should not break",
    requires => [ local_user_fixture(), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
 
    do => sub {
       my ( $user, $inbound_server, $creator_id ) = @_;
 
-      my $versionprefix     = "v2";
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
@@ -988,8 +987,7 @@ test "Outbound federation event from other origin",
          },
       );
 
-      # The event was generated with a valid signature, modify it with an
-      # invalid signature.
+      # Modify the event (after the signature was generated) to invalidate the signature.
       $event->{origin} = "other-server:12345";
 
       my $await_request_send_join;
@@ -997,8 +995,6 @@ test "Outbound federation event from other origin",
       $await_request_send_join = $inbound_server->await_request_v2_send_join( $room_id );
 
       Future->needs_all(
-         # Await PDU?
-
          $inbound_server->await_request_make_join( $room_id, $user->user_id )->then( sub {
             my ( $req, $room_id, $user_id ) = @_;
 
