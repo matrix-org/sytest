@@ -20,10 +20,16 @@ if [ -n "$MULTI_POSTGRES" ]; then
     # In this mode we want to run synapse against multiple split out databases.
 
     # We increase the max connections as we have more databases.
-    echo -e "max_connections=5000" >> /var/run/postgresql/data/postgresql.conf
+    for ver in /etc/postgresql/*/main; do
+        mkdir -p $ver/conf.d/
+        echo -e "fsync=off\nfull_page_writes=off" >> $ver/conf.d/fsync.conf;
+        echo -e "max_connections=1000" >>$ver/conf.d/max_conn.conf
+    done
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
+
+    su -c psql postgres <<< "show max_connections"
 
     # Make the test databases for the two Synapse servers that will be spun up
     su -c psql postgres <<EOF
