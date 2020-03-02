@@ -22,7 +22,6 @@ if [ -n "$MULTI_POSTGRES" ]; then
     # We increase the max connections as we have more databases.
     for ver in /etc/postgresql/*/main; do
         mkdir -p $ver/conf.d/
-        echo -e "fsync=off\nfull_page_writes=off" >> $ver/conf.d/fsync.conf;
         echo -e "max_connections=1000" >>$ver/conf.d/max_conn.conf
     done
 
@@ -94,6 +93,14 @@ elif [ -n "$POSTGRES" ]; then
     export PGUSER=postgres
     export POSTGRES_DB_1=pg1
     export POSTGRES_DB_2=pg2
+
+    # We increase the max connections as we have more databases.
+    for ver in /etc/postgresql/*/main; do
+        mkdir -p $ver/conf.d/
+        echo -e "max_connections=1000" >>$ver/conf.d/max_conn.conf
+    done
+
+    su -c psql postgres <<< "show max_connections"
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
