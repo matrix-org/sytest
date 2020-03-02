@@ -990,7 +990,7 @@ sub wrap_synapse_command
             },
             {
                type => "manhole",
-               port => $self->{ports}{frontend_proxy},
+               port => $self->{ports}{frontend_proxy_manhole},
                bind_address => $bind_host,
             },
             {
