@@ -555,28 +555,31 @@ test "uploading self-signing key notifies over federation",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
-         matrix_get_e2e_keys( $user1, $user2_id );
-      })->then( sub {
-         my ( $content ) = @_;
+         retry_until_success {
+            matrix_get_e2e_keys( $user1, $user2_id )
+            ->then( sub {
+               my ( $content ) = @_;
 
-         log_if_fail "key query content", $content;
+               log_if_fail "key query content", $content;
 
-         assert_json_keys( $content, "master_keys" );
-         assert_json_keys( $content->{master_keys}, $user2_id );
-         assert_deeply_eq( $content->{master_keys}->{$user2_id}, {
-               "user_id" => $user2_id,
-               "usage" => ["master"],
-               "keys" => {
-                  "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
-                      => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
-               },
-            },
-         );
-         assert_json_keys( $content, "self_signing_keys" );
-         assert_json_keys( $content->{self_signing_keys}, $user2_id );
-         assert_deeply_eq( $content->{self_signing_keys}->{$user2_id}, $self_signing_key);
+               assert_json_keys( $content, "master_keys" );
+               assert_json_keys( $content->{master_keys}, $user2_id );
+               assert_deeply_eq( $content->{master_keys}->{$user2_id}, {
+                     "user_id" => $user2_id,
+                     "usage" => ["master"],
+                     "keys" => {
+                        "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                           => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+                     },
+                  },
+               );
+               assert_json_keys( $content, "self_signing_keys" );
+               assert_json_keys( $content->{self_signing_keys}, $user2_id );
+               assert_deeply_eq( $content->{self_signing_keys}->{$user2_id}, $self_signing_key);
 
-         Future->done(1);
+               Future->done(1);
+            })
+         }
       });
    };
 
