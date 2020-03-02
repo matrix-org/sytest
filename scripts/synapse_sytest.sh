@@ -20,13 +20,12 @@ if [ -n "$MULTI_POSTGRES" ]; then
     # In this mode we want to run synapse against multiple split out databases.
 
     # We increase the max connections as we have more databases.
-    for ver in /etc/postgresql/*/main; do
-        sed -i -r "s/^max_connections.*$/max_connections = 500/" $ver/postgresql.conf
-    done
+    sed -i -r "s/^max_connections.*$/max_connections = 500/"/var/run/postgresql/data/postgresql.conf
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
+    su -c psql postgres <<< "show config_file"
     su -c psql postgres <<< "show max_connections"
 
     # Make the test databases for the two Synapse servers that will be spun up
@@ -94,13 +93,12 @@ elif [ -n "$POSTGRES" ]; then
     export POSTGRES_DB_2=pg2
 
     # We increase the max connections as we have more databases.
-    for ver in /etc/postgresql/*/main; do
-        sed -i -r "s/^max_connections.*$/max_connections = 500/" $ver/postgresql.conf
-    done
+    sed -i -r "s/^max_connections.*$/max_connections = 500/" /var/run/postgresql/data/postgresql.conf
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
+    su -c psql postgres <<< "show config_file"
     su -c psql postgres <<< "show max_connections"
 
     # Write out the configuration for a PostgreSQL using Synapse
