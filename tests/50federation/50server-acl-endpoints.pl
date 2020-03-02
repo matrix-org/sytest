@@ -28,7 +28,6 @@ my @TESTS = (
    [ "get room state ids", *can_get_state_ids ],
    [ "backfill", *can_backfill ],
    [ "/event_auth", *can_event_auth ],
-   [ "query auth", *can_query_auth ],
    [ "get missing events", *can_get_missing_events ],
 );
 
@@ -237,24 +236,6 @@ sub can_event_auth {
          hostname => $params{dest_server},
          uri      => "/v1/event_auth/$room_id/$event_id",
       ), $params{expect_ban}, "/event_auth",
-   );
-}
-
-sub can_query_auth {
-   my ( %params ) = @_;
-   my $room = $params{room};
-   my $room_id = $room->{room_id};
-   my $event_id = $room->id_for_event($room->{prev_events}[-1]);
-
-   maybe_expect_forbidden(
-      $params{outbound_client}->do_request_json(
-         method   => "POST",
-         hostname => $params{dest_server},
-         uri      => "/v1/query_auth/$room_id/$event_id",
-         content  => {
-            auth_chain => [],
-         },
-      ), $params{expect_ban}, "/query_auth",
    );
 }
 
