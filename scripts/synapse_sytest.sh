@@ -21,7 +21,7 @@ if [ -n "$MULTI_POSTGRES" ]; then
 
     # We increase the max connections as we have more databases.
     for ver in /etc/postgresql/*/main; do
-        sed -r "s/^max_connections.*$/max_connections = 1000" $ver/postgresql.conf
+        sed -r "s/^max_connections.*$/max_connections = 1000/" $ver/postgresql.conf
     done
 
     # Start the database
