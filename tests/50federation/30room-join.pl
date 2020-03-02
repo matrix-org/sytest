@@ -1055,10 +1055,7 @@ test "Outbound federation event with an invalid signature should not break",
          })->then( sub {
             my ( $event ) = @_;
 
-            # The joining HS (i.e. the SUT) should have invented the event ID
-            # for my membership event.
-
-            # TODO - sanity check the $event
+            assert_json_keys( $event->{content}, qw( membership ) );
 
             Future->done(1);
          }),
