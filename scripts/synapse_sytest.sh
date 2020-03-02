@@ -26,7 +26,7 @@ if [ -n "$MULTI_POSTGRES" ]; then
     done
 
     # Start the database
-    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
+    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA restart' postgres
 
     su -c psql postgres <<< "show max_connections"
 
@@ -101,7 +101,7 @@ elif [ -n "$POSTGRES" ]; then
     done
 
     # Start the database
-    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
+    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA restart' postgres
 
     su -c psql postgres <<< "show max_connections"
 
