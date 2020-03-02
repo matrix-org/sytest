@@ -22,11 +22,11 @@ if [ -n "$MULTI_POSTGRES" ]; then
     # We increase the max connections as we have more databases.
     for ver in /etc/postgresql/*/main; do
         mkdir -p $ver/conf.d/
-        echo -e "max_connections=1000" >>$ver/conf.d/max_conn.conf
+        echo -e "max_connections = 1000" >> $ver/conf.d/max_conn.conf
     done
 
     # Start the database
-    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA restart' postgres
+    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
     su -c psql postgres <<< "show max_connections"
 
@@ -97,11 +97,11 @@ elif [ -n "$POSTGRES" ]; then
     # We increase the max connections as we have more databases.
     for ver in /etc/postgresql/*/main; do
         mkdir -p $ver/conf.d/
-        echo -e "max_connections=1000" >>$ver/conf.d/max_conn.conf
+        echo -e "max_connections = 1000" >>$ver/conf.d/max_conn.conf
     done
 
     # Start the database
-    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA restart' postgres
+    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
     su -c psql postgres <<< "show max_connections"
 
