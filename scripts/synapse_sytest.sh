@@ -100,10 +100,10 @@ elif [ -n "$POSTGRES" ]; then
         echo -e "max_connections=1000" >>$ver/conf.d/max_conn.conf
     done
 
-    su -c psql postgres <<< "show max_connections"
-
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
+
+    su -c psql postgres <<< "show max_connections"
 
     # Write out the configuration for a PostgreSQL using Synapse
     ./scripts/prep_sytest_for_postgres.sh
