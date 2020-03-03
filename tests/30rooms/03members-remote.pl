@@ -103,10 +103,17 @@ test "New room members see existing members' presence in room initialSync",
             $presence{$first_user->user_id} or
                return Future->done( undef );  # try again
 
+            log_if_fail "Presence found during loop", $presence{ $first_user->user_id };
+
+            $presence{ $first_user->user_id }{content}{presence} eq "online" or
+               return Future->done( undef );  # try again
+
             return Future->done( \%presence );
          })
       })->then( sub {
          my ( $presencemap ) = @_;
+
+         log_if_fail "Presence", $presencemap->{ $first_user->user_id };
 
          assert_json_keys( $presencemap->{ $first_user->user_id },
             qw( type content ));

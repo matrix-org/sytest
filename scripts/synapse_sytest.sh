@@ -20,7 +20,7 @@ if [ -n "$MULTI_POSTGRES" ]; then
     # In this mode we want to run synapse against multiple split out databases.
 
     # We increase the max connections as we have more databases.
-    sed -i -r "s/^max_connections.*$/max_connections = 500/"/var/run/postgresql/data/postgresql.conf
+    sed -i -r "s/^max_connections.*$/max_connections = 500/" /var/run/postgresql/data/postgresql.conf
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
@@ -100,6 +100,8 @@ elif [ -n "$POSTGRES" ]; then
 
     su -c psql postgres <<< "show config_file"
     su -c psql postgres <<< "show max_connections"
+    su -c psql postgres <<< "show full_page_writes"
+    su -c psql postgres <<< "show fsync"
 
     # Write out the configuration for a PostgreSQL using Synapse
     ./scripts/prep_sytest_for_postgres.sh
