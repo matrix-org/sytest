@@ -90,6 +90,7 @@ multi_test "Canonical alias can be set",
             }
          )->SyTest::pass_on_done( "m.room.canonical_alias accepts present aliases" );
       })->then( sub {
+         # Create an unknown, but valid alias name.
          my $bad_alias = $room_alias =~ s/^#/#NOT-/r;
 
          matrix_put_room_state( $user, $room_id,
@@ -99,6 +100,64 @@ multi_test "Canonical alias can be set",
             }
          )->main::expect_http_4xx
             ->SyTest::pass_on_done( "m.room.canonical_alias rejects missing aliases" );
+      })->then( sub {
+         # Create an invalid alias name (starts with % instead of #).
+         my $bad_alias = $room_alias =~ s/^#/%/r;
+
+         matrix_put_room_state( $user, $room_id,
+            type    => "m.room.canonical_alias",
+            content => {
+               alias => $bad_alias,
+            }
+         )->main::expect_http_4xx
+            ->SyTest::pass_on_done( "m.room.canonical_alias rejects invalid aliases" );
+      });
+   };
+
+multi_test "Canonical alias can include alt_aliases",
+   requires => [ local_user_fixture(), room_alias_name_fixture() ],
+
+   do => sub {
+      my ( $user, $room_alias_name ) = @_;
+
+      my ( $room_id, $room_alias );
+
+      matrix_create_room( $user,
+         room_alias_name => $room_alias_name,
+      )->then( sub {
+         ( $room_id, $room_alias ) = @_;
+
+         matrix_put_room_state( $user, $room_id,
+            type    => "m.room.canonical_alias",
+            content => {
+               alias       => $room_alias,
+               alt_aliases => [ $room_alias ],
+            }
+         )->SyTest::pass_on_done( "m.room.canonical_alias accepts present aliases" );
+      })->then( sub {
+         # Create an unknown, but valid alias name.
+         my $bad_alias = $room_alias =~ s/^#/#NOT-/r;
+
+         matrix_put_room_state( $user, $room_id,
+            type    => "m.room.canonical_alias",
+            content => {
+               alias => $room_alias,
+               alt_aliases => [ $bad_alias ],
+            }
+         )->main::expect_http_4xx
+            ->SyTest::pass_on_done( "m.room.canonical_alias rejects missing aliases" );
+      })->then( sub {
+         # Create an invalid alias name (starts with % instead of #).
+         my $bad_alias = $room_alias =~ s/^#/%/r;
+
+         matrix_put_room_state( $user, $room_id,
+            type    => "m.room.canonical_alias",
+            content => {
+               alias => $room_alias,
+               alt_aliases => [ $bad_alias ],
+            }
+         )->main::expect_http_4xx
+            ->SyTest::pass_on_done( "m.room.canonical_alias rejects invalid aliases" );
       });
    };
 
