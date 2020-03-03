@@ -60,6 +60,3 @@ ENV PGHOST=/var/run/postgresql
 ENV PGDATA=$PGHOST/data
 ENV PGUSER=postgres
 RUN for ver in `ls /usr/lib/postgresql | head -n 1`; do su -c '/usr/lib/postgresql/'$ver'/bin/initdb -E "UTF-8" --lc-collate="C" --lc-ctype="C" --username=postgres' postgres; done
-
-# Turn off all the fsync stuff for postgres
-RUN for ver in /etc/postgresql/*/main; do mkdir -p $ver/conf.d/; echo -e "fsync=off\nfull_page_writes=off" >> $ver/conf.d/fsync.conf; done

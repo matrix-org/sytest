@@ -16,17 +16,25 @@ cd "$(dirname $0)/.."
 mkdir /work
 
 # PostgreSQL setup
-if [ -n "$MULTI_POSTGRES" ]; then
-    # In this mode we want to run synapse against multiple split out databases.
-
+if [ -n "$MULTI_POSTGRES" ] || [ -n "$POSTGRES" ]; then
     # We increase the max connections as we have more databases.
     sed -i -r "s/^max_connections.*$/max_connections = 500/" /var/run/postgresql/data/postgresql.conf
+
+    echo -e "fsync = off" >> /var/run/postgresql/data/postgresql.conf
+    echo -e "full_page_writes = off" >> /var/run/postgresql/data/postgresql.conf
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
     su -c psql postgres <<< "show config_file"
     su -c psql postgres <<< "show max_connections"
+    su -c psql postgres <<< "show full_page_writes"
+    su -c psql postgres <<< "show fsync"
+fi
+
+# Now create the databases
+if [ -n "$MULTI_POSTGRES" ]; then
+    # In this mode we want to run synapse against multiple split out databases.
 
     # Make the test databases for the two Synapse servers that will be spun up
     su -c psql postgres <<EOF
@@ -88,26 +96,6 @@ state_db:
 EOF
 
 elif [ -n "$POSTGRES" ]; then
-    export PGUSER=postgres
-    export POSTGRES_DB_1=pg1
-    export POSTGRES_DB_2=pg2
-
-    # We increase the max connections as we have more databases.
-    sed -i -r "s/^max_connections.*$/max_connections = 500/" /var/run/postgresql/data/postgresql.conf
-    sed -i -r "s/^fsync.*$/fsync = off/" /var/run/postgresql/data/postgresql.conf
-    sed -i -r "s/^full_page_writes.*$/full_page_writes = off/" /var/run/postgresql/data/postgresql.conf
-
-    echo -e "fsync = off" >> /var/run/postgresql/data/postgresql.conf
-    echo -e "full_page_writes = off" >> /var/run/postgresql/data/postgresql.conf
-
-    # Start the database
-    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
-
-    su -c psql postgres <<< "show config_file"
-    su -c psql postgres <<< "show max_connections"
-    su -c psql postgres <<< "show full_page_writes"
-    su -c psql postgres <<< "show fsync"
-
     # Write out the configuration for a PostgreSQL using Synapse
     ./scripts/prep_sytest_for_postgres.sh
 
