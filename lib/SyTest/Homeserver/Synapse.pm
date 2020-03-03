@@ -703,6 +703,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("pusher"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -728,6 +729,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("appservice"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -753,6 +755,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("federation_sender"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -778,6 +781,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("synchrotron"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -845,6 +849,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("media_repository"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -912,6 +917,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("user_dir"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -990,7 +996,7 @@ sub wrap_synapse_command
             },
             {
                type => "manhole",
-               port => $self->{ports}{frontend_proxy},
+               port => $self->{ports}{frontend_proxy_manhole},
                bind_address => $bind_host,
             },
             {
