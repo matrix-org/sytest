@@ -172,7 +172,7 @@ test "Guest user can set display names",
                displayname => "creeper",
             },
       )})->then( sub {
-         repeat_until_true {
+         retry_until_success {
             Future->needs_all(
                do_request_json_for( $guest_user,
                   method => "GET",
