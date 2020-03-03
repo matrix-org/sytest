@@ -96,6 +96,11 @@ state_db:
 EOF
 
 elif [ -n "$POSTGRES" ]; then
+    # Env vars used by prep_sytest_for_postgres script.
+    export PGUSER=postgres
+    export POSTGRES_DB_1=pg1
+    export POSTGRES_DB_2=pg2
+
     # Write out the configuration for a PostgreSQL using Synapse
     ./scripts/prep_sytest_for_postgres.sh
 
