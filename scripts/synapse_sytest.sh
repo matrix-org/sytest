@@ -94,6 +94,8 @@ elif [ -n "$POSTGRES" ]; then
 
     # We increase the max connections as we have more databases.
     sed -i -r "s/^max_connections.*$/max_connections = 500/" /var/run/postgresql/data/postgresql.conf
+    sed -i -r "s/^fsync.*$/fsync = off/" /var/run/postgresql/data/postgresql.conf
+    sed -i -r "s/^nfull_page_writes.*$/full_page_writes = off/" /var/run/postgresql/data/postgresql.conf
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
