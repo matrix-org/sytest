@@ -172,26 +172,28 @@ test "Guest user can set display names",
                displayname => "creeper",
             },
       )})->then( sub {
-         Future->needs_all(
-            do_request_json_for( $guest_user,
-               method => "GET",
-               uri    => $displayname_uri,
-            )->then( sub {
-               my ( $body ) = @_;
-               assert_eq( $body->{displayname}, "creeper", "Profile displayname" );
+         retry_until_success {
+            Future->needs_all(
+               do_request_json_for( $guest_user,
+                  method => "GET",
+                  uri    => $displayname_uri,
+               )->then( sub {
+                  my ( $body ) = @_;
+                  assert_eq( $body->{displayname}, "creeper", "Profile displayname" );
 
-               Future->done(1);
-            }),
-            do_request_json_for( $guest_user,
-               method => "GET",
-               uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
-            )->then( sub {
-               my ( $body ) = @_;
-               assert_eq( $body->{displayname}, "creeper", "Room displayname" );
+                  Future->done(1);
+               }),
+               do_request_json_for( $guest_user,
+                  method => "GET",
+                  uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
+               )->then( sub {
+                  my ( $body ) = @_;
+                  assert_eq( $body->{displayname}, "creeper", "Room displayname" );
 
-               Future->done(1);
-            }),
-         );
+                  Future->done(1);
+               }),
+            );
+         }
       });
    };
 
