@@ -175,9 +175,11 @@ test "Can login with new user via CAS",
                     $HS_URI,
                     "Service supplied to /cas/proxyValidate" );
 
-         assert_ok( $ticket_response =~ "loginToken=([^\"]+)",
+         assert_ok( $ticket_response =~ "loginToken=([^\"&]+)",
                     "Login token provided in the /ticket response" );
          my $login_token = $1;
+
+         log_if_fail( "Login token:", $login_token );
 
          # step 7: the client uses the loginToken via the /login API.
          $http->do_request_json(
