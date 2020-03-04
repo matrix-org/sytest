@@ -135,8 +135,6 @@ test "Regular users can add and delete aliases when m.room.aliases is restricted
    do => sub {
       my ( $creator, $other_user, $room_id, $alias ) = @_;
 
-      my $server_name = $other_user->http->server_name;
-
       matrix_change_room_power_levels(
          $creator, $room_id, sub {
             $_[0]->{events}->{'m.room.aliases'} = 50;
@@ -168,8 +166,6 @@ test "Regular users can add and delete aliases when m.room.aliases is restricted
 
 sub _test_can_create_and_delete_alias {
    my ( $room_id, $user, $alias ) = @_;
-
-   my $server_name = $user->http->server_name;
 
    do_request_json_for( $user,
       method => "PUT",
@@ -209,7 +205,6 @@ test "Users can't delete other's aliases",
 
    do => sub {
       my ( $user, $room_id, $other_user, $room_alias ) = @_;
-      my $server_name = $user->http->server_name;
 
       do_request_json_for( $user,
          method => "PUT",
@@ -224,6 +219,50 @@ test "Users can't delete other's aliases",
            content => {},
          )->main::expect_http_403;
       })
+   };
+
+test "Users with sufficient power-level can delete other's aliases",
+   requires => [ $creator_fixture, local_user_fixture(), room_alias_fixture(),
+                 qw( can_create_room_alias )],
+
+   do => sub {
+      my ( $user, $other_user, $room_alias ) = @_;
+      my $room_id;
+
+      matrix_create_and_join_room(
+         [ $user, $other_user ],
+      )->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_change_room_power_levels(
+            $user, $room_id, sub {
+               $_[0]->{users}->{$other_user->user_id} = 100;
+            },
+         )
+      })->then( sub {
+         do_request_json_for( $user,
+           method => "PUT",
+           uri    => "/r0/directory/room/$room_alias",
+
+           content => { room_id => $room_id },
+         )
+      })->then( sub {
+         do_request_json_for( $other_user,
+           method => "DELETE",
+           uri    => "/r0/directory/room/$room_alias",
+
+           content => {},
+         )
+      })->then( sub {
+         my ( $res ) = @_;
+         log_if_fail "Unable to delete alias", $res;
+
+         do_request_json_for(
+            $user,
+            method => "GET",
+            uri  => "/r0/directory/room/$room_alias",
+         );
+      })->main::expect_http_404;
    };
 
 test "Can delete canonical alias",
@@ -275,7 +314,6 @@ test "Alias creators can delete alias with no ops",
 
    do => sub {
       my ( $creator, $other_user, $room_alias ) = @_;
-      my $server_name = $creator->http->server_name;
       my $room_id;
 
       matrix_create_and_join_room( [ $creator, $other_user ] )
@@ -305,7 +343,6 @@ test "Alias creators can delete canonical alias with no ops",
 
    do => sub {
       my ( $creator, $other_user, $room_alias ) = @_;
-      my $server_name = $creator->http->server_name;
       my $room_id;
 
       matrix_create_and_join_room( [ $creator, $other_user ] )
