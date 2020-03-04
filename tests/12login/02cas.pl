@@ -161,7 +161,7 @@ test "Can login with new user via CAS",
                method   => "GET",
                full_uri => $login_uri,
                max_redirects => 0, # don't follow the redirect
-            )->followed_by( \&main::expect_http_302 ),
+            ),
          );
       })->then( sub {
          my ( $cas_validate_request, $ticket_response ) = @_;
@@ -175,19 +175,12 @@ test "Can login with new user via CAS",
                     $HS_URI,
                     "Service supplied to /cas/proxyValidate" );
 
-         my $redirect = $ticket_response->header( "Location" );
-         log_if_fail( "Redirect from /login/cas/ticket", $redirect);
-         assert_ok( $redirect =~ m#^https://client\?#,
-                    "Location returned by /login/cas/ticket did not match" );
+         assert_ok( $ticket_response =~ "loginToken=([^\"&]+)",
+                    "Login token provided in the /ticket response" );
+         my $login_token = $1;
 
-         # the original query param should have been preserved
-         my $redirect_uri = URI->new($redirect);
-         assert_eq( $redirect_uri->query_param( "p" ) // undef,
-                    "http://server",
-                    "Query param on redirect from /login/cas/ticket" );
-
-         # a 'loginToken' should be added.
-         my $login_token = $redirect_uri->query_param( "loginToken" );
+         log_if_fail( "Ticket response:", $ticket_response );
+         log_if_fail( "Login token:", $login_token );
 
          # step 7: the client uses the loginToken via the /login API.
          $http->do_request_json(
