@@ -969,7 +969,7 @@ test "Event with an invalid signature in the send_join response should not cause
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
-      my $room_alias = "#50fed-room-alias:$local_server_name";
+      my $room_alias = "#50fed-room-alias-invalid-sig:$local_server_name";
       my $room = $datastore->create_room(
          creator => $creator_id,
          alias   => $room_alias,
