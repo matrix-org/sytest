@@ -959,7 +959,7 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
       )
    };
 
-test "Outbound federation event with an invalid signature should not break",
+test "Event with an invalid signature in the send_join response should not cause room join to fail",
    requires => [ local_user_fixture(), $main::INBOUND_SERVER,
                  federation_user_id_fixture() ],
 
