@@ -158,6 +158,26 @@ multi_test "Canonical alias can include alt_aliases",
             }
          )->main::expect_matrix_error( 400, "M_INVALID_PARAM" )
             ->SyTest::pass_on_done( "m.room.canonical_alias rejects invalid aliases" );
+      })->then( sub {
+         # Create a second room with an alias on it.
+         my $other_alias_name = $room_alias_name . "2";
+
+         matrix_create_room( $user,
+            room_alias_name => $other_alias_name,
+         )->then( sub {
+            my ( $other_room_id, $other_room_alias ) = @_;
+
+            # Attempt to set a canonical alias for the original room using an
+            # alias from the second room.
+            matrix_put_room_state( $user, $room_id,
+               type    => "m.room.canonical_alias",
+               content => {
+                  alias => $room_alias,
+                  alt_aliases => [ $other_room_alias ],
+               }
+            )->main::expect_matrix_error( 400, "M_BAD_ALIAS" )
+               ->SyTest::pass_on_done( "m.room.canonical_alias rejects alias pointing to different room" );
+            })
       });
    };
 
