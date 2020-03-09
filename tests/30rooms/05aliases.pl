@@ -144,7 +144,7 @@ multi_test "Canonical alias can include alt_aliases",
                alias => $room_alias,
                alt_aliases => [ $bad_alias ],
             }
-         )->main::expect_http_4xx
+         )->main::expect_matrix_error( 404, "M_NOT_FOUND" )
             ->SyTest::pass_on_done( "m.room.canonical_alias rejects missing aliases" );
       })->then( sub {
          # Create an invalid alias name (starts with % instead of #).
@@ -156,7 +156,7 @@ multi_test "Canonical alias can include alt_aliases",
                alias => $room_alias,
                alt_aliases => [ $bad_alias ],
             }
-         )->main::expect_http_4xx
+         )->main::expect_matrix_error( 400, "M_INVALID_PARAM" )
             ->SyTest::pass_on_done( "m.room.canonical_alias rejects invalid aliases" );
       });
    };
