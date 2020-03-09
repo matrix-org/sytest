@@ -1204,6 +1204,7 @@ sub generate_haproxy_map
 ^/_matrix/client/versions$                                        client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/voip/turnServer$            client_reader
 ^/_matrix/client/(r0|unstable)/register$                          client_reader
+^/_matrix/client/(r0|unstable)/auth/.*/fallback/web$              client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/messages$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/get_groups_publicised$      client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
