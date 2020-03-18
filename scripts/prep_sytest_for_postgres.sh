@@ -6,7 +6,7 @@
 
 set -e
 
-cd "`dirname $0`/.."
+cd "/work"
 
 if [ -z "$POSTGRES_DB_1" ]; then
     echo >&2 "Variable POSTGRES_DB_1 not set"
