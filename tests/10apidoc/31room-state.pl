@@ -112,7 +112,7 @@ test "GET /rooms/:room_id/joined_members fetches my membership",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/unstable/rooms/$room_id/joined_members",
+         uri    => "/r0/rooms/$room_id/joined_members",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -220,7 +220,7 @@ test "GET /joined_rooms lists newly-created room",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/unstable/joined_rooms",
+         uri    => "/r0/joined_rooms",
       )->then( sub {
          my ( $body ) = @_;
 
