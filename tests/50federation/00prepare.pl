@@ -134,22 +134,35 @@ test "Checking local federation server",
       });
    };
 
+=head2 send_and_await_event
 
-# send an event over federation and wait for it to turn up. Returns the event id.
+   send_and_await_event( $outbound_client, $room, $user, %fields ) -> then( sub {
+      my ( $event_id ) = @_;
+   });
+
+Send an event over federation and wait for it to turn up.
+
+I<$outbound_client> should be a L<SyTest::Federation::Client>, most likely
+I<$main::OUTBOUND_CLIENT>, which is used to send the event.
+
+I<$room> should be the L<SyTest::Federation::Room> in which to send the event.
+
+I<$user> should be a L<User> which will poll for receiving the event.
+
+The remainder of the arguments (I<%fields>) are passed into
+L<SyTest::Federation::Room/create_and_insert_event>. They should include at
+least a C<sender>. C<type> and C<content> have defaults.
+
+=cut
+
 sub send_and_await_event {
-   my ( $outbound_client, $room, $sytest_user_id, $server_user ) = @_;
-
+   my ( $outbound_client, $room, $server_user, %fields ) = @_;
    my $server_name = $server_user->http->server_name;
 
-   my $event = $room->create_and_insert_event(
-      type => "m.room.message",
-      sender  => $sytest_user_id,
-      content => {
-         body => "hi",
-      },
-   );
+   $fields{type} //= "m.room.message";
+   $fields{content} //= { body => "hi" };
 
-   my $event_id = $room->id_for_event( $event );
+   my ( $event, $event_id ) = $room->create_and_insert_event( %fields );
    log_if_fail "Sending event $event_id in ".$room->room_id, $event;
 
    Future->needs_all(

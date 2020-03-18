@@ -1,3 +1,4 @@
+use List::Util qw( first );
 use Future::Utils qw( repeat );
 
 test "Guest user cannot call /events globally",
@@ -311,70 +312,57 @@ test "GET /publicRooms lists rooms",
    check => sub {
       my ( $http, $user ) = @_;
 
-      Future->needs_all(
-         matrix_create_room( $user,
+      my %rooms = (
+         listingtest0 => {},
+         listingtest1 => { history_visibility => "world_readable" },
+         listingtest2 => { history_visibility => "invited" },
+         listingtest3 => { guest_access => "can_join" },
+         listingtest4 => { guest_access => "can_join", history_visibility => "world_readable" },
+      );
+
+      Future->needs_all( map {
+         my $aliasname = $_;
+         my $settings = $rooms{$_};
+         my $room_id;
+
+         my $f = matrix_create_room( $user,
             visibility => "public",
-            room_alias_name => "listingtest0",
-         ),
+            room_alias_name => $aliasname,
+         )->on_done( sub {
+            ( $room_id, undef ) = ( @_ );
+         });
 
-         matrix_create_room( $user,
-            visibility => "public",
-            room_alias_name => "listingtest1",
-         )->then( sub {
-            my ( $room_id ) = @_;
+         if( $settings->{guest_access} ) {
+            $f = $f->then( sub {
+               matrix_set_room_guest_access( $user, $room_id, $settings->{guest_access} );
+            });
+         }
 
-            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-         }),
+         if( $settings->{history_visibility} ) {
+            $f = $f->then( sub {
+               matrix_set_room_history_visibility( $user, $room_id, $settings->{history_visibility} );
+            });
+         }
 
-         matrix_create_room( $user,
-            visibility => "public",
-            room_alias_name => "listingtest2",
-         )->then( sub {
-            my ( $room_id ) = @_;
-
-            matrix_set_room_history_visibility( $user, $room_id, "invited" );
-         }),
-
-         matrix_create_room( $user,
-            visibility => "public",
-            room_alias_name => "listingtest3",
-         )->then( sub {
-            my ( $room_id ) = @_;
-
-            matrix_set_room_guest_access( $user, $room_id, "can_join" );
-         }),
-
-         matrix_create_room( $user,
-            visibility => "public",
-            room_alias_name => "listingtest4",
-         )->then( sub {
-            my ( $room_id ) = @_;
-
-            Future->needs_all(
-               matrix_set_room_guest_access( $user, $room_id, "can_join" ),
-               matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
-            );
-         }),
-      )->then( sub {
-         repeat_until_true {
+         $f->on_done( sub {
+            log_if_fail "Created room $room_id for alias $aliasname with settings:", $settings;
+         });
+      } keys %rooms )->then( sub {
+         my $iter = 0;
+         retry_until_success {
+            $iter++;
             $http->do_request_json(
                method => "GET",
                uri    => "/r0/publicRooms",
             )->then( sub {
                my ( $body ) = @_;
 
-               log_if_fail "publicRooms", $body;
+               log_if_fail "Iteration $iter: publicRooms result", $body;
 
                assert_json_keys( $body, qw( chunk ));
                assert_json_list( $body->{chunk} );
 
-               my %isOK = (
-                  listingtest0 => 0,
-                  listingtest1 => 0,
-                  listingtest2 => 0,
-                  listingtest3 => 0,
-                  listingtest4 => 0,
-               );
+               my %isOK = map { $_ => 0 } keys %rooms;
 
                foreach my $room ( @{ $body->{chunk} } ) {
                   my $aliases = $room->{aliases};
@@ -382,26 +370,36 @@ test "GET /publicRooms lists rooms",
                   assert_json_boolean( my $guest_can_join = $room->{guest_can_join} );
 
                   foreach my $alias ( @{$aliases} ) {
-                     if( $alias =~ m/^\Q#listingtest0:/ ) {
-                        $isOK{listingtest0} = !$world_readable && !$guest_can_join;
+                     my $alias_local = first { $alias =~ m/^#$_:/ } keys %rooms;
+                     next unless $alias_local;
+                     my $settings = $rooms{$alias_local};
+
+                     if(( $settings->{history_visibility} // "" ) eq "world_readable" ) {
+                        $world_readable or die "Expected $alias_local to be world_readable";
+                     } else {
+                        $world_readable and die "Expected $alias_local not to be world_readable";
                      }
-                     elsif( $alias =~ m/^\Q#listingtest1:/ ) {
-                        $isOK{listingtest1} = $world_readable && !$guest_can_join;
+
+                     if(( $settings->{guest_access} // "" ) eq "can_join" ) {
+                        $guest_can_join or die "Expected $alias_local to be guest-joinable";
+                     } else {
+                        $guest_can_join and die "Expected $alias_local not to be guest-joinable";
                      }
-                     elsif( $alias =~ m/^\Q#listingtest2:/ ) {
-                        $isOK{listingtest2} = !$world_readable && !$guest_can_join;
-                     }
-                     elsif( $alias =~ m/^\Q#listingtest3:/ ) {
-                        $isOK{listingtest3} = !$world_readable && $guest_can_join;
-                     }
-                     elsif( $alias =~ m/^\Q#listingtest4:/ ) {
-                        $isOK{listingtest4} = $world_readable && $guest_can_join;
-                     }
+
+                     $isOK{$alias_local} = 1;
                   }
                }
 
-               Future->done( all { $isOK{$_} } keys %isOK );
-            })
+               foreach my $alias ( keys %rooms ) {
+                  $isOK{$alias} or die "$alias not found in result";
+               }
+
+               Future->done( 1 );
+            })->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Iteration $iter: not ready yet: $exc";
+            });
          };
       })
    };

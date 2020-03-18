@@ -26,9 +26,13 @@ test "Name/topic keys are correct",
             visibility      => "public",
             room_alias_name => $alias_local,
             %{$room},
-         )
+         )->on_done( sub {
+            my ( $room_id ) = @_;
+            log_if_fail "Created room $room_id with alias $alias_local";
+         });
       } keys %rooms )
       ->then( sub {
+         my $iter = 0;
          retry_until_success {
             $http->do_request_json(
                method => "GET",
@@ -36,7 +40,8 @@ test "Name/topic keys are correct",
             )->then( sub {
                my ( $body ) = @_;
 
-               log_if_fail "publicRooms", $body;
+               $iter++;
+               log_if_fail "Iteration $iter: publicRooms result", $body;
 
                assert_json_keys( $body, qw( chunk ));
                assert_json_list( $body->{chunk} );
@@ -65,28 +70,25 @@ test "Name/topic keys are correct",
 
                         my $room_config = $rooms{$alias_local};
 
-                        log_if_fail "Alias", $alias_local;
-                        log_if_fail "Room", $room;
-
-                        assert_eq( $canonical_alias, $alias, "Incorrect canonical_alias" );
-                        assert_eq( $room->{num_joined_members}, 1, "Incorrect member count" );
+                        assert_eq( $canonical_alias, $alias, "canonical_alias" );
+                        assert_eq( $room->{num_joined_members}, 1, "member count for '$alias_local'" );
 
                         # The rooms should get created "atomically", so we should never
                         # see any out of the public rooms list in the wrong state. If
                         # we see a room we expect it to already be in the right state.
 
                         if( defined $name ) {
-                           assert_eq( $room_config->{name}, $name, 'room name' );
+                           assert_eq( $room_config->{name}, $name, "room name for '$alias_local'" );
                         }
                         else {
-                           defined $room_config->{name} and die "Expected not to find a name";
+                           defined $room_config->{name} and die "Expected not to find a name for '$alias_local'";
                         }
 
                         if( defined $topic ) {
-                           assert_eq( $room_config->{topic}, $topic, 'room topic' );
+                           assert_eq( $room_config->{topic}, $topic, "room topic for '$alias_local'" );
                         }
                         else {
-                           defined $room_config->{topic} and die "Expected not to find a topic";
+                           defined $room_config->{topic} and die "Expected not to find a topic for '$alias_local'";
                         }
 
                         $isOK{$alias_local} = 1;
@@ -94,9 +96,15 @@ test "Name/topic keys are correct",
                   }
                }
 
-               all { $isOK{$_} } keys %isOK or die "Not all OK";
+               foreach my $alias ( keys %rooms ) {
+                  $isOK{$alias} or die "$alias not found in result";
+               }
 
                Future->done( 1 );
+            })->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Iteration $iter: not ready yet: $exc";
             });
          };
       });
