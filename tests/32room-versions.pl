@@ -8,11 +8,17 @@ foreach my $version ( qw ( 1 2 3 4 5 ) )  {
       check => sub {
          my ( $user ) = @_;
 
+         my $room_id;
+
          matrix_create_room_synced(
             $user,
             room_version => $version,
          )->then( sub {
-            my ( $room_id, undef, $sync_body ) = @_;
+            ( $room_id ) = @_;
+
+            matrix_sync( $user );
+         })->then( sub {
+            my ( $sync_body ) = @_;
 
             log_if_fail "sync body", $sync_body;
 
@@ -42,14 +48,16 @@ foreach my $version ( qw ( 1 2 3 4 5 ) )  {
          check => sub {
             my ( $user, $joiner, $room_alias_name ) = @_;
 
-            my ( $room_id, $room_alias, $event_id );
+            my ( $room_id, $event_id );
+
+            my $room_alias = sprintf( '#%s:%s', $room_alias_name, $user->server_name );
 
             matrix_create_room_synced(
                $user,
                room_version    => $version,
                room_alias_name => $room_alias_name,
             )->then( sub {
-               ( $room_id, $room_alias ) = @_;
+               ( $room_id ) = @_;
 
                matrix_join_room_synced( $joiner, $room_alias );
             })->then( sub {

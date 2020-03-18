@@ -139,9 +139,13 @@ test "A message sent after an initial sync appears in the timeline of an increme
       })->then( sub {
          ( $event_id ) = @_;
 
+         log_if_fail "Sent test message, id $event_id";
+
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
+
+         log_if_fail "Sync response", $body;
 
          my $room = $body->{rooms}{join}{$room_id};
          assert_json_keys( $room, qw( timeline state ephemeral ));

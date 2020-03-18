@@ -142,6 +142,7 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
+   my $unsecure_port = $self->{ports}{synapse_unsecure};
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
@@ -161,6 +162,7 @@ sub start
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_config => $log_config_file,
+        public_baseurl => "http://${bind_host}:$unsecure_port",
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
@@ -264,6 +266,14 @@ sub start
            recaptcha_private_key    => $self->{recaptcha_config}->{private_key},
         ) : (),
 
+        $self->{smtp_server_config} ? (
+           email => {
+              smtp_host => $self->{smtp_server_config}->{host},
+              smtp_port => $self->{smtp_server_config}->{port},
+              notif_from => 'synapse@localhost',
+           },
+        ) : (),
+
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
         } qw(
@@ -288,7 +298,7 @@ sub start
    if( $self->{coverage} ) {
       # Ensures that even --generate-config has coverage reports. This is intentional
       push @synapse_command,
-         "-m", "coverage", "run", "--rcfile=$self->{synapse_dir}/.coveragerc";
+         "-m", "coverage", "run", "--source=$self->{synapse_dir}/synapse", "--rcfile=$self->{synapse_dir}/.coveragerc";
    }
 
    push @synapse_command,

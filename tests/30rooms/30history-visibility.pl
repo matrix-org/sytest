@@ -539,13 +539,19 @@ test "Only see history_visibility changes on boundaries",
    };
 
 test "Backfill works correctly with history visibility set to joined",
-   requires => [ magic_local_user_and_room_fixtures( with_alias => 1), local_user_fixture(), remote_user_fixture() ],
+   requires => [ room_alias_name_fixture(), local_user_fixture(), local_user_fixture(), remote_user_fixture() ],
 
    do => sub {
-      my ( $user, $room_id, $room_alias, $another_user, $remote_user, $room_alias_name ) = @_;
+      my ( $room_alias_name, $user, $another_user, $remote_user ) = @_;
+      my ( $room_id, $room_alias );
 
-      matrix_set_room_history_visibility_synced( $user, $room_id, "joined" )
-      ->then( sub {
+      matrix_create_room(
+         $user,
+         room_alias_name => $room_alias_name,
+      )->then( sub {
+         ( $room_id, $room_alias ) = @_;
+         matrix_set_room_history_visibility_synced( $user, $room_id, "joined" );
+      })->then( sub {
          # Send some m.room.message that the remote server will not be able to see
          repeat( sub {
             my $msgnum = $_[0];

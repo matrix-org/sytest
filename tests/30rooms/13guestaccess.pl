@@ -468,12 +468,10 @@ test "GET /publicRooms includes avatar URLs",
 
                   foreach my $alias ( @{$aliases} ) {
                      if( $alias =~ m/^\Q#worldreadable:/ ) {
-                        assert_json_keys( $room, qw( avatar_url ) );
                         $isOK{worldreadable} =
                            ( $room->{avatar_url} eq "https://example.com/ringtails.jpg" );
                      }
                      elsif( $alias =~ m/^\Q#nonworldreadable:/ ) {
-                        assert_json_keys( $room, qw( avatar_url ) );
                         $isOK{nonworldreadable} =
                            ( $room->{avatar_url} eq "https://example.com/ruffed.jpg" );
                      }

@@ -204,13 +204,12 @@ test "Outbound federation passes make_join failures through to the client",
 
 test "Inbound federation can receive v1 room-join requests",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
-                 $main::HOMESERVER_INFO[0],
                  local_user_and_room_fixtures( room_opts => { room_version => "1" } ),
                  federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, undef, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
 
       my $local_server_name = $outbound_client->server_name;
       my $datastore         = $inbound_server->datastore;
@@ -338,14 +337,13 @@ test "Inbound federation can receive v1 room-join requests",
 
 test "Inbound federation rejects remote attempts to join local users to rooms",
    requires => [ $main::OUTBOUND_CLIENT,
-                 $main::HOMESERVER_INFO[0],
                  local_user_fixture(),
                  local_user_fixture(),
                ],
 
    do => sub {
-      my ( $outbound_client, $info, $creator_user, $user ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $creator_user, $user ) = @_;
+      my $first_home_server = $creator_user->server_name;
 
       my $user_id = $user->user_id;
 
@@ -373,13 +371,12 @@ test "Inbound federation rejects remote attempts to join local users to rooms",
 
 test "Inbound federation rejects remote attempts to kick local users to rooms",
    requires => [ $main::OUTBOUND_CLIENT,
-                 $main::HOMESERVER_INFO[0],
                  local_user_fixture(),
                ],
 
    do => sub {
-      my ( $outbound_client, $info, $creator_user ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $creator_user ) = @_;
+      my $first_home_server = $creator_user->server_name;
 
       my $user_id = $creator_user->user_id;
 
@@ -406,14 +403,13 @@ test "Inbound federation rejects remote attempts to kick local users to rooms",
 
 test "Inbound federation rejects attempts to join v1 rooms from servers without v1 support",
    requires => [ $main::OUTBOUND_CLIENT,
-                 $main::HOMESERVER_INFO[0],
                  local_user_fixture(),
                  federation_user_id_fixture(),
                ],
 
    do => sub {
-      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $creator_user, $user_id ) = @_;
+      my $first_home_server = $creator_user->server_name;
 
       matrix_create_room(
          $creator_user,
@@ -443,14 +439,13 @@ test "Inbound federation rejects attempts to join v1 rooms from servers without 
 
 test "Inbound federation rejects attempts to join v2 rooms from servers lacking version support",
    requires => [ $main::OUTBOUND_CLIENT,
-                 $main::HOMESERVER_INFO[0],
                  local_user_fixture(),
                  federation_user_id_fixture(),
                  qw( can_create_versioned_room ) ],
 
    do => sub {
-      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $creator_user, $user_id ) = @_;
+      my $first_home_server = $creator_user->server_name;
 
       matrix_create_room(
          $creator_user,
@@ -477,14 +472,13 @@ test "Inbound federation rejects attempts to join v2 rooms from servers lacking 
 
 test "Inbound federation rejects attempts to join v2 rooms from servers only supporting v1",
    requires => [ $main::OUTBOUND_CLIENT,
-                 $main::HOMESERVER_INFO[0],
                  local_user_fixture(),
                  federation_user_id_fixture(),
                  qw( can_create_versioned_room ) ],
 
    do => sub {
-      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $creator_user, $user_id ) = @_;
+      my $first_home_server = $creator_user->server_name;
 
       matrix_create_room(
          $creator_user,
@@ -514,14 +508,13 @@ test "Inbound federation rejects attempts to join v2 rooms from servers only sup
 
 test "Inbound federation accepts attempts to join v2 rooms from servers with support",
    requires => [ $main::OUTBOUND_CLIENT,
-                 $main::HOMESERVER_INFO[0],
                  local_user_fixture(),
                  federation_user_id_fixture(),
                  qw( can_create_versioned_room ) ],
 
    do => sub {
-      my ( $outbound_client, $info, $creator_user, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $creator_user, $user_id ) = @_;
+      my $first_home_server = $creator_user->server_name;
 
       matrix_create_room(
          $creator_user,

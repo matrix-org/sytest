@@ -56,6 +56,18 @@ sub new
 
 =head1 METHODS
 
+=head2 make_event_refs
+
+   $refs = $room->make_event_refs( $event1, $event2, ... );
+
+Given a set of events, create a list of either (event_id, hash) tuples or
+straight event_ids, suitable for inclusion in prev_events or auth_events for
+this room.
+
+Each C<$event> param should be a HASH reference for an event.
+
+Returns an ARRAY reference.
+
 =cut
 
 sub make_event_refs
@@ -71,6 +83,15 @@ sub make_event_refs
       return [ map { $self->id_for_event( $_ ) } @_ ];
    }
 }
+
+=head2 event_ids_from_refs
+
+   $event_ids = $room->event_ids_from_refs( [ $ref1, $ref2 ] );
+
+Performs the reverse operation to C<make_event_refs>: unpacks a C<prev_events>
+or C<auth_events> list and returns an ARRAY ref of event ids.
+
+=cut
 
 sub event_ids_from_refs
 {
@@ -189,7 +210,11 @@ sub create_initial_events
 
 =head2 create_event
 
-   $event = $room->create_event( %fields )
+   $event = $room->create_event( %fields );
+
+or:
+
+   ( $event, $event_id ) = $room->create_event( %fields );
 
 Constructs a new event in the room. This helper also fills in the C<depth>,
 C<prev_events> and C<auth_events> lists if they are absent from C<%fields>,
@@ -225,7 +250,11 @@ sub create_event
 
 =head2 create_and_insert_event
 
-   $event = $room->create_and_insert_event( %fields )
+   $event = $room->create_and_insert_event( %fields );
+
+or:
+
+   ( $event, $event_id ) = $room->create_and_insert_event( %fields );
 
 Constructs a new event via C<create_event>, updates the current state, if it is a
 state event, and records the event as the room's next prev_event.
@@ -237,13 +266,14 @@ sub create_and_insert_event
    my $self = shift;
    my %fields = @_;
 
-   my $event = $self->create_event( %fields );
+   my ( $event, $event_id ) = $self->create_event( %fields );
 
    $self->_insert_event( $event );
 
    $self->{prev_events} = [ $event ];
 
-   return $event;
+   return $event unless wantarray;
+   return ( $event, $event_id );
 }
 
 sub insert_event

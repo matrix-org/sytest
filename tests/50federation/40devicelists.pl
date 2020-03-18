@@ -64,15 +64,15 @@ test "Local device key changes get to remote servers",
 test "Server correctly handles incoming m.device_list_update",
    requires => [ local_user_fixture(),
                  $main::INBOUND_SERVER, $main::OUTBOUND_CLIENT,
-                 $main::HOMESERVER_INFO[0],  federation_user_id_fixture(),
+                 federation_user_id_fixture(),
                  room_alias_name_fixture() ],
 
    check => sub {
-      my ( $user, $inbound_server, $outbound_client, $info, $creator_id, $room_alias_name ) = @_;
+      my ( $user, $inbound_server, $outbound_client, $creator_id, $room_alias_name ) = @_;
 
       my ( $room_id );
 
-      my $local_server_name = $info->server_name;
+      my $local_server_name = $user->server_name;
 
       my $remote_server_name = $inbound_server->server_name;
       my $datastore          = $inbound_server->datastore;
@@ -290,7 +290,6 @@ test "Device list doesn't change if remote server is down",
    requires => [
       $main::OUTBOUND_CLIENT,
       $main::INBOUND_SERVER,
-      $main::HOMESERVER_INFO[0],
       local_user_fixture,
       federation_user_id_fixture(),
       qw( can_upload_e2e_keys )
@@ -300,7 +299,6 @@ test "Device list doesn't change if remote server is down",
       my (
          $outbound_client,
          $inbound_server,
-         $local_server_info,
          $local_user,
          $outbound_client_user
       ) = @_;
@@ -372,7 +370,7 @@ test "Device list doesn't change if remote server is down",
       )->then( sub {
          my ( $room_id ) = @_;
          $outbound_client->join_room(
-            server_name => $local_server_info->server_name,
+            server_name => $local_user->server_name,
             room_id     => $room_id,
             user_id     => $outbound_client_user,
          )

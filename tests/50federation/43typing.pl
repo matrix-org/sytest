@@ -3,15 +3,14 @@
 test "Inbound federation rejects typing notifications from wrong remote",
    requires => [
       $main::OUTBOUND_CLIENT,
-      $main::HOMESERVER_INFO[0],
       local_user_and_room_fixtures(),
       federation_user_id_fixture(),
    ],
 
    do => sub {
-      my ( $outbound_client, $info, $creator, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
 
-      my $local_server_name = $info->server_name;
+      my $local_server_name = $creator->server_name;
 
       $outbound_client->join_room(
          server_name => $local_server_name,
