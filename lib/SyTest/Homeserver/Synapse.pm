@@ -255,6 +255,13 @@ sub start
         media_store_path => "$hs_dir/media_store",
         uploads_path => "$hs_dir/uploads_path",
 
+        # Both of these settings default to false in order to preserve privacy.
+        # Sytest assumes that the room directory is open to ensure that the
+        # open behaviour can be tested, and the default case is handled through
+        # unit tests.
+        allow_public_rooms_over_federation => "true",
+        allow_public_rooms_without_auth => "true",
+
         user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
 
         require_membership_for_aliases => "false",
@@ -263,6 +270,9 @@ sub start
            enabled => "true",
            period => "6w",
         },
+
+        # Enable ephemeral message support (MSC2228)
+        enable_ephemeral_messages => "true",
 
         $self->{recaptcha_config} ? (
            recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
