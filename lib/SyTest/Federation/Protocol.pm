@@ -26,6 +26,7 @@ use Protocol::Matrix qw(
    encode_base64_unpadded
 );
 
+use Carp;
 
 use Exporter 'import';
 our @EXPORT_OK = qw(
@@ -44,6 +45,7 @@ Calculates the reference hash of an event.
 sub hash_event
 {
    my ( $event ) = @_;
+   croak "Require an event" unless ref $event eq 'HASH';
    my $redacted = redacted_event( $event );
    delete $redacted->{signatures};
    delete $redacted->{age_ts};

@@ -92,7 +92,7 @@ package SyTest::Output::TAP::Test {
    sub start {
       my $self = shift;
 
-      print STDERR "    Test ${\$self->num} ${\$self->name}...\n";
+      print STDERR "    Test ${\$self->num} ${\$self->name}... ";
       $self->starttime = Time::HiRes::time;
    }
 
@@ -137,7 +137,10 @@ package SyTest::Output::TAP::Test {
    {
       my $self = shift;
 
-      return if $self->skipped;
+      if( $self->skipped ) {
+         print STDERR "SKIP\n";
+         return;
+      }
 
       if( $self->multi ) {
          print "  1..${\$self->subnum}\n";
@@ -149,6 +152,7 @@ package SyTest::Output::TAP::Test {
       if( !$self->failed ) {
          $name .= " (${\$self->subnum} subtests)" if $self->multi;
 
+         print STDERR "OK\n";
          print "ok ${\$self->num} " .
             ( $self->expect_fail ? "(expected fail) " : "" ) .
             $name .
@@ -157,10 +161,14 @@ package SyTest::Output::TAP::Test {
          # for expected fails, theoretically all we need to do is write the
          # TODO, but Jenkins' 'TAP Test results' page is arse and doesn't distinguish
          # between expected and unexpected fails, so stick it in the name too.
-         print "not ok ${\$self->num} " .
-            ( $self->expect_fail ? "(expected fail) " : "" ) .
-            $name .
-            ( $self->expect_fail ? " # TODO expected fail" : "" ) . "\n";
+         if ( $self->expect_fail ) {
+            print STDERR "EXPECTED FAIL\n";
+            print "not ok ${\$self->num} (expected fail) $name # TODO expected fail\n";
+         } else {
+            print STDERR "FAIL\n";
+            print "not ok ${\$self->num} $name\n";
+         }
+
          my $starttime = $self->starttime;
          print "# Started: " . $self->format_time($starttime) . "\n";
          my $endtime = Time::HiRes::time;
