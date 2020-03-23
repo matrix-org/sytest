@@ -280,31 +280,6 @@ sub check_received_push_with_name
    });
 }
 
-test "Rooms with aliases are correctly named in pushed",
-   requires => [
-      local_user_fixtures( 2, with_events => 0 ), room_alias_fixture(),
-      $main::TEST_SERVER_INFO
-   ],
-
-   check => sub {
-      my ( $alice, $bob, $room_alias, $test_server_info ) = @_;
-      my $room_id;
-
-      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         do_request_json_for( $bob,
-            method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
-
-            content => { room_id => $room_id },
-         )
-      })->then( sub {
-         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
-      });
-   };
-
 test "Rooms with names are correctly named in pushed",
    requires => [
       local_user_fixtures( 2, with_events => 0 ),
@@ -370,10 +345,17 @@ test "Rooms with many users are correctly pushed",
       my ( $alice, $bob, $charlie, $room_alias, $test_server_info ) = @_;
       my $room_id;
 
+      my $name = "Test Name";
+
       setup_push( $alice, $bob, $test_server_info, "/alice_push" )
       ->then( sub {
-         ( $room_id ) = @_;
+         ($room_id) = @_;
 
+         matrix_put_room_state($bob, $room_id,
+             type    => "m.room.name",
+             content => { name => $name },
+         );
+      })->then( sub {
          matrix_join_room( $charlie, $room_id)
       })->then( sub {
          do_request_json_for( $bob,
@@ -383,7 +365,7 @@ test "Rooms with many users are correctly pushed",
             content => { room_id => $room_id },
          )
       })->then( sub {
-         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $name )
       });
    };
 

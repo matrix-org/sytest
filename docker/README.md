@@ -9,7 +9,6 @@ Included currently is:
 - matrixdotorg/sytest:stretch and matrixdotorg/sytest:buster, base containers with SyTest dependencies installed
 - matrixdotorg/sytest-synapse:py35, a container which will run SyTest against Synapse on Python 3.5 + Stretch
 - matrixdotorg/sytest-synapse:py37, a container which will run SyTest against Synapse on Python 3.7 + Buster
-- matrixdotorg/sytest-dendrite:go111, a container which will run SyTest against Dendrite on Go 1.11 + Stretch
 - matrixdotorg/sytest-dendrite:go113, a container which will run SyTest against Dendrite on Go 1.13 + Buster
 
 ## Using the containers

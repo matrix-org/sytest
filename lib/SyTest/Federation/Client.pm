@@ -271,6 +271,8 @@ sub join_room
 
          $room->insert_event( $member_event );
 
+         $store->{rooms_by_id}{ $room->room_id } = $room;
+
          Future->done( $room );
       });
    });

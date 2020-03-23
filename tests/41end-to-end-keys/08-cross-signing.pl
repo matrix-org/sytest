@@ -580,6 +580,112 @@ test "uploading self-signing key notifies over federation",
       });
    };
 
+test "uploading signed devices gets propagated over federation",
+   requires => [ local_user_fixture(), remote_user_fixture() ],
+
+   do => sub {
+      my ( $user1, $user2 ) = @_;
+
+      my $user1_id = $user1->user_id;
+      my $user1_device = $user1->device_id;
+      my $user2_id = $user2->user_id;
+      my $user2_device = $user2->device_id;
+
+      my $room_id;
+
+      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $self_signing_pubkey, $self_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
+      my $self_signing_key = {
+         # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
+         "user_id" => $user2_id,
+         "usage" => ["self_signing"],
+         "keys" => {
+            "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ"
+                => "EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ",
+         },
+      };
+      sign_json(
+         $self_signing_key,
+         secret_key => $master_secret_key,
+         origin => $user2_id,
+         key_id => "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+      );
+
+      my $device = {
+          "user_id" => $user2_id,
+          "device_id" => $user2_device,
+          "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
+          "keys" => {
+              "curve25519:$user2_device" => "curve25519+key",
+              "ed25519:$user2_device" => "ed25519+key",
+          }
+      };
+      my $cross_signature;
+
+      matrix_put_e2e_keys( $user2, device_keys => $device)->then( sub {
+         matrix_set_cross_signing_key( $user2, {
+             "auth" => {
+                 "type"     => "m.login.password",
+                 "user"     => $user2_id,
+                 "password" => $user2->password,
+             },
+             "master_key" => {
+                 # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
+                 "user_id" => $user2_id,
+                 "usage" => ["master"],
+                 "keys" => {
+                     "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
+                         => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
+                 },
+             },
+             "self_signing_key" => $self_signing_key,
+          });
+      })->then( sub {
+         matrix_create_room( $user1 );
+      })->then( sub {
+         ( $room_id ) = @_;
+         matrix_sync( $user1 );
+      })->then( sub {
+         matrix_invite_user_to_room( $user1, $user2, $room_id )
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_join_room( $user2, $room_id );
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         sign_json(
+            $device, secret_key => $self_signing_secret_key,
+            origin => $user2_id, key_id => "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ"
+         );
+         log_if_fail "sent signature", $device;
+         $cross_signature = $device->{signatures}->{$user2_id}->{"ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ"};
+         matrix_upload_signatures( $user2, {
+             $user2_id => {
+                 $user2_device => $device
+             }
+         } );
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user2 );
+      })->then( sub {
+         matrix_get_e2e_keys( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "key query content", $content;
+
+         assert_json_keys( $content->{device_keys}->{$user2_id}->{$user2_device}, "signatures" );
+
+         assert_deeply_eq( $content->{device_keys}->{$user2_id}->{$user2_device}->{signatures}, {
+            $user2_id => {
+               "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ" => $cross_signature
+            },
+         } );
+
+         Future->done(1);
+      });
+   };
+
 =head2 matrix_set_cross_signing_key
 
    matrix_set_cross_signing_key( $user, $keys )

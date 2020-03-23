@@ -689,6 +689,8 @@ test "If user leaves room, remote user changes device and rejoins we see update 
 
       matrix_create_room( $creator,
          invite => [ $remote_user->user_id ],
+         # Allow default PL users to invite others
+         preset => "private_chat",
       )->then( sub {
          ( $room_id ) = @_;
 
