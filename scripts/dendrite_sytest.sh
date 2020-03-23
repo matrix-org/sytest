@@ -17,26 +17,30 @@ mkdir /work
 # Start the database
 su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
-# Make the test databases
-su -c "psql -c \"CREATE USER dendrite PASSWORD 'itsasecret'\" postgres"
-su -c 'for i in account device mediaapi syncapi roomserver serverkey federationsender publicroomsapi appservice naffka sytest_template; do psql -c "CREATE DATABASE $i OWNER dendrite;"; done' postgres
+# Create required databases
+su -c 'for i in pg1 pg2 sytest_template; do psql -c "CREATE DATABASE $i;"; done' postgres
 
-# Write dendrite configuration
-mkdir -p "/work/server-0"
-cat > "/work/server-0/database.yaml" << EOF
-args:
-    user: $PGUSER
-    database: $PGUSER
-    host: $PGHOST
-type: pg
-EOF
+export PGUSER=postgres
+export POSTGRES_DB_1=pg1
+export POSTGRES_DB_2=pg2
 
+# Write out the configuration for a PostgreSQL Dendrite
+# Note: Dendrite can run entirely within a single database as all of the tables have
+# component prefixes
+./scripts/prep_sytest_for_postgres.sh
+
+# Build dendrite
+echo >&2 "--- Building dendrite from source"
+cd /src
+./build.sh
+cd -
 
 # Run the tests
-mkdir -p /logs
+echo >&2 "+++ Running tests"
 
 TEST_STATUS=0
-./run-tests.pl -I Dendrite::Monolith -d /src/bin -W /src/testfile -O tap --all \
+mkdir -p /logs
+./run-tests.pl -I Dendrite::Monolith -d /src/bin -W /src/sytest-whitelist -O tap --all \
     --work-directory="/work" \
     "$@" > /logs/results.tap || TEST_STATUS=$?
 
@@ -46,13 +50,14 @@ else
     echo >&2 -e "run-tests \e[32mPASSED\e[0m"
 fi
 
-# Check for new tests to be added to testfile
-/src/show-expected-fail-tests.sh /logs/results.tap /src/testfile || TEST_STATUS=$?
+# Check for new tests to be added to the test whitelist
+/src/show-expected-fail-tests.sh /logs/results.tap /src/sytest-whitelist \
+    /src/sytest-blacklist || TEST_STATUS=$?
 
 echo >&2 "--- Copying assets"
 
 # Copy out the logs
-rsync --ignore-missing-args --min-size=1B -av server-0 server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --include="dendrite-logs/*.log" --exclude="*"
+rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
