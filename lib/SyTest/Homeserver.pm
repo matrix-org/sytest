@@ -262,12 +262,12 @@ sub configure_logger
 
       loggers => {
          synapse => {
-            level => "DEBUG"
+            level => "INFO"
          }
       },
 
       root => {
-         level => "DEBUG",
+         level => "INFO",
          handlers => ["file"]
       }
 
