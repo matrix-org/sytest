@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-set -e
+set -ex
 
 cd $(dirname $0)
 docker build --pull ../ -f Dockerfile -t matrixdotorg/sytest:dinsic

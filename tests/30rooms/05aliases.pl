@@ -7,6 +7,7 @@ my $alias_localpart = "#☕";
 my $room_alias;
 
 my $creator_fixture = local_user_fixture();
+my $second_user_fixture = local_user_fixture();
 
 my $room_fixture = room_fixture( $creator_fixture );
 
@@ -101,30 +102,118 @@ multi_test "Canonical alias can be set",
       });
    };
 
-test "Creators can delete alias",
-   requires => [ $creator_fixture, $room_fixture, room_alias_fixture(),
-                 qw( can_create_room_alias )],
+test "Regular users can add and delete aliases in the default room configuration",
+   requires => [
+      $creator_fixture, $second_user_fixture,
+      magic_room_fixture(
+         requires_users => [ $creator_fixture, $second_user_fixture, ]
+      ),
+      room_alias_fixture(),
+      qw( can_create_room_alias ),
+   ],
 
    proves => [qw( can_delete_room_alias )],
 
    do => sub {
-      my ( $user, $room_id, $room_alias ) = @_;
-      my $server_name = $user->http->server_name;
+      my ( $creator, $other_user, $room_id, $room_alias ) = @_;
+      _test_can_create_and_delete_alias( $room_id, $other_user, $room_alias );
+   };
+
+
+test "Regular users can add and delete aliases when m.room.aliases is restricted",
+   requires => [
+      $creator_fixture, $second_user_fixture,
+      magic_room_fixture(
+         requires_users => [ $creator_fixture, $second_user_fixture, ],
+      ),
+      room_alias_fixture(),
+      qw( can_delete_room_alias ),
+   ],
+
+   proves => [qw( can_delete_room_alias )],
+
+   do => sub {
+      my ( $creator, $other_user, $room_id, $alias ) = @_;
+
+      my $server_name = $other_user->http->server_name;
+
+      matrix_change_room_power_levels(
+         $creator, $room_id, sub {
+            $_[0]->{events}->{'m.room.aliases'} = 50;
+         },
+      )->then( sub {
+         matrix_get_room_state( $creator, $room_id,
+            type      => "m.room.power_levels",
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "power levels", $body;
+
+         assert_eq( $body->{events}->{'m.room.aliases'}, 50 );
+
+         do_request_json_for( $other_user,
+            method => "PUT",
+            uri    => "/r0/directory/room/$alias",
+            content => { room_id => $room_id },
+         );
+      })->then( sub {
+         do_request_json_for( $other_user,
+            method => "DELETE",
+            uri    => "/r0/directory/room/$alias",
+            content => {},
+         );
+      });
+   };
+
+
+sub _test_can_create_and_delete_alias {
+   my ( $room_id, $user, $alias ) = @_;
+
+   my $server_name = $user->http->server_name;
+
+   do_request_json_for( $user,
+      method => "PUT",
+      uri    => "/r0/directory/room/$alias",
+
+      content => { room_id => $room_id },
+   )->then( sub {
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.aliases",
+         state_key => $server_name,
+      )
+   })->then( sub {
+      my ( $body ) = @_;
+
+      log_if_fail "Aliases after adding alias", $body;
+
+      assert_json_keys( $body, qw( aliases ) );
+      assert_json_list( my $aliases = $body->{aliases} );
+
+      any { $_ eq $alias } @$aliases or die "Expected alias to be in list";
 
       do_request_json_for( $user,
-         method => "PUT",
-         uri    => "/r0/directory/room/$room_alias",
+        method => "DELETE",
+        uri    => "/r0/directory/room/$alias",
 
-         content => { room_id => $room_id },
-      )->then( sub {
-         do_request_json_for( $user,
-           method => "DELETE",
-           uri    => "/r0/directory/room/$room_alias",
+        content => {},
+      )
+   })->then( sub {
+      matrix_get_room_state( $user, $room_id,
+         type      => "m.room.aliases",
+         state_key => $server_name,
+      )
+   })->then( sub {
+      my ( $body ) = @_;
 
-           content => {},
-         )
-      })
-   };
+      log_if_fail "Aliases after deleting alias", $body;
+      assert_json_keys( $body, qw( aliases ) );
+      assert_json_list( my $aliases = $body->{aliases} );
+
+      none { $_ eq $alias } @$aliases or die "Expected alias to not be in list";
+
+      Future->done;
+   });
+}
 
 test "Deleting a non-existent alias should return a 404",
    requires => [ $creator_fixture, room_alias_fixture(),

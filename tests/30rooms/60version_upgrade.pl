@@ -14,6 +14,7 @@
 
 use Future::Utils qw( repeat );
 use List::Util qw( all first none );
+use URI::Escape qw( uri_escape );
 
 push our @EXPORT, qw ( upgrade_room_synced $TEST_NEW_VERSION );
 
@@ -341,7 +342,7 @@ test "/upgrade copies the power levels to the new room",
       matrix_change_room_power_levels(
          $creator, $room_id, sub {
             ( $pl_content ) = @_;
-            $pl_content->{users}->{'@test:xyz'} = 40;
+            $pl_content->{users}->{'@test:xyz'} = JSON::number(40);
             log_if_fail "PL content in old room", $pl_content;
          }
       )->then( sub {
@@ -373,6 +374,94 @@ test "/upgrade copies the power levels to the new room",
             $pl_content,
             "power levels in replacement room",
          );
+         Future->done(1);
+      });
+   };
+
+test "/upgrade preserves the power level of the upgrading user in old and new rooms",
+   requires => [
+      local_user_and_room_fixtures(),
+      local_user_fixture(),
+      qw( can_upgrade_room_version can_change_power_levels ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id, $upgrader ) = @_;
+
+      my ( $pl_content, $new_room_id );
+
+      # Note that this test assumes that moderators by default are allowed to upgrade rooms
+
+      matrix_join_room_synced(
+         $upgrader, $room_id
+      )->then( sub {
+         # Make the joined user a moderator
+         matrix_change_room_power_levels(
+            $creator, $room_id, sub {
+               ( $pl_content ) = @_;
+               $pl_content->{users}->{$upgrader->user_id} = JSON::number(50);
+               log_if_fail "PL content in old room", $pl_content;
+            }
+         )
+      })->then( sub {
+         matrix_sync( $upgrader );
+      })->then( sub {
+         upgrade_room_synced(
+            $upgrader, $room_id,
+            expected_event_counts => { 'm.room.power_levels' => 1 },
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id, ) = @_;
+
+         matrix_sync_again( $upgrader );
+      })->then( sub {
+         my ( $sync_body ) = @_;
+
+         log_if_fail "sync body", $sync_body;
+
+         # Two power level events will be sent in the new room. The first is to make the
+         # upgrader user (previously a moderator) an Administrator (which can only be done
+         # when creating the room). This is such that they could send the initial state
+         # events. The second power level event is to downgrade the upgrader user from a
+         # Administrator to a Moderator again to keep a consistent state with the old room
+
+         # Grab the latest power level state of the new room
+         my $url_encoded_new_room_id = uri_escape( $new_room_id );
+         do_request_json_for(
+            $upgrader,
+            method  => "GET",
+            uri     => "/r0/rooms/$url_encoded_new_room_id/state/m.room.power_levels/",
+            content => {},
+         );
+      })->then( sub {
+         my ( $new_room_pl_content ) = @_;
+
+         # Check that the power levels in the new room match the original PLs
+         assert_deeply_eq(
+            $new_room_pl_content,
+            $pl_content,
+            "power levels in replacement room",
+         );
+
+         # Grab the latest power level state of the old room
+         my $url_encoded_old_room_id = uri_escape( $room_id );
+         do_request_json_for(
+            $upgrader,
+            method => "GET",
+            uri    => "/r0/rooms/$url_encoded_old_room_id/state/m.room.power_levels/",
+            content => {},
+         );
+      })->then( sub {
+         my ( $old_room_pl_content ) = @_;
+
+         # Check that the power levels in the old room have not changed
+         assert_deeply_eq(
+            $old_room_pl_content,
+            $pl_content,
+            "power levels in old room",
+         );
+
          Future->done(1);
       });
    };
@@ -612,19 +701,21 @@ test "/upgrade moves aliases to the new room",
             $creator, $room_id,
             new_version => $TEST_NEW_VERSION,
             expected_event_counts => {
-               'm.room.aliases' => 1, 'm.room.canonical_alias' => 1,
+               'm.room.aliases' => 0, 'm.room.canonical_alias' => 1,
             },
          );
       })->then( sub {
          ( $new_room_id ) = @_;
 
-         matrix_get_room_state(
-            $creator, $room_id,
-            type=>'m.room.aliases', state_key=>$server_name,
-         );
-      })->then( sub {
-         my ( $old_aliases ) = @_;
-         assert_deeply_eq( $old_aliases, {aliases => []}, "aliases on old room" );
+      # m.room.aliases are filtered out until a better solution to mitigating abuse is is specced.
+      #
+      #    matrix_get_room_state(
+      #       $creator, $room_id,
+      #       type=>'m.room.aliases', state_key=>$server_name,
+      #    );
+      # })->then( sub {
+      #    my ( $old_aliases ) = @_;
+      #    assert_deeply_eq( $old_aliases, {aliases => []}, "aliases on old room" );
 
          matrix_get_room_state( $creator, $room_id, type=>'m.room.canonical_alias' );
       })->then( sub {
@@ -633,17 +724,19 @@ test "/upgrade moves aliases to the new room",
             $old_canonical_alias, {}, "canonical_alias on old room",
          );
 
-         matrix_get_room_state(
-            $creator, $new_room_id,
-            type=>'m.room.aliases', state_key=>$server_name,
-         );
-      })->then( sub {
-         my ( $new_aliases ) = @_;
-         assert_deeply_eq(
-            [ sort( @{ $new_aliases->{aliases} } ) ],
-            [ sort( $room_alias_1, $room_alias_2 ) ],
-            "aliases on new room",
-         );
+      # m.room.aliases are filtered out until a better solution to mitigating abuse is is specced.
+      #
+      #    matrix_get_room_state(
+      #       $creator, $new_room_id,
+      #       type=>'m.room.aliases', state_key=>$server_name,
+      #    );
+      # })->then( sub {
+      #    my ( $new_aliases ) = @_;
+      #    assert_deeply_eq(
+      #       [ sort( @{ $new_aliases->{aliases} } ) ],
+      #       [ sort( $room_alias_1, $room_alias_2 ) ],
+      #       "aliases on new room",
+      #    );
 
          matrix_get_room_state(
             $creator, $new_room_id, type=>'m.room.canonical_alias',
