@@ -1,3 +1,5 @@
+use URI::Escape;
+
 sub wait_for_cas_request
 {
    my ( $expected_path, %params ) = @_;
@@ -109,11 +111,11 @@ test "Can login with new user via CAS",
    do => sub {
       my ( $http, $homeserver_info ) = @_;
 
-      my $HS_URI = $homeserver_info->client_location;
-
       # the redirectUrl we send to /login/cas/redirect, which is where we
       # hope to get redirected back to
       my $REDIRECT_URL = "https://client?p=http%3A%2F%2Fserver";
+
+      my $HS_URI = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
 
       # the ticket our mocked-up CAS server "generates"
       my $CAS_TICKET = "goldenticket";
