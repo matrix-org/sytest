@@ -83,6 +83,8 @@ sub do_request
    my $self = shift;
    my %params = @_;
 
+   croak "must give a method" unless $params{method};
+
    my $uri = $self->full_uri_for( %params );
 
    # Also set verify_mode = 0 to not complain about self-signed SSL certs
