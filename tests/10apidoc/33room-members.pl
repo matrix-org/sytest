@@ -611,7 +611,7 @@ through to C<setup_user>.
 
 =item room_opts => HASH
 
-Options to use when creating the room. Thes are passed into into
+Options to use when creating the room. These are passed into
 C<matrix_create_room>, whence they are passed on to the server.
 
 =back
