@@ -356,7 +356,7 @@ sub room_alias_name_fixture
 
 =head2 room_alias_fixture
 
-   $fixture = room_alias_fixture( prefix => $prefix, info => $info )
+   $fixture = room_alias_fixture( prefix => $prefix, remote => false )
 
 Returns a new Fixture, which when provisioned will allocate a name for a new
 room alias on the first homeserver, and return it as a string. Note that this
@@ -367,7 +367,7 @@ An optional prefix string can be provided, which will be prepended onto the
 alias name.
 
 An optional remote boolean can be supplied, which will generate an alias for
-the remote homeserver instead.
+the second homeserver instead.
 
 =cut
 
@@ -378,7 +378,7 @@ sub room_alias_fixture
    return fixture(
       requires => [
          room_alias_name_fixture( prefix => $args{prefix} ),
-         exists($args{remote}) ? $main::HOMESERVER_INFO[1] : $main::HOMESERVER_INFO[0],
+         $args{remote} ? $main::HOMESERVER_INFO[1] : $main::HOMESERVER_INFO[0],
       ],
 
       setup => sub {
