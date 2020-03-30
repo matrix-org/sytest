@@ -356,7 +356,7 @@ sub room_alias_name_fixture
 
 =head2 room_alias_fixture
 
-   $fixture = room_alias_fixture( prefix => $prefix, remote => false )
+   $fixture = room_alias_fixture( prefix => $prefix, remote => 0 )
 
 Returns a new Fixture, which when provisioned will allocate a name for a new
 room alias on the first homeserver, and return it as a string. Note that this
