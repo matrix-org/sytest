@@ -649,7 +649,6 @@ foreach my $user_type ( qw ( local remote ) ) {
 
 test "/upgrade moves aliases to the new room",
    requires => [
-      $main::HOMESERVER_INFO[0],
       local_user_and_room_fixtures(),
       room_alias_fixture(),
       room_alias_fixture(),
@@ -657,9 +656,8 @@ test "/upgrade moves aliases to the new room",
    ],
 
    do => sub {
-      my ( $info, $creator, $room_id, $room_alias_1, $room_alias_2 ) = @_;
+      my ( $creator, $room_id, $room_alias_1, $room_alias_2 ) = @_;
 
-      my $server_name = $info->server_name;
       my $new_room_id;
 
       do_request_json_for(
@@ -736,6 +734,67 @@ test "/upgrade moves aliases to the new room",
 
             Future->done(1);
          });
+      });
+   };
+
+test "/upgrade moves remote aliases to the new room",
+   requires => [
+      local_user_and_room_fixtures(),
+      remote_user_fixture(),
+      remote_room_alias_fixture(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id, $remote_user, $remote_room_alias ) = @_;
+
+      my $new_room_id;
+
+      log_if_fail $room_id;
+
+      # Invite the remote user to our room
+      matrix_invite_user_to_room(
+         $creator, $remote_user, $room_id
+      )->then( sub {
+         # Have the remote user join the room
+         matrix_join_room( $remote_user, $room_id );
+      })->then( sub {
+         # Have the remote user add an alias
+         do_request_json_for(
+            $remote_user,
+            method => "PUT",
+            uri    => "/r0/directory/room/$remote_room_alias",
+            content => { room_id => $room_id },
+         );
+      })->then( sub {
+         # Upgrade the room
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id ) = @_;
+
+         # Invite the remote user to the new room
+         matrix_invite_user_to_room(
+            $creator, $remote_user, $new_room_id
+         );
+      })->then( sub {
+         # Have the remote user join the upgraded room
+         matrix_join_room( $remote_user, $new_room_id );
+      })->then( sub {
+         # Check that the remote alias points to the new room id
+         do_request_json_for(
+            $remote_user,
+            method => "GET",
+            uri    => "/r0/directory/room/$remote_room_alias",
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_eq( $body->{room_id}, $new_room_id, "room_id for remote alias" );
+
+         Future->done(1);
       });
    };
 
