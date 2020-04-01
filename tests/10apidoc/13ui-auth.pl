@@ -22,10 +22,10 @@ sub wait_for_cas_request
 }
 
 test "Interactive authentication types include SSO",
-   requires => [ local_user_fixture( with_events => 0 ), $main::API_CLIENTS[0] ],
+   requires => [ local_user_fixture( with_events => 0 ) ],
 
    do => sub {
-      my ( $user, $http ) = @_;
+      my ( $user ) = @_;
 
       my $DEVICE_ID = "login_device";
 
@@ -34,7 +34,7 @@ test "Interactive authentication types include SSO",
          device_id => $DEVICE_ID,
          initial_device_display_name => "device display",
       )->then( sub {
-         # Initiate the interactive authentication session with the first device.
+         # Initiate the interactive authentication session.
          matrix_delete_device( $user, $DEVICE_ID, {} );
       })->main::expect_http_401->then( sub {
          my ($resp) = @_;
@@ -191,7 +191,7 @@ EOF
             ),
          );
       })->then( sub {
-         # Repeat the device deletion, which should now complete.
+         # Repeat the device deletion, which should now give an auth error.
          matrix_delete_device( $user, $DEVICE_ID, {
             auth => {
                session => $session,
