@@ -102,7 +102,7 @@ EOF
          # Note that we skip almost all of the CAS flow since it isn't important
          # for this test. The user just needs to end up back at the homeserver
          # with a valid ticket (and the original UI Auth session ID).
-         my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/auth/cas/ticket?session=$session&ticket=$CAS_TICKET";
+         my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?session=$session&ticket=$CAS_TICKET";
 
          Future->needs_all(
             wait_for_cas_request(
@@ -177,7 +177,7 @@ EOF
          # Note that we skip almost all of the CAS flow since it isn't important
          # for this test. The user just needs to end up back at the homeserver
          # with a valid ticket (and the original UI Auth session ID).
-         my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/auth/cas/ticket?session=$session&ticket=$CAS_TICKET";
+         my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?session=$session&ticket=$CAS_TICKET";
 
          Future->needs_all(
             wait_for_cas_request(
