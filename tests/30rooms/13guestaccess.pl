@@ -183,7 +183,6 @@ test "Guest user can set display names",
                   uri    => $displayname_uri,
                )->then( sub {
                   my ( $body ) = @_;
-
                   log_if_fail "Iteration $iter: /displayname result", $body;
 
                   assert_eq( $body->{displayname}, "creeper", "Profile displayname" );
@@ -195,7 +194,6 @@ test "Guest user can set display names",
                   uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
                )->then( sub {
                   my ( $body ) = @_;
-
                   log_if_fail "Iteration $iter: /state result", $body;
 
                   assert_eq( $body->{displayname}, "creeper", "Room displayname" );
