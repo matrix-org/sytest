@@ -1,7 +1,10 @@
 use JSON qw( decode_json );
 use URI::Escape;
 
-# TODO This code is copied from tests/12login/02cas.pl.
+our @EXPORT = qw( wait_for_cas_request );
+
+# A convenience function which wraps await_http_request. It returns a successful
+# CAS response when queried for a particular path.
 sub wait_for_cas_request
 {
    my ( $expected_path, %params ) = @_;

@@ -1,24 +1,5 @@
 use URI::Escape;
 
-sub wait_for_cas_request
-{
-   my ( $expected_path, %params ) = @_;
-
-   await_http_request( $expected_path, sub {
-      return 1;
-   })->then( sub {
-      my ( $request ) = @_;
-
-      my $response = HTTP::Response->new( 200 );
-      $response->add_content( $params{response} // "" );
-      $response->content_type( "text/plain" );
-      $response->content_length( length $response->content );
-      $request->respond( $response );
-
-      Future->done( $request );
-   });
-}
-
 my $CAS_SUCCESS = <<'EOF';
 <cas:serviceResponse xmlns:cas='http://www.yale.edu/tp/cas'>
     <cas:authenticationSuccess>
