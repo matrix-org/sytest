@@ -41,7 +41,7 @@ test "Interactive authentication types include SSO",
 
          my $body = decode_json $resp->content;
 
-         log_if_fail("Response to empty body", $body);
+         log_if_fail "Response to empty body", $body;
 
          assert_json_keys($body, qw(session params flows));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
@@ -93,7 +93,7 @@ EOF
 
          my $body = decode_json $resp->content;
 
-         log_if_fail( "Response to empty body", $body );
+         log_if_fail "Response to empty body", $body;
 
          assert_json_keys( $body, qw( session params flows ));
 
@@ -168,7 +168,7 @@ EOF
 
          my $body = decode_json $resp->content;
 
-         log_if_fail( "Response to empty body", $body );
+         log_if_fail "Response to empty body", $body;
 
          assert_json_keys( $body, qw( session params flows ));
 
@@ -241,7 +241,7 @@ test "The operation must be consistent through an interactive authentication ses
 
          my $body = decode_json $resp->content;
 
-         log_if_fail( "Response to empty body", $body );
+         log_if_fail "Response to empty body", $body;
 
          assert_json_keys( $body, qw( session params flows ));
 
