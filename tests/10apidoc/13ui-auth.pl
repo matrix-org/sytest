@@ -24,6 +24,30 @@ sub wait_for_cas_request
    });
 }
 
+# Generate a ticket request from the client to the homeserver (and "validate"
+# it with the CAS server).
+sub make_ticket_request
+{
+   my ( $http, $homeserver_info, $session, $ticket, $response ) = @_;
+
+   # Note that we skip almost all of the CAS flow since it isn't important
+   # for this test. The user just needs to end up back at the homeserver
+   # with a valid ticket (and the original UI Auth session ID).
+   my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?session=$session&ticket=$ticket";
+
+   Future->needs_all(
+      wait_for_cas_request(
+         "/cas/proxyValidate",
+         response => $response,
+      ),
+      $http->do_request_json(
+         method   => "GET",
+         full_uri => $login_uri,
+         max_redirects => 0, # don't follow the redirect
+      ),
+   );
+}
+
 test "Interactive authentication types include SSO",
    requires => [ local_user_fixture( with_events => 0 ) ],
 
@@ -102,22 +126,7 @@ EOF
 
          $session = $body->{session};
 
-         # Note that we skip almost all of the CAS flow since it isn't important
-         # for this test. The user just needs to end up back at the homeserver
-         # with a valid ticket (and the original UI Auth session ID).
-         my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?session=$session&ticket=$CAS_TICKET";
-
-         Future->needs_all(
-            wait_for_cas_request(
-               "/cas/proxyValidate",
-               response => $CAS_SUCCESS,
-            ),
-            $http->do_request_json(
-               method   => "GET",
-               full_uri => $login_uri,
-               max_redirects => 0, # don't follow the redirect
-            ),
-         );
+         make_ticket_request( $http, $homeserver_info, $session, $CAS_TICKET, $CAS_SUCCESS );
       })->then( sub {
          # Repeat the device deletion, which should now complete.
          matrix_delete_device( $user, $DEVICE_ID, {
@@ -177,22 +186,7 @@ EOF
 
          $session = $body->{session};
 
-         # Note that we skip almost all of the CAS flow since it isn't important
-         # for this test. The user just needs to end up back at the homeserver
-         # with a valid ticket (and the original UI Auth session ID).
-         my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?session=$session&ticket=$CAS_TICKET";
-
-         Future->needs_all(
-            wait_for_cas_request(
-               "/cas/proxyValidate",
-               response => $CAS_SUCCESS,
-            ),
-            $http->do_request_json(
-               method   => "GET",
-               full_uri => $login_uri,
-               max_redirects => 0, # don't follow the redirect
-            ),
-         );
+         make_ticket_request( $http, $homeserver_info, $session, $CAS_TICKET, $CAS_SUCCESS );
       })->then( sub {
          # Repeat the device deletion, which should now give an auth error.
          matrix_delete_device( $user, $DEVICE_ID, {
