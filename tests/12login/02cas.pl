@@ -41,7 +41,7 @@ test "login types include SSO",
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( flows ));
-         ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
+         assert_json_list $body->{flows};
 
          die "m.login.sso was not listed" unless
             any { $_->{type} eq "m.login.sso" } @{ $body->{flows} };
@@ -64,7 +64,7 @@ my $cas_login_fixture = fixture(
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( flows ));
-         ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
+         assert_json_list $body->{flows};
 
          die "SKIP: no m.login.cas" unless
             any { $_->{type} eq "m.login.cas" } @{ $body->{flows} };

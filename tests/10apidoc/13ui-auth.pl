@@ -44,7 +44,7 @@ test "Interactive authentication types include SSO",
          log_if_fail "Response to empty body", $body;
 
          assert_json_keys($body, qw(session params flows));
-         ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
+         assert_json_list $body->{flows};
 
          # Note that this uses the unstable value.
          die "org.matrix.login.sso was not listed" unless
