@@ -263,7 +263,59 @@ test "Can search public room list",
 
                content => {
                   filter => {
-                     generic_search_term => "wombles",  # Search case insesitively
+                     generic_search_term => "wombles",  # Search case insensitively
+                  }
+               },
+            )->then( sub {
+               my ( $body ) = @_;
+
+               log_if_fail "Body", $body;
+
+               assert_json_keys( $body, qw( chunk ) );
+
+               # We only expect to find a single result
+               assert_eq( scalar @{ $body->{chunk} }, 1 );
+               assert_eq( $body->{chunk}[0]{room_id}, $room_id );
+
+               Future->done( 1 );
+            })->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Failed to search room dir: $exc";
+            });
+         }
+      })
+   };
+
+test "Asking for a remote rooms list, but supplying the local server's name, returns the local rooms list",
+   requires => [ local_user_fixture() ],
+
+   check => sub {
+      my ( $local_user ) = @_;
+
+      my $room_id;
+
+      matrix_create_room( $local_user,
+         visibility      => "public",
+         name            => "Test Name",
+         topic           => "Test Topic Wibbles",
+      )->then( sub {
+         ( $room_id ) = @_;
+
+         retry_until_success {
+            do_request_json_for( $local_user,
+               method => "POST",
+               uri    => "/r0/publicRooms",
+
+               # Ask the local server for a remote room list, but supply the local server's server_name
+               # Server should return the local public rooms list
+               params => {
+                  server => $local_user->server_name,
+               },
+
+               content => {
+                  filter => {
+                     generic_search_term => "wibbles",  # Search case insensitively
                   }
                },
             )->then( sub {
