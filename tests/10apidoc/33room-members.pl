@@ -512,6 +512,11 @@ server and return the room id.
 C<$user_fixture> should be a Fixture which will provide a User when
 provisioned.
 
+C<opts> can contain a boolean key called C<synced>, which determines whether to
+perform a user /sync request after creating the room. This involves inserting
+and checking for a 'm.room.test' event in the room state, which may be
+undesirable in some cases. Defaults to 1.
+
 Any other options are passed into C<matrix_create_room>, whence they are passed
 on to the server.
 
@@ -531,8 +536,12 @@ sub room_fixture
       setup => sub {
          my ( $user ) = @_;
 
+         # Determine whether to create room synced or not. Default is synced
+         #
+         # This will insert a m.room.test event into room state which
+         # some tests may not want
          my $sync = 1;
-         if ( exists($args{synced}) && $args{synced} == 0 ) {
+         if ( exists( $args{synced} ) && $args{synced} == 0 ) {
             $sync = 0;
          }
 
