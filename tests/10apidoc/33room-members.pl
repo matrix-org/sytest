@@ -531,7 +531,7 @@ sub room_fixture
       setup => sub {
          my ( $user ) = @_;
 
-         matrix_create_room( $user, %args )->then( sub {
+         matrix_create_room_synced( $user, %args )->then( sub {
             my ( $room_id ) = @_;
             # matrix_create_room returns the room_id and the room_alias if
             #  one was set. However we only want to return the room_id
