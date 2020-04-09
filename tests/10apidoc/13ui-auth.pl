@@ -24,8 +24,9 @@ sub wait_for_cas_request
    });
 }
 
-# Generate a ticket request from the client to the homeserver (and "validate"
-# it with the CAS server).
+# Generate a ticket-submission request from the client to the homeserver.
+#
+# Waits for the validation request from the homeserver, and returns the given response.
 sub make_ticket_request
 {
    my ( $http, $homeserver_info, $session, $ticket, $response ) = @_;
