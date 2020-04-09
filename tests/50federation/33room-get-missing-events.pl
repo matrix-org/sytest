@@ -105,7 +105,9 @@ test "Outbound federation can request missing events",
 foreach my $vis (qw( world_readable shared invite joined )) {
    test "Inbound federation can return missing events for $vis visibility",
       requires => [ $main::OUTBOUND_CLIENT,
-                    local_user_and_room_fixtures(),
+                    # Setting synced to 1 inserts a m.room.test object into the
+                    # timeline which this test does not expect
+                    local_user_and_room_fixtures( room_opts => { synced => 0 } ),
                     federation_user_id_fixture() ],
 
       do => sub {
