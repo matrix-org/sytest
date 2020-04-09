@@ -345,7 +345,7 @@ test "Users with sufficient power-level can delete other's aliases",
    };
 
 test "Can delete canonical alias",
-   requires => [ local_user_fixture( with_events => 0 ), room_alias_fixture(),
+   requires => [ local_user_fixture(), room_alias_fixture(),
                  qw( can_create_room_alias )],
 
    do => sub {

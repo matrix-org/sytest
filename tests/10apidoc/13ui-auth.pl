@@ -50,7 +50,7 @@ sub make_ticket_request
 }
 
 test "Interactive authentication types include SSO",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -84,7 +84,7 @@ test "Interactive authentication types include SSO",
 
 test "Can perform interactive authentication with SSO",
    requires => [
-      local_user_fixture( with_events => 0 ),
+      local_user_fixture(),
       $main::API_CLIENTS[0],
       $main::HOMESERVER_INFO[0],
    ],
@@ -143,7 +143,7 @@ EOF
 
 test "The user must be consistent through an interactive authentication session with SSO",
    requires => [
-      local_user_fixture( with_events => 0 ),
+      local_user_fixture(),
       $main::API_CLIENTS[0],
       $main::HOMESERVER_INFO[0],
    ],
@@ -212,7 +212,7 @@ EOF
 
 
 test "The operation must be consistent through an interactive authentication session",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
