@@ -215,6 +215,15 @@ test "Message history can be paginated",
             body => "Message number $_[0]"
          )
       } foreach => [ 1 .. 20 ] )->then( sub {
+         await_sync( $user, check => sub {
+            sync_timeline_contains( $_[0], $room_id, sub {
+               any {
+                  $_->{type} eq "m.room.message"
+                  && $_->{content}{body} eq "Message number 20"
+               } @_;
+            });
+         });
+      })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 5 )
       })->then( sub {
          my ( $body ) = @_;
