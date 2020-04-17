@@ -144,7 +144,7 @@ multi_test "Canonical alias can include alt_aliases",
                alias => $room_alias,
                alt_aliases => [ $bad_alias ],
             }
-         )->main::expect_matrix_error( 404, "M_NOT_FOUND" )
+         )->main::expect_matrix_error( 400, "M_BAD_ALIAS" )
             ->SyTest::pass_on_done( "m.room.canonical_alias rejects missing aliases" );
       })->then( sub {
          # Create an invalid alias name (starts with % instead of #).

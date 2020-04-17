@@ -263,7 +263,9 @@ sub set_test_state
 }
 
 test "Setting state twice is idempotent",
-   requires => [ local_user_and_room_fixtures() ],
+   # Setting synced to 1 inserts a m.room.test object into the
+   # timeline which this test does not expect
+   requires => [ local_user_and_room_fixtures( room_opts => { synced => 0 } ) ],
 
    check => sub {
       my ( $user, $room_id ) = @_;
