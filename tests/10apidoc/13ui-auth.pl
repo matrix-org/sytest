@@ -5,6 +5,11 @@ our @EXPORT = qw( wait_for_cas_request );
 
 # A convenience function which wraps await_http_request. It returns a successful
 # CAS response when queried for a particular path.
+#
+# This takes two parameters:
+#  * The expected path of the request the homeserver makes to the CAS server.
+#  * A hash of parameters with the following (optional) keys:
+#    * response: The HTTP response body to return to the homeserver request.
 sub wait_for_cas_request
 {
    my ( $expected_path, %params ) = @_;
