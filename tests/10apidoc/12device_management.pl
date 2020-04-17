@@ -37,7 +37,7 @@ sub matrix_delete_device {
 }
 
 test "GET /device/{deviceId}",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -64,7 +64,7 @@ test "GET /device/{deviceId}",
    };
 
 test "GET /device/{deviceId} gives a 404 for unknown devices",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -78,7 +78,7 @@ test "GET /device/{deviceId} gives a 404 for unknown devices",
 
 
 test "GET /devices",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -136,7 +136,7 @@ test "GET /devices",
    };
 
 test "PUT /device/{deviceId} updates device fields",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -172,7 +172,7 @@ test "PUT /device/{deviceId} updates device fields",
    };
 
 test "PUT /device/{deviceId} gives a 404 for unknown devices",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -188,7 +188,7 @@ test "PUT /device/{deviceId} gives a 404 for unknown devices",
    };
 
 test "DELETE /device/{deviceId}",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -273,8 +273,8 @@ test "DELETE /device/{deviceId}",
 #
 test "DELETE /device/{deviceId} requires UI auth user to match device owner",
    requires => [
-      local_user_fixture( with_events => 0 ),
-      local_user_fixture( with_events => 0 ),
+      local_user_fixture(),
+      local_user_fixture(),
    ],
 
    do => sub {
@@ -317,7 +317,7 @@ test "DELETE /device/{deviceId} requires UI auth user to match device owner",
 
 
 test "DELETE /device/{deviceId} with no body gives a 401",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -335,61 +335,3 @@ test "DELETE /device/{deviceId} with no body gives a 401",
          matrix_delete_device( $user, $DEVICE_ID, undef );
       })->main::expect_http_401;
   };
-
-
-test "The deleted device must be consistent through an interactive auth session",
-   requires => [ local_user_fixture( with_events => 0 ) ],
-
-   do => sub {
-      my ( $user ) = @_;
-
-      my $DEVICE_ID = "login_device";
-      my $SECOND_DEVICE_ID = "second_device";
-
-      # Create two devices.
-      matrix_login_again_with_user(
-         $user,
-         device_id => $DEVICE_ID,
-         initial_device_display_name => "device display",
-      )->then( sub {
-         matrix_login_again_with_user(
-            $user,
-            device_id => $SECOND_DEVICE_ID,
-            initial_device_display_name => "device display",
-         )
-      })->then( sub {
-         # Initiate the interactive authentication session with the first device.
-         matrix_delete_device( $user, $DEVICE_ID, {} );
-      })->main::expect_http_401->then( sub {
-         my ( $resp ) = @_;
-
-         my $body = decode_json $resp->content;
-
-         log_if_fail( "Response to empty body", $body );
-
-         assert_json_keys( $body, qw( session params flows ));
-
-         # Continue the interactive authentication session (by providing
-         # credentials), but attempt to delete the second device.
-         matrix_delete_device( $user, $SECOND_DEVICE_ID, {
-             auth => {
-                type     => "m.login.password",
-                user     => $user->user_id,
-                password => $user->password,
-                session  => $body->{session},
-             }
-         })->main::expect_http_403;
-      })->then( sub {
-         # The device delete was rejected (the device should still exist).
-         matrix_get_device( $user, $SECOND_DEVICE_ID );
-      })->then( sub {
-         my ( $device ) = @_;
-         assert_json_keys(
-            $device,
-            qw( device_id user_id display_name ),
-         );
-         assert_eq( $device->{device_id}, $SECOND_DEVICE_ID );
-         assert_eq( $device->{display_name}, "device display" );
-         Future->done( 1 );
-      });
-   };

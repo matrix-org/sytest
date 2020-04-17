@@ -1,24 +1,5 @@
 use URI::Escape;
 
-sub wait_for_cas_request
-{
-   my ( $expected_path, %params ) = @_;
-
-   await_http_request( $expected_path, sub {
-      return 1;
-   })->then( sub {
-      my ( $request ) = @_;
-
-      my $response = HTTP::Response->new( 200 );
-      $response->add_content( $params{response} // "" );
-      $response->content_type( "text/plain" );
-      $response->content_length( length $response->content );
-      $request->respond( $response );
-
-      Future->done( $request );
-   });
-}
-
 my $CAS_SUCCESS = <<'EOF';
 <cas:serviceResponse xmlns:cas='http://www.yale.edu/tp/cas'>
     <cas:authenticationSuccess>
@@ -41,7 +22,7 @@ test "login types include SSO",
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( flows ));
-         ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
+         assert_json_list $body->{flows};
 
          die "m.login.sso was not listed" unless
             any { $_->{type} eq "m.login.sso" } @{ $body->{flows} };
@@ -64,7 +45,7 @@ my $cas_login_fixture = fixture(
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( flows ));
-         ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
+         assert_json_list $body->{flows};
 
          die "SKIP: no m.login.cas" unless
             any { $_->{type} eq "m.login.cas" } @{ $body->{flows} };
