@@ -1228,7 +1228,9 @@ sub generate_haproxy_get_map
     return <<'EOCONFIG';
 ^/_matrix/federation/v1/groups/                 federation_reader
 
-^/_matrix/client/(api/v1|r0|unstable)/groups/   client_reader
+^/_matrix/client/r0/user/[^/]*/account_data/                client_reader
+^/_matrix/client/r0/user/[^/]*/rooms/[^/]*/account_data/    client_reader
+^/_matrix/client/(api/v1|r0|unstable)/groups/               client_reader
 
 EOCONFIG
 }
