@@ -121,7 +121,7 @@ if [ -n "$OFFLINE" ]; then
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir /src
+    /venv/bin/pip install -q --upgrade --no-cache-dir /src[redis]
     /venv/bin/pip install -q --upgrade --no-cache-dir \
         lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
 

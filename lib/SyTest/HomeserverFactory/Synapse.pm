@@ -101,6 +101,7 @@ sub _init
    $self->{impl} = "SyTest::Homeserver::Synapse::ViaDendron";
    $self->{args}{dendron_binary} = "";
    $self->{args}{torture_replication} = 0;
+   $self->{args}{redis_host} = "";
 }
 
 sub get_options
@@ -108,8 +109,9 @@ sub get_options
    my $self = shift;
 
    return (
-      'dendron-binary=s' => \$self->{args}{dendron_binary},
+      'dendron-binary=s'       => \$self->{args}{dendron_binary},
       'torture-replication:50' => \$self->{args}{torture_replication},
+      'redis-host=s'           => \$self->{args}{redis_host},
       $self->SUPER::get_options(),
    );
 }
@@ -125,6 +127,8 @@ sub print_usage
        --dendron-binary PATH    - path to the 'dendron' binary
 
        --torture-replication[=LEVEL] - enable torturing of the replication protocol
+
+       --redis-host HOST 	- if set then use redis for replication
 EOF
 }
 
