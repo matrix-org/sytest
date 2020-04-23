@@ -787,3 +787,17 @@ test "If user leaves room, remote user changes device and rejoins we see update 
          Future->done(1);
       });
    };
+
+# regression test for https://github.com/matrix-org/synapse/pull/7160
+test "Users receive device_list updates for their own devices",
+   requires => [ local_user_fixture(), qw( can_sync ) ],
+
+   check => sub {
+      my ( $user1 ) = @_;
+
+      matrix_sync( $user1 )->then( sub {
+         matrix_login_again_with_user( $user1 );
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user1 );
+      });
+   };
