@@ -52,7 +52,7 @@ fi
 
 # Check for new tests to be added to the test whitelist
 /src/show-expected-fail-tests.sh /logs/results.tap /src/sytest-whitelist \
-    /src/sytest-blacklist > /src/test-whitelist.log || TEST_STATUS=$?
+    /src/sytest-blacklist > /work/show_expected_fail_tests_output.txt || TEST_STATUS=$?
 
 echo >&2 "--- Copying assets"
 
@@ -62,9 +62,10 @@ rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
     perl /sytest/scripts/format_tap.pl /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
-    # If show-expected-fail-tests logged something, put it in the annotation
-    # We want nice output though, so surround the text output in code tags
-    cat /src/test-whitelist.log >> /logs/annotate.md
+    # If show-expected-fail-tests logged something, put it into the annotation
+    # Annotations from a failed build show at the top of buildkite, alerting
+    # developers quickly as to what needs to change in the black/whitelist.
+    cat /work/show_expected_fail_tests_output.txt >> /logs/annotate.md
 fi
 
 exit $TEST_STATUS
