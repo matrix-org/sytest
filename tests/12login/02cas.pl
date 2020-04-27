@@ -1,21 +1,4 @@
-sub wait_for_cas_request
-{
-   my ( $expected_path, %params ) = @_;
-
-   await_http_request( $expected_path, sub {
-      return 1;
-   })->then( sub {
-      my ( $request ) = @_;
-
-      my $response = HTTP::Response->new( 200 );
-      $response->add_content( $params{response} // "" );
-      $response->content_type( "text/plain" );
-      $response->content_length( length $response->content );
-      $request->respond( $response );
-
-      Future->done( $request );
-   });
-}
+use URI::Escape;
 
 my $CAS_SUCCESS = <<'EOF';
 <cas:serviceResponse xmlns:cas='http://www.yale.edu/tp/cas'>
@@ -33,12 +16,13 @@ test "login types include SSO",
       my ( $http ) = @_;
 
       $http->do_request_json(
+         method => "GET",
          uri => "/r0/login",
       )->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( flows ));
-         ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
+         assert_json_list $body->{flows};
 
          die "m.login.sso was not listed" unless
             any { $_->{type} eq "m.login.sso" } @{ $body->{flows} };
@@ -55,12 +39,13 @@ my $cas_login_fixture = fixture(
       my ( $http ) = @_;
 
       $http->do_request_json(
+         method => "GET",
          uri => "/r0/login",
       )->then( sub {
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( flows ));
-         ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
+         assert_json_list $body->{flows};
 
          die "SKIP: no m.login.cas" unless
             any { $_->{type} eq "m.login.cas" } @{ $body->{flows} };
@@ -107,11 +92,11 @@ test "Can login with new user via CAS",
    do => sub {
       my ( $http, $homeserver_info ) = @_;
 
-      my $HS_URI = $homeserver_info->client_location;
-
       # the redirectUrl we send to /login/cas/redirect, which is where we
       # hope to get redirected back to
       my $REDIRECT_URL = "https://client?p=http%3A%2F%2Fserver";
+
+      my $HS_URI = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
 
       # the ticket our mocked-up CAS server "generates"
       my $CAS_TICKET = "goldenticket";
@@ -159,7 +144,7 @@ test "Can login with new user via CAS",
                method   => "GET",
                full_uri => $login_uri,
                max_redirects => 0, # don't follow the redirect
-            )->followed_by( \&main::expect_http_302 ),
+            ),
          );
       })->then( sub {
          my ( $cas_validate_request, $ticket_response ) = @_;
@@ -173,19 +158,12 @@ test "Can login with new user via CAS",
                     $HS_URI,
                     "Service supplied to /cas/proxyValidate" );
 
-         my $redirect = $ticket_response->header( "Location" );
-         log_if_fail( "Redirect from /login/cas/ticket", $redirect);
-         assert_ok( $redirect =~ m#^https://client\?#,
-                    "Location returned by /login/cas/ticket did not match" );
+         assert_ok( $ticket_response =~ "loginToken=([^\"&]+)",
+                    "Login token provided in the /ticket response" );
+         my $login_token = $1;
 
-         # the original query param should have been preserved
-         my $redirect_uri = URI->new($redirect);
-         assert_eq( $redirect_uri->query_param( "p" ) // undef,
-                    "http://server",
-                    "Query param on redirect from /login/cas/ticket" );
-
-         # a 'loginToken' should be added.
-         my $login_token = $redirect_uri->query_param( "loginToken" );
+         log_if_fail( "Ticket response:", $ticket_response );
+         log_if_fail( "Login token:", $login_token );
 
          # step 7: the client uses the loginToken via the /login API.
          $http->do_request_json(

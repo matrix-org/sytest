@@ -33,6 +33,7 @@ sub _init
 
    $self->{paths} = {};
    $self->{dendron} = '';
+   $self->{redis_host} = '';
 
    $self->SUPER::_init( $args );
 
@@ -281,6 +282,11 @@ sub start
         # feature with worker mode.
         limit_usage_by_mau => "true",
         max_mau_value => 50000000,
+
+        redis => {
+           enabled => $self->{redis_host} ne '',
+           host    => $self->{redis_host},
+        },
 
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
@@ -653,6 +659,7 @@ sub _init
    $self->SUPER::_init( @_ );
 
    $self->{dendron} = delete $args->{dendron_binary};
+   $self->{redis_host} = delete $args->{redis_host};
 
    if( my $level = delete $args->{torture_replication} ) {
       # torture the replication protocol a bit, to replicate bugs.
@@ -703,6 +710,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("pusher"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -728,6 +736,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("appservice"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -753,6 +762,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("federation_sender"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -778,6 +788,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("synchrotron"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -845,6 +856,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("media_repository"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -912,6 +924,7 @@ sub wrap_synapse_command
          "worker_log_config"       => $self->configure_logger("user_dir"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -990,7 +1003,7 @@ sub wrap_synapse_command
             },
             {
                type => "manhole",
-               port => $self->{ports}{frontend_proxy},
+               port => $self->{ports}{frontend_proxy_manhole},
                bind_address => $bind_host,
             },
             {
@@ -1183,6 +1196,7 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/exchange_third_party_invite/  federation_reader
 ^/_matrix/federation/v1/send/                         federation_reader
 ^/_matrix/federation/v1/get_groups_publicised         federation_reader
+^/_matrix/federation/v1/user/devices/                 federation_reader
 ^/_matrix/key/v2/query                                federation_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/publicRooms$                client_reader
@@ -1197,9 +1211,12 @@ sub generate_haproxy_map
 ^/_matrix/client/versions$                                        client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/voip/turnServer$            client_reader
 ^/_matrix/client/(r0|unstable)/register$                          client_reader
+^/_matrix/client/(r0|unstable)/auth/.*/fallback/web$              client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/messages$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/get_groups_publicised$      client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
+^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
@@ -1216,10 +1233,13 @@ EOCONFIG
 sub generate_haproxy_get_map
 {
     return <<'EOCONFIG';
-^/_matrix/federation/v1/groups/                 federation_reader
+# pushrules should be here, but the tests seem to be racy.
+# ^/_matrix/client/(api/v1|r0|unstable)/pushrules/            client_reader
+^/_matrix/client/(api/v1|r0|unstable)/groups/               client_reader
+^/_matrix/client/r0/user/[^/]*/account_data/                client_reader
+^/_matrix/client/r0/user/[^/]*/rooms/[^/]*/account_data/    client_reader
 
-^/_matrix/client/(api/v1|r0|unstable)/groups/   client_reader
-
+^/_matrix/federation/v1/groups/                             federation_reader
 EOCONFIG
 }
 

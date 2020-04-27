@@ -374,6 +374,7 @@ test "/upgrade copies the power levels to the new room",
       });
    };
 
+# See https://github.com/matrix-org/synapse/issues/6632 for details
 test "/upgrade preserves the power level of the upgrading user in old and new rooms",
    requires => [
       local_user_and_room_fixtures(),
@@ -386,8 +387,6 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
 
       my ( $pl_content, $new_room_id );
 
-      # Note that this test assumes that moderators by default are allowed to upgrade rooms
-
       matrix_join_room_synced(
          $upgrader, $room_id
       )->then( sub {
@@ -396,6 +395,11 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
             $creator, $room_id, sub {
                ( $pl_content ) = @_;
                $pl_content->{users}->{$upgrader->user_id} = JSON::number(50);
+
+               # Note that this test assumes that moderators by default are allowed to upgrade rooms
+               # Change the PL rules to allow moderators to send tombstones
+               $pl_content->{events}->{"m.room.tombstone"} = JSON::number(50);
+
                log_if_fail "PL content in old room", $pl_content;
             }
          )
@@ -501,19 +505,6 @@ test "/upgrade copies important state to the new room",
       }
 
       $f->then( sub {
-         # to make things harder, we now restrict our ability to change each of
-         # those states: the server should make sure it sets up the state
-         # *before* it replicates the PL.
-         matrix_change_room_power_levels(
-            $creator, $room_id, sub {
-               my ( $levels ) = @_;
-               foreach my $k ( keys %STATE_DICT ) {
-                  $levels->{events}->{$k} = 80;
-               }
-               $levels->{users}->{$creator->user_id} = 50;
-            },
-         );
-      })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
          upgrade_room_synced(
@@ -546,7 +537,6 @@ test "/upgrade copies important state to the new room",
          Future->done(1);
       });
    };
-
 
 test "/upgrade copies ban events to the new room",
    requires => [
@@ -659,7 +649,6 @@ foreach my $user_type ( qw ( local remote ) ) {
 
 test "/upgrade moves aliases to the new room",
    requires => [
-      $main::HOMESERVER_INFO[0],
       local_user_and_room_fixtures(),
       room_alias_fixture(),
       room_alias_fixture(),
@@ -667,9 +656,8 @@ test "/upgrade moves aliases to the new room",
    ],
 
    do => sub {
-      my ( $info, $creator, $room_id, $room_alias_1, $room_alias_2 ) = @_;
+      my ( $creator, $room_id, $room_alias_1, $room_alias_2 ) = @_;
 
-      my $server_name = $info->server_name;
       my $new_room_id;
 
       do_request_json_for(
@@ -690,6 +678,7 @@ test "/upgrade moves aliases to the new room",
             type    => "m.room.canonical_alias",
             content => {
                alias => $room_alias_1,
+               alt_aliases => [ $room_alias_2 ],
             },
          );
       })->then( sub {
@@ -702,37 +691,12 @@ test "/upgrade moves aliases to the new room",
          );
       })->then( sub {
          ( $new_room_id ) = @_;
-
-      # m.room.aliases are filtered out until a better solution to mitigating abuse is is specced.
-      #
-      #    matrix_get_room_state(
-      #       $creator, $room_id,
-      #       type=>'m.room.aliases', state_key=>$server_name,
-      #    );
-      # })->then( sub {
-      #    my ( $old_aliases ) = @_;
-      #    assert_deeply_eq( $old_aliases, {aliases => []}, "aliases on old room" );
-
          matrix_get_room_state( $creator, $room_id, type=>'m.room.canonical_alias' );
       })->then( sub {
          my ( $old_canonical_alias ) = @_;
          assert_deeply_eq(
             $old_canonical_alias, {}, "canonical_alias on old room",
          );
-
-      # m.room.aliases are filtered out until a better solution to mitigating abuse is is specced.
-      #
-      #    matrix_get_room_state(
-      #       $creator, $new_room_id,
-      #       type=>'m.room.aliases', state_key=>$server_name,
-      #    );
-      # })->then( sub {
-      #    my ( $new_aliases ) = @_;
-      #    assert_deeply_eq(
-      #       [ sort( @{ $new_aliases->{aliases} } ) ],
-      #       [ sort( $room_alias_1, $room_alias_2 ) ],
-      #       "aliases on new room",
-      #    );
 
          matrix_get_room_state(
             $creator, $new_room_id, type=>'m.room.canonical_alias',
@@ -741,7 +705,10 @@ test "/upgrade moves aliases to the new room",
          my ( $new_canonical_alias ) = @_;
          assert_deeply_eq(
             $new_canonical_alias,
-            { alias => $room_alias_1 },
+            {
+               alias => $room_alias_1,
+               alt_aliases => [ $room_alias_2 ],
+            },
             "canonical_alias on new room",
          );
 
@@ -767,6 +734,67 @@ test "/upgrade moves aliases to the new room",
 
             Future->done(1);
          });
+      });
+   };
+
+test "/upgrade moves remote aliases to the new room",
+   requires => [
+      local_user_and_room_fixtures(),
+      remote_user_fixture(),
+      remote_room_alias_fixture(),
+      qw( can_upgrade_room_version ),
+   ],
+
+   do => sub {
+      my ( $creator, $room_id, $remote_user, $remote_room_alias ) = @_;
+
+      my $new_room_id;
+
+      log_if_fail $room_id;
+
+      # Invite the remote user to our room
+      matrix_invite_user_to_room(
+         $creator, $remote_user, $room_id
+      )->then( sub {
+         # Have the remote user join the room
+         matrix_join_room( $remote_user, $room_id );
+      })->then( sub {
+         # Have the remote user add an alias
+         do_request_json_for(
+            $remote_user,
+            method => "PUT",
+            uri    => "/r0/directory/room/$remote_room_alias",
+            content => { room_id => $room_id },
+         );
+      })->then( sub {
+         # Upgrade the room
+         upgrade_room_synced(
+            $creator, $room_id,
+            new_version => $TEST_NEW_VERSION,
+         );
+      })->then( sub {
+         ( $new_room_id ) = @_;
+
+         # Invite the remote user to the new room
+         matrix_invite_user_to_room(
+            $creator, $remote_user, $new_room_id
+         );
+      })->then( sub {
+         # Have the remote user join the upgraded room
+         matrix_join_room( $remote_user, $new_room_id );
+      })->then( sub {
+         # Check that the remote alias points to the new room id
+         do_request_json_for(
+            $remote_user,
+            method => "GET",
+            uri    => "/r0/directory/room/$remote_room_alias",
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_eq( $body->{room_id}, $new_room_id, "room_id for remote alias" );
+
+         Future->done(1);
       });
    };
 

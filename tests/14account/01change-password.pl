@@ -82,7 +82,7 @@ test "After changing password, existing session still works",
       })->then_done(1);
    };
 
-test "After changing password, a different session no longer works",
+test "After changing password, a different session no longer works by default",
    requires => [ local_user_fixture( password => $password ) ],
 
    check => sub {
@@ -104,6 +104,38 @@ test "After changing password, a different session no longer works",
                200 => "redo",
             );
          };
+      })->then_done(1);
+   };
+
+test "After changing password, different sessions can optionally be kept",
+   requires => [ local_user_fixture( password => $password ) ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      my $other_login;
+
+      matrix_login_again_with_user( $user )->then( sub {
+         ( $other_login ) = @_;
+         # ensure other login works to start with
+         matrix_sync( $other_login );
+      })->then( sub {
+         do_request_json_for( $user,
+            method => "POST",
+            uri    => "/r0/account/password",
+            content => {
+               auth => {
+                  type           => "m.login.password",
+                  user           => $user->user_id,
+                  password       => $password,
+               },
+               new_password => "my new password",
+               logout_devices => JSON::false,
+            },
+         );
+      })->then( sub {
+         # The access token should still be valid.
+         matrix_sync( $other_login );
       })->then_done(1);
    };
 

@@ -37,7 +37,7 @@ sub matrix_delete_device {
 }
 
 test "GET /device/{deviceId}",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -64,7 +64,7 @@ test "GET /device/{deviceId}",
    };
 
 test "GET /device/{deviceId} gives a 404 for unknown devices",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -78,7 +78,7 @@ test "GET /device/{deviceId} gives a 404 for unknown devices",
 
 
 test "GET /devices",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -136,7 +136,7 @@ test "GET /devices",
    };
 
 test "PUT /device/{deviceId} updates device fields",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -172,7 +172,7 @@ test "PUT /device/{deviceId} updates device fields",
    };
 
 test "PUT /device/{deviceId} gives a 404 for unknown devices",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -188,7 +188,7 @@ test "PUT /device/{deviceId} gives a 404 for unknown devices",
    };
 
 test "DELETE /device/{deviceId}",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;
@@ -273,8 +273,8 @@ test "DELETE /device/{deviceId}",
 #
 test "DELETE /device/{deviceId} requires UI auth user to match device owner",
    requires => [
-      local_user_fixture( with_events => 0 ),
-      local_user_fixture( with_events => 0 ),
+      local_user_fixture(),
+      local_user_fixture(),
    ],
 
    do => sub {
@@ -317,7 +317,7 @@ test "DELETE /device/{deviceId} requires UI auth user to match device owner",
 
 
 test "DELETE /device/{deviceId} with no body gives a 401",
-   requires => [ local_user_fixture( with_events => 0 ) ],
+   requires => [ local_user_fixture() ],
 
    do => sub {
       my ( $user ) = @_;

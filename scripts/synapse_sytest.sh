@@ -16,14 +16,25 @@ cd "$(dirname $0)/.."
 mkdir /work
 
 # PostgreSQL setup
-if [ -n "$MULTI_POSTGRES" ]; then
-    # In this mode we want to run synapse against multiple split out databases.
-
+if [ -n "$MULTI_POSTGRES" ] || [ -n "$POSTGRES" ]; then
     # We increase the max connections as we have more databases.
-    echo -e "max_connections=1000" >> /var/run/postgresql/data/postgresql.conf
+    sed -i -r "s/^max_connections.*$/max_connections = 500/" /var/run/postgresql/data/postgresql.conf
+
+    echo -e "fsync = off" >> /var/run/postgresql/data/postgresql.conf
+    echo -e "full_page_writes = off" >> /var/run/postgresql/data/postgresql.conf
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
+
+    su -c psql postgres <<< "show config_file"
+    su -c psql postgres <<< "show max_connections"
+    su -c psql postgres <<< "show full_page_writes"
+    su -c psql postgres <<< "show fsync"
+fi
+
+# Now create the databases
+if [ -n "$MULTI_POSTGRES" ]; then
+    # In this mode we want to run synapse against multiple split out databases.
 
     # Make the test databases for the two Synapse servers that will be spun up
     su -c psql postgres <<EOF
@@ -85,12 +96,10 @@ state_db:
 EOF
 
 elif [ -n "$POSTGRES" ]; then
+    # Env vars used by prep_sytest_for_postgres script.
     export PGUSER=postgres
     export POSTGRES_DB_1=pg1
     export POSTGRES_DB_2=pg2
-
-    # Start the database
-    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
 
     # Write out the configuration for a PostgreSQL using Synapse
     ./scripts/prep_sytest_for_postgres.sh
@@ -105,14 +114,15 @@ if [ -n "$OFFLINE" ]; then
     # if we're in offline mode, just put synapse into the virtualenv, and
     # hope that the deps are up-to-date.
     #
-    # (`pip install -e` likes to reinstall setuptools even if it's already installed,
-    # so we just run setup.py explicitly.)
-    #
-    (cd /src && /venv/bin/python setup.py -q develop)
+    # --no-use-pep517 works around what appears to be a pip issue
+    # (https://github.com/pypa/pip/issues/5402 possibly) where pip wants
+    # to reinstall any requirements for the build system, even if they are
+    # already installed.
+    /venv/bin/pip install --no-index --no-use-pep517 /src
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir /src
+    /venv/bin/pip install -q --upgrade --no-cache-dir /src[redis]
     /venv/bin/pip install -q --upgrade --no-cache-dir \
         lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
 

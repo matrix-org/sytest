@@ -67,7 +67,10 @@ test "After deactivating account, can't log in with password",
             uri     => "/r0/login",
             content => {
                type     => "m.login.password",
-               user     => $user->user_id,
+               identifier => {
+                  type => "m.id.user",
+                  user => $user->user_id,
+               },
                password => $user->password,
             }
          # We don't mandate the exact failure code here

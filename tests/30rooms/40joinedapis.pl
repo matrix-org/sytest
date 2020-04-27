@@ -30,7 +30,7 @@ test "/joined_rooms returns only joined rooms",
       )->then( sub {
          do_request_json_for( $user,
             method => "GET",
-            uri => "/unstable/joined_rooms",
+            uri => "/r0/joined_rooms",
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -92,7 +92,7 @@ test "/joined_members return joined members",
 
             do_request_json_for( $user,
                method => "GET",
-               uri => "/unstable/rooms/$room_id/joined_members",
+               uri => "/r0/rooms/$room_id/joined_members",
             )->then( sub {
                my ( $body ) = @_;
 

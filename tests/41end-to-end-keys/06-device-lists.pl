@@ -347,6 +347,8 @@ test "If remote user leaves room we no longer receive device updates",
       matrix_create_room( $creator )->then( sub {
          ( $room_id ) = @_;
 
+         matrix_sync( $creator );
+      })->then( sub {
          matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
       })->then( sub {
          matrix_join_room( $remote_leaver, $room_id );
@@ -355,38 +357,78 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          matrix_join_room( $remote2, $room_id );
       })->then( sub {
-         matrix_sync( $creator );
-      })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver )
-      })->then( sub {
-         matrix_put_e2e_keys( $remote2 )
-      })->then( sub {
+         log_if_fail "Created and joined room";
+
+         # make sure we've received the device list update for remote_leaver's
+         # join to the room, otherwise we could get out of sync.
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
-         matrix_set_device_display_name( $remote_leaver, $remote_leaver->device_id, "test display name" ),
+
+         # there must be e2e keys for the devices, otherwise they don't appear in /query.
+         matrix_put_e2e_keys( $remote2, device_keys => { x => "x" } );
       })->then( sub {
-         log_if_fail "Remote_leaver " . $remote_leaver->user_id . " set display name";
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { x => "y" } );
+      })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
+
       })->then( sub {
-         matrix_leave_room_synced( $remote_leaver, $room_id )
+         # sanity check: make sure that we've got the right update
+         do_request_json_for( $creator,
+            method => "POST",
+            uri    => "/r0/keys/query",
+
+            content => {
+               device_keys => { $remote_leaver->user_id => [ $remote_leaver->device_id ] },
+            },
+         )->then( sub {
+            my ( $body ) = @_;
+
+            log_if_fail "keys after remote_leaver uploaded keys", $body;
+            assert_json_keys( $body, qw( device_keys ));
+            my $update = $body->{device_keys}->{ $remote_leaver->user_id }->{ $remote_leaver->device_id };
+            assert_eq( $update->{x}, "y" );
+            Future->done;
+         });
+      })->then( sub {
+
+         # now one of the remote users leaves the room...
+         matrix_leave_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          log_if_fail "Remote_leaver " . $remote_leaver->user_id . " left room";
+
+         # now /finally/ we can test what we came here for. Both remote users update their
+         # device keys, and we check that we only get an update for one of them.
          matrix_put_e2e_keys( $remote_leaver, device_keys => { updated => "keys" } )
       })->then( sub {
          log_if_fail "Remote_leaver " . $remote_leaver->user_id . " updated keys";
          matrix_put_e2e_keys( $remote2, device_keys => { updated => "keys" } )
       })->then( sub {
          log_if_fail "Remote user 2 " . $remote2->user_id . " updated keys";
-         sync_until_user_in_device_list( $creator, $remote2 );
-      })->then( sub {
-         my ( $body ) = @_;
 
-         log_if_fail "Final body", $body;
+         # we wait for a sync in which remote2 appears in the changed list, and make
+         # sure that remote_leaver *doesn't* appear in the meantime.
 
-         any { $_ eq $remote_leaver->user_id } @{ $body->{device_lists}{changed} }
-            and die "user2 in changed list after leaving";
+         my $wait_for_id = $remote2->user_id;
+         repeat_until_true {
+            matrix_sync_again( $creator, timeout => 1000 )
+            ->then( sub {
+                my ( $body ) = @_;
 
-         Future->done(1);
+                log_if_fail "waiting for $wait_for_id in 'changed'", $body;
+
+                return Future->done(0) unless
+                   $body->{device_lists} &&
+                   $body->{device_lists}{changed};
+
+                my @changed_list = @{ $body->{device_lists}{changed} };
+                any { $_ eq $remote_leaver->user_id } @changed_list
+                   and die "remote_leaver " . $remote_leaver->user_id . " in changed list after leaving";
+
+                return Future->done(
+                   any { $_ eq $wait_for_id } @changed_list
+                );
+             });
+          };
       });
    };
 
@@ -689,6 +731,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
 
       matrix_create_room( $creator,
          invite => [ $remote_user->user_id ],
+         preset => "private_chat",  # Allow default PL users to invite others
       )->then( sub {
          ( $room_id ) = @_;
 
@@ -742,5 +785,19 @@ test "If user leaves room, remote user changes device and rejoins we see update 
             or die "user not in changed list";
 
          Future->done(1);
+      });
+   };
+
+# regression test for https://github.com/matrix-org/synapse/pull/7160
+test "Users receive device_list updates for their own devices",
+   requires => [ local_user_fixture(), qw( can_sync ) ],
+
+   check => sub {
+      my ( $user1 ) = @_;
+
+      matrix_sync( $user1 )->then( sub {
+         matrix_login_again_with_user( $user1 );
+      })->then( sub {
+         sync_until_user_in_device_list( $user1, $user1 );
       });
    };
