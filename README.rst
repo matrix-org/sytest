@@ -70,6 +70,11 @@ SyTest requires a number of dependencies that are easiest installed from CPAN.
    Synapse does not need to be installed, as SyTest will run it directly from
    its source code directory.
 
+Additionally, a number of native dependencies are required. To install these
+dependencies on a Ubuntu/Debian-derived Linux distribution, run the following::
+
+    sudo apt install libpq-dev build-essential
+
 Installing on OS X
 ------------------
 Dependencies can be installed on OS X in the same manner, except that packages
