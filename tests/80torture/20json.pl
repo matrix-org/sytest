@@ -1,6 +1,8 @@
 # Test integers that are outside of the range of [-2 ^ 53 + 1, 2 ^ 53 - 1].
 test "Invalid JSON integers",
-   requires => [ local_user_and_room_fixtures() ],
+   requires => [ local_user_and_room_fixtures(
+      room_opts => { room_version => "org.matrix.strict_canonicaljson" }
+   ), ],
 
    do => sub {
       my ( $user, $room_id ) = @_;
