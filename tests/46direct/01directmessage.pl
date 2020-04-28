@@ -72,7 +72,7 @@ sub matrix_recv_device_message
       return 1 if $f->failure;
       my $resp = $f->get;
       log_if_fail "Sync response", $resp;
-      scalar @{ $resp->{to_device}{events} };
+      return scalar @{ $resp->{to_device}{events} };
    };
 
    $f->then( sub {
@@ -156,13 +156,13 @@ test "Can recv a device message using /sync",
       });
    };
 
-test "Can send to a to-device message to two users which both receive it using /sync",
+test "Can send a to-device message to two users which both receive it using /sync",
    requires => [ local_user_fixture(), local_user_fixture(), local_user_fixture(), qw( can_recv_device_message ) ],
 
    check => sub {
       my ( $sender, $recip1, $recip2 ) = @_;
 
-      # do intial syncs for each recipient
+      # do initial syncs for each recipient
       matrix_sync( $recip1 )
       ->then( sub {
          my ( $body ) = @_;
