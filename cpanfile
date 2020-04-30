@@ -28,7 +28,6 @@ requires 'Email::MIME';
 requires 'File::Basename';
 requires 'File::Path';
 requires 'File::Slurper';
-requires 'File::Which';
 requires 'Future', '>= 0.33';
 requires 'Getopt::Long';
 requires 'IO::Async', '>= 0.69';
