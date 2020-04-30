@@ -71,7 +71,7 @@ SyTest requires a number of dependencies that are easiest installed from CPAN.
    its source code directory.
 
 Additionally, a number of native dependencies are required. To install these
-dependencies on a Ubuntu/Debian-derived Linux distribution, run the following::
+dependencies on an Ubuntu/Debian-derived Linux distribution, run the following::
 
     sudo apt install libpq-dev build-essential
 
