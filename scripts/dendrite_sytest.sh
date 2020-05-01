@@ -32,7 +32,9 @@ export POSTGRES_DB_2=pg2
 # Build dendrite
 echo >&2 "--- Building dendrite from source"
 cd /src
-./build.sh
+# Put installed packages into ./bin
+export GOBIN=$PWD/`dirname $0`/bin
+go install ./cmd/dendrite-monolith-server
 cd -
 
 # Run the tests
