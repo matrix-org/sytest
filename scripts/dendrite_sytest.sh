@@ -32,7 +32,7 @@ export POSTGRES_DB_2=pg2
 # Build dendrite
 echo >&2 "--- Building dendrite from source"
 cd /src
-go build -o bin/dendrite-monolith-server cmd/dendrite-monolith-server
+go build -o bin/dendrite-monolith-server ./cmd/dendrite-monolith-server
 cd -
 
 # Run the tests
