@@ -9,7 +9,7 @@ set -ex
 
 cd /sytest
 
-mkdir /work
+mkdir -p /work
 
 # Make sure all Perl deps are installed -- this is done in the docker build so will only install packages added since the last Docker build
 ./install-deps.pl
@@ -23,6 +23,7 @@ su -c 'for i in pg1 pg2 sytest_template; do psql -c "CREATE DATABASE $i;"; done'
 export PGUSER=postgres
 export POSTGRES_DB_1=pg1
 export POSTGRES_DB_2=pg2
+export GOBIN=/tmp/bin
 
 # Write out the configuration for a PostgreSQL Dendrite
 # Note: Dendrite can run entirely within a single database as all of the tables have
@@ -32,7 +33,9 @@ export POSTGRES_DB_2=pg2
 # Build dendrite
 echo >&2 "--- Building dendrite from source"
 cd /src
-go build -o bin/dendrite-monolith-server ./cmd/dendrite-monolith-server
+mkdir -p $GOBIN
+go install -v ./cmd/dendrite-monolith-server
+go install -v ./cmd/generate-keys
 cd -
 
 # Run the tests
@@ -40,7 +43,7 @@ echo >&2 "+++ Running tests"
 
 TEST_STATUS=0
 mkdir -p /logs
-./run-tests.pl -I Dendrite::Monolith -d /src/bin -W /src/sytest-whitelist -O tap --all \
+./run-tests.pl -I Dendrite::Monolith -d $GOBIN -W /src/sytest-whitelist -O tap --all \
     --work-directory="/work" \
     "$@" > /logs/results.tap || TEST_STATUS=$?
 
