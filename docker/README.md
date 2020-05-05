@@ -55,9 +55,40 @@ Synapse:
  * `BLACKLIST`: set non-empty to change the default blacklist file to the
    specified path relative to the Synapse directory
 
+Some examples of running Synapse in different configurations:
+
+* Running Synapse in legacy worker mode (without redis):
+
+  ```
+  docker run --rm -it -e POSTGRES=true -e WORKERS=true -v /path/to/synapse\:/src:ro \
+      -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py35
+  ```
+
+* Running Synapse in redis worker mode:
+
+  ```
+  docker network create testfoobar
+  docker run --network testfoobar --name testredis -d redis:5.0
+  docker run --network testfoobar --rm -it -v /path/to/synapse\:/src:ro \
+       -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py35 \
+       --redis-host testredis
+  # Use `docker start/stop testredis` if you want to explicitly kill redis or start it again after reboot
+  ```
+
 Dendrite:
 
 Dendrite does not currently make use of any environment variables.
+
+## Using the local checkout of Sytest
+
+If you would like to run tests with a custom checkout of Sytest, add a volume
+to the docker command mounting the checkout to the `/sytest` folder in the
+container:
+
+```
+docker run --rm -it /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs \
+    -v /path/to/code/sytest\:/sytest:ro matrixdotorg/sytest-synapse:py35
+```
 
 ## Building the containers
 
