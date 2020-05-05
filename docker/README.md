@@ -57,14 +57,15 @@ Synapse:
 
 Some examples of running Synapse in different configurations:
 
-* Running Synapse in legacy worker mode (without redis):
+* Running Synapse in worker mode using
+[TCP-replication](https://github.com/matrix-org/synapse/blob/master/docs/tcp_replication.md):
 
   ```
   docker run --rm -it -e POSTGRES=true -e WORKERS=true -v /path/to/synapse\:/src:ro \
       -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py35
   ```
 
-* Running Synapse in redis worker mode:
+* Running Synapse in worker mode using redis:
 
   ```
   docker network create testfoobar
