@@ -61,7 +61,7 @@ Some examples of running Synapse in different configurations:
 [TCP-replication](https://github.com/matrix-org/synapse/blob/master/docs/tcp_replication.md):
 
   ```
-  docker run --rm -it -e POSTGRES=true -e WORKERS=true -v /path/to/synapse\:/src:ro \
+  docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -v /path/to/synapse\:/src:ro \
       -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py35
   ```
 
@@ -70,9 +70,10 @@ Some examples of running Synapse in different configurations:
   ```
   docker network create testfoobar
   docker run --network testfoobar --name testredis -d redis:5.0
-  docker run --network testfoobar --rm -it -v /path/to/synapse\:/src:ro \
-       -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py35 \
-       --redis-host testredis
+  docker run --network testfoobar --rm -it -e POSTGRES=1 -e WORKERS=1 \
+       -v /path/to/synapse\:/src:ro \
+       -v /path/to/where/you/want/logs\:/logs \
+       matrixdotorg/sytest-synapse:py35 --redis-host testredis
   # Use `docker start/stop testredis` if you want to explicitly kill redis or start it again after reboot
   ```
 
