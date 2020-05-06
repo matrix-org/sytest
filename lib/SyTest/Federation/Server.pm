@@ -439,11 +439,11 @@ __PACKAGE__->mk_await_request_pair(
 );
 
 __PACKAGE__->mk_await_request_pair(
-   "v1", "invite", [qw( :room_id )],
+   "v1", "invite", [qw( :room_id :event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   "v2", "invite", [qw( :room_id )],
+   "v2", "invite", [qw( :room_id :event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
