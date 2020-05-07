@@ -71,4 +71,7 @@ if [ $TEST_STATUS -ne 0 ]; then
     cat /work/show_expected_fail_tests_output.txt >> /logs/annotate.md
 fi
 
+echo >&2 "--- Sytest compliance report"
+(cd /src && ./are-we-synapse-yet.py /logs/results.tap) || true
+
 exit $TEST_STATUS
