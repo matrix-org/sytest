@@ -45,7 +45,6 @@ TEST_STATUS=0
 mkdir -p /logs
 ./run-tests.pl -I Dendrite::Monolith -d $GOBIN -W /src/sytest-whitelist -O tap --all \
     --work-directory="/work" \
-tests/50federation/36state.pl \
     "$@" > /logs/results.tap || TEST_STATUS=$?
 
 if [ $TEST_STATUS -ne 0 ]; then
