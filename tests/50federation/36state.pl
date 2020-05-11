@@ -329,7 +329,14 @@ test "Outbound federation requests missing prev_events and then asks for /state_
       })->then( sub {
          my ( $body ) = @_;
          $pl_event_id = $body->{event_id};
-
+         # wait for the PL event to be processed before joining or else the join
+         # might be processed before we've fully processed the PL event.
+         await_sync_timeline_contains($creator, $room_id, check => sub {
+            my ( $event ) = @_;
+            log_if_fail "Received event", $event;
+            return $event->{event_id} eq $pl_event_id
+         })
+      })->then( sub {
          $outbound_client->join_room(
             server_name => $first_home_server,
             room_id     => $room_id,
