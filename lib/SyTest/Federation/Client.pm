@@ -16,8 +16,7 @@ use SyTest::Assertions qw( :all );
 use URI::Escape qw( uri_escape );
 
 use constant SUPPORTED_ROOM_VERSIONS => [qw(
-   1 2 3 4 5
-   org.matrix.msc2260
+   1 2 3 4 5 6
 )];
 
 sub configure
