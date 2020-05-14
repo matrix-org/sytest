@@ -1,7 +1,7 @@
 # Test integers that are outside of the range of [-2 ^ 53 + 1, 2 ^ 53 - 1].
 test "Invalid JSON integers",
    requires => [ local_user_and_room_fixtures(
-      room_opts => { room_version => "org.matrix.strict_canonicaljson" }
+      room_opts => { room_version => "6" }
    ), ],
 
    do => sub {
@@ -31,7 +31,7 @@ test "Invalid JSON integers",
 # Floats (including NaN, Infinity, and -Infinity) should be rejected.
 test "Invalid JSON floats",
    requires => [ local_user_and_room_fixtures(
-      room_opts => { room_version => "org.matrix.strict_canonicaljson" }
+      room_opts => { room_version => "6" }
    ), ],
 
    do => sub {
