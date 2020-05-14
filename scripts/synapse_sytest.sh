@@ -25,11 +25,6 @@ if [ -n "$MULTI_POSTGRES" ] || [ -n "$POSTGRES" ]; then
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
-
-    #su -c psql postgres <<< "show config_file"
-    #su -c psql postgres <<< "show max_connections"
-    #su -c psql postgres <<< "show full_page_writes"
-    #su -c psql postgres <<< "show fsync"
 fi
 
 # Now create the databases
@@ -116,7 +111,7 @@ fi
 # if we're running against a source directory, turn it into a tarball.  pip
 # will then unpack it to a temporary location, and build it.  (As of pip 20.1,
 # it will otherwise try to build it in-tree, which means writing changes to the
-# source volume outside the container.
+# source volume outside the container.)
 #
 if [ -d "$SYNAPSE_SOURCE" ]; then
     echo "Creating tarball from synapse source"
