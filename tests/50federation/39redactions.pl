@@ -217,7 +217,9 @@ test "An event which redacts an event in a different room should be ignored",
       });
    };
 
-test "Inbound federation ignores redactions from invalid servers room > v3",
+
+
+test "An event which redacts itself should be ignored",
    requires => [
       $main::OUTBOUND_CLIENT,
       federated_rooms_fixture( room_opts => { room_version => "1" } ),
@@ -252,6 +254,7 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
          )
       });
    };
+
 
 test "A pair of events which redact each other should be ignored",
    requires => [

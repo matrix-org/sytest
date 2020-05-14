@@ -425,22 +425,6 @@ sub local_user_fixtures
 
 push @EXPORT, qw( remote_user_fixture );
 
-sub remote_admin_fixture
-{
-   my %args = @_;
-
-   fixture(
-      requires => [ $main::API_CLIENTS[1], localpart_fixture(), qw( can_register_with_secret ) ],
-
-      setup => sub {
-         my ( $http, $localpart ) = @_;
-
-         matrix_admin_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
-      },
-   );
-}
-push @EXPORT, qw( remote_admin_fixture );
-
 sub remote_user_fixture
 {
    my %args = @_;
@@ -454,6 +438,25 @@ sub remote_user_fixture
          my ( $http, $localpart ) = @_;
 
          setup_user( $http, $localpart, %args )
+      }
+   );
+}
+
+push @EXPORT, qw( remote_admin_fixture );
+
+sub remote_admin_fixture
+{
+   my %args = @_;
+
+   fixture(
+      name => "remote_admin_fixture",
+
+      requires => [ $main::API_CLIENTS[1], localpart_fixture(), qw( can_register_with_secret ) ],
+
+      setup => sub {
+         my ( $http, $localpart ) = @_;
+
+         matrix_admin_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
       }
    );
 }
