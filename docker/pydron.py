@@ -117,4 +117,4 @@ except BaseException as e:
     # Otherwise, something bad has happened.
     sys.exit(1)
 finally:
-   subprocess.call(["pkill", "-9", "-f", "synapse.app"])
+   subprocess.run(["pkill", "-9", "-f", "synapse.app"])
