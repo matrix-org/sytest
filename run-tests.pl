@@ -55,13 +55,19 @@ our $BIND_HOST = "localhost";
 # and the like.
 our $TEST_RUN_ID = strftime( '%Y%m%d_%H%M%S', gmtime() );
 
-my %FIXED_BUGS;
-
 my $STOP_ON_FAIL;
 my $SERVER_IMPL = undef;
 
 my $WHITELIST_FILE;
 my $BLACKLIST_FILE;
+
+# the room version that we use for the majority of our tests (those which do
+# not requires a specific room version). 'undef' means 'use the default from
+# the server under test'.
+our $TEST_ROOM_VERSION;
+
+# where we put working files (server configs, mostly)
+our $WORK_DIR = ".";
 
 Getopt::Long::Configure('pass_through');
 GetOptions(
@@ -83,6 +89,10 @@ GetOptions(
    'v|verbose+' => \(my $VERBOSE = 0),
 
    'n|no-tls' => sub { $WANT_TLS = 0 },
+
+   'work-directory=s' => \$WORK_DIR,
+
+   'room-version=s' => \$TEST_ROOM_VERSION,
 
    # these two are superceded by -I, but kept for backwards compatibility
    'dendron=s' => sub {
@@ -106,8 +116,6 @@ GetOptions(
    'bind-host=s' => \$BIND_HOST,
 
    'p|port-range=s' => \(my $PORT_RANGE = "8800:8899"),
-
-   'F|fixed=s' => sub { $FIXED_BUGS{$_}++ for split m/,/, $_[1] },
 
    'h|help' => sub { usage(0) },
 ) or usage(1);
@@ -175,9 +183,11 @@ Options:
 
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
-   -F, --fixed BUGS             - bug names that are expected to be fixed
-                                  (ignores 'bug' declarations with these names)
+   --work-directory DIR         - where we put working files (server configs,
+                                  mostly). Defaults to '.'.
 
+   --room-version VERSION       - use the given room version for the majority of
+                                  tests
 .
    write STDERR;
 
@@ -210,11 +220,16 @@ if( $BLACKLIST_FILE and $WHITELIST_FILE ) {
 # Read in test blacklist rules if set
 my %TEST_BLACKLIST;
 if ( $BLACKLIST_FILE ) {
-   open( my $blacklist_data, "<", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for reading: $!\n";
+   open( my $blacklist_data, "<:encoding(UTF-8)", $BLACKLIST_FILE ) or die "Couldn't open blacklist file for reading: $!\n";
    while ( my $test_name = <$blacklist_data> ) {
-      # Trim whitespace
+      # Trim whitespace and comments
       chomp $test_name;
-      $TEST_BLACKLIST{$test_name} = 1;
+      $test_name =~ s/#.*//;
+      $test_name =~ s/^\s*//;
+      $test_name =~ s/\s*$//;
+      if($test_name) {
+         $TEST_BLACKLIST{$test_name} = 1;
+      }
    }
    close $blacklist_data;
 }
@@ -222,11 +237,16 @@ if ( $BLACKLIST_FILE ) {
 # Read in test whitelist rules if set
 my %TEST_WHITELIST;
 if ( $WHITELIST_FILE ) {
-   open( my $whitelist_data, "<", $WHITELIST_FILE ) or die "Couldn't open whitelist file for reading: $!\n";
+   open( my $whitelist_data, "<:encoding(UTF-8)", $WHITELIST_FILE ) or die "Couldn't open whitelist file for reading: $!\n";
    while ( my $test_name = <$whitelist_data> ) {
-      # Trim whitespace
+      # Trim whitespace and comments
       chomp $test_name;
-      $TEST_WHITELIST{$test_name} = 1;
+      $test_name =~ s/#.*//;
+      $test_name =~ s/^\s*//;
+      $test_name =~ s/\s*$//;
+      if($test_name) {
+         $TEST_WHITELIST{$test_name} = 1;
+      }
    }
    close $whitelist_data;
 }
@@ -582,10 +602,6 @@ my @TESTS;
 sub _push_test
 {
    my ( $filename, $multi, $name, %params ) = @_;
-
-   # We expect this test to fail if it's declared to be dependent on a bug that
-   # is not yet fixed
-   $params{expect_fail}++ if $params{bug} and not $FIXED_BUGS{ $params{bug} };
 
    if( %only_files and not exists $only_files{$filename} ) {
       $proven{$_} = PRESUMED for @{ $params{proves} // [] };

@@ -253,10 +253,7 @@ sub on_request_federation_v1_event
    my $self = shift;
    my ( $req, $event_id ) = @_;
 
-   my $event = $self->{datastore}->get_event( $event_id ) or
-      return Future->done( response => HTTP::Response->new(
-         404, "Not found", [ Content_length => 0 ], "",
-      ) );
+   my $event = $self->{datastore}->get_event( $event_id );
 
    Future->done( json => {
       origin           => $self->server_name,
@@ -277,14 +274,29 @@ sub on_request_federation_v1_make_join
          404, "Not found", [ Content_length => 0 ], "",
       ) );
 
+   my $room_version = $room->room_version;
+
    Future->done( json => {
       event => $room->make_join_protoevent(
          user_id => $user_id,
       ),
+      room_version => "$room_version",
    } );
 }
 
 sub on_request_federation_v1_send_join
+{
+   my $self = shift;
+
+   $self->on_request_federation_v2_send_join( @_ )->then( sub {
+      my $res = @_;
+
+      # /v1/send_join has an extraneous [ 200, ... ] wrapper (see MSC1802)
+      Future->done( json => [ 200, $res ] );
+   })
+}
+
+sub on_request_federation_v2_send_join
 {
    my $self = shift;
    my ( $req, $room_id ) = @_;
@@ -299,26 +311,25 @@ sub on_request_federation_v1_send_join
    my $event = $req->body_from_json;
 
    my @auth_chain = $store->get_auth_chain_events(
-      map { $_->[0] } @{ $event->{auth_events} }
+      @{ $room->event_ids_from_refs( $event->{auth_events} ) }
    );
    my @state_events = $room->current_state_events;
 
    $room->insert_event( $event );
 
-   # SYN-490
-   Future->done( json => [ 200, {
+   Future->done( json => {
       auth_chain => \@auth_chain,
       state      => \@state_events,
-   } ] );
+   } );
 }
 
 sub mk_await_request_pair
 {
    my $class = shift;
-   my ( $shortname, $paramnames ) = @_;
+   my ( $versionprefix, $shortname, $paramnames ) = @_;
    my @paramnames = @$paramnames;
 
-   my $okey = "awaiting_$shortname";
+   my $okey = "awaiting_${versionprefix}_${shortname}";
 
    my $awaitfunc = sub {
       my $self = shift;
@@ -336,7 +347,9 @@ sub mk_await_request_pair
          });
    };
 
-   my $was_on_requestfunc = $class->can( "on_request_federation_v1_$shortname" );
+   my $was_on_requestfunc = $class->can(
+      "on_request_federation_${versionprefix}_${shortname}"
+   );
    my $on_requestfunc = sub {
       my $self = shift;
       my ( $req, @pathvalues ) = @_;
@@ -375,60 +388,74 @@ sub mk_await_request_pair
 
    no strict 'refs';
    no warnings 'redefine';
-   *{"${class}::await_request_$shortname"} = $awaitfunc;
-   *{"${class}::on_request_federation_v1_$shortname"} = $on_requestfunc;
+   *{"${class}::await_request_${versionprefix}_${shortname}"} = $awaitfunc;
+   # Deprecated alternative name for v1 endpoints.
+   *{"${class}::await_request_${shortname}"} = $awaitfunc if ${versionprefix} eq "v1";
+   *{"${class}::on_request_federation_${versionprefix}_${shortname}"} = $on_requestfunc;
 }
 
 __PACKAGE__->mk_await_request_pair(
-   query_directory => [qw( ?room_alias )],
+   "v1", "query_directory", [qw( ?room_alias )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   query_profile => [qw( ?user_id )],
+   "v1", "query_profile", [qw( ?user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   make_join => [qw( :room_id :user_id )],
+   "v1", "make_join", [qw( :room_id :user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   make_leave => [qw( :room_id :user_id )],
+   "v1", "make_leave", [qw( :room_id :user_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   send_join => [qw( :room_id )],
+   "v1", "send_join", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   state_ids => [qw( :room_id ?event_id )],
+   "v2", "send_join", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   state => [qw( :room_id )],
+   "v1", "state_ids", [qw( :room_id ?event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   get_missing_events => [qw( :room_id )],
+   "v1", "state", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   event_auth => [qw( :room_id :event_id )],
+   "v1", "get_missing_events", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   backfill => [qw( :room_id )],
+   "v1", "event_auth", [qw( :room_id :event_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   invite => [qw( :room_id )],
+   "v1", "backfill", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   event => [qw( :event_id )],
+   "v1", "invite", [qw( :room_id )],
 );
 
 __PACKAGE__->mk_await_request_pair(
-   user_devices => [qw( :user_id )],
+   "v2", "invite", [qw( :room_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   "v1", "event", [qw( :event_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   "v1", "user_devices", [qw( :user_id )],
+);
+
+__PACKAGE__->mk_await_request_pair(
+   "v1", "user_keys_query", [qw( )],
 );
 
 sub on_request_federation_v1_send
@@ -453,6 +480,15 @@ sub on_request_federation_v1_send
 
    # A PDU is an event
    foreach my $event ( @{ $body->{pdus} } ) {
+      my $room = $self->{datastore}->get_room( $event->{room_id} );
+
+      if ( $room ) {
+         my $event_id = $room->id_for_event( $event );
+         $room->insert_event( $event );
+      } else {
+         warn "Unknown room ${ $event->{room_id} }"
+      }
+
       next if $self->on_event( $event );
 
       warn "TODO: Unhandled incoming event of type '$event->{type}'";
@@ -519,6 +555,43 @@ sub on_event
 
    $awaiter->f->done( $event );
    return 1;
+}
+
+=head2 await_request_v1_send_join_reject_v2
+
+   $fut = $server->await_request_v1_send_join_reject_v2( $room_id );
+   my ( $request, $room_id, $event_id ) = $fut->get;
+
+Awaits inbound request for /v1/send_join endpoint while rejecting inbound
+requests to /v2/send_join. Using the C<await_request_v1_send_join> standard
+has the problem that C<SyTest::Federation::Server> will handle /v2/send_join
+appropriately unless overriden, and so remote servers that use v2 will never
+call v1 endpoint in such a case.
+
+=cut
+
+sub await_request_v1_send_join_reject_v2 {
+   my $self = shift;
+   my ( $room_id ) = @_;
+
+   my $v2_fut = $self->await_request_v2_send_join( $room_id )
+   ->then( sub {
+      my ( $req, $room_id, $event_id ) = @_;
+      $req->respond( HTTP::Response->new(
+         404, "Not found", [ Content_length => 0 ], "",
+      ) );
+
+      Future->done
+   });
+
+   $self->await_request_v1_send_join( $room_id )
+   ->then( sub {
+      my ( $req, $room_id, $event_id ) = @_;
+
+      $v2_fut->cancel();
+
+      Future->done( $req, $room_id, $event_id )
+   })
 }
 
 1;

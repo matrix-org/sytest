@@ -50,35 +50,31 @@ sub test_history_visibility
 
          matrix_set_room_history_visibility( $creator, $room_id, $visibility )
          ->then( sub {
-            matrix_set_room_guest_access($creator, $room_id, "can_join");
+            matrix_set_room_guest_access_synced($creator, $room_id, "can_join");
          })->then( sub {
-            matrix_send_room_text_message( $creator, $room_id, body => "Before join" )
+            matrix_send_room_text_message_synced( $creator, $room_id, body => "Before join" )
                ->on_done( sub { ( $before_join_event_id ) = @_ } )
          })->then( sub {
-            retry_until_success {
-                my $rq = matrix_get_room_messages( $joiner, $room_id, limit => 10 );
-                if( $permitted->{see_without_join} ) {
-                    $rq->then( sub {
-                        my ( $body ) = @_;
-                        my %visible_events = map { $_->{event_id} => $_ } @{ $body->{chunk} };
+            my $rq = matrix_get_room_messages( $joiner, $room_id, limit => 10 );
+            if( $permitted->{see_without_join} ) {
+                $rq->then( sub {
+                    my ( $body ) = @_;
+                    my %visible_events = map { $_->{event_id} => $_ } @{ $body->{chunk} };
 
-                        log_if_fail "/messages body", $body;
-
-                        assert_eq( exists $visible_events{$before_join_event_id}, 1,
-                                   "visibility without join'" );
-                        Future->done();
-                     });
-                 } else {
-                    $rq->followed_by( \&expect_4xx_or_empty_chunk );
-                 }
+                    assert_eq( exists $visible_events{$before_join_event_id}, 1,
+                               "visibility without join'" );
+                    Future->done();
+                 });
+             } else {
+                $rq->followed_by( \&expect_4xx_or_empty_chunk );
              }
          })->then( sub {
-            matrix_invite_user_to_room( $creator, $joiner, $room_id );
+            matrix_invite_user_to_room_synced( $creator, $joiner, $room_id );
          })->then( sub {
-            matrix_send_room_text_message( $creator, $room_id, body => "After invite" )
+            matrix_send_room_text_message_synced( $creator, $room_id, body => "After invite" )
                ->on_done( sub { ( $after_invite_event_id ) = @_ } )
          })->then( sub {
-            matrix_join_room( $joiner, $room_id );
+            matrix_join_room_synced( $joiner, $room_id );
          })->then( sub {
             matrix_get_room_messages( $joiner, $room_id, limit => 10 )
          })->then( sub {
@@ -100,8 +96,8 @@ sub test_history_visibility
 }
 
 foreach my $i (
-   [ "Guest", sub { guest_user_fixture( with_events => 1 ) } ],
-   [ "Real", sub { local_user_fixture( with_events => 1 ) } ]
+   [ "Guest", sub { guest_user_fixture() } ],
+   [ "Real", sub { local_user_fixture() } ]
 ) {
    my ( $name, $fixture ) = @$i;
 
@@ -146,7 +142,7 @@ foreach my $i (
          ->then( sub {
             ( $room_id ) = @_;
 
-            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+            matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" );
          })->then( sub {
             matrix_initialsync_room( $nonjoined_user, $room_id )
          })->then( sub {
@@ -241,42 +237,6 @@ foreach my $i (
       },
    );
 
-   test(
-      "$name non-joined user doesn't get events before room made world_readable",
-
-      requires => [ $fixture->(), local_user_fixture( with_events => 1 ) ],
-
-      do => sub {
-         my ( $nonjoined_user, $user ) = @_;
-
-         my $room_id;
-
-         matrix_create_and_join_room( [ $user ] )
-         ->then( sub {
-            ( $room_id ) = @_;
-
-            matrix_send_room_text_message( $user, $room_id, body => "private" );
-         })->then( sub {
-            matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
-         })->then( sub {
-            Future->needs_all(
-               matrix_send_room_text_message( $user, $room_id, body => "public" ),
-
-               # The client is allowed to see exactly two events, the
-               # m.room.history_visibility event and the public message.
-               # The server is free to return these in separate calls to
-               # /events, so we try at most two times to get the events we expect.
-               check_events( $nonjoined_user, $room_id )
-               ->then( sub {
-                  Future->done(1);
-               }, sub {
-                  check_events( $nonjoined_user, $room_id );
-               }),
-            );
-         });
-      },
-   );
-
    # /state
 
    test(
@@ -287,7 +247,7 @@ foreach my $i (
       do => sub {
          my ( $user, $room_id ) = @_;
 
-         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+         matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" );
       },
 
       check => sub {
@@ -308,7 +268,7 @@ foreach my $i (
       do => sub {
          my ( $user, $room_id ) = @_;
 
-         matrix_set_room_history_visibility( $user, $room_id, "world_readable" );
+         matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" );
       },
 
       check => sub {
@@ -361,7 +321,7 @@ foreach my $i (
 
             matrix_send_room_text_message( $creating_user, $room_id, body => "private" )
          })->then( sub {
-            matrix_set_room_history_visibility( $creating_user, $room_id, "world_readable" );
+            matrix_set_room_history_visibility_synced( $creating_user, $room_id, "world_readable" );
          })->then( sub {
             matrix_send_room_text_message_synced( $creating_user, $room_id, body => "public" );
          })->then( sub {
@@ -398,8 +358,8 @@ foreach my $i (
          my ( $user, $room_id, $nonjoined_user ) = @_;
 
          Future->needs_all(
-            matrix_set_room_history_visibility( $user, $room_id, "world_readable" ),
-            matrix_set_room_guest_access( $user, $room_id, "can_join" ),
+            matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" ),
+            matrix_set_room_guest_access_synced( $user, $room_id, "can_join" ),
          )->then( sub {
             matrix_join_room( $nonjoined_user, $room_id );
          })->then( sub {
@@ -421,7 +381,7 @@ foreach my $i (
       do => sub {
          my ( $user, $room_id, $nonjoined_user ) = @_;
 
-         matrix_set_room_guest_access( $user, $room_id, "can_join" )
+         matrix_set_room_guest_access_synced( $user, $room_id, "can_join" )
          ->then( sub {
             matrix_send_room_text_message( $nonjoined_user, $room_id, body => "sup" )
                ->main::expect_http_403;
@@ -436,7 +396,7 @@ foreach my $i (
          do => sub {
             my ( $user, $room_id, $joining_user ) = @_;
 
-            matrix_set_room_guest_access( $user, $room_id, "can_join" )
+            matrix_set_room_guest_access_synced( $user, $room_id, "can_join" )
             ->then( sub {
                matrix_send_room_text_message( $user, $room_id, body => "shared" );
             })->then( sub {
@@ -498,15 +458,15 @@ test "Only see history_visibility changes on boundaries",
    do => sub {
       my ( $user, $room_id, $joining_user ) = @_;
 
-      matrix_set_room_history_visibility( $user, $room_id, "joined" )
+      matrix_set_room_history_visibility_synced( $user, $room_id, "joined" )
       ->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "1" );
       })->then( sub {
-         matrix_set_room_history_visibility( $user, $room_id, "invited" )
+         matrix_set_room_history_visibility_synced( $user, $room_id, "invited" )
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "2" );
       })->then( sub {
-         matrix_set_room_history_visibility( $user, $room_id, "shared" )
+         matrix_set_room_history_visibility_synced( $user, $room_id, "shared" )
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "3" );
       })->then( sub {
@@ -539,13 +499,19 @@ test "Only see history_visibility changes on boundaries",
    };
 
 test "Backfill works correctly with history visibility set to joined",
-   requires => [ magic_local_user_and_room_fixtures( with_alias => 1), local_user_fixture(), remote_user_fixture() ],
+   requires => [ room_alias_name_fixture(), local_user_fixture(), local_user_fixture(), remote_user_fixture() ],
 
    do => sub {
-      my ( $user, $room_id, $room_alias, $another_user, $remote_user, $room_alias_name ) = @_;
+      my ( $room_alias_name, $user, $another_user, $remote_user ) = @_;
+      my ( $room_id, $room_alias );
 
-      matrix_set_room_history_visibility( $user, $room_id, "joined" )
-      ->then( sub {
+      matrix_create_room(
+         $user,
+         room_alias_name => $room_alias_name,
+      )->then( sub {
+         ( $room_id, $room_alias ) = @_;
+         matrix_set_room_history_visibility_synced( $user, $room_id, "joined" );
+      })->then( sub {
          # Send some m.room.message that the remote server will not be able to see
          repeat( sub {
             my $msgnum = $_[0];
@@ -577,33 +543,6 @@ test "Backfill works correctly with history visibility set to joined",
          Future->done( 1 );
       })
    };
-
-sub check_events
-{
-   my ( $user, $room_id ) = @_;
-
-   matrix_get_events( $user, limit => 3, dir => "b", room_id => $room_id )
-   ->then( sub {
-      my ( $body ) = @_;
-
-      log_if_fail "Body", $body;
-
-      assert_json_keys( $body, qw( chunk ) );
-      @{ $body->{chunk} } >= 1 or die "Want at least one event";
-      @{ $body->{chunk} } < 3 or die "Want at most two events";
-
-      my $found = 0;
-      foreach my $event ( @{ $body->{chunk} } ) {
-         next if !exists $event->{content};
-         next if !exists $event->{content}{body};
-
-         $found = 1 if $event->{content}{body} eq "public";
-         die "Should not have found private" if $event->{content}{body} eq "private";
-      }
-
-      Future->done( $found );
-   }),
-}
 
 sub ignore_presence_for
 {

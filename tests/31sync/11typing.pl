@@ -23,7 +23,7 @@ test "Typing events appear in initial sync",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_typing( $user, $room_id, typing => 1, timeout => 30000 );
+         matrix_typing( $user, $room_id, typing => JSON::true, timeout => 30000 );
       })->then( sub {
          # Send and wait for a text message so that we know that /sync is ready
          matrix_send_room_text_message_synced( $user, $room_id, body => "synced");
@@ -78,7 +78,7 @@ test "Typing events appear in incremental sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_typing( $user, $room_id, typing => 1, timeout => 30000 );
+         matrix_typing( $user, $room_id, typing => JSON::true, timeout => 30000 );
       })->then( sub {
          # Send and wait for a text message so that we know that /sync is ready
          matrix_send_room_text_message_synced( $user, $room_id, body => "synced");
@@ -132,7 +132,7 @@ test "Typing events appear in gapped sync",
 
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_typing( $user, $room_id, typing => 1, timeout => 30000 );
+         matrix_typing( $user, $room_id, typing => JSON::true, timeout => 30000 );
       })->then( sub {
          matrix_send_filler_messages_synced( $user, $room_id, 20 );
       })->then( sub {

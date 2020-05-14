@@ -103,8 +103,9 @@ sub matrix_send_room_message
       content => $opts{content},
    )->then( sub {
       my ( $body ) = @_;
-
-      Future->done( $body->{event_id} );
+      my ( $event_id ) = $body->{event_id};
+      log_if_fail "Sent '$type' event in $room_id: $event_id";
+      Future->done( $event_id );
    });
 }
 

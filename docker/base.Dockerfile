@@ -1,26 +1,30 @@
-FROM debian:stretch
+ARG DEBIAN_VERSION=buster
+
+FROM debian:${DEBIAN_VERSION}
 
 ENV DEBIAN_FRONTEND noninteractive
 
 # Install base dependencies that Python or Go would require
 RUN apt-get -qq update && apt-get -qq install -y \
     build-essential \
-    perl \
-    wget \
-    postgresql-9.6 \
-    postgresql-client \
-    libpq-dev \
-    libssl-dev \
-    libz-dev \
-    libffi-dev \
-    sqlite3 \
-    libjpeg-dev \
-    libxslt1-dev \
+    dos2unix \
+    eatmydata \
     git \
-    locales \
     haproxy \
     jq \
-    dos2unix
+    libffi-dev \
+    libjpeg-dev \
+    libpq-dev \
+    libssl-dev \
+    libxslt1-dev \
+    libz-dev \
+    locales \
+    perl \
+    postgresql \
+    rsync \
+    sqlite3 \
+    wget \
+ && rm -rf /var/lib/apt/lists/*
 
 # Set up the locales, as the default Debian image only has C, and PostgreSQL needs the correct locales to make a UTF-8 database
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
@@ -38,7 +42,7 @@ ENV LC_ALL en_US.UTF-8
 ADD install-deps.pl ./install-deps.pl
 ADD cpanfile ./cpanfile
 RUN dos2unix ./cpanfile ./install-deps.pl
-RUN perl ./install-deps.pl
+RUN perl ./install-deps.pl -T
 RUN rm cpanfile install-deps.pl
 
 # this is a dependency of the TAP-JUnit converter
@@ -46,3 +50,13 @@ RUN cpan XML::Generator
 
 # /logs is where we should expect logs to end up
 RUN mkdir /logs
+
+# Add the bootstrap file.
+ADD docker/bootstrap.sh /bootstrap.sh
+RUN dos2unix /bootstrap.sh
+
+# PostgreSQL setup
+ENV PGHOST=/var/run/postgresql
+ENV PGDATA=$PGHOST/data
+ENV PGUSER=postgres
+RUN for ver in `ls /usr/lib/postgresql | head -n 1`; do su -c '/usr/lib/postgresql/'$ver'/bin/initdb -E "UTF-8" --lc-collate="C" --lc-ctype="C" --username=postgres' postgres; done

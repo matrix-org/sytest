@@ -37,6 +37,7 @@ test "GET /login yields a set of flows",
       my ( $http ) = @_;
 
       $http->do_request_json(
+         method => "GET",
          uri => "/r0/login",
       )->then( sub {
          my ( $body ) = @_;
@@ -91,6 +92,38 @@ test "POST /login can log in as a user",
 
          assert_eq( $body->{home_server}, $http->server_name,
             'Response home_server' );
+
+         Future->done(1);
+      });
+   };
+
+test "POST /login returns the same device_id as that in the request",
+   requires => [ $main::API_CLIENTS[0], $registered_user_fixture,
+                 qw( can_login_password_flow )],
+
+   proves => [qw( can_login )],
+
+   do => sub {
+      my ( $http, $user_id ) = @_;
+
+      my $device_id = "my_super_id";
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/login",
+
+         content => {
+            type     => "m.login.password",
+            user     => $user_id,
+            password => $password,
+            device_id => $device_id,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( device_id ));
+
+         assert_eq( $body->{device_id}, $device_id, 'device_id' );
 
          Future->done(1);
       });

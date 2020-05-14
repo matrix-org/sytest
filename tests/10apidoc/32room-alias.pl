@@ -48,3 +48,50 @@ test "PUT /directory/room/:room_alias creates alias",
          Future->done(1);
       });
    };
+
+test "GET /rooms/:room_id/aliases lists aliases",
+   requires => [ $user_fixture, room_alias_fixture(), qw( can_create_room_alias )],
+
+   do => sub {
+      my ( $user, $room_alias ) = @_;
+      my ( $room_id );
+
+      matrix_create_room( $user )->then( sub {
+         ( $room_id ) = @_;
+
+         # the list should be empty initially
+         do_request_json_for(
+            $user,
+            method => "GET",
+            uri => "/unstable/org.matrix.msc2432/rooms/$room_id/aliases",
+         );
+      })->then( sub {
+         my ( $res ) = @_;
+         log_if_fail "response from /aliases", $res;
+
+         assert_json_keys( $res, qw( aliases ));
+         assert_json_empty_list( $res->{aliases} );
+
+         # now add an alias
+         do_request_json_for(
+            $user,
+            method => "PUT",
+            uri    => "/r0/directory/room/$room_alias",
+            content => { room_id => $room_id },
+         );
+      })->then( sub {
+         # ... and recheck
+         do_request_json_for(
+            $user,
+            method => "GET",
+            uri => "/unstable/org.matrix.msc2432/rooms/$room_id/aliases",
+         );
+      })->then( sub {
+         my ( $res ) = @_;
+         log_if_fail "response from /aliases", $res;
+
+         assert_json_keys( $res, qw( aliases ));
+         assert_deeply_eq($res->{aliases}, [ $room_alias ]);
+         Future->done;
+      });
+   };

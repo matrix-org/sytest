@@ -1,3 +1,23 @@
+sub matrix_set_pusher {
+   my ( $user, $location ) = @_;
+
+   do_request_json_for(
+      $user,
+      method  => "POST",
+      uri     => "/r0/pushers/set",
+      content => {
+         profile_tag         => "tag",
+         kind                => "http",
+         app_id              => "sytest",
+         app_display_name    => "sytest_display_name",
+         device_display_name => "device_display_name",
+         pushkey             => "a_push_key",
+         lang                => "en",
+         data                => { url => $location, },
+      },
+   );
+}
+
 multi_test "Test that a message is pushed",
    requires => [
       # We use the version of register new user that doesn't start the event
@@ -61,21 +81,8 @@ multi_test "Test that a message is pushed",
          # Alice. This may race with Bob joining the room. So the first
          # message received may be due to Bob joining rather than the
          # message that Bob sent.
-         do_request_json_for( $alice,
-            method  => "POST",
-            uri     => "/r0/pushers/set",
-            content => {
-               profile_tag         => "tag",
-               kind                => "http",
-               app_id              => "sytest",
-               app_display_name    => "sytest_display_name",
-               device_display_name => "device_display_name",
-               pushkey             => "a_push_key",
-               lang                => "en",
-               data                => {
-                  url => $test_server_info->client_location . "/alice_push",
-               },
-            },
+         matrix_set_pusher(
+            $alice, $test_server_info->client_location . "/alice_push",
          )->SyTest::pass_on_done( "Alice's pusher created" )
       })->then( sub {
          # Bob sends a message that should be pushed to Alice, since it is
@@ -169,21 +176,8 @@ test "Invites are pushed",
       my ( $alice, $bob, $test_server_info ) = @_;
       my $room_id;
 
-      do_request_json_for( $alice,
-         method  => "POST",
-         uri     => "/r0/pushers/set",
-         content => {
-            profile_tag         => "tag",
-            kind                => "http",
-            app_id              => "sytest",
-            app_display_name    => "sytest_display_name",
-            device_display_name => "device_display_name",
-            pushkey             => "a_push_key",
-            lang                => "en",
-            data                => {
-               url => $test_server_info->client_location . "/alice_push",
-            },
-         },
+      matrix_set_pusher(
+         $alice, $test_server_info->client_location . "/alice_push",
       )->then( sub {
          matrix_create_room( $bob, visibility => "private" );
       })->then( sub {
@@ -236,21 +230,8 @@ sub setup_push
    my ( $alice, $bob, $test_server_info, $loc ) = @_;
    my $room_id;
 
-   do_request_json_for( $alice,
-      method  => "POST",
-      uri     => "/r0/pushers/set",
-      content => {
-         profile_tag         => "tag",
-         kind                => "http",
-         app_id              => "sytest",
-         app_display_name    => "sytest_display_name",
-         device_display_name => "device_display_name",
-         pushkey             => "a_push_key",
-         lang                => "en",
-         data                => {
-            url => $test_server_info->client_location . $loc,
-         },
-      },
+   matrix_set_pusher(
+      $alice, $test_server_info->client_location . $loc,
    )->then( sub {
       matrix_create_room( $bob );
    })->then( sub {
@@ -298,31 +279,6 @@ sub check_received_push_with_name
       Future->done(1);
    });
 }
-
-test "Rooms with aliases are correctly named in pushed",
-   requires => [
-      local_user_fixtures( 2, with_events => 0 ), room_alias_fixture(),
-      $main::TEST_SERVER_INFO
-   ],
-
-   check => sub {
-      my ( $alice, $bob, $room_alias, $test_server_info ) = @_;
-      my $room_id;
-
-      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
-      ->then( sub {
-         ( $room_id ) = @_;
-
-         do_request_json_for( $bob,
-            method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
-
-            content => { room_id => $room_id },
-         )
-      })->then( sub {
-         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
-      });
-   };
 
 test "Rooms with names are correctly named in pushed",
    requires => [
@@ -389,10 +345,17 @@ test "Rooms with many users are correctly pushed",
       my ( $alice, $bob, $charlie, $room_alias, $test_server_info ) = @_;
       my $room_id;
 
+      my $name = "Test Name";
+
       setup_push( $alice, $bob, $test_server_info, "/alice_push" )
       ->then( sub {
-         ( $room_id ) = @_;
+         ($room_id) = @_;
 
+         matrix_put_room_state($bob, $room_id,
+             type    => "m.room.name",
+             content => { name => $name },
+         );
+      })->then( sub {
          matrix_join_room( $charlie, $room_id)
       })->then( sub {
          do_request_json_for( $bob,
@@ -402,7 +365,7 @@ test "Rooms with many users are correctly pushed",
             content => { room_id => $room_id },
          )
       })->then( sub {
-         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
+         check_received_push_with_name( $bob, $room_id, "/alice_push", $name )
       });
    };
 
@@ -537,5 +500,62 @@ test "Don't get pushed for rooms you've muted",
          assert_eq( $notification->{content}{body}, "Second message - " . $alice->user_id, "message");
 
          Future->done(1);
+      });
+   };
+
+test "Rejected events are not pushed",
+   requires => [
+      federated_rooms_fixture(),
+      $main::OUTBOUND_CLIENT,
+      $main::TEST_SERVER_INFO,
+   ],
+
+   do => sub {
+      my ( $alice, $sytest_user_id, $room, $outbound_client, $test_server_info ) = @_;
+
+      # first we send an event from a different user (which should be rejected):
+      my $rejected_event = $room->create_and_insert_event(
+         type => "m.room.message",
+         sender  => '@fakeuser:' . $outbound_client->server_name,
+         content => { body => "rejected" },
+      );
+
+      my $regular_event = $room->create_and_insert_event(
+         type => "m.room.message",
+         sender  => $sytest_user_id,
+         content => { body => "Hello" },
+      );
+
+      log_if_fail "Rejected event " . $room->id_for_event( $rejected_event );
+      log_if_fail "Regular event " . $room->id_for_event( $regular_event );
+
+      matrix_set_pusher(
+         $alice, $test_server_info->client_location . "/alice_push",
+      )->then( sub {
+         Future->needs_all(
+            # we send the rejected event first, and then the regular event, and
+            # check that we don't get a push for the rejeced event before the
+            # regular event.
+            $outbound_client->send_event(
+               event => $rejected_event,
+               destination => $alice->server_name,
+            )->then( sub {
+               $outbound_client->send_event(
+                  event => $regular_event,
+                  destination => $alice->server_name,
+               );
+            }),
+
+            await_http_request( "/alice_push" )->then( sub {
+               my ( $request ) = @_;
+               my $body = $request->body_from_json;
+               $request->respond_json( {} );
+
+               log_if_fail "Received push", $body;
+
+               assert_eq( $body->{notification}{event_id}, $room->id_for_event( $regular_event ) );
+               Future->done();
+            }),
+         );
       });
    };

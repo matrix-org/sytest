@@ -83,6 +83,8 @@ sub do_request
    my $self = shift;
    my %params = @_;
 
+   croak "must give a method" unless $params{method};
+
    my $uri = $self->full_uri_for( %params );
 
    # Also set verify_mode = 0 to not complain about self-signed SSL certs
@@ -147,8 +149,12 @@ sub do_request_json
    $self->do_request( %params );
 }
 
-# A terrible internals hack that relies on the dualvar nature of the ^ operator
-sub SvPOK { ( $_[0] ^ $_[0] ) ne "0" }
+# A terrible internals hack that relies on the dualvar nature of the ^ operator.
+# Returns true if perl thinks the argument is a string.
+sub SvPOK {
+   my ( $s ) = @_;
+   return utf8::is_utf8( $s ) || ( $s ^ $s ) ne "0";
+}
 
 sub wrap_numbers
 {

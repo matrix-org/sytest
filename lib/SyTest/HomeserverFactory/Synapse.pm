@@ -34,7 +34,6 @@ sub _init
    };
 
    $self->{extra_args} = [];
-   $self->{verbosity} = 0;
 
    $self->SUPER::_init( @_ );
 }
@@ -78,20 +77,10 @@ sub print_usage
 EOF
 }
 
-sub set_verbosity
-{
-   my ( $self, $verbosity ) = @_;
-   $self->{verbosity} = $verbosity;
-}
-
 sub create_server
 {
    my $self = shift;
    my @extra_args = @{ $self->{extra_args} };
-
-   if( $self->{verbosity} ) {
-      push @extra_args, ( "-" . ( "v" x $self->{verbosity} ));
-   }
 
    my %params = (
       @_,
@@ -120,7 +109,7 @@ sub get_options
 
    return (
       'dendron-binary=s' => \$self->{args}{dendron_binary},
-      'torture-replication+' => \$self->{args}{torture_replication},
+      'torture-replication:50' => \$self->{args}{torture_replication},
       $self->SUPER::get_options(),
    );
 }
@@ -135,7 +124,7 @@ sub print_usage
 
        --dendron-binary PATH    - path to the 'dendron' binary
 
-       --torture-replication    - enable torturing of the replication protocol
+       --torture-replication[=LEVEL] - enable torturing of the replication protocol
 EOF
 }
 

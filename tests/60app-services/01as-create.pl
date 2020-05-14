@@ -115,46 +115,13 @@ test "AS can make room aliases",
    do => sub {
       my ( $as_user, $appserv, $room_id, $room_alias ) = @_;
 
-      Future->needs_all(
-         $appserv->await_event( "m.room.aliases" )->then( sub {
-            my ( $event, $request ) = @_;
+      do_request_json_for( $as_user,
+         method => "PUT",
+         uri    => "/r0/directory/room/$room_alias",
 
-            # As this is the first AS event we've received, lets check that the
-            # token matches, to give that coverage.
-
-            my $access_token = $request->query_param( "access_token" );
-
-            assert_ok( defined $access_token,
-               "HS provides an access_token" );
-            assert_eq( $access_token, $appserv->info->hs2as_token,
-               "HS provides the correct token" );
-
-            log_if_fail "Event", $event;
-
-            assert_json_keys( $event, qw( content room_id user_id ));
-
-            $event->{room_id} eq $room_id or
-               die "Expected room_id to be $room_id";
-            $event->{user_id} eq $as_user->user_id or
-               die "Expected user_id to be ${\$as_user->user_id}";
-
-            assert_json_keys( my $content = $event->{content}, qw( aliases ));
-            assert_json_list( my $aliases = $content->{aliases} );
-
-            grep { $_ eq $room_alias } @$aliases or
-               die "EXpected to find our alias in the aliases list";
-
-            Future->done;
-         }),
-
-         do_request_json_for( $as_user,
-            method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
-
-            content => {
-               room_id => $room_id,
-            },
-         )
+         content => {
+            room_id => $room_id,
+         },
       )->then( sub {
          # Nothing interesting in the body
 

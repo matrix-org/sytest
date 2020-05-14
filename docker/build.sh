@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
-set -e
+set -ex
 
-cd `dirname $0`
-docker build ../ -f Dockerfile -t matrixdotorg/sytest
-docker build ../ -f Dockerfile-synapsepy2 -t matrixdotorg/sytest-synapse:dinsic
+cd $(dirname $0)
+docker build --pull ../ -f Dockerfile -t matrixdotorg/sytest:dinsic
+docker build ../ -t matrixdotorg/sytest-synapse:dinsic

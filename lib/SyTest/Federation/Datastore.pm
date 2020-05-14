@@ -11,6 +11,7 @@ use List::Util 1.45 qw( uniq );
 use Time::HiRes qw( time );
 
 use SyTest::Federation::Room;
+use SyTest::Federation::Protocol qw( hash_event id_for_event );
 
 sub new
 {
@@ -145,7 +146,7 @@ sub next_event_id
 
 =head2 put_event
 
-   $store->put_event( $event )
+   $store->put_event( $event_id, $event )
 
 Accessor and mutator for event storage
 
@@ -165,14 +166,15 @@ sub get_event
 sub put_event
 {
    my $self = shift;
-   my ( $event ) = @_;
+   my ( $event_id, $event ) = @_;
 
-   $self->{events_by_id}{ $event->{event_id} } = $event;
+   $self->{events_by_id}{ $event_id } = $event;
 }
 
 =head2 create_event
 
-   $event = $store->create_event( %fields )
+   $event = $store->create_event( [ room_version => ver, ] %fields );
+   ( $event, $event_id ) = $store->create_event( [ room_version => ver, ] %fields );
 
 Creates a new event with the given fields, signs it with L<sign_event>, stores
 it using L<put_event> and returns it.
@@ -187,23 +189,35 @@ sub create_event
    defined $fields{$_} or croak "Every event needs a '$_' field"
       for qw( type auth_events content depth prev_events room_id sender );
 
-   my $event_id = delete $fields{event_id};
-   if( not defined $event_id ) {
-      $event_id = $self->next_event_id( delete $fields{event_id_suffix} );
-   }
+   my $room_version = delete $fields{room_version} // 1;
+   my $event_id_suffix = delete $fields{event_id_suffix};
 
    my $event = {
       %fields,
-
-      event_id         => $event_id,
       origin           => $self->server_name,
       origin_server_ts => JSON::number( int( time() * 1000 )),
    };
 
-   $self->sign_event( $event );
-   $self->put_event( $event );
+   my $event_id = $fields{event_id};
+   if( $room_version eq '1' || $room_version eq '2' ) {
+      if( not defined $event_id ) {
+         # room v1/v2: assign an event id
+         $event_id = $self->next_event_id( $event_id_suffix );
+         $event->{event_id} = $event_id;
+      }
+      $self->sign_event( $event );
+   } else {
+      die "event with explicit event_id in room v$room_version"
+         if defined $event_id;
 
-   return $event;
+      $self->sign_event( $event );
+      $event_id = id_for_event( $event, $room_version );
+   }
+
+   $self->put_event( $event_id, $event );
+
+   return $event unless wantarray;
+   return ( $event, $event_id );
 }
 
 =head2 get_backfill_events
@@ -287,7 +301,10 @@ sub get_auth_chain_events
    while( @event_ids ) {
       my $event = $events_by_id{shift @event_ids};
 
-      my @auth_ids = map { $_->[0] } @{ $event->{auth_events} };
+      my $room = $self->get_room( $event->{room_id} ) or
+         croak "Unknown room $event->{room_id}";
+
+      my @auth_ids = @{ $room->event_ids_from_refs( $event->{auth_events} ) };
 
       foreach my $id ( @auth_ids ) {
          next if $events_by_id{$id};
@@ -336,7 +353,11 @@ sub get_room
 
 =head2 create_room
 
-   $room = $store->create_room( creator => $creator, [ alias => $alias ] )
+   $room = $store->create_room(
+      creator => $creator,
+      [ alias => $alias, ]
+      [ room_version => $room_version, ]
+   )
 
 Creates a new L<SyTest::Federation::Room> instance with a new room ID and
 stores it in the data store. It creates the initial room events using the
@@ -350,9 +371,11 @@ sub create_room
    my %args = @_;
 
    my $creator = $args{creator};
+   my $room_version = $args{room_version} // 1;
 
    my $room = SyTest::Federation::Room->new(
       datastore => $self,
+      room_version => $room_version,
    );
 
    $room->create_initial_events(

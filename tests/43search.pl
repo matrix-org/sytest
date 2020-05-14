@@ -307,3 +307,73 @@ test "Search works across an upgraded room and its predecessor",
          Future->done(1);
       });
    };
+
+foreach my $ordering_type ( qw ( rank recent ) ) {
+   test "Search results with $ordering_type ordering do not include redacted events",
+      requires => [
+         local_user_and_room_fixtures(),
+      ],
+
+      check => sub {
+         my ( $user, $room_id ) = @_;
+
+         my ( $event_id_one, $event_id_two );
+
+         matrix_send_room_text_message( $user, $room_id,
+            body => "message 1",
+         )->then( sub {
+            ( $event_id_one ) = @_;
+
+            matrix_send_room_text_message( $user, $room_id,
+               body => "message 2",
+            );
+         })->then( sub {
+            ( $event_id_two ) = @_;
+
+            matrix_redact_event( $user, $room_id, $event_id_one );
+         })->then( sub {
+            do_request_json_for( $user,
+               method  => "POST",
+               uri     => "/r0/search",
+               content => {
+                  search_categories => {
+                     room_events => {
+                        keys        => [ "content.body" ],
+                        search_term => "message",
+                        order_by    => $ordering_type,
+                     }
+                  }
+               }
+            );
+         })->then( sub {
+            my ( $body ) = @_;
+
+            log_if_fail "Search Result Body:", $body;
+
+            assert_json_keys( $body, qw( search_categories ) );
+            assert_json_keys( $body->{search_categories}, qw ( room_events ) );
+
+            my $room_events = $body->{search_categories}{room_events};
+            assert_json_keys( $room_events, qw( count results ) );
+
+            # TODO: Force count to be 1 search result instead of 2
+               # Synapse doesn't currently support an accurate count here
+
+            my $results = $room_events->{results};
+            my $results_length = scalar @$results;
+            assert_eq( $results_length, 1 );
+
+            my $result = first { $_->{result}{event_id} eq $event_id_two } @$results;
+
+            assert_json_keys( $result, qw( rank result ) );
+            assert_json_keys( $result->{result}, qw(
+               event_id room_id user_id content type
+            ));
+
+            $result->{result}{content}{body} eq "message 2"
+               or die "Unexpected event content in search result";
+
+            Future->done(1);
+         });
+      };
+}

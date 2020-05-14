@@ -10,6 +10,8 @@ use constant JSON_MIME_TYPE => "application/json";
 
 use SyTest::CarpByFile;
 
+use SyTest::HTTPClient;
+
 sub DESTROY
 {
    return if ${^GLOBAL_PHASE} eq "DESTRUCT";
@@ -33,7 +35,13 @@ sub body_from_json
       croak "Cannot ->body_from_json with Content-Type: $type";
    }
 
-   return $json->decode( $self->body );
+   my $decoded = $json->decode( $self->body );
+
+   # wrap numeric values with JSON::number to stop them getting turned into
+   # strings when they are printed.
+   $decoded = SyTest::HTTPClient::wrap_numbers( $decoded );
+
+   return $decoded;
 }
 
 sub respond_json

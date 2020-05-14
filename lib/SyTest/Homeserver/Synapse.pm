@@ -20,7 +20,7 @@ use POSIX qw( strftime WIFEXITED WEXITSTATUS );
 
 use YAML ();
 
-use SyTest::SSL qw( ensure_ssl_cert );
+use SyTest::SSL qw( ensure_ssl_key create_ssl_cert );
 
 sub _init
 {
@@ -76,6 +76,10 @@ sub _init
       event_creator_metrics => main::alloc_port( "event_creator[$idx].metrics" ),
       event_creator_manhole => main::alloc_port( "event_creator[$idx].manhole" ),
 
+      frontend_proxy         => main::alloc_port( "frontend_proxy[$idx]" ),
+      frontend_proxy_metrics => main::alloc_port( "frontend_proxy[$idx].metrics" ),
+      frontend_proxy_manhole => main::alloc_port( "frontend_proxy[$idx].manhole" ),
+
       haproxy => main::alloc_port( "haproxy[$idx]" ),
    };
 }
@@ -102,29 +106,26 @@ sub start
 
    my $hs_dir = $self->{hs_dir};
 
-   my %db_config = $self->_get_dbconfig(
+   my %db_configs = $self->_get_dbconfigs(
       type => 'sqlite',
       args => {
          database => ":memory:", #"$hs_dir/homeserver.db",
       },
    );
 
-   my $db_type = $db_config{type};
+   # convert sytest db args onto synapse db args
+   for my $db ( keys %db_configs ) {
+      my %db_config = %{ $db_configs{$db} };
 
-   # map sytest db args onto synapse db args
-   my %synapse_db_config;
-   if( $db_type eq "pg" ) {
-      %synapse_db_config = (
-         name => 'psycopg2',
-         args => $db_config{args},
-      );
-   }
-   else {
-      # must be sqlite
-      %synapse_db_config = (
-         name => 'sqlite3',
-         args => $db_config{args},
-      );
+      my $db_type = $db_config{type};
+
+      if( $db_type eq "pg" ) {
+         $db_configs{$db}{name} = 'psycopg2';
+      }
+      else {
+         # must be sqlite
+         $db_configs{$db}{name} = 'sqlite3';
+      }
    }
 
    # Clean up the media_store directory each time, or else it fills up with
@@ -142,7 +143,7 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $log_config_file = "$hs_dir/log.config";
+   my $unsecure_port = $self->{ports}{synapse_unsecure};
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
@@ -150,12 +151,19 @@ sub start
    $self->{paths}{cert_file} = "$hs_dir/tls.crt";
    $self->{paths}{key_file} = "$hs_dir/tls.key";
 
-   ensure_ssl_cert( $self->{paths}{cert_file}, $self->{paths}{key_file}, $bind_host );
+   ensure_ssl_key( $self->{paths}{key_file} );
+   create_ssl_cert( $self->{paths}{cert_file}, $self->{paths}{key_file}, $bind_host );
+
+   # make it possible to use a custom log config file
+   my $log_config_file = "$hs_dir/log.config";
+   if( ! -f $log_config_file ) {
+      $log_config_file = $self->configure_logger("homeserver");
+   }
 
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
-        log_file => "$log",
-        ( -f $log_config_file ) ? ( log_config => $log_config_file ) : (),
+        log_config => $log_config_file,
+        public_baseurl => "http://${bind_host}:$unsecure_port",
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
@@ -195,17 +203,23 @@ sub start
                 burst_count => 1000,
             }
         },
+
+        rc_federation => {
+           # allow 100 requests per sec instead of 10
+           sleep_limit => 100,
+           window_size => 1000,
+        },
+
         enable_registration => "true",
-        database => \%synapse_db_config,
+        databases => \%db_configs,
         macaroon_secret_key => $macaroon_secret_key,
         registration_shared_secret => $registration_shared_secret,
 
         pid_file => "$hs_dir/homeserver.pid",
 
-        use_frozen_events => "true",
+        use_frozen_dicts => "true",
 
         allow_guest_access => "True",
-        invite_3pid_guest => "true",
 
         # Metrics are always useful
         enable_metrics => 1,
@@ -238,6 +252,13 @@ sub start
         media_store_path => "$hs_dir/media_store",
         uploads_path => "$hs_dir/uploads_path",
 
+        # Both of these settings default to false in order to preserve privacy.
+        # Sytest assumes that the room directory is open to ensure that the
+        # open behaviour can be tested, and the default case is handled through
+        # unit tests.
+        allow_public_rooms_over_federation => "true",
+        allow_public_rooms_without_auth => "true",
+
         user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
 
         require_membership_for_aliases => "false",
@@ -247,11 +268,28 @@ sub start
            period => "6w",
         },
 
+        # Enable ephemeral message support (MSC2228)
+        enable_ephemeral_messages => "true",
+
         $self->{recaptcha_config} ? (
            recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
            recaptcha_public_key     => $self->{recaptcha_config}->{public_key},
            recaptcha_private_key    => $self->{recaptcha_config}->{private_key},
         ) : (),
+
+        $self->{smtp_server_config} ? (
+           email => {
+              smtp_host => $self->{smtp_server_config}->{host},
+              smtp_port => $self->{smtp_server_config}->{port},
+              notif_from => 'synapse@localhost',
+           },
+        ) : (),
+
+        # We use a high limit so the limit is never reached, but enabling the
+        # limit ensures that the code paths get hit. This helps testing the
+        # feature with worker mode.
+        limit_usage_by_mau => "true",
+        max_mau_value => 50000000,
 
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
@@ -267,7 +305,7 @@ sub start
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
-      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator ) ) {
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator frontend_proxy ) ) {
          open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
       }
    }
@@ -277,7 +315,7 @@ sub start
    if( $self->{coverage} ) {
       # Ensures that even --generate-config has coverage reports. This is intentional
       push @synapse_command,
-         "-m", "coverage", "run", "--rcfile=$self->{synapse_dir}/.coveragerc";
+         "-m", "coverage", "run", "--source=$self->{synapse_dir}/synapse", "--rcfile=$self->{synapse_dir}/.coveragerc";
    }
 
    push @synapse_command,
@@ -299,6 +337,7 @@ sub start
    my $env = {
       "PATH" => $ENV{PATH},
       "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
+      "SYNAPSE_TEST_PATCH_LOG_CONTEXTS" => 1,
    };
 
    my $loop = $self->loop;
@@ -623,11 +662,12 @@ sub _init
    $self->SUPER::_init( @_ );
 
    $self->{dendron} = delete $args->{dendron_binary};
-   if( delete $args->{torture_replication} ) {
+
+   if( my $level = delete $args->{torture_replication} ) {
       # torture the replication protocol a bit, to replicate bugs.
       # (value is the number of ms to wait before sending out each batch of
       # updates.)
-      $self->{replication_torture_level} = 50;
+      $self->{replication_torture_level} = $level;
    }
 
    my $idx = $self->{hs_index};
@@ -669,9 +709,10 @@ sub wrap_synapse_command
       my $pusher_config_path = $self->write_yaml_file( "pusher.yaml" => {
          "worker_app"              => "synapse.app.pusher",
          "worker_pid_file"         => "$hsdir/pusher.pid",
-         "worker_log_file"         => "$log.pusher",
+         "worker_log_config"       => $self->configure_logger("pusher"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -694,9 +735,10 @@ sub wrap_synapse_command
       my $appservice_config_path = $self->write_yaml_file( "appservice.yaml" => {
          "worker_app"              => "synapse.app.appservice",
          "worker_pid_file"         => "$hsdir/appservice.pid",
-         "worker_log_file"         => "$log.appservice",
+         "worker_log_config"       => $self->configure_logger("appservice"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -719,9 +761,10 @@ sub wrap_synapse_command
       my $federation_sender_config_path = $self->write_yaml_file( "federation_sender.yaml" => {
          "worker_app"              => "synapse.app.federation_sender",
          "worker_pid_file"         => "$hsdir/federation_sender.pid",
-         "worker_log_file"         => "$log.federation_sender",
+         "worker_log_config"       => $self->configure_logger("federation_sender"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -744,9 +787,10 @@ sub wrap_synapse_command
       my $synchrotron_config_path = $self->write_yaml_file( "synchrotron.yaml" => {
          "worker_app"              => "synapse.app.synchrotron",
          "worker_pid_file"         => "$hsdir/synchrotron.pid",
-         "worker_log_file"         => "$log.synchrotron",
+         "worker_log_config"       => $self->configure_logger("synchrotron"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -777,7 +821,7 @@ sub wrap_synapse_command
       my $federation_reader_config_path = $self->write_yaml_file( "federation_reader.yaml" => {
          "worker_app"              => "synapse.app.federation_reader",
          "worker_pid_file"         => "$hsdir/federation_reader.pid",
-         "worker_log_file"         => "$log.federation_reader",
+         "worker_log_config"       => $self->configure_logger("federation_reader"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
@@ -811,9 +855,10 @@ sub wrap_synapse_command
       my $media_repository_config_path = $self->write_yaml_file( "media_repository.yaml" => {
          "worker_app"              => "synapse.app.media_repository",
          "worker_pid_file"         => "$hsdir/media_repository.pid",
-         "worker_log_file"         => "$log.media_repository",
+         "worker_log_config"       => $self->configure_logger("media_repository"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -844,7 +889,7 @@ sub wrap_synapse_command
       my $client_reader_config_path = $self->write_yaml_file( "client_reader.yaml" => {
          "worker_app"                   => "synapse.app.client_reader",
          "worker_pid_file"              => "$hsdir/client_reader.pid",
-         "worker_log_file"              => "$log.client_reader",
+         "worker_log_config"            => $self->configure_logger("client_reader"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
@@ -878,9 +923,10 @@ sub wrap_synapse_command
       my $user_dir_config_path = $self->write_yaml_file( "user_dir.yaml" => {
          "worker_app"              => "synapse.app.user_dir",
          "worker_pid_file"         => "$hsdir/user_dir.pid",
-         "worker_log_file"         => "$log.user_dir",
+         "worker_log_config"       => $self->configure_logger("user_dir"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -911,7 +957,7 @@ sub wrap_synapse_command
       my $event_creator_config_path = $self->write_yaml_file( "event_creator.yaml" => {
          "worker_app"                   => "synapse.app.event_creator",
          "worker_pid_file"              => "$hsdir/event_creator.pid",
-         "worker_log_file"              => "$log.event_creator",
+         "worker_log_config"            => $self->configure_logger("event_creator"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
@@ -939,6 +985,41 @@ sub wrap_synapse_command
       push @command,
          "--event-creator-config" => $event_creator_config_path,
          "--event-creator-url" => "http://$bind_host:$self->{ports}{event_creator}";
+   }
+
+   {
+      my $frontend_proxy_config_path = $self->write_yaml_file( "frontend_proxy.yaml" => {
+         "worker_app"                   => "synapse.app.frontend_proxy",
+         "worker_pid_file"              => "$hsdir/frontend_proxy.pid",
+         "worker_log_config"            => $self->configure_logger("frontend_proxy"),
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
+         "worker_listeners"             => [
+            {
+               type      => "http",
+               resources => [{ names => ["client"] }],
+               port      => $self->{ports}{frontend_proxy},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{frontend_proxy_manhole},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{frontend_proxy_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      } );
+
+      push @command,
+         "--frontend-proxy-config" => $frontend_proxy_config_path,
+         "--frontend-proxy-url" => "http://$bind_host:$self->{ports}{frontend_proxy}";
    }
 
    return @command;
@@ -998,6 +1079,7 @@ sub start
 
       $self->{paths}{pem_file} = $self->write_file( "combined.pem", $cert . $key );
       $self->{paths}{path_map_file} = $self->write_file( "path_map_file", $self->generate_haproxy_map );
+      $self->{paths}{get_path_map_file} = $self->write_file( "get_path_map_file", $self->generate_haproxy_get_map );
 
       $self->{haproxy_config} = $self->write_file( "haproxy.conf", $self->generate_haproxy_config );
 
@@ -1057,6 +1139,9 @@ defaults
 frontend http-in
     bind ${bind_host}:$ports->{haproxy} ssl crt $self->{paths}{pem_file}
 
+    acl has_get_map path -m reg -M -f $self->{paths}{get_path_map_file}
+    use_backend %[path,map_reg($self->{paths}{get_path_map_file},synapse)] if has_get_map METH_GET
+
     use_backend %[path,map_reg($self->{paths}{path_map_file},synapse)]
 
 backend synapse
@@ -1080,31 +1165,83 @@ backend user_dir
 backend event_creator
     server event_creator ${bind_host}:$ports->{event_creator}
 
+backend frontend_proxy
+    server frontend_proxy ${bind_host}:$ports->{frontend_proxy}
+
 EOCONFIG
 }
 
 sub generate_haproxy_map
 {
     return <<'EOCONFIG';
-^/_matrix/client/(v2_alpha|r0)/sync$            synchrotron
-^/_matrix/client/(api/v1|v2_alpha|r0)/events$   synchrotron
-# We need to catch global and per room, so just match based on ending.
-^/_matrix/client/.*/initialSync$                synchrotron
+^/_matrix/client/(v2_alpha|r0)/sync$                  synchrotron
+^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
+^/_matrix/client/(api/v1|r0)/initialSync$             synchrotron
+^/_matrix/client/(api/v1|r0)/rooms/[^/]+/initialSync$ synchrotron
 
 ^/_matrix/media/    media_repository
 
-^/_matrix/federation/v1/event/                  federation_reader
-^/_matrix/federation/v1/state/                  federation_reader
-^/_matrix/federation/v1/state_ids/              federation_reader
-^/_matrix/federation/v1/backfill/               federation_reader
-^/_matrix/federation/v1/get_missing_events/     federation_reader
-^/_matrix/federation/v1/publicRooms             federation_reader
+^/_matrix/federation/v1/event/                        federation_reader
+^/_matrix/federation/v1/state/                        federation_reader
+^/_matrix/federation/v1/state_ids/                    federation_reader
+^/_matrix/federation/v1/backfill/                     federation_reader
+^/_matrix/federation/v1/get_missing_events/           federation_reader
+^/_matrix/federation/v1/publicRooms                   federation_reader
+^/_matrix/federation/v1/query/                        federation_reader
+^/_matrix/federation/v1/make_join/                    federation_reader
+^/_matrix/federation/v1/make_leave/                   federation_reader
+^/_matrix/federation/v1/send_join/                    federation_reader
+^/_matrix/federation/v1/send_leave/                   federation_reader
+^/_matrix/federation/v1/invite/                       federation_reader
+^/_matrix/federation/v1/query_auth/                   federation_reader
+^/_matrix/federation/v1/event_auth/                   federation_reader
+^/_matrix/federation/v1/exchange_third_party_invite/  federation_reader
+^/_matrix/federation/v1/send/                         federation_reader
+^/_matrix/federation/v1/get_groups_publicised         federation_reader
+^/_matrix/federation/v1/user/devices/                 federation_reader
+^/_matrix/key/v2/query                                federation_reader
 
-^/_matrix/client/(api/v1|r0)/publicRooms$    client_reader
+^/_matrix/client/(api/v1|r0|unstable)/publicRooms$                client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/joined_members$    client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/context/.*$        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/members$           client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/state$             client_reader
+^/_matrix/client/(api/v1|r0|unstable)/login$                      client_reader
+^/_matrix/client/(api/v1|r0|unstable)/account/3pid$               client_reader
+^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 client_reader
+^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               client_reader
+^/_matrix/client/versions$                                        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/voip/turnServer$            client_reader
+^/_matrix/client/(r0|unstable)/register$                          client_reader
+^/_matrix/client/(r0|unstable)/auth/.*/fallback/web$              client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/messages$          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/get_groups_publicised$      client_reader
+^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
+^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
+
+^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
 ^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
 
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send      event_creator
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send                                 event_creator
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
+^/_matrix/client/(api/v1|r0|unstable)/join/                                         event_creator
+^/_matrix/client/(api/v1|r0|unstable)/profile/                                      event_creator
+
+EOCONFIG
+}
+
+sub generate_haproxy_get_map
+{
+    return <<'EOCONFIG';
+# pushrules should be here, but the tests seem to be racy.
+# ^/_matrix/client/(api/v1|r0|unstable)/pushrules/            client_reader
+^/_matrix/client/(api/v1|r0|unstable)/groups/               client_reader
+^/_matrix/client/r0/user/[^/]*/account_data/                client_reader
+^/_matrix/client/r0/user/[^/]*/rooms/[^/]*/account_data/    client_reader
+
+^/_matrix/federation/v1/groups/                             federation_reader
 EOCONFIG
 }
 

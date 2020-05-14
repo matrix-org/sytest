@@ -1,14 +1,10 @@
 test "Forward extremities remain so even after the next events are populated as outliers",
-      requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER, $main::HOMESERVER_INFO[0],
-                 local_user_and_room_fixtures(
-                    user_opts => { with_events => 1 },
-                    room_opts => { room_version => "1" },
-                  ),
-                 federation_user_id_fixture() ],
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 federated_rooms_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $info, $creator, $room_id, $user_id ) = @_;
-      my $first_home_server = $info->server_name;
+      my ( $outbound_client, $inbound_server, $creator, $user_id, $room ) = @_;
+      my $first_home_server = $creator->server_name;
 
       # Here we create a straightforward dag like this:
       #
@@ -38,34 +34,36 @@ test "Forward extremities remain so even after the next events are populated as 
       # (https://github.com/matrix-org/synapse/issues/3883).
 
       my $fake_user_id = '@fake_user:' . $outbound_client->server_name;
-      my ( $room, $pl_event_b );
+      my $room_id = $room->room_id;
+      my ( $pl_event_b, $pl_event_b_id );
 
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $user_id,
+      # make sure that the sytest user has permission to alter the state
+      Future->needs_all(
+         matrix_change_room_power_levels( $creator, $room_id, sub {
+            my ( $levels ) = @_;
+            $levels->{users}->{$user_id} = 100;
+         })->on_done( sub {
+            my ( $r ) = @_;
+            my $event_id = $r->{ event_id };
+            log_if_fail "Sent PL event B: $event_id";
+         }),
+         $inbound_server->await_event( "m.room.power_levels", $room_id, sub {1} )
+         ->on_done( sub {
+            my ( $pl_event_b ) = @_;
+            $pl_event_b_id = $room->id_for_event( $pl_event_b );
+         }),
       )->then( sub {
-         ( $room ) = @_;
-
-         # make sure that the sytest user has permission to alter the state
-         Future->needs_all(
-            matrix_change_room_power_levels( $creator, $room_id, sub {
-               my ( $levels ) = @_;
-               $levels->{users}->{$user_id} = 100;
-            }),
-            $inbound_server->await_event( "m.room.power_levels", $room_id, sub {1} )
-            ->then( sub {
-               ( $pl_event_b ) = @_;
-               log_if_fail "Received PL event B", $pl_event_b;
-               $room->insert_event( $pl_event_b );
-               Future->done();
-            }),
-         );
-      })->then( sub {
          my %state_before_c = %{ $room->{current_state} };
 
+         log_if_fail "Starting room state", {
+            map { $_ => $room->id_for_event( $state_before_c{ $_ }) } keys %state_before_c
+         };
+
+         my $pl_state = $state_before_c{"m.room.power_levels\0"};
+         assert_eq( $room->id_for_event( $pl_state ), $pl_event_b_id, "PL state event id" );
+
          # generate all of the events
-         my $outlier_event_c = $room->create_and_insert_event(
+         my ( $outlier_event_c, $outlier_event_c_id ) = $room->create_and_insert_event(
             event_id_suffix => "outlier_C",
             type => "test_state",
             state_key => "C",
@@ -73,12 +71,12 @@ test "Forward extremities remain so even after the next events are populated as 
             content => {
                body => "event_c",
             },
-            # prev_events => SyTest::Federation::Room::make_event_refs( $pl_event_b ),
+            # prev_events => $room->make_event_refs( $pl_event_b ),
          );
 
-         log_if_fail "Outlier event C", $outlier_event_c;
+         log_if_fail "Outlier event C $outlier_event_c_id", $outlier_event_c;
 
-         my $backfilled_event_d = $room->create_and_insert_event(
+         my ( $backfilled_event_d, $backfilled_event_d_id ) = $room->create_and_insert_event(
             event_id_suffix => "backfilled_D",
             type => "message",
             sender  => $fake_user_id,
@@ -86,8 +84,9 @@ test "Forward extremities remain so even after the next events are populated as 
                body => "event_d",
             },
          );
+         log_if_fail "Backfilled event D $backfilled_event_d_id", $backfilled_event_d;
 
-         my $sent_event_e = $room->create_and_insert_event(
+         my ( $sent_event_e, $sent_event_e_id ) = $room->create_and_insert_event(
             event_id_suffix => "sent_E",
             type => "message",
             sender  => $fake_user_id,
@@ -95,6 +94,7 @@ test "Forward extremities remain so even after the next events are populated as 
                body => "event_e",
             },
          );
+         log_if_fail "Sent event E $sent_event_e_id", $sent_event_e;
 
          # do the send
          Future->needs_all(
@@ -112,7 +112,7 @@ test "Forward extremities remain so even after the next events are populated as 
 
                assert_deeply_eq(
                   $body->{latest_events},
-                  [ $sent_event_e->{event_id } ],
+                  [ $sent_event_e_id ],
                   "latest_events in /get_missing_events request",
                );
 
@@ -125,21 +125,22 @@ test "Forward extremities remain so even after the next events are populated as 
             }),
 
             $inbound_server->await_request_state_ids(
-               $room_id, $outlier_event_c->{event_id},
+               $room_id, $outlier_event_c_id,
             )->then( sub {
                my ( $req ) = @_;
                log_if_fail "/state_ids request";
 
                my $resp = {
                   pdu_ids => [
-                     map { $_->{event_id} } values( %state_before_c ),
+                     map { $room->id_for_event( $_ )} values( %state_before_c ),
                   ],
-                  auth_chain_ids => [
-                     # XXX we're supposed to return the whole auth chain here,
-                     # not just c's auth_events. It doesn't matter too much
-                     # here though.
-                     map { $_->[0] } @{ $outlier_event_c->{auth_events} },
-                  ],
+
+                  # XXX we're supposed to return the whole auth chain here,
+                  # not just c's auth_events. It doesn't matter too much
+                  # here though.
+                  auth_chain_ids => $room->event_ids_from_refs(
+                     $outlier_event_c->{auth_events},
+                  ),
                };
 
                log_if_fail "/state_ids response", $resp;
@@ -158,7 +159,7 @@ test "Forward extremities remain so even after the next events are populated as 
                log_if_fail "Extremities after send", \@extremity_event_ids;
                assert_deeply_eq(
                   \@extremity_event_ids,
-                  [ $pl_event_b->{event_id} ],
+                  [ $pl_event_b_id ],
                   "forward extremities",
                  );
                Future->done(1);

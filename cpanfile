@@ -23,6 +23,8 @@ requires 'DBI';
 requires 'DBD::Pg';
 requires 'Digest::HMAC_SHA1';
 requires 'Digest::SHA';
+requires 'Email::Address::XS';
+requires 'Email::MIME';
 requires 'File::Basename';
 requires 'File::Path';
 requires 'File::Slurper';

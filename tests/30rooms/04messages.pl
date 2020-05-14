@@ -154,9 +154,6 @@ test "Remote room members also see posted message events",
    requires => [ $senduser_fixture, $remote_fixture, $room_fixture,
                 qw( can_receive_room_message_locally )],
 
-   # this test frequently times out for unknown reasons
-   bug => "synapse#1679",
-
    do => sub {
       my ( $senduser, $remote_user, $room_id ) = @_;
 
@@ -206,7 +203,7 @@ test "Remote room members can get room messages",
    };
 
 test "Message history can be paginated",
-   requires => [ magic_local_user_and_room_fixtures() ],
+   requires => [ local_user_and_room_fixtures() ],
 
    proves => [qw( can_paginate_room )],
 
@@ -350,5 +347,55 @@ test "Message history can be paginated over federation",
 
             return 1;
          })
+      });
+   };
+
+# Test for MSC2228 for local messages.
+test "Ephemeral messages received from clients are correctly expired",
+   requires => [ local_user_and_room_fixtures() ],
+
+   do => sub {
+      my ( $user, $room_id ) = @_;
+
+      my $now_ms = int( time() * 1000 );
+      my $filter = '{"types":["m.room.message"]}';
+
+      matrix_send_room_message( $user, $room_id,
+         content => {
+            msgtype                          => "m.text",
+            body                             => "This is a message",
+            "org.matrix.self_destruct_after" => $now_ms + 1000,
+         },
+      )->then( sub {
+         await_sync_timeline_contains($user, $room_id, check => sub {
+            my ($event) = @_;
+            return $event->{content}{body} eq "This is a message"
+         })
+      })->then( sub {
+         # wait for the message to expire
+         delay( 1.5 )
+      })->then( sub {
+         my $iter = 0;
+         retry_until_success {
+            matrix_get_room_messages( $user, $room_id, filter => $filter )->then( sub {
+               $iter++;
+               my ( $body ) = @_;
+               log_if_fail "Iteration $iter: response body after expiry", $body;
+
+               my $chunk = $body->{chunk};
+
+               @$chunk == 1 or
+                  die "Expected 1 message";
+
+               # Check that we can't read the message's content after its expiry.
+               assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
+
+               Future->done(1);
+            })->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Iteration $iter: not ready yet: $exc";
+            });
+         }
       });
    };

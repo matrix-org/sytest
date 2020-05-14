@@ -134,7 +134,51 @@ test "Checking local federation server",
       });
    };
 
-push @EXPORT, qw( federation_user_id_fixture );
+=head2 send_and_await_event
+
+   send_and_await_event( $outbound_client, $room, $user, %fields ) -> then( sub {
+      my ( $event_id ) = @_;
+   });
+
+Send an event over federation and wait for it to turn up.
+
+I<$outbound_client> should be a L<SyTest::Federation::Client>, most likely
+I<$main::OUTBOUND_CLIENT>, which is used to send the event.
+
+I<$room> should be the L<SyTest::Federation::Room> in which to send the event.
+
+I<$user> should be a L<User> which will poll for receiving the event.
+
+The remainder of the arguments (I<%fields>) are passed into
+L<SyTest::Federation::Room/create_and_insert_event>. They should include at
+least a C<sender>. C<type> and C<content> have defaults.
+
+=cut
+
+sub send_and_await_event {
+   my ( $outbound_client, $room, $server_user, %fields ) = @_;
+   my $server_name = $server_user->http->server_name;
+
+   $fields{type} //= "m.room.message";
+   $fields{content} //= { body => "hi" };
+
+   my ( $event, $event_id ) = $room->create_and_insert_event( %fields );
+   log_if_fail "Sending event $event_id in ".$room->room_id, $event;
+
+   Future->needs_all(
+      $outbound_client->send_event(
+         event => $event,
+         destination => $server_name,
+      ),
+      await_sync_timeline_contains(
+         $server_user, $room->room_id, check => sub {
+            $_[0]->{event_id} eq $event_id
+         }
+      ),
+   )->then_done( $event_id );
+}
+push @EXPORT, qw( send_and_await_event );
+
 
 my $next_user_id = 0;
 
@@ -160,3 +204,95 @@ sub federation_user_id_fixture
       },
    );
 }
+push @EXPORT, qw( federation_user_id_fixture );
+
+
+=head2 federated_rooms_fixture
+
+   test "foo",
+       requires => [ federated_rooms_fixture( %options ) ],
+       do => sub {
+           my ( $creator_user, $joining_user_id, $room1, $room2, ... ) = @_;
+       };
+
+Returns a new Fixture, which:
+
+=over
+
+=item * creates a user on the main test server
+
+=item * uses that user to create one or more rooms
+
+=item * uses a test user to join those rooms over federation
+
+=back
+
+The results of the Fixture are:
+
+=over
+
+=item * A User struct for the user on the server under test
+
+=item * A string giving the user id of the sytest user which has joined the rooms
+
+=item * A SyTest::Federation::Room object for each room
+
+=back
+
+The following options are supported:
+
+=over
+
+=item room_count => SCALAR
+
+The number of rooms to be created. Defaults to 1.
+
+=item room_opts => HASH
+
+A set of options to be passed into C<matrix_create_room> for all of the rooms.
+
+=back
+
+=cut
+
+sub federated_rooms_fixture {
+   my %options = @_;
+
+   my $room_count = $options{room_count} // 1;
+   my $room_opts = $options{room_opts} // {};
+
+   return fixture(
+      requires => [
+         local_user_fixture(),
+         $main::OUTBOUND_CLIENT,
+         federation_user_id_fixture(),
+      ],
+
+      setup => sub {
+         my ( $synapse_user, $outbound_client, $sytest_user_id ) = @_;
+         my $synapse_server_name = $synapse_user->http->server_name;
+
+         my @rooms;
+
+         repeat( sub {
+            my ( $idx ) = @_;
+            matrix_create_room( $synapse_user, %$room_opts )->then( sub {
+               my ( $room_id ) = @_;
+               $outbound_client->join_room(
+                  server_name => $synapse_server_name,
+                  room_id     => $room_id,
+                  user_id     => $sytest_user_id,
+               );
+            })->on_done( sub {
+               my ( $room ) = @_;
+               log_if_fail "Joined room $idx: " . $room->room_id;
+               push @rooms, $room;
+            });
+         }, foreach => [ 1 .. $room_count ]) -> then( sub {
+            Future->done( $synapse_user, $sytest_user_id, @rooms );
+         });
+      },
+   );
+}
+
+push @EXPORT, qw( federated_rooms_fixture );

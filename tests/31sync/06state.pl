@@ -773,6 +773,9 @@ test "Current state appears in timeline in private history with many messages be
    requires => [ local_user_fixtures( 3, with_events => 0 ),
                  qw( can_sync ) ],
 
+   # sending 50 messages can take a while
+   timeout => 20000,
+
    check => sub {
       my ( $creator, $syncer, $invitee ) = @_;
 
@@ -795,7 +798,9 @@ test "Current state appears in timeline in private history with many messages be
 
             matrix_send_room_text_message( $creator, $room_id,
                body => "Message $msgnum",
-            )
+            )->on_done( sub {
+               log_if_fail "Sent msg $msgnum / 50";
+            });
          }, foreach => [ 1 .. 50 ])
       })->then( sub {
          matrix_leave_room( $syncer, $room_id )
@@ -828,6 +833,9 @@ test "Current state appears in timeline in private history with many messages af
    requires => [ local_user_fixtures( 3, with_events => 0 ),
                  qw( can_sync ) ],
 
+   # sending 50 messages can take a while
+   timeout => 20000,
+
    check => sub {
       my ( $creator, $syncer, $invitee ) = @_;
 
@@ -854,7 +862,9 @@ test "Current state appears in timeline in private history with many messages af
 
             matrix_send_room_text_message( $creator, $room_id,
                body => "Message $msgnum",
-            )
+            )->on_done( sub {
+               log_if_fail "Sent msg $msgnum / 50";
+            });
          }, foreach => [ 1 .. 50 ])
       })->then( sub {
          matrix_join_room_synced( $syncer, $room_id )

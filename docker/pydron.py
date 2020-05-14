@@ -54,7 +54,7 @@ try:
         + " -m synapse.app.homeserver -D --config-path="
         + args["--synapse-config"]
     )
-    subprocess.call(shlex.split(synapse))
+    subprocess.run(shlex.split(synapse), check=True)
 
     # Then, start up all the workers. Do these in parallel because they take a while.
     worker_processes = {}

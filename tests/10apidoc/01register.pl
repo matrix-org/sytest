@@ -106,6 +106,37 @@ test "POST /register downcases capitals in usernames",
       });
    };
 
+test "POST /register returns the same device_id as that in the request",
+   requires => [ $main::API_CLIENTS[0],
+                 qw( can_register_dummy_flow ) ],
+
+   do => sub {
+      my ( $http ) = @_;
+
+      my $device_id = "my_device_id";
+
+      $http->do_request_json(
+         method => "POST",
+         uri    => "/r0/register",
+
+         content => {
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => "mycooluser",
+            password => "sUp3rs3kr1t",
+            device_id => $device_id,
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( device_id ));
+         assert_eq( $body->{device_id}, $device_id, 'device_id' );
+
+         Future->done( 1 );
+      });
+   };
+
 
 foreach my $chr (split '', '!":?\@[]{|}£é' . "\n'" ) {
    my $q = $chr; $q =~ s/\n/\\n/;
@@ -220,7 +251,7 @@ sub matrix_register_user
 
       return $f->then_done( $user )
          ->on_done( sub {
-            log_if_fail "Registered new user $uid";
+            log_if_fail "Registered new user ". $user->user_id;
          });
    });
 }
@@ -277,7 +308,7 @@ sub matrix_admin_register_user_via_secret
 
       return Future->done( $user )
         ->on_done( sub {
-           log_if_fail "Registered new user (via secret) $uid";
+           log_if_fail "Registered new user (via secret) " . $user->user_id;
         });
    });
 }
@@ -394,22 +425,6 @@ sub local_user_fixtures
 
 push @EXPORT, qw( remote_user_fixture );
 
-sub remote_admin_fixture
-{
-   my %args = @_;
-
-   fixture(
-      requires => [ $main::API_CLIENTS[1], localpart_fixture(), qw( can_register_with_secret ) ],
-
-      setup => sub {
-         my ( $http, $localpart ) = @_;
-
-         matrix_admin_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
-      },
-   );
-}
-push @EXPORT, qw( remote_admin_fixture );
-
 sub remote_user_fixture
 {
    my %args = @_;
@@ -423,6 +438,25 @@ sub remote_user_fixture
          my ( $http, $localpart ) = @_;
 
          setup_user( $http, $localpart, %args )
+      }
+   );
+}
+
+push @EXPORT, qw( remote_admin_fixture );
+
+sub remote_admin_fixture
+{
+   my %args = @_;
+
+   fixture(
+      name => "remote_admin_fixture",
+
+      requires => [ $main::API_CLIENTS[1], localpart_fixture(), qw( can_register_with_secret ) ],
+
+      setup => sub {
+         my ( $http, $localpart ) = @_;
+
+         matrix_admin_register_user_via_secret( $http, $localpart, is_admin => 1, %args );
       }
    );
 }

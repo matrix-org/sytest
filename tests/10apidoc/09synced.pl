@@ -103,15 +103,13 @@ sub sync_presence_contains
 
 =head2 await_sync
 
-   my ( $action_result ) = await_sync( $user,
+   my ( $check_result ) = await_sync( $user,
       check => sub {
-         my ( $sync_body ) = @_
+         my ( $sync_body ) = @_;
 
-         # return a true value if the sync contains the action.
+         # return a true value if the sync matches.
          # return a false value if the sync isn't ready yet.
-         return check_that_action_result_appears_in_sync_body(
-            $sync_body, $action_result
-         );
+         return check_that_sync_body_is_ready( $sync_body );
       },
    )->get;
 
@@ -160,10 +158,19 @@ sub await_sync {
 
 =head2 await_sync_timeline_contains
 
-Waits for something to appear in a the timeline of a particular room, see
-await_sync for details.
+    $sync_body = await_sync_timeline_contains( $user, $room_id,
+        check => sub {
+            my ( $event ) = @_;
+            return true_if_event_matches();
+        },
+    )->get();
+
+Waits for something to appear in a the timeline of a particular room.
+Returns the sync body.
 
 The C<check> function gets given individual events.
+
+See L</await_sync> for details of the C<since> parameter.
 
 =cut
 
@@ -172,11 +179,11 @@ sub await_sync_timeline_contains {
 
    my $check = delete $params{check} or die "Must supply a 'check' param";
 
-   await_sync( $user,
+   return await_sync( $user,
       check => sub {
          my ( $body ) = @_;
 
-         sync_timeline_contains( $body, $room_id, $check )
+         return sync_timeline_contains( $body, $room_id, $check ) ? $body : 0;
       },
       %params,
    )
@@ -184,10 +191,19 @@ sub await_sync_timeline_contains {
 
 =head2 await_sync_timeline_or_state_contains
 
-Waits for something to appear in a the timeline or the state of a particular
-room, see await_sync for details.
+    $sync_body = await_sync_timeline_or_state_contains( $user, $room_id,
+        check => sub {
+            my ( $event ) = @_;
+            return true_if_event_matches();
+        },
+    )->get();
+
+Waits for something to appear in a the timeline of a particular room.
+Returns the sync body.
 
 The C<check> function gets given individual events.
+
+See L</await_sync> for details of the C<since> parameter.
 
 =cut
 
@@ -196,11 +212,13 @@ sub await_sync_timeline_or_state_contains {
 
    my $check = delete $params{check} or die "Must supply a 'check' param";
 
-   await_sync( $user,
+   return await_sync( $user,
       check => sub {
          my ( $body ) = @_;
 
-         sync_timeline_contains( $body, $room_id, $check ) || sync_room_contains( $body, $room_id, "state", $check )
+         return (
+            sync_timeline_contains( $body, $room_id, $check ) || sync_room_contains( $body, $room_id, "state", $check )
+         ) ? $body : 0;
       },
       %params,
    )
@@ -208,9 +226,19 @@ sub await_sync_timeline_or_state_contains {
 
 =head2 await_sync_presence_contains
 
-Waits for presence events to come down sync, see await_sync for details.
+    $sync_body = await_sync_presence_contains( $user,
+        check => sub {
+            my ( $presence_event ) = @_;
+            return true_if_event_matches();
+        },
+    )->get();
+
+Waits for presence events to come down sync.
+Returns the sync body.
 
 The C<check> function gets given individual presence events.
+
+See L</await_sync> for details of the C<since> parameter.
 
 =cut
 
@@ -219,11 +247,11 @@ sub await_sync_presence_contains {
 
    my $check = delete $params{check} or die "Must supply a 'check' param";
 
-   await_sync( $user,
+   return await_sync( $user,
       check => sub {
          my ( $body ) = @_;
 
-         sync_presence_contains( $body, $check )
+         return sync_presence_contains( $body, $check ) ? $body : 0;
       },
       %params,
    )
@@ -307,8 +335,8 @@ push @EXPORT, qw( assert_state_room_members_match );
 sub assert_state_room_members_match {
    my ( $events, $memberships ) = @_;
 
-   log_if_fail "expected members:", $memberships;
-   log_if_fail "state:", $events;
+   log_if_fail "assert_state_room_members_match: expected members:", $memberships;
+   log_if_fail "assert_state_room_members_match: actual state:", $events;
 
    my ( $member_ids );
    if ( ref($memberships) eq 'ARRAY' ) {

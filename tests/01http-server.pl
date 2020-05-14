@@ -6,7 +6,7 @@ use IO::Async::SSL;
 
 use SyTest::HTTPClient;
 use SyTest::HTTPServer::Request;
-use SyTest::SSL qw( ensure_ssl_cert );
+use SyTest::SSL qw( ensure_ssl_key create_ssl_cert );
 
 my $DIR = dirname( __FILE__ );
 
@@ -30,12 +30,13 @@ Creates a TLS cert signed by the CA, and configures an IO::Async::Listener to st
 sub start_test_server_ssl {
    my ( $server ) = @_;
 
-   my $test_server_dir = abs_path( "test-server" );
+   my $test_server_dir = abs_path( $main::WORK_DIR."/test-server" );
    -d $test_server_dir or make_path( $test_server_dir );
 
    my $ssl_cert = "$test_server_dir/server.crt";
    my $ssl_key = "$test_server_dir/server.key";
-   ensure_ssl_cert( $ssl_cert, $ssl_key, $BIND_HOST );
+   ensure_ssl_key( $ssl_key );
+   create_ssl_cert( $ssl_cert, $ssl_key, $BIND_HOST );
 
    return $server->listen(
       host          => $BIND_HOST,

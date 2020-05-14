@@ -64,6 +64,23 @@ validate recaptcha submissions.
 
 =back
 
+=head2 smtp_server_config => HASH
+
+Details of an smtp server for things like 3pid validation. Should include the
+following keys:
+
+=over
+
+=item C<host>
+
+The hostname where the SMTP server can be reached.
+
+=item C<port>
+
+The port where the SMTP server can be reached.
+
+=back
+
 =head2 cas_config => HASH
 
 Parameters for testing the server's CAS integration. Should include the
@@ -149,7 +166,7 @@ sub configure
    my %params = @_;
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
-      recaptcha_config cas_config
+      recaptcha_config cas_config smtp_server_config
       app_service_config_files
    );
 
@@ -211,6 +228,56 @@ sub write_json_file
    return $self->write_file( $relpath, JSON::encode_json( $content ) );
 }
 
+
+sub configure_logger
+{
+   my $self = shift;
+   my ( $log_type ) = @_;
+   my $hs_dir = $self->{hs_dir};
+
+   my $log_config_file = $self->write_yaml_file("log.config.$log_type" => {
+      version => "1",
+
+      formatters => {
+         precise => {
+            format => "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(request)s - %(message)s"
+         }
+      },
+
+      filters => {
+         context => {
+            "()" => "synapse.logging.context.LoggingContextFilter",
+            request => ""
+         }
+      },
+      handlers => {
+         file => {
+            class => "logging.FileHandler",
+            formatter => "precise",
+            filename => "$hs_dir/$log_type.log",
+            filters => ["context"],
+            encoding => "utf8"
+         }
+      },
+
+      loggers => {
+         synapse => {
+            level => "INFO"
+         }
+      },
+
+      root => {
+         level => "INFO",
+         handlers => ["file"]
+      }
+
+   });
+
+   return $log_config_file;
+
+}
+
+
 =head2 _get_dbconfig
 
    %db_config = $self->_get_dbconfig( %defaults )
@@ -229,6 +296,10 @@ It returns the config hash.
 
 =cut
 
+# This is now only used for Dendrite, as synapse uses `_get_dbconfigs`. It
+# probably makes more sense to have a dendrite specific handling, rather than
+# using synapse config format and then parsing and converting it into dendrite
+# config.
 sub _get_dbconfig
 {
    my $self = shift;
@@ -272,6 +343,85 @@ sub _get_dbconfig
 
    return %db_config;
 }
+
+
+=head2 _get_dbconfigs
+
+   %db_configs = $self->_get_dbconfigs( %defaults )
+
+This method loads the database configs from either C<databases.yaml> or
+C<database.yaml>, using the default if it doesn't exist.
+
+It then passes the loaded configs to C<_check_db_config> for
+sanity-checking. That method may be overridden by subclasses, and should C<die>
+if there is a problem with the config.
+
+Finally, it calls the relevant clear_db method on each database to clear out
+the configured databases.
+
+It returns the configs as a hash of database name to config hashref.
+
+=cut
+
+sub _get_dbconfigs
+{
+   my $self = shift;
+   my ( %defaults ) = @_;
+
+   my $hs_dir = $self->{hs_dir};
+
+   # Try and load the configs from the various locations.
+   my ( %db_configs );
+   if ( -f "$hs_dir/databases.yaml") {
+      $self->{output}->diag( "Using DB config from $hs_dir/databases.yaml" );
+
+      %db_configs = %{ YAML::LoadFile( "$hs_dir/databases.yaml" ) };
+   }
+   elsif( -f "$hs_dir/database.yaml" ) {
+      $self->{output}->diag( "Using DB config from $hs_dir/database.yaml" );
+
+      my %db_config = %{ YAML::LoadFile( "$hs_dir/database.yaml" ) };
+
+      $db_configs{"main"} = \%db_config;
+   }
+   else {
+      $self->{output}->diag( "Using default DB config and writing to $hs_dir/database.yaml" );
+
+      YAML::DumpFile( "$hs_dir/database.yaml", \%defaults );
+      $db_configs{"main"} = \%defaults;
+   }
+
+   # Go through each database and check the config and clear the database.
+   foreach my $db ( keys %db_configs ) {
+      my $db_config = $db_configs{$db};
+
+      # backwards-compatibility hacks
+      my $db_name = delete $db_config->{name};
+      if( defined $db_name ) {
+         if( $db_name eq 'psycopg2' ) {
+            $db_config->{type} = 'pg';
+         }
+         elsif( $db_name eq 'sqlite3' ) {
+            $db_config->{type} = 'sqlite';
+         }
+         else {
+            die "Unrecognised DB name '$db_name'";
+         }
+      }
+
+      eval {
+         $self->_check_db_config( %{ $db_config } );
+         1;
+      } or die "Error loading db config: $@";
+
+      my $db_type = $db_config->{type};
+      my $clear_meth = "_clear_db_${db_type}";
+      $self->$clear_meth( %{ $db_config->{args} } );
+   }
+
+   return %db_configs;
+}
+
 
 sub _check_db_config
 {

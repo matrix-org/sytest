@@ -236,7 +236,7 @@ test "Invited user can reject local invite after originator leaves",
    };
 
 test "Invited user can see room metadata",
-   requires => [ magic_local_user_and_room_fixtures(), local_user_fixture() ],
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
 
    do => sub {
       my ( $creator, $room_id, $invitee ) = @_;
@@ -280,7 +280,7 @@ test "Invited user can see room metadata",
 
          $state_by_type{$_} or die "Did not receive $_ state"
             for qw( m.room.join_rules m.room.name
-                    m.room.canonical_alias m.room.avatar );
+                    m.room.avatar );
 
          my @futures = ();
 
@@ -306,7 +306,7 @@ test "Invited user can see room metadata",
    };
 
 test "Remote invited user can see room metadata",
-   requires => [ magic_local_user_and_room_fixtures(), remote_user_fixture() ],
+   requires => [ local_user_and_room_fixtures(), remote_user_fixture() ],
 
    do => sub {
       my ( $creator, $room_id, $invitee ) = @_;
@@ -348,7 +348,7 @@ test "Remote invited user can see room metadata",
 
          $state_by_type{$_} or die "Did not receive $_ state"
             for qw( m.room.join_rules m.room.name
-                    m.room.canonical_alias m.room.avatar );
+                    m.room.avatar );
 
          my @futures = ();
 
