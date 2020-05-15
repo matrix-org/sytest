@@ -286,6 +286,8 @@ sub _start_monolith
       setup => [
          env => {
             LOG_DIR => $self->{hs_dir},
+            DENDRITE_TRACE_SQL => $ENV{'DENDRITE_TRACE_SQL'},
+            DENDRITE_TRACE_HTTP => $ENV{'DENDRITE_TRACE_HTTP'},
          },
       ],
       command => [ @command ],
