@@ -277,6 +277,17 @@ sub start
            },
         ) : (),
 
+        instance_map => {
+           "frontend_proxy1" => {
+              host => "$bind_host",
+              port => $self->{ports}{frontend_proxy},
+           },
+        },
+
+        writers => {
+           events => $self->{redis_host} ne '' ? "frontend_proxy1" : "master",
+        },
+
         # We use a high limit so the limit is never reached, but enabling the
         # limit ensures that the code paths get hit. This helps testing the
         # feature with worker mode.
@@ -284,8 +295,9 @@ sub start
         max_mau_value => 50000000,
 
         redis => {
-           enabled => $self->{redis_host} ne '',
-           host    => $self->{redis_host},
+           enabled  => $self->{redis_host} ne '',
+           password => "foobar",
+           host     => $self->{redis_host},
         },
 
         map {
@@ -988,6 +1000,7 @@ sub wrap_synapse_command
    {
       my $frontend_proxy_config_path = $self->write_yaml_file( "frontend_proxy.yaml" => {
          "worker_app"                   => "synapse.app.frontend_proxy",
+         "worker_name"                  => "frontend_proxy1",
          "worker_pid_file"              => "$hsdir/frontend_proxy.pid",
          "worker_log_config"            => $self->configure_logger("frontend_proxy"),
          "worker_replication_host"      => "$bind_host",
@@ -997,7 +1010,7 @@ sub wrap_synapse_command
          "worker_listeners"             => [
             {
                type      => "http",
-               resources => [{ names => ["client"] }],
+               resources => [{ names => ["client", "replication"] }],
                port      => $self->{ports}{frontend_proxy},
                bind_address => $bind_host,
             },
