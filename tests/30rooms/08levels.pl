@@ -7,6 +7,8 @@ my $user_fixture = local_user_fixture();
 
 sub lockeddown_room_fixture
 {
+   my ( %options ) = @_;
+
    fixture(
       requires => [ $creator_fixture, $user_fixture,
                     qw( can_change_power_levels ) ],
@@ -14,7 +16,7 @@ sub lockeddown_room_fixture
       setup => sub {
          my ( $creator, $test_user ) = @_;
 
-         matrix_create_and_join_room( [ $creator, $test_user ] )
+         matrix_create_and_join_room( [ $creator, $test_user ], %options )
          ->then( sub {
             my ( $room_id ) = @_;
 
@@ -157,3 +159,24 @@ foreach my $levelname (qw( ban kick redact )) {
          })->SyTest::pass_on_done( "Fails at setting 75" );
       };
 }
+
+multi_test "Users cannot set notifications powerlevel higher than their own",
+   requires => [ $creator_fixture, $user_fixture, lockeddown_room_fixture( room_version => "6" ),
+                 qw( can_change_power_levels )],
+
+   do => sub {
+      my ( $user, undef, $room_id ) = @_;
+
+      matrix_change_room_power_levels( $user, $room_id, sub {
+         my ( $levels ) = @_;
+
+         $levels->{notifications}{room} = 25;
+      })->SyTest::pass_on_done( "Succeeds at setting 25" )
+      ->then( sub {
+         matrix_change_room_power_levels( $user, $room_id, sub {
+            my ( $levels ) = @_;
+
+            $levels->{notifications}{room} = 10000000;
+         })->main::expect_http_403
+      })->SyTest::pass_on_done( "Fails at setting 75" );
+   };
