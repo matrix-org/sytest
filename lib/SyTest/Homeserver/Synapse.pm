@@ -284,7 +284,7 @@ sub start
            },
         },
 
-        writers => {
+        stream_writers => {
            events => $self->{redis_host} ne '' ? "frontend_proxy1" : "master",
         },
 
