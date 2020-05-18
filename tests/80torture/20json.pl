@@ -18,7 +18,7 @@ test "Invalid JSON integers",
          )->followed_by( \&main::expect_http_400 ),
 
          do_request_json_for( $user,
-            method  => "PUT",
+            method  => "POST",
             uri     => "/r0/rooms/$room_id/send/sytest.dummy",
             content => {
                msgtype => "sytest.dummy",
@@ -48,7 +48,7 @@ test "Invalid JSON floats",
          )->followed_by( \&main::expect_http_400 ),
 
          do_request_json_for( $user,
-            method  => "PUT",
+            method  => "POST",
             uri     => "/r0/rooms/$room_id/send/sytest.dummy",
             content => {
                msgtype => "sytest.dummy",
@@ -57,7 +57,7 @@ test "Invalid JSON floats",
          )->followed_by( \&main::expect_http_400 ),
 
          do_request_json_for( $user,
-            method  => "PUT",
+            method  => "POST",
             uri     => "/r0/rooms/$room_id/send/sytest.dummy",
             content => {
                msgtype => "sytest.dummy",
@@ -66,7 +66,7 @@ test "Invalid JSON floats",
          )->followed_by( \&main::expect_http_400 ),
 
          do_request_json_for( $user,
-            method  => "PUT",
+            method  => "POST",
             uri     => "/r0/rooms/$room_id/send/sytest.dummy",
             content => {
                msgtype => "sytest.dummy",
