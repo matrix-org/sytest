@@ -156,7 +156,7 @@ foreach my $levelname (qw( ban kick redact )) {
 
                $levels->{$levelname} = 10000000;
             })->main::expect_http_403
-         })->SyTest::pass_on_done( "Fails at setting 75" );
+         })->SyTest::pass_on_done( "Fails at setting 10000000" );
       };
 }
 
@@ -178,5 +178,5 @@ multi_test "Users cannot set notifications powerlevel higher than their own",
 
             $levels->{notifications}{room} = 10000000;
          })->main::expect_http_403
-      })->SyTest::pass_on_done( "Fails at setting 75" );
+      })->SyTest::pass_on_done( "Fails at setting 10000000" );
    };
