@@ -52,7 +52,7 @@ test "Invalid JSON floats",
             uri     => "/r0/rooms/$room_id/send/sytest.dummy",
             content => {
                msgtype => "sytest.dummy",
-               body    => "NaN",
+               body    => "NaN" + 0,
             },
          )->followed_by( \&main::expect_http_400 ),
 
@@ -61,7 +61,7 @@ test "Invalid JSON floats",
             uri     => "/r0/rooms/$room_id/send/sytest.dummy",
             content => {
                msgtype => "sytest.dummy",
-               body    => "inf",
+               body    => "inf" + 0,
             },
          )->followed_by( \&main::expect_http_400 ),
 
@@ -70,7 +70,7 @@ test "Invalid JSON floats",
             uri     => "/r0/rooms/$room_id/send/sytest.dummy",
             content => {
                msgtype => "sytest.dummy",
-               body    => "-inf",
+               body    => "-inf" + 0,
             },
          )->followed_by( \&main::expect_http_400 ),
       );
