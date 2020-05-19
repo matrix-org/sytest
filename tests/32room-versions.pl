@@ -1,7 +1,5 @@
 use URI::Escape qw( uri_escape );
 
-use SyTest::Federation::Client;
-
 # We test that some basic functionality works across all room versions
 foreach my $version ( qw ( 1 2 3 4 5 6 ) )  {
    multi_test "User can create and send/receive messages in a room with version $version",
