@@ -295,9 +295,8 @@ sub start
         max_mau_value => 50000000,
 
         redis => {
-           enabled  => $self->{redis_host} ne '',
-           password => "foobar",
-           host     => $self->{redis_host},
+           enabled => $self->{redis_host} ne '',
+           host    => $self->{redis_host},
         },
 
         map {
