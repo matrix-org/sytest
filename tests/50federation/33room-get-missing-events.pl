@@ -94,11 +94,14 @@ test "Outbound federation can request missing events",
          );
       })->then( sub {
          # creator user should eventually receive the missing event
-         await_event_for( $creator, filter => sub {
-            my ( $event ) = @_;
-            return $event->{type} eq "m.room.message" &&
-                   $event->{event_id} eq $missing_event->{event_id};
-         });
+         await_sync_timeline_contains(
+            $creator, $room_id,
+            check => sub {
+               my ( $event ) = @_;
+               $event->{type} eq "m.room.message" &&
+               $event->{event_id} eq $missing_event->{event_id};
+            },
+         );
       });
    };
 
