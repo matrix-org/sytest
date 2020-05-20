@@ -17,6 +17,7 @@ test "Outbound federation can backfill events",
          creator => $creator_id,
          alias   => $room_alias,
       );
+      my $room_id;
 
       # Create some past messages to backfill from
       $room->create_and_insert_event(
@@ -65,7 +66,16 @@ test "Outbound federation can backfill events",
          )->then( sub {
             my ( $body ) = @_;
 
-            my $room_id = $body->{room_id};
+            $room_id = $body->{room_id};
+
+            # wait for it to arrive
+            await_sync_timeline_contains(
+               $user, $room_id,
+               check => sub {
+                  $_[0]->{type} eq "m.room.member"
+               },
+            );
+         })->then( sub {
 
             # It make take some time for the join to propagate, so we need to
             # retry on failure.
