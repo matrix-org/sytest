@@ -1061,3 +1061,85 @@ test "Event with an invalid signature in the send_join response should not cause
          }),
       )
    };
+
+test "Room version 6 rejects invalid JSON",
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
+
+      my $local_server_name = $outbound_client->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      $outbound_client->do_request_json(
+         method   => "GET",
+         hostname => $first_home_server,
+         uri      => "/v1/make_join/$room_id/$user_id",
+         params   => {
+            ver => ["6"],
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "make_join body", $body;
+
+         assert_json_keys( $body, qw( event ));
+
+         my $protoevent = $body->{event};
+
+         assert_json_keys( $protoevent, qw(
+            auth_events content depth room_id sender state_key type
+         ));
+
+         assert_json_nonempty_list( my $auth_events = $protoevent->{auth_events} );
+
+         assert_json_nonempty_list( $protoevent->{prev_events} );
+
+         assert_json_number( $protoevent->{depth} );
+
+         $protoevent->{room_id} eq $room_id or
+            die "Expected 'room_id' to be $room_id";
+         $protoevent->{sender} eq $user_id or
+            die "Expected 'sender' to be $user_id";
+         $protoevent->{state_key} eq $user_id or
+            die "Expected 'state_key' to be $user_id";
+         $protoevent->{type} eq "m.room.member" or
+            die "Expected 'type' to be 'm.room.member'";
+
+         assert_json_keys( my $content = $protoevent->{content}, qw( membership ) );
+         $content->{membership} eq "join" or
+            die "Expected 'membership' to be 'join'";
+
+         my %event = (
+            ( map { $_ => $protoevent->{$_} } qw(
+               auth_events content depth prev_events room_id sender
+               state_key type ) ),
+
+            origin           => $local_server_name,
+            origin_server_ts => $inbound_server->time_ms,
+         );
+         # Insert a "bad" value into the send join, in this case a float.
+         ${event}{contents}{bad_val} = 1.1;
+
+         $datastore->sign_event( \%event );
+
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $first_home_server,
+            uri      => "/v2/send_join/$room_id/xxx",
+
+            content => \%event,
+         )
+      })->main::expect_http_400
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "Join error response", $body;
+
+         assert_eq( $body->{errcode}, "M_BAD_JSON", 'responsecode' );
+         Future->done(1);
+      });
+   };
