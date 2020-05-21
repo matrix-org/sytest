@@ -16,15 +16,19 @@ test "Banned user is kicked and may not rejoin until unbanned",
 
          content => { user_id => $banned_user->user_id, reason => "testing" },
       )->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.member",
-            state_key => $banned_user->user_id,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
-         $body->{membership} eq "ban" or
-            die "Expected banned user membership to be 'ban'";
+         retry_until_success {
+            matrix_get_room_state( $creator, $room_id,
+               type      => "m.room.member",
+               state_key => $banned_user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
+               $body->{membership} eq "ban" or
+                  die "Expected banned user membership to be 'ban'";
 
+               Future->done( 1 )
+            })
+         }
+      })->then( sub {
          matrix_join_room( $banned_user, $room_id )
             ->main::expect_http_403;  # Must be unbanned first
       })->then( sub {
@@ -75,15 +79,19 @@ test "Remote banned user is kicked and may not rejoin until unbanned",
 
          content => { user_id => $banned_user->user_id, reason => "testing" },
       )->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.member",
-            state_key => $banned_user->user_id,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
-         $body->{membership} eq "ban" or
-            die "Expected banned user membership to be 'ban'";
+         retry_until_success {
+            matrix_get_room_state( $creator, $room_id,
+               type      => "m.room.member",
+               state_key => $banned_user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
+               $body->{membership} eq "ban" or
+                  die "Expected banned user membership to be 'ban'";
 
+               Future->done( 1 )
+            })
+         }
+      })->then( sub {
          repeat_until_true {
             matrix_get_room_state( $banned_user, $room_id,
                type      => "m.room.member",

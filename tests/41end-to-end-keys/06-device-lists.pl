@@ -735,7 +735,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $remote_user, $room_id );
+         matrix_join_room_synced( $remote_user, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -757,7 +757,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
             matrix_invite_user_to_room( $remote_user, $creator, $room_id )
          }
       })->then( sub {
-         matrix_join_room( $creator, $room_id );
+         matrix_join_room_synced( $creator, $room_id )
       })->then( sub {
          sync_until_user_in_device_list(
             $creator, $remote_user, msg => 'Second body',

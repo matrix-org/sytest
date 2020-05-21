@@ -78,16 +78,18 @@ test "Can invite existing 3pid with no ops into a private room",
             },
          );
       })->then( sub {
-         matrix_get_room_state( $inviter, $room_id,
-            type      => "m.room.member",
-            state_key => $invitee_mxid,
-         );
-      })->on_done( sub {
-         my ( $body ) = @_;
+         retry_until_success {
+            matrix_get_room_state( $inviter, $room_id,
+               type      => "m.room.member",
+               state_key => $invitee_mxid,
+            )->on_done( sub {
+               my ( $body ) = @_;
 
-         log_if_fail "Body", $body;
-         assert_eq( $body->{membership}, "invite",
-            'invited user membership' );
+               log_if_fail "Body", $body;
+               assert_eq( $body->{membership}, "invite",
+                  'invited user membership' );
+            })
+         }
       });
    };
 
@@ -236,7 +238,9 @@ sub can_invite_unbound_3pid
       log_if_fail "m.room.member invite", $body;
       assert_eq( $body->{third_party_invite}{display_name}, 'Bob', 'invite display name' );
 
-      matrix_join_room( $invitee, $room_id )
+      retry_until_success {
+         matrix_join_room( $invitee, $room_id )
+      }
    })->then( sub {
       matrix_get_room_state( $inviter, $room_id,
          type      => "m.room.member",
@@ -289,7 +293,9 @@ test "Can invite unbound 3pid over federation with users from both servers",
          log_if_fail "m.room.member invite", $body;
          assert_eq( $body->{third_party_invite}{display_name}, 'Bob', 'invite display name' );
 
-         matrix_join_room( $invitee, $room_id )
+         retry_until_success {
+            matrix_join_room( $invitee, $room_id )
+         }
       })->then( sub {
          await_event_for( $inviter, filter => sub {
             my ( $event ) = @_;
@@ -301,11 +307,13 @@ test "Can invite unbound 3pid over federation with users from both servers",
             return 1;
          })
       })->then( sub {
-         matrix_get_room_state( $inviter, $room_id,
-            type      => "m.room.member",
-            state_key => $invitee->user_id,
-         )
-      })->followed_by( assert_membership( "join" ) );
+         retry_until_success {
+            matrix_get_room_state( $inviter, $room_id,
+               type      => "m.room.member",
+               state_key => $invitee->user_id,
+            )->followed_by( assert_membership( "join" ) )
+         }
+      });
    };
 
 test "Can accept unbound 3pid invite after inviter leaves",
