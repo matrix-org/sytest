@@ -139,7 +139,7 @@ sub matrix_change_room_power_levels
       my ( $levels ) = @_;
       $func->( $levels );
 
-      matrix_put_room_state( $user, $room_id, type => "m.room.power_levels",
+      matrix_put_room_state_synced( $user, $room_id, type => "m.room.power_levels",
          content => $levels,
       );
    });
