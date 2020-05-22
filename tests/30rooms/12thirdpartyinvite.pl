@@ -242,11 +242,13 @@ sub can_invite_unbound_3pid
          matrix_join_room( $invitee, $room_id )
       }
    })->then( sub {
-      matrix_get_room_state( $inviter, $room_id,
-         type      => "m.room.member",
-         state_key => $invitee->user_id,
-      )
-   })->followed_by( assert_membership( "join" ) );
+      retry_until_success {
+         matrix_get_room_state( $inviter, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )->followed_by( assert_membership( "join" ) )
+      }
+   })
 }
 
 test "Can invite unbound 3pid over federation with users from both servers",
