@@ -156,8 +156,8 @@ test "Ephemeral messages received from servers are correctly expired",
 
       my $filter = '{"types":["m.room.message"]}';
 
-      matrix_invite_user_to_room( $local_user, $federated_user, $room_id )->then( sub {
-         matrix_join_room( $federated_user, $room_id )
+      matrix_invite_user_to_room_synced( $local_user, $federated_user, $room_id )->then( sub {
+         matrix_join_room_synced( $federated_user, $room_id )
       })->then( sub {
          my $now_ms = int( time() * 1000 );
 
