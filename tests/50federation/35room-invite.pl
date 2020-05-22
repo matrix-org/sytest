@@ -408,7 +408,6 @@ test "Inbound federation rejects invites which are not signed by the sender",
       my ( $outbound_client, $user, $sytest_user_id ) = @_;
 
       my $server_name = $user->server_name;
-      my $sytest_server_name = $outbound_client->server_name;
       my $datastore = $outbound_client->datastore;
 
       my $room = $datastore->create_room(
@@ -755,3 +754,34 @@ test "Inbound /v1/send_leave rejects leaves from other servers",
 
    # this test is a bit slooow
    timeout => 20;
+
+test "Inbound federation rejects invites which are not signed by the sender",
+   requires => [
+      $main::OUTBOUND_CLIENT, local_user_fixture(), federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $outbound_client, $user, $sytest_user_id ) = @_;
+
+      my $server_name = $user->server_name;
+      my $datastore = $outbound_client->datastore;
+
+      my $room = $datastore->create_room(
+         creator => $sytest_user_id,
+         room_version => "6",
+      );
+
+      my $invite = $room->create_event(
+         type => "m.room.member",
+         content   => {
+            membership => "invite",
+            bad_val => 1.1,
+         },
+         sender    => $sytest_user_id,
+         state_key => $user->user_id,
+      );
+
+      # Note that only v2 supports providing different room versions.
+      do_v2_invite_request( $room, $server_name, $outbound_client, $invite )
+      ->main::expect_http_400();
+   };

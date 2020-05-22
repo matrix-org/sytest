@@ -1062,7 +1062,7 @@ test "Event with an invalid signature in the send_join response should not cause
       )
    };
 
-test "Room version 6 rejects invalid JSON",
+test "Inbound: room version 6 rejects invalid JSON",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
                  federation_user_id_fixture() ],
@@ -1094,7 +1094,7 @@ test "Room version 6 rejects invalid JSON",
             auth_events content depth room_id sender state_key type
          ));
 
-         assert_json_nonempty_list( my $auth_events = $protoevent->{auth_events} );
+         assert_json_nonempty_list( $protoevent->{auth_events} );
 
          assert_json_nonempty_list( $protoevent->{prev_events} );
 
@@ -1130,14 +1130,13 @@ test "Room version 6 rejects invalid JSON",
             method   => "PUT",
             hostname => $first_home_server,
             uri      => "/v2/send_join/$room_id/xxx",
-
             content => \%event,
          )
       })->main::expect_http_400
       ->then( sub {
          my ( $response ) = @_;
          my $body = decode_json( $response->content );
-         log_if_fail "Join error response", $body;
+         log_if_fail "Send join error response", $body;
 
          assert_eq( $body->{errcode}, "M_BAD_JSON", 'responsecode' );
          Future->done(1);
