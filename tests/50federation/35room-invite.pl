@@ -755,7 +755,7 @@ test "Inbound /v1/send_leave rejects leaves from other servers",
    # this test is a bit slooow
    timeout => 20;
 
-test "Inbound federation rejects invites which are not signed by the sender",
+test "Inbound federation rejects invites which include invalid JSON for room version 6",
    requires => [
       $main::OUTBOUND_CLIENT, local_user_fixture(), federation_user_id_fixture(),
    ],
@@ -784,4 +784,100 @@ test "Inbound federation rejects invites which are not signed by the sender",
       # Note that only v2 supports providing different room versions.
       do_v2_invite_request( $room, $server_name, $outbound_client, $invite )
       ->main::expect_http_400();
+   };
+
+test "Inbound federation rejects invite rejections which include invalid JSON for room version 6",
+   requires => [
+      local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
+      $main::INBOUND_SERVER,
+      $main::OUTBOUND_CLIENT,
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $user, $room_id, $inbound_server, $outbound_client, $invitee_id ) = @_;
+
+      Future->needs_all(
+         matrix_invite_user_to_room( $user, $invitee_id, $room_id ),
+
+         $inbound_server->await_request_v2_invite( $room_id )->then( sub {
+            my ( $req, undef ) = @_;
+
+            my $body = $req->body_from_json;
+            log_if_fail "Invitation", $body;
+
+            my $invite = $body->{event};
+
+            # accept the invite event and send it back
+            $inbound_server->datastore->sign_event( $invite );
+
+            $req->respond_json(
+               { event => $invite }
+            );
+
+            Future->done;
+         }),
+      )->then( sub {
+         # now let's reject the event: start by asking the server to build us a
+         # leave event
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $user->server_name,
+            uri      => "/v1/make_leave/$room_id/$invitee_id",
+         );
+      })->then( sub {
+         my ( $resp ) = @_;
+         log_if_fail "/make_leave response", $resp;
+
+         my $protoevent = $resp->{event};
+         assert_json_keys( $protoevent, qw(
+            origin room_id sender type content state_key depth prev_events auth_events
+         ));
+
+         assert_eq( $protoevent->{type}, "m.room.member", 'event type' );
+         assert_eq( $protoevent->{room_id}, $room_id, 'event room_id' );
+         assert_eq( $protoevent->{sender}, $invitee_id, 'event sender' );
+         assert_eq( $protoevent->{content}{membership}, "leave", 'event content membership' );
+         assert_eq( $protoevent->{state_key}, $invitee_id, 'event state_key' );
+
+         my ( $event, $event_id ) = $inbound_server->datastore->create_event(
+            map { $_ => $protoevent->{$_} } qw(
+               auth_events content depth prev_events room_id sender
+               state_key type
+            ),
+         );
+
+         my %event = (
+            ( map { $_ => $protoevent->{$_} } qw(
+               auth_events content depth prev_events room_id sender
+               state_key type ) ),
+
+            origin           => $outbound_client->server_name,
+            origin_server_ts => $inbound_server->time_ms,
+         );
+
+         $inbound_server->datastore->sign_event( \%event );
+
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $user->server_name,
+            uri      => "/v2/send_leave/$room_id/xxx",
+            content => \%event,
+           )
+      })->then( sub {
+         my ( $resp ) = @_;
+         log_if_fail "/send_leave response", $resp;
+
+         assert_json_object( $resp );
+
+         # now wait for the leave event to come down /sync to $user
+         await_sync_timeline_contains(
+            $user, $room_id, check => sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.member";
+               return unless $event->{content}{membership} eq "leave";
+               return 1;
+            }
+         );
+      });
    };
