@@ -282,6 +282,9 @@ sub _start_monolith
       '--tls-key', $self->{paths}{tls_key},
    );
 
+   push(@command, '-api') if $ENV{'API'} == '1';
+   $output->diag( "Starting Dendrite with: @command" );
+
    return $self->_start_process_and_await_connectable(
       setup => [
          env => {
