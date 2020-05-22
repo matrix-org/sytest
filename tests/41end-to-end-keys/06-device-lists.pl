@@ -180,12 +180,12 @@ test "Can query remote device keys using POST after notification",
 
       my $room_id;
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user1, $user2, $room_id )
+         matrix_invite_user_to_room_synced( $user1, $user2, $room_id )
       })->then( sub {
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -236,12 +236,12 @@ test "Device deletion propagates over federation",
 
       my $room_id;
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user1, $user2, $room_id )
+         matrix_invite_user_to_room_synced( $user1, $user2, $room_id )
       })->then( sub {
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -295,12 +295,12 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
 
       my $room_id;
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $remote_leaver->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -344,18 +344,18 @@ test "If remote user leaves room we no longer receive device updates",
 
       my $room_id;
 
-      matrix_create_room( $creator )->then( sub {
+      matrix_create_room_synced( $creator )->then( sub {
          ( $room_id ) = @_;
 
          matrix_sync( $creator );
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $remote_leaver, $room_id )
       })->then( sub {
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $remote2, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $remote2, $room_id )
       })->then( sub {
-         matrix_join_room( $remote2, $room_id );
+         matrix_join_room_synced( $remote2, $room_id );
       })->then( sub {
          log_if_fail "Created and joined room";
 
@@ -442,10 +442,10 @@ test "Local device key changes appear in /keys/changes",
 
       my ( $room_id, $from_token, $to_token );
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -504,7 +504,7 @@ test "New users appear in /keys/changes",
 
       my ( $room_id, $from_token, $to_token );
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
          matrix_sync( $user1 );
@@ -556,12 +556,12 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
 
       my ( $room_id, $from_token, $to_token );
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $remote_leaver->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -618,12 +618,12 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
 
       my ( $room_id, $from_token );
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $other_user->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $other_user, $room_id );
+         matrix_join_room_synced( $other_user, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -674,12 +674,12 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
 
       my ( $room_id, $from_token );
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $other_user->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $other_user, $room_id );
+         matrix_join_room_synced( $other_user, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -729,7 +729,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
 
       my ( $room_id, $from_token, $to_token );
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $remote_user->user_id ],
          preset => "private_chat",  # Allow default PL users to invite others
       )->then( sub {
