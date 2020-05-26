@@ -1,4 +1,4 @@
-my $user_fixture = local_user_fixture();
+my $user_fixture = local_user_fixture( with_event => 1);
 
 my $room_fixture = room_fixture( $user_fixture );
 
