@@ -820,6 +820,8 @@ test "Inbound federation rejects invite rejections which include invalid JSON fo
       )->then( sub {
          # now let's reject the event: start by asking the server to build us a
          # leave event
+         #
+         # TODO Can we post a bad value here?
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $user->server_name,
@@ -848,13 +850,15 @@ test "Inbound federation rejects invite rejections which include invalid JSON fo
          );
 
          my %event = (
-            ( map { $_ => $protoevent->{$_} } qw(
+            (map {$_ => $protoevent->{$_}} qw(
                auth_events content depth prev_events room_id sender
-               state_key type ) ),
+               state_key type)),
 
             origin           => $outbound_client->server_name,
             origin_server_ts => $inbound_server->time_ms,
          );
+         # Insert a "bad" value into the send leave, in this case a float.
+         ${event}{contents}{bad_val} = 1.1;
 
          $inbound_server->datastore->sign_event( \%event );
 
@@ -864,20 +868,13 @@ test "Inbound federation rejects invite rejections which include invalid JSON fo
             uri      => "/v2/send_leave/$room_id/xxx",
             content => \%event,
            )
-      })->then( sub {
-         my ( $resp ) = @_;
-         log_if_fail "/send_leave response", $resp;
+      })->main::expect_http_400
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "Send join error response", $body;
 
-         assert_json_object( $resp );
-
-         # now wait for the leave event to come down /sync to $user
-         await_sync_timeline_contains(
-            $user, $room_id, check => sub {
-               my ( $event ) = @_;
-               return unless $event->{type} eq "m.room.member";
-               return unless $event->{content}{membership} eq "leave";
-               return 1;
-            }
-         );
+         assert_eq( $body->{errcode}, "M_BAD_JSON", 'responsecode' );
+         Future->done(1);
       });
    };
