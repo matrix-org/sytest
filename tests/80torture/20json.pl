@@ -50,6 +50,9 @@ test "Invalid JSON floats",
 # Special values (like inf/nan) should be rejected. Note that these values are
 # not technically valid JSON, but extensions that some programming languages
 # support automatically.
+#
+# Note that these tests don't explictely check for M_BAD_JSON since the
+# homeserver's parser might not even be able to parse the string.
 test "Invalid JSON special values",
    requires => [ local_user_and_room_fixtures(
       room_opts => { room_version => "6" }
@@ -69,7 +72,7 @@ test "Invalid JSON special values",
                msgtype => "sytest.dummy",
                body    => "NaN" + 0,
             },
-         )->main::expect_bad_json,
+         )->main::expect_http_400,
 
          do_request_json_for( $user,
             method  => "POST",
@@ -78,7 +81,7 @@ test "Invalid JSON special values",
                msgtype => "sytest.dummy",
                body    => "inf" + 0,
             },
-         )->main::expect_bad_json,
+         )->main::expect_http_400,
 
          do_request_json_for( $user,
             method  => "POST",
@@ -87,7 +90,7 @@ test "Invalid JSON special values",
                msgtype => "sytest.dummy",
                body    => "-inf" + 0,
             },
-         )->main::expect_bad_json,
+         )->main::expect_http_400,
 
          # Try some Python magic values.
          $user->http->do_request(
@@ -98,7 +101,7 @@ test "Invalid JSON special values",
             },
             content      => '{"msgtype": "sytest.dummy", "body": Infinity}',
             content_type => "application/json",
-         )->main::expect_bad_json,
+         )->main::expect_http_400,
 
          $user->http->do_request(
             method       => "POST",
@@ -108,7 +111,7 @@ test "Invalid JSON special values",
             },
             content      => '{"msgtype": "sytest.dummy", "body": -Infinity}',
             content_type => "application/json",
-         )->main::expect_bad_json,
+         )->main::expect_http_400,
 
          $user->http->do_request(
             method       => "POST",
@@ -118,6 +121,6 @@ test "Invalid JSON special values",
             },
             content      => '{"msgtype": "sytest.dummy", "body": NaN}',
             content_type => "application/json",
-         )->main::expect_bad_json,
+         )->main::expect_http_400,
       );
    };
