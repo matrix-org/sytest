@@ -786,6 +786,52 @@ test "Inbound federation rejects invites which include invalid JSON for room ver
       ->main::expect_http_400();
    };
 
+test "Outbound federation rejects invite response which include invalid JSON for room version 6",
+   requires => [
+      local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
+      $main::INBOUND_SERVER,
+      $main::OUTBOUND_CLIENT,
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ($user, $room_id, $inbound_server, $outbound_client, $invitee_id) = @_;
+
+      Future->needs_all(
+         matrix_invite_user_to_room($user, $invitee_id, $room_id),
+
+         $inbound_server->await_request_v2_invite($room_id)->then(sub {
+            my ($req, undef) = @_;
+
+            my $body = $req->body_from_json;
+            log_if_fail "Invitation", $body;
+
+            my $invite = $body->{event};
+            # Add a bad value into the response.
+            $invite->{bad_val} = 1.1;
+
+            log_if_fail "Invitation 2", $invite;
+
+            # accept the invite event and send it back
+            $inbound_server->datastore->sign_event($invite);
+
+            $req->respond_json(
+               { event => $invite }
+            );
+
+            Future->done;
+         }),
+      )->main::expect_http_400
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         log_if_fail "Send join error response", $body;
+
+         assert_eq( $body->{errcode}, "M_BAD_JSON", 'responsecode' );
+         Future->done(1);
+      });
+   };
+
 test "Inbound federation rejects invite rejections which include invalid JSON for room version 6",
    requires => [
       local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
@@ -821,7 +867,8 @@ test "Inbound federation rejects invite rejections which include invalid JSON fo
          # now let's reject the event: start by asking the server to build us a
          # leave event
          #
-         # TODO Can we post a bad value here?
+         # Note that it doesn't make sense to try to use a bad JSON value here
+         # since the endpoint doesn't accept any JSON anyway.
          $outbound_client->do_request_json(
             method   => "GET",
             hostname => $user->server_name,
