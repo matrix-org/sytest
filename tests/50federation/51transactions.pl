@@ -1,14 +1,10 @@
 test "Server correctly handles transactions that break edu limits",
-   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+   requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures(),
-                 federation_user_id_fixture(), room_alias_name_fixture() ],
+                 federation_user_id_fixture() ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id, $room_alias_name ) = @_;
-
-      my $remote_server_name = $inbound_server->server_name;
-
-      my $room_alias = "#$room_alias_name:$remote_server_name";
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
 
       $outbound_client->join_room(
          server_name => $creator->server_name,
@@ -48,5 +44,44 @@ test "Server correctly handles transactions that break edu limits",
                 Future->done( 1 );
             }),
          );
+      });
+   };
+
+# This currently tests that the entire transaction is rejected if a single bad
+# PDU is sent in. It is unclear if this is the correct behavior or not.
+#
+# See https://github.com/matrix-org/synapse/issues/7543
+test "Server rejects invalid JSON in a version 6 room",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+
+      $outbound_client->join_room(
+         server_name => $creator->server_name,
+         room_id     => $room_id,
+         user_id     => $user_id,
+      )->then( sub {
+         my ( $room ) = @_;
+
+         my $new_event = $room->create_and_insert_event(
+             type => "m.room.message",
+
+             sender  => $user_id,
+             content => {
+                body    => "Message 1",
+                bad_val => 1.1,
+             },
+         );
+
+         my @pdus = ( $new_event );
+
+         # Send the transaction to the client and expect a fail
+         $outbound_client->send_transaction(
+             pdus => \@pdus,
+             destination => $creator->server_name,
+         )->main::expect_bad_json();
       });
    };
