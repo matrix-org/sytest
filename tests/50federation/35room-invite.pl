@@ -783,7 +783,7 @@ test "Inbound federation rejects invites which include invalid JSON for room ver
 
       # Note that only v2 supports providing different room versions.
       do_v2_invite_request( $room, $server_name, $outbound_client, $invite )
-      ->main::expect_http_400();
+      ->main::expect_bad_json;
    };
 
 test "Outbound federation rejects invite response which include invalid JSON for room version 6",
@@ -821,15 +821,7 @@ test "Outbound federation rejects invite response which include invalid JSON for
 
             Future->done;
          }),
-      )->main::expect_http_400
-      ->then( sub {
-         my ( $response ) = @_;
-         my $body = decode_json( $response->content );
-         log_if_fail "Send join error response", $body;
-
-         assert_eq( $body->{errcode}, "M_BAD_JSON", 'responsecode' );
-         Future->done(1);
-      });
+      )->main::expect_bad_json;
    };
 
 test "Inbound federation rejects invite rejections which include invalid JSON for room version 6",
@@ -915,13 +907,5 @@ test "Inbound federation rejects invite rejections which include invalid JSON fo
             uri      => "/v2/send_leave/$room_id/xxx",
             content => \%event,
            )
-      })->main::expect_http_400
-      ->then( sub {
-         my ( $response ) = @_;
-         my $body = decode_json( $response->content );
-         log_if_fail "Send join error response", $body;
-
-         assert_eq( $body->{errcode}, "M_BAD_JSON", 'responsecode' );
-         Future->done(1);
-      });
+      })->main::expect_bad_json;
    };

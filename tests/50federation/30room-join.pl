@@ -1062,6 +1062,24 @@ test "Event with an invalid signature in the send_join response should not cause
       )
    };
 
+push @EXPORT, qw( expect_bad_json );
+
+sub expect_bad_json {
+   my ($f) = @_;
+
+   $f->main::expect_http_400
+   ->then(sub {
+      # done
+      my ($response) = @_;
+      log_if_fail "Response", $response;
+      my $body = decode_json($response->content);
+      log_if_fail "Body", $body;
+
+      assert_eq($body->{errcode}, "M_BAD_JSON", 'responsecode');
+      Future->done(1);
+   });
+};
+
 test "Inbound: room version 6 rejects invalid JSON",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
@@ -1132,13 +1150,5 @@ test "Inbound: room version 6 rejects invalid JSON",
             uri      => "/v2/send_join/$room_id/xxx",
             content => \%event,
          )
-      })->main::expect_http_400
-      ->then( sub {
-         my ( $response ) = @_;
-         my $body = decode_json( $response->content );
-         log_if_fail "Send join error response", $body;
-
-         assert_eq( $body->{errcode}, "M_BAD_JSON", 'responsecode' );
-         Future->done(1);
-      });
+      })->main::expect_bad_json;
    };

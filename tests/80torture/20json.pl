@@ -15,7 +15,7 @@ test "Invalid JSON integers",
                msgtype => "sytest.dummy",
                body    => 9007199254740992,  # 2 ** 53
             },
-         )->followed_by( \&main::expect_http_400 ),
+         )->main::expect_bad_json,
 
          do_request_json_for( $user,
             method  => "POST",
@@ -24,7 +24,7 @@ test "Invalid JSON integers",
                msgtype => "sytest.dummy",
                body    => -9007199254740992,  # -2 ** 53
             },
-         )->followed_by( \&main::expect_http_400 ),
+         )->main::expect_bad_json,
       );
    };
 
@@ -44,7 +44,7 @@ test "Invalid JSON floats",
             msgtype => "sytest.dummy",
             body    => 1.1,
          },
-      )->followed_by( \&main::expect_http_400 );
+      )->main::expect_bad_json;
    };
 
 # Special values (like inf/nan) should be rejected. Note that these values are
@@ -69,7 +69,7 @@ test "Invalid JSON special values",
                msgtype => "sytest.dummy",
                body    => "NaN" + 0,
             },
-         )->followed_by( \&main::expect_http_400 ),
+         )->main::expect_bad_json,
 
          do_request_json_for( $user,
             method  => "POST",
@@ -78,7 +78,7 @@ test "Invalid JSON special values",
                msgtype => "sytest.dummy",
                body    => "inf" + 0,
             },
-         )->followed_by( \&main::expect_http_400 ),
+         )->main::expect_bad_json,
 
          do_request_json_for( $user,
             method  => "POST",
@@ -87,7 +87,7 @@ test "Invalid JSON special values",
                msgtype => "sytest.dummy",
                body    => "-inf" + 0,
             },
-         )->followed_by( \&main::expect_http_400 ),
+         )->main::expect_bad_json,
 
          # Try some Python magic values.
          $user->http->do_request(
@@ -98,7 +98,7 @@ test "Invalid JSON special values",
             },
             content      => '{"msgtype": "sytest.dummy", "body": Infinity}',
             content_type => "application/json",
-         )->followed_by( \&main::expect_http_400 ),
+         )->main::expect_bad_json,
 
          $user->http->do_request(
             method       => "POST",
@@ -108,7 +108,7 @@ test "Invalid JSON special values",
             },
             content      => '{"msgtype": "sytest.dummy", "body": -Infinity}',
             content_type => "application/json",
-         )->followed_by( \&main::expect_http_400 ),
+         )->main::expect_bad_json,
 
          $user->http->do_request(
             method       => "POST",
@@ -118,6 +118,6 @@ test "Invalid JSON special values",
             },
             content      => '{"msgtype": "sytest.dummy", "body": NaN}',
             content_type => "application/json",
-         )->followed_by( \&main::expect_http_400 ),
+         )->main::expect_bad_json,
       );
    };
