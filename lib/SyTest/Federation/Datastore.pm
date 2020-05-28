@@ -268,10 +268,13 @@ sub get_backfill_events
       my $event = eval { $self->get_event( $id ) }
          or next;
 
+      my $room = $self->get_room( $event->{room_id} ) or
+         croak "Unknown room $event->{room_id}";
+
       push @events, $event;
 
       push @event_ids, grep { !$exclude{$_} }
-                       map { $_->[0] } @{ $event->{prev_events} };
+                       @{ $room->event_ids_from_refs( $event->{prev_events} ) };
 
       # Don't include this event if we encounter it again
       $exclude{$id} = 1;
