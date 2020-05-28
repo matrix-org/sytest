@@ -360,6 +360,8 @@ test "GET /rooms/:room_id/state fetches entire room state",
       matrix_create_room_synced( $user )->then( sub {
          ( $room_id ) = @_;
 
+         matrix_sync( $user );
+      })->then( sub {
          do_request_json_for( $user,
             method => "GET",
             uri    => "/r0/rooms/$room_id/state",

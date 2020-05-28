@@ -37,6 +37,8 @@ test "POST /createRoom makes a private room",
    do => sub {
       my ( $user ) = @_;
 
+      my ( $body );
+
       do_request_json_for( $user,
          method => "POST",
          uri    => "/r0/createRoom",
@@ -45,8 +47,10 @@ test "POST /createRoom makes a private room",
             visibility => "private",
          },
       )->then( sub {
-         my ( $body ) = @_;
+         ( $body ) = @_;
 
+         matrix_sync( $user );
+      })->then( sub {
          assert_json_keys( $body, qw( room_id ));
          assert_json_nonempty_string( $body->{room_id} );
 
