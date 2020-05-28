@@ -357,7 +357,10 @@ test "GET /rooms/:room_id/state fetches entire room state",
 
       my ( $room_id );
 
-      matrix_create_room_synced( $user )->then( sub {
+      matrix_create_room_synced(
+         $user,
+         name => "Test",
+      )->then( sub {
          ( $room_id ) = @_;
 
          matrix_sync( $user );
