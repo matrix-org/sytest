@@ -348,17 +348,23 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
    };
 
 test "GET /rooms/:room_id/state fetches entire room state",
-   requires => [ $user_fixture, $room_fixture ],
+   requires => [ $user_fixture ],
 
    proves => [qw( can_get_room_all_state )],
 
    check => sub {
-      my ( $user, $room_id, undef ) = @_;
+      my ( $user, undef ) = @_;
 
-      do_request_json_for( $user,
-         method => "GET",
-         uri    => "/r0/rooms/$room_id/state",
-      )->then( sub {
+      my ( $room_id );
+
+      matrix_create_room_synced( $user )->then( sub {
+         ( $room_id ) = @_;
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/r0/rooms/$room_id/state",
+         );
+      })->then( sub {
          my ( $body ) = @_;
 
          assert_json_list( $body );
