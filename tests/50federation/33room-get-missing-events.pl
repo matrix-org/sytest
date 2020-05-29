@@ -13,7 +13,7 @@ test "Outbound federation can request missing events",
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
-      my $missing_event;
+      my $missing_event_id;
 
       $outbound_client->join_room(
          server_name => $first_home_server,
@@ -27,7 +27,7 @@ test "Outbound federation can request missing events",
          my $latest_event = $room->get_current_state_event( "m.room.member", $user_id );
 
          # Generate but don't send an event
-         $missing_event = $room->create_and_insert_event(
+         my $missing_event = $room->create_and_insert_event(
             type => "m.room.message",
 
             sender  => $user_id,
@@ -35,6 +35,7 @@ test "Outbound federation can request missing events",
                body => "Message 1",
             },
          );
+         $missing_event_id = $room->id_for_event( $missing_event );
 
          # Generate another one and do send it so it will refer to the
          # previous in its prev_events field
@@ -43,9 +44,7 @@ test "Outbound federation can request missing events",
 
             # This would be done by $room->create_and_insert_event anyway but lets be
             #   sure for this test
-            prev_events => [
-               [ $missing_event->{event_id}, $missing_event->{hashes} ],
-            ],
+            prev_events => $room->make_event_refs( $missing_event ),
 
             sender  => $user_id,
             content => {
@@ -65,13 +64,13 @@ test "Outbound federation can request missing events",
                assert_json_list( my $earliest = $body->{earliest_events} );
                @$earliest == 1 or
                   die "Expected a single 'earliest_event' ID";
-               assert_eq( $earliest->[0], $latest_event->{event_id},
+               assert_eq( $earliest->[0], $room->id_for_event( $latest_event ),
                   'earliest_events[0]' );
 
                assert_json_list( my $latest = $body->{latest_events} );
                @$latest == 1 or
                   die "Expected a single 'latest_events' ID";
-               assert_eq( $latest->[0], $sent_event->{event_id},
+               assert_eq( $latest->[0], $room->id_for_event( $sent_event ),
                   'latest_events[0]' );
 
                my @events = $datastore->get_backfill_events(
@@ -97,7 +96,7 @@ test "Outbound federation can request missing events",
          await_event_for( $creator, filter => sub {
             my ( $event ) = @_;
             return $event->{type} eq "m.room.message" &&
-                   $event->{event_id} eq $missing_event->{event_id};
+                   $event->{event_id} eq $missing_event_id;
          });
       });
    };
@@ -408,5 +407,122 @@ test "outliers whose auth_events are in a different room are correctly rejected"
             die "user became a member of the room without an invite";
          }
          Future->done;
+      });
+   };
+
+test "Outbound federation will ignore a missing event with bad JSON for room version 6",
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 local_user_and_room_fixtures(
+                    user_opts => { with_events => 1 },
+                    room_opts => { room_version => "6" },
+                   ),
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
+
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      my $missing_event_id;
+
+      $outbound_client->join_room(
+         server_name => $first_home_server,
+         room_id     => $room_id,
+         user_id     => $user_id,
+         version     => "6",
+      )->then( sub {
+         my ( $room ) = @_;
+
+         # TODO: We happen to know the latest event in the server should be my
+         #   m.room.member state event, but that's a bit fragile
+         my $latest_event = $room->get_current_state_event( "m.room.member", $user_id );
+
+         log_if_fail "Latest event", $latest_event;
+
+         # Generate but don't send an event
+         my $missing_event = $room->create_and_insert_event(
+            type => "m.room.message",
+
+            sender  => $user_id,
+            content => {
+               body => "Message 1",
+            },
+         );
+         $missing_event_id = $room->id_for_event( $missing_event );
+
+         log_if_fail "Missing event", $missing_event;
+
+         # Generate another one and do send it so it will refer to the
+         # previous in its prev_events field
+         my $sent_event = $room->create_and_insert_event(
+            type => "m.room.message",
+
+            # This would be done by $room->create_and_insert_event anyway but lets be
+            #   sure for this test
+            prev_events => $room->make_event_refs( $missing_event ),
+
+            sender  => $user_id,
+            content => {
+               body => "Message 2",
+            },
+         );
+
+         log_if_fail "Sent event", $sent_event;
+
+         Future->needs_all(
+            $inbound_server->await_request_get_missing_events( $room_id )
+            ->then( sub {
+               my ( $req ) = @_;
+               my $body = $req->body_from_json;
+
+               log_if_fail "Body", $body;
+
+               assert_json_keys( $body, qw( earliest_events latest_events limit ));
+               # TODO: min_depth but I have no idea what it does
+
+               assert_json_list( my $earliest = $body->{earliest_events} );
+               @$earliest == 1 or
+                  die "Expected a single 'earliest_event' ID";
+               assert_eq( $earliest->[0], $room->id_for_event( $latest_event ),
+                  'earliest_events[0]' );
+
+               assert_json_list( my $latest = $body->{latest_events} );
+               @$latest == 1 or
+                  die "Expected a single 'latest_events' ID";
+               assert_eq( $latest->[0], $room->id_for_event( $sent_event ),
+                  'latest_events[0]' );
+
+               my @events = $datastore->get_backfill_events(
+                  start_at    => $latest,
+                  stop_before => $earliest,
+                  limit       => $body->{limit},
+               );
+
+               log_if_fail "Backfilling", @events;
+
+               $req->respond_json( {
+                  events => \@events,
+               } );
+
+               Future->done(1);
+            }),
+
+            $outbound_client->send_event(
+               event       => $sent_event,
+               destination => $first_home_server,
+            ),
+         );
+      })->then( sub {
+         # creator user should eventually receive the missing event
+         await_event_for( $creator, filter => sub {
+            my ( $event ) = @_;
+
+            log_if_fail "Event", $event;
+
+            return $event->{type} eq "m.room.message" &&
+                   $event->{event_id} eq $missing_event_id;
+         });
       });
    };
