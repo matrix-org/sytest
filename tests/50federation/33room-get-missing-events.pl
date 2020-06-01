@@ -10,7 +10,6 @@ test "Outbound federation can request missing events",
       my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
       my $first_home_server = $creator->server_name;
 
-      my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
       my $missing_event_id;
@@ -422,7 +421,6 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
       my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
       my $first_home_server = $creator->server_name;
 
-      my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
       $outbound_client->join_room(
