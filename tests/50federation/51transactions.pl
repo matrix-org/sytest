@@ -82,6 +82,6 @@ test "Server rejects invalid JSON in a version 6 room",
          $outbound_client->send_transaction(
              pdus => \@pdus,
              destination => $creator->server_name,
-         )->main::expect_m_bad_json();
+         )->main::expect_m_bad_json;
       });
    };

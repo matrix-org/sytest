@@ -553,7 +553,7 @@ test "Outbound federation rejects backfill containing invalid JSON for events in
                });
             };
 
-            Future->done(1);
+            Future->done;
          }),
       )
    };

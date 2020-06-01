@@ -505,7 +505,7 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
                   events => \@events,
                } );
 
-               Future->done(1);
+               Future->done;
             }),
 
             # Can't use send_event here because that checks none were rejected.
