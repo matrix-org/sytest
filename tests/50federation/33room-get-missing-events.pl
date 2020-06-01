@@ -425,8 +425,6 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
-      my $missing_event_id;
-
       $outbound_client->join_room(
          server_name => $first_home_server,
          room_id     => $room_id,
@@ -447,10 +445,10 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
 
             sender  => $user_id,
             content => {
-               body => "Message 1",
+               body    => "Message 1",
+               bad_val => 1.1,
             },
          );
-         $missing_event_id = $room->id_for_event( $missing_event );
 
          log_if_fail "Missing event", $missing_event;
 
@@ -468,6 +466,7 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
                body => "Message 2",
             },
          );
+         my $sent_event_id = $room->id_for_event( $sent_event );
 
          log_if_fail "Sent event", $sent_event;
 
@@ -491,7 +490,7 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
                assert_json_list( my $latest = $body->{latest_events} );
                @$latest == 1 or
                   die "Expected a single 'latest_events' ID";
-               assert_eq( $latest->[0], $room->id_for_event( $sent_event ),
+               assert_eq( $latest->[0], $sent_event_id,
                   'latest_events[0]' );
 
                my @events = $datastore->get_backfill_events(
@@ -506,23 +505,30 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
                   events => \@events,
                } );
 
+               log_if_fail "Done here";
+
                Future->done(1);
             }),
 
-            $outbound_client->send_event(
-               event       => $sent_event,
+            # Can't use send_event here because that checks none were rejected.
+            $outbound_client->send_transaction(
                destination => $first_home_server,
-            ),
+               pdus => [ $sent_event ],
+            )->then( sub {
+               my ( $body ) = @_;
+
+               log_if_fail "Send response", $body;
+
+               assert_json_keys( $body, 'pdus' );
+               # 'pdus' is a map from event id to error details.
+               my $pdus = $body->{pdus};
+
+               # Sending the event fails since fetching the event results in
+               # invalid JSON.
+               assert_json_keys( $pdus, $sent_event_id );
+
+               Future->done;
+            }),
          );
-      })->then( sub {
-         # creator user should eventually receive the missing event
-         await_event_for( $creator, filter => sub {
-            my ( $event ) = @_;
-
-            log_if_fail "Event", $event;
-
-            return $event->{type} eq "m.room.message" &&
-                   $event->{event_id} eq $missing_event_id;
-         });
       });
    };
