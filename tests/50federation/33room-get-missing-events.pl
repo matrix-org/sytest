@@ -1,7 +1,6 @@
 test "Outbound federation can request missing events",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(
-                    user_opts => { with_events => 1 },
                     room_opts => { room_version => "1" },
                    ),
                  federation_user_id_fixture() ],
@@ -415,7 +414,6 @@ test "outliers whose auth_events are in a different room are correctly rejected"
 test "Outbound federation will ignore a missing event with bad JSON for room version 6",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(
-                    user_opts => { with_events => 1 },
                     room_opts => { room_version => "6" },
                    ),
                  federation_user_id_fixture() ],
