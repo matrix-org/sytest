@@ -1063,7 +1063,7 @@ test "Event with an invalid signature in the send_join response should not cause
    };
 
 
-test "Inbound: room version 6 rejects invalid JSON",
+test "Inbound: send_join rejects invalid JSON for room version 6 rejects",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
                  federation_user_id_fixture() ],
@@ -1087,32 +1087,8 @@ test "Inbound: room version 6 rejects invalid JSON",
 
          log_if_fail "make_join body", $body;
 
-         assert_json_keys( $body, qw( event ));
-
-         my $protoevent = $body->{event};
-
-         assert_json_keys( $protoevent, qw(
-            auth_events content depth room_id sender state_key type
-         ));
-
-         assert_json_nonempty_list( $protoevent->{auth_events} );
-
-         assert_json_nonempty_list( $protoevent->{prev_events} );
-
-         assert_json_number( $protoevent->{depth} );
-
-         $protoevent->{room_id} eq $room_id or
-            die "Expected 'room_id' to be $room_id";
-         $protoevent->{sender} eq $user_id or
-            die "Expected 'sender' to be $user_id";
-         $protoevent->{state_key} eq $user_id or
-            die "Expected 'state_key' to be $user_id";
-         $protoevent->{type} eq "m.room.member" or
-            die "Expected 'type' to be 'm.room.member'";
-
-         assert_json_keys( my $content = $protoevent->{content}, qw( membership ) );
-         $content->{membership} eq "join" or
-            die "Expected 'membership' to be 'join'";
+         # It is assumed that the make_join response is sane, other tests ensure
+         # this behavior.
 
          my %event = (
             ( map { $_ => $protoevent->{$_} } qw(
