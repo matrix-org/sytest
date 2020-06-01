@@ -15,7 +15,7 @@ test "Invalid JSON integers",
                msgtype => "sytest.dummy",
                body    => 9007199254740992,  # 2 ** 53
             },
-         )->main::expect_bad_json,
+         )->main::expect_m_bad_json,
 
          do_request_json_for( $user,
             method  => "POST",
@@ -24,7 +24,7 @@ test "Invalid JSON integers",
                msgtype => "sytest.dummy",
                body    => -9007199254740992,  # -2 ** 53
             },
-         )->main::expect_bad_json,
+         )->main::expect_m_bad_json,
       );
    };
 
@@ -44,7 +44,7 @@ test "Invalid JSON floats",
             msgtype => "sytest.dummy",
             body    => 1.1,
          },
-      )->main::expect_bad_json;
+      )->main::expect_m_bad_json;
    };
 
 # Special values (like inf/nan) should be rejected. Note that these values are
