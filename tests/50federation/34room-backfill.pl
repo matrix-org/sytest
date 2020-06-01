@@ -17,6 +17,7 @@ test "Outbound federation can backfill events",
          creator => $creator_id,
          alias   => $room_alias,
       );
+      my $room_id;
 
       # Create some past messages to backfill from
       $room->create_and_insert_event(
@@ -65,68 +66,71 @@ test "Outbound federation can backfill events",
          )->then( sub {
             my ( $body ) = @_;
 
-            my $room_id = $body->{room_id};
+            $room_id = $body->{room_id};
 
-            # It make take some time for the join to propagate, so we need to
-            # retry on failure.
-            retry_until_success {
+            # wait for it to arrive
+            await_sync_timeline_contains(
+               $user, $room_id,
+               check => sub {
+                  $_[0]->{type} eq "m.room.member"
+               },
+            );
+         })->then( sub {
+            # 10 m.room.message events + my own m.room.member
+            my $want_count = 11;
 
-               # 10 m.room.message events + my own m.room.member
-               my $want_count = 11;
+            # We may have to get more than once to have all 11 events
 
-               # We may have to get more than once to have all 11 events
+            my $token;
+            my @events;
 
-               my $token;
-               my @events;
+            (
+               repeat {
+                  matrix_get_room_messages( $user, $room_id,
+                     limit => $want_count - scalar(@events),
+                     from  => $token,
+                  )->then( sub {
+                     my ( $body ) = @_;
+                     push @events, @{ $body->{chunk} };
 
-               (
-                  repeat {
-                     matrix_get_room_messages( $user, $room_id,
-                        limit => $want_count - scalar(@events),
-                        from  => $token,
-                     )->then( sub {
-                        my ( $body ) = @_;
-                        push @events, @{ $body->{chunk} };
+                     $token = $body->{end};
+                     Future->done;
+                  });
+               } while => sub { !shift->failure and @events < $want_count }
+            )->then( sub {
+               log_if_fail "Events", \@events;
 
-                        $token = $body->{end};
-                        Future->done;
-                     });
-                  } while => sub { !shift->failure and @events < $want_count }
-               )->then( sub {
-                  log_if_fail "Events", \@events;
+               assert_json_keys( $events[0], qw( type event_id room_id ));
+               assert_eq( $events[0]->{type}, "m.room.member",
+                  'events[0] type' );
 
-                  assert_json_keys( $events[0], qw( type event_id room_id ));
-                  assert_eq( $events[0]->{type}, "m.room.member",
-                     'events[0] type' );
+               my $member_event = shift @events;
+               assert_json_keys( $member_event,
+                  qw( type event_id room_id sender state_key content ));
 
-                  my $member_event = shift @events;
-                  assert_json_keys( $member_event,
-                     qw( type event_id room_id sender state_key content ));
+               assert_eq( $member_event->{type}, "m.room.member",
+                  'member event type' );
+               assert_eq( $member_event->{room_id}, $room_id,
+                  'member event room_id' );
+               assert_eq( $member_event->{sender}, $user->user_id,
+                  'member event sender' );
+               assert_eq( $member_event->{state_key}, $user->user_id,
+                  'member event state_key' );
+               assert_eq( $member_event->{content}{membership}, "join",
+                  'member event content.membership' );
 
-                  assert_eq( $member_event->{type}, "m.room.member",
-                     'member event type' );
-                  assert_eq( $member_event->{room_id}, $room_id,
-                     'member event room_id' );
-                  assert_eq( $member_event->{sender}, $user->user_id,
-                     'member event sender' );
-                  assert_eq( $member_event->{state_key}, $user->user_id,
-                     'member event state_key' );
-                  assert_eq( $member_event->{content}{membership}, "join",
-                     'member event content.membership' );
+               foreach my $message ( @events ) {
+                  assert_json_keys( $message, qw( type event_id room_id sender ));
+                  assert_eq( $message->{type}, "m.room.message",
+                     'message type' );
+                  assert_eq( $message->{room_id}, $room_id,
+                     'message room_id' );
+                  assert_eq( $message->{sender}, $creator_id,
+                     'message sender' );
+               }
 
-                  foreach my $message ( @events ) {
-                     assert_json_keys( $message, qw( type event_id room_id sender ));
-                     assert_eq( $message->{type}, "m.room.message",
-                        'message type' );
-                     assert_eq( $message->{room_id}, $room_id,
-                        'message room_id' );
-                     assert_eq( $message->{sender}, $creator_id,
-                        'message sender' );
-                  }
-
-                  Future->done(1);
-               });
-            }
+               Future->done(1);
+            });
          }),
       )
    };
