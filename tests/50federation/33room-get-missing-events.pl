@@ -445,6 +445,7 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
             sender  => $user_id,
             content => {
                body    => "Message 1",
+               # Insert a bad value here so that this event cannot be fetched.
                bad_val => 1.1,
             },
          );
@@ -504,8 +505,6 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
                   events => \@events,
                } );
 
-               log_if_fail "Done here";
-
                Future->done(1);
             }),
 
@@ -523,8 +522,9 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
                my $pdus = $body->{pdus};
 
                # Sending the event fails since fetching the event results in
-               # invalid JSON.
+               # invalid JSON, thus we expect an error for the sent PDU.
                assert_json_keys( $pdus, $sent_event_id );
+               assert_json_keys( $pdus->{$sent_event_id}, qw( error ) );
 
                Future->done;
             }),
