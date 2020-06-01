@@ -11,7 +11,7 @@ test "Outbound federation can backfill events",
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
-      my $room_alias = "#50fed-31backfill:$local_server_name";
+      my $room_alias = "#50fed-34backfill:$local_server_name";
 
       my $room = $datastore->create_room(
          creator => $creator_id,
@@ -457,7 +457,7 @@ test "Outbound federation rejects backfill containing invalid JSON for events in
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
-      my $room_alias = "#50fed-31backfill:$local_server_name";
+      my $room_alias = "#50fed-34backfill-bad-json:$local_server_name";
 
       my $room = $datastore->create_room(
          creator      => $creator_id,
