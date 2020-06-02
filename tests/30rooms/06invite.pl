@@ -42,7 +42,7 @@ multi_test "Can invite users to invite-only rooms",
          $creator_fixture,
          local_user_fixture(),
          inviteonly_room_fixture( creator => $creator_fixture ),
-         qw( can_invite_room ),
+         qw( can_invite_room deprecated_endpoints ),
       ];
    },
 
@@ -79,7 +79,8 @@ multi_test "Can invite users to invite-only rooms",
 
 test "Uninvited users cannot join the room",
    requires => [ local_user_fixture(),
-                 inviteonly_room_fixture( creator => local_user_fixture() ) ],
+                 inviteonly_room_fixture( creator => local_user_fixture() ),
+				 qw ( deprecated_endpoints ) ],
 
    check => sub {
       my ( $uninvited, $room_id ) = @_;
@@ -95,7 +96,8 @@ test "Invited user can reject invite",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-      }
+      },
+	  qw ( deprecated_endpoints )
    ],
    do => \&invited_user_can_reject_invite;
 
@@ -104,7 +106,8 @@ test "Invited user can reject invite over federation",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-      }
+      },
+	  qw ( deprecated_endpoints )
    ],
    do => \&invited_user_can_reject_invite;
 
@@ -114,7 +117,8 @@ test "Invited user can reject invite over federation several times",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-      }
+      },
+	  qw ( deprecated_endpoints )
    ],
    do => sub {
       my ( $invitee, $creator, $room_id ) = @_;
@@ -169,7 +173,8 @@ test "Invited user can reject invite for empty room",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-      }
+      },
+	  qw ( deprecated_endpoints )
    ],
    do => \&invited_user_can_reject_invite_for_empty_room;
 
@@ -178,7 +183,8 @@ test "Invited user can reject invite over federation for empty room",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-      }
+      },
+	  qw ( deprecated_endpoints )
    ],
    do => \&invited_user_can_reject_invite_for_empty_room;
 
@@ -210,7 +216,8 @@ test "Invited user can reject local invite after originator leaves",
       do {
          my $creator = local_user_fixture();
          $creator, inviteonly_room_fixture( creator => $creator );
-      }
+      },
+	  qw ( deprecated_endpoints )
    ],
    do => sub {
       my ( $invitee, $creator, $room_id ) = @_;
