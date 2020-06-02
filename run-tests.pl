@@ -182,19 +182,19 @@ Options:
    -n, --no-tls                 - prefer plaintext client connections where
                                   possible
 
-   --exclude-deprecated         - don't run tests that claim to use deprecated
+       --exclude-deprecated     - don't run tests that claim to use deprecated
                                   endpoints
 
-   --bind-host HOST             - when starting listeners (eg homeservers or
+       --bind-host HOST         - when starting listeners (eg homeservers or
                                   test httpds), bind to this hostname instead of
                                   'localhost'.
 
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
-   --work-directory DIR         - where we put working files (server configs,
+       --work-directory DIR     - where we put working files (server configs,
                                   mostly). Defaults to '.'.
 
-   --room-version VERSION       - use the given room version for the majority of
+       --room-version VERSION   - use the given room version for the majority of
                                   tests
 .
    write STDERR;
