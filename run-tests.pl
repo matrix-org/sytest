@@ -919,7 +919,7 @@ TESTS: foreach my $test ( @TESTS ) {
       passed  => $passed_count,
       failed  => $failed_count,
       skipped => $skipped_count,
-	  excluded => $excluded_count,
+      excluded => $excluded_count,
    );
 }
 
