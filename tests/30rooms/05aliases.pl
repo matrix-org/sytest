@@ -219,15 +219,19 @@ test "Regular users can add and delete aliases when m.room.aliases is restricted
             $_[0]->{events}->{'m.room.aliases'} = 50;
          },
       )->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.power_levels",
-         );
+         retry_until_success {
+            matrix_get_room_state( $creator, $room_id,
+               type      => "m.room.power_levels",
+            )->then( sub {
+               my ( $body ) = @_;
+               log_if_fail "power levels", $body;
+
+               assert_eq( $body->{events}->{'m.room.aliases'}, 50 );
+
+               Future->done( 1 )
+            })
+         }
       })->then( sub {
-         my ( $body ) = @_;
-         log_if_fail "power levels", $body;
-
-         assert_eq( $body->{events}->{'m.room.aliases'}, 50 );
-
          do_request_json_for( $other_user,
             method => "PUT",
             uri    => "/r0/directory/room/$alias",
@@ -364,7 +368,7 @@ test "Can delete canonical alias",
             content => { room_id => $room_id },
          )
       })->then( sub {
-         matrix_put_room_state( $creator, $room_id,
+         matrix_put_room_state_synced( $creator, $room_id,
             type    => "m.room.canonical_alias",
             content => { alias => $room_alias }
          )
@@ -376,15 +380,17 @@ test "Can delete canonical alias",
            content => {},
          )
       })->then( sub {
-         matrix_get_room_state( $creator, $room_id,
-            type      => "m.room.canonical_alias",
-         )
-      })->then( sub {
-         my ( $body ) = @_;
+         retry_until_success {
+            matrix_get_room_state( $creator, $room_id,
+               type      => "m.room.canonical_alias",
+            )->then( sub {
+               my ( $body ) = @_;
 
-         not defined $body->{alias} or die "Expected canonical alias to be empty";
+               not defined $body->{alias} or die "Expected canonical alias to be empty";
 
-         Future->done( 1 );
+               Future->done( 1 );
+            })
+         }
       })
    };
 

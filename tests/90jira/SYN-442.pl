@@ -68,7 +68,8 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User A received the invite from user B" )
       })->then( sub {
 
-         matrix_join_room( $user_1, $room_id )
-            ->SyTest::pass_on_done( "User A joined the room" )
+         retry_until_success {
+            matrix_join_room( $user_1, $room_id )
+         }->SyTest::pass_on_done( "User A joined the room" )
       })->then_done(1);
    };

@@ -152,7 +152,7 @@ foreach my $type (qw( join_rules history_visibility )) {
       requires => [ local_user_fixtures( 2 ) ],
 
       # matrix_get_user_dir_synced creates two new users and a room, which is kinda slow.
-      timeout => 20000,
+      timeout => 20,
 
       check => sub {
          my ( $creator, $user ) = @_;
@@ -250,7 +250,7 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
    requires => [ local_user_fixtures( 2 ) ],
 
    # matrix_get_user_dir_synced creates two new users and a room, which is kinda slow.
-   timeout => 20000,
+   timeout => 20,
 
    check => sub {
       my ( $creator, $user ) = @_;

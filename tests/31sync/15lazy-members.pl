@@ -286,7 +286,7 @@ test "The only membership state included in a gapped incremental sync is for sen
 
 test "Gapped incremental syncs include all state changes",
    # sending 50 messages can take a while
-   timeout => 20000,
+   timeout => 20,
 
    requires => [ local_user_fixtures( 4 ),
                  qw( can_sync ) ],
