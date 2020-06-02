@@ -517,15 +517,8 @@ test "Outbound federation rejects backfill containing invalid JSON for events in
             Future->done;
          }),
 
-         do_request_json_for( $user,
-            method => "POST",
-            uri    => "/r0/join/$room_alias",
-
-            content => {},
-         )->then( sub {
-            my ( $body ) = @_;
-
-            my $room_id = $body->{room_id};
+         matrix_join_room( $user, $room_alias )->then( sub {
+            my ( $room_id ) = @_;
 
             # It make take some time for the join to propagate, so we need to
             # retry on failure.
