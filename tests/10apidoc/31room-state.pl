@@ -238,8 +238,10 @@ test "GET /joined_rooms lists newly-created room",
    };
 
 test "POST /rooms/:room_id/state/m.room.name sets name",
+   # TODO: deprecated endpoint used in this test
+
    requires => [ $user_fixture, $room_fixture,
-                 qw( can_room_initial_sync deprecated_endpoints )],
+                 qw( can_room_initial_sync )],
 
    proves => [qw( can_set_room_name )],
 
@@ -294,8 +296,10 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
 my $topic = "A new topic for the room";
 
 test "POST /rooms/:room_id/state/m.room.topic sets topic",
+   # TODO: deprecated endpoint used in this test
+   
    requires => [ $user_fixture, $room_fixture,
-                 qw( can_room_initial_sync deprecated_endpoints )],
+                 qw( can_room_initial_sync )],
 
    proves => [qw( can_set_room_topic )],
 
