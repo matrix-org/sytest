@@ -325,9 +325,11 @@ test "Server correctly resyncs when server leaves and rejoins a room",
 
          matrix_leave_room( $user, $room->room_id )
       })->then( sub {
-         matrix_join_room( $user, $room->room_id,
-            server_name => $inbound_server->server_name,
-         )
+         retry_until_success {
+            matrix_join_room( $user, $room->room_id,
+               server_name => $inbound_server->server_name,
+            )
+         }
       })->then( sub {
          Future->needs_all(
             $inbound_server->await_request_user_devices( $federated_user_id )
