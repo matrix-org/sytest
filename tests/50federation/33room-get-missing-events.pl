@@ -415,128 +415,118 @@ test "outliers whose auth_events are in a different room are correctly rejected"
 # room with a bad JSON value (e.g. a float) should discard the bad data.
 #
 # To test this we need to:
-# * Join a room.
 # * Add an event with "bad" data into the room history, but don't send it.
 # * Add a "good" event into the room history and send it.
 # * The homeserver attempts to get the missing event (with the bad data).
 # * Ensure that fetching the event results in an error.
 test "Outbound federation will ignore a missing event with bad JSON for room version 6",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
-                 local_user_and_room_fixtures(
-                    room_opts => { room_version => "6" },
-                   ),
-                 federation_user_id_fixture() ],
+                 federated_rooms_fixture( room_opts => { room_version => "6" } ) ],
 
    do => sub {
-      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $inbound_server, $creator, $user_id, @rooms ) = @_;
+
+      my $room = @rooms[0];
+      my $room_id = $room->{room_id};
       my $first_home_server = $creator->server_name;
 
       my $datastore         = $inbound_server->datastore;
 
-      $outbound_client->join_room(
-         server_name => $first_home_server,
-         room_id     => $room_id,
-         user_id     => $user_id,
-         version     => "6",
-      )->then( sub {
-         my ( $room ) = @_;
+      # TODO: We happen to know the latest event in the server should be my
+      #   m.room.member state event, but that's a bit fragile
+      my $latest_event = $room->get_current_state_event( "m.room.member", $user_id );
 
-         # TODO: We happen to know the latest event in the server should be my
-         #   m.room.member state event, but that's a bit fragile
-         my $latest_event = $room->get_current_state_event( "m.room.member", $user_id );
+      log_if_fail "Latest event", $latest_event;
 
-         log_if_fail "Latest event", $latest_event;
+      # Generate but don't send an event
+      my $missing_event = $room->create_and_insert_event(
+         type => "m.room.message",
 
-         # Generate but don't send an event
-         my $missing_event = $room->create_and_insert_event(
-            type => "m.room.message",
+         sender  => $user_id,
+         content => {
+            body    => "Message 1",
+            # Insert a bad value here so that this event cannot be fetched.
+            bad_val => 1.1,
+         },
+      );
 
-            sender  => $user_id,
-            content => {
-               body    => "Message 1",
-               # Insert a bad value here so that this event cannot be fetched.
-               bad_val => 1.1,
-            },
-         );
+      log_if_fail "Missing event", $missing_event;
 
-         log_if_fail "Missing event", $missing_event;
+      # Generate another one and do send it so it will refer to the
+      # previous in its prev_events field
+      my $sent_event = $room->create_and_insert_event(
+         type => "m.room.message",
 
-         # Generate another one and do send it so it will refer to the
-         # previous in its prev_events field
-         my $sent_event = $room->create_and_insert_event(
-            type => "m.room.message",
+         # This would be done by $room->create_and_insert_event anyway but lets be
+         #   sure for this test
+         prev_events => $room->make_event_refs( $missing_event ),
 
-            # This would be done by $room->create_and_insert_event anyway but lets be
-            #   sure for this test
-            prev_events => $room->make_event_refs( $missing_event ),
+         sender  => $user_id,
+         content => {
+            body => "Message 2",
+         },
+      );
+      my $sent_event_id = $room->id_for_event( $sent_event );
 
-            sender  => $user_id,
-            content => {
-               body => "Message 2",
-            },
-         );
-         my $sent_event_id = $room->id_for_event( $sent_event );
+      log_if_fail "Sent event", $sent_event;
 
-         log_if_fail "Sent event", $sent_event;
+      Future->needs_all(
+         $inbound_server->await_request_get_missing_events( $room_id )
+         ->then( sub {
+            my ( $req ) = @_;
+            my $body = $req->body_from_json;
 
-         Future->needs_all(
-            $inbound_server->await_request_get_missing_events( $room_id )
-            ->then( sub {
-               my ( $req ) = @_;
-               my $body = $req->body_from_json;
+            log_if_fail "Body", $body;
 
-               log_if_fail "Body", $body;
+            assert_json_keys( $body, qw( earliest_events latest_events limit ));
+            # TODO: min_depth but I have no idea what it does
 
-               assert_json_keys( $body, qw( earliest_events latest_events limit ));
-               # TODO: min_depth but I have no idea what it does
+            assert_json_list( my $earliest = $body->{earliest_events} );
+            @$earliest == 1 or
+               die "Expected a single 'earliest_event' ID";
+            assert_eq( $earliest->[0], $room->id_for_event( $latest_event ),
+               'earliest_events[0]' );
 
-               assert_json_list( my $earliest = $body->{earliest_events} );
-               @$earliest == 1 or
-                  die "Expected a single 'earliest_event' ID";
-               assert_eq( $earliest->[0], $room->id_for_event( $latest_event ),
-                  'earliest_events[0]' );
+            assert_json_list( my $latest = $body->{latest_events} );
+            @$latest == 1 or
+               die "Expected a single 'latest_events' ID";
+            assert_eq( $latest->[0], $sent_event_id,
+               'latest_events[0]' );
 
-               assert_json_list( my $latest = $body->{latest_events} );
-               @$latest == 1 or
-                  die "Expected a single 'latest_events' ID";
-               assert_eq( $latest->[0], $sent_event_id,
-                  'latest_events[0]' );
+            my @events = $datastore->get_backfill_events(
+               start_at    => $latest,
+               stop_before => $earliest,
+               limit       => $body->{limit},
+            );
 
-               my @events = $datastore->get_backfill_events(
-                  start_at    => $latest,
-                  stop_before => $earliest,
-                  limit       => $body->{limit},
-               );
+            log_if_fail "Backfilling", @events;
 
-               log_if_fail "Backfilling", @events;
+            $req->respond_json( {
+               events => \@events,
+            } );
 
-               $req->respond_json( {
-                  events => \@events,
-               } );
+            Future->done;
+         }),
 
-               Future->done;
-            }),
+         # Can't use send_event here because that checks none were rejected.
+         $outbound_client->send_transaction(
+            destination => $first_home_server,
+            pdus => [ $sent_event ],
+         )->then( sub {
+            my ( $body ) = @_;
 
-            # Can't use send_event here because that checks none were rejected.
-            $outbound_client->send_transaction(
-               destination => $first_home_server,
-               pdus => [ $sent_event ],
-            )->then( sub {
-               my ( $body ) = @_;
+            log_if_fail "Send response", $body;
 
-               log_if_fail "Send response", $body;
+            assert_json_keys( $body, 'pdus' );
+            # 'pdus' is a map from event id to error details.
+            my $pdus = $body->{pdus};
 
-               assert_json_keys( $body, 'pdus' );
-               # 'pdus' is a map from event id to error details.
-               my $pdus = $body->{pdus};
+            # Sending the event fails since fetching the event results in
+            # invalid JSON, thus we expect an error for the sent PDU.
+            assert_json_keys( $pdus, $sent_event_id );
+            assert_json_keys( $pdus->{$sent_event_id}, qw( error ) );
 
-               # Sending the event fails since fetching the event results in
-               # invalid JSON, thus we expect an error for the sent PDU.
-               assert_json_keys( $pdus, $sent_event_id );
-               assert_json_keys( $pdus->{$sent_event_id}, qw( error ) );
-
-               Future->done;
-            }),
-         );
-      });
+            Future->done;
+         }),
+      );
    };

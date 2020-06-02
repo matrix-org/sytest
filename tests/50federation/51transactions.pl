@@ -57,36 +57,29 @@ test "Server correctly handles transactions that break edu limits",
 # See https://github.com/matrix-org/synapse/issues/7543
 test "Server rejects invalid JSON in a version 6 room",
    requires => [ $main::OUTBOUND_CLIENT,
-                 local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
-                 federation_user_id_fixture() ],
+                 federated_rooms_fixture( room_opts => { room_version => "6" } ) ],
 
    do => sub {
-      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+      my ( $outbound_client, $creator, $user_id, @rooms ) = @_;
 
-      $outbound_client->join_room(
-         server_name => $creator->server_name,
-         room_id     => $room_id,
-         user_id     => $user_id,
-      )->then( sub {
-         my ( $room ) = @_;
+      my $room = $rooms[0];
 
-         my $bad_event = $room->create_and_insert_event(
-             type => "m.room.message",
+      my $bad_event = $room->create_and_insert_event(
+          type => "m.room.message",
 
-             sender  => $user_id,
-             content => {
-                body    => "Message 1",
-                # Insert a "bad" value into the PDU, in this case a float.
-                bad_val => 1.1,
-             },
-         );
+          sender  => $user_id,
+          content => {
+             body    => "Message 1",
+             # Insert a "bad" value into the PDU, in this case a float.
+             bad_val => 1.1,
+          },
+      );
 
-         my @pdus = ( $bad_event );
+      my @pdus = ( $bad_event );
 
-         # Send the transaction to the client and expect a fail
-         $outbound_client->send_transaction(
-             pdus => \@pdus,
-             destination => $creator->server_name,
-         )->main::expect_m_bad_json;
-      });
+      # Send the transaction to the client and expect a fail
+      $outbound_client->send_transaction(
+          pdus => \@pdus,
+          destination => $creator->server_name,
+      )->main::expect_m_bad_json;
    };
