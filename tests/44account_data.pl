@@ -102,7 +102,7 @@ test "Can get room account data without syncing",
 
 
 test "Latest account data comes down in /initialSync",
-   requires => [ local_user_and_room_fixtures() ],
+   requires => [ local_user_and_room_fixtures(), qw ( deprecated_endpoints ) ],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -126,7 +126,7 @@ test "Latest account data comes down in /initialSync",
 
 
 test "Latest account data comes down in room initialSync",
-   requires => [ local_user_and_room_fixtures() ],
+   requires => [ local_user_and_room_fixtures(), qw ( deprecated_endpoints ) ],
 
    check => sub {
       my ( $user, $room_id ) = @_;

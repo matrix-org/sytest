@@ -133,7 +133,7 @@ test "GET /rooms/:room_id/joined_members fetches my membership",
    };
 
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
-   requires => [ $user_fixture, $room_fixture ],
+   requires => [ $user_fixture, $room_fixture, qw ( deprecated_endpoints ) ],
 
    proves => [qw( can_room_initial_sync )],
 
@@ -239,7 +239,7 @@ test "GET /joined_rooms lists newly-created room",
 
 test "POST /rooms/:room_id/state/m.room.name sets name",
    requires => [ $user_fixture, $room_fixture,
-                 qw( can_room_initial_sync )],
+                 qw( can_room_initial_sync deprecated_endpoints )],
 
    proves => [qw( can_set_room_name )],
 
@@ -295,7 +295,7 @@ my $topic = "A new topic for the room";
 
 test "POST /rooms/:room_id/state/m.room.topic sets topic",
    requires => [ $user_fixture, $room_fixture,
-                 qw( can_room_initial_sync )],
+                 qw( can_room_initial_sync deprecated_endpoints )],
 
    proves => [qw( can_set_room_topic )],
 

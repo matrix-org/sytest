@@ -113,7 +113,7 @@ foreach my $i (
       test(
          "$name non-joined user cannot call /events on $visibility room",
 
-         requires => [ $fixture->(), local_user_and_room_fixtures() ],
+         requires => [ $fixture->(), local_user_and_room_fixtures(), qw ( deprecated_endpoints ) ],
 
          do => sub {
             my ( $nonjoined_user, $creator_user, $room_id ) = @_;
@@ -131,7 +131,7 @@ foreach my $i (
    test(
       "$name non-joined user can call /events on world_readable room",
 
-      requires => [ $fixture->(), local_user_fixture( with_events => 1 ), local_user_fixture( with_events => 1 ) ],
+      requires => [ $fixture->(), local_user_fixture( with_events => 1 ), local_user_fixture( with_events => 1 ), qw ( deprecated_endpoints ) ],
 
       do => sub {
          my ( $nonjoined_user, $user, $user_not_in_room ) = @_;
@@ -286,7 +286,7 @@ foreach my $i (
    test(
       "$name non-joined users cannot room initalSync for non-world_readable rooms",
 
-      requires => [ guest_user_fixture(), local_user_fixture() ],
+      requires => [ guest_user_fixture(), local_user_fixture(), qw ( deprecated_endpoints ) ],
 
       do => sub {
          my ( $non_joined_user, $creating_user ) = @_;
@@ -308,7 +308,7 @@ foreach my $i (
    test(
       "$name non-joined users can room initialSync for world_readable rooms",
 
-      requires => [ guest_user_fixture( with_events => 1 ), local_user_fixture( with_events => 1 ) ],
+      requires => [ guest_user_fixture( with_events => 1 ), local_user_fixture( with_events => 1 ), qw ( deprecated_endpoints ) ],
 
       do => sub {
          my ( $syncing_user, $creating_user ) = @_;

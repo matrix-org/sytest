@@ -66,6 +66,9 @@ my $BLACKLIST_FILE;
 # the server under test'.
 our $TEST_ROOM_VERSION;
 
+# should we include tests that claim to use deprecated endpoints?
+our $INCLUDE_DEPRECATED_ENDPOINTS = 1;
+
 # where we put working files (server configs, mostly)
 our $WORK_DIR = ".";
 
@@ -93,6 +96,8 @@ GetOptions(
    'work-directory=s' => \$WORK_DIR,
 
    'room-version=s' => \$TEST_ROOM_VERSION,
+
+   'exclude-deprecated' => sub { $INCLUDE_DEPRECATED_ENDPOINTS = 0 },
 
    # these two are superceded by -I, but kept for backwards compatibility
    'dendron=s' => sub {
@@ -177,7 +182,10 @@ Options:
    -n, --no-tls                 - prefer plaintext client connections where
                                   possible
 
-       --bind-host HOST         - when starting listeners (eg homeservers or
+   --exclude-deprecated         - don't run tests that claim to use deprecated
+                                  endpoints
+
+   --bind-host HOST             - when starting listeners (eg homeservers or
                                   test httpds), bind to this hostname instead of
                                   'localhost'.
 
@@ -838,6 +846,7 @@ my $failed_count = 0;
 my $expected_fail_count = 0;
 my $passed_count = 0;
 my $skipped_count = 0;
+my $excluded_count = 0;
 
 $OUTPUT->status(
    tests   => scalar @TESTS,
@@ -845,16 +854,27 @@ $OUTPUT->status(
    passed  => $passed_count,
    failed  => $failed_count,
    skipped => $skipped_count,
+   excluded => $excluded_count,
 );
 
 # Now run the tests
 my $prev_filename;
-foreach my $test ( @TESTS ) {
+TESTS: foreach my $test ( @TESTS ) {
    if( !$prev_filename or $prev_filename ne $test->file ) {
       $OUTPUT->run_file( $prev_filename = $test->file );
    }
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
+
+   # If the test claims to require deprecated endpoints and we're not allowing those
+   # then skip the test altogether - there's no point in even showing it as skipped.
+   my @requires = @{ $test->requires // [] };
+   foreach my $req ( @requires ) {
+		if ($req eq "deprecated_endpoints" && !$INCLUDE_DEPRECATED_ENDPOINTS) {
+		   $excluded_count++;
+		   next TESTS;
+		}
+   }
 
    # Check if this test has been blocked by the blacklist. If so, mark as expected fail
    if ( scalar( $BLACKLIST_FILE ) and exists $TEST_BLACKLIST{ $test->name } ) {
@@ -899,6 +919,7 @@ foreach my $test ( @TESTS ) {
       passed  => $passed_count,
       failed  => $failed_count,
       skipped => $skipped_count,
+	  excluded => $excluded_count,
    );
 }
 

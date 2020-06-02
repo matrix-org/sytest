@@ -64,7 +64,7 @@ my $room_fixture = fixture(
 );
 
 test "A departed room is still included in /initialSync (SPEC-216)",
-    requires => [ $left_user_fixture, $room_fixture ],
+    requires => [ $left_user_fixture, $room_fixture, qw ( deprecated_endpoints ) ],
 
     check => sub {
         my ( $user, $room_id ) = @_;
@@ -97,7 +97,7 @@ test "A departed room is still included in /initialSync (SPEC-216)",
     };
 
 test "Can get rooms/{roomId}/initialSync for a departed room (SPEC-216)",
-    requires => [ $left_user_fixture, $room_fixture ],
+    requires => [ $left_user_fixture, $room_fixture, qw ( deprecated_endpoints ) ],
 
     check => sub {
         my ( $user, $room_id ) = @_;

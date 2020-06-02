@@ -93,7 +93,7 @@ test "Setting room topic reports m.room.topic to myself",
 
 test "Global initialSync",
    requires => [ $user_fixture, $room_fixture,
-                qw( can_initial_sync can_set_room_topic )],
+                qw( can_initial_sync can_set_room_topic deprecated_endpoints )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -147,7 +147,7 @@ test "Global initialSync",
 
 test "Global initialSync with limit=0 gives no messages",
    requires => [ $user_fixture, $room_fixture,
-                qw( can_initial_sync )],
+                qw( can_initial_sync deprecated_endpoints )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -170,7 +170,7 @@ test "Global initialSync with limit=0 gives no messages",
 
 test "Room initialSync",
    requires => [ $user_fixture, $room_fixture,
-                qw( can_room_initial_sync )],
+                qw( can_room_initial_sync deprecated_endpoints )],
 
    check => sub {
       my ( $user, $room_id ) = @_;
@@ -218,7 +218,7 @@ test "Room initialSync",
 
 test "Room initialSync with limit=0 gives no messages",
    requires => [ $user_fixture, $room_fixture,
-                qw( can_initial_sync )],
+                qw( can_initial_sync deprecated_endpoints )],
 
    check => sub {
       my ( $user, $room_id ) = @_;

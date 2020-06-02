@@ -55,7 +55,7 @@ test "New room members see their own join event",
 
 test "New room members see existing users' presence in room initialSync",
    requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
-                 qw( can_room_initial_sync )],
+                 qw( can_room_initial_sync deprecated_endpoints )],
 
    check => sub {
       my ( $first_user, $local_user, $room_id ) = @_;
@@ -119,7 +119,7 @@ test "Existing members see new members' presence",
 
 test "All room members see all room members' presence in global initialSync",
    requires => [ $creator_fixture, $local_user_fixture, $room_fixture,
-                 qw( can_initial_sync )],
+                 qw( can_initial_sync deprecated_endpoints )],
 
    check => sub {
       my ( $first_user, $local_user, $room_id ) = @_;

@@ -33,7 +33,7 @@ sub find_receipt
 
 multi_test "Read receipts are visible to /initialSync",
    requires => [ local_user_and_room_fixtures(),
-                 qw( can_post_room_receipts )],
+                 qw( can_post_room_receipts deprecated_endpoints )],
 
    do => sub {
       my ( $user, $room_id ) = @_;

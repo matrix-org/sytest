@@ -1,6 +1,6 @@
 test "GET /initialSync with non-numeric 'limit'",
    requires => [ $main::SPYGLASS_USER,
-                 qw( can_initial_sync )],
+                 qw( can_initial_sync deprecated_endpoints )],
 
    check => sub {
       my ( $user ) = @_;
