@@ -182,8 +182,8 @@ Options:
    -n, --no-tls                 - prefer plaintext client connections where
                                   possible
 
-       --exclude-deprecated     - don't run tests that claim to use deprecated
-                                  endpoints
+       --exclude-deprecated     - don't run tests that specifically test deprecated
+	                              endpoints
 
        --bind-host HOST         - when starting listeners (eg homeservers or
                                   test httpds), bind to this hostname instead of
@@ -866,7 +866,7 @@ TESTS: foreach my $test ( @TESTS ) {
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
 
-   # If the test claims to require deprecated endpoints and we're not allowing those
+   # If the test specifically tests deprecated endpoints and we're not allowing those
    # then skip the test altogether - there's no point in even showing it as skipped.
    my @requires = @{ $test->requires // [] };
    foreach my $req ( @requires ) {
