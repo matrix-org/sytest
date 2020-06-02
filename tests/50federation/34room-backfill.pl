@@ -517,35 +517,31 @@ test "Outbound federation rejects backfill containing invalid JSON for events in
             Future->done;
          }),
 
-         matrix_join_room( $user, $room_alias )->then( sub {
-            my ( $room_id ) = @_;
+         matrix_join_room_synced( $user, $room_alias )->then( sub {
+            my ($room_id) = @_;
 
-            # It make take some time for the join to propagate, so we need to
-            # retry on failure.
-            retry_until_success {
-               matrix_get_room_messages( $user, $room_id,
-                  limit => 10,  # Something larger than 1.
-               )->then( sub {
-                  my ( $body ) = @_;
-                  my @events = $body->{chunk};
+            matrix_get_room_messages($user, $room_id,
+               limit => 10, # Something larger than 1.
+            );
+         })->then( sub {
+            my ( $body ) = @_;
+            my @events = $body->{chunk};
 
-                  log_if_fail "Body", $body;
+            log_if_fail "Body", $body;
 
-                  # Theoretically this is 1 m.room.message events + our own
-                  # m.room.member, but since the message event will be rejected
-                  # only the member event will come back.
-                  assert_eq( scalar @events , 1 );
+            # Theoretically this is 1 m.room.message events + our own
+            # m.room.member, but since the message event will be rejected
+            # only the member event will come back.
+            assert_eq( scalar @events , 1 );
 
-                  my $member_event = $events[0];
+            my $member_event = $body->{chunk}[0];
 
-                  # Ensure the only event is the m.room.member event (not the
-                  # m.room.message event).
-                  assert_json_keys( $member_event,
-                     qw( type event_id room_id sender state_key content ));
-                  assert_eq( $member_event->{type}, "m.room.member",
-                     'events[0] type' );
-               });
-            };
+            # Ensure the only event is the m.room.member event (not the
+            # m.room.message event).
+            assert_json_keys( $member_event,
+               qw( type event_id room_id sender state_key content ));
+            assert_eq( $member_event->{type}, "m.room.member",
+               'events[0] type' );
 
             Future->done;
          }),
