@@ -260,7 +260,7 @@ test "Tags appear in the v1 /initalSync",
 
 test "Tags appear in the v1 room initial sync",
    requires => [ local_user_fixture( with_events => 0 ),
-                 qw( can_add_tag can_remove_tag )],
+                 qw( can_add_tag can_remove_tag deprecated_endpoints )],
 
    do => sub {
       my ( $user ) = @_;
