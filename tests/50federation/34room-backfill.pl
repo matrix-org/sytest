@@ -448,6 +448,15 @@ test "Backfilled events whose prev_events are in a different room do not allow c
       });
    };
 
+# A homeserver receiving a response from `backfill` for a version 6 room with a
+# bad JSON value (e.g. a float) should discard the bad data.
+#
+# To test this we need to:
+# * Create a room.
+# * Add "bad" data into the room history.
+# * Join the room.
+# * Attempt to backfill the room history.
+# * Ensure that the "bad" event wil be discarded.
 test "Outbound federation rejects backfill containing invalid JSON for events in room version 6",
    requires => [ local_user_fixture(), $main::INBOUND_SERVER, federation_user_id_fixture() ],
 
@@ -473,6 +482,7 @@ test "Outbound federation rejects backfill containing invalid JSON for events in
          content => {
             msgtype => "m.text",
             body    => "Message here",
+            # Insert a "bad" value into the event, in this case a float.
             bad_val => 1.1,
          },
       );
@@ -535,21 +545,12 @@ test "Outbound federation rejects backfill containing invalid JSON for events in
 
                   my $member_event = $events[0];
 
+                  # Ensure the only event is the m.room.member event (not the
+                  # m.room.message event).
                   assert_json_keys( $member_event,
                      qw( type event_id room_id sender state_key content ));
                   assert_eq( $member_event->{type}, "m.room.member",
                      'events[0] type' );
-
-                  assert_eq( $member_event->{type}, "m.room.member",
-                     'member event type' );
-                  assert_eq( $member_event->{room_id}, $room_id,
-                     'member event room_id' );
-                  assert_eq( $member_event->{sender}, $user->user_id,
-                     'member event sender' );
-                  assert_eq( $member_event->{state_key}, $user->user_id,
-                     'member event state_key' );
-                  assert_eq( $member_event->{content}{membership}, "join",
-                     'member event content.membership' );
                });
             };
 

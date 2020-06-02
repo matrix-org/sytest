@@ -47,8 +47,12 @@ test "Server correctly handles transactions that break edu limits",
       });
    };
 
-# This currently tests that the entire transaction is rejected if a single bad
-# PDU is sent in. It is unclear if this is the correct behavior or not.
+# Room version 6 states that homeservers should strictly enforce canonical JSON
+# on PDUs. Test that a transaction to `send` with a PDU that has bad data will
+# be handled properly.
+#
+# This enforces that the entire transaction is rejected if a single bad PDU is
+# sent. It is unclear if this is the correct behavior or not.
 #
 # See https://github.com/matrix-org/synapse/issues/7543
 test "Server rejects invalid JSON in a version 6 room",
@@ -66,17 +70,18 @@ test "Server rejects invalid JSON in a version 6 room",
       )->then( sub {
          my ( $room ) = @_;
 
-         my $new_event = $room->create_and_insert_event(
+         my $bad_event = $room->create_and_insert_event(
              type => "m.room.message",
 
              sender  => $user_id,
              content => {
                 body    => "Message 1",
+                # Insert a "bad" value into the PDU, in this case a float.
                 bad_val => 1.1,
              },
          );
 
-         my @pdus = ( $new_event );
+         my @pdus = ( $bad_event );
 
          # Send the transaction to the client and expect a fail
          $outbound_client->send_transaction(

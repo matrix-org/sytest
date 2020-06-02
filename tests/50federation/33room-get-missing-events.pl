@@ -411,6 +411,15 @@ test "outliers whose auth_events are in a different room are correctly rejected"
       });
    };
 
+# A homeserver receiving a response from `get_missing_events` for a version 6
+# room with a bad JSON value (e.g. a float) should discard the bad data.
+#
+# To test this we need to:
+# * Join a room.
+# * Add an event with "bad" data into the room history, but don't send it.
+# * Add a "good" event into the room history and send it.
+# * The homeserver attempts to get the missing event (with the bad data).
+# * Ensure that fetching the event results in an error.
 test "Outbound federation will ignore a missing event with bad JSON for room version 6",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(

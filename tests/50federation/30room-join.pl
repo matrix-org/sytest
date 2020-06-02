@@ -1062,7 +1062,14 @@ test "Event with an invalid signature in the send_join response should not cause
       )
    };
 
-
+# A homeserver receiving a `send_join` request for a room version 6 room with
+# a bad JSON value (e.g. a float) should reject the request.
+#
+# To test this we need to:
+# * Send a successful `make_join` request.
+# * Add a "bad" value into the returned prototype event.
+# * Make a request to `send_join`.
+# * Check that the response is M_BAD_JSON.
 test "Inbound: send_join rejects invalid JSON for room version 6 rejects",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
@@ -1087,6 +1094,8 @@ test "Inbound: send_join rejects invalid JSON for room version 6 rejects",
 
          log_if_fail "make_join body", $body;
 
+         my $protoevent = $body->{event};
+
          # It is assumed that the make_join response is sane, other tests ensure
          # this behavior.
 
@@ -1099,7 +1108,7 @@ test "Inbound: send_join rejects invalid JSON for room version 6 rejects",
             origin_server_ts => $inbound_server->time_ms,
          );
          # Insert a "bad" value into the send join, in this case a float.
-         ${event}{contents}{bad_val} = 1.1;
+         ${event}{content}{bad_val} = 1.1;
 
          $datastore->sign_event( \%event );
 

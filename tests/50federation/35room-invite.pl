@@ -824,6 +824,15 @@ test "Outbound federation rejects invite response which include invalid JSON for
       )->main::expect_m_bad_json;
    };
 
+# A homeserver should reject an invite rejection for a version 6 room if it
+# contains bad JSON data.
+#
+# To test this we need to:
+# * Send a successful invite to a room (via `invite`).
+# * Send a successful `make_leave` for the room.
+# * Add a "bad" value into the returned prototype event.
+# * Make a request to `send_leave`.
+# * Check that the response is M_BAD_JSON.
 test "Inbound federation rejects invite rejections which include invalid JSON for room version 6",
    requires => [
       local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
@@ -856,8 +865,8 @@ test "Inbound federation rejects invite rejections which include invalid JSON fo
             Future->done;
          }),
       )->then( sub {
-         # now let's reject the event: start by asking the server to build us a
-         # leave event
+         # Initiate a rejection of the invite: ask the server to build us a
+         # leave event.
          #
          # Note that it doesn't make sense to try to use a bad JSON value here
          # since the endpoint doesn't accept any JSON anyway.
@@ -868,25 +877,13 @@ test "Inbound federation rejects invite rejections which include invalid JSON fo
          );
       })->then( sub {
          my ( $resp ) = @_;
+
          log_if_fail "/make_leave response", $resp;
 
          my $protoevent = $resp->{event};
-         assert_json_keys( $protoevent, qw(
-            origin room_id sender type content state_key depth prev_events auth_events
-         ));
 
-         assert_eq( $protoevent->{type}, "m.room.member", 'event type' );
-         assert_eq( $protoevent->{room_id}, $room_id, 'event room_id' );
-         assert_eq( $protoevent->{sender}, $invitee_id, 'event sender' );
-         assert_eq( $protoevent->{content}{membership}, "leave", 'event content membership' );
-         assert_eq( $protoevent->{state_key}, $invitee_id, 'event state_key' );
-
-         my ( $event, $event_id ) = $inbound_server->datastore->create_event(
-            map { $_ => $protoevent->{$_} } qw(
-               auth_events content depth prev_events room_id sender
-               state_key type
-            ),
-         );
+         # It is assumed that the make_leave response is sane, other tests
+         # ensure this behavior.
 
          my %event = (
             (map {$_ => $protoevent->{$_}} qw(
