@@ -1070,7 +1070,7 @@ test "Event with an invalid signature in the send_join response should not cause
 # * Add a "bad" value into the returned prototype event.
 # * Make a request to `send_join`.
 # * Check that the response is M_BAD_JSON.
-test "Inbound: send_join rejects invalid JSON for room version 6 rejects",
+test "Inbound: send_join rejects invalid JSON for room version 6",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
                  federation_user_id_fixture() ],

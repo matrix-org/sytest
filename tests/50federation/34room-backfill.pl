@@ -456,7 +456,7 @@ test "Backfilled events whose prev_events are in a different room do not allow c
 # * Add "bad" data into the room history.
 # * Join the room.
 # * Attempt to backfill the room history.
-# * Ensure that the "bad" event wil be discarded.
+# * Ensure that the "bad" event will be discarded.
 test "Outbound federation rejects backfill containing invalid JSON for events in room version 6",
    requires => [ local_user_fixture(), $main::INBOUND_SERVER, federation_user_id_fixture() ],
 
