@@ -80,8 +80,8 @@ test "Interactive authentication types include SSO",
          assert_json_list $body->{flows};
 
          # Note that this uses the unstable value.
-         die "org.matrix.login.sso was not listed" unless
-            any { $_->{stages}[0] eq "org.matrix.login.sso" } @{ $body->{flows} };
+         die "m.login.sso was not listed" unless
+            any { $_->{stages}[0] eq "m.login.sso" } @{ $body->{flows} };
 
          Future->done( 1 );
       });
