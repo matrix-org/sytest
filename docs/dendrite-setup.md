@@ -41,14 +41,18 @@ SyTest will expect Dendrite to be at `../dendrite` relative to Sytest's root dir
 Simply run the following to execute tests:
 
 ```
-./run-tests.pl -I Dendrite::Monolith -W ../dendrite/testfile
+./run-tests.pl -I Dendrite::Monolith -W ../dendrite/sytest-whitelist -B ../dendrite/sytest-blacklist
 ```
 
 ## Useful flags
 
 * `-W` applies a test whitelist file, one of which is currently kept up to date
   with what sytests Dendrite passes
-  [here](https://github.com/matrix-org/dendrite/blob/master/testfile)
+  [here](https://github.com/matrix-org/dendrite/blob/master/sytest-whitelist)
+
+* `-B` applies a test blacklist file, one of which is currently kept up to date
+  with what sytests are currently flaky (fail *sometimes*) with Dendrite
+  [here](https://github.com/matrix-org/dendrite/blob/master/sytest-blacklist)
 
 * `-d` lets you set the path to Dendrite's `bin/` directory, in case it's
   somewhere other than `../dendrite/bin`

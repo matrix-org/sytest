@@ -114,14 +114,15 @@ if [ -n "$OFFLINE" ]; then
     # if we're in offline mode, just put synapse into the virtualenv, and
     # hope that the deps are up-to-date.
     #
-    # (`pip install -e` likes to reinstall setuptools even if it's already installed,
-    # so we just run setup.py explicitly.)
-    #
-    (cd /src && /venv/bin/python setup.py -q develop)
+    # --no-use-pep517 works around what appears to be a pip issue
+    # (https://github.com/pypa/pip/issues/5402 possibly) where pip wants
+    # to reinstall any requirements for the build system, even if they are
+    # already installed.
+    /venv/bin/pip install --no-index --no-use-pep517 /src
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir /src
+    /venv/bin/pip install -q --upgrade --no-cache-dir /src[redis]
     /venv/bin/pip install -q --upgrade --no-cache-dir \
         lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
 
