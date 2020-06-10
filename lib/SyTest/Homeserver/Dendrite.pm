@@ -282,10 +282,15 @@ sub _start_monolith
       '--tls-key', $self->{paths}{tls_key},
    );
 
+   push(@command, '-api') if $ENV{'API'} == '1';
+   $output->diag( "Starting Dendrite with: @command" );
+
    return $self->_start_process_and_await_connectable(
       setup => [
          env => {
             LOG_DIR => $self->{hs_dir},
+            DENDRITE_TRACE_SQL => $ENV{'DENDRITE_TRACE_SQL'},
+            DENDRITE_TRACE_HTTP => $ENV{'DENDRITE_TRACE_HTTP'},
          },
       ],
       command => [ @command ],
