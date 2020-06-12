@@ -7,7 +7,7 @@ use base qw( IO::Async::Notifier );
 
 use Future::Utils qw( repeat );
 
-use YAML ();
+use YAML::XS ();
 use JSON ();
 use File::Path qw( make_path );
 use File::Slurper qw( write_binary );
@@ -215,7 +215,12 @@ sub write_yaml_file
 
    my $hs_dir = $self->{hs_dir};
 
-   YAML::DumpFile( my $abspath = "$hs_dir/$relpath", $content );
+   # the docs on this aren't great, but empirically this is needed to make
+   # YAML::XS::DumpFile understand that JSON::true values should be dumped as
+   # `true`.
+   local $YAML::XS::Boolean = "JSON::PP";
+
+   YAML::XS::DumpFile( my $abspath = "$hs_dir/$relpath", $content );
 
    return $abspath;
 }
@@ -236,7 +241,7 @@ sub configure_logger
    my $hs_dir = $self->{hs_dir};
 
    my $log_config_file = $self->write_yaml_file("log.config.$log_type" => {
-      version => "1",
+      version => 1,
 
       formatters => {
          precise => {
@@ -311,7 +316,7 @@ sub _get_dbconfig
 
    my ( %db_config );
    if( -f $db_config_abs_path ) {
-      %db_config = %{ YAML::LoadFile( $db_config_abs_path ) };
+      %db_config = %{ YAML::XS::LoadFile( $db_config_abs_path ) };
 
       # backwards-compatibility hacks
       my $db_name = delete $db_config{name};
@@ -328,7 +333,7 @@ sub _get_dbconfig
       }
    }
    else {
-      YAML::DumpFile( $db_config_abs_path, \%defaults );
+      $self->write_yaml_file( $db_config_path, \%defaults );
       %db_config = %defaults;
    }
 
@@ -375,19 +380,19 @@ sub _get_dbconfigs
    if ( -f "$hs_dir/databases.yaml") {
       $self->{output}->diag( "Using DB config from $hs_dir/databases.yaml" );
 
-      %db_configs = %{ YAML::LoadFile( "$hs_dir/databases.yaml" ) };
+      %db_configs = %{ YAML::XS::LoadFile( "$hs_dir/databases.yaml" ) };
    }
    elsif( -f "$hs_dir/database.yaml" ) {
       $self->{output}->diag( "Using DB config from $hs_dir/database.yaml" );
 
-      my %db_config = %{ YAML::LoadFile( "$hs_dir/database.yaml" ) };
+      my %db_config = %{ YAML::XS::LoadFile( "$hs_dir/database.yaml" ) };
 
       $db_configs{"main"} = \%db_config;
    }
    else {
       $self->{output}->diag( "Using default DB config and writing to $hs_dir/database.yaml" );
 
-      YAML::DumpFile( "$hs_dir/database.yaml", \%defaults );
+      $self->write_yaml_file( "database.yaml", \%defaults );
       $db_configs{"main"} = \%defaults;
    }
 

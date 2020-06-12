@@ -44,7 +44,9 @@ our $MAIL_SERVER_INFO = fixture(
          $OUTPUT->diag( "Started test SMTP Server at $sockname" );
          Future->done({
             host => $BIND_HOST,
-            port => $sockport,
+            # +0 because otherwise this comes back as a string, and perl is
+            # awful
+            port => $sockport + 0,
          });
       });
    },
