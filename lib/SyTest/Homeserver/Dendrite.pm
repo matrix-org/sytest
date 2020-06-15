@@ -258,7 +258,7 @@ sub _get_config
    my $self = shift;
    my %config = $self->SUPER::_get_config();
 
-   $config{kafka}{use_naffka} = 'true';
+   $config{kafka}{use_naffka} = JSON::true;
 
    return %config;
 }
