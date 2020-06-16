@@ -1,24 +1,58 @@
+# fixture which registers a user, and sets up a push rule for them
+# the push rule matches any content and performs the given action.
+#
+# returns the user id.
+sub user_with_push_rule_fixture
+{
+   my( $action, $skip_on_fail ) = @_;
+
+   return fixture(
+      name => "user_with_push_rule_fixture($action)",
+      requires => [ local_user_fixture() ],
+      setup => sub {
+         my ( $user ) = @_;
+
+         matrix_add_push_rule( $user, 'global', 'content', 'anything', {
+            pattern => "*",
+            actions => [ $action ]
+         })->then_with_f(
+            sub { # done
+               Future->done( $user );
+            },
+            http => sub {  # catch http
+               my ( $f, undef, undef, $response ) = @_;
+               log_if_fail "push rule fail", $response;
+               if ( $skip_on_fail && $response && $response->code == 400 ) {
+                  # assume the server doesn't support this
+                  die "SKIP: server does not support $action action";
+               }
+               # otherwise propagate the original result
+               return $f;
+            },
+         );
+      },
+   );
+}
+
 foreach my $action_and_counter (
    [ "notify", "notification_count" ],
    [ "org.matrix.msc2625.mark_unread", "org.matrix.msc2625.unread_count" ]
 ) {
    my ( $action, $counter ) = @$action_and_counter;
    test "Messages that $action from another user increment $counter",
-      requires => [ local_user_fixture( with_events => 0 ),
-         local_user_fixture( with_events => 0 ),
-         qw( can_sync ) ],
+      requires => [
+         user_with_push_rule_fixture( $action, $action ne "notify" ),
+         local_user_fixture(),
+         qw( can_sync )
+      ],
 
       check    => sub {
          my ( $user1, $user2 ) = @_;
 
          my $room_id;
 
-         matrix_add_push_rule( $user1, 'global', 'content', 'anything', {
-            pattern => "*",
-            actions => [ $action ]
-         })->then( sub {
-            matrix_create_room( $user1 );
-         })->then( sub {
+         matrix_create_room( $user1 )
+         ->then( sub {
             ($room_id) = @_;
 
             matrix_join_room( $user2, $room_id );
@@ -63,11 +97,7 @@ foreach my $action_and_counter (
                or die "Expected $counter to be 1";
 
             Future->done(1);
-         })->on_fail( sub {
-            if ( $action eq "org.matrix.msc2625.mark_unread" ) {
-               die "SKIP: the homeserver doesn't support MSC2625";
-            }
-         })
+         });
       };
 }
 
