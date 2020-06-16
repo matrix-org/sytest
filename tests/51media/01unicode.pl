@@ -1,6 +1,7 @@
 use HTTP::Headers::Util qw( split_header_words );
 use URI::Escape qw( uri_escape );
 use SyTest::TCPProxy;
+use utf8;
 
 my $FILENAME = "\xf0\x9f\x90\x94";
 my $FILENAME_ENCODED = uc uri_escape( $FILENAME );
@@ -167,7 +168,17 @@ sub test_using_client
 
    get_media( $client, $content )->then( sub {
       my ( $cd_params ) = @_;
-      assert_eq( $cd_params->{'filename*'}, "utf-8''$FILENAME_ENCODED", "filename*" );
+
+      # The Content-Disposition header can take two formats - either:
+      #  * filename=utf-8"filename_here"
+      #  * filename*=utf-8''filename_here
+      # This checks the format of whichever one we were provided with. 
+      if (exists( $cd_params->{filename} )) {
+         assert_eq( $cd_params->{filename}, "utf-8\"$FILENAME\"", "filename" );
+      } else {
+         assert_eq( $cd_params->{'filename*'}, "utf-8''$FILENAME_ENCODED", "filename*" );
+      }
+
       Future->done(1);
    });
 }
@@ -212,6 +223,7 @@ test "Can download specifying a different Unicode file name",
    check => sub {
       my ( $http ) = @_;
 
+      my $alt_filename = "☕";
       my $alt_filename_encoded = "%E2%98%95";
 
       $http->do_request(
@@ -222,6 +234,7 @@ test "Can download specifying a different Unicode file name",
 
          my $disposition = $response->header( "Content-Disposition" );
          uc $disposition eq uc "inline; filename*=utf-8''$alt_filename_encoded" or
+            uc $disposition eq uc "inline; filename=utf-8\"$alt_filename\"" or
             die "Expected a UTF-8 filename parameter";
 
          Future->done(1);
