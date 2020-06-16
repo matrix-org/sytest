@@ -222,6 +222,7 @@ test "Can download specifying a different Unicode file name",
 
          my $disposition = $response->header( "Content-Disposition" );
          uc $disposition eq uc "inline; filename*=utf-8''$alt_filename_encoded" or
+            uc $disposition eq uc "inline; filename=utf-8\"$alt_filename_encoded\"" or
             die "Expected a UTF-8 filename parameter";
 
          Future->done(1);
