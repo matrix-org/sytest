@@ -426,7 +426,7 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
    do => sub {
       my ( $outbound_client, $inbound_server, $creator, $user_id, @rooms ) = @_;
 
-      my $room = @rooms[0];
+      my $room = $rooms[0];
       my $room_id = $room->{room_id};
       my $first_home_server = $creator->server_name;
 
