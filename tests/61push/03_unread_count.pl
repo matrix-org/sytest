@@ -63,6 +63,10 @@ foreach my $action_and_counter (
                or die "Expected $counter to be 1";
 
             Future->done(1);
+         })->on_fail(sub {
+            if ( $action eq "org.matrix.msc2625.mark_unread" ) {
+               die "SKIP: the homeserver doesn't support MSC2625";
+            }
          })
       };
 }
