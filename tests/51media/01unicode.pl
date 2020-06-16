@@ -168,7 +168,7 @@ sub test_using_client
    get_media( $client, $content )->then( sub {
       my ( $cd_params ) = @_;
 
-      if (defined( $cd_params->{'filename'} )) {
+      if (exists( $cd_params->{'filename'} )) {
          assert_eq( $cd_params->{'filename'}, "utf-8\"$FILENAME\"", "filename" );
       } else {
          assert_eq( $cd_params->{'filename*'}, "utf-8''$FILENAME_ENCODED", "filename*" );
