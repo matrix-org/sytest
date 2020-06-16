@@ -212,6 +212,7 @@ test "Can download specifying a different Unicode file name",
    check => sub {
       my ( $http ) = @_;
 
+      my $alt_filename = "☕";
       my $alt_filename_encoded = "%E2%98%95";
 
       $http->do_request(
@@ -222,7 +223,7 @@ test "Can download specifying a different Unicode file name",
 
          my $disposition = $response->header( "Content-Disposition" );
          uc $disposition eq uc "inline; filename*=utf-8''$alt_filename_encoded" or
-            uc $disposition eq uc "inline; filename=utf-8\"$alt_filename_encoded\"" or
+            uc $disposition eq uc "inline; filename=utf-8\"$alt_filename\"" or
             die "Expected a UTF-8 filename parameter";
 
          Future->done(1);
