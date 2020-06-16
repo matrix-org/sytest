@@ -5,7 +5,7 @@ EOF
 my $content_type = "text/plain";
 my $content_id;
 
-test "POST /media/v1/upload can create an upload",
+test "POST /media/r0/upload can create an upload",
    requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
 
    proves => [qw( can_upload_media )],
@@ -16,7 +16,7 @@ test "POST /media/v1/upload can create an upload",
       # Because we're POST'ing non-JSON
       $http->do_request(
          method   => "POST",
-         full_uri => "/_matrix/media/v1/upload",
+         full_uri => "/_matrix/media/r0/upload",
          params => {
             access_token => $user->access_token,
          },
@@ -35,7 +35,7 @@ test "POST /media/v1/upload can create an upload",
       });
    };
 
-test "GET /media/v1/download can fetch the value again",
+test "GET /media/r0/download can fetch the value again",
    requires => [ $main::API_CLIENTS[0],
                  qw( can_upload_media )],
 
@@ -46,7 +46,7 @@ test "GET /media/v1/download can fetch the value again",
 
       $http->do_request(
          method   => "GET",
-         full_uri => "/_matrix/media/v1/download/" . join( "", @$content_id ),
+         full_uri => "/_matrix/media/r0/download/" . join( "", @$content_id ),
          # No access_token; it should be public
       )->then( sub {
          my ( $got_content, $response ) = @_;
