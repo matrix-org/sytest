@@ -43,31 +43,29 @@ test "Typing notification sent to local room members",
       my ( $typinguser, $local_user, $room_id ) = @_;
 
       matrix_typing( $typinguser, $room_id,
-         typing => 1,
+         typing => JSON::true,
          timeout => 30000, # msec
       )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, filter => sub {
-               my ( $event ) = @_;
+            await_sync_ephemeral_contains($recvuser, $room_id,
+               check => sub {
+                  my ( $event ) = @_;
+                  return unless $event->{type} eq "m.typing";
 
-               return unless $event->{type} eq "m.typing";
+                  assert_json_keys( $event, qw( type content ));
+                  assert_json_keys( my $content = $event->{content}, qw( user_ids ));
+                  assert_json_list( my $users = $content->{user_ids} );
 
-               assert_json_keys( $event, qw( type room_id content ));
-               assert_json_keys( my $content = $event->{content}, qw( user_ids ));
+                  scalar @$users == 1 or
+                     die "Expected 1 member to be typing";
+                  $users->[0] eq $typinguser->user_id or
+                     die "Expected ${\ $typinguser->user_id } to be typing";
 
-               return unless $event->{room_id} eq $room_id;
-
-               assert_json_list( my $users = $content->{user_ids} );
-
-               scalar @$users == 1 or
-                  die "Expected 1 member to be typing";
-               $users->[0] eq $typinguser->user_id or
-                  die "Expected ${\ $typinguser->user_id } to be typing";
-
-               return 1;
-            })
+                  return 1;
+               },
+            )
          } $typinguser, $local_user );
       });
    };
@@ -80,25 +78,24 @@ test "Typing notifications also sent to remote room members",
    do => sub {
       my ( $typinguser, $remote_user, $room_id ) = @_;
 
-      await_event_for( $remote_user, filter => sub {
-         my ( $event ) = @_;
+      await_sync_ephemeral_contains($remote_user, $room_id,
+         check => sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq "m.typing";
 
-         return unless $event->{type} eq "m.typing";
+            assert_json_keys( $event, qw( type content ));
+            assert_json_keys( my $content = $event->{content}, qw( user_ids ));
 
-         assert_json_keys( $event, qw( type room_id content ));
-         assert_json_keys( my $content = $event->{content}, qw( user_ids ));
+            assert_json_list( my $users = $content->{user_ids} );
 
-         return unless $event->{room_id} eq $room_id;
+            scalar @$users == 1 or
+               die "Expected 1 member to be typing";
+            $users->[0] eq $typinguser->user_id or
+               die "Expected ${\ $typinguser->user_id } to be typing";
 
-         assert_json_list( my $users = $content->{user_ids} );
-
-         scalar @$users == 1 or
-            die "Expected 1 member to be typing";
-         $users->[0] eq $typinguser->user_id or
-            die "Expected ${\ $typinguser->user_id } to be typing";
-
-         return 1;
-      })
+            return 1;
+         },
+      )
    };
 
 
@@ -109,27 +106,25 @@ test "Typing can be explicitly stopped",
    do => sub {
       my ( $typinguser, $local_user, $room_id ) = @_;
 
-      matrix_typing( $typinguser, $room_id, typing => 0 )->then( sub {
+      matrix_typing( $typinguser, $room_id, typing => JSON::false )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, filter => sub {
-               my ( $event ) = @_;
+            await_sync_ephemeral_contains($recvuser, $room_id,
+               check => sub {
+                  my ( $event ) = @_;
+                  return unless $event->{type} eq "m.typing";
 
-               return unless $event->{type} eq "m.typing";
+                  assert_json_keys( $event, qw( type content ));
+                  assert_json_keys( my $content = $event->{content}, qw( user_ids ));
+                  assert_json_list( my $users = $content->{user_ids} );
 
-               assert_json_keys( $event, qw( type room_id content ));
-               assert_json_keys( my $content = $event->{content}, qw( user_ids ));
+                  scalar @$users and
+                     die "Expected 0 members to be typing";
 
-               return unless $event->{room_id} eq $room_id;
-
-               assert_json_list( my $users = $content->{user_ids} );
-
-               scalar @$users and
-                  die "Expected 0 members to be typing";
-
-               return 1;
-            })
+                  return 1;
+               },
+            )
          } $typinguser, $local_user );
       });
    };
