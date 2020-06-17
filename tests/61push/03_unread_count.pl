@@ -43,7 +43,7 @@ foreach my $action_and_counter (
       requires => [
          user_with_push_rule_fixture(
             $action,
-            $action eq "org.matrix.msc2625.mark_unread"
+            $action eq "org.matrix.msc2625.mark_unread",
          ),
          local_user_fixture(),
          qw( can_sync )
