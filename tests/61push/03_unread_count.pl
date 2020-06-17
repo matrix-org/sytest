@@ -41,7 +41,10 @@ foreach my $action_and_counter (
    my ( $action, $counter ) = @$action_and_counter;
    test "Messages that $action from another user increment $counter",
       requires => [
-         user_with_push_rule_fixture( $action, $action ne "notify" ),
+         user_with_push_rule_fixture(
+            $action,
+            $action eq "org.matrix.msc2625.mark_unread"
+         ),
          local_user_fixture(),
          qw( can_sync )
       ],
