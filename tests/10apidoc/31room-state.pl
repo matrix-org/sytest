@@ -238,8 +238,7 @@ test "GET /joined_rooms lists newly-created room",
    };
 
 test "POST /rooms/:room_id/state/m.room.name sets name",
-   requires => [ $user_fixture, $room_fixture,
-                 qw( can_room_initial_sync )],
+   requires => [ $user_fixture, $room_fixture],
 
    proves => [qw( can_set_room_name )],
 
@@ -252,18 +251,14 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
 
          content => { name => $name },
       )->then( sub {
-         repeat_until_true {
-            matrix_initialsync_room( $user, $room_id )->then( sub {
-               my ( $body ) = @_;
-
-               assert_json_keys( $body, qw( state ));
-               my $state = $body->{state};
-
-               my %state_by_type = partition_by { $_->{type} } @$state;
-
-               Future->done( defined $state_by_type{"m.room.name"} );
-            })
-         };
+         await_sync_timeline_contains($user, $room_id,
+            check => sub {
+               my ( $event ) = @_;
+               return $event->{type} eq "m.room.name" &&
+                  $event->{state_key} eq "" &&
+                  $event->{content}{name} eq $name;
+            },
+         )
       })
    };
 
@@ -294,8 +289,7 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
 my $topic = "A new topic for the room";
 
 test "POST /rooms/:room_id/state/m.room.topic sets topic",
-   requires => [ $user_fixture, $room_fixture,
-                 qw( can_room_initial_sync )],
+   requires => [ $user_fixture, $room_fixture],
 
    proves => [qw( can_set_room_topic )],
 
@@ -308,18 +302,14 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
          content => { topic => $topic },
       )->then( sub {
-         repeat_until_true {
-            matrix_initialsync_room( $user, $room_id )->then( sub {
-               my ( $body ) = @_;
-
-               assert_json_keys( $body, qw( state ));
-               my $state = $body->{state};
-
-               my %state_by_type = partition_by { $_->{type} } @$state;
-
-               Future->done( defined $state_by_type{"m.room.topic"} );
-            })
-         };
+         await_sync_timeline_contains($user, $room_id,
+            check => sub {
+               my ( $event ) = @_;
+               return $event->{type} eq "m.room.topic" &&
+                  $event->{state_key} eq "" &&
+                  $event->{content}{topic} eq $topic;
+            },
+         )
       })
    };
 
