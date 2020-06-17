@@ -390,6 +390,7 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
       my $server_name = $creator_user->server_name;
       my $room_id;
       my $join_event;
+      my $room_version;
 
       matrix_create_room(
          $creator_user,
@@ -405,7 +406,7 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
          my ( $body ) = @_;
          log_if_fail "make_join body", $body;
 
-         my $room_version = $body->{room_version} // 1;
+         $room_version = $body->{room_version} // 1;
 
          $join_event = $body->{event};
 
@@ -416,11 +417,12 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
             # room v1/v2: assign an event id
             $join_event->{event_id} = $outbound_client->datastore->next_event_id();
          }
+         my $event_id = SyTest::Federation::Protocol::id_for_event($join_event, $room_version);
 
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $server_name,
-            uri      => "/v1/send_join/$room_id/xxx",
+            uri      => "/v1/send_join/$room_id/$event_id",
             content  => $join_event,
          );
       })->main::expect_http_403()
@@ -436,11 +438,12 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
                $outbound_client->datastore->key_id => "a" x 86,
             },
          };
+         my $event_id = SyTest::Federation::Protocol::id_for_event($join_event, $room_version);
 
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $server_name,
-            uri      => "/v1/send_join/$room_id/xxx",
+            uri      => "/v1/send_join/$room_id/$event_id",
             content  => $join_event,
          );
       })->main::expect_http_403()
@@ -457,11 +460,12 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
 
          # make sure that it gets accepted once we sign it
          $outbound_client->datastore->sign_event( $join_event );
+         my $event_id = SyTest::Federation::Protocol::id_for_event($join_event, $room_version);
 
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $server_name,
-            uri      => "/v1/send_join/$room_id/xxx",
+            uri      => "/v1/send_join/$room_id/$event_id",
             content  => $join_event,
          );
 
@@ -1111,11 +1115,12 @@ test "Inbound: send_join rejects invalid JSON for room version 6",
          ${event}{content}{bad_val} = 1.1;
 
          $datastore->sign_event( \%event );
+         my $event_id = SyTest::Federation::Protocol::id_for_event(\%event, '6');
 
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $first_home_server,
-            uri      => "/v2/send_join/$room_id/xxx",
+            uri      => "/v2/send_join/$room_id/$event_id",
             content => \%event,
          )
       })->main::expect_m_bad_json;
