@@ -70,7 +70,9 @@ sub matrix_recv_device_message
    } until => sub {
       my ( $f ) = @_;
       return 1 if $f->failure;
-      scalar @{ $f->get->{to_device}{events} };
+      my $resp = $f->get;
+      log_if_fail "Sync response", $resp;
+      return scalar @{ $resp->{to_device}{events} };
    };
 
    $f->then( sub {
@@ -148,6 +150,66 @@ test "Can recv a device message using /sync",
             content => {
                my_key => "my_value",
             },
+         }]);
+
+         Future->done(1);
+      });
+   };
+
+test "Can send a to-device message to two users which both receive it using /sync",
+   requires => [ local_user_fixture(), local_user_fixture(), local_user_fixture(), qw( can_recv_device_message ) ],
+
+   check => sub {
+      my ( $sender, $recip1, $recip2 ) = @_;
+
+      # do initial syncs for each recipient
+      matrix_sync( $recip1 )
+      ->then( sub {
+         my ( $body ) = @_;
+         $recip1->device_message_next_batch = $body->{next_batch};
+
+         matrix_sync( $recip2 );
+      })->then( sub {
+         my ( $body ) = @_;
+         $recip2->device_message_next_batch = $body->{next_batch};
+
+         # send the message
+         matrix_send_device_message(
+            $sender,
+            type     => "my.test.type",
+            messages => {
+               $recip1->user_id => {
+                  $recip1->device_id => {
+                     my_key => "r1",
+                  },
+               },
+               $recip2->user_id => {
+                  $recip2->device_id => {
+                     my_key => "r2",
+                  },
+               },
+            },
+         );
+      })->then( sub {
+         log_if_fail "sent to-device messages";
+         matrix_recv_and_ack_device_message( $recip1 );
+      })->then( sub {
+         my ( $messages ) = @_;
+
+         assert_deeply_eq( $messages, [{
+            sender  => $sender->user_id,
+            type    => "my.test.type",
+            content => { my_key => "r1" },
+         }]);
+
+         matrix_recv_and_ack_device_message( $recip2 );
+      })->then( sub {
+         my ( $messages ) = @_;
+
+         assert_deeply_eq( $messages, [{
+            sender  => $sender->user_id,
+            type    => "my.test.type",
+            content => { my_key => "r2" },
          }]);
 
          Future->done(1);

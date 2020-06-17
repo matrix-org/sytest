@@ -82,7 +82,10 @@ test "POST /login can log in as a user",
 
          content => {
             type     => "m.login.password",
-            user     => $user_id,
+            identifier => {
+               type => "m.id.user",
+               user => $user_id,
+            },
             password => $password,
          },
       )->then( sub {
@@ -114,7 +117,10 @@ test "POST /login returns the same device_id as that in the request",
 
          content => {
             type     => "m.login.password",
-            user     => $user_id,
+            identifier => {
+               type => "m.id.user",
+               user => $user_id,
+            },
             password => $password,
             device_id => $device_id,
          },
@@ -146,7 +152,10 @@ test "POST /login can log in as a user with just the local part of the id",
 
          content => {
             type     => "m.login.password",
-            user     => $user_localpart,
+            identifier => {
+               type => "m.id.user",
+               user => $user_localpart,
+            },
             password => $password,
          },
       )->then( sub {
@@ -174,7 +183,10 @@ test "POST /login as non-existing user is rejected",
 
          content => {
             type     => "m.login.password",
-            user     => "i-ought-not-to-exist",
+            identifier => {
+               type => "m.id.user",
+               user => "i-ought-not-to-exist",
+            },
             password => "XXX",
          },
       )->main::expect_http_403;
@@ -193,7 +205,10 @@ test "POST /login wrong password is rejected",
 
          content => {
             type     => "m.login.password",
-            user     => $user_id,
+            identifier => {
+               type => "m.id.user",
+               user => $user_id,
+            },
             password => "${password}wrong",
          },
       )->main::expect_http_403->then( sub {
@@ -225,7 +240,10 @@ sub matrix_login_again_with_user
       uri     => "/r0/login",
       content  => {
          type     => "m.login.password",
-         user     => $user->user_id,
+         identifier => {
+            type => "m.id.user",
+            user => $user->user_id,
+         },
          password => $user->password,
          %args,
       },

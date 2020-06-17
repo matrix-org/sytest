@@ -33,6 +33,7 @@ sub _init
 
    $self->{paths} = {};
    $self->{dendron} = '';
+   $self->{redis_host} = '';
 
    $self->SUPER::_init( $args );
 
@@ -290,6 +291,11 @@ sub start
         # feature with worker mode.
         limit_usage_by_mau => "true",
         max_mau_value => 50000000,
+
+        redis => {
+           enabled => $self->{redis_host} ne '',
+           host    => $self->{redis_host},
+        },
 
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
@@ -662,6 +668,7 @@ sub _init
    $self->SUPER::_init( @_ );
 
    $self->{dendron} = delete $args->{dendron_binary};
+   $self->{redis_host} = delete $args->{redis_host};
 
    if( my $level = delete $args->{torture_replication} ) {
       # torture the replication protocol a bit, to replicate bugs.

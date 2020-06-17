@@ -9,7 +9,7 @@
 
 # Run the sytests.
 
-set -ex
+set -e
 
 cd "$(dirname $0)/.."
 
@@ -25,11 +25,6 @@ if [ -n "$MULTI_POSTGRES" ] || [ -n "$POSTGRES" ]; then
 
     # Start the database
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
-
-    su -c psql postgres <<< "show config_file"
-    su -c psql postgres <<< "show max_connections"
-    su -c psql postgres <<< "show full_page_writes"
-    su -c psql postgres <<< "show fsync"
 fi
 
 # Now create the databases
@@ -110,18 +105,37 @@ elif [ -n "$POSTGRES" ]; then
 
 fi
 
+# default value for SYNAPSE_SOURCE
+: ${SYNAPSE_SOURCE:=/src}
+
+# if we're running against a source directory, turn it into a tarball.  pip
+# will then unpack it to a temporary location, and build it.  (As of pip 20.1,
+# it will otherwise try to build it in-tree, which means writing changes to the
+# source volume outside the container.)
+#
+if [ -d "$SYNAPSE_SOURCE" ]; then
+    echo "Creating tarball from synapse source"
+    tar -C "$SYNAPSE_SOURCE" -czf /tmp/synapse.tar.gz \
+        synapse scripts setup.py README.rst synctl MANIFEST.in
+    SYNAPSE_SOURCE="/tmp/synapse.tar.gz"
+elif [ ! -r "$SYNAPSE_SOURCE" ]; then
+    echo "Unable to read synapse source at $SYNAPSE_SOURCE" >&2
+    exit 1
+fi
+
 if [ -n "$OFFLINE" ]; then
     # if we're in offline mode, just put synapse into the virtualenv, and
     # hope that the deps are up-to-date.
     #
-    # (`pip install -e` likes to reinstall setuptools even if it's already installed,
-    # so we just run setup.py explicitly.)
-    #
-    (cd /src && /venv/bin/python setup.py -q develop)
+    # --no-use-pep517 works around what appears to be a pip issue
+    # (https://github.com/pypa/pip/issues/5402 possibly) where pip wants
+    # to reinstall any requirements for the build system, even if they are
+    # already installed.
+    /venv/bin/pip install --no-index --no-use-pep517 "$SYNAPSE_SOURCE"
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir /src
+    /venv/bin/pip install -q --upgrade --no-cache-dir "$SYNAPSE_SOURCE"[redis]
     /venv/bin/pip install -q --upgrade --no-cache-dir \
         lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
 

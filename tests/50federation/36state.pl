@@ -287,6 +287,7 @@ test "Outbound federation requests missing prev_events and then asks for /state_
    do => sub {
       my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
       my $first_home_server = $creator->server_name;
+      log_if_fail "Room ID is ". $room_id;
 
       # in this test, we're going to create a DAG like this:
       #
@@ -328,7 +329,14 @@ test "Outbound federation requests missing prev_events and then asks for /state_
       })->then( sub {
          my ( $body ) = @_;
          $pl_event_id = $body->{event_id};
-
+         # wait for the PL event to be processed before joining or else the join
+         # might be processed before we've fully processed the PL event.
+         await_sync_timeline_contains($creator, $room_id, check => sub {
+            my ( $event ) = @_;
+            log_if_fail "Received event", $event;
+            return $event->{event_id} eq $pl_event_id
+         })
+      })->then( sub {
          $outbound_client->join_room(
             server_name => $first_home_server,
             room_id     => $room_id,
@@ -336,7 +344,7 @@ test "Outbound federation requests missing prev_events and then asks for /state_
            );
       })->then( sub {
          ( $room ) = @_;
-
+         log_if_fail "User joined room ". $user_id;
          # Create and send B
          $sent_event_b = $room->create_and_insert_event(
             type => "test_state",
@@ -347,14 +355,17 @@ test "Outbound federation requests missing prev_events and then asks for /state_
                body => "event_b",
             },
          );
+         log_if_fail "User sent event B ". $sent_event_b->{event_id};
 
          Future->needs_all(
             $outbound_client->send_event(
                event       => $sent_event_b,
                destination => $first_home_server,
             ),
-            await_event_for( $creator, filter => sub {
-               ( $_[0]->{event_id} // '' ) eq $sent_event_b->{event_id};
+            await_sync_timeline_contains($creator, $room_id, check => sub {
+               my ( $event ) = @_;
+               log_if_fail "Received event", $event;
+               return $event->{event_id} eq $sent_event_b->{event_id}
             }),
          );
       })->then( sub {
@@ -479,11 +490,14 @@ test "Outbound federation requests missing prev_events and then asks for /state_
          )->then( sub {
             # creator user should eventually receive the events
             Future->needs_all(
-               await_event_for( $creator, filter => sub {
-                  ( $_[0]->{event_id} // '' ) eq $sent_event_c->{event_id};
+               await_sync_timeline_contains($creator, $room_id, check => sub {
+                  my ( $event ) = @_;
+                  return $event->{event_id} eq $sent_event_c->{event_id}
                }),
-               await_event_for( $creator, filter => sub {
-                  ( $_[0]->{event_id} // '' ) eq $missing_event_x->{event_id};
+               await_sync_timeline_contains($creator, $room_id, check => sub {
+                  my ( $event ) = @_;
+                  log_if_fail "/sync event", $event;
+                  return $event->{event_id} eq $missing_event_x->{event_id}
                }),
             );
          })->then( sub {

@@ -81,10 +81,9 @@ test "Inbound federation can receive events",
             destination => $first_home_server,
          );
       })->then( sub {
-         await_event_for( $creator, filter => sub {
+         await_sync_timeline_contains( $creator, $room_id, check => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
-            return unless $event->{room_id} eq $room_id;
 
             assert_eq( $event->{sender}, $user_id,
                'event sender' );
@@ -132,10 +131,9 @@ test "Inbound federation can receive redacted events",
             destination => $first_home_server,
          );
       })->then( sub {
-         await_event_for( $creator, filter => sub {
+         await_sync_timeline_contains( $creator, $room_id, check => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
-            return unless $event->{room_id} eq $room_id;
 
             assert_eq( $event->{sender}, $user_id,
                'event sender' );

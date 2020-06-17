@@ -34,7 +34,11 @@ test "Guest users can send messages to guest_access rooms if joined",
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )
       ->then( sub {
-         matrix_join_room( $guest_user, $room_id )
+         # we use join_room_synced as a proxy for ensuring that the join event
+         # has propagated to the workers, otherwise the worker that receives
+         # the event send request might not know that we are in the room.
+         # (see https://github.com/matrix-org/sytest/issues/836)
+         matrix_join_room_synced( $guest_user, $room_id );
       })->then( sub {
          matrix_send_room_text_message( $guest_user, $room_id, body => "sup" );
       })->then( sub {
@@ -125,7 +129,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )
       ->then( sub {
-         matrix_join_room( $guest_user, $room_id );
+         matrix_join_room_synced( $guest_user, $room_id );
       })->then( sub {
          matrix_get_room_membership( $user, $room_id, $guest_user );
       })->then( sub {
@@ -154,7 +158,11 @@ test "Guest user can set display names",
       my $displayname_uri = "/r0/profile/:user_id/displayname";
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )->then( sub {
-         matrix_join_room( $guest_user, $room_id );
+         # we use join_room_synced as a proxy for ensuring that the join event
+         # has propagated to the workers, otherwise the worker that receives
+         # the profile request might not know that we are in the room.
+         # (see https://github.com/matrix-org/sytest/issues/836)
+         matrix_join_room_synced( $guest_user, $room_id );
       })->then( sub {
          do_request_json_for( $guest_user,
             method => "GET",
@@ -172,13 +180,19 @@ test "Guest user can set display names",
                displayname => "creeper",
             },
       )})->then( sub {
+         my $iter = 0;
+
          retry_until_success {
+            $iter++;
+
             Future->needs_all(
                do_request_json_for( $guest_user,
                   method => "GET",
                   uri    => $displayname_uri,
                )->then( sub {
                   my ( $body ) = @_;
+                  log_if_fail "Iteration $iter: /displayname result", $body;
+
                   assert_eq( $body->{displayname}, "creeper", "Profile displayname" );
 
                   Future->done(1);
@@ -188,6 +202,8 @@ test "Guest user can set display names",
                   uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
                )->then( sub {
                   my ( $body ) = @_;
+                  log_if_fail "Iteration $iter: /state result", $body;
+
                   assert_eq( $body->{displayname}, "creeper", "Room displayname" );
 
                   Future->done(1);
@@ -217,7 +233,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
          })->then( sub {
             matrix_join_room( $remote_user, $room_id );
          })->then( sub {
-            matrix_join_room( $guest_user, $room_id );
+            matrix_join_room_synced( $guest_user, $room_id );
          })->then( sub {
             matrix_get_room_membership( $local_user, $room_id, $guest_user );
          })->then( sub {
