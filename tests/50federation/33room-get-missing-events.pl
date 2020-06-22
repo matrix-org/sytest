@@ -452,8 +452,8 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
 
       log_if_fail "Missing event", $missing_event;
 
-      # Generate another one and do send it so it will refer to the
-      # previous in its prev_events field
+      # Generate another event which will be sent. It will refer to the missing
+      # event in its prev_events field.
       my $sent_event = $room->create_and_insert_event(
          type => "m.room.message",
 
