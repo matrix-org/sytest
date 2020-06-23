@@ -47,8 +47,6 @@ sub matrix_recv_device_message
 {
    my ( $user ) = @_;
 
-   my $next_batch;
-
    my $delay = 0;
 
    my $f = repeat {

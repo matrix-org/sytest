@@ -242,10 +242,10 @@ test "Can paginate public room list",
    };
 
 test "Can search public room list",
-   requires => [ $main::HOMESERVER_INFO[0], local_user_fixture() ],
+   requires => [ local_user_fixture() ],
 
    check => sub {
-      my ( $info, $local_user ) = @_;
+      my ( $local_user ) = @_;
 
       my $room_id;
 

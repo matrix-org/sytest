@@ -76,10 +76,10 @@ test "Can bind and unbind 3PID via homeserver",
 
 
 test "Can unbind 3PID via homeserver when bound out of band",
-   requires => [ $main::HTTP_CLIENT, local_user_fixture(), id_server_fixture() ],
+   requires => [ local_user_fixture(), id_server_fixture() ],
 
    check => sub {
-      my ( $http, $user, $id_server ) = @_;
+      my ( $user, $id_server ) = @_;
 
       my $medium = "email";
       my $address = 'bob3@example.com';
@@ -107,10 +107,10 @@ test "Can unbind 3PID via homeserver when bound out of band",
 
 
 test "3PIDs are unbound after account deactivation",
-   requires => [ $main::HTTP_CLIENT, local_user_fixture(), id_server_fixture() ],
+   requires => [ local_user_fixture(), id_server_fixture() ],
 
    check => sub {
-      my ( $http, $user, $id_server ) = @_;
+      my ( $user, $id_server ) = @_;
 
       my $medium = "email";
       my $address = 'bob4@example.com';
@@ -132,10 +132,10 @@ test "3PIDs are unbound after account deactivation",
 
 
 test "Can bind and unbind 3PID via /unbind by specifying the identity server",
-   requires => [ $main::HTTP_CLIENT, local_user_fixture(), id_server_fixture() ],
+   requires => [ local_user_fixture(), id_server_fixture() ],
 
    check => sub {
-      my ( $http, $user, $id_server ) = @_;
+      my ( $user, $id_server ) = @_;
 
       my $medium = "email";
       my $address = 'bobby@example.com';
@@ -165,10 +165,10 @@ test "Can bind and unbind 3PID via /unbind by specifying the identity server",
 
 
 test "Can bind and unbind 3PID via /unbind without specifying the identity server",
-   requires => [ $main::HTTP_CLIENT, local_user_fixture(), id_server_fixture() ],
+   requires => [ local_user_fixture(), id_server_fixture() ],
 
    check => sub {
-      my ( $http, $user, $id_server ) = @_;
+      my ( $user, $id_server ) = @_;
 
       my $medium = "email";
       my $address = 'bobby2@example.com';

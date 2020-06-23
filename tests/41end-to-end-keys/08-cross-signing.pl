@@ -417,10 +417,7 @@ test "can fetch self-signing keys over federation",
    do => sub {
       my ( $user1, $user2 ) = @_;
 
-      my $user1_id = $user1->user_id;
-      my $user1_device = $user1->device_id;
       my $user2_id = $user2->user_id;
-      my $user2_device = $user2->device_id;
 
       my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
       my $self_signing_key = {
@@ -488,8 +485,6 @@ test "uploading self-signing key notifies over federation",
    do => sub {
       my ( $user1, $user2 ) = @_;
 
-      my $user1_id = $user1->user_id;
-      my $user1_device = $user1->device_id;
       my $user2_id = $user2->user_id;
       my $user2_device = $user2->device_id;
 
@@ -589,8 +584,6 @@ test "uploading signed devices gets propagated over federation",
    do => sub {
       my ( $user1, $user2 ) = @_;
 
-      my $user1_id = $user1->user_id;
-      my $user1_device = $user1->device_id;
       my $user2_id = $user2->user_id;
       my $user2_device = $user2->device_id;
 

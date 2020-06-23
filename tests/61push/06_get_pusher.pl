@@ -38,7 +38,7 @@ test "Can fetch a user's pushers",
 
          log_if_fail "Get pusher response body", $body;
 
-         assert_json_keys( my $notification = $body, qw(pushers));
+         assert_json_keys( $body, qw(pushers) );
 
          assert_json_keys( my $pusher = $body->{pushers}[0], qw(
             profile_tag kind app_id app_display_name device_display_name
