@@ -197,6 +197,24 @@ sub await_sync_timeline_contains {
    )
 }
 
+=head2 await_sync_ephemeral_contains
+
+    $sync_body = await_sync_ephemeral_contains( $user, $room_id,
+        check => sub {
+            my ( $event ) = @_;
+            return true_if_event_matches();
+        },
+    )->get();
+
+Waits for something to appear in a the ephemeral section of a particular room.
+Returns the sync body.
+
+The C<check> function gets given individual events.
+
+See L</await_sync> for details of the C<since> parameter.
+
+=cut
+
 sub await_sync_ephemeral_contains {
    my ( $user, $room_id, %params ) = @_;
 
