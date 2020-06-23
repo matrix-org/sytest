@@ -109,17 +109,28 @@ test "Typing can be explicitly stopped",
       matrix_typing( $typinguser, $room_id, typing => JSON::false )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;
-
+            my $num_typing_events = 0;
             await_sync_ephemeral_contains($recvuser, $room_id,
                check => sub {
                   my ( $event ) = @_;
                   return unless $event->{type} eq "m.typing";
+                  $num_typing_events++;
+
+                  log_if_fail "Received typing event: ", $event;
 
                   assert_json_keys( $event, qw( type content ));
                   assert_json_keys( my $content = $event->{content}, qw( user_ids ));
                   assert_json_list( my $users = $content->{user_ids} );
 
-                  return scalar @$users == 0;
+                  my $zero_users = scalar @$users == 0;
+                  if ( !$zero_users ) {
+                     log_if_fail "rejecting event because want zero users typing, but there are some";
+                     if ( $num_typing_events > 1) {
+                        # this is the second time we have seen a typing event with >0 typing users, bail out
+                        die "seen too many typing events with typing users";
+                     }
+                  }
+                  return $zero_users;
                },
             )
          } $typinguser, $local_user );
