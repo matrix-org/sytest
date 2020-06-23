@@ -15,20 +15,14 @@ sub inviteonly_room_fixture
          )->then( sub {
             my ( $room_id ) = @_;
 
-            matrix_initialsync_room( $creator, $room_id )->then( sub {
-               my ( $body ) = @_;
-
-               assert_json_keys( $body, qw( state ));
-
-               my ( $join_rules_event ) = first { $_->{type} eq "m.room.join_rules" } @{ $body->{state} };
-               $join_rules_event or
-                  die "Failed to find an m.room.join_rules event";
-
-               $join_rules_event->{content}{join_rule} eq "invite" or
+            await_sync_timeline_contains($creator, $room_id, check => sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.join_rules";
+               $event->{content}{join_rule} eq "invite" or
                   die "Expected join rule to be 'invite'";
-
-               Future->done( $room_id );
+               return 1;
             });
+            Future->done( $room_id );
          });
       }
    )
