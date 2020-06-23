@@ -35,7 +35,7 @@ test "Forward extremities remain so even after the next events are populated as 
 
       my $fake_user_id = '@fake_user:' . $outbound_client->server_name;
       my $room_id = $room->room_id;
-      my ( $pl_event_b, $pl_event_b_id );
+      my $pl_event_b_id;
 
       # make sure that the sytest user has permission to alter the state
       Future->needs_all(
