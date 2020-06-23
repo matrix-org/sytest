@@ -119,8 +119,7 @@ test "Typing can be explicitly stopped",
                   assert_json_keys( my $content = $event->{content}, qw( user_ids ));
                   assert_json_list( my $users = $content->{user_ids} );
 
-                  scalar @$users and
-                     die "Expected 0 members to be typing";
+                  return unless scalar @$users == 1;
 
                   return 1;
                },
