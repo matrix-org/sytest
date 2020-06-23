@@ -122,15 +122,15 @@ test "Typing can be explicitly stopped",
                   assert_json_keys( my $content = $event->{content}, qw( user_ids ));
                   assert_json_list( my $users = $content->{user_ids} );
 
-                  my $zero_users = scalar @$users == 0;
-                  if ( !$zero_users ) {
-                     log_if_fail "rejecting event because want zero users typing, but there are some";
-                     if ( $num_typing_events > 1) {
-                        # this is the second time we have seen a typing event with >0 typing users, bail out
-                        die "seen too many typing events with typing users";
-                     }
+                  return 1 if scalar @$users == 0;
+
+                  log_if_fail "rejecting event because want zero users typing, but there are some";
+
+                  if ( $num_typing_events > 1 ) {
+                     # this is the second time we have seen a typing event with >0 typing users, bail out
+                     die "seen too many typing events with typing users";
                   }
-                  return $zero_users;
+                  return 0;
                },
             )
          } $typinguser, $local_user );
