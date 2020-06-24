@@ -11,7 +11,7 @@ test "Outbound federation can backfill events",
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
-      my $room_alias = "#50fed-31backfill:$local_server_name";
+      my $room_alias = "#50fed-34backfill:$local_server_name";
 
       my $room = $datastore->create_room(
          creator => $creator_id,
@@ -446,4 +446,104 @@ test "Backfilled events whose prev_events are in a different room do not allow c
              Future->done;
           });
       });
+   };
+
+# A homeserver receiving a response from `backfill` for a version 6 room with a
+# bad JSON value (e.g. a float) should discard the bad data.
+#
+# To test this we need to:
+# * Create a room.
+# * Add "bad" data into the room history.
+# * Join the room.
+# * Attempt to backfill the room history.
+# * Ensure that the "bad" event will be discarded.
+test "Outbound federation rejects backfill containing invalid JSON for events in room version 6",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER, federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id ) = @_;
+
+      my $local_server_name = $inbound_server->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      my $room_alias = "#50fed-34backfill-bad-json:$local_server_name";
+
+      my $room = $datastore->create_room(
+         creator      => $creator_id,
+         alias        => $room_alias,
+         room_version => "6",
+      );
+
+      # Create some past messages to backfill from
+      $room->create_and_insert_event(
+         type => "m.room.message",
+
+         sender  => $creator_id,
+         content => {
+            msgtype => "m.text",
+            body    => "Message here",
+            # Insert a "bad" value into the event, in this case a float.
+            bad_val => 1.1,
+         },
+      );
+
+      Future->needs_all(
+         $inbound_server->await_request_backfill( $room->room_id )->then( sub {
+            my ( $req ) = @_;
+
+            # The helpfully-named 'v' parameter gives the "versions", i.e. the
+            # event IDs to start the backfill walk from. This can just be used
+            # in the 'start_at' list for $datastore->get_backfill_events.
+            # This would typically be an event ID the requesting server is
+            # aware exists but has not yet seen, such as one listed in a
+            # prev_events or auth_events list.
+            my $v     = $req->query_param( 'v' );
+
+            my $limit = $req->query_param( 'limit' );
+
+            my @events = $datastore->get_backfill_events(
+               start_at => [ $v ],
+               limit    => $limit,
+            );
+
+            log_if_fail "Responding with JSON", @events;
+
+            $req->respond_json( {
+               origin           => $inbound_server->server_name,
+               origin_server_ts => $inbound_server->time_ms,
+               pdus             => \@events,
+            } );
+
+            Future->done;
+         }),
+
+         matrix_join_room_synced( $user, $room_alias )->then( sub {
+            my ($room_id) = @_;
+
+            matrix_get_room_messages($user, $room_id,
+               limit => 10, # Something larger than 1.
+            );
+         })->then( sub {
+            my ( $body ) = @_;
+            my @events = $body->{chunk};
+
+            log_if_fail "Body", $body;
+
+            # Theoretically this is 1 m.room.message events + our own
+            # m.room.member, but since the message event will be rejected
+            # only the member event will come back.
+            assert_eq( scalar @events , 1 );
+
+            my $member_event = $body->{chunk}[0];
+
+            # Ensure the only event is the m.room.member event (not the
+            # m.room.message event).
+            assert_json_keys( $member_event,
+               qw( type event_id room_id sender state_key content ));
+            assert_eq( $member_event->{type}, "m.room.member",
+               'events[0] type' );
+
+            Future->done;
+         }),
+      )
    };

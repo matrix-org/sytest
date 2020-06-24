@@ -774,7 +774,7 @@ test "Current state appears in timeline in private history with many messages be
                  qw( can_sync ) ],
 
    # sending 50 messages can take a while
-   timeout => 20000,
+   timeout => 20,
 
    check => sub {
       my ( $creator, $syncer, $invitee ) = @_;
@@ -834,7 +834,7 @@ test "Current state appears in timeline in private history with many messages af
                  qw( can_sync ) ],
 
    # sending 50 messages can take a while
-   timeout => 20000,
+   timeout => 20,
 
    check => sub {
       my ( $creator, $syncer, $invitee ) = @_;

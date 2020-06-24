@@ -408,7 +408,6 @@ test "Inbound federation rejects invites which are not signed by the sender",
       my ( $outbound_client, $user, $sytest_user_id ) = @_;
 
       my $server_name = $user->server_name;
-      my $sytest_server_name = $outbound_client->server_name;
       my $datastore = $outbound_client->datastore;
 
       my $room = $datastore->create_room(
@@ -755,3 +754,155 @@ test "Inbound /v1/send_leave rejects leaves from other servers",
 
    # this test is a bit slooow
    timeout => 20;
+
+test "Inbound federation rejects invites which include invalid JSON for room version 6",
+   requires => [
+      $main::OUTBOUND_CLIENT, local_user_fixture(), federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $outbound_client, $user, $sytest_user_id ) = @_;
+
+      my $server_name = $user->server_name;
+      my $datastore = $outbound_client->datastore;
+
+      my $room = $datastore->create_room(
+         creator => $sytest_user_id,
+         room_version => "6",
+      );
+
+      my $invite = $room->create_event(
+         type => "m.room.member",
+         content   => {
+            membership => "invite",
+            bad_val => 1.1,
+         },
+         sender    => $sytest_user_id,
+         state_key => $user->user_id,
+      );
+
+      # Note that only v2 supports providing different room versions.
+      do_v2_invite_request( $room, $server_name, $outbound_client, $invite )
+      ->main::expect_m_bad_json;
+   };
+
+test "Outbound federation rejects invite response which include invalid JSON for room version 6",
+   requires => [
+      local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
+      $main::INBOUND_SERVER,
+      $main::OUTBOUND_CLIENT,
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ($user, $room_id, $inbound_server, $outbound_client, $invitee_id) = @_;
+
+      Future->needs_all(
+         matrix_invite_user_to_room($user, $invitee_id, $room_id),
+
+         $inbound_server->await_request_v2_invite($room_id)->then(sub {
+            my ($req, undef) = @_;
+
+            my $body = $req->body_from_json;
+            log_if_fail "Invitation", $body;
+
+            my $invite = $body->{event};
+            # Add a bad value into the response.
+            $invite->{bad_val} = 1.1;
+
+            log_if_fail "Invitation 2", $invite;
+
+            # accept the invite event and send it back
+            $inbound_server->datastore->sign_event($invite);
+
+            $req->respond_json(
+               { event => $invite }
+            );
+
+            Future->done;
+         }),
+      )->main::expect_m_bad_json;
+   };
+
+# A homeserver should reject an invite rejection for a version 6 room if it
+# contains bad JSON data.
+#
+# To test this we need to:
+# * Send a successful invite to a room (via `invite`).
+# * Send a successful `make_leave` for the room.
+# * Add a "bad" value into the returned prototype event.
+# * Make a request to `send_leave`.
+# * Check that the response is M_BAD_JSON.
+test "Inbound federation rejects invite rejections which include invalid JSON for room version 6",
+   requires => [
+      local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
+      $main::INBOUND_SERVER,
+      $main::OUTBOUND_CLIENT,
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $user, $room_id, $inbound_server, $outbound_client, $invitee_id ) = @_;
+
+      Future->needs_all(
+         matrix_invite_user_to_room( $user, $invitee_id, $room_id ),
+
+         $inbound_server->await_request_v2_invite( $room_id )->then( sub {
+            my ( $req, undef ) = @_;
+
+            my $body = $req->body_from_json;
+            log_if_fail "Invitation", $body;
+
+            my $invite = $body->{event};
+
+            # accept the invite event and send it back
+            $inbound_server->datastore->sign_event( $invite );
+
+            $req->respond_json(
+               { event => $invite }
+            );
+
+            Future->done;
+         }),
+      )->then( sub {
+         # Initiate a rejection of the invite: ask the server to build us a
+         # leave event.
+         #
+         # Note that it doesn't make sense to try to use a bad JSON value here
+         # since the endpoint doesn't accept any JSON anyway.
+         $outbound_client->do_request_json(
+            method   => "GET",
+            hostname => $user->server_name,
+            uri      => "/v1/make_leave/$room_id/$invitee_id",
+         );
+      })->then( sub {
+         my ( $resp ) = @_;
+
+         log_if_fail "/make_leave response", $resp;
+
+         my $protoevent = $resp->{event};
+
+         # It is assumed that the make_leave response is sane, other tests
+         # ensure this behavior.
+
+         my %event = (
+            (map {$_ => $protoevent->{$_}} qw(
+               auth_events content depth prev_events room_id sender
+               state_key type)),
+
+            origin           => $outbound_client->server_name,
+            origin_server_ts => $inbound_server->time_ms,
+         );
+         # Insert a "bad" value into the send leave, in this case a float.
+         ${event}{contents}{bad_val} = 1.1;
+
+         $inbound_server->datastore->sign_event( \%event );
+
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $user->server_name,
+            uri      => "/v2/send_leave/$room_id/xxx",
+            content => \%event,
+           )
+      })->main::expect_m_bad_json;
+   };

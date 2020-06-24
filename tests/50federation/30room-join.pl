@@ -1061,3 +1061,62 @@ test "Event with an invalid signature in the send_join response should not cause
          }),
       )
    };
+
+# A homeserver receiving a `send_join` request for a room version 6 room with
+# a bad JSON value (e.g. a float) should reject the request.
+#
+# To test this we need to:
+# * Send a successful `make_join` request.
+# * Add a "bad" value into the returned prototype event.
+# * Make a request to `send_join`.
+# * Check that the response is M_BAD_JSON.
+test "Inbound: send_join rejects invalid JSON for room version 6",
+   requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
+                 local_user_and_room_fixtures( room_opts => { room_version => "6" } ),
+                 federation_user_id_fixture() ],
+
+   do => sub {
+      my ( $outbound_client, $inbound_server, $creator, $room_id, $user_id ) = @_;
+      my $first_home_server = $creator->server_name;
+
+      my $local_server_name = $outbound_client->server_name;
+      my $datastore         = $inbound_server->datastore;
+
+      $outbound_client->do_request_json(
+         method   => "GET",
+         hostname => $first_home_server,
+         uri      => "/v1/make_join/$room_id/$user_id",
+         params   => {
+            ver => ["6"],
+         },
+      )->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "make_join body", $body;
+
+         my $protoevent = $body->{event};
+
+         # It is assumed that the make_join response is sane, other tests ensure
+         # this behavior.
+
+         my %event = (
+            ( map { $_ => $protoevent->{$_} } qw(
+               auth_events content depth prev_events room_id sender
+               state_key type ) ),
+
+            origin           => $local_server_name,
+            origin_server_ts => $inbound_server->time_ms,
+         );
+         # Insert a "bad" value into the send join, in this case a float.
+         ${event}{content}{bad_val} = 1.1;
+
+         $datastore->sign_event( \%event );
+
+         $outbound_client->do_request_json(
+            method   => "PUT",
+            hostname => $first_home_server,
+            uri      => "/v2/send_join/$room_id/xxx",
+            content => \%event,
+         )
+      })->main::expect_m_bad_json;
+   };

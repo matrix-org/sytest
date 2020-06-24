@@ -137,7 +137,7 @@ sub invited_user_can_reject_invite
 
    matrix_invite_user_to_room( $creator, $invitee, $room_id )
    ->then( sub {
-      matrix_leave_room( $invitee, $room_id )
+      matrix_leave_room_synced( $invitee, $room_id )
    })->then( sub {
       matrix_get_room_state( $creator, $room_id,
          type      => "m.room.member",
