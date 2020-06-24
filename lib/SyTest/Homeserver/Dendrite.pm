@@ -130,8 +130,8 @@ sub _get_config
             output_room_event  => 'roomserverOutput',
             output_client_data => 'clientapiOutput',
             user_updates => 'userUpdates',
-            output_typing_event => 'typingServerOutput',
-            user_updates => 'userUpdates',
+            output_typing_event => 'eduServerTypingOutput',
+            output_send_to_device_event => 'eduServerSendToDeviceOutput',
          },
       },
 

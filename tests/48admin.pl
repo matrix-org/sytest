@@ -387,6 +387,8 @@ multi_test "Shutdown room",
 
          $new_room_id = $body->{new_room_id};
 
+         log_if_fail "Shutdown room, new room ID", $new_room_id;
+
          matrix_send_room_text_message( $user, $room_id, body => "Hello" )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot post in room" )
@@ -412,12 +414,13 @@ multi_test "Shutdown room",
 
          pass( "Aliases were repointed" );
 
-         matrix_get_room_state( $user, $new_room_id,
-            type      => "m.room.name",
-            state_key => "",
-         );
-      })->SyTest::pass_on_done( "User was added to new room" )
-      ->then( sub {
+         retry_until_success {
+            matrix_get_room_state( $user, $new_room_id,
+               type      => "m.room.name",
+               state_key => "",
+            )->SyTest::pass_on_done( "User was added to new room" )
+         }
+      })->then( sub {
          matrix_send_room_text_message( $user, $new_room_id, body => "Hello" )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot send into new room" );

@@ -172,3 +172,13 @@ sub expect_m_not_found
    );
 }
 push @EXPORT, qw( expect_m_not_found );
+
+
+sub expect_m_bad_json
+{
+   my $f = shift;
+   return expect_matrix_error(
+      $f, 400, 'M_BAD_JSON',
+   );
+}
+push @EXPORT, qw( expect_m_bad_json );
