@@ -129,7 +129,7 @@ sub invited_user_can_reject_invite
 {
    my ( $invitee, $creator, $room_id ) = @_;
 
-   matrix_invite_user_to_room( $creator, $invitee, $room_id )
+   matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
    ->then( sub {
       matrix_leave_room_synced( $invitee, $room_id )
    })->then( sub {
@@ -315,7 +315,7 @@ test "Remote invited user can see room metadata",
             content => { url => "http://something" },
          ),
       )->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id );
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id );
       })->then( sub {
          await_sync( $invitee, check => sub {
             my ( $body ) = @_;
