@@ -19,8 +19,8 @@ else
         branch_name=$BUILDKITE_BRANCH
     else
         # Otherwise, try and find the branch that the Synapse/Dendrite checkout
-        # is using. Fall back to dinsic if unknown.
-        branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="dinsic"
+        # is using. Fall back to develop if unknown.
+        branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
     fi
 
     if [ "$SYTEST_TARGET" == "dendrite" ] && [ "$branch_name" == "master" ]; then
@@ -30,9 +30,9 @@ else
 
     # Try and fetch the branch
     wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
-        # Probably a 404, fall back to dinsic
-        echo "Using dinsic instead..."
-        wget -q https://github.com/matrix-org/sytest/archive/dinsic.tar.gz -O sytest.tar.gz
+        # Probably a 404, fall back to develop
+        echo "Using develop instead..."
+        wget -q https://github.com/matrix-org/sytest/archive/develop.tar.gz -O sytest.tar.gz
     }
 
     mkdir -p /sytest
