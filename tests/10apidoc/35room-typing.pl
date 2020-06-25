@@ -10,7 +10,7 @@ test "PUT /rooms/:room_id/typing/:user_id sets typing notification",
          method => "PUT",
          uri    => "/r0/rooms/$room_id/typing/:user_id",
 
-         content => { typing => 1 },
+         content => { typing => JSON::true },
       )->then( sub {
          my ( $body ) = @_;
 
