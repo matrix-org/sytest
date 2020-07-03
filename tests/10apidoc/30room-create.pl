@@ -23,7 +23,6 @@ test "POST /createRoom makes a public room",
 
          assert_json_keys( $body, qw( room_id room_alias ));
          assert_json_nonempty_string( $body->{room_id} );
-         assert_json_nonempty_string( $body->{room_alias} );
 
          Future->done(1);
       });
