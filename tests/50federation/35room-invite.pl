@@ -389,17 +389,20 @@ foreach my $error_code ( 403, 500, -1 ) {
                );
             }
          })->then( sub {
-            matrix_sync( $user, since => $sync_token );
-         })->then( sub {
-            my ( $body ) = @_;
-
-            log_if_fail "Sync body after reject", $body;
-
             # we now expect the room to appear in the 'leave' section, with a leave event.
-            assert_json_keys( $body->{rooms}, 'leave' );
-            assert_json_keys( $body->{rooms}{leave}, $room_id );
+            log_if_fail "Reject sent, waiting for leave event";
 
-            my $room = $body->{rooms}{leave}{$room_id};
+            return await_sync( $user,
+               since => $sync_token,
+               check => sub {
+                  my ( $body ) = @_;
+                  $sync_token = $body->{next_batch};
+                  return $body->{rooms}{leave}{$room_id};
+               },
+            );
+         })->then( sub {
+            my ( $room ) = @_;
+
             assert_json_keys( $room, 'timeline' );
             assert_json_keys( $room->{timeline}, 'events' );
             assert_json_nonempty_list( $room->{timeline}{events} );
