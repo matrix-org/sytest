@@ -250,11 +250,12 @@ sub do_v1_invite_request
    my ( $room, $first_home_server, $outbound_client, $invitation ) = @_;
 
    my $room_id = $room->room_id;
+   my $event_id = $room->id_for_event( $invitation );
 
    $outbound_client->do_request_json(
       method   => "PUT",
       hostname => $first_home_server,
-      uri      => "/v1/invite/$room_id/$invitation->{event_id}",
+      uri      => "/v1/invite/$room_id/$event_id",
 
       content => $invitation,
    )->then( sub {
@@ -286,6 +287,7 @@ sub do_v2_invite_request
    my ( $room, $first_home_server, $outbound_client, $invitation ) = @_;
 
    my $room_id = $room->room_id;
+   my $event_id = $room->id_for_event( $invitation );
 
    my $create_event = $room->get_current_state_event( "m.room.create" );
    my $room_version = $create_event->{content}{room_version} // "1";
@@ -293,7 +295,7 @@ sub do_v2_invite_request
    $outbound_client->do_request_json(
       method   => "PUT",
       hostname => $first_home_server,
-      uri      => "/v2/invite/$room_id/$invitation->{event_id}",
+      uri      => "/v2/invite/$room_id/$event_id",
 
       content => {
          event             => $invitation,
@@ -342,9 +344,19 @@ foreach my $error_code ( 403, 500, -1 ) {
          );
 
          my $room_id = $room->room_id;
+         my $sync_token;
 
          invite_server_v1( $room, $creator_id, $user, $federation_server )
          ->then( sub {
+            # wait for the invite to turn up in the sync
+            return await_sync( $user,
+               check => sub {
+                  my ( $body ) = @_;
+                  $sync_token = $body->{next_batch};
+                  return exists $body->{rooms}{invite}{$room_id};
+               },
+            );
+         })->then( sub {
             if( $error_code < 0 ) {
                # now shut down the remote server, so that we get an 'unreachable'
                # error on make_leave
@@ -379,13 +391,29 @@ foreach my $error_code ( 403, 500, -1 ) {
                );
             }
          })->then( sub {
-            matrix_sync( $user );
-         })->then( sub {
-            my ( $body ) = @_;
+            # we now expect the room to appear in the 'leave' section, with a leave event.
+            log_if_fail "Reject sent, waiting for leave event";
 
-            log_if_fail "Sync body", $body;
-            assert_json_object( $body->{rooms}{invite} );
-            keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+            return await_sync( $user,
+               since => $sync_token,
+               check => sub {
+                  my ( $body ) = @_;
+                  $sync_token = $body->{next_batch};
+                  return $body->{rooms}{leave}{$room_id};
+               },
+            );
+         })->then( sub {
+            my ( $room ) = @_;
+
+            assert_json_keys( $room, 'timeline' );
+            assert_json_keys( $room->{timeline}, 'events' );
+            assert_json_nonempty_list( $room->{timeline}{events} );
+
+            my $event = $room->{timeline}{events}[0];
+            assert_eq( $event->{type}, "m.room.member" );
+            assert_eq( $event->{state_key}, $user->user_id );
+            assert_eq( $event->{sender}, $user->user_id );
+            assert_eq( $event->{content}{membership}, "leave" );
             Future->done(1);
          });
       };
