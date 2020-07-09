@@ -250,11 +250,12 @@ sub do_v1_invite_request
    my ( $room, $first_home_server, $outbound_client, $invitation ) = @_;
 
    my $room_id = $room->room_id;
+   my $event_id = $room->id_for_event( $invitation );
 
    $outbound_client->do_request_json(
       method   => "PUT",
       hostname => $first_home_server,
-      uri      => "/v1/invite/$room_id/$invitation->{event_id}",
+      uri      => "/v1/invite/$room_id/$event_id",
 
       content => $invitation,
    )->then( sub {
@@ -286,6 +287,7 @@ sub do_v2_invite_request
    my ( $room, $first_home_server, $outbound_client, $invitation ) = @_;
 
    my $room_id = $room->room_id;
+   my $event_id = $room->id_for_event( $invitation );
 
    my $create_event = $room->get_current_state_event( "m.room.create" );
    my $room_version = $create_event->{content}{room_version} // "1";
@@ -293,7 +295,7 @@ sub do_v2_invite_request
    $outbound_client->do_request_json(
       method   => "PUT",
       hostname => $first_home_server,
-      uri      => "/v2/invite/$room_id/$invitation->{event_id}",
+      uri      => "/v2/invite/$room_id/$event_id",
 
       content => {
          event             => $invitation,
