@@ -469,15 +469,16 @@ test "Outbound federation requests missing prev_events and then asks for /state_
                   $state{$k} = $event;
                }
 
+               my @auth_chain = $inbound_server->{datastore}->get_auth_chain_events(
+                  map { $_->{event_id} } values( %state )
+               );
+
                my $resp = {
                   pdu_ids => [
                      map { $_->{event_id} } values( %state ),
                   ],
                   auth_chain_ids => [
-                     # XXX we're supposed to return the whole auth chain here,
-                     # not just y's auth_events. It doesn't matter too much
-                     # here though.
-                     map { $_->[0] } @{ $missing_event_y->{auth_events} },
+                     map { $_->{event_id} } @auth_chain,
                   ],
                };
 
