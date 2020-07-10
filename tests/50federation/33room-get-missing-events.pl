@@ -452,8 +452,8 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
 
       log_if_fail "Missing event", $missing_event;
 
-      # Generate another one and do send it so it will refer to the
-      # previous in its prev_events field
+      # Generate another event which will be sent. It will refer to the missing
+      # event in its prev_events field.
       my $sent_event = $room->create_and_insert_event(
          type => "m.room.message",
 
@@ -484,8 +484,13 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
             assert_json_list( my $earliest = $body->{earliest_events} );
             @$earliest == 1 or
                die "Expected a single 'earliest_event' ID";
-            assert_eq( $earliest->[0], $room->id_for_event( $latest_event ),
-               'earliest_events[0]' );
+            # It is expected that the earliest event is the m.room.member event,
+            # but it is possible that the caches have not yet been invalidated
+            # so also allow any of that event's previous events.
+            my @expected = @{$latest_event->{prev_events}};
+            push( @expected, $room->id_for_event( $latest_event ) );
+            assert_ok( any { $earliest->[0] eq $_ } @expected,
+               "'earliest_events' did not match" );
 
             assert_json_list( my $latest = $body->{latest_events} );
             @$latest == 1 or
