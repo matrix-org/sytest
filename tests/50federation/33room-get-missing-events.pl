@@ -489,7 +489,8 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
             # so also allow any of that event's previous events.
             my @expected = @{$latest_event->{prev_events}};
             push( @expected, $room->id_for_event( $latest_event ) );
-            assert_in_list( $earliest->[0], @expected, 'earliest_events[0]' );
+            assert_ok( any { $earliest->[0] eq $_ } @expected,
+               "'earliest_events' did not match" );
 
             assert_json_list( my $latest = $body->{latest_events} );
             @$latest == 1 or

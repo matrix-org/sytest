@@ -24,7 +24,6 @@ our @EXPORT_OK = qw(
    assert_json_boolean
 
    assert_base64_unpadded
-   assert_in_list
 );
 
 use Data::Dump 'pp';
@@ -298,25 +297,6 @@ sub assert_base64_unpadded
       die "String contains invalid base64 characters";
    $str =~ m(=) and
       die "String contains trailing padding";
-}
-
-=head2 assert_in_list
-
-   assert_in_list( $obj, @list )
-
-Fails the test if C<$obj> is not found in C<@list>.
-
-=cut
-
-sub assert_in_list
-{
-   my ( $obj, @list ) = @_;
-   foreach ( @list ) {
-      if ($obj eq $_) {
-         return;
-      }
-   }
-   croak "$obj not found in list";
 }
 
 1;
