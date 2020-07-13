@@ -714,7 +714,7 @@ sub matrix_upload_signatures {
    do_request_json_for(
       $user,
       method  => "POST",
-      uri     => "/r0/keys/signatures/upload",
+      uri     => "/unstable/keys/signatures/upload",
       content => $signatures,
    );
 }
