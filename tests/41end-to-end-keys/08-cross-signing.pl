@@ -695,7 +695,7 @@ sub matrix_set_cross_signing_key {
 
    do_request_json_for( $user,
       method  => "POST",
-      uri     => "/r0/keys/device_signing/upload",
+      uri     => "/unstable/keys/device_signing/upload",
       content => $keys,
    );
 }
