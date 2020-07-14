@@ -13,7 +13,7 @@ sub matrix_send_device_message
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/unstable/sendToDevice/$type/$txn_id",
+      uri     => "/r0/sendToDevice/$type/$txn_id",
       content => \%params,
    );
 }

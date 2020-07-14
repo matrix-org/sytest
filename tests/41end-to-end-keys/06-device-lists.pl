@@ -68,7 +68,7 @@ test "Local device key changes appear in v2 /sync",
       })->then( sub {
          do_request_json_for( $user2,
             method  => "POST",
-            uri     => "/unstable/keys/upload",
+            uri     => "/r0/keys/upload",
             content => {
                device_keys => {
                   user_id   => $user2->user_id,
@@ -455,7 +455,7 @@ test "Local device key changes appear in /keys/changes",
 
          do_request_json_for( $user2,
             method  => "POST",
-            uri     => "/unstable/keys/upload",
+            uri     => "/r0/keys/upload",
             content => {
                device_keys => {
                   user_id   => $user2->user_id,
@@ -475,7 +475,7 @@ test "Local device key changes appear in /keys/changes",
 
          do_request_json_for( $user1,
             method => "GET",
-            uri => "/unstable/keys/changes",
+            uri => "/r0/keys/changes",
             params => {
                from => $from_token,
                to => $to_token,
@@ -523,7 +523,7 @@ test "New users appear in /keys/changes",
 
          do_request_json_for( $user1,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,
@@ -589,7 +589,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
 
          do_request_json_for( $creator,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,
@@ -646,7 +646,7 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
       })->then( sub {
          do_request_json_for( $creator,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,
@@ -700,7 +700,7 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
       })->then( sub {
          do_request_json_for( $creator,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,
@@ -767,7 +767,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
 
          do_request_json_for( $creator,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,

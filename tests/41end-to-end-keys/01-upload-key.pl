@@ -10,7 +10,7 @@ test "Can upload device keys",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/unstable/keys/upload",
+         uri     => "/r0/keys/upload",
          content => {
             device_keys => {
                user_id => $user->user_id,
@@ -44,7 +44,7 @@ test "Should reject keys claiming to belong to a different user",
       do_request_json_for(
          $user,
          method  => "POST",
-         uri     => "/unstable/keys/upload",
+         uri     => "/r0/keys/upload",
          content => {
             device_keys => {
                user_id => "\@50-e2e-alice:localhost:8480",
