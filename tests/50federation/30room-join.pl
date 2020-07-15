@@ -377,6 +377,41 @@ test "Inbound /v1/make_join rejects remote attempts to join local users to rooms
    };
 
 
+test "Inbound /make_join rejects attempts to join rooms where all users have left",
+   requires => [
+      $main::OUTBOUND_CLIENT,
+      local_user_and_room_fixtures(),
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+
+      my $first_home_server = $creator->server_name;
+
+      # initially, a make_join should be accepted
+      $outbound_client->make_join(
+         server_name => $first_home_server,
+         room_id     => $room_id,
+         user_id     => $user_id,
+      )->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Initial make_join response", $body;
+
+         matrix_leave_room_synced( $creator, $room_id );
+      })->then( sub {
+         log_if_fail "Creator left room";
+
+         # now we expect a 404
+         $outbound_client->make_join(
+            server_name => $first_home_server,
+            room_id     => $room_id,
+            user_id     => $user_id,
+         )->main::expect_m_not_found();
+      });
+   };
+
+
 test "Inbound /v1/send_join rejects incorrectly-signed joins",
    requires => [
       $main::OUTBOUND_CLIENT,
