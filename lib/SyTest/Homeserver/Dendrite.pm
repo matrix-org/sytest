@@ -132,6 +132,7 @@ sub _get_config
             user_updates => 'userUpdates',
             output_typing_event => 'eduServerTypingOutput',
             output_send_to_device_event => 'eduServerSendToDeviceOutput',
+            output_key_change_event => 'output_key_change_event',
          },
       },
 
