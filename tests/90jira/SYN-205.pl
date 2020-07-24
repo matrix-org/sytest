@@ -11,14 +11,24 @@ multi_test "Rooms can be created with an initial invite list (SYN-205)",
       ->then( sub {
          my ( $room_id ) = @_;
 
-         await_event_for( $invitee, filter => sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.member" and
-                          $event->{room_id} eq $room_id and
-                          $event->{state_key} eq $invitee->user_id and
-                          $event->{content}{membership} eq "invite";
+         await_sync($invitee, check => sub {
+            my ( $sync_body ) = @_;
+            log_if_fail $sync_body;
+            my $room =  $sync_body->{rooms}{invite}{$room_id};
+            assert_json_keys( $room, qw( invite_state ) );
+            assert_json_keys( $room->{invite_state}, qw( events ) );
+            my $invite = first {
+               $_->{type} eq "m.room.member"
+                  and $_->{state_key} eq $invitee->user_id
+            } @{ $room->{invite_state}{events} };
 
-            return 1;
-         })->SyTest::pass_on_done( "Invitee received invite event" )
+            assert_json_keys( $invite, qw( sender content state_key type ));
+            $invite->{content}{membership} eq "invite"
+               or die "Expected an invite event";
+            $invite->{sender} eq $user->user_id
+               or die "Expected the invite to be from user A";
+
+            Future->done(1);
+         });
       })->then_done(1);
    };
