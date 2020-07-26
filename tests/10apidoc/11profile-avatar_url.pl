@@ -1,6 +1,6 @@
 my $user_fixture = local_user_fixture();
 
-my $avatar_url = "http://somewhere/my-pic.jpg";
+my $avatar_url = "mxc://example.com/SEsfnsuifSDFSSEF";
 
 test "PUT /profile/:user_id/avatar_url sets my avatar",
    requires => [ $user_fixture ],
