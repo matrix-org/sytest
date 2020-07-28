@@ -29,7 +29,7 @@ multi_test "Rooms can be created with an initial invite list (SYN-205)",
             $invite->{sender} eq $user->user_id
                or die "Expected the invite to be from user A";
 
-            Future->done(1);
+            return 1;
          });
       })->then_done(1);
    };
