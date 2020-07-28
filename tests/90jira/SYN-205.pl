@@ -15,6 +15,7 @@ multi_test "Rooms can be created with an initial invite list (SYN-205)",
             my ( $sync_body ) = @_;
             log_if_fail $sync_body;
             my $room =  $sync_body->{rooms}{invite}{$room_id};
+            return unless $room;
             assert_json_keys( $room, qw( invite_state ) );
             assert_json_keys( $room->{invite_state}, qw( events ) );
             my $invite = first {
