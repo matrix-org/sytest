@@ -111,7 +111,7 @@ sub _get_config
          kafka => {
             use_naffka => true,
             database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/naffka.db") : $db_uri,
+               ($_ => "file:$self->{hs_dir}/naffka.db") : $db_uri,
             topics => {
                output_room_event  => 'roomserverOutput',
                output_client_data => 'clientapiOutput',
@@ -124,6 +124,8 @@ sub _get_config
       },
 
       app_service_api => {
+         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+           ($_ => "file:$self->{hs_dir}/appservice_api.db") : $db_uri,
          config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
       },
 
