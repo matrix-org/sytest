@@ -103,11 +103,33 @@ sub _get_config
    }
 
    return (
-      version => 0,
-      matrix => {
+      version => 1,
+      global => {
          server_name => $self->server_name,
          private_key => $self->{paths}{matrix_key},
-         federation_certificates => [$self->{paths}{tls_cert}],
+
+         kafka => {
+            use_naffka => true,
+            database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/naffka.db") : $db_uri,
+            topics => {
+               output_room_event  => 'roomserverOutput',
+               output_client_data => 'clientapiOutput',
+               user_updates => 'userUpdates',
+               output_typing_event => 'eduServerTypingOutput',
+               output_send_to_device_event => 'eduServerSendToDeviceOutput',
+               output_key_change_event => 'output_key_change_event',
+            },
+         },
+      },
+
+      app_service_api => {
+         config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
+      },
+
+      client_api => {
+         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/client_api.db") : $db_uri,
          registration_shared_secret => "reg_secret",
 
          $self->{recaptcha_config} ? (
@@ -121,29 +143,51 @@ sub _get_config
          ) : (),
       },
 
-      media => {
+      current_state_server => {
+          database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/current_state_server.db") : $db_uri,
+      },
+
+      federation_api => {
+         federation_certificates => [$self->{paths}{tls_cert}],
+      },
+
+      federation_sender => {
+         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/federation_sender.db") : $db_uri,
+      },
+
+      key_server => {
+         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/key_server.db") : $db_uri,
+      },
+
+      media_api => {
+         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/media_api.db") : $db_uri,
          base_path => "media_store",
       },
 
-      kafka => {
-         topics => {
-            output_room_event  => 'roomserverOutput',
-            output_client_data => 'clientapiOutput',
-            user_updates => 'userUpdates',
-            output_typing_event => 'eduServerTypingOutput',
-            output_send_to_device_event => 'eduServerSendToDeviceOutput',
-            output_key_change_event => 'output_key_change_event',
-         },
+      room_server => {
+         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/room_server.db") : $db_uri,
       },
 
-      database => {
-         # POSTGRES not set or is 0, use sqlite, which has separate .db files for each server
-         map { ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-         ($_ => "file:$self->{hs_dir}/" . $_ . ".db") :
-         ($_ => $db_uri) } qw(
-            account device media_api sync_api room_server server_key
-            federation_sender public_rooms_api naffka appservice current_state e2e_key
-         ),
+      server_key_api => {
+         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/server_key_api.db") : $db_uri,
+      },
+
+      sync_api => {
+         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/sync_api.db") : $db_uri,
+      },
+
+      user_api => {
+         account_database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/accounts.db") : $db_uri,
+         device_database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+            ($_ => "file:$self->{hs_dir}/devices.db") : $db_uri,
       },
 
       logging => [{
@@ -153,10 +197,6 @@ sub _get_config
             path => "$self->{hs_dir}/dendrite-logs",
          },
       }],
-
-      application_services => {
-         config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
-      },
    );
 }
 
