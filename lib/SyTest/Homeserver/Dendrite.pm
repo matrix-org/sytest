@@ -109,7 +109,7 @@ sub _get_config
          private_key => $self->{paths}{matrix_key},
 
          kafka => {
-            use_naffka => true,
+            use_naffka => $JSON::true,
             database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                ($_ => "file:$self->{hs_dir}/naffka.db") : $db_uri,
             topics => {
