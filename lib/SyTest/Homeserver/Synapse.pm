@@ -207,6 +207,17 @@ sub start
            window_size => 1000,
         },
 
+        rc_joins => {
+           local => {
+             per_second => 1000,
+              burst_count => 1000,
+           },
+           remote => {
+             per_second => 1000,
+              burst_count => 1000,
+           },
+        },
+
         enable_registration => "true",
         databases => \%db_configs,
         macaroon_secret_key => $macaroon_secret_key,
