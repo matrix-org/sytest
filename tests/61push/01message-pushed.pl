@@ -230,17 +230,77 @@ sub setup_push
    my ( $alice, $bob, $test_server_info, $loc ) = @_;
    my $room_id;
 
+   my $target = $test_server_info->client_location . $loc;
    matrix_set_pusher(
-      $alice, $test_server_info->client_location . $loc,
+      $alice, $target,
    )->then( sub {
+      log_if_fail "Created pusher for ".$alice->user_id." -> ".$target;
       matrix_create_room( $bob );
    })->then( sub {
       ( $room_id ) = @_;
 
-      matrix_join_room( $alice, $room_id )
+      matrix_join_room( $alice, $room_id );
    })->then( sub {
-      Future->done( $room_id )
+      # we need to make sure the pusher is working.
+      #
+      # the problem is that, in a worker-based system, there is no guarantee
+      # that the pusher worker knows about the new pusher by the time we send
+      # the event: The process handling the /pushers/set request might pause
+      # between responding to /pushers/set and sending out the replication
+      # notification.
+
+      # so, we have bob send messages until we get a push.
+
+      log_if_fail "Joined room $room_id; waiting for push to start working";
+
+      wait_for_pusher_to_work( $bob, $room_id, $loc );
+   })->then( sub {
+      Future->done( $room_id );
    })
+}
+
+
+=head2 wait_for_pusher_to_work
+
+   wait_for_pusher_to_work( $sending_user, $room_id, $push_location )
+
+This is mostly a helper function for setup_push, but it might also help in some
+other situations when configuring a pusher.
+
+Because setting up a pusher is asynchronous, we need to wait until it becomes
+active. We do this by having a second user (who shares a room with the user
+that created the pusher) send messages to the room until a push arrives.
+
+=cut
+
+sub wait_for_pusher_to_work
+{
+   my ( $sending_user, $room_id, $push_loc ) = @_;
+
+   # a future which waits for a push to arrive
+   my $push_future = await_http_request( $push_loc, sub {
+       my ( $request ) = @_;
+       my $body = $request->body_from_json;
+
+       log_if_fail "Push arrived", $body;
+       $request->respond_json( {} );
+       return 1;
+    });
+
+   # a future which will send messages until failure or cancelled
+   my $send_future = repeat {
+      matrix_send_room_text_message( $sending_user, $room_id, body => "Message" ) ->
+         then( sub { return delay( 0.2 ); });
+   } while => sub {
+      my ( $trial_f ) = @_;
+      return $trial_f->result;
+   };
+
+   # wait until we either get a push, or the send fails. In either
+   # case wait_any will cancel the other future.
+   return Future->wait_any(
+      $push_future, $send_future
+   );
 }
 
 sub check_received_push_with_name
@@ -280,7 +340,7 @@ sub check_received_push_with_name
    });
 }
 
-test "Rooms with names are correctly named in pushed",
+test "Rooms with names are correctly named in pushes",
    requires => [
       local_user_fixtures( 2, with_events => 0 ),
       $main::TEST_SERVER_INFO
@@ -506,12 +566,13 @@ test "Don't get pushed for rooms you've muted",
 test "Rejected events are not pushed",
    requires => [
       federated_rooms_fixture(),
+      local_user_fixture(),
       $main::OUTBOUND_CLIENT,
       $main::TEST_SERVER_INFO,
    ],
 
    do => sub {
-      my ( $alice, $sytest_user_id, $room, $outbound_client, $test_server_info ) = @_;
+      my ( $alice, $sytest_user_id, $room, $bob, $outbound_client, $test_server_info ) = @_;
 
       # first we send an event from a different user (which should be rejected):
       my $rejected_event = $room->create_and_insert_event(
@@ -532,6 +593,12 @@ test "Rejected events are not pushed",
       matrix_set_pusher(
          $alice, $test_server_info->client_location . "/alice_push",
       )->then( sub {
+         # we need a second local user in the room, so that we can test if
+         # alice's pusher is active.
+         matrix_join_room( $bob, $room->room_id );
+      })->then( sub {
+         wait_for_pusher_to_work( $bob, $room->room_id, "/alice_push" );
+      })->then( sub {
          Future->needs_all(
             # we send the rejected event first, and then the regular event, and
             # check that we don't get a push for the rejeced event before the
