@@ -93,11 +93,11 @@ our @HOMESERVER_INFO = map {
                   sender_localpart => $as_info->localpart,
                   namespaces => {
                      users => [
-                        { regex => '@_.*:' . $info->server_name, exclusive => "false" },
-                        map { { regex => $_, exclusive => "true" } } @{ $as_info->user_regexes },
+                        { regex => '@_.*:' . $info->server_name, exclusive => JSON::false },
+                        map { { regex => $_, exclusive => JSON::true } } @{ $as_info->user_regexes },
                      ],
                      aliases => [
-                        map { { regex => $_, exclusive => "true" } } @{ $as_info->alias_regexes },
+                        map { { regex => $_, exclusive => JSON::true } } @{ $as_info->alias_regexes },
                      ],
                      rooms => [],
                   },
