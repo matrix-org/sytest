@@ -5,8 +5,6 @@ test "Local device key changes get to remote servers",
    check => sub {
       my ( $user, $inbound_server, $creator_id, $room_alias_name ) = @_;
 
-      my ( $room_id );
-
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
@@ -14,7 +12,7 @@ test "Local device key changes get to remote servers",
 
       my $prev_stream_id;
 
-      my $room = $datastore->create_room(
+      $datastore->create_room(
          creator => $creator_id,
          alias   => $room_alias,
       );
@@ -70,8 +68,6 @@ test "Server correctly handles incoming m.device_list_update",
    check => sub {
       my ( $user, $inbound_server, $outbound_client, $creator_id, $room_alias_name ) = @_;
 
-      my ( $room_id );
-
       my $local_server_name = $user->server_name;
 
       my $remote_server_name = $inbound_server->server_name;
@@ -81,9 +77,7 @@ test "Server correctly handles incoming m.device_list_update",
 
       my $device_id = "random_device_id";
 
-      my $prev_stream_id;
-
-      my $room = $datastore->create_room(
+      $datastore->create_room(
          creator => $creator_id,
          alias   => $room_alias,
       );
@@ -387,8 +381,6 @@ test "Local device key changes get to remote servers with correct prev_id",
    check => sub {
       my ( $user1, $user2, $inbound_server, $creator_id, $room_alias_name ) = @_;
 
-      my ( $room_id );
-
       my $local_server_name = $inbound_server->server_name;
       my $datastore         = $inbound_server->datastore;
 
@@ -396,7 +388,7 @@ test "Local device key changes get to remote servers with correct prev_id",
 
       my $prev_stream_id;
 
-      my $room = $datastore->create_room(
+      $datastore->create_room(
          creator => $creator_id,
          alias   => $room_alias,
       );
@@ -625,8 +617,6 @@ test "If a device list update goes missing, the server resyncs on the next one",
    check => sub {
       my ( $user, $inbound_server, $outbound_client, $creator_id, $room_alias_name ) = @_;
 
-      my ( $room_id );
-
       my $local_server_name = $user->server_name;
 
       my $remote_server_name = $inbound_server->server_name;
@@ -636,9 +626,7 @@ test "If a device list update goes missing, the server resyncs on the next one",
 
       my $device_id = "random_device_id";
 
-      my $prev_stream_id;
-
-      my $room = $datastore->create_room(
+      $datastore->create_room(
          creator => $creator_id,
          alias   => $room_alias,
       );

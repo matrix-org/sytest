@@ -15,20 +15,14 @@ sub inviteonly_room_fixture
          )->then( sub {
             my ( $room_id ) = @_;
 
-            matrix_initialsync_room( $creator, $room_id )->then( sub {
-               my ( $body ) = @_;
-
-               assert_json_keys( $body, qw( state ));
-
-               my ( $join_rules_event ) = first { $_->{type} eq "m.room.join_rules" } @{ $body->{state} };
-               $join_rules_event or
-                  die "Failed to find an m.room.join_rules event";
-
-               $join_rules_event->{content}{join_rule} eq "invite" or
+            await_sync_timeline_contains($creator, $room_id, check => sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.join_rules";
+               $event->{content}{join_rule} eq "invite" or
                   die "Expected join rule to be 'invite'";
-
-               Future->done( $room_id );
+               return 1;
             });
+            Future->done( $room_id );
          });
       }
    )
@@ -135,7 +129,7 @@ sub invited_user_can_reject_invite
 {
    my ( $invitee, $creator, $room_id ) = @_;
 
-   matrix_invite_user_to_room( $creator, $invitee, $room_id )
+   matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
    ->then( sub {
       matrix_leave_room_synced( $invitee, $room_id )
    })->then( sub {
@@ -321,7 +315,7 @@ test "Remote invited user can see room metadata",
             content => { url => "http://something" },
          ),
       )->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id );
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id );
       })->then( sub {
          await_sync( $invitee, check => sub {
             my ( $body ) = @_;

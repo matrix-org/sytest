@@ -205,22 +205,15 @@ sub invite_server
      die "ARGH: I forgot to sign my own event";
 
    Future->needs_all(
-     await_event_for( $user, filter => sub {
-         my ( $event ) = @_;
-         return $event->{type} eq "m.room.member" &&
-                $event->{room_id} eq $room_id;
+      await_sync($user, check => sub {
+         my ( $sync_body ) = @_;
+         log_if_fail "/sync body", $sync_body;
+         my $room = $sync_body->{rooms}{invite}{$room_id};
+         if ( !$room ) {
+            return 0;
          }
-     )->then( sub {
-         my ( $event ) = @_;
-         log_if_fail "Invitation event", $event;
-
-         assert_eq( $event->{state_key}, $user->user_id,
-            'event state_key' );
-         assert_eq( $event->{content}{membership}, "invite",
-            'event content membership' );
-
-         Future->done(1);
-     }),
+         return 1;
+      }),
 
      $do_invite_request->(
          $room, $first_home_server, $outbound_client, $invitation,

@@ -141,7 +141,7 @@ sub _get_config
          ($_ => "file:$self->{hs_dir}/" . $_ . ".db") :
          ($_ => $db_uri) } qw(
             account device media_api sync_api room_server server_key
-            federation_sender public_rooms_api naffka appservice
+            federation_sender public_rooms_api naffka appservice current_state
          ),
       },
 
