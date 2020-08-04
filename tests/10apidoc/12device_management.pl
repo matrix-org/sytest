@@ -55,7 +55,7 @@ test "GET /device/{deviceId}",
          my ( $device ) = @_;
          assert_json_keys(
             $device,
-            qw( device_id user_id display_name ),
+            qw( device_id display_name ),
          );
          assert_eq( $device->{device_id}, $DEVICE_ID );
          assert_eq( $device->{display_name}, "device display" );
@@ -126,9 +126,8 @@ test "GET /devices",
 
             assert_json_keys(
                $result,
-               qw( device_id user_id display_name ),
+               qw( device_id display_name ),
             );
-            assert_eq( $result->{user_id}, $user->user_id, "user_id" );
             assert_eq( $result->{display_name}, $DEVICES{$id}, "display_name" );
          }
          Future->done( 1 );
@@ -163,7 +162,7 @@ test "PUT /device/{deviceId} updates device fields",
          my ( $device ) = @_;
          assert_json_keys(
             $device,
-            qw( device_id user_id display_name ),
+            qw( device_id display_name ),
          );
          assert_eq( $device->{device_id}, $DEVICE_ID );
          assert_eq( $device->{display_name}, "new display name" );

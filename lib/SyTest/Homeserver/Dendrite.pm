@@ -132,6 +132,7 @@ sub _get_config
             user_updates => 'userUpdates',
             output_typing_event => 'eduServerTypingOutput',
             output_send_to_device_event => 'eduServerSendToDeviceOutput',
+            output_key_change_event => 'output_key_change_event',
          },
       },
 
@@ -141,7 +142,7 @@ sub _get_config
          ($_ => "file:$self->{hs_dir}/" . $_ . ".db") :
          ($_ => $db_uri) } qw(
             account device media_api sync_api room_server server_key
-            federation_sender public_rooms_api naffka appservice current_state
+            federation_sender public_rooms_api naffka appservice current_state e2e_key
          ),
       },
 
