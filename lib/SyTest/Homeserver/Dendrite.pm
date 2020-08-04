@@ -111,7 +111,7 @@ sub _get_config
 
          kafka => {
             use_naffka => $JSON::true,
-            database => {
+            naffka_database => {
                connection_string => 
                    ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                    "file:$self->{hs_dir}/naffka.db" : $db_uri,
