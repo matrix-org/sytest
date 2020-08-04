@@ -110,8 +110,11 @@ sub _get_config
 
          kafka => {
             use_naffka => $JSON::true,
-            database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               ($_ => "file:$self->{hs_dir}/naffka.db") : $db_uri,
+            database => {
+               connection_string => 
+                   ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                   ($_ => "file:$self->{hs_dir}/naffka.db") : $db_uri,
+            },
             topics => {
                output_room_event  => 'roomserverOutput',
                output_client_data => 'clientapiOutput',
@@ -124,14 +127,20 @@ sub _get_config
       },
 
       app_service_api => {
-         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-           ($_ => "file:$self->{hs_dir}/appservice_api.db") : $db_uri,
+         database => {
+            connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                ($_ => "file:$self->{hs_dir}/appservice_api.db") : $db_uri,
+         },
          config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
       },
 
       client_api => {
-         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/client_api.db") : $db_uri,
+         database => {
+            connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                ($_ => "file:$self->{hs_dir}/client_api.db") : $db_uri,
+         },
          registration_shared_secret => "reg_secret",
 
          $self->{recaptcha_config} ? (
@@ -146,8 +155,11 @@ sub _get_config
       },
 
       current_state_server => {
-          database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/current_state_server.db") : $db_uri,
+          database => {
+             connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                ($_ => "file:$self->{hs_dir}/current_state_server.db") : $db_uri,
+          },
       },
 
       federation_api => {
@@ -155,41 +167,65 @@ sub _get_config
       },
 
       federation_sender => {
-         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/federation_sender.db") : $db_uri,
+         database => {
+             connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                ($_ => "file:$self->{hs_dir}/federation_sender.db") : $db_uri,
+         }
       },
 
       key_server => {
-         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/key_server.db") : $db_uri,
+         database => {
+             connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                ($_ => "file:$self->{hs_dir}/key_server.db") : $db_uri,
+         },
       },
 
       media_api => {
-         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/media_api.db") : $db_uri,
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               ($_ => "file:$self->{hs_dir}/media_api.db") : $db_uri,
+         },
          base_path => "media_store",
       },
 
       room_server => {
-         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/room_server.db") : $db_uri,
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               ($_ => "file:$self->{hs_dir}/room_server.db") : $db_uri,
+         },
       },
 
       server_key_api => {
-         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/server_key_api.db") : $db_uri,
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               ($_ => "file:$self->{hs_dir}/server_key_api.db") : $db_uri,
+         },
       },
 
       sync_api => {
-         database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/sync_api.db") : $db_uri,
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               ($_ => "file:$self->{hs_dir}/sync_api.db") : $db_uri,
+         },
       },
 
       user_api => {
-         account_database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/accounts.db") : $db_uri,
-         device_database => ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-            ($_ => "file:$self->{hs_dir}/devices.db") : $db_uri,
+         account_database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               ($_ => "file:$self->{hs_dir}/accounts.db") : $db_uri,
+         },
+         device_database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               ($_ => "file:$self->{hs_dir}/devices.db") : $db_uri,
+         },
       },
 
       logging => [{
