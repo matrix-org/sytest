@@ -50,7 +50,9 @@ Synapse:
 
  * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of sqlite.
  * `WORKERS`: set non-empty to test a worker-mode deployment rather than a
-   monolith.
+   monolith. Requires `POSTGRES`.
+ * `REDIS`: set non-empty to use redis replication rather than old
+   TCP. Requires `WORKERS`.
  * `OFFLINE`: set non-empty to avoid updating the python or perl dependencies.
  * `BLACKLIST`: set non-empty to change the default blacklist file to the
    specified path relative to the Synapse directory
@@ -68,13 +70,10 @@ Some examples of running Synapse in different configurations:
 * Running Synapse in worker mode using redis:
 
   ```
-  docker network create testfoobar
-  docker run --network testfoobar --name testredis -d redis:5.0
-  docker run --network testfoobar --rm -it -e POSTGRES=1 -e WORKERS=1 \
+  docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -e REDIS=1 \
        -v /path/to/synapse\:/src:ro \
        -v /path/to/where/you/want/logs\:/logs \
-       matrixdotorg/sytest-synapse:py35 --redis-host testredis
-  # Use `docker start/stop testredis` if you want to explicitly kill redis or start it again after reboot
+       matrixdotorg/sytest-synapse:py35
   ```
 
 Dendrite:
