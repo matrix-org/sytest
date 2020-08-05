@@ -665,10 +665,13 @@ sub _start_await_port
    return $self->{ports}{synapse};
 }
 
-package SyTest::Homeserver::Synapse::ViaDendron;
+package SyTest::Homeserver::Synapse::ViaHaproxy;
 use base qw( SyTest::Homeserver::Synapse );
 
 use Carp;
+use File::Slurper qw( read_binary );
+
+use constant HAPROXY_BIN => $ENV{HAPROXY_BIN} // "/usr/sbin/haproxy";
 
 sub _init
 {
@@ -689,6 +692,9 @@ sub _init
 
    my $idx = $self->{hs_index};
    $self->{ports}{dendron} = main::alloc_port( "dendron[$idx]" );
+
+   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
+      for qw( haproxy );
 }
 
 sub _check_db_config
@@ -1052,34 +1058,13 @@ sub _start_await_port
 sub secure_port
 {
    my $self = shift;
-   return $self->{ports}{dendron};
+   return $self->{ports}{haproxy};
 }
 
 sub unsecure_port
 {
    my $self = shift;
-   die "dendron does not have an unsecure port mode\n";
-}
-
-package SyTest::Homeserver::Synapse::ViaHaproxy;
-# For now we'll base this on "ViaDendron" so that dendron manages the multiple
-# workers. Longer-term we'll want to have a specific worker management system
-# so we can avoid dendron itself.
-use base qw( SyTest::Homeserver::Synapse::ViaDendron );
-
-use Carp;
-
-use File::Slurper qw( read_binary );
-
-use constant HAPROXY_BIN => $ENV{HAPROXY_BIN} // "/usr/sbin/haproxy";
-
-sub _init
-{
-   my $self = shift;
-   $self->SUPER::_init( @_ );
-
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( haproxy );
+   die "haproxy does not have an unsecure port mode\n";
 }
 
 sub start
@@ -1261,18 +1246,6 @@ sub generate_haproxy_get_map
 
 ^/_matrix/federation/v1/groups/                             federation_reader
 EOCONFIG
-}
-
-sub secure_port
-{
-   my $self = shift;
-   return $self->{ports}{haproxy};
-}
-
-sub unsecure_port
-{
-   my $self = shift;
-   die "haproxy does not have an unsecure port mode\n";
 }
 
 1;
