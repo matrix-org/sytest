@@ -17,14 +17,15 @@ mkdir /work
 
 # PostgreSQL setup
 if [ -n "$MULTI_POSTGRES" ] || [ -n "$POSTGRES" ]; then
-    # We increase the max connections as we have more databases.
-    sed -i -r "s/^max_connections.*$/max_connections = 500/" /var/run/postgresql/data/postgresql.conf
+    sed -i -r "s/^max_connections.*$/max_connections = 500/" "$PGDATA/postgresql.conf"
 
-    echo -e "fsync = off" >> /var/run/postgresql/data/postgresql.conf
-    echo -e "full_page_writes = off" >> /var/run/postgresql/data/postgresql.conf
+    echo "fsync = off" >> "$PGDATA/postgresql.conf"
+    echo "full_page_writes = off" >> "$PGDATA/postgresql.conf"
 
     # Start the database
-    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w -D $PGDATA start' postgres
+    echo "starting postgres..."
+    su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w start -s' postgres
+    echo "postgres started"
 fi
 
 # Now create the databases
