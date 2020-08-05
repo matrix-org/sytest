@@ -195,7 +195,7 @@ sub _generate_keyfiles
 
 
 package SyTest::Homeserver::Dendrite::Monolith;
-use base qw( SyTest::Homeserver::Dendrite::Base SyTest::Homeserver::ProcessManager );
+use base qw( SyTest::Homeserver::Dendrite::Base );
 
 use Carp;
 
@@ -303,14 +303,6 @@ sub _start_monolith
    })->on_done( sub {
       $output->diag( "Started monolith server" );
    });
-}
-
-# override for Homeserver::kill_and_await_finish: delegate to
-# ProcessManager::kill_and_await_finish
-sub kill_and_await_finish
-{
-   my $self = shift;
-   return $self->SyTest::Homeserver::ProcessManager::kill_and_await_finish();
 }
 
 1;
