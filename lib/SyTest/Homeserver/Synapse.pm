@@ -716,9 +716,6 @@ sub wrap_synapse_command
       $self->{dendron},
       "--synapse-python" => $self->{python},
       "--synapse-config" => $self->{paths}{config},
-      "--synapse-url" => "http://$bind_host:$self->{ports}{synapse_unsecure}",
-      "--cert-file" => $self->{paths}{cert_file},
-      "--key-file"  => $self->{paths}{key_file},
       "--addr" => "$bind_host:" . $self->{ports}{dendron},
    );
 
@@ -831,7 +828,6 @@ sub wrap_synapse_command
 
       push @command,
          "--synchrotron-config" => $synchrotron_config_path,
-         "--synchrotron-url" => "http://$bind_host:$self->{ports}{synchrotron}";
    }
 
    {
@@ -865,7 +861,6 @@ sub wrap_synapse_command
 
       push @command,
          "--federation-reader-config" => $federation_reader_config_path,
-         "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
    }
 
    {
@@ -899,7 +894,6 @@ sub wrap_synapse_command
 
       push @command,
          "--media-repository-config" => $media_repository_config_path,
-         "--media-repository-url" => "http://$bind_host:$self->{ports}{media_repository}";
    }
 
    {
@@ -933,7 +927,6 @@ sub wrap_synapse_command
 
       push @command,
          "--client-reader-config" => $client_reader_config_path,
-         "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}";
    }
 
    {
@@ -967,7 +960,6 @@ sub wrap_synapse_command
 
       push @command,
          "--user-directory-config" => $user_dir_config_path,
-         "--user-directory-url" => "http://$bind_host:$self->{ports}{user_dir}";
    }
 
    {
@@ -1001,7 +993,6 @@ sub wrap_synapse_command
 
       push @command,
          "--event-creator-config" => $event_creator_config_path,
-         "--event-creator-url" => "http://$bind_host:$self->{ports}{event_creator}";
    }
 
    {
@@ -1037,7 +1028,6 @@ sub wrap_synapse_command
 
       push @command,
          "--frontend-proxy-config" => $frontend_proxy_config_path,
-         "--frontend-proxy-url" => "http://$bind_host:$self->{ports}{frontend_proxy}";
    }
 
    return @command;
