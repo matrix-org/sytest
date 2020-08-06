@@ -307,7 +307,7 @@ test "Server correctly resyncs when server leaves and rejoins a room",
       )->then( sub {
          my ( $first, $content ) = @_;
 
-         log_if_fail "first query response", $content;
+         log_if_fail "initial device query response", $content;
 
          assert_json_keys( $content, "device_keys" );
 
@@ -317,19 +317,41 @@ test "Server correctly resyncs when server leaves and rejoins a room",
          my $alice_keys = $device_keys->{ $federated_user_id };
          assert_json_keys( $alice_keys, ( $device_id1 ) );
 
-         matrix_leave_room( $user, $room->room_id )
+         Future->needs_all(
+            matrix_leave_room( $user, $room->room_id )->on_done( sub {
+               log_if_fail "sent leave request";
+            }),
+
+            # make sure that the leave propagates back to the sytest server
+            # see https://github.com/matrix-org/synapse/issues/8036
+            $inbound_server->await_event(
+               "m.room.member", $room->room_id, sub {
+                  my ( $ev ) = @_;
+                  log_if_fail "received event over federation", $ev;
+                  return $ev->{state_key} eq $user->user_id &&
+                     $ev->{content}{membership} eq 'leave';
+               }
+            ),
+         );
       })->then( sub {
+         log_if_fail "left room; now rejoining";
+         my $iter = 0;
          retry_until_success {
+            $iter++;
             matrix_join_room( $user, $room->room_id,
                server_name => $inbound_server->server_name,
-            )
+            )->on_fail( sub {
+               my ( $exc ) = @_;
+               chomp $exc;
+               log_if_fail "Room join iteration $iter failed: $exc";
+            });
          }
       })->then( sub {
+         log_if_fail "rejoined room";
          Future->needs_all(
             $inbound_server->await_request_user_devices( $federated_user_id )
             ->then( sub {
                my ( $req, undef ) = @_;
-
                assert_eq( $req->method, "GET", 'request method' );
 
                $req->respond_json( {
@@ -356,8 +378,10 @@ test "Server correctly resyncs when server leaves and rejoins a room",
                      $federated_user_id => [],
                   },
                },
-            ),
-         )
+            )->on_done( sub {
+               log_if_fail "sent second device query request";
+            }),
+         );
       })->then( sub {
          my ( $first, $content ) = @_;
 
