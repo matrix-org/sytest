@@ -29,8 +29,7 @@ C<SyTest::Homeserver::ProcessManager>
 
 =head1 DESCRIPTION
 
-This class is a mixin for C<SyTest::Homeserver> implementations (or, in fact,
-any C<IO::Async::Notifier> class) which start external processes.
+This class is a mixin for C<IO::Async::Notifier> classes which start external processes.
 
 =cut
 
@@ -179,7 +178,7 @@ sub _start_process_and_await_connectable
    my $finished_future = $self->{proc_info}{$proc}->finished_future;
 
    my $fut = Future->wait_any(
-      $self->await_connectable( $self->{bind_host}, $self->secure_port ),
+      $self->await_connectable( $connect_host, $connect_port ),
       $finished_future->without_cancel()->then_fail(
          "Process died without becoming connectable",
       ),

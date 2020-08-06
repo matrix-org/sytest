@@ -361,51 +361,30 @@ sub start
 
    my $loop = $self->loop;
 
-   my $started_future = $loop->new_future;
-
    $output->diag(
       "Creating config for server $hs_index with command "
          . join( " ", @config_command ),
    );
 
-   $loop->open_process(
+   return $self->_run_command(
       setup => [ env => $env ],
       command => [ @config_command ],
+   )->then( sub {
+      $output->diag(
+        "Starting server $hs_index for port $port with command "
+           . join( " ", @command ),
+      );
 
-      on_finish => sub {
-         my ( $proc, $exitcode ) = @_;
-
-         if( $exitcode != 0 ) {
-            $started_future->fail( "Server failed to generate config: exitcode " . ( $exitcode >> 8 ));
-            return
-         }
-
-         $output->diag(
-            "Starting server $hs_index for port $port with command "
-               . join( " ", @command ),
-         );
-
-         $self->add_child(
-            $self->{proc} = IO::Async::Process->new(
-               setup => [ env => $env ],
-
-               command => \@command,
-
-               on_finish => $self->_capture_weakself( 'on_finish' ),
-            )
-         );
-
-         $self->adopt_future(
-            $self->await_connectable( $bind_host, $self->_start_await_port )->then( sub {
-               $started_future->done;
-            })
-         );
-
-         $self->open_logfile;
-      }
-   );
-
-   return $started_future;
+      $self->_start_process_and_await_connectable(
+         setup => [ env => $env ],
+         command => \@command,
+         connect_host => $bind_host,
+         connect_port => $self->_start_await_port,
+      );
+   })->on_done( sub {
+      $output->diag("Started synapse $hs_index");
+      $self->open_logfile();
+   });
 }
 
 sub generate_listeners
@@ -447,78 +426,6 @@ sub wrap_synapse_command
 {
    my $self = shift;
    return @_;
-}
-
-sub pid
-{
-   my $self = shift;
-   return 0 if !$self->{proc};
-   return $self->{proc}->pid;
-}
-
-sub kill
-{
-   my $self = shift;
-   my ( $signal ) = @_;
-
-   if( $self->{proc} and my $pid = $self->{proc}->pid ) {
-      kill $signal => $pid;
-   }
-}
-
-sub kill_and_await_finish
-{
-   my $self = shift;
-
-   return $self->SUPER::kill_and_await_finish->then( sub {
-
-      # skip this if the process never got started.
-      return Future->done unless $self->pid;
-
-      $self->{output}->diag( "Killing ${\ $self->pid }" );
-
-      $self->kill( 'INT' );
-
-      return Future->needs_any(
-         $self->await_finish,
-
-         $self->loop->delay_future( after => 30 )->then( sub {
-            print STDERR "Timed out waiting for ${\ $self->pid }; sending SIGKILL\n";
-            $self->kill( 'KILL' );
-            Future->done;
-         }),
-        );
-   });
-}
-
-sub on_finish
-{
-   my $self = shift;
-   my ( $process, $exitcode ) = @_;
-
-   my $hs_index = $self->{hs_index};
-
-   say $self->pid . " stopped";
-
-   my $port = $self->{ports}{synapse};
-
-   if( $exitcode > 0 ) {
-      if( WIFEXITED($exitcode) ) {
-         warn "Main homeserver process for server $hs_index exited " . WEXITSTATUS($exitcode) . "\n";
-      }
-      else {
-         warn "Main homeserver process for server $hs_index failed - code=$exitcode\n";
-      }
-
-      print STDERR "\e[1;35m[server $port}]\e[m: $_\n"
-         for @{ $self->{stderr_lines} // [] };
-
-      # Now force all remaining output to be printed
-      $self->{print_output}++;
-      undef $self->{filter_output};
-   }
-
-   $self->await_finish->done( $exitcode );
 }
 
 sub open_logfile
@@ -1103,29 +1010,12 @@ sub start
 
       $output->diag( "Starting haproxy on port $self->{ports}{haproxy}" );
 
-      $self->add_child( $self->{haproxy_proc} = IO::Async::Process->new(
+      $self->_start_process_and_await_connectable(
          command => [ HAPROXY_BIN, "-db", "-f", $self->{haproxy_config} ],
-         on_finish => sub {
-            my ( undef, $exitcode ) = @_;
-            print STDERR "\n\nhaproxy died $exitcode\n\n";
-         },
-      ) );
-
-      return $self->await_connectable( $self->{bind_host}, $self->{ports}{haproxy} )
-         ->on_done( sub { $output->diag( "haproxy started" ) } );
+         connect_host => $self->{bind_host},
+         connect_port => $self->{ports}{haproxy},
+      )->on_done( sub { $output->diag( "haproxy started" ) } );
    });
-}
-
-sub kill
-{
-   my $self = shift;
-   my ( $signal ) = @_;
-
-   $self->SUPER::kill( @_ );
-
-   if( $self->{haproxy_proc} and my $pid = $self->{haproxy_proc}->pid ) {
-      kill $signal => $pid;
-   }
 }
 
 sub generate_haproxy_config
