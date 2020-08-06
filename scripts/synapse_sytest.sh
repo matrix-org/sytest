@@ -15,6 +15,11 @@ cd "$(dirname $0)/.."
 
 mkdir /work
 
+# start the redis server, if desired
+if [ -n "$REDIS" ]; then
+    /usr/bin/redis-server /etc/redis/redis.conf
+fi
+
 # PostgreSQL setup
 if [ -n "$MULTI_POSTGRES" ] || [ -n "$POSTGRES" ]; then
     sed -i -r "s/^max_connections.*$/max_connections = 500/" "$PGDATA/postgresql.conf"
@@ -163,6 +168,10 @@ if [ -n "$WORKERS" ]; then
     RUN_TESTS+=(-I Synapse::ViaHaproxy --dendron-binary=/pydron.py)
 else
     RUN_TESTS+=(-I Synapse)
+fi
+
+if [ -n "$REDIS" ]; then
+    RUN_TESTS+=(--redis-host=localhost)
 fi
 
 mkdir -p /logs
