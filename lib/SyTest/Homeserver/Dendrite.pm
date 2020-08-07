@@ -148,7 +148,7 @@ sub _get_config
 
       logging => [{
          type => 'file',
-         level => 'debug',
+         level => 'trace',
          params => {
             path => "$self->{hs_dir}/dendrite-logs",
          },
