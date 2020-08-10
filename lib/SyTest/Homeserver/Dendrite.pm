@@ -84,31 +84,55 @@ sub _get_config
       args => {},
    );
 
-   my $db_uri = sprintf('dbname=%s', $db_config{args}->{database});
 
-   if( exists $db_config{args}->{user} ) {
-      $db_uri .= sprintf( " user=%s", $db_config{args}->{user} );
-   }
-
-   if( exists $db_config{args}->{password} ) {
-      $db_uri .= sprintf( " password=%s", $db_config{args}->{password} );
-   }
-
-   if( exists $db_config{args}->{host} ) {
-      $db_uri .= sprintf( " host=%s", $db_config{args}->{host} );
-   }
-
-   if( exists $db_config{args}->{sslmode} ) {
-      $db_uri .= sprintf( " sslmode=%s", $db_config{args}->{sslmode} );
-   }
+   my $db_uri = sprintf(
+      'postgresql://%s:%s@%s/%s?sslmode=%s',
+      $db_config{args}->{user},
+      $db_config{args}->{password},
+      "", # $db_config{args}->{host},
+      $db_config{args}->{database},
+      $db_config{args}->{sslmode},
+   );
 
    return (
-      version => 0,
-      matrix => {
+      version => 1,
+      global => {
          server_name => $self->server_name,
          private_key => $self->{paths}{matrix_key},
-         federation_certificates => [$self->{paths}{tls_cert}],
-         federation_disable_tls_validation => $JSON::true,
+
+         kafka => {
+            use_naffka => $JSON::true,
+            naffka_database => {
+               connection_string => 
+                   ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                   "file:$self->{hs_dir}/naffka.db" : $db_uri,
+            },
+            topics => {
+               output_room_event  => 'roomserverOutput',
+               output_client_data => 'clientapiOutput',
+               user_updates => 'userUpdates',
+               output_typing_event => 'eduServerTypingOutput',
+               output_send_to_device_event => 'eduServerSendToDeviceOutput',
+               output_key_change_event => 'output_key_change_event',
+            },
+         },
+      },
+
+      app_service_api => {
+         database => {
+            connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                "file:$self->{hs_dir}/appservice_api.db" : $db_uri,
+         },
+         config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
+      },
+
+      client_api => {
+         database => {
+            connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                "file:$self->{hs_dir}/client_api.db" : $db_uri,
+         },
          registration_shared_secret => "reg_secret",
 
          $self->{recaptcha_config} ? (
@@ -122,29 +146,79 @@ sub _get_config
          ) : (),
       },
 
-      media => {
-         base_path => "media_store",
+      current_state_server => {
+          database => {
+             connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                "file:$self->{hs_dir}/current_state_server.db" : $db_uri,
+          },
       },
 
-      kafka => {
-         topics => {
-            output_room_event  => 'roomserverOutput',
-            output_client_data => 'clientapiOutput',
-            user_updates => 'userUpdates',
-            output_typing_event => 'eduServerTypingOutput',
-            output_send_to_device_event => 'eduServerSendToDeviceOutput',
-            output_key_change_event => 'output_key_change_event',
+      federation_api => {
+         federation_certificates => [$self->{paths}{tls_cert}],
+      },
+
+      federation_sender => {
+         database => {
+             connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                "file:$self->{hs_dir}/federation_sender.db" : $db_uri,
+         },
+         disable_tls_validation => $JSON::true,
+      },
+
+      key_server => {
+         database => {
+             connection_string => 
+                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+                "file:$self->{hs_dir}/key_server.db" : $db_uri,
          },
       },
 
-      database => {
-         # POSTGRES not set or is 0, use sqlite, which has separate .db files for each server
-         map { ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-         ($_ => "file:$self->{hs_dir}/" . $_ . ".db") :
-         ($_ => $db_uri) } qw(
-            account device media_api sync_api room_server server_key
-            federation_sender public_rooms_api naffka appservice current_state e2e_key
-         ),
+      media_api => {
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/media_api.db" : $db_uri,
+         },
+         base_path => "media_store",
+      },
+
+      room_server => {
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/room_server.db" : $db_uri,
+         },
+      },
+
+      server_key_api => {
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/server_key_api.db" : $db_uri,
+         },
+      },
+
+      sync_api => {
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/sync_api.db" : $db_uri,
+         },
+      },
+
+      user_api => {
+         account_database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/accounts.db" : $db_uri,
+         },
+         device_database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/devices.db" : $db_uri,
+         },
       },
 
       logging => [{
@@ -154,10 +228,6 @@ sub _get_config
             path => "$self->{hs_dir}/dendrite-logs",
          },
       }],
-
-      application_services => {
-         config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
-      },
    );
 }
 
@@ -259,9 +329,6 @@ sub _get_config
 {
    my $self = shift;
    my %config = $self->SUPER::_get_config();
-
-   $config{kafka}{use_naffka} = JSON::true;
-
    return %config;
 }
 
