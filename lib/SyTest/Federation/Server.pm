@@ -490,8 +490,6 @@ sub on_request_federation_v1_send
       }
 
       next if $self->on_event( $event );
-
-      warn "TODO: Unhandled incoming event of type '$event->{type}'";
    }
 
    Future->done( json => {} );
