@@ -85,23 +85,14 @@ sub _get_config
    );
 
 
-   my $db_uri = sprintf('dbname=%s', $db_config{args}->{database});
-
-   if( exists $db_config{args}->{user} ) {
-      $db_uri .= sprintf( " user=%s", $db_config{args}->{user} );
-   }
-
-   if( exists $db_config{args}->{password} ) {
-      $db_uri .= sprintf( " password=%s", $db_config{args}->{password} );
-   }
-
-   if( exists $db_config{args}->{host} ) {
-      $db_uri .= sprintf( " host=%s", $db_config{args}->{host} );
-   }
-
-   if( exists $db_config{args}->{sslmode} ) {
-      $db_uri .= sprintf( " sslmode=%s", $db_config{args}->{sslmode} );
-   }
+   my $db_uri = sprintf(
+      'postgresql://%s:%s@%s/%s?sslmode=%s',
+      $db_config{args}->{user},
+      $db_config{args}->{password},
+      "", # $db_config{args}->{host},
+      $db_config{args}->{database},
+      $db_config{args}->{sslmode},
+   );
 
    return (
       version => 1,
