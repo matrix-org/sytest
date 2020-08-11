@@ -198,7 +198,7 @@ test "Can query remote device keys using POST after notification",
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
          matrix_get_e2e_keys(
-            $user1, $user2->user_id => {}
+            $user1, $user2->user_id
          )
       })->then( sub {
          my ( $content ) = @_;
