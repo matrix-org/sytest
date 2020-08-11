@@ -195,7 +195,7 @@ sub can_get_state_ids {
       $params{outbound_client}->do_request_json(
          method   => "GET",
          hostname => $params{dest_server},
-         uri      => "/v1/state_ids/$room_id/",
+         uri      => "/v1/state_ids/$room_id",
          params   => {
             event_id => $event_id,
          },
@@ -213,7 +213,7 @@ sub can_backfill {
       $params{outbound_client}->do_request_json(
          method   => "GET",
          hostname => $params{dest_server},
-         uri      => "/v1/backfill/$room_id/",
+         uri      => "/v1/backfill/$room_id",
          params   => {
             v => $event_id,
             limit => 100,
