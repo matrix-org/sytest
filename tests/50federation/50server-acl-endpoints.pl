@@ -53,9 +53,7 @@ sub can_send_event {
       my $pdu_result = $body->{pdus}->{$event_id};
 
       if( $params{expect_ban} ) {
-         assert_json_keys( $pdu_result, qw( errcode ));
-         assert_eq( $pdu_result->{errcode}, 'M_FORBIDDEN',
-                    "error code for forbidden /send" );
+         assert_json_keys( $pdu_result, qw( error ));
       } else {
          assert_deeply_eq( $pdu_result, {}, "result for permitted /send" );
       }
