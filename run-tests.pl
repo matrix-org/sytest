@@ -183,7 +183,7 @@ Options:
                                   possible
 
        --exclude-deprecated     - don't run tests that specifically test deprecated
-	                              endpoints
+                                  endpoints
 
        --bind-host HOST         - when starting listeners (eg homeservers or
                                   test httpds), bind to this hostname instead of
@@ -866,7 +866,7 @@ $OUTPUT->status(
 
 # Now run the tests
 my $prev_filename;
-TESTS: foreach my $test ( @TESTS ) {
+foreach my $test ( @TESTS ) {
    if( !$prev_filename or $prev_filename ne $test->file ) {
       $OUTPUT->run_file( $prev_filename = $test->file );
    }
