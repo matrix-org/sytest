@@ -617,7 +617,7 @@ sub _push_test
    }
 
    if( $params{deprecated_endpoints} ) {
-       if ( $INCLUDE_DEPRECATED_ENDPOINTS ) {
+       if ( !$INCLUDE_DEPRECATED_ENDPOINTS ) {
            $excluded_count ++;
            return;
        }
