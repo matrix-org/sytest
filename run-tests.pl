@@ -618,7 +618,6 @@ sub _push_test
 
    if( $params{deprecated_endpoints} ) {
        if ( !$INCLUDE_DEPRECATED_ENDPOINTS ) {
-           $excluded_count ++;
            return;
        }
    }
@@ -853,7 +852,6 @@ my $failed_count = 0;
 my $expected_fail_count = 0;
 my $passed_count = 0;
 my $skipped_count = 0;
-my $excluded_count = 0;
 
 $OUTPUT->status(
    tests   => scalar @TESTS,
@@ -861,7 +859,6 @@ $OUTPUT->status(
    passed  => $passed_count,
    failed  => $failed_count,
    skipped => $skipped_count,
-   excluded => $excluded_count,
 );
 
 # Now run the tests
@@ -916,7 +913,6 @@ foreach my $test ( @TESTS ) {
       passed  => $passed_count,
       failed  => $failed_count,
       skipped => $skipped_count,
-      excluded => $excluded_count,
    );
 }
 
