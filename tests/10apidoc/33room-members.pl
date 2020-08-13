@@ -496,6 +496,8 @@ sub matrix_create_and_join_room
          } @local_members,
       )
    })->then( sub {
+      log_if_fail "Created room_id=$room_id";
+
       Future->done( $room_id,
          ( $with_alias ? ( $room_alias_fullname ) : () )
       );
@@ -660,7 +662,7 @@ sub matrix_join_room_synced
 
    matrix_do_and_wait_for_sync( $user,
       do => sub {
-         matrix_join_room( $user, $room_id_or_alias, %params );
+         retry_until_success { matrix_join_room( $user, $room_id_or_alias, %params ) }
       },
       check => sub { exists $_[0]->{rooms}{join}{$_[1]} },
    );

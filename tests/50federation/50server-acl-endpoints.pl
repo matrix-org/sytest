@@ -53,9 +53,7 @@ sub can_send_event {
       my $pdu_result = $body->{pdus}->{$event_id};
 
       if( $params{expect_ban} ) {
-         assert_json_keys( $pdu_result, qw( errcode ));
-         assert_eq( $pdu_result->{errcode}, 'M_FORBIDDEN',
-                    "error code for forbidden /send" );
+         assert_json_keys( $pdu_result, qw( error ));
       } else {
          assert_deeply_eq( $pdu_result, {}, "result for permitted /send" );
       }
@@ -197,7 +195,7 @@ sub can_get_state_ids {
       $params{outbound_client}->do_request_json(
          method   => "GET",
          hostname => $params{dest_server},
-         uri      => "/v1/state_ids/$room_id/",
+         uri      => "/v1/state_ids/$room_id",
          params   => {
             event_id => $event_id,
          },
@@ -215,7 +213,7 @@ sub can_backfill {
       $params{outbound_client}->do_request_json(
          method   => "GET",
          hostname => $params{dest_server},
-         uri      => "/v1/backfill/$room_id/",
+         uri      => "/v1/backfill/$room_id",
          params   => {
             v => $event_id,
             limit => 100,

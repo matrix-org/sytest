@@ -60,7 +60,7 @@ test "Can update backup version",
          do_request_json_for(
             $user,
             method  => "PUT",
-            uri     => "/unstable/room_keys/version/$version",
+            uri     => "/r0/room_keys/version/$version",
             content => {
                algorithm => "m.megolm_backup.v1",
                auth_data => "adifferentopaquestring",
@@ -384,7 +384,7 @@ test "Deleted & recreated backups are empty",
          # get all keys
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/unstable/room_keys/keys",
+            uri     => "/r0/room_keys/keys",
             params  => {
                version => $content->{version},
             }
@@ -424,7 +424,7 @@ sub matrix_create_key_backup {
 
    do_request_json_for( $user,
       method  => "POST",
-      uri     => "/unstable/room_keys/version",
+      uri     => "/r0/room_keys/version",
       content => {
          algorithm => "m.megolm_backup.v1",
          auth_data => "anopaquestring",
@@ -445,7 +445,7 @@ sub matrix_delete_key_backup {
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/unstable/room_keys/version/$version",
+      uri     => "/r0/room_keys/version/$version",
    );
 }
 
@@ -462,7 +462,7 @@ version if version is omitted
 sub matrix_get_key_backup_info {
    my ( $user, $version ) = @_;
 
-   my $url = "/unstable/room_keys/version";
+   my $url = "/r0/room_keys/version";
 
    if (defined($version)) {
       $url .= "/$version";
@@ -486,7 +486,7 @@ sub matrix_backup_keys {
    my ( $user, $room_id, $session_id, $version, $content ) = @_;
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/unstable/room_keys/keys/$room_id/$session_id",
+      uri     => "/r0/room_keys/keys/$room_id/$session_id",
       params  => {
          version => $version,
       },
@@ -508,11 +508,11 @@ sub matrix_get_backup_key {
    my $uri;
 
    if ( defined $session_id ) {
-      $uri = "/unstable/room_keys/keys/$room_id/$session_id";
+      $uri = "/r0/room_keys/keys/$room_id/$session_id";
    } elsif ( defined $room_id ) {
-      $uri = "/unstable/room_keys/keys/$room_id";
+      $uri = "/r0/room_keys/keys/$room_id";
    } else {
-      $uri = "/unstable/room_keys/keys";
+      $uri = "/r0/room_keys/keys";
    }
 
    do_request_json_for( $user,

@@ -4,7 +4,7 @@ test "Add group role",
    do => sub {
       my ( $user ) = @_;
 
-      my ( $group_id, $room_id );
+      my $group_id;
 
       matrix_create_group( $user )
       ->then( sub {
@@ -31,7 +31,7 @@ test "Remove group role",
    do => sub {
       my ( $user ) = @_;
 
-      my ( $group_id, $room_id );
+      my $group_id;
 
       matrix_create_group( $user )
       ->then( sub {
@@ -52,7 +52,7 @@ test "Get group roles",
    do => sub {
       my ( $user ) = @_;
 
-      my ( $group_id, $room_id );
+      my $group_id;
 
       matrix_create_group( $user )
       ->then( sub {

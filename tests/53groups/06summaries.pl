@@ -377,7 +377,7 @@ test "Add user to group summary with role",
    do => sub {
       my ( $user, $viewer ) = @_;
 
-      my ( $group_id, $room_id );
+      my $group_id;
 
       matrix_create_group( $user,
          name => "Testing summaries",
@@ -418,7 +418,7 @@ test "Remove user from group summary with role",
    do => sub {
       my ( $user, $viewer ) = @_;
 
-      my ( $group_id, $room_id );
+      my $group_id;
 
       matrix_create_group( $user,
          name => "Testing summaries",

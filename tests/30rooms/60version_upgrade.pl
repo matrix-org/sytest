@@ -674,7 +674,7 @@ test "/upgrade moves aliases to the new room",
          );
       })->then( sub {
          # alias 1 is the canonical alias.
-         matrix_put_room_state( $creator, $room_id,
+         matrix_put_room_state_synced( $creator, $room_id,
             type    => "m.room.canonical_alias",
             content => {
                alias => $room_alias_1,
@@ -757,7 +757,7 @@ test "/upgrade moves remote aliases to the new room",
          $creator, $remote_user, $room_id
       )->then( sub {
          # Have the remote user join the room
-         matrix_join_room( $remote_user, $room_id );
+         matrix_join_room_synced( $remote_user, $room_id );
       })->then( sub {
          # Have the remote user add an alias
          do_request_json_for(
@@ -781,20 +781,24 @@ test "/upgrade moves remote aliases to the new room",
          );
       })->then( sub {
          # Have the remote user join the upgraded room
-         matrix_join_room( $remote_user, $new_room_id );
+         matrix_join_room_synced( $remote_user, $new_room_id );
       })->then( sub {
          # Check that the remote alias points to the new room id
-         do_request_json_for(
-            $remote_user,
-            method => "GET",
-            uri    => "/r0/directory/room/$remote_room_alias",
-         );
-      })->then( sub {
-         my ( $body ) = @_;
+         retry_until_success {
+            do_request_json_for(
+               $remote_user,
+               method => "GET",
+               uri    => "/r0/directory/room/$remote_room_alias",
+            )->then( sub {
+               my ( $body ) = @_;
 
-         assert_eq( $body->{room_id}, $new_room_id, "room_id for remote alias" );
+               log_if_fail "Got room ID for alias", $body->{room_id};
 
-         Future->done(1);
+               assert_eq( $body->{room_id}, $new_room_id, "room_id for remote alias" );
+
+               Future->done(1);
+            })
+         }
       });
    };
 
@@ -969,7 +973,6 @@ test "/upgrade is rejected if the user can't send state events",
 
    do => sub {
       my ( $creator, $room_id, $joiner ) = @_;
-      my ( $replacement_room );
 
       matrix_join_room( $joiner, $room_id )->then( sub {
          upgrade_room(
@@ -985,7 +988,6 @@ test "/upgrade of a bogus room fails gracefully",
 
    do => sub {
       my ( $user ) = @_;
-      my ( $replacement_room );
 
       upgrade_room(
          $user, "!fail:unknown",

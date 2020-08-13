@@ -68,7 +68,7 @@ test "Local device key changes appear in v2 /sync",
       })->then( sub {
          do_request_json_for( $user2,
             method  => "POST",
-            uri     => "/unstable/keys/upload",
+            uri     => "/r0/keys/upload",
             content => {
                device_keys => {
                   user_id   => $user2->user_id,
@@ -180,12 +180,12 @@ test "Can query remote device keys using POST after notification",
 
       my $room_id;
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user1, $user2, $room_id )
+         matrix_invite_user_to_room_synced( $user1, $user2, $room_id )
       })->then( sub {
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -198,7 +198,7 @@ test "Can query remote device keys using POST after notification",
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
          matrix_get_e2e_keys(
-            $user1, $user2->user_id => {}
+            $user1, $user2->user_id
          )
       })->then( sub {
          my ( $content ) = @_;
@@ -236,12 +236,12 @@ test "Device deletion propagates over federation",
 
       my $room_id;
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user1, $user2, $room_id )
+         matrix_invite_user_to_room_synced( $user1, $user2, $room_id )
       })->then( sub {
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -295,12 +295,12 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
 
       my $room_id;
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $remote_leaver->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -310,7 +310,7 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
       })->then( sub {
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { updated => "keys" } )
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { x => "x2" } } )
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
@@ -344,18 +344,18 @@ test "If remote user leaves room we no longer receive device updates",
 
       my $room_id;
 
-      matrix_create_room( $creator )->then( sub {
+      matrix_create_room_synced( $creator )->then( sub {
          ( $room_id ) = @_;
 
          matrix_sync( $creator );
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $remote_leaver, $room_id )
       })->then( sub {
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $remote2, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $remote2, $room_id )
       })->then( sub {
-         matrix_join_room( $remote2, $room_id );
+         matrix_join_room_synced( $remote2, $room_id );
       })->then( sub {
          log_if_fail "Created and joined room";
 
@@ -363,11 +363,10 @@ test "If remote user leaves room we no longer receive device updates",
          # join to the room, otherwise we could get out of sync.
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
-
          # there must be e2e keys for the devices, otherwise they don't appear in /query.
-         matrix_put_e2e_keys( $remote2, device_keys => { x => "x" } );
+         matrix_put_e2e_keys( $remote2, device_keys => { keys => { x => "x" } } );
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { x => "y" } );
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { x => "y" } } );
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
 
@@ -386,7 +385,7 @@ test "If remote user leaves room we no longer receive device updates",
             log_if_fail "keys after remote_leaver uploaded keys", $body;
             assert_json_keys( $body, qw( device_keys ));
             my $update = $body->{device_keys}->{ $remote_leaver->user_id }->{ $remote_leaver->device_id };
-            assert_eq( $update->{x}, "y" );
+            assert_eq( $update->{keys}{x}, "y" );
             Future->done;
          });
       })->then( sub {
@@ -398,10 +397,10 @@ test "If remote user leaves room we no longer receive device updates",
 
          # now /finally/ we can test what we came here for. Both remote users update their
          # device keys, and we check that we only get an update for one of them.
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { updated => "keys" } )
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { x => "x2" } } )
       })->then( sub {
          log_if_fail "Remote_leaver " . $remote_leaver->user_id . " updated keys";
-         matrix_put_e2e_keys( $remote2, device_keys => { updated => "keys" } )
+         matrix_put_e2e_keys( $remote2, device_keys => { keys => { x => "x2" } } )
       })->then( sub {
          log_if_fail "Remote user 2 " . $remote2->user_id . " updated keys";
 
@@ -442,10 +441,10 @@ test "Local device key changes appear in /keys/changes",
 
       my ( $room_id, $from_token, $to_token );
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -455,7 +454,7 @@ test "Local device key changes appear in /keys/changes",
 
          do_request_json_for( $user2,
             method  => "POST",
-            uri     => "/unstable/keys/upload",
+            uri     => "/r0/keys/upload",
             content => {
                device_keys => {
                   user_id   => $user2->user_id,
@@ -475,7 +474,7 @@ test "Local device key changes appear in /keys/changes",
 
          do_request_json_for( $user1,
             method => "GET",
-            uri => "/unstable/keys/changes",
+            uri => "/r0/keys/changes",
             params => {
                from => $from_token,
                to => $to_token,
@@ -504,7 +503,7 @@ test "New users appear in /keys/changes",
 
       my ( $room_id, $from_token, $to_token );
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
          matrix_sync( $user1 );
@@ -523,7 +522,7 @@ test "New users appear in /keys/changes",
 
          do_request_json_for( $user1,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,
@@ -556,12 +555,12 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
 
       my ( $room_id, $from_token, $to_token );
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $remote_leaver->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -573,7 +572,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
 
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { updated => "keys" } )
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { x => "x2" } } )
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
@@ -589,7 +588,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
 
          do_request_json_for( $creator,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,
@@ -618,12 +617,12 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
 
       my ( $room_id, $from_token );
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $other_user->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $other_user, $room_id );
+         matrix_join_room_synced( $other_user, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -646,7 +645,7 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
       })->then( sub {
          do_request_json_for( $creator,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,
@@ -674,12 +673,12 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
 
       my ( $room_id, $from_token );
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $other_user->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $other_user, $room_id );
+         matrix_join_room_synced( $other_user, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -700,7 +699,7 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
       })->then( sub {
          do_request_json_for( $creator,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,
@@ -729,13 +728,13 @@ test "If user leaves room, remote user changes device and rejoins we see update 
 
       my ( $room_id, $from_token, $to_token );
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $remote_user->user_id ],
          preset => "private_chat",  # Allow default PL users to invite others
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $remote_user, $room_id );
+         matrix_join_room_synced( $remote_user, $room_id );
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
@@ -749,7 +748,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $remote_user, device_keys => { updated => "keys" } )
+         matrix_put_e2e_keys( $remote_user, device_keys => { keys => { x => "x2" } } )
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
@@ -757,7 +756,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
             matrix_invite_user_to_room( $remote_user, $creator, $room_id )
          }
       })->then( sub {
-         matrix_join_room( $creator, $room_id );
+         matrix_join_room_synced( $creator, $room_id )
       })->then( sub {
          sync_until_user_in_device_list(
             $creator, $remote_user, msg => 'Second body',
@@ -767,7 +766,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
 
          do_request_json_for( $creator,
             method => "GET",
-            uri    => "/unstable/keys/changes",
+            uri    => "/r0/keys/changes",
 
             params => {
                from => $from_token,
