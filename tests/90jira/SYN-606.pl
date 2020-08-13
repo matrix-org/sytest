@@ -6,7 +6,8 @@ foreach my $i (
 
    test(
       "$name user can call /events on another world_readable room (SYN-606)",
-      requires => [ $fixture->(),  local_user_fixture(), qw ( deprecated_endpoints ) ],
+      deprecated_endpoints => 1,
+      requires => [ $fixture->(),  local_user_fixture() ],
 
       do => sub {
          my ( $nonjoined_user, $user ) = @_;

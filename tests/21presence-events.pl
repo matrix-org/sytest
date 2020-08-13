@@ -3,8 +3,9 @@ my $PRESENCE_LIST_URI = "/r0/presence/list/:user_id";
 
 
 test "initialSync sees my presence status",
+   deprecated_endpoints => 1,
    requires => [ local_user_fixture( with_events => 1 ),
-                 qw( can_initial_sync, deprecated_endpoints )],
+                 qw( can_initial_sync )],
 
    check => sub {
       my ( $user ) = @_;

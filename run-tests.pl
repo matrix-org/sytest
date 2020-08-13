@@ -616,6 +616,13 @@ sub _push_test
       return;
    }
 
+   if( $params{deprecated_endpoints} ) {
+       if ( $INCLUDE_DEPRECATED_ENDPOINTS ) {
+           $excluded_count ++;
+           return;
+       }
+   }
+
    push @TESTS, Test( $filename, $name, $multi,
       @params{qw( expect_fail proves requires check do timeout )} );
 }
@@ -865,16 +872,6 @@ TESTS: foreach my $test ( @TESTS ) {
    }
 
    my $m = $test->multi ? "enter_multi_test" : "enter_test";
-
-   # If the test specifically tests deprecated endpoints and we're not allowing those
-   # then skip the test altogether - there's no point in even showing it as skipped.
-   my @requires = @{ $test->requires // [] };
-   foreach my $req ( @requires ) {
-		if ($req eq "deprecated_endpoints" && !$INCLUDE_DEPRECATED_ENDPOINTS) {
-		   $excluded_count++;
-		   next TESTS;
-		}
-   }
 
    # Check if this test has been blocked by the blacklist. If so, mark as expected fail
    if ( scalar( $BLACKLIST_FILE ) and exists $TEST_BLACKLIST{ $test->name } ) {

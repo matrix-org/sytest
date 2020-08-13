@@ -133,7 +133,8 @@ test "GET /rooms/:room_id/joined_members fetches my membership",
    };
 
 test "GET /rooms/:room_id/initialSync fetches initial sync state",
-   requires => [ $user_fixture, $room_fixture, qw ( deprecated_endpoints ) ],
+   deprecated_endpoints => 1,
+   requires => [ $user_fixture, $room_fixture ],
 
    proves => [qw( can_room_initial_sync )],
 

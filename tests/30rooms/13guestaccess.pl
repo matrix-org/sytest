@@ -2,7 +2,8 @@ use List::Util qw( first );
 use Future::Utils qw( repeat );
 
 test "Guest user cannot call /events globally",
-   requires => [ guest_user_fixture(), qw ( deprecated_endpoints ) ],
+   deprecated_endpoints => 1,
+   requires => [ guest_user_fixture() ],
 
    do => sub {
       my ( $guest_user ) = @_;
@@ -73,7 +74,8 @@ test "Guest users can send messages to guest_access rooms if joined",
    };
 
 test "Guest user calling /events doesn't tightloop",
-   requires => [ guest_user_fixture(), local_user_fixture(), qw ( deprecated_endpoints ) ],
+   deprecated_endpoints => 1,
+   requires => [ guest_user_fixture(), local_user_fixture() ],
 
    do => sub {
       my ( $guest_user, $user ) = @_;
