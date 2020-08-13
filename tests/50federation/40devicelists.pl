@@ -577,7 +577,7 @@ test "Device list doesn't change if remote server is down",
             uri     => "/r0/keys/query",
             content => {
                device_keys => {
-                  $outbound_client_user => {}
+                  $outbound_client_user => []
                }
             }
          )
@@ -608,7 +608,7 @@ test "Device list doesn't change if remote server is down",
             uri     => "/r0/keys/query",
             content => {
                device_keys => {
-                  $outbound_client_user => {}
+                  $outbound_client_user => []
                }
             }
          )
