@@ -112,7 +112,7 @@ foreach my $i (
    foreach my $visibility (qw( shared invited joined default )) {
       test(
          "$name non-joined user cannot call /events on $visibility room",
-   
+
          deprecated_endpoints => 1,
          requires => [ $fixture->(), local_user_and_room_fixtures() ],
 

@@ -75,7 +75,7 @@ multi_test "Can invite users to invite-only rooms",
 test "Uninvited users cannot join the room",
    # TODO: deprecated endpoint used in this test
    requires => [ local_user_fixture(),
-                 inviteonly_room_fixture( creator => local_user_fixture() )],
+                 inviteonly_room_fixture( creator => local_user_fixture() ) ],
 
    check => sub {
       my ( $uninvited, $room_id ) = @_;
