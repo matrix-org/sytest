@@ -293,7 +293,7 @@ test "Setting state twice is idempotent",
 
 test "Joining room twice is idempotent",
    # TODO: deprecated endpoint used in this test
-   requires => [ local_user_and_room_fixtures()],
+   requires => [ local_user_and_room_fixtures() ],
 
    check => sub {
       my ( $user, $room_id ) = @_;
