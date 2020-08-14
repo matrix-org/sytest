@@ -1,4 +1,5 @@
 test "GET /initialSync with non-numeric 'limit'",
+   deprecated_endpoints => 1,
    requires => [ $main::SPYGLASS_USER,
                  qw( can_initial_sync )],
 

@@ -1,6 +1,7 @@
 use Future::Utils qw( repeat );
 
 multi_test "New federated private chats get full presence information (SYN-115)",
+   # TODO: deprecated endpoint used in this test
    requires => [ local_user_fixture(), remote_user_fixture( with_events => 1 ),
                  qw( can_create_private_room )],
 

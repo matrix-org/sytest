@@ -2,6 +2,7 @@ use List::UtilsBy qw( extract_first_by );
 use Future::Utils qw( repeat );
 
 test "GET /events initially",
+   deprecated_endpoints => 1,
    requires => [ $main::SPYGLASS_USER ],
 
    check => sub {
@@ -28,6 +29,7 @@ test "GET /events initially",
    };
 
 test "GET /initialSync initially",
+   deprecated_endpoints => 1,
    requires => [ $main::SPYGLASS_USER ],
 
    proves => [qw( can_initial_sync )],

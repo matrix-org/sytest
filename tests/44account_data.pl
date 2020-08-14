@@ -102,6 +102,7 @@ test "Can get room account data without syncing",
 
 
 test "Latest account data comes down in /initialSync",
+   deprecated_endpoints => 1,
    requires => [ local_user_and_room_fixtures() ],
 
    check => sub {
@@ -126,6 +127,7 @@ test "Latest account data comes down in /initialSync",
 
 
 test "Latest account data comes down in room initialSync",
+   deprecated_endpoints => 1,
    requires => [ local_user_and_room_fixtures() ],
 
    check => sub {
