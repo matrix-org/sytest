@@ -973,7 +973,6 @@ test "/upgrade is rejected if the user can't send state events",
 
    do => sub {
       my ( $creator, $room_id, $joiner ) = @_;
-      my ( $replacement_room );
 
       matrix_join_room( $joiner, $room_id )->then( sub {
          upgrade_room(
@@ -989,7 +988,6 @@ test "/upgrade of a bogus room fails gracefully",
 
    do => sub {
       my ( $user ) = @_;
-      my ( $replacement_room );
 
       upgrade_room(
          $user, "!fail:unknown",

@@ -377,6 +377,41 @@ test "Inbound /v1/make_join rejects remote attempts to join local users to rooms
    };
 
 
+test "Inbound /make_join rejects attempts to join rooms where all users have left",
+   requires => [
+      $main::OUTBOUND_CLIENT,
+      local_user_and_room_fixtures(),
+      federation_user_id_fixture(),
+   ],
+
+   do => sub {
+      my ( $outbound_client, $creator, $room_id, $user_id ) = @_;
+
+      my $first_home_server = $creator->server_name;
+
+      # initially, a make_join should be accepted
+      $outbound_client->make_join(
+         server_name => $first_home_server,
+         room_id     => $room_id,
+         user_id     => $user_id,
+      )->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "Initial make_join response", $body;
+
+         matrix_leave_room_synced( $creator, $room_id );
+      })->then( sub {
+         log_if_fail "Creator left room";
+
+         # now we expect a 404
+         $outbound_client->make_join(
+            server_name => $first_home_server,
+            room_id     => $room_id,
+            user_id     => $user_id,
+         )->main::expect_m_not_found();
+      });
+   };
+
+
 test "Inbound /v1/send_join rejects incorrectly-signed joins",
    requires => [
       $main::OUTBOUND_CLIENT,
@@ -390,6 +425,7 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
       my $server_name = $creator_user->server_name;
       my $room_id;
       my $join_event;
+      my $room_version;
 
       matrix_create_room(
          $creator_user,
@@ -405,7 +441,7 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
          my ( $body ) = @_;
          log_if_fail "make_join body", $body;
 
-         my $room_version = $body->{room_version} // 1;
+         $room_version = $body->{room_version} // 1;
 
          $join_event = $body->{event};
 
@@ -416,11 +452,12 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
             # room v1/v2: assign an event id
             $join_event->{event_id} = $outbound_client->datastore->next_event_id();
          }
+         my $event_id = SyTest::Federation::Protocol::id_for_event($join_event, $room_version);
 
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $server_name,
-            uri      => "/v1/send_join/$room_id/xxx",
+            uri      => "/v1/send_join/$room_id/$event_id",
             content  => $join_event,
          );
       })->main::expect_http_403()
@@ -436,11 +473,12 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
                $outbound_client->datastore->key_id => "a" x 86,
             },
          };
+         my $event_id = SyTest::Federation::Protocol::id_for_event($join_event, $room_version);
 
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $server_name,
-            uri      => "/v1/send_join/$room_id/xxx",
+            uri      => "/v1/send_join/$room_id/$event_id",
             content  => $join_event,
          );
       })->main::expect_http_403()
@@ -457,11 +495,12 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
 
          # make sure that it gets accepted once we sign it
          $outbound_client->datastore->sign_event( $join_event );
+         my $event_id = SyTest::Federation::Protocol::id_for_event($join_event, $room_version);
 
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $server_name,
-            uri      => "/v1/send_join/$room_id/xxx",
+            uri      => "/v1/send_join/$room_id/$event_id",
             content  => $join_event,
          );
 
@@ -1111,11 +1150,12 @@ test "Inbound: send_join rejects invalid JSON for room version 6",
          ${event}{content}{bad_val} = 1.1;
 
          $datastore->sign_event( \%event );
+         my $event_id = SyTest::Federation::Protocol::id_for_event(\%event, '6');
 
          $outbound_client->do_request_json(
             method   => "PUT",
             hostname => $first_home_server,
-            uri      => "/v2/send_join/$room_id/xxx",
+            uri      => "/v2/send_join/$room_id/$event_id",
             content => \%event,
          )
       })->main::expect_m_bad_json;

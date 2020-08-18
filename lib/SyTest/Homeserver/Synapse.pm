@@ -18,7 +18,7 @@ use File::Path qw( remove_tree );
 use List::Util qw( any );
 use POSIX qw( strftime WIFEXITED WEXITSTATUS );
 
-use YAML ();
+use JSON;
 
 use SyTest::SSL qw( ensure_ssl_key create_ssl_cert );
 
@@ -186,10 +186,6 @@ sub start
             per_second => 1000,
             burst_count => 1000,
         },
-        rc_third_party_invite => {
-           per_second => 1000,
-           burst_count => 1000,
-        },
         rc_login => {
             address => {
                 per_second => 1000,
@@ -263,11 +259,6 @@ sub start
         user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
 
         require_membership_for_aliases => "false",
-
-        account_validity => {
-           enabled => "true",
-           period => "6w",
-        },
 
         # Enable ephemeral message support (MSC2228)
         enable_ephemeral_messages => "true",
@@ -419,9 +410,8 @@ sub generate_listeners
          type         => "http",
          port         => $unsecure_port,
          bind_address => $bind_host,
-         tls          => 0,
          resources    => [{
-            names => [ "client", "federation", "replication", "metrics" ], compress => 0
+            names => [ "client", "federation", "replication", "metrics" ]
          }]
       }
    }
@@ -431,7 +421,6 @@ sub generate_listeners
          type         => "replication",
          port         => $replication_tcp_port,
          bind_address => $bind_host,
-         tls          => 0,
       }
    }
 
@@ -440,7 +429,6 @@ sub generate_listeners
          type         => "metrics",
          port         => $self->{ports}{synapse_metrics},
          bind_address => $bind_host,
-         tls          => 0,
       };
 }
 
@@ -652,9 +640,9 @@ sub generate_listeners
          type => "http",
          port => $self->{ports}{synapse},
          bind_address => $self->{bind_host},
-         tls => 1,
+         tls => JSON::true,
          resources => [{
-            names => [ "client", "federation", "replication", "metrics" ], compress => 0
+            names => [ "client", "federation", "replication", "metrics" ]
          }]
       },
       $self->SUPER::generate_listeners;

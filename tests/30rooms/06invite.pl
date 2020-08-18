@@ -15,20 +15,14 @@ sub inviteonly_room_fixture
          )->then( sub {
             my ( $room_id ) = @_;
 
-            matrix_initialsync_room( $creator, $room_id )->then( sub {
-               my ( $body ) = @_;
-
-               assert_json_keys( $body, qw( state ));
-
-               my ( $join_rules_event ) = first { $_->{type} eq "m.room.join_rules" } @{ $body->{state} };
-               $join_rules_event or
-                  die "Failed to find an m.room.join_rules event";
-
-               $join_rules_event->{content}{join_rule} eq "invite" or
+            await_sync_timeline_contains($creator, $room_id, check => sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.join_rules";
+               $event->{content}{join_rule} eq "invite" or
                   die "Expected join rule to be 'invite'";
-
-               Future->done( $room_id );
+               return 1;
             });
+            Future->done( $room_id );
          });
       }
    )
@@ -135,22 +129,24 @@ sub invited_user_can_reject_invite
 {
    my ( $invitee, $creator, $room_id ) = @_;
 
-   matrix_invite_user_to_room( $creator, $invitee, $room_id )
+   matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
    ->then( sub {
       matrix_leave_room_synced( $invitee, $room_id )
    })->then( sub {
-      matrix_get_room_state( $creator, $room_id,
-         type      => "m.room.member",
-         state_key => $invitee->user_id,
-      );
-   })->then( sub {
-      my ( $body ) = @_;
-
-      log_if_fail "Membership body", $body;
-      $body->{membership} eq "leave" or
-         die "Expected membership to be 'leave'";
-
-      Future->done(1);
+      # Leaving a room may 200 OK before it gets sent over federation, which
+      # is to be expected given rate limits/backoff. Therefore, we need to
+      # keep querying the state on the other end until it works.
+      ( repeat_until_true {
+         matrix_get_room_state( $creator, $room_id,
+            type      => "m.room.member",
+            state_key => $invitee->user_id,
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Membership body (want leave)", $body;
+            return unless $body->{membership} eq "leave";
+            Future->done(1);
+         })
+      })
    })->then( sub {
       matrix_sync( $invitee )
    })->then( sub {
@@ -188,7 +184,8 @@ sub invited_user_can_reject_invite_for_empty_room
 
    matrix_invite_user_to_room( $creator, $invitee, $room_id )
    ->then( sub {
-      matrix_leave_room( $creator, $room_id )
+      # wait for the leave to come down to make sure we're testing an empty room
+      matrix_leave_room_synced( $creator, $room_id )
    })
    ->then( sub {
       matrix_leave_room( $invitee, $room_id )
@@ -217,7 +214,8 @@ test "Invited user can reject local invite after originator leaves",
 
       matrix_invite_user_to_room( $creator, $invitee, $room_id )
       ->then( sub {
-         matrix_leave_room( $creator, $room_id );
+         # wait for the leave to come down to make sure we're testing an empty room
+         matrix_leave_room_synced( $creator, $room_id );
       })->then( sub {
          matrix_leave_room( $invitee, $room_id );
       })->then( sub {
@@ -321,7 +319,7 @@ test "Remote invited user can see room metadata",
             content => { url => "http://something" },
          ),
       )->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id );
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id );
       })->then( sub {
          await_sync( $invitee, check => sub {
             my ( $body ) = @_;

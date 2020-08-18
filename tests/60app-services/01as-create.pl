@@ -3,10 +3,10 @@ my $user_fixture = local_user_fixture();
 my $room_fixture = room_fixture( $user_fixture );
 
 test "AS can create a user",
-   requires => [ $main::AS_USER[0], $room_fixture ],
+   requires => [ $main::AS_USER[0] ],
 
    do => sub {
-      my ( $as_user, $room_id ) = @_;
+      my ( $as_user ) = @_;
 
       do_request_json_for( $as_user,
          method => "POST",
@@ -27,10 +27,10 @@ test "AS can create a user",
    };
 
 test "AS can create a user with an underscore",
-   requires => [ $main::AS_USER[0], $room_fixture ],
+   requires => [ $main::AS_USER[0] ],
 
    do => sub {
-      my ( $as_user, $room_id ) = @_;
+      my ( $as_user ) = @_;
 
       do_request_json_for( $as_user,
          method => "POST",
@@ -52,10 +52,10 @@ test "AS can create a user with an underscore",
 
 
 test "AS can create a user with inhibit_login",
-   requires => [ $main::AS_USER[0], $room_fixture ],
+   requires => [ $main::AS_USER[0] ],
 
    do => sub {
-      my ( $as_user, $room_id ) = @_;
+      my ( $as_user ) = @_;
 
       do_request_json_for( $as_user,
          method => "POST",
@@ -107,13 +107,13 @@ test "Regular users cannot register within the AS namespace",
 
 test "AS can make room aliases",
    requires => [
-      $main::AS_USER[0], $main::APPSERV[0], $room_fixture,
+      $main::AS_USER[0], $room_fixture,
       room_alias_fixture( prefix => "astest-" ),
       qw( can_create_room_alias ),
    ],
 
    do => sub {
-      my ( $as_user, $appserv, $room_id, $room_alias ) = @_;
+      my ( $as_user, $room_id, $room_alias ) = @_;
 
       do_request_json_for( $as_user,
          method => "PUT",

@@ -83,7 +83,7 @@ test "Can filter rooms/{roomId}/members",
 
    check => sub {
       my ( $user1, $user2 ) = @_;
-      my ( $room_id, $event_id );
+      my $room_id;
 
       matrix_create_and_join_room( [ $user1, $user2 ] )->then( sub {
          ( $room_id ) = @_;
@@ -130,4 +130,3 @@ test "Can filter rooms/{roomId}/members",
          Future->done(1);
       })
    };
-

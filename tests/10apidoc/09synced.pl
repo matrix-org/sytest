@@ -6,6 +6,7 @@ push our @EXPORT, qw(
    sync_timeline_contains
    await_sync
    await_sync_timeline_contains
+   await_sync_ephemeral_contains
    await_sync_timeline_or_state_contains
    await_sync_presence_contains
 );
@@ -92,6 +93,13 @@ sub sync_timeline_contains
    my ( $sync_body, $room_id, $check ) = @_;
 
    sync_room_contains( $sync_body, $room_id, "timeline", $check );
+}
+
+sub sync_ephemeral_contains
+{
+   my ( $sync_body, $room_id, $check ) = @_;
+
+   sync_room_contains( $sync_body, $room_id, "ephemeral", $check );
 }
 
 sub sync_presence_contains
@@ -184,6 +192,39 @@ sub await_sync_timeline_contains {
          my ( $body ) = @_;
 
          return sync_timeline_contains( $body, $room_id, $check ) ? $body : 0;
+      },
+      %params,
+   )
+}
+
+=head2 await_sync_ephemeral_contains
+
+    $sync_body = await_sync_ephemeral_contains( $user, $room_id,
+        check => sub {
+            my ( $event ) = @_;
+            return true_if_event_matches();
+        },
+    )->get();
+
+Waits for something to appear in a the ephemeral section of a particular room.
+Returns the sync body.
+
+The C<check> function gets given individual events.
+
+See L</await_sync> for details of the C<since> parameter.
+
+=cut
+
+sub await_sync_ephemeral_contains {
+   my ( $user, $room_id, %params ) = @_;
+
+   my $check = delete $params{check} or die "Must supply a 'check' param";
+
+   return await_sync( $user,
+      check => sub {
+         my ( $body ) = @_;
+
+         return sync_ephemeral_contains( $body, $room_id, $check ) ? $body : 0;
       },
       %params,
    )

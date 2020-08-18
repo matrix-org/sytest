@@ -22,8 +22,6 @@ test "Remote servers cannot set power levels in rooms without existing powerleve
    do => sub {
       my ( $synapse_user, $inbound_server, $sytest_user_id_a) = @_;
 
-      my $synapse_server_name = $synapse_user->http->server_name;
-      my $outbound_client     = $inbound_server->client;
       my $sytest_server_name  = $inbound_server->server_name;
       my $datastore           = $inbound_server->datastore;
 
@@ -59,16 +57,14 @@ test "Remote servers cannot set power levels in rooms without existing powerleve
 
 test "Remote servers should reject attempts by non-creators to set the power levels",
 
-   requires => [ $main::OUTBOUND_CLIENT,
-                 $main::INBOUND_SERVER,
+   requires => [ $main::INBOUND_SERVER,
                  local_user_fixture(),
                  federation_user_id_fixture(),
                  federation_user_id_fixture(),
                 ],
 
    do => sub {
-      my ( $outbound_server, $inbound_server,
-           $synapse_user, $sytest_user_id_a, $sytest_user_id_b ) = @_;
+      my ( $inbound_server, $synapse_user, $sytest_user_id_a, $sytest_user_id_b ) = @_;
 
       my $synapse_server_name = $synapse_user->server_name;
       my $outbound_client     = $inbound_server->client;
