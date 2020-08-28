@@ -375,9 +375,11 @@ sub start
            . join( " ", @command ),
       );
 
-      $self->_start_process_and_await_notify(
+      $self->_start_process_and_await_connectable(
          setup => [ env => $env ],
          command => \@command,
+         connect_host => $bind_host,
+         connect_port => $self->_start_await_port,
       );
    })->on_done( sub {
       $output->diag("Started synapse $hs_index");
