@@ -12,6 +12,7 @@ test "Local users can peek by room ID",
          do_request_json_for( $peeking_user,
             method => "POST",
             uri    => "/r0/peek/$room_id",
+            content => {},
          )
       })->then(sub {
          matrix_sync( $peeking_user );
