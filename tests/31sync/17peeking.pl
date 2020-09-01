@@ -58,10 +58,11 @@ test "Local users can peek by room ID",
       })
    };
 
+
 my $room_alias_name = sprintf("peektest-%s", $TEST_RUN_ID);
 test "Local users can peek by room alias",
    requires => [
-      local_user_and_room_fixtures(room_opts => { room_alias_name => $room_alias_name, $TEST_RUN_ID}),
+      local_user_and_room_fixtures(room_opts => { room_alias_name => $room_alias_name }),
       local_user_fixture()
    ],
 
@@ -87,9 +88,55 @@ test "Local users can peek by room alias",
       })
    };
 
-# test "We can't peek into private rooms"
 
-# test "Peeked rooms only turn up in the sync for the device who peeked them"
+test "Peeked rooms only turn up in the sync for the device who peeked them",
+   requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
+
+   check => sub {
+      my ( $user, $room_id, $peeking_user ) = @_;
+      my ( $peeking_user_device2 );
+
+      matrix_login_again_with_user($peeking_user)->then(sub {
+         $peeking_user_device2 = $_[0];
+         matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek")
+      })->then(sub {
+         do_request_json_for( $peeking_user,
+            method => "POST",
+            uri    => "/r0/peek/$room_id",
+            content => {},
+         )
+      })->then(sub {
+         matrix_sync( $peeking_user );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "device 1 first sync response", $body;
+         my $room = $body->{rooms}{peek}{$room_id};
+         assert_ok( $room->{timeline}->{events}->[-1]->{content}->{body} eq 'something to peek', "peek has message body" );
+      })->then(sub {
+         matrix_sync( $peeking_user_device2 );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "device 2 first sync response", $body;
+         assert_ok( scalar keys(%{$body->{rooms}{peek}}) == 0, "no peeked rooms present");
+      })->then( sub {
+         matrix_send_room_text_message_synced( $user, $room_id, body => "something else to peek")
+      })->then( sub {
+         matrix_sync_again( $peeking_user );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "device 1 second sync response", $body;
+         my $room = $body->{rooms}{peek}{$room_id};
+         assert_ok( $room->{timeline}->{events}->[-1]->{content}->{body} eq 'something else to peek', "second peek has message body" );
+         matrix_sync_again( $peeking_user_device2 );
+      })->then( sub {
+         my ( $body ) = @_;
+         log_if_fail "device 2 second sync response", $body;
+         assert_ok( scalar keys(%{$body->{rooms}{peek}}) == 0, "still no peeked rooms present");
+         Future->done(1)
+      })
+   };
+
+# test "We can't peek into private rooms"
 
 # test "Users can unpeek from rooms"
 
