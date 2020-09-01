@@ -306,7 +306,6 @@ sub _await_ready_notification
    my ( $env ) = @_;
 
    my $loop = $self->loop;
-   my $output = $self->{output};
 
    # Create a random abstract socket name. Abstract sockets start with a null
    # byte.
@@ -329,7 +328,6 @@ sub _await_ready_notification
 
          # Payloads are newline separated list of varalbe assignments.
          foreach my $line ( split(/\n/, $dgram) ) {
-            $output->diag( "Received signal from process: $line" );
             if ( $line eq "READY=1" ) {
                $poke_fut->done;
             }
