@@ -963,16 +963,13 @@ sub _start_synapse
       push @worker_configs, $frontend_proxy_config;
    }
 
-   foreach my $worker_config ( @worker_configs ) {
-
-   }
-
    my @base_synapse_command = $self->_generate_base_synapse_command();
    my $idx = $self->{hs_index};
 
    $self->_start_process_and_await_notify(
       setup => [ env => $env ],
       command => \@base_synapse_command,
+      name => "synapse-$idx-master",
    )->then( sub {
       Future->needs_all(
          map {
@@ -989,6 +986,7 @@ sub _start_synapse
             $self->_start_process_and_await_notify(
                setup => [ env => $env ],
                command => \@command,
+               name => "synapse-$idx-$worker_name",
             )->then( sub {
                $self->{output}->diag("Started synapse $idx worker $worker_name");
 

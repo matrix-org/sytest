@@ -34,7 +34,7 @@ This class is a mixin for C<IO::Async::Notifier> classes which start external pr
 
 =cut
 
-struct ProcessInfo => [qw( process finished_future output_lines print_output )];
+struct ProcessInfo => [qw( process finished_future output_lines print_output name )];
 
 =head1 UTILITY METHODS
 
@@ -75,11 +75,13 @@ sub _start_process
          if exists $params{$_};
    }
 
+   my $proc_name = $params{name} // "server";
+
    $self->{proc_info} //= {};
 
    my $fut = $self->loop->new_future;
 
-   my $proc_info = ProcessInfo( undef, $fut, [], 0 );
+   my $proc_info = ProcessInfo( undef, $fut, [], 0, $proc_name );
 
    my $on_output = sub {
       my ( $stream, $buffref, $eof ) = @_;
@@ -108,11 +110,13 @@ sub _on_output_line
    my $self = shift;
    my ( $proc_info, $line ) = @_;
 
+   my $name = $proc_info->name;
+
    push @{ $proc_info->output_lines }, $line;
    shift @{ $proc_info->output_lines } while @{ $proc_info->output_lines } > 20;
 
    if( $proc_info->print_output ) {
-      print STDERR "\e[1;35m[server]\e[m: $line\n";
+      print STDERR "\e[1;35m[$name]\e[m: $line\n";
    }
 }
 
@@ -122,19 +126,20 @@ sub _on_finish
    my $self = shift;
    my ( $process, $exitcode ) = @_;
 
+   my $proc_info = $self->{proc_info}{$process};
+   my $name = $proc_info->name;
+
    if( $exitcode > 0 ) {
       if( WIFEXITED($exitcode) ) {
-         warn "Homeserver process exited " . WEXITSTATUS($exitcode) . "\n";
+         warn "$name process exited " . WEXITSTATUS($exitcode) . "\n";
       }
       else {
-         warn "Homeserver process failed - code=$exitcode\n";
+         warn "$name process failed - code=$exitcode\n";
       }
    }
 
-   my $proc_info = $self->{proc_info}{$process};
-
    # print the last few lines of output
-   print STDERR "\e[1;35m[server]\e[m: $_\n"
+   print STDERR "\e[1;35m[$name]\e[m: $_\n"
       for @{ $proc_info->output_lines };
 
    # - and force anything that has yet to hit the buffer to be printed
