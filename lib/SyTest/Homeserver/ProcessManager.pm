@@ -230,13 +230,13 @@ sub _kill_process
 
    my $finished_future = $proc_info->finished_future;
 
-   $self->{output}->diag( "Killing process " . $process->pid );
+   $self->{output}->diag( "Killing process " . $proc_info->name );
    $process->kill( 'INT' );
    return Future->needs_any(
       $finished_future->without_cancel,
 
       $self->loop->delay_future( after => 30 )->then( sub {
-         $self->{output}->diag( "Timed out waiting for ${\ $process->pid }; sending SIGKILL" );
+         $self->{output}->diag( "Timed out waiting for ${\ $proc_info->name }; sending SIGKILL" );
          $process->kill( 'KILL' );
          Future->done;
       }),
@@ -281,12 +281,13 @@ sub _start_process_and_await_notify
    my $await_fut = $self->_await_ready_notification( $env );
 
    my $proc = $self -> _start_process( %params );
-   my $finished_future = $self->{proc_info}{$proc}->finished_future;
+   my $proc_info = $self->{proc_info}{$proc};
+   my $finished_future = $proc_info->finished_future;
 
    my $fut = Future->wait_any(
       $await_fut,
       $finished_future->without_cancel()->then_fail(
-         "Process died without becoming connectable",
+         "Process died without becoming ready",
       ),
    );
    return $fut;
