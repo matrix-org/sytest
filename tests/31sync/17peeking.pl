@@ -58,12 +58,41 @@ test "Local users can peek by room ID",
       })
    };
 
-# test "Local users can peek by room alias",
+my $room_alias_name = sprintf("peektest-%s", $TEST_RUN_ID);
+test "Local users can peek by room alias",
+   requires => [
+      local_user_and_room_fixtures(room_opts => { room_alias_name => $room_alias_name, $TEST_RUN_ID}),
+      local_user_fixture()
+   ],
+
+   check => sub {
+      my ( $user, $room_id, $peeking_user ) = @_;
+
+      matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek")->then(sub {
+         do_request_json_for( $peeking_user,
+            method => "POST",
+            uri    => "/r0/peek/#$room_alias_name:".$user->http->server_name,
+            content => {},
+         )
+      })->then(sub {
+         matrix_sync( $peeking_user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         log_if_fail "first sync response", $body;
+
+         my $room = $body->{rooms}{peek}{$room_id};
+         assert_ok( $room->{timeline}->{events}->[-1]->{content}->{body} eq 'something to peek', "peek has message body" );
+         Future->done(1)
+      })
+   };
+
+# test "We can't peek into private rooms"
 
 # test "Peeked rooms only turn up in the sync for the device who peeked them"
 
 # test "Users can unpeek from rooms"
 
-# test "Joining a peeked room moves it atomically from peeked to joined rooms and stops peeking",
+# test "Joining a peeked room moves it atomically from peeked to joined rooms and stops peeking"
 
 # test "Parting a room which was joined after being peeked"
