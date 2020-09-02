@@ -283,15 +283,7 @@ sub _start_process_and_await_notify
       $finished_future->without_cancel()->then_fail(
          "Process died without becoming connectable",
       ),
-   )->else_with_f( sub {
-      my ( $f ) = @_;
-
-      # We need to manually kill child procs here as we don't seem to have
-      # registered the on finish handler yet.
-      $self->kill_and_await_finish()->then( sub {
-         $f
-      })
-   } );
+   );
    return $fut;
 }
 
@@ -355,11 +347,7 @@ sub _await_ready_notification
       socktype => "dgram",
       path     => $path,
    } )->then( sub {
-      # We add a timeout so that we don't wait for ever if process wedges.
-      Future->wait_any(
-         $poke_fut,
-         $loop->timeout_future( after => 15 )
-      )
+      $poke_fut
    })
 }
 
