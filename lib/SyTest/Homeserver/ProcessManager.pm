@@ -267,12 +267,12 @@ sub _start_process_and_await_notify
    my %setup_map = @$setup;  # Copy to a hash so we can pull out the env entry.
    my $env = $setup_map{env} // {};
    if ( not defined $setup_map{env} ) {
-      # There was no env entry, so we me need to add it to the setup array.
+      # There was no env entry, so we need to add it to the setup array.
       push @$setup, env => $env;
    }
 
    # We need to set this up *before* we start the process as we need to bind the
-   # socket before startin the process.
+   # socket before starting the process.
    my $await_fut = $self->_await_ready_notification( $env );
 
    my $proc = $self -> _start_process( %params );
