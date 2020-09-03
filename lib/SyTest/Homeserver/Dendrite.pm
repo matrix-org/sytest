@@ -144,6 +144,10 @@ sub _get_config
             recaptcha_public_key     => $self->{recaptcha_config}->{public_key},
             recaptcha_private_key    => $self->{recaptcha_config}->{private_key},
          ) : (),
+
+         rate_limiting => {
+            enabled => $JSON::false,
+         },
       },
 
       current_state_server => {
