@@ -1,4 +1,5 @@
 use Future::Utils qw( repeat );
+use JSON qw( decode_json );
 
 # Tests MSC2753 style peeking
 
@@ -168,8 +169,10 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
 
 # test "Users can unpeek from rooms"
 
+# test "Peeking with full_state=true does the right thing"
+
 # test "Joining a peeked room moves it atomically from peeked to joined rooms and stops peeking"
 
-# test "Parting a room which was joined after being peeked"
+# test "Parting a room which was joined after being peeked doesn't go back to being peeked"
 
 # test "Changing history visibility to non-world_readable terminates peeks"
