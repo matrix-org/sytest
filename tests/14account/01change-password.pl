@@ -23,6 +23,7 @@ sub matrix_set_password
             password => $old_password,
          },
          new_password => $new_password,
+         logout_devices => JSON::true,
       },
    );
 }
