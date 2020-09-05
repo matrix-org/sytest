@@ -16,6 +16,16 @@ test "Name/topic keys are correct",
             name => "name_2",
             topic => "topic_2",
          },
+         publicroom_with_unicode_chars_name => {
+             name => "un nom français",
+         },
+         publicroom_with_unicode_chars_topic => {
+             topic => "un topic à la française",
+         },
+         publicroom_with_unicode_chars_name_topic => {
+             name => "un nom français",
+             topic => "un topic à la française",
+         },
       );
 
       Future->needs_all( map {
