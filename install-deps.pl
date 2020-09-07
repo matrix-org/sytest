@@ -31,34 +31,42 @@ sub check_installed
    }
 
    defined $want_ver or return 1;
-   unless( $want_ver =~ s/^>=\s+// ) {
-      print STDERR "TODO: can only perform '>=' version checks\n";
+   my $inst_ver = `$^X -M$mod -e 'print \$${mod}::VERSION'`;
+
+   if( $want_ver =~ s/^>=\s*// ) {
+      if( $inst_ver lt $want_ver ) {
+         die "$mod: got $inst_ver, want >=$want_ver\n";
+      }
+   } elsif( $want_ver =~ s/^<\s*// ) {
+      if( $inst_ver ge $want_ver ) {
+         die "$mod: got $inst_ver, want <$want_ver\n";
+      }
+   } else {
+      print STDERR "TODO: can only perform '<' and '>=' version checks: cannot support $want_ver\n";
       return 1;
    }
 
-   my $inst_ver = `$^X -M$mod -e 'print \$${mod}::VERSION'`;
-   if( $inst_ver lt $want_ver ) {
-      die "$mod: got $inst_ver, want $want_ver\n";
-   }
    return 1;
 }
 
 sub requires
 {
-   my ( $mod, $ver ) = @_;
+   my ( $mod, $ver, $dist_path ) = @_;
 
    eval { check_installed( $mod, $ver ) } and return;
+
+   $dist_path //= $mod;
 
    # TODO: check that some location is user-writable in @INC, and that it appears
    # somehow in PERL_{MB,MM}_OPT
 
    if( !$DRYRUN ) {
-      print STDERR "**** Installing $mod ****\n";
+      print STDERR "\n\n**** install-deps.pl: Installing $mod ****\n";
 
       if( $NOTEST ) {
-         CPAN::Shell->notest('install', $mod);
+         CPAN::Shell->notest('install', $dist_path);
       } else {
-         CPAN::Shell->install($mod);
+         CPAN::Shell->install($dist_path);
       }
 
       if( not eval { check_installed( $mod, $ver ) } ) {
@@ -66,7 +74,7 @@ sub requires
          exit 1;
       }
    } else {
-      print qq($^X -MCPAN -e 'install "$mod"'\n);
+      print qq($^X -MCPAN -e 'install "$dist_path"'\n);
    }
 }
 
