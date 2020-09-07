@@ -17,10 +17,18 @@ test "Local users can peek into world_readable rooms by room ID",
             uri    => "/r0/peek/$room_id",
             content => {},
          )
-      })->then(sub {
-         matrix_sync( $peeking_user );
+      })->then( sub {
+         await_sync( $peeking_user,
+            since => $peeking_user->sync_next_batch,
+            check => sub {
+               my ( $body ) = @_;
+               return 0 unless $body->{rooms}{peek}{$room_id};
+               return $body;
+            }
+         )
       })->then( sub {
          my ( $body ) = @_;
+         $peeking_user->sync_next_batch = $body->{next_batch};
 
          log_if_fail "first sync response", $body;
 
@@ -40,6 +48,7 @@ test "Local users can peek into world_readable rooms by room ID",
          matrix_sync_again( $peeking_user );
       })->then( sub {
          my ( $body ) = @_;
+         $peeking_user->sync_next_batch = $body->{next_batch};
 
          log_if_fail "second sync response", $body;
          my $room = $body->{rooms}{peek}{$room_id};
@@ -47,9 +56,17 @@ test "Local users can peek into world_readable rooms by room ID",
       })->then( sub {
          matrix_send_room_text_message_synced( $user, $room_id, body => "something else to peek");
       })->then( sub {
-         matrix_sync_again( $peeking_user );
+         await_sync( $peeking_user,
+            since => $peeking_user->sync_next_batch,
+            check => sub {
+               my ( $body ) = @_;
+               return 0 unless $body->{rooms}{peek}{$room_id};
+               return $body;
+            }
+         )
       })->then( sub {
          my ( $body ) = @_;
+         $peeking_user->sync_next_batch = $body->{next_batch};
 
          log_if_fail "third sync response", $body;
          my $room = $body->{rooms}{peek}{$room_id};
@@ -60,7 +77,6 @@ test "Local users can peek into world_readable rooms by room ID",
          Future->done(1)
       })
    };
-
 
 for my $visibility (qw(shared invited joined)) {
    test "We can't peek into rooms with $visibility history_visibility",
@@ -106,9 +122,17 @@ test "Local users can peek by room alias",
             content => {},
          )
       })->then(sub {
-         matrix_sync( $peeking_user );
+         await_sync( $peeking_user,
+            since => $peeking_user->sync_next_batch,
+            check => sub {
+               my ( $body ) = @_;
+               return 0 unless $body->{rooms}{peek}{$room_id};
+               return $body;
+            }
+         )
       })->then( sub {
          my ( $body ) = @_;
+         $peeking_user->sync_next_batch = $body->{next_batch};
 
          log_if_fail "first sync response", $body;
 
@@ -137,14 +161,23 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
             content => {},
          )
       })->then(sub {
-         matrix_sync( $peeking_user );
+         await_sync( $peeking_user,
+            since => $peeking_user->sync_next_batch,
+            check => sub {
+               my ( $body ) = @_;
+               return 0 unless $body->{rooms}{peek}{$room_id};
+               return $body;
+            }
+         )
       })->then( sub {
          my ( $body ) = @_;
+         $peeking_user->sync_next_batch = $body->{next_batch};
          log_if_fail "device 1 first sync response", $body;
          my $room = $body->{rooms}{peek}{$room_id};
          assert_ok( $room->{timeline}->{events}->[-1]->{content}->{body} eq 'something to peek', "peek has message body" );
       })->then(sub {
-         matrix_sync( $peeking_user_device2 );
+         # FIXME: racey - this may return blank due to the peek not having taken effect yet
+         matrix_sync( $peeking_user_device2, timeout => 1000 );
       })->then( sub {
          my ( $body ) = @_;
          log_if_fail "device 2 first sync response", $body;
@@ -152,13 +185,22 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
       })->then( sub {
          matrix_send_room_text_message_synced( $user, $room_id, body => "something else to peek")
       })->then( sub {
-         matrix_sync_again( $peeking_user );
+         await_sync( $peeking_user,
+            since => $peeking_user->sync_next_batch,
+            check => sub {
+               my ( $body ) = @_;
+               return 0 unless $body->{rooms}{peek}{$room_id};
+               return $body;
+            }
+         )
       })->then( sub {
          my ( $body ) = @_;
+         $peeking_user->sync_next_batch = $body->{next_batch};
          log_if_fail "device 1 second sync response", $body;
          my $room = $body->{rooms}{peek}{$room_id};
          assert_ok( $room->{timeline}->{events}->[-1]->{content}->{body} eq 'something else to peek', "second peek has message body" );
-         matrix_sync_again( $peeking_user_device2 );
+         # FIXME: racey - this may return blank due to the peek not having taken effect yet
+         matrix_sync_again( $peeking_user_device2, timeout => 1000 );
       })->then( sub {
          my ( $body ) = @_;
          log_if_fail "device 2 second sync response", $body;
