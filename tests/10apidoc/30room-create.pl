@@ -16,7 +16,7 @@ test "POST /createRoom makes a public room",
          content => {
             visibility      => "public",
             # This is just the localpart
-            room_alias_name => "30room-create",
+            room_alias_name => "30room-create-".time,
          },
       )->then( sub {
          my ( $body ) = @_;
