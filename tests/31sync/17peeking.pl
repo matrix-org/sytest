@@ -48,7 +48,6 @@ test "Local users can peek into world_readable rooms by room ID",
          matrix_sync_again( $peeking_user );
       })->then( sub {
          my ( $body ) = @_;
-         $peeking_user->sync_next_batch = $body->{next_batch};
 
          log_if_fail "second sync response", $body;
          my $room = $body->{rooms}{peek}{$room_id};
