@@ -211,6 +211,8 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
 
 # test "Users can unpeek from rooms"
 
+# test "Users can peek, unpeek and peek again"
+
 # test "Peeking with full_state=true does the right thing"
 
 # test "Joining a peeked room moves it atomically from peeked to joined rooms and stops peeking"
