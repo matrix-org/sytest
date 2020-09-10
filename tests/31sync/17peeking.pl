@@ -10,14 +10,14 @@ test "Local users can peek into world_readable rooms by room ID",
       my ( $user, $room_id, $peeking_user ) = @_;
 
       matrix_set_room_history_visibility( $user, $room_id, "world_readable" )->then(sub {
-         matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek");
-      })->then(sub {
          do_request_json_for( $peeking_user,
             method => "POST",
             uri    => "/r0/peek/$room_id",
             content => {},
          )
       })->then( sub {
+         matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek");
+      })->then(sub {
          await_sync( $peeking_user,
             since => $peeking_user->sync_next_batch,
             check => sub {
@@ -77,6 +77,7 @@ test "Local users can peek into world_readable rooms by room ID",
       })
    };
 
+
 for my $visibility (qw(shared invited joined)) {
    test "We can't peek into rooms with $visibility history_visibility",
       requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
@@ -113,13 +114,13 @@ test "Local users can peek by room alias",
       my ( $user, $room_id, $peeking_user ) = @_;
 
       matrix_set_room_history_visibility( $user, $room_id, "world_readable" )->then(sub {
-         matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek");
-      })->then(sub {
          do_request_json_for( $peeking_user,
             method => "POST",
             uri    => "/r0/peek/#$room_alias_name:".$user->http->server_name,
             content => {},
          )
+      })->then(sub {
+         matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek");
       })->then(sub {
          await_sync( $peeking_user,
             since => $peeking_user->sync_next_batch,
@@ -152,13 +153,13 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
          matrix_login_again_with_user($peeking_user);
       })->then(sub {
          $peeking_user_device2 = $_[0];
-         matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek");
-      })->then(sub {
          do_request_json_for( $peeking_user,
             method => "POST",
             uri    => "/r0/peek/$room_id",
             content => {},
          )
+      })->then(sub {
+         matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek");
       })->then(sub {
          await_sync( $peeking_user,
             since => $peeking_user->sync_next_batch,
