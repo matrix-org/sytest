@@ -90,11 +90,6 @@ some configuration output, rather than an error::
     $ pkg-config --libs libsodium
     -L/usr/local/Cellar/libsodium/1.0.8/lib -lsodium
 
-It's possible that Crypt::NaCL::Sodium has got out of sync with brew's libsodium,
-causing errors about aes128ctr, which was removed in 1.0.8.1 of libsodium.
-In which case you may want to strip out the aes128ctr stuff from Sodium.xs to
-get it to install... :/
-
 Then force an install of Crypt::NaCl::Sodium::
 
     $ cpan
