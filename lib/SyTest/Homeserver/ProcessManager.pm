@@ -316,7 +316,7 @@ sub _await_ready_notification
    # We replace null byte with '@' to allow us to pass it in via env. (This is
    # as per the sd_notify spec).
    my $path_env = $path;
-   $path_env =~ s/\0/\@/rg;
+   $path_env =~ s/\0/\@/g;
    $env->{"NOTIFY_SOCKET"} = $path_env;
 
    # Create a future that gets resolved when we receive a `READY=1`
