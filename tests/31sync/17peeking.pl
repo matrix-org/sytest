@@ -213,6 +213,8 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
 
 # test "Users can peek, unpeek and peek again"
 
+# test "Peeking into an unknown room returns the right error"
+
 # test "Peeking with full_state=true does the right thing"
 
 # test "Joining a peeked room moves it atomically from peeked to joined rooms and stops peeking"
@@ -220,3 +222,5 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
 # test "Parting a room which was joined after being peeked doesn't go back to being peeked"
 
 # test "Changing history visibility to non-world_readable terminates peeks"
+
+# test "Users can peek local EDUs"
