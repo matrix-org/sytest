@@ -74,6 +74,10 @@ test "Users can peek into world-readable remote rooms",
 
 # test "Users cannot peek into remote rooms with non-world-readable history visibility"
 
+# test "Remote peeks are cancelled if a room's history visibility changes to non-world-readable"
+
+# test "Joining a peeked remote room moves it atomically from peeked to joined rooms"
+
 # test "Peeking uses server_name to specify the peeking server"
 
 # test "Peeking into an unknown room returns the right error"
@@ -85,3 +89,6 @@ test "Users can peek into world-readable remote rooms",
 # test "If a peek is not renewed, the peeked server stops sending events"
 
 # test "Server can't peek into unknown room versions"
+
+# test "Can't peek if server-ACL'd"
+
