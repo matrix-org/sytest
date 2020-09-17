@@ -29,10 +29,10 @@ else
     fi
 
     # Try and fetch the branch
-    wget -q https://github.com/valkum/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
+    wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
         # Probably a 404, fall back to develop
         echo "Using develop instead..."
-        wget -q https://github.com/valkum/sytest/archive/develop.tar.gz -O sytest.tar.gz
+        wget -q https://github.com/matrix-org/sytest/archive/develop.tar.gz -O sytest.tar.gz
     }
 
     mkdir -p /sytest
@@ -61,10 +61,12 @@ if [ -x "/sytest/scripts/${SYTEST_TARGET}_sytest.sh" ]; then
 elif [ -x "/sytest/docker/${SYTEST_TARGET}_sytest.sh" ]; then
     # old branches of sytest used to put the sytest running script in the "/docker" directory
     exec "/sytest/docker/${SYTEST_TARGET}_sytest.sh" "$@"
+
 else
     PLUGIN_RUNNER=$(find /sytest/plugins/ -type f -exec test -x {} \; -name "${SYTEST_TARGET}_sytest.sh" -print)
     if [ -n PLUGIN_RUNNER ]; then
         exec ${PLUGIN_RUNNER} "$@"
+        
     else
         echo "sytest runner script for ${SYTEST_TARGET} not found" >&2
         exit 1
