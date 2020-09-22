@@ -253,6 +253,7 @@ sub start
         send_federation       => ( not $self->{dendron} ),
         update_user_directory => ( not $self->{dendron} ),
         enable_media_repo     => ( not $self->{dendron} ),
+        run_background_tasks  => ( not $self->{dendron} ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -324,7 +325,7 @@ sub start
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
-      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator frontend_proxy ) ) {
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator frontend_proxy background_worker ) ) {
          open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
       }
    }
@@ -941,6 +942,18 @@ sub wrap_synapse_command
 
       push @command,
          "--frontend-proxy-config" => $frontend_proxy_config_path,
+   }
+
+   {
+      my $background_worker_config_path = $self->write_yaml_file( "background_worker.yaml" => {
+         "worker_app"                   => "synapse.app.background_worker",
+         "worker_name"                  => "background_worker1",
+         "worker_pid_file"              => "$hsdir/background_worker.pid",
+         "worker_log_config"            => $self->configure_logger("background_worker"),
+      } );
+
+      push @command,
+         "--background-worker-config" => $background_worker_config_path,
    }
 
    return @command;
