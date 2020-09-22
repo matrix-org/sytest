@@ -950,6 +950,10 @@ sub wrap_synapse_command
          "worker_name"                  => "background_worker1",
          "worker_pid_file"              => "$hsdir/background_worker.pid",
          "worker_log_config"            => $self->configure_logger("background_worker"),
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
       } );
 
       push @command,
