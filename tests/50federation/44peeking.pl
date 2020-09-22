@@ -10,15 +10,15 @@ test "Users can peek into world-readable remote rooms",
    check => sub {
       my ( $user, $room_id, $peeking_user ) = @_;
 
-      matrix_set_room_history_visibility( $user, $room_id, "world_readable" )->then(sub {
+      matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" )->then(sub {
+         matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek");
+      })->then(sub {
          do_request_json_for( $peeking_user,
             method => "POST",
             uri    => "/r0/peek/#$room_alias_name:".$user->http->server_name,
             content => {},
          )
       })->then( sub {
-         matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek");
-      })->then(sub {
          await_sync( $peeking_user,
             since => $peeking_user->sync_next_batch,
             check => sub {
@@ -39,10 +39,9 @@ test "Users can peek into world-readable remote rooms",
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{ephemeral}, qw( events ));
 
-         assert_ok( $room->{timeline}->{events}->[0]->{type} eq 'm.room.create', "peek has m.room.create" );
+         assert_ok( (grep { $_->{type} eq 'm.room.create' } @{$room->{state}->{events}}), "peek has m.room.create in state" );
          assert_ok( $room->{timeline}->{events}->[-1]->{type} eq 'm.room.message', "peek has message type" );
          assert_ok( $room->{timeline}->{events}->[-1]->{content}->{body} eq 'something to peek', "peek has message body" );
-         assert_ok( @{$room->{state}->{events}} == 0 );
 
          assert_ok( scalar keys(%{$body->{rooms}{join}}) == 0, "no joined rooms present");
       })->then( sub {
