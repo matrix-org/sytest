@@ -296,3 +296,33 @@ sub federated_rooms_fixture {
 }
 
 push @EXPORT, qw( federated_rooms_fixture );
+
+=head2 federated_room_alias_fixture
+
+   test "foo",
+       requires => [ federated_room_alias_fixture() ],
+       do => sub {
+           my ( $room_alias ) = @_;
+       };
+
+Returns a new Fixture, which creates a unique room alias on the sytest federation server.
+
+=cut
+
+sub federated_room_alias_fixture {
+   my %args = @_;
+
+   return fixture(
+      requires => [
+         room_alias_name_fixture( prefix => $args{prefix} ),
+         $main::INBOUND_SERVER,
+      ],
+
+      setup => sub {
+         my ( $alias_name, $inbound_server ) = @_;
+         Future->done( sprintf "#%s:%s", $alias_name, $inbound_server->server_name );
+      },
+   );
+}
+
+push @EXPORT, qw( federated_room_alias_fixture );
