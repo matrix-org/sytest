@@ -277,7 +277,6 @@ sub set_test_state
 }
 
 test "Setting state twice is idempotent",
-   # TODO: deprecated endpoint used in this test
    # Setting synced to 1 inserts a m.room.test object into the
    # timeline which this test does not expect
    requires => [ local_user_and_room_fixtures( room_opts => { synced => 0 } ) ],
@@ -302,7 +301,6 @@ test "Setting state twice is idempotent",
    };
 
 test "Joining room twice is idempotent",
-   # TODO: deprecated endpoint used in this test
    requires => [ local_user_and_room_fixtures() ],
 
    check => sub {
