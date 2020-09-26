@@ -109,7 +109,7 @@ sub _on_output_line
    my ( $proc_info, $line ) = @_;
 
    push @{ $proc_info->output_lines }, $line;
-   shift @{ $proc_info->output_lines } while @{ $proc_info->output_lines } > 20;
+   shift @{ $proc_info->output_lines } while @{ $proc_info->output_lines } > 2000;
 
    if( $proc_info->print_output ) {
       print STDERR "\e[1;35m[server]\e[m: $line\n";
