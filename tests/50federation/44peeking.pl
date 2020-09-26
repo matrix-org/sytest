@@ -23,7 +23,7 @@ test "Users can peek into world-readable remote rooms",
             since => $peeking_user->sync_next_batch,
             check => sub {
                my ( $body ) = @_;
-               return 0 unless $body->{rooms}{peek}{$room_id};
+               return 0 unless $body->{rooms}{peek}{$room_id} && @{$body->{rooms}{peek}{$room_id}{timeline}{events}};
                return $body;
             }
          )
