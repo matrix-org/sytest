@@ -12,6 +12,9 @@ test "Users can peek into world-readable remote rooms",
 
       matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" )->then(sub {
          matrix_send_room_text_message_synced( $user, $room_id, body => "something to peek");
+         # XXX: this is flakey because we don't yet atomically /send events after starting /peeking,
+         # so if the /peek executes after the peeked server has already processed the event at the point
+         # of the peek, then we'll never receive it.
       })->then(sub {
          do_request_json_for( $peeking_user,
             method => "POST",
