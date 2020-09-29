@@ -64,7 +64,8 @@ try:
 
         base = (
             args["--synapse-python"]
-            + " -m synapse.app.generic_worker"
+            + " -m synapse.app."
+            + appname
             + " -D --config-path="
             + args["--synapse-config"]
             + " --config-path="

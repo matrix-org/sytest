@@ -253,7 +253,7 @@ sub start
         send_federation       => ( not $self->{dendron} ),
         update_user_directory => ( not $self->{dendron} ),
         enable_media_repo     => ( not $self->{dendron} ),
-        run_background_tasks  => ( not $self->{dendron} ),
+        run_background_tasks_on  => ( "background_worker1" ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -946,7 +946,7 @@ sub wrap_synapse_command
 
    {
       my $background_worker_config_path = $self->write_yaml_file( "background_worker.yaml" => {
-         "worker_app"                   => "synapse.app.background_worker",
+         "worker_app"                   => "synapse.app.generic_worker",
          "worker_name"                  => "background_worker1",
          "worker_pid_file"              => "$hsdir/background_worker.pid",
          "worker_log_config"            => $self->configure_logger("background_worker"),
@@ -957,7 +957,7 @@ sub wrap_synapse_command
       } );
 
       push @command,
-         "--background-worker-config" => $background_worker_config_path,
+         "--generic-worker-config" => $background_worker_config_path,
    }
 
    return @command;
