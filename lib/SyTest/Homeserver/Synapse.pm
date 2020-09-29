@@ -253,7 +253,7 @@ sub start
         send_federation       => ( not $self->{dendron} ),
         update_user_directory => ( not $self->{dendron} ),
         enable_media_repo     => ( not $self->{dendron} ),
-        run_background_tasks_on  => ( "background_worker1" ),
+        run_background_tasks_on  => ( $self->{dendron} ? "background_worker1" : "master" ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
