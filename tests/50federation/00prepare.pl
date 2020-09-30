@@ -87,7 +87,7 @@ test "Checking local federation server",
          my ( $body ) = @_;
          log_if_fail "Keyserver response", $body;
 
-         assert_json_keys( $body, qw( server_name valid_until_ts verify_keys signatures tls_fingerprints ));
+         assert_json_keys( $body, qw( server_name valid_until_ts verify_keys signatures ));
 
          assert_json_string( $body->{server_name} );
          $body->{server_name} eq $local_server_name or
@@ -119,16 +119,6 @@ test "Checking local federation server",
          assert_base64_unpadded( $signature );
 
          # TODO: verify it?
-
-         assert_json_list( $body->{tls_fingerprints} );
-         @{ $body->{tls_fingerprints} } > 0 or
-            die "Expected some tls_fingerprints";
-
-         foreach ( @{ $body->{tls_fingerprints} } ) {
-            assert_json_object( $_ );
-
-            # TODO: Check it has keys named by the algorithms
-         }
 
          Future->done(1);
       });
