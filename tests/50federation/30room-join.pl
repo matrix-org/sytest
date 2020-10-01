@@ -1027,7 +1027,7 @@ test "Event with an invalid signature in the send_join response should not cause
       );
 
       # Modify the event (after the signature was generated) to invalidate the signature.
-      $event->{origin} = "other-server:12345";
+      $event->{state_key} = "something";
 
       my $await_request_send_join;
 
