@@ -280,7 +280,7 @@ sub _start_process_and_await_notify
    # socket before starting the process.
    my $await_fut = $self->_await_ready_notification( $env );
 
-   my $proc = $self -> _start_process( %params );
+   my $proc = $self->_start_process( %params );
    my $proc_info = $self->{proc_info}{$proc};
    my $finished_future = $proc_info->finished_future;
 

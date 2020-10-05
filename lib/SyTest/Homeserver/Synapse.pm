@@ -32,7 +32,7 @@ sub _init
    );
 
    $self->{paths} = {};
-   $self->{dendron} = '';
+   $self->{workers} = 0;
    $self->{redis_host} = '';
 
    $self->SUPER::_init( $args );
@@ -246,13 +246,13 @@ sub start
         # connections to local homeservers, of which sytest uses extensively
         federation_ip_range_blacklist => [],
 
-        # If we're using dendron-style split workers, we need to disable these
-        # things in the main process
-        start_pushers         => ( not $self->{dendron} ),
-        notify_appservices    => ( not $self->{dendron} ),
-        send_federation       => ( not $self->{dendron} ),
-        update_user_directory => ( not $self->{dendron} ),
-        enable_media_repo     => ( not $self->{dendron} ),
+        # If we're using workers we need to disable these things in the main
+        # process
+        start_pushers         => ( not $self->{workers} ),
+        notify_appservices    => ( not $self->{workers} ),
+        send_federation       => ( not $self->{workers} ),
+        update_user_directory => ( not $self->{workers} ),
+        enable_media_repo     => ( not $self->{workers} ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -589,12 +589,6 @@ sub generate_listeners
       $self->SUPER::generate_listeners;
 }
 
-sub _start_await_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse};
-}
-
 package SyTest::Homeserver::Synapse::ViaHaproxy;
 use base qw( SyTest::Homeserver::Synapse );
 
@@ -610,7 +604,7 @@ sub _init
 
    $self->SUPER::_init( @_ );
 
-   $self->{dendron} = delete $args->{dendron_binary};
+   $self->{workers} = delete $args->{workers};
    $self->{redis_host} = delete $args->{redis_host};
 
    if( my $level = delete $args->{torture_replication} ) {
@@ -619,9 +613,6 @@ sub _init
       # updates.)
       $self->{replication_torture_level} = $level;
    }
-
-   my $idx = $self->{hs_index};
-   $self->{ports}{dendron} = main::alloc_port( "dendron[$idx]" );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
       for qw( haproxy );
@@ -995,12 +986,6 @@ sub _start_synapse
          } @worker_configs
       )
    })
-}
-
-sub _start_await_port
-{
-   my $self = shift;
-   return $self->{ports}{dendron};
 }
 
 sub secure_port

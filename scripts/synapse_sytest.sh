@@ -165,7 +165,7 @@ RUN_TESTS=(
 )
 
 if [ -n "$WORKERS" ]; then
-    RUN_TESTS+=(-I Synapse::ViaHaproxy --dendron-binary=/pydron.py)
+    RUN_TESTS+=(-I Synapse::ViaHaproxy --workers)
 else
     RUN_TESTS+=(-I Synapse)
 fi
