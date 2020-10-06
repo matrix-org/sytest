@@ -102,29 +102,36 @@ test "New room members see existing members' presence in room initialSync",
 
             my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
-            if( not $presence{$first_user->user_id} ) {
-               log_if_fail "No presence for user " . $first_user->user_id . ": retrying";
+            # it's possible that the user's presence hasn't yet arrived at our
+            # server (or hasn't propagated between the workers). In this case,
+            # we expect the presence value to be either missing, or present
+            # (hah!) with a default value.
+
+            my $first_user_id = $first_user->user_id;
+            my $first_presence = $presence{$first_user_id};
+
+            if( not $first_presence ) {
+               log_if_fail "No presence for user $first_user_id: retrying";
                return Future->done( undef );  # try again
             }
 
-            if( $presence{$first_user->user_id}{content}{presence} ne 'online' ) {
-               log_if_fail "User " . $first_user->user_id . "not yet online: retrying";
+            assert_json_keys( $first_presence, qw( type content ));
+            assert_json_keys( $first_presence->{content}, qw( presence ));
+
+            if( $first_presence->{content}{presence} eq 'offline' &&
+                   not exists $first_presence->{content}{last_active_ago} ) {
+               log_if_fail "Default presence block for user $first_user_id: retrying";
                return Future->done( undef );  # try again
             }
 
-            return Future->done( \%presence );
+            # otherwise, there should be a last_active_ago field.
+            # (the user may or may not actually be online, because it might
+            # have taken quite a while for us to spin up the prerequisites for
+            # this test).
+            assert_json_keys( $first_presence->{content}, qw( last_active_ago ));
+
+            return Future->done( 1 );
          })
-      })->then( sub {
-         my ( $presencemap ) = @_;
-
-         log_if_fail "presence map: ", $presencemap;
-
-         assert_json_keys( $presencemap->{ $first_user->user_id },
-            qw( type content ));
-         assert_json_keys( $presencemap->{ $first_user->user_id }{content},
-            qw( presence last_active_ago ));
-
-         Future->done(1);
       });
    };
 
