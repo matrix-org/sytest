@@ -168,17 +168,27 @@ test "New room members see first user's profile information in global initialSyn
       matrix_initialsync( $user )->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( presence ));
-         assert_json_list( $body->{presence} );
+         log_if_fail "initialSync result", $body;
 
-         my %presence_by_userid = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
+         my $room = first { $_->{room_id} eq $room_id } @{$body->{rooms}};
 
-         my $presence = $presence_by_userid{ $first_user->user_id } or
-            die "Failed to find presence of first user";
+         assert_json_keys( $room, qw( state ));
+         assert_json_list( $room->{state} );
 
-         assert_json_keys( $presence, qw( content ));
-         assert_json_keys( my $content = $presence->{content},
-            qw( user_id presence ));
+         my $first_user_id = $first_user->user_id;
+         my $first_member = first {
+            $_->{type} eq "m.room.member" and $_->{state_key} eq $first_user_id
+         } @{ $room->{state} }
+            or die "Failed to find first user $first_user_id in m.room.member state";
+
+         assert_json_keys( $first_member, qw( user_id content ));
+         assert_json_keys( my $content = $first_member->{content},
+            qw( displayname avatar_url ));
+
+         length $content->{displayname} or
+            die "First user does not have profile displayname\n";
+         length $content->{avatar_url} or
+            die "First user does not have profile avatar_url\n";
 
          Future->done(1);
       });
@@ -195,13 +205,16 @@ test "New room members see first user's profile information in per-room initialS
       matrix_initialsync_room( $user, $room_id )->then( sub {
          my ( $body ) = @_;
 
+         log_if_fail "initialSync result", $body;
+
          assert_json_keys( $body, qw( state ));
          assert_json_list( $body->{state} );
 
+         my $first_user_id = $first_user->user_id;
          my $first_member = first {
-            $_->{type} eq "m.room.member" and $_->{state_key} eq $first_user->user_id
+            $_->{type} eq "m.room.member" and $_->{state_key} eq $first_user_id
          } @{ $body->{state} }
-            or die "Failed to find first user in m.room.member state";
+            or die "Failed to find first user $first_user_id in m.room.member state";
 
          assert_json_keys( $first_member, qw( user_id content ));
          assert_json_keys( my $content = $first_member->{content},
