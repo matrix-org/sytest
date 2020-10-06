@@ -253,6 +253,7 @@ sub start
         send_federation       => ( not $self->{workers} ),
         update_user_directory => ( not $self->{workers} ),
         enable_media_repo     => ( not $self->{workers} ),
+        run_background_tasks_on  => ( $self->{workers} ? "background_worker1" : "master" ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -324,7 +325,7 @@ sub start
    {
       # create or truncate
       open my $tmph, ">", $log or die "Cannot open $log for writing - $!";
-      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator frontend_proxy ) ) {
+      foreach my $suffix ( qw( appservice media_repository federation_reader synchrotron federation_sender client_reader user_dir event_creator frontend_proxy background_worker ) ) {
          open my $tmph, ">", "$log.$suffix" or die "Cannot open $log.$suffix for writing - $!";
       }
    }
@@ -952,6 +953,21 @@ sub _start_synapse
       };
 
       push @worker_configs, $frontend_proxy_config;
+   }
+
+   {
+      my $background_worker_config = {
+         "worker_app"                   => "synapse.app.generic_worker",
+         "worker_name"                  => "background_worker1",
+         "worker_pid_file"              => "$hsdir/background_worker.pid",
+         "worker_log_config"            => $self->configure_logger("background_worker"),
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
+      };
+
+      push @worker_configs, $background_worker_config;
    }
 
    my @base_synapse_command = $self->_generate_base_synapse_command();
