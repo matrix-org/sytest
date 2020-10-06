@@ -352,6 +352,7 @@ sub _start_monolith
       '--config', $self->{paths}{config},
       '--http-bind-address', $self->{bind_host} . ':' . $self->unsecure_port,
       '--https-bind-address', $self->{bind_host} . ':' . $self->secure_port,
+      '--api-bind-address', $self->{bind_host} . ':1' . $self->unsecure_port,
       '--tls-cert', $self->{paths}{tls_cert},
       '--tls-key', $self->{paths}{tls_key},
    );
