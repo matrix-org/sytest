@@ -956,7 +956,7 @@ sub _start_synapse
    }
 
    {
-      my $background_worker_config_path = $self->write_yaml_file( "background_worker.yaml" => {
+      my $background_worker_config = {
          "worker_app"                   => "synapse.app.generic_worker",
          "worker_name"                  => "background_worker1",
          "worker_pid_file"              => "$hsdir/background_worker.pid",
@@ -965,9 +965,9 @@ sub _start_synapse
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
-      } );
+      };
 
-      push @worker_configs, $background_worker_config_path;
+      push @worker_configs, $background_worker_config;
    }
 
    my @base_synapse_command = $self->_generate_base_synapse_command();
