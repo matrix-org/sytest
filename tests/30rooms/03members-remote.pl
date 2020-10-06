@@ -98,15 +98,26 @@ test "New room members see existing members' presence in room initialSync",
          matrix_initialsync_room( $user, $room_id )->then( sub {
             my ( $body ) = @_;
 
+            log_if_fail "initialSync result", $body;
+
             my %presence = map { $_->{content}{user_id} => $_ } @{ $body->{presence} };
 
-            $presence{$first_user->user_id} or
+            if( not $presence{$first_user->user_id} ) {
+               log_if_fail "No presence for user " . $first_user->user_id . ": retrying";
                return Future->done( undef );  # try again
+            }
+
+            if( $presence{$first_user->user_id}{content}{presence} ne 'online' ) {
+               log_if_fail "User " . $first_user->user_id . "not yet online: retrying";
+               return Future->done( undef );  # try again
+            }
 
             return Future->done( \%presence );
          })
       })->then( sub {
          my ( $presencemap ) = @_;
+
+         log_if_fail "presence map: ", $presencemap;
 
          assert_json_keys( $presencemap->{ $first_user->user_id },
             qw( type content ));
