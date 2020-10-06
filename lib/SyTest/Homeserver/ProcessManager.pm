@@ -58,6 +58,10 @@ Passed to C<IO::Async::Process::new>, giving the command to be run.
 Optional reference to an array to pass to the underlying C<Loop>
 C<spawn_child> method.
 
+=item name => STRING
+
+Optional name for the process, used while logging.
+
 =back
 
 It returns the Process object.
