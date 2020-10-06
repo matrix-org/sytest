@@ -136,7 +136,7 @@ our @HOMESERVER_INFO = map {
 
                # If we just exit then we need to call the AT_END functions
                # manually (if we don't we'll leak child processes).
-               run_AT_END;
+               run_AT_END();
                exit 1;
             }
          })
