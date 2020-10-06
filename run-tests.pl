@@ -99,11 +99,7 @@ GetOptions(
 
    'exclude-deprecated' => sub { $INCLUDE_DEPRECATED_ENDPOINTS = 0 },
 
-   # these two are superceded by -I, but kept for backwards compatibility
-   'dendron=s' => sub {
-      $SERVER_IMPL = 'Synapse::ViaDendron' unless $SERVER_IMPL;
-      push @ARGV, "--dendron-binary", $_[1];
-   },
+   # this is superceded by -I, but kept for backwards compatibility
    'haproxy'   => sub {
       $SERVER_IMPL = 'Synapse::ViaHaproxy' unless $SERVER_IMPL;
    },
@@ -939,7 +935,12 @@ sub AT_END
    push @AT_END, @_;
 }
 
-$_->() for @AT_END;
+sub run_AT_END
+{
+   $_->() for @AT_END;
+}
+
+run_AT_END;
 
 if( $failed_count ) {
    $OUTPUT->final_fail( $failed_count );
