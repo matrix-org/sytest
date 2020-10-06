@@ -10,7 +10,6 @@ my @servers;
 # see
 #   https://rt.perl.org/Public/Bug/Display.html?id=128774
 main::AT_END sub {
-
    ( fmap_void {
       my $server = $_;
       $server->kill_and_await_finish;
@@ -137,7 +136,7 @@ our @HOMESERVER_INFO = map {
 
                # If we just exit then we need to call the AT_END functions
                # manually (if we don't we'll leak child processes).
-               $_->() for @main::AT_END;
+               run_AT_END;
                exit 1;
             }
          })

@@ -935,7 +935,12 @@ sub AT_END
    push @AT_END, @_;
 }
 
-$_->() for @AT_END;
+sub run_AT_END
+{
+   $_->() for @AT_END;
+}
+
+run_AT_END;
 
 if( $failed_count ) {
    $OUTPUT->final_fail( $failed_count );
