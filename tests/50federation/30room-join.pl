@@ -1101,6 +1101,42 @@ test "Event with an invalid signature in the send_join response should not cause
       )
    };
 
+test "Membership event with an invalid displayname in the send_join response should not cause room join to fail",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture(),
+                 federated_room_alias_fixture(),
+               ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id, $room_alias ) = @_;
+
+      my $room = $inbound_server->datastore->create_room(
+         creator => $creator_id,
+         alias   => $room_alias,
+      );
+      my $room_id = $room->room_id;
+
+      # create a dodgy membership event
+      $room->create_and_insert_event(
+         type => "m.room.member",
+
+         content     => { membership => "join", displayname => [], avatar_url => [] },
+         sender      => $creator_id,
+         state_key   => $creator_id,
+      );
+
+
+      # join the room and wait for it to turn up in /sync
+      matrix_do_and_wait_for_sync( $user,
+         do => sub {
+            matrix_join_room( $user, $room_alias )->on_done( sub {
+               my ( $res ) = @_;
+               log_if_fail "Joined room", $res;
+            });
+         }, check => sub { exists $_[0]->{rooms}{join}{$room_id}},
+      );
+   };
+
 # A homeserver receiving a `send_join` request for a room version 6 room with
 # a bad JSON value (e.g. a float) should reject the request.
 #

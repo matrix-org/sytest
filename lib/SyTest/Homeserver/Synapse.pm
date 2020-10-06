@@ -32,7 +32,7 @@ sub _init
    );
 
    $self->{paths} = {};
-   $self->{dendron} = '';
+   $self->{workers} = 0;
    $self->{redis_host} = '';
 
    $self->SUPER::_init( $args );
@@ -246,14 +246,14 @@ sub start
         # connections to local homeservers, of which sytest uses extensively
         federation_ip_range_blacklist => [],
 
-        # If we're using dendron-style split workers, we need to disable these
-        # things in the main process
-        start_pushers         => ( not $self->{dendron} ),
-        notify_appservices    => ( not $self->{dendron} ),
-        send_federation       => ( not $self->{dendron} ),
-        update_user_directory => ( not $self->{dendron} ),
-        enable_media_repo     => ( not $self->{dendron} ),
-        run_background_tasks_on  => ( $self->{dendron} ? "background_worker1" : "master" ),
+        # If we're using workers we need to disable these things in the main
+        # process
+        start_pushers         => ( not $self->{workers} ),
+        notify_appservices    => ( not $self->{workers} ),
+        send_federation       => ( not $self->{workers} ),
+        update_user_directory => ( not $self->{workers} ),
+        enable_media_repo     => ( not $self->{workers} ),
+        run_background_tasks_on  => ( $self->{workers} ? "background_worker1" : "master" ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -330,28 +330,13 @@ sub start
       }
    }
 
-   my @synapse_command = ( $self->{python} );
-
-   if( $self->{coverage} ) {
-      # Ensures that even --generate-config has coverage reports. This is intentional
-      push @synapse_command,
-         "-m", "coverage", "run", "--source=$self->{synapse_dir}/synapse", "--rcfile=$self->{synapse_dir}/.coveragerc";
-   }
-
-   push @synapse_command,
-      "-m", "synapse.app.homeserver",
-      "--config-path" => $config_path,
-      "--server-name" => $self->server_name;
+   my @synapse_command = $self->_generate_base_synapse_command();
 
    $output->diag( "Generating config for port $port" );
 
    my @config_command = (
       @synapse_command, "--generate-config", "--report-stats=no",
-   );
-
-   my @command = (
-      $self->wrap_synapse_command( @synapse_command ),
-      @{ $self->{extra_args} },
+      "--server-name", $self->server_name
    );
 
    my $env = {
@@ -372,20 +357,58 @@ sub start
       command => [ @config_command ],
    )->then( sub {
       $output->diag(
-        "Starting server $hs_index for port $port with command "
-           . join( " ", @command ),
+        "Starting server $hs_index for port $port"
       );
 
-      $self->_start_process_and_await_connectable(
-         setup => [ env => $env ],
-         command => \@command,
-         connect_host => $bind_host,
-         connect_port => $self->_start_await_port,
-      );
+      $self->_start_synapse( env => $env )
    })->on_done( sub {
       $output->diag("Started synapse $hs_index");
       $self->open_logfile();
    });
+}
+
+sub _generate_base_synapse_command
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $app = $params{app} // "synapse.app.homeserver";
+
+   my @synapse_command = ( $self->{python} );
+
+   if( $self->{coverage} ) {
+      # Ensures that even --generate-config has coverage reports. This is intentional
+      push @synapse_command,
+         "-m", "coverage", "run", "--source=$self->{synapse_dir}/synapse", "--rcfile=$self->{synapse_dir}/.coveragerc";
+   }
+
+   push @synapse_command,
+      "-m", $app,
+      "--config-path" => $self->{paths}{config};
+
+
+   my @command = (
+      @synapse_command,
+      @{ $self->{extra_args} },
+   );
+
+   return @command
+}
+
+sub _start_synapse
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $env = $params{env};
+
+   my $bind_host = $self->{bind_host};
+   my @synapse_command = $self->_generate_base_synapse_command();
+
+   $self->_start_process_and_await_notify(
+      setup => [ env => $env ],
+      command => \@synapse_command,
+   );
 }
 
 sub generate_listeners
@@ -567,12 +590,6 @@ sub generate_listeners
       $self->SUPER::generate_listeners;
 }
 
-sub _start_await_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse};
-}
-
 package SyTest::Homeserver::Synapse::ViaHaproxy;
 use base qw( SyTest::Homeserver::Synapse );
 
@@ -588,7 +605,7 @@ sub _init
 
    $self->SUPER::_init( @_ );
 
-   $self->{dendron} = delete $args->{dendron_binary};
+   $self->{workers} = delete $args->{workers};
    $self->{redis_host} = delete $args->{redis_host};
 
    if( my $level = delete $args->{torture_replication} ) {
@@ -597,9 +614,6 @@ sub _init
       # updates.)
       $self->{replication_torture_level} = $level;
    }
-
-   my $idx = $self->{hs_index};
-   $self->{ports}{dendron} = main::alloc_port( "dendron[$idx]" );
 
    defined $self->{ports}{$_} or croak "Need a '$_' port\n"
       for qw( haproxy );
@@ -615,27 +629,23 @@ sub _check_db_config
    return $self->SUPER::_check_db_config( @_ );
 }
 
-sub wrap_synapse_command
+sub _start_synapse
 {
    my $self = shift;
+   my %params = @_;
+
+   my $env = $params{env};
 
    my $bind_host = $self->{bind_host};
    my $log = $self->{paths}{log};
    my $hsdir = $self->{hs_dir};
 
-   -x $self->{dendron} or
-      die "Cannot exec($self->{dendron}) - $!";
-
-   my @command = (
-      $self->{dendron},
-      "--synapse-python" => $self->{python},
-      "--synapse-config" => $self->{paths}{config},
-      "--addr" => "$bind_host:" . $self->{ports}{dendron},
-   );
+   my @worker_configs = ();
 
    {
-      my $pusher_config_path = $self->write_yaml_file( "pusher.yaml" => {
+      my $pusher_config = {
          "worker_app"              => "synapse.app.pusher",
+         "worker_name"             => "pusher",
          "worker_pid_file"         => "$hsdir/pusher.pid",
          "worker_log_config"       => $self->configure_logger("pusher"),
          "worker_replication_host" => "$bind_host",
@@ -654,14 +664,15 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command, "--pusher-config" => $pusher_config_path;
+      push @worker_configs, $pusher_config;
    }
 
    {
-      my $appservice_config_path = $self->write_yaml_file( "appservice.yaml" => {
+      my $appservice_config = {
          "worker_app"              => "synapse.app.appservice",
+         "worker_name"             => "appservice",
          "worker_pid_file"         => "$hsdir/appservice.pid",
          "worker_log_config"       => $self->configure_logger("appservice"),
          "worker_replication_host" => "$bind_host",
@@ -680,14 +691,15 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command, "--appservice-config" => $appservice_config_path;
+      push @worker_configs, $appservice_config;
    }
 
    {
-      my $federation_sender_config_path = $self->write_yaml_file( "federation_sender.yaml" => {
+      my $federation_sender_config = {
          "worker_app"              => "synapse.app.federation_sender",
+         "worker_name"             => "federation_sender",
          "worker_pid_file"         => "$hsdir/federation_sender.pid",
          "worker_log_config"       => $self->configure_logger("federation_sender"),
          "worker_replication_host" => "$bind_host",
@@ -706,14 +718,15 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command, "--federation-sender-config" => $federation_sender_config_path;
+      push @worker_configs, $federation_sender_config;
    }
 
    {
-      my $synchrotron_config_path = $self->write_yaml_file( "synchrotron.yaml" => {
+      my $synchrotron_config = {
          "worker_app"              => "synapse.app.synchrotron",
+         "worker_name"             => "synchrotron",
          "worker_pid_file"         => "$hsdir/synchrotron.pid",
          "worker_log_config"       => $self->configure_logger("synchrotron"),
          "worker_replication_host" => "$bind_host",
@@ -738,15 +751,15 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command,
-         "--synchrotron-config" => $synchrotron_config_path,
+      push @worker_configs, $synchrotron_config;
    }
 
    {
-      my $federation_reader_config_path = $self->write_yaml_file( "federation_reader.yaml" => {
+      my $federation_reader_config = {
          "worker_app"              => "synapse.app.federation_reader",
+         "worker_name"             => "federation_reader",
          "worker_pid_file"         => "$hsdir/federation_reader.pid",
          "worker_log_config"       => $self->configure_logger("federation_reader"),
          "worker_replication_host" => "$bind_host",
@@ -771,15 +784,15 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command,
-         "--federation-reader-config" => $federation_reader_config_path,
+      push @worker_configs, $federation_reader_config;
    }
 
    {
-      my $media_repository_config_path = $self->write_yaml_file( "media_repository.yaml" => {
+      my $media_repository_config ={
          "worker_app"              => "synapse.app.media_repository",
+         "worker_name"             => "media_repository",
          "worker_pid_file"         => "$hsdir/media_repository.pid",
          "worker_log_config"       => $self->configure_logger("media_repository"),
          "worker_replication_host" => "$bind_host",
@@ -804,15 +817,15 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command,
-         "--media-repository-config" => $media_repository_config_path,
+      push @worker_configs, $media_repository_config;
    }
 
    {
-      my $client_reader_config_path = $self->write_yaml_file( "client_reader.yaml" => {
+      my $client_reader_config = {
          "worker_app"                   => "synapse.app.client_reader",
+         "worker_name"                  => "client_reader",
          "worker_pid_file"              => "$hsdir/client_reader.pid",
          "worker_log_config"            => $self->configure_logger("client_reader"),
          "worker_replication_host"      => "$bind_host",
@@ -837,15 +850,15 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command,
-         "--client-reader-config" => $client_reader_config_path,
+      push @worker_configs, $client_reader_config;
    }
 
    {
-      my $user_dir_config_path = $self->write_yaml_file( "user_dir.yaml" => {
+      my $user_dir_config = {
          "worker_app"              => "synapse.app.user_dir",
+         "worker_name"             => "user_dir",
          "worker_pid_file"         => "$hsdir/user_dir.pid",
          "worker_log_config"       => $self->configure_logger("user_dir"),
          "worker_replication_host" => "$bind_host",
@@ -870,15 +883,15 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command,
-         "--user-directory-config" => $user_dir_config_path,
+      push @worker_configs, $user_dir_config;
    }
 
    {
-      my $event_creator_config_path = $self->write_yaml_file( "event_creator.yaml" => {
+      my $event_creator_config = {
          "worker_app"                   => "synapse.app.event_creator",
+         "worker_name"                  => "event_creator",
          "worker_pid_file"              => "$hsdir/event_creator.pid",
          "worker_log_config"            => $self->configure_logger("event_creator"),
          "worker_replication_host"      => "$bind_host",
@@ -903,14 +916,13 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command,
-         "--event-creator-config" => $event_creator_config_path,
+      push @worker_configs, $event_creator_config;
    }
 
    {
-      my $frontend_proxy_config_path = $self->write_yaml_file( "frontend_proxy.yaml" => {
+      my $frontend_proxy_config = {
          "worker_app"                   => "synapse.app.frontend_proxy",
          "worker_name"                  => "frontend_proxy1",
          "worker_pid_file"              => "$hsdir/frontend_proxy.pid",
@@ -938,10 +950,9 @@ sub wrap_synapse_command
                bind_address => $bind_host,
             },
          ],
-      } );
+      };
 
-      push @command,
-         "--frontend-proxy-config" => $frontend_proxy_config_path,
+      push @worker_configs, $frontend_proxy_config;
    }
 
    {
@@ -956,17 +967,41 @@ sub wrap_synapse_command
          "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
       } );
 
-      push @command,
-         "--generic-worker-config" => $background_worker_config_path,
+      push @worker_configs, $background_worker_config_path;
    }
 
-   return @command;
-}
+   my @base_synapse_command = $self->_generate_base_synapse_command();
+   my $idx = $self->{hs_index};
 
-sub _start_await_port
-{
-   my $self = shift;
-   return $self->{ports}{dendron};
+   $self->_start_process_and_await_notify(
+      setup => [ env => $env ],
+      command => \@base_synapse_command,
+      name => "synapse-$idx-master",
+   )->then( sub {
+      Future->needs_all(
+         map {
+            my $worker_app = $_->{worker_app};
+            my $worker_name = $_->{worker_name};
+
+            my $config_file = $self->write_yaml_file( $worker_name . ".yaml" => $_ );
+
+            my @command = $self->_generate_base_synapse_command( app => $worker_app );
+            push @command, "--config-path" => $config_file;
+
+            $self->{output}->diag("Starting synapse $idx worker $worker_name");
+
+            $self->_start_process_and_await_notify(
+               setup => [ env => $env ],
+               command => \@command,
+               name => "synapse-$idx-$worker_name",
+            )->then( sub {
+               $self->{output}->diag("Started synapse $idx worker $worker_name");
+
+               Future->done
+            })
+         } @worker_configs
+      )
+   })
 }
 
 sub secure_port

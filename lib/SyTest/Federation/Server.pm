@@ -215,13 +215,9 @@ sub on_request_key_v2_server
    my $cert = Net::SSLeay::get_certificate( $ssl );
 
    my $algo = "sha256";
-   my $fingerprint = Net::SSLeay::X509_digest( $cert, Net::SSLeay::EVP_get_digestbyname( $algo ) );
 
    Future->done( json => $self->signed_data( {
       server_name => $self->server_name,
-      tls_fingerprints => [
-         { $algo => encode_base64_unpadded( $fingerprint ) },
-      ],
       valid_until_ts => ( time + 86400 ) * 1000, # +24h in msec
       verify_keys => {
          $self->key_id => {
