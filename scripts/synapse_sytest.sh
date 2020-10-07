@@ -182,7 +182,6 @@ pid=$!
 
 # make sure that we kill the test runner on SIGTERM, SIGINT, etc
 trap 'kill $pid' TERM INT
-
 wait $pid || TEST_STATUS=$?
 trap - TERM INT
 
