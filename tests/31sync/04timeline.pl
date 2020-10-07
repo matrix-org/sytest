@@ -374,6 +374,63 @@ test "A prev_batch token can be used in the v1 messages API",
    };
 
 
+test "A prev_batch token from incremental sync can be used in the v1 messages API",
+   requires => [ local_user_fixture( with_events => 0 ),
+                 qw( can_sync ) ],
+
+   check => sub {
+      my ( $user ) = @_;
+
+      my ( $room_id, $event_id_1, $event_id_2 );
+
+      matrix_create_room( $user )
+      ->then( sub {
+         ( $room_id ) = @_;
+
+         matrix_send_room_text_message( $user, $room_id, body => "1" );
+      })->then( sub {
+         ( $event_id_1 ) = @_;
+         matrix_sync( $user )
+      })->then( sub {
+         matrix_send_room_text_message_synced( $user, $room_id,
+            body => "2"
+         );
+      })->then( sub {
+         ( $event_id_2 ) = @_;
+
+         matrix_sync_again( $user );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         my $room = $body->{rooms}{join}{$room_id};
+         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room->{state}, qw( events ));
+         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         @{ $room->{timeline}{events} } == 1
+            or die "Expected only one timeline event";
+         $room->{timeline}{events}[0]{event_id} eq $event_id_2
+            or die "Unexpected timeline event";
+
+         matrix_get_room_messages( $user, $room_id,
+            from  => $room->{timeline}{prev_batch},
+            limit => 1,
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( chunk start end ) );
+         @{ $body->{chunk} } == 1 or die "Expected only one event";
+         $body->{chunk}[0]{event_id} eq $event_id_1
+            or die "Unexpected event";
+         $body->{chunk}[0]{content}{body} eq "1"
+            or die "Unexpected message body.";
+
+         Future->done(1);
+      })
+   };
+
+
+
 test "A next_batch token can be used in the v1 messages API",
    requires => [ local_user_fixture( with_events => 0 ),
                  qw( can_sync ) ],
