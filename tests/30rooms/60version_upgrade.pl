@@ -1070,46 +1070,51 @@ test "Local and remote users' homeservers remove a room from their public direct
             $remote_joiner, $new_room_id, ( server_name => $creator->server_name, )
          );
       })->then(sub {
-         do_request_json_for( $creator,
-            method => "GET",
-            uri    => "/r0/publicRooms",
-         );
-      })->then( sub {
-         # Check public rooms list for local user
-         my ( $body ) = @_;
+         retry_until_success {
+            do_request_json_for( $creator,
+               method => "GET",
+               uri    => "/r0/publicRooms",
+            )->then( sub {
+               # Check public rooms list for local user
+               my ( $body ) = @_;
 
-         log_if_fail "Public rooms list for local user", $body;
+               log_if_fail "Public rooms list for local user", $body;
 
-         assert_json_keys( $body, qw( chunk ) );
+               assert_json_keys( $body, qw( chunk ) );
 
-         # Check that the room list contains new room id
-         any { $new_room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "Local room list did not include expected room id $new_room_id";
+               # Check that the room list contains new room id
+               any { $new_room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "Local room list did not include expected room id $new_room_id";
 
-         # Check that the room list doesn't contain old room id
-         none { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "Local room list included unexpected room id $room_id";
+               # Check that the room list doesn't contain old room id
+               none { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "Local room list included unexpected room id $room_id";
 
-         do_request_json_for( $remote_joiner,
-            method => "GET",
-            uri    => "/r0/publicRooms",
-         );
-      })->then( sub {
-         # Check public rooms list for remote user
-         my ( $body ) = @_;
+            })
+         }
+      })->then(sub {
+         retry_until_success {
+            do_request_json_for( $remote_joiner,
+               method => "GET",
+               uri    => "/r0/publicRooms",
+            )->then( sub {
+            # Check public rooms list for remote user
+               my ( $body ) = @_;
 
-         log_if_fail "Public rooms list for remote user", $body;
+               log_if_fail "Public rooms list for remote user", $body;
 
-         assert_json_keys( $body, qw( chunk ) );
+               assert_json_keys( $body, qw( chunk ) );
 
-         # Check that the room list contains new room id
-         any { $new_room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "Remote room list did not include expected room id $new_room_id";
+               # Check that the room list contains new room id
+               any { $new_room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "Remote room list did not include expected room id $new_room_id";
 
-         # Check that the room list doesn't contain old room id
-         none { $room_id eq $_->{room_id} } @{ $body->{chunk} }
-            or die "Remote room list included unexpected room id $room_id";
+               # Check that the room list doesn't contain old room id
+               none { $room_id eq $_->{room_id} } @{ $body->{chunk} }
+                  or die "Remote room list included unexpected room id $room_id";
 
-         Future->done( 1 );
+               Future->done( 1 );
+            })
+         }
       });
    }
