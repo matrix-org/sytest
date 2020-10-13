@@ -81,6 +81,14 @@ sub _init
       frontend_proxy_metrics => main::alloc_port( "frontend_proxy[$idx].metrics" ),
       frontend_proxy_manhole => main::alloc_port( "frontend_proxy[$idx].manhole" ),
 
+      event_persister1         => main::alloc_port( "event_persister1[$idx]" ),
+      event_persister1_metrics => main::alloc_port( "event_persister1[$idx].metrics" ),
+      event_persister1_manhole => main::alloc_port( "event_persister1[$idx].manhole" ),
+
+      event_persister2         => main::alloc_port( "event_persister2[$idx]" ),
+      event_persister2_metrics => main::alloc_port( "event_persister2[$idx].metrics" ),
+      event_persister2_manhole => main::alloc_port( "event_persister2[$idx].manhole" ),
+
       haproxy => main::alloc_port( "haproxy[$idx]" ),
    };
 }
@@ -290,14 +298,18 @@ sub start
         ) : (),
 
         instance_map => {
-           "frontend_proxy1" => {
+           "event_persister1" => {
               host => "$bind_host",
-              port => $self->{ports}{frontend_proxy},
+              port => $self->{ports}{event_persister1},
+           },
+           "event_persister2" => {
+              host => "$bind_host",
+              port => $self->{ports}{event_persister2},
            },
         },
 
         stream_writers => {
-           events => $self->{redis_host} ne '' ? "frontend_proxy1" : "master",
+           events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -968,6 +980,74 @@ sub _start_synapse
       };
 
       push @worker_configs, $background_worker_config;
+   }
+
+   {
+      my $event_persister1_config = {
+         "worker_app"                   => "synapse.app.generic_worker",
+         "worker_name"                  => "event_persister1",
+         "worker_pid_file"              => "$hsdir/event_persister1.pid",
+         "worker_log_config"            => $self->configure_logger("event_persister1"),
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
+         "worker_listeners"             => [
+            {
+               type      => "http",
+               resources => [{ names => ["client", "replication"] }],
+               port      => $self->{ports}{event_persister1},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{event_persister1_manhole},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{event_persister1_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      };
+
+      push @worker_configs, $event_persister1_config;
+   }
+
+   {
+      my $event_persister2_config = {
+         "worker_app"                   => "synapse.app.generic_worker",
+         "worker_name"                  => "event_persister2",
+         "worker_pid_file"              => "$hsdir/event_persister2.pid",
+         "worker_log_config"            => $self->configure_logger("event_persister2"),
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
+         "worker_listeners"             => [
+            {
+               type      => "http",
+               resources => [{ names => ["client", "replication"] }],
+               port      => $self->{ports}{event_persister2},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{event_persister2_manhole},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{event_persister2_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      };
+
+      push @worker_configs, $event_persister2_config;
    }
 
    my @base_synapse_command = $self->_generate_base_synapse_command();
