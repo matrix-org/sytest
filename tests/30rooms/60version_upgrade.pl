@@ -1070,6 +1070,8 @@ test "Local and remote users' homeservers remove a room from their public direct
             $remote_joiner, $new_room_id, ( server_name => $creator->server_name, )
          );
       })->then(sub {
+         # The room list can be updated asynchrounously, so we retry if it
+         # doesn't match what we expect.
          retry_until_success {
             do_request_json_for( $creator,
                method => "GET",
@@ -1093,6 +1095,8 @@ test "Local and remote users' homeservers remove a room from their public direct
             })
          }
       })->then(sub {
+         # The room list can be updated asynchrounously, so we retry if it
+         # doesn't match what we expect.
          retry_until_success {
             do_request_json_for( $remote_joiner,
                method => "GET",
