@@ -1091,14 +1091,14 @@ test "Event with an invalid signature in the send_join response should not cause
                die "Expected room_id to be $room_id";
          })->then(sub {
             await_sync_timeline_contains( $user, $room_id, check => sub {
-                my ( $event ) = @_;
+               my ( $event ) = @_;
                 
-                assert_json_keys( $event, qw( type sender ));
-                return unless $event->{type} eq "m.room.member";
-                assert_json_keys( $event->{content}, qw( membership ) );
-                return unless $event->{sender} eq $user->user_id;
+               assert_json_keys( $event, qw( type sender ));
+               return unless $event->{type} eq "m.room.member";
+               assert_json_keys( $event->{content}, qw( membership ) );
+               return unless $event->{sender} eq $user->user_id;
 
-                Future->done(1);
+               Future->done(1);
             });
          }),
       )
