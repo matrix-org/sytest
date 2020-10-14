@@ -1017,7 +1017,7 @@ test "Event with an invalid signature in the send_join response should not cause
       my $room_id = $room->room_id;
 
       my $event = $room->create_and_insert_event(
-         sender      => "\@test:$local_server_name",
+         sender      => "$creator_id",
          type        => "test",
          room_id     => $room_id,
          state_key   => "",
@@ -1089,14 +1089,17 @@ test "Event with an invalid signature in the send_join response should not cause
 
             $body->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
+         })->then(sub {
+            await_sync_timeline_contains( $user, $room_id, check => sub {
+               my ( $event ) = @_;
+                
+               assert_json_keys( $event, qw( type sender ));
+               return unless $event->{type} eq "m.room.member";
+               assert_json_keys( $event->{content}, qw( membership ) );
+               return unless $event->{sender} eq $user->user_id;
 
-            matrix_get_my_member_event( $user, $room_id )
-         })->then( sub {
-            my ( $event ) = @_;
-
-            assert_json_keys( $event->{content}, qw( membership ) );
-
-            Future->done(1);
+               Future->done(1);
+            });
          }),
       )
    };
