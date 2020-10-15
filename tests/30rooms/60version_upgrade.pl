@@ -1092,6 +1092,7 @@ test "Local and remote users' homeservers remove a room from their public direct
                none { $room_id eq $_->{room_id} } @{ $body->{chunk} }
                   or die "Local room list included unexpected room id $room_id";
 
+               Future->done( 1 );
             })
          }
       })->then(sub {
