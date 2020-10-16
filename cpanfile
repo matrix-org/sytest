@@ -32,7 +32,9 @@ requires 'Email::MIME';
 requires 'File::Basename';
 requires 'File::Path';
 requires 'File::Slurper';
-requires 'Future', '>= 0.33';
+
+# Future 0.45 allows you to return immediate values from sequence functions.
+requires 'Future', '>= 0.45';
 requires 'Getopt::Long';
 requires 'IO::Async', '>= 0.69';
 requires 'IO::Async::SSL';
