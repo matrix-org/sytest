@@ -118,6 +118,7 @@ multi_test "Read receipts are visible to /initialSync",
    };
 
 test "Read receipts are sent as events",
+   deprecated_endpoints => 1,
    requires => [ local_user_and_room_fixtures( user_opts => { with_events => 1 }),
                  qw( can_post_room_receipts )],
 
