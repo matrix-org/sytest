@@ -29,6 +29,7 @@ sub inviteonly_room_fixture
 }
 
 multi_test "Can invite users to invite-only rooms",
+   # TODO: deprecated endpoint used in this test
    requires => do {
       my $creator_fixture = local_user_fixture();
 
@@ -72,6 +73,7 @@ multi_test "Can invite users to invite-only rooms",
    };
 
 test "Uninvited users cannot join the room",
+   # TODO: deprecated endpoint used in this test
    requires => [ local_user_fixture(),
                  inviteonly_room_fixture( creator => local_user_fixture() ) ],
 
@@ -85,6 +87,7 @@ test "Uninvited users cannot join the room",
 my $other_local_user_fixture = local_user_fixture();
 
 test "Invited user can reject invite",
+   # TODO: deprecated endpoint used in this test
    requires => [ local_user_fixture(),
       do {
          my $creator = local_user_fixture();
@@ -94,6 +97,7 @@ test "Invited user can reject invite",
    do => \&invited_user_can_reject_invite;
 
 test "Invited user can reject invite over federation",
+   # TODO: deprecated endpoint used in this test
    requires => [ remote_user_fixture(),
       do {
          my $creator = local_user_fixture();
@@ -103,6 +107,7 @@ test "Invited user can reject invite over federation",
    do => \&invited_user_can_reject_invite;
 
 test "Invited user can reject invite over federation several times",
+   # TODO: deprecated endpoint used in this test
    # https://github.com/matrix-org/synapse/issues/1987
    requires => [ remote_user_fixture(),
       do {
@@ -161,6 +166,7 @@ sub invited_user_can_reject_invite
 }
 
 test "Invited user can reject invite for empty room",
+   # TODO: deprecated endpoint used in this test
    requires => [ local_user_fixture(),
       do {
          my $creator = local_user_fixture();
@@ -170,6 +176,7 @@ test "Invited user can reject invite for empty room",
    do => \&invited_user_can_reject_invite_for_empty_room;
 
 test "Invited user can reject invite over federation for empty room",
+   # TODO: deprecated endpoint used in this test
    requires => [ remote_user_fixture(),
       do {
          my $creator = local_user_fixture();
@@ -203,6 +210,7 @@ sub invited_user_can_reject_invite_for_empty_room
 }
 
 test "Invited user can reject local invite after originator leaves",
+   # TODO: deprecated endpoint used in this test
    requires => [ local_user_fixture(),
       do {
          my $creator = local_user_fixture();

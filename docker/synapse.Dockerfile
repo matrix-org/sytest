@@ -3,7 +3,8 @@ ARG DEBIAN_VERSION=buster
 FROM matrixdotorg/sytest:${DEBIAN_VERSION}
 
 RUN apt-get -qq update && apt-get -qq install -y \
-    python3 python3-dev python3-virtualenv eatmydata
+    python3 python3-dev python3-virtualenv eatmydata \
+    redis-server
 
 ENV PYTHON=python3
 

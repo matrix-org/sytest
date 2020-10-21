@@ -91,15 +91,14 @@ sub create_server
 }
 
 
-package SyTest::HomeserverFactory::Synapse::ViaDendron;
+package SyTest::HomeserverFactory::Synapse::ViaHaproxy;
 use base qw( SyTest::HomeserverFactory::Synapse );
 
 sub _init
 {
    my $self = shift;
    $self->SUPER::_init( @_ );
-   $self->{impl} = "SyTest::Homeserver::Synapse::ViaDendron";
-   $self->{args}{dendron_binary} = "";
+   $self->{impl} = "SyTest::Homeserver::Synapse::ViaHaproxy";
    $self->{args}{torture_replication} = 0;
    $self->{args}{redis_host} = "";
 }
@@ -130,17 +129,6 @@ sub print_usage
 
        --redis-host HOST 	- if set then use redis for replication
 EOF
-}
-
-
-package SyTest::HomeserverFactory::Synapse::ViaHaproxy;
-use base qw( SyTest::HomeserverFactory::Synapse::ViaDendron );
-
-sub _init
-{
-   my $self = shift;
-   $self->SUPER::_init( @_ );
-   $self->{impl} = "SyTest::Homeserver::Synapse::ViaHaproxy";
 }
 
 1;

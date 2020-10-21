@@ -50,6 +50,11 @@ is described in more detail in the following sections.
     Provides an ``ARRAY`` reference giving a list of named requirements and
     fixture objects.
 
+``deprecated_endpoints``
+    A flag to indicate whether the test targets endpoints that have been
+    deprecated in the spec. These tests will be ignored automatically if
+    the ``--exclude-deprecated`` flag is provided to Sytest. 
+
 A call to ``test`` is a simplified version of ``multi_test`` which produces
 only a single line of test output indicating success or failure automatically.
 A call to ``multi_test`` can make use of additional functions within the body

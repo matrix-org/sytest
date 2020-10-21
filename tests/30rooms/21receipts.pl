@@ -32,6 +32,7 @@ sub find_receipt
 }
 
 multi_test "Read receipts are visible to /initialSync",
+   deprecated_endpoints => 1,
    requires => [ local_user_and_room_fixtures(),
                  qw( can_post_room_receipts )],
 

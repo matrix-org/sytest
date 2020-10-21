@@ -22,7 +22,7 @@ test "Federation key API allows unsigned requests for keys",
          my ( $body ) = @_;
          log_if_fail "Key response", $body;
 
-         assert_json_keys( $body, qw( server_name valid_until_ts signatures verify_keys old_verify_keys tls_fingerprints ));
+         assert_json_keys( $body, qw( server_name valid_until_ts signatures verify_keys old_verify_keys ));
 
          assert_json_string( $body->{server_name} );
          $body->{server_name} eq $first_home_server or

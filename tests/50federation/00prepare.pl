@@ -87,7 +87,7 @@ test "Checking local federation server",
          my ( $body ) = @_;
          log_if_fail "Keyserver response", $body;
 
-         assert_json_keys( $body, qw( server_name valid_until_ts verify_keys signatures tls_fingerprints ));
+         assert_json_keys( $body, qw( server_name valid_until_ts verify_keys signatures ));
 
          assert_json_string( $body->{server_name} );
          $body->{server_name} eq $local_server_name or
@@ -119,16 +119,6 @@ test "Checking local federation server",
          assert_base64_unpadded( $signature );
 
          # TODO: verify it?
-
-         assert_json_list( $body->{tls_fingerprints} );
-         @{ $body->{tls_fingerprints} } > 0 or
-            die "Expected some tls_fingerprints";
-
-         foreach ( @{ $body->{tls_fingerprints} } ) {
-            assert_json_object( $_ );
-
-            # TODO: Check it has keys named by the algorithms
-         }
 
          Future->done(1);
       });
@@ -296,3 +286,33 @@ sub federated_rooms_fixture {
 }
 
 push @EXPORT, qw( federated_rooms_fixture );
+
+=head2 federated_room_alias_fixture
+
+   test "foo",
+       requires => [ federated_room_alias_fixture() ],
+       do => sub {
+           my ( $room_alias ) = @_;
+       };
+
+Returns a new Fixture, which creates a unique room alias on the sytest federation server.
+
+=cut
+
+sub federated_room_alias_fixture {
+   my %args = @_;
+
+   return fixture(
+      requires => [
+         room_alias_name_fixture( prefix => $args{prefix} ),
+         $main::INBOUND_SERVER,
+      ],
+
+      setup => sub {
+         my ( $alias_name, $inbound_server ) = @_;
+         Future->done( sprintf "#%s:%s", $alias_name, $inbound_server->server_name );
+      },
+   );
+}
+
+push @EXPORT, qw( federated_room_alias_fixture );

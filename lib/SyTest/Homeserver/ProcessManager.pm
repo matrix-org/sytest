@@ -22,6 +22,7 @@ package SyTest::Homeserver::ProcessManager;
 use Future::Utils qw( fmap_void );
 use POSIX qw( WIFEXITED WEXITSTATUS );
 use Struct::Dumb;
+use IO::Async::Socket;
 
 =head1 NAME
 
@@ -29,8 +30,7 @@ C<SyTest::Homeserver::ProcessManager>
 
 =head1 DESCRIPTION
 
-This class is a mixin for C<SyTest::Homeserver> implementations (or, in fact,
-any C<IO::Async::Notifier> class) which start external processes.
+This class is a mixin for C<IO::Async::Notifier> classes which start external processes.
 
 =cut
 
@@ -179,7 +179,7 @@ sub _start_process_and_await_connectable
    my $finished_future = $self->{proc_info}{$proc}->finished_future;
 
    my $fut = Future->wait_any(
-      $self->await_connectable( $self->{bind_host}, $self->secure_port ),
+      $self->await_connectable( $connect_host, $connect_port ),
       $finished_future->without_cancel()->then_fail(
          "Process died without becoming connectable",
       ),
@@ -238,5 +238,119 @@ sub _kill_process
    );
 }
 
-1;
+=head2 _start_process_and_await_notify
 
+   $fut = $hs->_start_process_and_await_notify( %params )
+
+This method starts a new process, setting the `NOTIFY_SOCKET` env, and waits to
+receive a `READY=1` notification from the process on the socket.
+
+Parameters are passed on to C<IO::Async::Process::new>.
+
+=cut
+
+sub _start_process_and_await_notify
+{
+   my $self = shift;
+
+   my %params = @_;
+
+   # We now need to do some faffing to pull out any passed env hash so that we
+   # can then pass it to `_await_ready_notification`.
+   #
+   # The env is passed in as part of the `setup` param, which is an ordered map
+   # represented as an array.
+   $params{setup} //= [];
+
+   my $setup = $params{setup};
+
+   my %setup_map = @$setup;  # Copy to a hash so we can pull out the env entry.
+   my $env = $setup_map{env} // {};
+   if ( not defined $setup_map{env} ) {
+      # There was no env entry, so we need to add it to the setup array.
+      push @$setup, env => $env;
+   }
+
+   # We need to set this up *before* we start the process as we need to bind the
+   # socket before starting the process.
+   my $await_fut = $self->_await_ready_notification( $env );
+
+   my $proc = $self -> _start_process( %params );
+   my $finished_future = $self->{proc_info}{$proc}->finished_future;
+
+   my $fut = Future->wait_any(
+      $await_fut,
+      $finished_future->without_cancel()->then_fail(
+         "Process died without becoming connectable",
+      ),
+   );
+   return $fut;
+}
+
+=head2 _await_ready_notification
+
+   $fut = $hs->_await_ready_notification( $env )
+
+This method binds a listener to a newly created unix socket and waits for a
+`READY=1` to be received. The socket address is added to the `env` map passed
+in under `NOTIFY_SOCKET`.
+
+This is basically a noddy implementation of the `sd_notify` mechanism.
+
+=cut
+
+sub _await_ready_notification
+{
+   my $self = shift;
+
+   my ( $env ) = @_;
+
+   my $loop = $self->loop;
+   my $output = $self->{output};
+
+   # Create a random abstract socket name. Abstract sockets start with a null
+   # byte.
+   my $random_id = join "", map { chr 65 + rand 25 } 1 .. 20;
+   my $path = "\0sytest-$random_id.sock";
+
+   # We replace null byte with '@' to allow us to pass it in via env. (This is
+   # as per the sd_notify spec).
+   my $path_env = $path;
+   $path_env =~ s/\0/\@/g;
+   $env->{"NOTIFY_SOCKET"} = $path_env;
+
+   # Create a future that gets resolved when we receive a `READY=1`
+   # notification.
+   my $poke_fut = Future->new;
+
+   my $socket = IO::Async::Socket->new(
+      on_recv => sub {
+         my ( $self, $dgram, $addr ) = @_;
+
+         # Payloads are newline separated list of varalbe assignments.
+         foreach my $line ( split(/\n/, $dgram) ) {
+            $output->diag( "Received signal from process: $line" );
+            if ( $line eq "READY=1" ) {
+               $poke_fut->done;
+            }
+         }
+
+         $loop->stop;
+      },
+      on_recv_error => sub {
+         my ( $self, $errno ) = @_;
+         die "Cannot recv - $errno\n";
+      },
+   );
+   $loop->add( $socket );
+
+   $socket->bind( {
+      family   => "unix",
+      socktype => "dgram",
+      path     => $path,
+   } )->then( sub {
+      $poke_fut
+   })
+}
+
+1;

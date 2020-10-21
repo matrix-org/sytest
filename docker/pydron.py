@@ -30,15 +30,11 @@ while input_args:
 
 # Using the key:value arg pairs, parse which ones are config paths.
 configs = {}
-urls = {}
 
 for x in args.keys():
     if x != "--synapse-config" and x.endswith("-config"):
         # Strip the first two dashes and -config off it
         configs[x[2 : -len("-config")]] = args[x]
-    if x.endswith("-url"):
-        # Strip the first two dashes and -url off it
-        urls[x[2 : -len("-url")]] = args[x]
 
 # One of the config options is named differently than the actual app script, so,
 # create a map for it.

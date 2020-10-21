@@ -44,7 +44,7 @@ echo >&2 "+++ Running tests"
 TEST_STATUS=0
 mkdir -p /logs
 ./run-tests.pl -I Dendrite::Monolith -d $GOBIN -W /src/sytest-whitelist -O tap --all \
-    --work-directory="/work" \
+    --work-directory="/work" --exclude-deprecated \
     "$@" > /logs/results.tap || TEST_STATUS=$?
 
 if [ $TEST_STATUS -ne 0 ]; then

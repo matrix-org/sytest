@@ -34,7 +34,7 @@ test "After changing password, can't log in with old password",
       my ( $user ) = @_;
 
       matrix_set_password( $user, $password, "my new password" )->then( sub {
-         do_request_json_for( $user,
+         $user->http->do_request_json(
             method => "POST",
             uri    => "/r0/login",
 
@@ -58,7 +58,7 @@ test "After changing password, can log in with new password",
       my ( $user ) = @_;
 
       matrix_set_password( $user, $password, "my new password" )->then( sub {
-         do_request_json_for( $user,
+         $user->http->do_request_json(
             method => "POST",
             uri    => "/r0/login",
 

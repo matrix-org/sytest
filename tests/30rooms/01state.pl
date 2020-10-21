@@ -92,6 +92,7 @@ test "Setting room topic reports m.room.topic to myself",
    };
 
 test "Global initialSync",
+   deprecated_endpoints => 1,
    requires => [ $user_fixture, $room_fixture,
                 qw( can_initial_sync can_set_room_topic )],
 
@@ -146,6 +147,7 @@ test "Global initialSync",
    };
 
 test "Global initialSync with limit=0 gives no messages",
+   deprecated_endpoints => 1,
    requires => [ $user_fixture, $room_fixture,
                 qw( can_initial_sync )],
 
@@ -169,6 +171,7 @@ test "Global initialSync with limit=0 gives no messages",
    };
 
 test "Room initialSync",
+   deprecated_endpoints => 1,
    requires => [ $user_fixture, $room_fixture,
                 qw( can_room_initial_sync )],
 
@@ -217,6 +220,7 @@ test "Room initialSync",
    };
 
 test "Room initialSync with limit=0 gives no messages",
+   deprecated_endpoints => 1,
    requires => [ $user_fixture, $room_fixture,
                 qw( can_initial_sync )],
 
@@ -263,6 +267,7 @@ sub set_test_state
 }
 
 test "Setting state twice is idempotent",
+   # TODO: deprecated endpoint used in this test
    # Setting synced to 1 inserts a m.room.test object into the
    # timeline which this test does not expect
    requires => [ local_user_and_room_fixtures( room_opts => { synced => 0 } ) ],
@@ -287,6 +292,7 @@ test "Setting state twice is idempotent",
    };
 
 test "Joining room twice is idempotent",
+   # TODO: deprecated endpoint used in this test
    requires => [ local_user_and_room_fixtures() ],
 
    check => sub {
