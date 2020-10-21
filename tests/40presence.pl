@@ -121,6 +121,7 @@ test "Presence changes to UNAVAILABLE are reported to remote room members",
    };
 
 test "Newly created users see their own presence in /initialSync (SYT-34)",
+   deprecated_endpoints => 1,
    requires => [ local_user_fixture(),
                  qw( can_initial_sync )],
 

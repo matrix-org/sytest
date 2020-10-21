@@ -87,6 +87,7 @@ test "New room members see their own join event",
    };
 
 test "New room members see existing members' presence in room initialSync",
+   deprecated_endpoints => 1,
    requires => [ $creator_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_join_remote_room_by_alias can_room_initial_sync )],
 
@@ -157,6 +158,7 @@ test "Existing members see new member's presence",
    };
 
 test "New room members see first user's profile information in global initialSync",
+   deprecated_endpoints => 1,
    requires => [ $creator_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_join_remote_room_by_alias can_initial_sync can_set_displayname can_set_avatar_url )],
 
@@ -183,6 +185,7 @@ test "New room members see first user's profile information in global initialSyn
    };
 
 test "New room members see first user's profile information in per-room initialSync",
+   deprecated_endpoints => 1,
    requires => [ $creator_fixture, $remote_user_fixture, $room_fixture,
                  qw( can_room_initial_sync can_set_displayname can_set_avatar_url )],
 

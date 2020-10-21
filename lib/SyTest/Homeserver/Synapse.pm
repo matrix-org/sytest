@@ -207,6 +207,17 @@ sub start
            window_size => 1000,
         },
 
+        rc_joins => {
+           local => {
+             per_second => 1000,
+              burst_count => 1000,
+           },
+           remote => {
+             per_second => 1000,
+              burst_count => 1000,
+           },
+        },
+
         enable_registration => "true",
         databases => \%db_configs,
         macaroon_secret_key => $macaroon_secret_key,
@@ -350,51 +361,30 @@ sub start
 
    my $loop = $self->loop;
 
-   my $started_future = $loop->new_future;
-
    $output->diag(
       "Creating config for server $hs_index with command "
          . join( " ", @config_command ),
    );
 
-   $loop->open_process(
+   return $self->_run_command(
       setup => [ env => $env ],
       command => [ @config_command ],
+   )->then( sub {
+      $output->diag(
+        "Starting server $hs_index for port $port with command "
+           . join( " ", @command ),
+      );
 
-      on_finish => sub {
-         my ( $proc, $exitcode ) = @_;
-
-         if( $exitcode != 0 ) {
-            $started_future->fail( "Server failed to generate config: exitcode " . ( $exitcode >> 8 ));
-            return
-         }
-
-         $output->diag(
-            "Starting server $hs_index for port $port with command "
-               . join( " ", @command ),
-         );
-
-         $self->add_child(
-            $self->{proc} = IO::Async::Process->new(
-               setup => [ env => $env ],
-
-               command => \@command,
-
-               on_finish => $self->_capture_weakself( 'on_finish' ),
-            )
-         );
-
-         $self->adopt_future(
-            $self->await_connectable( $bind_host, $self->_start_await_port )->then( sub {
-               $started_future->done;
-            })
-         );
-
-         $self->open_logfile;
-      }
-   );
-
-   return $started_future;
+      $self->_start_process_and_await_connectable(
+         setup => [ env => $env ],
+         command => \@command,
+         connect_host => $bind_host,
+         connect_port => $self->_start_await_port,
+      );
+   })->on_done( sub {
+      $output->diag("Started synapse $hs_index");
+      $self->open_logfile();
+   });
 }
 
 sub generate_listeners
@@ -436,78 +426,6 @@ sub wrap_synapse_command
 {
    my $self = shift;
    return @_;
-}
-
-sub pid
-{
-   my $self = shift;
-   return 0 if !$self->{proc};
-   return $self->{proc}->pid;
-}
-
-sub kill
-{
-   my $self = shift;
-   my ( $signal ) = @_;
-
-   if( $self->{proc} and my $pid = $self->{proc}->pid ) {
-      kill $signal => $pid;
-   }
-}
-
-sub kill_and_await_finish
-{
-   my $self = shift;
-
-   return $self->SUPER::kill_and_await_finish->then( sub {
-
-      # skip this if the process never got started.
-      return Future->done unless $self->pid;
-
-      $self->{output}->diag( "Killing ${\ $self->pid }" );
-
-      $self->kill( 'INT' );
-
-      return Future->needs_any(
-         $self->await_finish,
-
-         $self->loop->delay_future( after => 30 )->then( sub {
-            print STDERR "Timed out waiting for ${\ $self->pid }; sending SIGKILL\n";
-            $self->kill( 'KILL' );
-            Future->done;
-         }),
-        );
-   });
-}
-
-sub on_finish
-{
-   my $self = shift;
-   my ( $process, $exitcode ) = @_;
-
-   my $hs_index = $self->{hs_index};
-
-   say $self->pid . " stopped";
-
-   my $port = $self->{ports}{synapse};
-
-   if( $exitcode > 0 ) {
-      if( WIFEXITED($exitcode) ) {
-         warn "Main homeserver process for server $hs_index exited " . WEXITSTATUS($exitcode) . "\n";
-      }
-      else {
-         warn "Main homeserver process for server $hs_index failed - code=$exitcode\n";
-      }
-
-      print STDERR "\e[1;35m[server $port}]\e[m: $_\n"
-         for @{ $self->{stderr_lines} // [] };
-
-      # Now force all remaining output to be printed
-      $self->{print_output}++;
-      undef $self->{filter_output};
-   }
-
-   $self->await_finish->done( $exitcode );
 }
 
 sub open_logfile
@@ -654,10 +572,13 @@ sub _start_await_port
    return $self->{ports}{synapse};
 }
 
-package SyTest::Homeserver::Synapse::ViaDendron;
+package SyTest::Homeserver::Synapse::ViaHaproxy;
 use base qw( SyTest::Homeserver::Synapse );
 
 use Carp;
+use File::Slurper qw( read_binary );
+
+use constant HAPROXY_BIN => $ENV{HAPROXY_BIN} // "/usr/sbin/haproxy";
 
 sub _init
 {
@@ -678,6 +599,9 @@ sub _init
 
    my $idx = $self->{hs_index};
    $self->{ports}{dendron} = main::alloc_port( "dendron[$idx]" );
+
+   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
+      for qw( haproxy );
 }
 
 sub _check_db_config
@@ -705,9 +629,6 @@ sub wrap_synapse_command
       $self->{dendron},
       "--synapse-python" => $self->{python},
       "--synapse-config" => $self->{paths}{config},
-      "--synapse-url" => "http://$bind_host:$self->{ports}{synapse_unsecure}",
-      "--cert-file" => $self->{paths}{cert_file},
-      "--key-file"  => $self->{paths}{key_file},
       "--addr" => "$bind_host:" . $self->{ports}{dendron},
    );
 
@@ -820,7 +741,6 @@ sub wrap_synapse_command
 
       push @command,
          "--synchrotron-config" => $synchrotron_config_path,
-         "--synchrotron-url" => "http://$bind_host:$self->{ports}{synchrotron}";
    }
 
    {
@@ -854,7 +774,6 @@ sub wrap_synapse_command
 
       push @command,
          "--federation-reader-config" => $federation_reader_config_path,
-         "--federation-reader-url" => "http://$bind_host:$self->{ports}{federation_reader}";
    }
 
    {
@@ -888,7 +807,6 @@ sub wrap_synapse_command
 
       push @command,
          "--media-repository-config" => $media_repository_config_path,
-         "--media-repository-url" => "http://$bind_host:$self->{ports}{media_repository}";
    }
 
    {
@@ -922,7 +840,6 @@ sub wrap_synapse_command
 
       push @command,
          "--client-reader-config" => $client_reader_config_path,
-         "--client-reader-url" => "http://$bind_host:$self->{ports}{client_reader}";
    }
 
    {
@@ -956,7 +873,6 @@ sub wrap_synapse_command
 
       push @command,
          "--user-directory-config" => $user_dir_config_path,
-         "--user-directory-url" => "http://$bind_host:$self->{ports}{user_dir}";
    }
 
    {
@@ -990,7 +906,6 @@ sub wrap_synapse_command
 
       push @command,
          "--event-creator-config" => $event_creator_config_path,
-         "--event-creator-url" => "http://$bind_host:$self->{ports}{event_creator}";
    }
 
    {
@@ -1026,7 +941,6 @@ sub wrap_synapse_command
 
       push @command,
          "--frontend-proxy-config" => $frontend_proxy_config_path,
-         "--frontend-proxy-url" => "http://$bind_host:$self->{ports}{frontend_proxy}";
    }
 
    return @command;
@@ -1041,34 +955,13 @@ sub _start_await_port
 sub secure_port
 {
    my $self = shift;
-   return $self->{ports}{dendron};
+   return $self->{ports}{haproxy};
 }
 
 sub unsecure_port
 {
    my $self = shift;
-   die "dendron does not have an unsecure port mode\n";
-}
-
-package SyTest::Homeserver::Synapse::ViaHaproxy;
-# For now we'll base this on "ViaDendron" so that dendron manages the multiple
-# workers. Longer-term we'll want to have a specific worker management system
-# so we can avoid dendron itself.
-use base qw( SyTest::Homeserver::Synapse::ViaDendron );
-
-use Carp;
-
-use File::Slurper qw( read_binary );
-
-use constant HAPROXY_BIN => $ENV{HAPROXY_BIN} // "/usr/sbin/haproxy";
-
-sub _init
-{
-   my $self = shift;
-   $self->SUPER::_init( @_ );
-
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( haproxy );
+   die "haproxy does not have an unsecure port mode\n";
 }
 
 sub start
@@ -1092,29 +985,12 @@ sub start
 
       $output->diag( "Starting haproxy on port $self->{ports}{haproxy}" );
 
-      $self->add_child( $self->{haproxy_proc} = IO::Async::Process->new(
+      $self->_start_process_and_await_connectable(
          command => [ HAPROXY_BIN, "-db", "-f", $self->{haproxy_config} ],
-         on_finish => sub {
-            my ( undef, $exitcode ) = @_;
-            print STDERR "\n\nhaproxy died $exitcode\n\n";
-         },
-      ) );
-
-      return $self->await_connectable( $self->{bind_host}, $self->{ports}{haproxy} )
-         ->on_done( sub { $output->diag( "haproxy started" ) } );
+         connect_host => $self->{bind_host},
+         connect_port => $self->{ports}{haproxy},
+      )->on_done( sub { $output->diag( "haproxy started" ) } );
    });
-}
-
-sub kill
-{
-   my $self = shift;
-   my ( $signal ) = @_;
-
-   $self->SUPER::kill( @_ );
-
-   if( $self->{haproxy_proc} and my $pid = $self->{haproxy_proc}->pid ) {
-      kill $signal => $pid;
-   }
 }
 
 sub generate_haproxy_config
@@ -1250,18 +1126,6 @@ sub generate_haproxy_get_map
 
 ^/_matrix/federation/v1/groups/                             federation_reader
 EOCONFIG
-}
-
-sub secure_port
-{
-   my $self = shift;
-   return $self->{ports}{haproxy};
-}
-
-sub unsecure_port
-{
-   my $self = shift;
-   die "haproxy does not have an unsecure port mode\n";
 }
 
 1;

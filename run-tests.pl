@@ -66,6 +66,9 @@ my $BLACKLIST_FILE;
 # the server under test'.
 our $TEST_ROOM_VERSION;
 
+# should we include tests that claim to use deprecated endpoints?
+our $INCLUDE_DEPRECATED_ENDPOINTS = 1;
+
 # where we put working files (server configs, mostly)
 our $WORK_DIR = ".";
 
@@ -93,6 +96,8 @@ GetOptions(
    'work-directory=s' => \$WORK_DIR,
 
    'room-version=s' => \$TEST_ROOM_VERSION,
+
+   'exclude-deprecated' => sub { $INCLUDE_DEPRECATED_ENDPOINTS = 0 },
 
    # these two are superceded by -I, but kept for backwards compatibility
    'dendron=s' => sub {
@@ -177,16 +182,19 @@ Options:
    -n, --no-tls                 - prefer plaintext client connections where
                                   possible
 
+       --exclude-deprecated     - don't run tests that specifically test deprecated
+                                  endpoints
+
        --bind-host HOST         - when starting listeners (eg homeservers or
                                   test httpds), bind to this hostname instead of
                                   'localhost'.
 
    -p, --port-range START:MAX   - pool of TCP ports to allocate from
 
-   --work-directory DIR         - where we put working files (server configs,
+       --work-directory DIR     - where we put working files (server configs,
                                   mostly). Defaults to '.'.
 
-   --room-version VERSION       - use the given room version for the majority of
+       --room-version VERSION   - use the given room version for the majority of
                                   tests
 .
    write STDERR;
@@ -606,6 +614,12 @@ sub _push_test
    if( %only_files and not exists $only_files{$filename} ) {
       $proven{$_} = PRESUMED for @{ $params{proves} // [] };
       return;
+   }
+
+   if( $params{deprecated_endpoints} ) {
+       if ( !$INCLUDE_DEPRECATED_ENDPOINTS ) {
+           return;
+       }
    }
 
    push @TESTS, Test( $filename, $name, $multi,
