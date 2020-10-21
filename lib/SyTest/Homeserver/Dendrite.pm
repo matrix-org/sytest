@@ -63,7 +63,8 @@ sub _check_db_config
    my $self = shift;
    my ( %config ) = @_;
 
-   $config{type} eq "pg" or die "Dendrite can only run against postgres";
+   # We're in the business of running sytest against dendrite+sqlite these days
+   #$config{type} eq "pg" or die "Dendrite can only run against postgres";
 
    return $self->SUPER::_check_db_config( @_ );
 }

@@ -80,7 +80,7 @@ volume to the docker command mounting the checkout to the `/sytest` folder in
 the container:
 
 ```
-docker run --rm -it /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs \
+docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs \
     -v /path/to/code/sytest\:/sytest:ro matrixdotorg/sytest-synapse:py35
 ```
 
