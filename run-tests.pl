@@ -623,7 +623,7 @@ sub _push_test
    }
 
    if( exists $params{implementation_specific} ) {
-       @tokens = split /::/, $params{implementation_specific};
+       my @tokens = split /::/, $params{implementation_specific};
        if ( @tokens[0] ne $SERVER_IMPL ) {
            return;
        }
