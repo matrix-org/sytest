@@ -622,6 +622,12 @@ sub _push_test
        }
    }
 
+   if( exists $params{implementation_specific} ) {
+       if ( $params{implementation_specific} ne $SERVER_IMPL ) {
+           return;
+       }
+   }
+
    push @TESTS, Test( $filename, $name, $multi,
       @params{qw( expect_fail proves requires check do timeout )} );
 }

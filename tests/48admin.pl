@@ -30,6 +30,7 @@ sub await_purge_complete {
 
 test "/whois",
    requires => [ $main::API_CLIENTS[0] ],
+   implementation_specific => "Synapse",
 
    do => sub {
       my ( $http ) = @_;
@@ -69,6 +70,7 @@ test "/whois",
 
 test "/purge_history",
    requires => [ local_admin_fixture(), local_user_and_room_fixtures() ],
+   implementation_specific => "Synapse",
 
    do => sub {
       my ( $admin, $user, $room_id ) = @_;
@@ -149,6 +151,7 @@ test "/purge_history",
 
 test "/purge_history by ts",
    requires => [ local_admin_fixture(), local_user_and_room_fixtures() ],
+   implementation_specific => "Synapse",
 
    do => sub {
       my ( $admin, $user, $room_id ) = @_;
@@ -222,6 +225,7 @@ test "/purge_history by ts",
 test "Can backfill purged history",
    requires => [ local_admin_fixture(), local_user_and_room_fixtures(),
                  remote_user_fixture(), qw( can_paginate_room_remotely ) ],
+   implementation_specific => "Synapse",
 
    # this test is a bit slow.
    timeout => 50,
@@ -358,6 +362,7 @@ test "Can backfill purged history",
 multi_test "Shutdown room",
    requires => [ local_admin_fixture(), local_user_fixtures( 2 ), remote_user_fixture(),
       room_alias_name_fixture() ],
+   implementation_specific => "Synapse",
 
    do => sub {
       my ( $admin, $user, $dummy_user, $remote_user, $room_alias_name ) = @_;
