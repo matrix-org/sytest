@@ -623,7 +623,7 @@ sub _push_test
    }
 
    if( exists $params{implementation_specific} ) {
-       if ( $params{implementation_specific} ne $SERVER_IMPL ) {
+       if ( (split /::/, $params{implementation_specific})[0] ne $SERVER_IMPL ) {
            return;
        }
    }

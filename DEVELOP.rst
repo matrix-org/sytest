@@ -57,7 +57,7 @@ is described in more detail in the following sections.
 
 ``implementation_specific``
     A string to specify that the test should only be run for certain homeserver
-    implementations, e.g. `"Synapse"`, `"Dendrite::Monolith"` etc. 
+    implementations, e.g. `"Synapse"`, `"Dendrite"` etc. 
 
 A call to ``test`` is a simplified version of ``multi_test`` which produces
 only a single line of test output indicating success or failure automatically.
