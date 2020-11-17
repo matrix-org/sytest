@@ -13,3 +13,4 @@
 .vscode
 .coverage*
 .idea
+/signingkeyserver.db
