@@ -70,11 +70,6 @@ sub _init
    $self->SUPER::_init( @_ );
 }
 
-sub implementation_name
-{
-   return "dendrite";
-}
-
 sub create_server
 {
    my $self = shift;
