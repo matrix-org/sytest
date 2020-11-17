@@ -622,6 +622,12 @@ sub _push_test
        }
    }
 
+   if( exists $params{implementation_specific} ) {
+       if ( $HS_FACTORY->implementation_name() ne $params{implementation_specific} ) {
+           return;
+       }
+   }
+
    push @TESTS, Test( $filename, $name, $multi,
       @params{qw( expect_fail proves requires check do timeout )} );
 }
