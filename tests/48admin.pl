@@ -30,7 +30,6 @@ sub await_purge_complete {
 
 test "/whois",
    requires => [ $main::API_CLIENTS[0] ],
-   implementation_specific => "synapse",
 
    do => sub {
       my ( $http ) = @_;
