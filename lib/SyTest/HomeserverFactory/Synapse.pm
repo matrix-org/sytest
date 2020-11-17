@@ -103,6 +103,11 @@ sub _init
    $self->{args}{redis_host} = "";
 }
 
+sub implementation_name
+{
+   return "synapse";
+}
+
 sub get_options
 {
    my $self = shift;

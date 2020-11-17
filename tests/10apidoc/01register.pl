@@ -318,7 +318,7 @@ sub shared_secret_tests {
 
    test "POST $ep_name with shared secret",
       requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
-      implementation_specific => "Synapse",
+      implementation_specific => "synapse",
 
       proves => [qw( can_register_with_secret )],
 
@@ -335,7 +335,7 @@ sub shared_secret_tests {
 
    test "POST $ep_name admin with shared secret",
       requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
-      implementation_specific => "Synapse",
+      implementation_specific => "synapse",
 
       do => sub {
          my ( $http, $uid ) = @_;
@@ -351,7 +351,7 @@ sub shared_secret_tests {
 
    test "POST $ep_name with shared secret downcases capitals",
       requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
-      implementation_specific => "Synapse",
+      implementation_specific => "synapse",
 
       proves => [qw( can_register_with_secret )],
 
@@ -368,7 +368,7 @@ sub shared_secret_tests {
 
    test "POST $ep_name with shared secret disallows symbols",
       requires => [ $main::API_CLIENTS[0] ],
-      implementation_specific => "Synapse",
+      implementation_specific => "synapse",
 
       proves => [qw( can_register_with_secret )],
 

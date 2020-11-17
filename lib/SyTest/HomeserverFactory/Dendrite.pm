@@ -31,6 +31,11 @@ sub _init
    $self->SUPER::_init( @_ );
 }
 
+sub implementation_name
+{
+   return "dendrite";
+}
+
 sub get_options
 {
    my $self = shift;
