@@ -1,0 +1,2 @@
+- Add signingkeyserver.db to .gitignore. Thanks to @bodqhrohro
+- Increase the test timeout to 300 seconds. Thanks to @bodqhrohro
