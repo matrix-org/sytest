@@ -36,7 +36,7 @@ Data::Dump::Filtered::add_dump_filter( sub {
 });
 
 my $plugin_dir = $ENV{"SYTEST_PLUGINS"} || "plugins"; # Read plugin dir from env var SYTEST_PLUGINS or fallback to plugins
-my @plugins = grep { -d } glob(catdir($plugin_dir, "*", "*")); # Read all plugins/<author>/<plugin>
+my @plugins = grep { -d } glob(catdir($plugin_dir, "*")); # Read all plugins/<plugin>
 my @lib_dirs = map { catdir($_, "lib") } @plugins;
 
 use Module::Pluggable

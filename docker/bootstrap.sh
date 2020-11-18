@@ -38,15 +38,16 @@ else
     mkdir -p /sytest
     tar -C /sytest --strip-components=1 -xf sytest.tar.gz
 
-    if [ -n "$PLUGIN" ]; then
+    if [ -n "$PLUGINS" ]; then
         mkdir /sytest/plugins
         echo "--- Downloading plugins for sytest"
-        IFS=':'; for plugin in $PLUGIN; do
-            wget -q https://github.com/$plugin/archive/master.tar.gz -O plugin.tar.gz || {
-                echo "Failed to download plugin: $plugin"
+        IFS=' '; for plugin in $PLUGINS; do
+            plugindir=$(mktemp -d --tmpdir=/sytest/plugins)
+            wget -q $plugin -O plugin.tar.gz || {
+                echo "Failed to download plugin: $plugin" >&2
+                exit 1
             }
-            mkdir -p /sytest/plugins/$plugin
-            tar -C /sytest/plugins/$plugin --strip-components=1 -xf plugin.tar.gz
+            tar -C $plugindir --strip-components=1 -xf plugin.tar.gz
         done
     fi
 fi
@@ -63,10 +64,9 @@ elif [ -x "/sytest/docker/${SYTEST_TARGET}_sytest.sh" ]; then
     exec "/sytest/docker/${SYTEST_TARGET}_sytest.sh" "$@"
 
 else
-    PLUGIN_RUNNER=$(find /sytest/plugins/ -type f -exec test -x {} \; -name "${SYTEST_TARGET}_sytest.sh" -print)
+    PLUGIN_RUNNER=$(find /sytest/plugins/ -type f -name "${SYTEST_TARGET}_sytest.sh" -print)
     if [ -n PLUGIN_RUNNER ]; then
         exec ${PLUGIN_RUNNER} "$@"
-        
     else
         echo "sytest runner script for ${SYTEST_TARGET} not found" >&2
         exit 1

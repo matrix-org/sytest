@@ -146,6 +146,12 @@ synapse) and place it within the homeserver configuration directory
 
 .. _dictConfig: https://docs.python.org/2/library/logging.config.html#logging.config.dictConfig
 
+Sytest supports plugins. Plugins follow the same project structure as sytest and can be placed
+in the `plugins` directory.
+To override the path of the plugins directory set the env var `SYTEST_PLUGINS` to another directory.
+
+Currently only Homeserver and Output Implementations are supported in plugins.
+
 Developing
 ----------
 
