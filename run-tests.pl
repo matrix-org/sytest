@@ -758,7 +758,7 @@ sub _run_test0
 
       Future->wait_any(
          $f_setup,
-         $loop->delay_future( after => 60 )
+         $loop->delay_future( after => 300 )
             ->then_fail( "Timed out waiting for setup" )
       )->get;
 
