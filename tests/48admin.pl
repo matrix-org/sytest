@@ -17,8 +17,8 @@ sub await_purge_complete {
          $prev_trial ? delay( $delay *= 1.5 ) : Future->done
       )->then( sub {
          do_request_json_for( $admin_user,
-            method  => "GET",
-            uri     => "/r0/admin/purge_history_status/$purge_id",
+            method   => "GET",
+            full_uri => "/_synapse/admin/v1/purge_history_status/$purge_id",
          )
       })->then( sub {
          my ($body) = @_;
@@ -95,15 +95,15 @@ test "/purge_history",
          await_message_in_room( $user, $room_id, $last_event_id ),
       })->then( sub {
          do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/r0/admin/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
-            content => {}
+            method   => "POST",
+            full_uri => "/_synapse/admin/v1/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
+            content  => {}
          )->main::expect_http_403;  # Must be server admin
       })->then( sub {
          do_request_json_for( $admin,
-            method  => "POST",
-            uri     => "/r0/admin/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
-            content => {}
+            method   => "POST",
+            full_uri => "/_synapse/admin/v1/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
+            content  => {}
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -184,9 +184,9 @@ test "/purge_history by ts",
          await_message_in_room( $user, $room_id, $last_event_id ),
       })->then( sub {
          do_request_json_for( $admin,
-            method  => "POST",
-            uri     => "/r0/admin/purge_history/$room_id",
-            content => {
+            method   => "POST",
+            full_uri => "/_synapse/admin/v1/purge_history/$room_id",
+            content  => {
                purge_up_to_ts => int($last_event_ts * 1000),
             },
          )
@@ -287,9 +287,9 @@ test "Can backfill purged history",
          )
       })->then( sub {
          do_request_json_for( $admin,
-            method  => "POST",
-            uri     => "/r0/admin/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
-            content => {}
+            method   => "POST",
+            full_uri => "/_synapse/admin/v1/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
+            content  => {}
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -381,9 +381,9 @@ multi_test "Shutdown room",
          matrix_join_room( $remote_user, $room_id );
       })->then( sub {
          do_request_json_for( $admin,
-            method  => "POST",
-            uri     => "/r0/admin/shutdown_room/$room_id",
-            content => { "new_room_user_id" => $dummy_user->user_id },
+            method   => "POST",
+            full_uri => "/_synapse/admin/v1/shutdown_room/$room_id",
+            content  => { "new_room_user_id" => $dummy_user->user_id },
          );
       })->SyTest::pass_on_done( "Shutdown room returned success" )
       ->then( sub {
