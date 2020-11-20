@@ -256,7 +256,7 @@ sub matrix_register_user
    });
 }
 
-shared_secret_tests( "/r0/admin/register", \&matrix_admin_register_user_via_secret);
+shared_secret_tests( "/_synapse/admin/v1/register", \&matrix_admin_register_user_via_secret);
 
 sub matrix_admin_register_user_via_secret
 {
@@ -269,8 +269,8 @@ sub matrix_admin_register_user_via_secret
       croak "Require UID for matrix_register_user_via_secret";
 
    $http->do_request_json(
-      method => "GET",
-      uri    => "/r0/admin/register",
+      method   => "GET",
+      full_uri => "/_synapse/admin/v1/register",
    )->then( sub{
       my ( $nonce ) = @_;
 
@@ -280,8 +280,8 @@ sub matrix_admin_register_user_via_secret
       );
 
       return $http->do_request_json(
-         method => "POST",
-         uri    => "/r0/admin/register",
+         method   => "POST",
+         full_uri => "/_synapse/admin/v1/register",
 
          content => {
            nonce    => $nonce->{nonce},
