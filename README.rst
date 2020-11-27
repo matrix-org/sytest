@@ -148,8 +148,8 @@ synapse) and place it within the homeserver configuration directory
 
 Sytest supports plugins. Plugins follow the same project structure as sytest and can be placed
 in the ``plugins`` directory. They should contain the ``lib/SyTest/HomeserverFactory`` and
-``lib/SyTest/Homeserver``, or ``lib/SyTest/Output`` directories. Similar to the sytest repository.
-The path of the plugins directory can be overridden via the ``SYTEST_PLUGINS``environment variable.
+``lib/SyTest/Homeserver``, or ``lib/SyTest/Output`` directories, similar to the root of the sytest repository.
+The path of the plugins directory can be overridden via the ``SYTEST_PLUGINS`` environment variable.
 
 Currently only ``Homeserver`` and ``Output`` implementations are supported in plugins.
 
