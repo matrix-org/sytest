@@ -19,6 +19,7 @@ use IO::Async::Loop;
 
 use Data::Dump qw( pp );
 use File::Basename qw( basename );
+use File::Spec::Functions qw( catdir );
 use Getopt::Long qw( :config no_ignore_case gnu_getopt );
 use IO::Socket::SSL;
 use List::Util 1.33 qw( first all any maxstr max );
@@ -34,16 +35,21 @@ Data::Dump::Filtered::add_dump_filter( sub {
       : undef;
 });
 
+my $plugin_dir = $ENV{"SYTEST_PLUGINS"} || "plugins"; # Read plugin dir from env var SYTEST_PLUGINS or fallback to plugins
+my @plugins = grep { -d } glob(catdir($plugin_dir, "*")); # Read all plugins/<plugin>
+my @lib_dirs = map { catdir($_, "lib") } @plugins;
+
 use Module::Pluggable
    sub_name    => "output_formats",
    search_path => [ "SyTest::Output" ],
+   search_dirs => \@lib_dirs,
    require     => 1;
 
 use Module::Pluggable
    sub_name    => "homeserver_factories",
    search_path => [ "SyTest::HomeserverFactory" ],
+   search_dirs => \@lib_dirs,
    require     => 1;
-
 
 binmode(STDOUT, ":utf8");
 
