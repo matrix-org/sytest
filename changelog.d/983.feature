@@ -1,1 +1,0 @@
-- Add tests for allowed symbols in user identifiers. Thanks to @bodqhrohro
