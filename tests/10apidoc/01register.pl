@@ -183,6 +183,11 @@ foreach my $chr (split '', '!":?\@[]{|}£é' . "\n'" ) {
 
 foreach my $chr (split '', 'q3._=-/' ) {
    test "POST /register allows registration of usernames with '$chr'",
+      # Note: this test relies on somewhat implementation-specific details,
+      # in that it assumes that the `username` presented to `/register` maps
+      # directly onto an MXID. In reality, a server is free to accept or reject
+      # any `usernames` it wants, provided it maps those it accepts onto
+      # valid MXIDs.
       requires => [ $main::API_CLIENTS[0],
                     qw( can_register_dummy_flow ) ],
 
