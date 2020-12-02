@@ -1017,7 +1017,7 @@ test "Event with an invalid signature in the send_join response should not cause
       my $room_id = $room->room_id;
 
       my $event = $room->create_and_insert_event(
-         sender      => "\@test:$local_server_name",
+         sender      => "$creator_id",
          type        => "test",
          room_id     => $room_id,
          state_key   => "",
@@ -1027,7 +1027,7 @@ test "Event with an invalid signature in the send_join response should not cause
       );
 
       # Modify the event (after the signature was generated) to invalidate the signature.
-      $event->{origin} = "other-server:12345";
+      $event->{state_key} = "something";
 
       my $await_request_send_join;
 
@@ -1089,16 +1089,55 @@ test "Event with an invalid signature in the send_join response should not cause
 
             $body->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
+         })->then(sub {
+            await_sync_timeline_contains( $user, $room_id, check => sub {
+               my ( $event ) = @_;
+                
+               assert_json_keys( $event, qw( type sender ));
+               return unless $event->{type} eq "m.room.member";
+               assert_json_keys( $event->{content}, qw( membership ) );
+               return unless $event->{sender} eq $user->user_id;
 
-            matrix_get_my_member_event( $user, $room_id )
-         })->then( sub {
-            my ( $event ) = @_;
-
-            assert_json_keys( $event->{content}, qw( membership ) );
-
-            Future->done(1);
+               Future->done(1);
+            });
          }),
       )
+   };
+
+test "Membership event with an invalid displayname in the send_join response should not cause room join to fail",
+   requires => [ local_user_fixture(), $main::INBOUND_SERVER,
+                 federation_user_id_fixture(),
+                 federated_room_alias_fixture(),
+               ],
+
+   do => sub {
+      my ( $user, $inbound_server, $creator_id, $room_alias ) = @_;
+
+      my $room = $inbound_server->datastore->create_room(
+         creator => $creator_id,
+         alias   => $room_alias,
+      );
+      my $room_id = $room->room_id;
+
+      # create a dodgy membership event
+      $room->create_and_insert_event(
+         type => "m.room.member",
+
+         content     => { membership => "join", displayname => [], avatar_url => [] },
+         sender      => $creator_id,
+         state_key   => $creator_id,
+      );
+
+
+      # join the room and wait for it to turn up in /sync
+      matrix_do_and_wait_for_sync( $user,
+         do => sub {
+            matrix_join_room( $user, $room_alias )->on_done( sub {
+               my ( $res ) = @_;
+               log_if_fail "Joined room", $res;
+            });
+         }, check => sub { exists $_[0]->{rooms}{join}{$room_id}},
+      );
    };
 
 # A homeserver receiving a `send_join` request for a room version 6 room with

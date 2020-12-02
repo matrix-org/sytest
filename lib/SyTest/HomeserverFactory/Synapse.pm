@@ -38,6 +38,11 @@ sub _init
    $self->SUPER::_init( @_ );
 }
 
+sub implementation_name
+{
+   return "synapse";
+}
+
 sub get_options
 {
    my $self = shift;
@@ -108,7 +113,7 @@ sub get_options
    my $self = shift;
 
    return (
-      'dendron-binary=s'       => \$self->{args}{dendron_binary},
+      'workers'              => sub { $self->{args}{workers} = 1 },
       'torture-replication:50' => \$self->{args}{torture_replication},
       'redis-host=s'           => \$self->{args}{redis_host},
       $self->SUPER::get_options(),
@@ -123,7 +128,7 @@ sub print_usage
 
    print STDERR <<EOF;
 
-       --dendron-binary PATH    - path to the 'dendron' binary
+       --workers    - run with workers
 
        --torture-replication[=LEVEL] - enable torturing of the replication protocol
 

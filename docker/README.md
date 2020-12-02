@@ -80,7 +80,7 @@ volume to the docker command mounting the checkout to the `/sytest` folder in
 the container:
 
 ```
-docker run --rm -it /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs \
+docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs \
     -v /path/to/code/sytest\:/sytest:ro matrixdotorg/sytest-synapse:py35
 ```
 
@@ -97,3 +97,15 @@ docker run --rm -it ... matrixdotorg/sytest-synapse:py37 tests/20profile-events.
 
 The containers are built by executing `./build.sh`. You will then have to push
 them up to Docker Hub with `./push.sh`.
+
+## Loading sytest plugins at start
+
+To utilize sytest plugins and automatically load them on start set the `PLUGINS` environment variable.
+This should be one or more URLs to tar.gz files separated by whitespaces.
+
+The bootstrap script will search for `${SYTEST_TARGET}_sytest.sh` in all plugins. This can be used to
+execute custom scripts like the ones in `/scripts/`
+
+```
+docker run --rm -it -e PLUGINS="https://host/path/to/hs_plugin.tar.gz https://host2/path/to/output_plugin.tar.gz"
+```

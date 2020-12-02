@@ -180,6 +180,37 @@ foreach my $chr (split '', '!":?\@[]{|}£é' . "\n'" ) {
       };
 }
 
+
+foreach my $chr (split '', 'q3._=-/' ) {
+   test "POST /register allows registration of usernames with '$chr'",
+      # Note: this test relies on somewhat implementation-specific details,
+      # in that it assumes that the `username` presented to `/register` maps
+      # directly onto an MXID. In reality, a server is free to accept or reject
+      # any `usernames` it wants, provided it maps those it accepts onto
+      # valid MXIDs.
+      requires => [ $main::API_CLIENTS[0],
+                    qw( can_register_dummy_flow ) ],
+
+      do => sub {
+         my ( $http ) = @_;
+
+         my $reqbody = {
+            auth => {
+               type => "m.login.dummy",
+            },
+            username => 'chrtestuser'.$chr,
+            password => "sUp3rs3kr1t",
+         };
+
+         $http->do_request_json(
+            method => "POST",
+            uri    => "/r0/register",
+
+            content => $reqbody,
+         );
+      };
+}
+
 push our @EXPORT, qw( localpart_fixture );
 
 my $next_anon_uid = 1;
@@ -256,7 +287,7 @@ sub matrix_register_user
    });
 }
 
-shared_secret_tests( "/r0/admin/register", \&matrix_admin_register_user_via_secret);
+shared_secret_tests( "/_synapse/admin/v1/register", \&matrix_admin_register_user_via_secret);
 
 sub matrix_admin_register_user_via_secret
 {
@@ -269,8 +300,8 @@ sub matrix_admin_register_user_via_secret
       croak "Require UID for matrix_register_user_via_secret";
 
    $http->do_request_json(
-      method => "GET",
-      uri    => "/r0/admin/register",
+      method   => "GET",
+      full_uri => "/_synapse/admin/v1/register",
    )->then( sub{
       my ( $nonce ) = @_;
 
@@ -280,8 +311,8 @@ sub matrix_admin_register_user_via_secret
       );
 
       return $http->do_request_json(
-         method => "POST",
-         uri    => "/r0/admin/register",
+         method   => "POST",
+         full_uri => "/_synapse/admin/v1/register",
 
          content => {
            nonce    => $nonce->{nonce},
@@ -318,6 +349,7 @@ sub shared_secret_tests {
 
    test "POST $ep_name with shared secret",
       requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+      implementation_specific => "synapse",
 
       proves => [qw( can_register_with_secret )],
 
@@ -334,6 +366,7 @@ sub shared_secret_tests {
 
    test "POST $ep_name admin with shared secret",
       requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+      implementation_specific => "synapse",
 
       do => sub {
          my ( $http, $uid ) = @_;
@@ -349,6 +382,7 @@ sub shared_secret_tests {
 
    test "POST $ep_name with shared secret downcases capitals",
       requires => [ $main::API_CLIENTS[0], localpart_fixture() ],
+      implementation_specific => "synapse",
 
       proves => [qw( can_register_with_secret )],
 
@@ -365,6 +399,7 @@ sub shared_secret_tests {
 
    test "POST $ep_name with shared secret disallows symbols",
       requires => [ $main::API_CLIENTS[0] ],
+      implementation_specific => "synapse",
 
       proves => [qw( can_register_with_secret )],
 

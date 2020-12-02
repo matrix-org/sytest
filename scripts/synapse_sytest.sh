@@ -165,7 +165,7 @@ RUN_TESTS=(
 )
 
 if [ -n "$WORKERS" ]; then
-    RUN_TESTS+=(-I Synapse::ViaHaproxy --dendron-binary=/pydron.py)
+    RUN_TESTS+=(-I Synapse::ViaHaproxy --workers)
 else
     RUN_TESTS+=(-I Synapse)
 fi
@@ -177,7 +177,13 @@ fi
 mkdir -p /logs
 
 TEST_STATUS=0
-"${RUN_TESTS[@]}" "$@" >/logs/results.tap || TEST_STATUS=$?
+"${RUN_TESTS[@]}" "$@" >/logs/results.tap &
+pid=$!
+
+# make sure that we kill the test runner on SIGTERM, SIGINT, etc
+trap 'kill $pid' TERM INT
+wait $pid || TEST_STATUS=$?
+trap - TERM INT
 
 if [ $TEST_STATUS -ne 0 ]; then
     echo >&2 -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"
