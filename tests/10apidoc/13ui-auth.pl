@@ -1,7 +1,7 @@
 use JSON qw( decode_json );
 use URI::Escape;
 
-our @EXPORT = qw( wait_for_cas_request );
+our @EXPORT = qw( wait_for_cas_request generate_cas_response matrix_login_with_cas );
 
 my $cas_login_fixture = fixture(
    requires => [ $main::API_CLIENTS[0] ],
@@ -30,11 +30,14 @@ sub generate_cas_response
 {
    my ( $user_id ) = @_;
 
-   my ($user_localpart) = $user_id =~ m/@([^:]*):/;
+   if ($user_id =~ /^@/) {
+      ($user_id) = $user_id =~ m/@([^:]*):/;
+   }
+
    my $cas_success = <<"EOF";
 <cas:serviceResponse xmlns:cas='http://www.yale.edu/tp/cas'>
     <cas:authenticationSuccess>
-         <cas:user>$user_localpart</cas:user>
+         <cas:user>$user_id</cas:user>
          <cas:attributes></cas:attributes>
     </cas:authenticationSuccess>
 </cas:serviceResponse>
@@ -72,15 +75,13 @@ sub wait_for_cas_request
 # Log into Synapse via CAS.
 sub matrix_login_with_cas
 {
-   my ( $user_id, $cas_ticket, $http, $homeserver_info, %params ) = @_;
+   my ( $user_id, $cas_ticket, $http, $homeserver_info, $cas_response, %params ) = @_;
 
    # the redirectUrl we send to /login/sso/redirect, which is where we
    # hope to get redirected back to
    my $REDIRECT_URL = "https://client?p=http%3A%2F%2Fserver";
 
    my $HS_URI = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
-
-   my $CAS_SUCCESS = generate_cas_response( $user_id );
 
    # step 1: client sends request to /login/sso/redirect
    # step 2: synapse should redirect to the cas server.
@@ -94,7 +95,7 @@ sub matrix_login_with_cas
          },
       ),
    )->then( sub {
-      my ( $cas_request, $cas_response ) = @_;
+      my ( $cas_request, $_cas_response ) = @_;
       log_if_fail( "Initial CAS request query:",
                    $cas_request->query_string );
 
@@ -119,7 +120,7 @@ sub matrix_login_with_cas
       Future->needs_all(
          wait_for_cas_request(
             "/cas/proxyValidate",
-            response => $CAS_SUCCESS,
+            response => $cas_response,
          ),
          $http->do_request_json(
             method   => "GET",
@@ -212,6 +213,7 @@ test "Interactive authentication types include SSO",
          $CAS_TICKET,
          $http,
          $homeserver_info,
+         generate_cas_response( $user->user_id ),
          device_id => $DEVICE_ID,
          initial_device_display_name => "device display",
       )->then( sub {
@@ -260,6 +262,7 @@ test "Can perform interactive authentication with SSO",
          $CAS_TICKET,
          $http,
          $homeserver_info,
+         generate_cas_response( $user->user_id ),
          device_id => $DEVICE_ID,
          initial_device_display_name => "device display",
       )->then( sub {
@@ -303,10 +306,6 @@ test "The user must be consistent through an interactive authentication session 
 
       my $DEVICE_ID = "login_device";
 
-      # The user below is what is returned from SSO and does not match the user
-      # being logged into the homeserver.
-      my $CAS_SUCCESS = generate_cas_response( '@cas_user' . $http->server_name );
-
       # the ticket our mocked-up CAS server "generates"
       my $CAS_TICKET = "goldenticket";
       my $session;
@@ -317,6 +316,7 @@ test "The user must be consistent through an interactive authentication session 
          $CAS_TICKET,
          $http,
          $homeserver_info,
+         generate_cas_response( $user->user_id ),
          device_id => $DEVICE_ID,
          initial_device_display_name => "device display",
       )->then( sub {
@@ -333,7 +333,15 @@ test "The user must be consistent through an interactive authentication session 
 
          $session = $body->{session};
 
-         make_ticket_request( $http, $homeserver_info, $session, $CAS_TICKET, $CAS_SUCCESS );
+         make_ticket_request(
+            $http,
+            $homeserver_info,
+            $session,
+            $CAS_TICKET,
+            # The user below is what is returned from SSO and does not match the user
+            # which logged into the homeserver.
+            generate_cas_response( "cas_user" ),
+         );
       })->then( sub {
          # Repeat the device deletion, which should now give an auth error.
          matrix_delete_device( $user, $DEVICE_ID, {
