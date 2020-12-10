@@ -382,8 +382,12 @@ multi_test "Shutdown room",
       })->then( sub {
          do_request_json_for( $admin,
             method   => "POST",
-            full_uri => "/_synapse/admin/v1/shutdown_room/$room_id",
-            content  => { "new_room_user_id" => $dummy_user->user_id },
+            full_uri => "/_synapse/admin/v1/rooms/$room_id/delete",
+            content  => {
+               new_room_user_id => $dummy_user->user_id,
+               block => JSON::true,
+               purge => JSON::false,
+            },
          );
       })->SyTest::pass_on_done( "Shutdown room returned success" )
       ->then( sub {
