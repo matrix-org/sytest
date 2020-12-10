@@ -25,33 +25,9 @@ test "login types include SSO",
    };
 
 
-my $cas_login_fixture = fixture(
-   requires => [ $main::API_CLIENTS[0] ],
-
-   setup => sub {
-      my ( $http ) = @_;
-
-      $http->do_request_json(
-         method => "GET",
-         uri => "/r0/login",
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( flows ));
-         assert_json_list $body->{flows};
-
-         die "SKIP: no m.login.cas" unless
-            any { $_->{type} eq "m.login.cas" } @{ $body->{flows} };
-
-         Future->done( 1 );
-      });
-   },
-);
-
-
 test "/login/cas/redirect redirects if the old m.login.cas login type is listed",
    requires => [
-      $main::TEST_SERVER_INFO, $main::API_CLIENTS[0], $cas_login_fixture,
+      $main::TEST_SERVER_INFO, $main::API_CLIENTS[0], cas_login_fixture(),
    ],
 
    do => sub {
@@ -85,13 +61,9 @@ test "Can login with new user via CAS",
    do => sub {
       my ( $http, $homeserver_info ) = @_;
 
-      # the ticket our mocked-up CAS server "generates"
-      my $CAS_TICKET = "goldenticket";
-
       # Ensure the base login works without issue.
       matrix_login_with_cas(
          '@cas_user=21:' . $http->server_name,
-         $CAS_TICKET,
          $http,
          $homeserver_info,
          $CAS_SUCCESS,

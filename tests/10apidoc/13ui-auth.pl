@@ -1,31 +1,41 @@
 use JSON qw( decode_json );
 use URI::Escape;
 
-our @EXPORT = qw( wait_for_cas_request generate_cas_response matrix_login_with_cas );
+our @EXPORT = qw( wait_for_cas_request generate_cas_response matrix_login_with_cas cas_login_fixture );
 
-my $cas_login_fixture = fixture(
-   requires => [ $main::API_CLIENTS[0] ],
+# A fixture to ensure that CAS is enabled before attempting to run tests against
+# a homeserver.
+sub cas_login_fixture {
+   fixture(
+      requires => [ $main::API_CLIENTS[0] ],
 
-   setup => sub {
-      my ( $http ) = @_;
+      setup    => sub {
+         my ($http) = @_;
 
-      $http->do_request_json(
-         method => "GET",
-         uri => "/r0/login",
-      )->then( sub {
-         my ( $body ) = @_;
+         $http->do_request_json(
+            method => "GET",
+            uri    => "/r0/login",
+         )->then(sub {
+            my ($body) = @_;
 
-         assert_json_keys( $body, qw( flows ));
-         assert_json_list $body->{flows};
+            assert_json_keys($body, qw(flows));
+            assert_json_list $body->{flows};
 
-         die "SKIP: no m.login.cas" unless
-            any { $_->{type} eq "m.login.cas" } @{ $body->{flows} };
+            die "SKIP: no m.login.cas" unless
+               any {$_->{type} eq "m.login.cas"} @{$body->{flows}};
 
-         Future->done( 1 );
-      });
-   },
-);
+            Future->done(1);
+         });
+      },
+   );
+}
 
+# Generates the XML response that the CAS server would generate in response to
+# a query from the homeserver.
+#
+# It takes a single parameter:
+# * The user ID, this can be a Matrix ID (in which case it is stripped to just
+#   the localpart) or a plain string to insert into the XML.
 sub generate_cas_response
 {
    my ( $user_id ) = @_;
@@ -73,15 +83,26 @@ sub wait_for_cas_request
 }
 
 # Log into Synapse via CAS.
+#
+# This takes the following parameters:
+#  * The Matrix user ID to log in with.
+#  * The CAS ticket to use. This can be any string.
+#  * The HTTP object.
+#  * The Homeserver Info object.
+#  * The XML CAS response. See generate_cas_response.
+#  * Any additional parameters will be passed as part of the login request.
 sub matrix_login_with_cas
 {
-   my ( $user_id, $cas_ticket, $http, $homeserver_info, $cas_response, %params ) = @_;
+   my ( $user_id, $http, $homeserver_info, $cas_response, %params ) = @_;
 
    # the redirectUrl we send to /login/sso/redirect, which is where we
    # hope to get redirected back to
    my $REDIRECT_URL = "https://client?p=http%3A%2F%2Fserver";
 
    my $HS_URI = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
+
+   # the ticket our mocked-up CAS server "generates"
+   my $CAS_TICKET = "goldenticket";
 
    # step 1: client sends request to /login/sso/redirect
    # step 2: synapse should redirect to the cas server.
@@ -111,7 +132,7 @@ sub matrix_login_with_cas
       #
       # The URI that CAS redirects back to is the value of the 'service'
       # param we gave it, with an additional "ticket" query-param:
-      my $login_uri = $service . "&ticket=$cas_ticket";
+      my $login_uri = $service . "&ticket=$CAS_TICKET";
 
       # step 5: synapse receives ticket number from client, and makes a
       # request to CAS to validate the ticket.
@@ -134,7 +155,7 @@ sub matrix_login_with_cas
       assert_eq( $cas_validate_request->method, "GET",
                  "/cas/proxyValidate request method" );
       assert_eq( $cas_validate_request->query_param( "ticket" ),
-                 $cas_ticket,
+                 $CAS_TICKET,
                  "Ticket supplied to /cas/proxyValidate" );
       assert_eq( $cas_validate_request->query_param( "service" ),
                  $HS_URI,
@@ -179,12 +200,14 @@ sub matrix_login_with_cas
 # Waits for the validation request from the homeserver, and returns the given response.
 sub make_ticket_request
 {
-   my ( $http, $homeserver_info, $session, $ticket, $response ) = @_;
+   my ( $http, $homeserver_info, $session, $response ) = @_;
+
+   my $CAS_TICKET = "goldenticket";
 
    # Note that we skip almost all of the CAS flow since it isn't important
    # for this test. The user just needs to end up back at the homeserver
    # with a valid ticket (and the original UI Auth session ID).
-   my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?session=$session&ticket=$ticket";
+   my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?session=$session&ticket=$CAS_TICKET";
 
    Future->needs_all(
       wait_for_cas_request(
@@ -200,17 +223,15 @@ sub make_ticket_request
 }
 
 test "Interactive authentication types include SSO",
-   requires => [ local_user_fixture(), $main::API_CLIENTS[0], $main::HOMESERVER_INFO[0], $cas_login_fixture, ],
+   requires => [ local_user_fixture(), $main::API_CLIENTS[0], $main::HOMESERVER_INFO[0], cas_login_fixture(), ],
 
    do => sub {
       my ( $user, $http, $homeserver_info ) = @_;
 
       my $DEVICE_ID = "login_device";
-      my $CAS_TICKET = "goldenticket";
 
       matrix_login_with_cas(
          $user->user_id,
-         $CAS_TICKET,
          $http,
          $homeserver_info,
          generate_cas_response( $user->user_id ),
@@ -242,7 +263,7 @@ test "Can perform interactive authentication with SSO",
       local_user_fixture(),
       $main::API_CLIENTS[0],
       $main::HOMESERVER_INFO[0],
-      $cas_login_fixture,
+      cas_login_fixture(),
    ],
 
    do => sub {
@@ -252,14 +273,11 @@ test "Can perform interactive authentication with SSO",
 
       my $CAS_SUCCESS = generate_cas_response( $user->user_id );
 
-      # the ticket our mocked-up CAS server "generates"
-      my $CAS_TICKET = "goldenticket";
       my $session;
 
       # Create a device.
       matrix_login_with_cas(
          $user->user_id,
-         $CAS_TICKET,
          $http,
          $homeserver_info,
          generate_cas_response( $user->user_id ),
@@ -279,7 +297,7 @@ test "Can perform interactive authentication with SSO",
 
          $session = $body->{session};
 
-         make_ticket_request( $http, $homeserver_info, $session, $CAS_TICKET, $CAS_SUCCESS );
+         make_ticket_request( $http, $homeserver_info, $session, $CAS_SUCCESS );
       })->then( sub {
          # Repeat the device deletion, which should now complete.
          matrix_delete_device( $user, $DEVICE_ID, {
@@ -298,7 +316,7 @@ test "The user must be consistent through an interactive authentication session 
       local_user_fixture(),
       $main::API_CLIENTS[0],
       $main::HOMESERVER_INFO[0],
-      $cas_login_fixture,
+      cas_login_fixture(),
    ],
 
    do => sub {
@@ -306,14 +324,11 @@ test "The user must be consistent through an interactive authentication session 
 
       my $DEVICE_ID = "login_device";
 
-      # the ticket our mocked-up CAS server "generates"
-      my $CAS_TICKET = "goldenticket";
       my $session;
 
       # Create a device.
       matrix_login_with_cas(
          $user->user_id,
-         $CAS_TICKET,
          $http,
          $homeserver_info,
          generate_cas_response( $user->user_id ),
@@ -337,7 +352,6 @@ test "The user must be consistent through an interactive authentication session 
             $http,
             $homeserver_info,
             $session,
-            $CAS_TICKET,
             # The user below is what is returned from SSO and does not match the user
             # which logged into the homeserver.
             generate_cas_response( "cas_user" ),
