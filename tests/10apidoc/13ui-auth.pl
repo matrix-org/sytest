@@ -117,8 +117,7 @@ sub matrix_login_with_cas
       ),
    )->then( sub {
       my ( $cas_request, $_cas_response ) = @_;
-      log_if_fail( "Initial CAS request query:",
-                   $cas_request->query_string );
+      log_if_fail "Initial CAS request query:", $cas_request->query_string;
 
       assert_eq( $cas_request->method, "GET", "CAS request method" );
 
@@ -132,7 +131,7 @@ sub matrix_login_with_cas
       #
       # The URI that CAS redirects back to is the value of the 'service'
       # param we gave it, with an additional "ticket" query-param:
-      my $login_uri = $service . "&ticket=$CAS_TICKET";
+      my $login_uri = "$service&ticket=$CAS_TICKET";;
 
       # step 5: synapse receives ticket number from client, and makes a
       # request to CAS to validate the ticket.
@@ -165,8 +164,8 @@ sub matrix_login_with_cas
                  "Login token provided in the /ticket response" );
       my $login_token = $1;
 
-      log_if_fail( "Ticket response:", $ticket_response );
-      log_if_fail( "Login token:", $login_token );
+      log_if_fail "Ticket response:", $ticket_response;
+      log_if_fail "Login token:", $login_token;
 
       # step 7: the client uses the loginToken via the /login API.
       $http->do_request_json(
@@ -182,7 +181,7 @@ sub matrix_login_with_cas
    })->then( sub {
       my ( $body ) = @_;
 
-      log_if_fail( "Response from /login", $body );
+      log_if_fail "Response from /login", $body;
 
       assert_json_keys( $body, qw( access_token home_server user_id device_id ));
 
