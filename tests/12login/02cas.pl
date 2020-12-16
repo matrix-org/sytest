@@ -1,13 +1,6 @@
 use URI::Escape;
 
-my $CAS_SUCCESS = <<'EOF';
-<cas:serviceResponse xmlns:cas='http://www.yale.edu/tp/cas'>
-    <cas:authenticationSuccess>
-         <cas:user>cas_user!</cas:user>
-         <cas:attributes></cas:attributes>
-    </cas:authenticationSuccess>
-</cas:serviceResponse>
-EOF
+my $CAS_SUCCESS = generate_cas_response( 'cas_user!' );
 
 test "login types include SSO",
    requires => [ $main::API_CLIENTS[0] ],
@@ -32,33 +25,9 @@ test "login types include SSO",
    };
 
 
-my $cas_login_fixture = fixture(
-   requires => [ $main::API_CLIENTS[0] ],
-
-   setup => sub {
-      my ( $http ) = @_;
-
-      $http->do_request_json(
-         method => "GET",
-         uri => "/r0/login",
-      )->then( sub {
-         my ( $body ) = @_;
-
-         assert_json_keys( $body, qw( flows ));
-         assert_json_list $body->{flows};
-
-         die "SKIP: no m.login.cas" unless
-            any { $_->{type} eq "m.login.cas" } @{ $body->{flows} };
-
-         Future->done( 1 );
-      });
-   },
-);
-
-
 test "/login/cas/redirect redirects if the old m.login.cas login type is listed",
    requires => [
-      $main::TEST_SERVER_INFO, $main::API_CLIENTS[0], $cas_login_fixture,
+      $main::TEST_SERVER_INFO, $main::API_CLIENTS[0], cas_login_fixture(),
    ],
 
    do => sub {
@@ -92,102 +61,11 @@ test "Can login with new user via CAS",
    do => sub {
       my ( $http, $homeserver_info ) = @_;
 
-      # the redirectUrl we send to /login/cas/redirect, which is where we
-      # hope to get redirected back to
-      my $REDIRECT_URL = "https://client?p=http%3A%2F%2Fserver";
-
-      my $HS_URI = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
-
-      # the ticket our mocked-up CAS server "generates"
-      my $CAS_TICKET = "goldenticket";
-
-      # step 1: client sends request to /login/sso/redirect
-      # step 2: synapse should redirect to the cas server.
-      Future->needs_all(
-         wait_for_cas_request( "/cas/login" ),
-         $http->do_request(
-            method => "GET",
-            uri    => "/r0/login/sso/redirect",
-            params => {
-               redirectUrl => $REDIRECT_URL,
-            },
-         ),
-      )->then( sub {
-         my ( $cas_request, $cas_response ) = @_;
-         log_if_fail( "Initial CAS request query:",
-                      $cas_request->query_string );
-
-         assert_eq( $cas_request->method, "GET", "CAS request method" );
-
-         my $service = $cas_request->query_param( "service" );
-
-         # step 3: client sends credentials to CAS server
-         # step 4: CAS redirects, with a ticket number, back to synapse.
-         #
-         # For this test, we skip this bit, as it's nothing to do with synapse,
-         # really.
-         #
-         # The URI that CAS redirects back to is the value of the 'service'
-         # param we gave it, with an additional "ticket" query-param:
-         my $login_uri = $service . "&ticket=$CAS_TICKET";
-
-         # step 5: synapse receives ticket number from client, and makes a
-         # request to CAS to validate the ticket.
-         # step 6: synapse sends a redirect back to the browser, with a
-         # 'loginToken' parameter
-         Future->needs_all(
-            wait_for_cas_request(
-               "/cas/proxyValidate",
-               response => $CAS_SUCCESS,
-            ),
-            $http->do_request_json(
-               method   => "GET",
-               full_uri => $login_uri,
-               max_redirects => 0, # don't follow the redirect
-            ),
-         );
-      })->then( sub {
-         my ( $cas_validate_request, $ticket_response ) = @_;
-
-         assert_eq( $cas_validate_request->method, "GET",
-                    "/cas/proxyValidate request method" );
-         assert_eq( $cas_validate_request->query_param( "ticket" ),
-                    $CAS_TICKET,
-                    "Ticket supplied to /cas/proxyValidate" );
-         assert_eq( $cas_validate_request->query_param( "service" ),
-                    $HS_URI,
-                    "Service supplied to /cas/proxyValidate" );
-
-         assert_ok( $ticket_response =~ "loginToken=([^\"&]+)",
-                    "Login token provided in the /ticket response" );
-         my $login_token = $1;
-
-         log_if_fail( "Ticket response:", $ticket_response );
-         log_if_fail( "Login token:", $login_token );
-
-         # step 7: the client uses the loginToken via the /login API.
-         $http->do_request_json(
-            method => "POST",
-            uri    => "/r0/login",
-
-            content => {
-               type     => "m.login.token",
-               token    => $login_token,
-            }
-         );
-      })->then( sub {
-         my ( $body ) = @_;
-
-         log_if_fail( "Response from /login", $body );
-
-         assert_json_keys( $body, qw( access_token home_server user_id device_id ));
-
-         assert_eq( $body->{home_server}, $http->server_name,
-                    'home_server in /login response' );
-         assert_eq( $body->{user_id},
-                    '@cas_user=21:' . $http->server_name,
-                    'user_id in /login response' );
-
-         Future->done(1);
-      });
+      # Ensure the base login works without issue.
+      matrix_login_with_cas(
+         '@cas_user=21:' . $http->server_name,
+         $http,
+         $homeserver_info,
+         $CAS_SUCCESS,
+      );
    };
