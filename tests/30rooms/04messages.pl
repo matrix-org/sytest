@@ -108,7 +108,7 @@ test "Local non-members don't see posted message events",
 
             return unless $event->{type} eq "m.room.message";
 
-            assert_json_keys( $event, qw( type content user_id ));
+            assert_json_keys( $event, qw( type content sender ));
 
             die "Nonmember received event about a room they're not a member of";
          }),

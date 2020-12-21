@@ -59,10 +59,10 @@ test "Guest users can send messages to guest_access rooms if joined",
 
                my ( $event ) = @$chunk;
 
-               assert_json_keys( $event, qw( type room_id user_id content ));
+               assert_json_keys( $event, qw( type room_id sender content ));
 
-               $event->{user_id} eq $guest_user->user_id or
-                  die "expected user_id to be ".$guest_user->user_id;
+               $event->{sender} eq $guest_user->user_id or
+                  die "expected sender to be ".$guest_user->user_id;
 
                $event->{content}->{body} eq "sup" or
                   die "content to be sup";
