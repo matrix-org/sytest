@@ -121,7 +121,7 @@ our @HOMESERVER_INFO = map {
          Future->wait_any(
             $server->start,
 
-            $loop->delay_future( after => 60 )
+            $loop->delay_future( after => 60 * $TIMEOUT_FACTOR )
                ->then_fail( "Timeout waiting for HS to start" ),
          )->then( sub {
             $OUTPUT->diag( "Started server-$idx" );

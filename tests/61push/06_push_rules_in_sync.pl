@@ -20,7 +20,7 @@ sub check_woken_up_by_push_rules {
    matrix_sync( $user )->then( sub {
       Future->needs_all(
          matrix_sync_again( $user,
-            timeout => 10000,
+            timeout => 10000 * $TIMEOUT_FACTOR,
             filter => '{"room":{"rooms":[]},"presence":{"types":[]}}',
          )->then( \&check_for_push_rules ),
          $action->(),

@@ -85,7 +85,7 @@ sub GET_new_events_for
    return $user->pending_get_events //=
       matrix_get_events( $user,
          from    => $user->eventstream_token,
-         timeout => 500,
+         timeout => 500 * $TIMEOUT_FACTOR,
          %params,
       )->on_ready( sub {
          undef $user->pending_get_events;
@@ -200,7 +200,7 @@ sub await_event_for
    return Future->wait_any(
       $f,
 
-      delay( 10 )
+      delay( 10 * $TIMEOUT_FACTOR )
          ->then_fail( $failmsg ),
    );
 }

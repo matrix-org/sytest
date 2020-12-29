@@ -44,7 +44,7 @@ test "Typing notification sent to local room members",
 
       matrix_typing( $typinguser, $room_id,
          typing => JSON::true,
-         timeout => 30000, # msec
+         timeout => 30000 * $TIMEOUT_FACTOR, # msec
       )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;

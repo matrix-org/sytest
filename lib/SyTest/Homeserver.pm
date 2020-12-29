@@ -497,7 +497,7 @@ sub await_connectable
    my $loop = $self->loop;
 
    my $attempts = 25;
-   my $delay    = 0.05;
+   my $delay    = 0.05 * $main::TIMEOUT_FACTOR;
 
    my $output = $self->{output};
 

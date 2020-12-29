@@ -47,7 +47,7 @@ sub matrix_do_and_wait_for_sync
 
    my $check = delete $params{check} or die "Must supply a 'check' param";
    my $do = delete $params{do} or die "Must supply a 'do' param";
-   $params{timeout} = $params{timeout} // 1000;
+   $params{timeout} = ($params{timeout} // 1000) * $TIMEOUT_FACTOR;
 
    my $next_batch;
 
@@ -139,7 +139,7 @@ sub await_sync {
    my ( $user, %params ) = @_;
 
    my $check = delete $params{check} or die "Must supply a 'check' param";
-   $params{timeout} = $params{timeout} // 1000;
+   $params{timeout} = ($params{timeout} // 1000) * $TIMEOUT_FACTOR;
 
    my $next_batch = delete $params{since} // $user->sync_next_batch;
    if ( $next_batch ) {

@@ -78,6 +78,10 @@ our $INCLUDE_DEPRECATED_ENDPOINTS = 1;
 # where we put working files (server configs, mostly)
 our $WORK_DIR = ".";
 
+# all timeouts in tests should be multiplied by this
+our $TIMEOUT_FACTOR = $ENV{'TIMEOUT_FACTOR'} // 1;
+$TIMEOUT_FACTOR > 0 or die "Invalid timeout factor";
+
 Getopt::Long::Configure('pass_through');
 GetOptions(
    'I|server-implementation=s' => \$SERVER_IMPL,
@@ -424,7 +428,7 @@ sub retry_until_success(&)
 {
    my ( $code ) = @_;
 
-   my $delay = 0.1;
+   my $delay = 0.1 * $TIMEOUT_FACTOR;
    my $iter = 0;
 
    try_repeat {
@@ -446,7 +450,7 @@ sub repeat_until_true(&)
 {
    my ( $code ) = @_;
 
-   my $delay = 0.1;
+   my $delay = 0.1 * $TIMEOUT_FACTOR;
 
    repeat {
       my $prev_f = shift;
@@ -764,14 +768,14 @@ sub _run_test0
 
       Future->wait_any(
          $f_setup,
-         $loop->delay_future( after => 60 )
+         $loop->delay_future( after => 60 * $TIMEOUT_FACTOR )
             ->then_fail( "Timed out waiting for setup" )
       )->get;
 
       Future->wait_any(
          $f_test,
 
-         $loop->delay_future( after => $test->timeout // 10 )
+         $loop->delay_future( after => ($test->timeout // 10) * $TIMEOUT_FACTOR )
             ->then_fail( "Timed out waiting for test" )
       )->get;
 

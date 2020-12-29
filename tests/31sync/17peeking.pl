@@ -177,7 +177,7 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
          assert_ok( $room->{timeline}->{events}->[-1]->{content}->{body} eq 'something to peek', "peek has message body" );
       })->then(sub {
          # FIXME: racey - this may return blank due to the peek not having taken effect yet
-         matrix_sync( $peeking_user_device2, timeout => 1000 );
+         matrix_sync( $peeking_user_device2, timeout => 1000 * $TIMEOUT_FACTOR );
       })->then( sub {
          my ( $body ) = @_;
          log_if_fail "device 2 first sync response", $body;
@@ -200,7 +200,7 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
          my $room = $body->{rooms}{peek}{$room_id};
          assert_ok( $room->{timeline}->{events}->[-1]->{content}->{body} eq 'something else to peek', "second peek has message body" );
          # FIXME: racey - this may return blank due to the peek not having taken effect yet
-         matrix_sync_again( $peeking_user_device2, timeout => 1000 );
+         matrix_sync_again( $peeking_user_device2, timeout => 1000 * $TIMEOUT_FACTOR );
       })->then( sub {
          my ( $body ) = @_;
          log_if_fail "device 2 second sync response", $body;

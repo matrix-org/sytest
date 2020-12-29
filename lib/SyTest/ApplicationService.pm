@@ -142,7 +142,7 @@ sub await_event
    return Future->wait_any(
       $f,
 
-      main::delay( 10 )
+      main::delay( 10 * $main::TIMEOUT_FACTOR )
          ->then_fail( $failmsg ),
    );
 }

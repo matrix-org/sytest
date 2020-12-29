@@ -16,7 +16,7 @@ multi_test "Typing notifications don't leak",
             method => "PUT",
             uri    => "/r0/rooms/$room_id/typing/:user_id",
 
-            content => { typing => JSON::true, timeout => 30000 }, # msec
+            content => { typing => JSON::true, timeout => 30000 * $TIMEOUT_FACTOR }, # msec
          );
       })->then( sub {
          Future->needs_all( map {
@@ -35,7 +35,7 @@ multi_test "Typing notifications don't leak",
 
          # Wait on a different user to see if we get a typing notification
          Future->wait_any(
-            delay( 2 ),
+            delay( 2 * $TIMEOUT_FACTOR ),
 
             await_sync_ephemeral_contains($nonmember, $room_id,
                check => sub {

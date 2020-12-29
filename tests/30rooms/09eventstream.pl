@@ -71,7 +71,7 @@ test "Event stream catches up fully after many messages",
          try_repeat( sub {
             matrix_get_events( $user,
                from    => $user->eventstream_token,
-               timeout => 500,
+               timeout => 500 * $TIMEOUT_FACTOR,
                limit   => 5,
             )->on_done( sub {
                my ( $body ) = @_;

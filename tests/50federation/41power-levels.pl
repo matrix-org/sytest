@@ -118,7 +118,7 @@ test "Remote servers should reject attempts by non-creators to set the power lev
       })->then( sub {
          # check that synapse still doesn't have a PL event. Annoyingly we need
          # to give it a few seconds to turn up.
-         delay( 5 )
+         delay( 5 * $TIMEOUT_FACTOR )
       })->then( sub {
          matrix_get_room_state_by_type( $synapse_user, $room_id );
       })->then( sub {

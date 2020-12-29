@@ -145,8 +145,8 @@ test "Wildcard device messages wake up /sync",
          set_presence => "offline",
       )->then( sub {
          Future->needs_all(
-            matrix_sync_again( $user, filter => $FILTER_ONLY_DIRECT, timeout => 10000 ),
-            delay(0.1)->then( sub {
+            matrix_sync_again( $user, filter => $FILTER_ONLY_DIRECT, timeout => 10000 * $TIMEOUT_FACTOR ),
+            delay(0.1 * $TIMEOUT_FACTOR)->then( sub {
                matrix_send_device_message( $user,
                   type     => "my.test.type",
                   messages => {
@@ -174,8 +174,8 @@ test "Wildcard device messages over federation wake up /sync",
          set_presence => "offline",
       )->then( sub {
          Future->needs_all(
-            matrix_sync_again( $local_user, filter => $FILTER_ONLY_DIRECT, timeout => 10000 ),
-            delay(0.1)->then( sub {
+            matrix_sync_again( $local_user, filter => $FILTER_ONLY_DIRECT, timeout => 10000 * $TIMEOUT_FACTOR ),
+            delay(0.1 * $TIMEOUT_FACTOR)->then( sub {
                matrix_send_device_message( $remote_user,
                   type     => "my.test.type",
                   messages => {

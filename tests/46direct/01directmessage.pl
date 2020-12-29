@@ -51,7 +51,7 @@ sub matrix_recv_device_message
 
    my $f = repeat {
       delay( $delay )->then( sub {
-         $delay = 0.1 + $delay * 1.5;
+         $delay = 0.1 + $delay * 1.5 * $TIMEOUT_FACTOR;
 
          my @params = (
             filter            => $FILTER_ONLY_DIRECT,
