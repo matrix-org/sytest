@@ -38,6 +38,14 @@ sub new
 
 sub _init {}
 
+# Returns the generic simple name of the implementation, e.g. "synapse",
+# "dendrite" etc. This is used when determining whether to run any
+# implementation-specific tests.
+sub implementation_name
+{
+    return "";
+}
+
 # returns a list of (name => action) pairs suitable for
 # inclusion in the GetOptions argument list
 sub get_options
