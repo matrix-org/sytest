@@ -14,6 +14,8 @@ sub matrix_typing
 {
    my ( $user, $room_id, %params ) = @_;
 
+   $params{timeout} *= $TIMEOUT_FACTOR if defined $params{timeout};
+
    do_request_json_for( $user,
       method => "PUT",
       uri    => "/r0/rooms/$room_id/typing/:user_id",
@@ -44,7 +46,7 @@ test "Typing notification sent to local room members",
 
       matrix_typing( $typinguser, $room_id,
          typing => JSON::true,
-         timeout => 30000 * $TIMEOUT_FACTOR, # msec
+         timeout => 30000, # msec
       )->then( sub {
          Future->needs_all( map {
             my $recvuser = $_;

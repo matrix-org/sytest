@@ -81,7 +81,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             Future->wait_any(
                $f,
 
-               delay( 2 * $TIMEOUT_FACTOR )
+               delay( 2 )
                   ->then_fail( "Timed out waiting for ${\$user->user_id} to receive all presence" )
             );
          } $alice, $bob )

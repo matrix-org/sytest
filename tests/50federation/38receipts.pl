@@ -19,7 +19,7 @@ test "Outbound federation sends receipts",
          log_if_fail "Joined room $room_id";
 
          # workaround for https://github.com/matrix-org/synapse/issues/6536
-         delay( 0.5 * $TIMEOUT_FACTOR );
+         delay( 0.5 );
       })->then( sub {
          # send a message from the federated user
 

@@ -7,7 +7,7 @@ use URI::Escape qw( uri_escape );
 sub await_purge_complete {
    my ( $admin_user, $purge_id ) = @_;
 
-   my $delay = 0.1 * $TIMEOUT_FACTOR;
+   my $delay = 0.1;
 
    return repeat( sub {
       my ( $prev_trial ) = @_;
@@ -174,7 +174,7 @@ test "/purge_history by ts",
          }, foreach => [ 1 .. 9 ])
       })->then( sub {
          $last_event_ts = time();
-         delay(0.01 * $TIMEOUT_FACTOR);
+         delay(0.01);
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id,
             body => "Message 10",
@@ -442,7 +442,7 @@ sub await_message_in_room
    my $user_id = $user->user_id;
 
    repeat( sub {
-      matrix_sync_again( $user, timeout => 500 * $TIMEOUT_FACTOR )
+      matrix_sync_again( $user, timeout => 500 )
       ->then( sub {
          my ( $body ) = @_;
 

@@ -174,7 +174,7 @@ test "Ephemeral messages received from servers are correctly expired",
          })
       })->then( sub {
          # wait for the message to expire
-         delay( 1.5 * $TIMEOUT_FACTOR )
+         delay( 1.5 )
       })->then( sub {
          my $iter = 0;
          retry_until_success {

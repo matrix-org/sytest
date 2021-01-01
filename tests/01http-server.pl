@@ -79,7 +79,7 @@ our $TEST_SERVER_INFO = fixture(
             Future->wait_any(
                await_http_request( "/http_server_self_test", sub {1} ),
 
-               delay( 10 * $TIMEOUT_FACTOR )
+               delay( 10 )
                   ->then_fail( "Timed out waiting for request" ),
             )->then( sub {
                my ( $request ) = @_;
@@ -104,7 +104,7 @@ our $TEST_SERVER_INFO = fixture(
             Future->wait_any(
                await_http_request( "/http_server_self_test", sub {1} ),
 
-               delay( 10 * $TIMEOUT_FACTOR )
+               delay( 10 )
                   ->then_fail( "Timed out waiting for request" ),
             )->then( sub {
                my ( $request ) = @_;
@@ -207,7 +207,7 @@ sub await_http_request
 
    push @pending_awaiters, Awaiter( $pathmatch, $filter, $f );
 
-   my $timeout = ($args{timeout} // 10) * $TIMEOUT_FACTOR;
+   my $timeout = $args{timeout} // 10;
 
    return $f if !$timeout;
 

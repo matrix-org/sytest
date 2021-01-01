@@ -419,7 +419,7 @@ sub alloc_port
 sub delay
 {
    my ( $secs ) = @_;
-   $loop->delay_future( after => $secs );
+   $loop->delay_future( after => $secs * $TIMEOUT_FACTOR );
 }
 
 # Handy utility wrapper around Future::Utils::try_repeat_until_success which
@@ -428,7 +428,7 @@ sub retry_until_success(&)
 {
    my ( $code ) = @_;
 
-   my $delay = 0.1 * $TIMEOUT_FACTOR;
+   my $delay = 0.1;
    my $iter = 0;
 
    try_repeat {
@@ -450,7 +450,7 @@ sub repeat_until_true(&)
 {
    my ( $code ) = @_;
 
-   my $delay = 0.1 * $TIMEOUT_FACTOR;
+   my $delay = 0.1;
 
    repeat {
       my $prev_f = shift;

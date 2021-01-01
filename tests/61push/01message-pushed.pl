@@ -293,7 +293,7 @@ sub wait_for_pusher_to_work
    # a future which will send messages until failure or cancelled
    my $send_future = repeat {
       matrix_send_room_text_message( $sending_user, $room_id, body => "Message" ) ->
-         then( sub { return delay( 0.2 * $TIMEOUT_FACTOR ); });
+         then( sub { return delay( 0.2 ); });
    } while => sub {
       my ( $trial_f ) = @_;
       return $trial_f->result;

@@ -30,7 +30,7 @@ sub sync_until_user_in_device_list
    log_if_fail "$msg: waiting for $wait_for_id in $device_list";
 
    return repeat_until_true {
-      matrix_sync_again( $syncing_user, timeout => 1000 * $TIMEOUT_FACTOR )
+      matrix_sync_again( $syncing_user, timeout => 1000 )
       ->then( sub {
          my ( $body ) = @_;
 
@@ -104,7 +104,7 @@ test "Local new device changes appear in v2 /sync",
          matrix_login_again_with_user( $user2 )
       })->then( sub {
          repeat_until_true {
-            matrix_sync_again( $user1, timeout => 1000 * $TIMEOUT_FACTOR )
+            matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
 
@@ -321,7 +321,7 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
          matrix_join_room( $remote_leaver, $room_id );
       })->then( sub {
          repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 * $TIMEOUT_FACTOR )
+            matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
 
@@ -409,7 +409,7 @@ test "If remote user leaves room we no longer receive device updates",
 
          my $wait_for_id = $remote2->user_id;
          repeat_until_true {
-            matrix_sync_again( $creator, timeout => 1000 * $TIMEOUT_FACTOR )
+            matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                 my ( $body ) = @_;
 

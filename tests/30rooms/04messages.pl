@@ -114,7 +114,7 @@ test "Local non-members don't see posted message events",
          }),
 
          # So as not to wait too long, give it 500msec to not arrive
-         delay( 0.5 * $TIMEOUT_FACTOR )->then_done(1),
+         delay( 0.5 )->then_done(1),
       );
    };
 
@@ -382,7 +382,7 @@ test "Ephemeral messages received from clients are correctly expired",
          })
       })->then( sub {
          # wait for the message to expire
-         delay( 1.5 * $TIMEOUT_FACTOR )
+         delay( 1.5 )
       })->then( sub {
          my $iter = 0;
          retry_until_success {

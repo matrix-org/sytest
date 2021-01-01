@@ -97,7 +97,7 @@ sub _on_mail {
 
 sub await_email_to {
    my ( $rcpt, %args ) = @_;
-   my $timeout = ($args{timeout} // 10) * $TIMEOUT_FACTOR;
+   my $timeout = $args{timeout} // 10;
 
    my $f = $loop->new_future;
    my $awaiter = MailAwaiter( $f, $rcpt );

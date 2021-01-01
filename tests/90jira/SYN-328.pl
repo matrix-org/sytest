@@ -35,7 +35,7 @@ multi_test "Typing notifications don't leak",
 
          # Wait on a different user to see if we get a typing notification
          Future->wait_any(
-            delay( 2 * $TIMEOUT_FACTOR ),
+            delay( 2 ),
 
             await_sync_ephemeral_contains($nonmember, $room_id,
                check => sub {

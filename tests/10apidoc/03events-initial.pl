@@ -85,7 +85,7 @@ sub GET_new_events_for
    return $user->pending_get_events //=
       matrix_get_events( $user,
          from    => $user->eventstream_token,
-         timeout => 500 * $TIMEOUT_FACTOR,
+         timeout => 500,
          %params,
       )->on_ready( sub {
          undef $user->pending_get_events;
@@ -126,6 +126,8 @@ Try matrix_sync instead.
 sub matrix_get_events
 {
    my ( $user, %params ) = @_;
+
+   $params{timeout} *= $TIMEOUT_FACTOR if defined $params{timeout};
 
    do_request_json_for( $user,
       method => "GET",
@@ -200,7 +202,7 @@ sub await_event_for
    return Future->wait_any(
       $f,
 
-      delay( 10 * $TIMEOUT_FACTOR )
+      delay( 10 )
          ->then_fail( $failmsg ),
    );
 }
@@ -220,6 +222,8 @@ sub matrix_sync
    my ( $user, %params ) = @_;
 
    my $update_next_batch = delete $params{update_next_batch} // 1;
+
+   $params{timeout} *= $TIMEOUT_FACTOR if defined $params{timeout};
 
    do_request_json_for( $user,
       method  => "GET",
