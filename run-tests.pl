@@ -768,14 +768,14 @@ sub _run_test0
 
       Future->wait_any(
          $f_setup,
-         $loop->delay_future( after => 60 * $TIMEOUT_FACTOR )
+         delay( 60 )
             ->then_fail( "Timed out waiting for setup" )
       )->get;
 
       Future->wait_any(
          $f_test,
 
-         $loop->delay_future( after => ($test->timeout // 10) * $TIMEOUT_FACTOR )
+         delay( $test->timeout // 10 )
             ->then_fail( "Timed out waiting for test" )
       )->get;
 

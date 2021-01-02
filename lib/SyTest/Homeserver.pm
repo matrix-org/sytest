@@ -497,7 +497,7 @@ sub await_connectable
    my $loop = $self->loop;
 
    my $attempts = 25;
-   my $delay    = 0.05 * $main::TIMEOUT_FACTOR;
+   my $delay    = 0.05;
 
    my $output = $self->{output};
 
@@ -517,7 +517,7 @@ sub await_connectable
          $attempts--;
          $delay *= 1.3;
 
-         $loop->delay_future( after => $delay )
+         main::delay( $delay )
               ->then_done(0);
       })
    } while => sub { !$_[0]->failure and !$_[0]->get };
