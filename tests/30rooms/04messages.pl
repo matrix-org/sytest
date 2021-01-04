@@ -400,10 +400,6 @@ test "Ephemeral messages received from clients are correctly expired",
                assert_deeply_eq( $chunk->[0]{content}, {}, 'chunk[0] content size' );
 
                Future->done(1);
-            })->on_fail( sub {
-               my ( $exc ) = @_;
-               chomp $exc;
-               log_if_fail "Iteration $iter: not ready yet: $exc";
             });
          }
       });

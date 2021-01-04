@@ -34,7 +34,7 @@ This class is a mixin for C<IO::Async::Notifier> classes which start external pr
 
 =cut
 
-struct ProcessInfo => [qw( process finished_future output_lines print_output )];
+struct ProcessInfo => [qw( process finished_future output_lines print_output name )];
 
 =head1 UTILITY METHODS
 
@@ -58,6 +58,10 @@ Passed to C<IO::Async::Process::new>, giving the command to be run.
 Optional reference to an array to pass to the underlying C<Loop>
 C<spawn_child> method.
 
+=item name => STRING
+
+Optional name for the process, used while logging.
+
 =back
 
 It returns the Process object.
@@ -75,11 +79,13 @@ sub _start_process
          if exists $params{$_};
    }
 
+   my $proc_name = $params{name} // "server";
+
    $self->{proc_info} //= {};
 
    my $fut = $self->loop->new_future;
 
-   my $proc_info = ProcessInfo( undef, $fut, [], 0 );
+   my $proc_info = ProcessInfo( undef, $fut, [], 0, $proc_name );
 
    my $on_output = sub {
       my ( $stream, $buffref, $eof ) = @_;
@@ -108,11 +114,13 @@ sub _on_output_line
    my $self = shift;
    my ( $proc_info, $line ) = @_;
 
+   my $name = $proc_info->name;
+
    push @{ $proc_info->output_lines }, $line;
    shift @{ $proc_info->output_lines } while @{ $proc_info->output_lines } > 20;
 
    if( $proc_info->print_output ) {
-      print STDERR "\e[1;35m[server]\e[m: $line\n";
+      print STDERR "\e[1;35m[$name]\e[m: $line\n";
    }
 }
 
@@ -122,19 +130,20 @@ sub _on_finish
    my $self = shift;
    my ( $process, $exitcode ) = @_;
 
+   my $proc_info = $self->{proc_info}{$process};
+   my $name = $proc_info->name;
+
    if( $exitcode > 0 ) {
       if( WIFEXITED($exitcode) ) {
-         warn "Homeserver process exited " . WEXITSTATUS($exitcode) . "\n";
+         warn "$name process exited " . WEXITSTATUS($exitcode) . "\n";
       }
       else {
-         warn "Homeserver process failed - code=$exitcode\n";
+         warn "$name process failed - code=$exitcode\n";
       }
    }
 
-   my $proc_info = $self->{proc_info}{$process};
-
    # print the last few lines of output
-   print STDERR "\e[1;35m[server]\e[m: $_\n"
+   print STDERR "\e[1;35m[$name]\e[m: $_\n"
       for @{ $proc_info->output_lines };
 
    # - and force anything that has yet to hit the buffer to be printed
@@ -225,13 +234,13 @@ sub _kill_process
 
    my $finished_future = $proc_info->finished_future;
 
-   $self->{output}->diag( "Killing process " . $process->pid );
+   $self->{output}->diag( "Killing process " . $proc_info->name );
    $process->kill( 'INT' );
    return Future->needs_any(
       $finished_future->without_cancel,
 
       $self->loop->delay_future( after => 30 )->then( sub {
-         $self->{output}->diag( "Timed out waiting for ${\ $process->pid }; sending SIGKILL" );
+         $self->{output}->diag( "Timed out waiting for ${\ $proc_info->name }; sending SIGKILL" );
          $process->kill( 'KILL' );
          Future->done;
       }),
@@ -275,13 +284,14 @@ sub _start_process_and_await_notify
    # socket before starting the process.
    my $await_fut = $self->_await_ready_notification( $env );
 
-   my $proc = $self -> _start_process( %params );
-   my $finished_future = $self->{proc_info}{$proc}->finished_future;
+   my $proc = $self->_start_process( %params );
+   my $proc_info = $self->{proc_info}{$proc};
+   my $finished_future = $proc_info->finished_future;
 
    my $fut = Future->wait_any(
       $await_fut,
       $finished_future->without_cancel()->then_fail(
-         "Process died without becoming connectable",
+         "Process died without becoming ready",
       ),
    );
    return $fut;
@@ -306,7 +316,6 @@ sub _await_ready_notification
    my ( $env ) = @_;
 
    my $loop = $self->loop;
-   my $output = $self->{output};
 
    # Create a random abstract socket name. Abstract sockets start with a null
    # byte.
@@ -329,7 +338,6 @@ sub _await_ready_notification
 
          # Payloads are newline separated list of varalbe assignments.
          foreach my $line ( split(/\n/, $dgram) ) {
-            $output->diag( "Received signal from process: $line" );
             if ( $line eq "READY=1" ) {
                $poke_fut->done;
             }

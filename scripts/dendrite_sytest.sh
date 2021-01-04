@@ -45,7 +45,13 @@ TEST_STATUS=0
 mkdir -p /logs
 ./run-tests.pl -I Dendrite::Monolith -d $GOBIN -W /src/sytest-whitelist -O tap --all \
     --work-directory="/work" --exclude-deprecated \
-    "$@" > /logs/results.tap || TEST_STATUS=$?
+    "$@" > /logs/results.tap &
+pid=$!
+
+# make sure that we kill the test runner on SIGTERM, SIGINT, etc
+trap 'kill $pid' TERM INT
+wait $pid || TEST_STATUS=$?
+trap - TERM INT
 
 if [ $TEST_STATUS -ne 0 ]; then
     echo >&2 -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"

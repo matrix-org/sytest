@@ -103,10 +103,6 @@ test "Name/topic keys are correct",
                }
 
                Future->done( 1 );
-            })->on_fail( sub {
-               my ( $exc ) = @_;
-               chomp $exc;
-               log_if_fail "Iteration $iter: not ready yet: $exc";
             });
          };
       });
@@ -165,7 +161,11 @@ test "Can paginate public room list",
       # First we fill up the room list a bit (note there will probably already
       # be entries in it).
       ( try_repeat {
-         matrix_create_room( $user, visibility => "public" )
+         my $n = $_;
+         matrix_create_room( $user, visibility => "public" )->on_done( sub {
+            my ( $body ) = @_;
+            log_if_fail "Created room $n", $body;
+         });
       } foreach => [ 1 .. 10 ] )->then( sub {
          # Now we do an un-limited query to work out the number of rooms we
          # expect.
@@ -176,6 +176,8 @@ test "Can paginate public room list",
          )
       })->then( sub {
          my ( $body ) = @_;
+
+         log_if_fail "initial /publicRooms response", $body;
 
          $num_rooms = scalar( @{ $body->{chunk} } );
 
