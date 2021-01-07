@@ -307,7 +307,7 @@ sub start
               host => "$bind_host",
               port => $self->{ports}{event_persister2},
            },
-	   "client_reader" => {
+           "client_reader" => {
               host => "$bind_host",
               port => $self->{ports}{client_reader},
            },
@@ -315,7 +315,11 @@ sub start
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
-	   to_device => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+
+           # There's no particular reason to choose client_reader, but I
+           # couldn't think of a better place and I'm not sure we want to add
+           # more workers at this point
+           to_device => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
