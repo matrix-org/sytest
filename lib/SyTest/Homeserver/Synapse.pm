@@ -307,10 +307,15 @@ sub start
               host => "$bind_host",
               port => $self->{ports}{event_persister2},
            },
+	   "client_reader" => {
+              host => "$bind_host",
+              port => $self->{ports}{client_reader},
+           },
         },
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
+	   to_device => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -847,7 +852,7 @@ sub _start_synapse
          "worker_listeners"             => [
             {
                type      => "http",
-               resources => [{ names => ["client"] }],
+               resources => [{ names => ["client", "replication"] }],
                port      => $self->{ports}{client_reader},
                bind_address => $bind_host,
             },
@@ -1235,6 +1240,8 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
+
+^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          client_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
