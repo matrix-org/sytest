@@ -9,4 +9,4 @@ docker push matrixdotorg/sytest:buster
 docker push matrixdotorg/sytest:bullseye
 docker push matrixdotorg/sytest-synapse:py35
 docker push matrixdotorg/sytest-synapse:py37
-docker push matrixdotorg/sytest-synapse:py38
+docker push matrixdotorg/sytest-synapse:py39
