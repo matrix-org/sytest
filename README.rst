@@ -122,6 +122,19 @@ using ``--python``::
 
     ./run-tests.pl --python ../synapse/env/bin/python
 
+If you're seeing the following error when trying to run against Synapse,
+make sure you have your Synapse Python virtualenv(venv) activated: ``source ../synapse/env/bin/Activate``::
+
+    $ ./run-tests.pl
+    ...
+    ** Error starting server-0 (on port 8800): python exited 1: /Users/myuser/.pyenv/versions/3.8.6/bin/python: Error while finding module specification for 'synapse.app.homeserver' (ModuleNotFoundError: No module named 'synapse')
+    ❌
+
+    $ source ../synapse/env/bin/Activate
+    (synapse) $ ./run-tests.pl
+    ...
+    ✅
+
 To obtain greater visibility on why a particular test is failing, two
 additional options can be passed to print extra information. The
 ``--client-log`` flag (shortened to ``-C``) will print HTTP requests made and
