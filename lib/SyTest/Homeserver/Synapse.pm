@@ -319,7 +319,9 @@ sub start
            # There's no particular reason to choose client_reader, but I
            # couldn't think of a better place and I'm not sure we want to add
            # more workers at this point
-           to_device => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           to_device    => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           account_data => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           receipts     => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -1270,6 +1272,10 @@ EOCONFIG
       $haproxy_map .= <<'EOCONFIG';
 
 ^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/tag           client_reader
+^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  client_reader
 
 EOCONFIG
    }
