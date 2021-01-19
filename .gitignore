@@ -10,6 +10,8 @@
 /test-server
 /var
 \#*
+signingkeyserver.db
 .vscode
 .coverage*
 .idea
+.DS_Store

@@ -119,6 +119,8 @@ sub _on_output_line
    push @{ $proc_info->output_lines }, $line;
    shift @{ $proc_info->output_lines } while @{ $proc_info->output_lines } > 20;
 
+   #print STDERR "\e[1;35m[$name asdf]\e[m: $line\n";
+
    if( $proc_info->print_output ) {
       print STDERR "\e[1;35m[$name]\e[m: $line\n";
    }
@@ -321,6 +323,8 @@ sub _await_ready_notification
    # byte.
    my $random_id = join "", map { chr 65 + rand 25 } 1 .. 20;
    my $path = "\0sytest-$random_id.sock";
+   
+   print STDERR "New unix socket $path\n";
 
    # We replace null byte with '@' to allow us to pass it in via env. (This is
    # as per the sd_notify spec).
@@ -351,6 +355,9 @@ sub _await_ready_notification
       },
    );
    $loop->add( $socket );
+
+   print STDERR "Binding unix socket $path\n";
+   print STDERR "jytjuytyjyjjy\n";
 
    $socket->bind( {
       family   => "unix",

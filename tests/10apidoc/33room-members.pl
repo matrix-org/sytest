@@ -676,7 +676,10 @@ sub matrix_leave_room_synced
       do => sub {
          matrix_leave_room( $user, $room_id, %params );
       },
-      check => sub { exists $_[0]->{rooms}{leave}{$room_id} },
+      check => sub {
+         log_if_fail "check leave_room_sync for $room_id", $_[0]->{rooms}{leave};
+         exists $_[0]->{rooms}{leave}{$room_id};
+      },
    );
 }
 

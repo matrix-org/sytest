@@ -16,13 +16,16 @@ test "Left rooms appear in the leave section of sync",
       })->then( sub {
          ( $room_id ) = @_;
 
+         log_if_fail "Try leave room sync";
          matrix_leave_room_synced( $user, $room_id );
       })->then( sub {
+         log_if_fail "Try sync again with filter";
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
+         log_if_fail "sync result:", $room;
          assert_json_keys( $room, qw( timeline state ));
 
          Future->done(1);
@@ -48,16 +51,23 @@ test "Newly left rooms appear in the leave section of incremental sync",
       })->then( sub {
          ( $room_id ) = @_;
 
+         log_if_fail "Try initial sync";
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
+         log_if_fail "Try leave room sync";
          matrix_leave_room_synced( $user, $room_id );
       })->then( sub {
+         log_if_fail "Try sync again with filter";
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
+         log_if_fail "Leave response:", $body->{rooms}{leave};
          my $room = $body->{rooms}{leave}{$room_id};
+         log_if_fail "Room leave response:", $room;
          assert_json_keys( $room, qw( timeline state ));
+
+         log_if_fail "Room state events:", $room->{state}{events};
 
          @{ $room->{state}{events} } == 0
             or die "Expected no state events";
@@ -360,12 +370,15 @@ test "Archived rooms only contain history from before the user left",
       })->then( sub {
          my ( $body ) = @_;
 
+         log_if_fail "Returned sync body initial", $body;
+
+         # We should only expect to see events between the join and leave events
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));
          @{ $room->{state}{events} } == 0
             or die "Expected no state events";
          @{ $room->{timeline}{events} } == 2
-            or die "Expected two timeline events";
+            or die "Expected 2 timeline events but got " . @{ $room->{timeline}{events} };
 
          my $timeline_event = $room->{timeline}{events}[0];
          $timeline_event->{content}{body} eq "before"
@@ -374,6 +387,8 @@ test "Archived rooms only contain history from before the user left",
          matrix_sync( $user_b, filter => $filter_id_b, since => $next_b );
       })->then( sub {
          my ( $body ) = @_;
+
+         log_if_fail "Returned sync body from next batch", $body;
 
          my $room = $body->{rooms}{leave}{$room_id};
          assert_json_keys( $room, qw( timeline state ));

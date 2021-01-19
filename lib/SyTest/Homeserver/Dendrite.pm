@@ -29,7 +29,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-       bindir pg_db pg_user pg_pass
+       bindir print_output pg_db pg_user pg_pass
    );
 
    defined $self->{bindir} or croak "Need a bindir";
