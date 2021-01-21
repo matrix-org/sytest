@@ -108,7 +108,7 @@ test "Local non-members don't see posted message events",
 
             return unless $event->{type} eq "m.room.message";
 
-            assert_json_keys( $event, qw( type content user_id ));
+            assert_json_keys( $event, qw( type content sender ));
 
             die "Nonmember received event about a room they're not a member of";
          }),
@@ -140,7 +140,7 @@ test "Local room members can get room messages",
 
             my ( $event ) = @$chunk;
 
-            assert_json_keys( $event, qw( type room_id user_id content ));
+            assert_json_keys( $event, qw( type room_id sender content ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
@@ -193,7 +193,7 @@ test "Remote room members can get room messages",
 
          my ( $event ) = @$chunk;
 
-         assert_json_keys( $event, qw( type room_id user_id content ));
+         assert_json_keys( $event, qw( type room_id sender content ));
 
          $event->{room_id} eq $room_id or
             die "Expected room_id to be $room_id";
