@@ -443,7 +443,11 @@ test "Old leaves are present in gapped incremental syncs",
             matrix_send_room_text_message( $bob, $room_id,
                body => "Message $msgnum",
             )
-         }, foreach => [ 1 .. 10 ])
+         }, foreach => [ 1 .. 9 ])
+      })->then( sub {
+         matrix_send_room_text_message_synced( $bob, $room_id,
+            body => "Message 10",
+         )
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
@@ -458,7 +462,11 @@ test "Old leaves are present in gapped incremental syncs",
             matrix_send_room_text_message( $bob, $room_id,
                body => "Message $msgnum",
             )
-         }, foreach => [ 1 .. 10 ])
+         }, foreach => [ 1 .. 9 ])
+      })->then( sub {
+         matrix_send_room_text_message_synced( $bob, $room_id,
+            body => "Message 10",
+         )
       })->then( sub {
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
