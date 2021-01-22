@@ -252,6 +252,7 @@ sub start
 
         # We remove the ip range blacklist which by default blocks federation
         # connections to local homeservers, of which sytest uses extensively
+        ip_range_blacklist => [],
         federation_ip_range_blacklist => [],
 
         # If we're using workers we need to disable these things in the main
@@ -306,10 +307,21 @@ sub start
               host => "$bind_host",
               port => $self->{ports}{event_persister2},
            },
+           "client_reader" => {
+              host => "$bind_host",
+              port => $self->{ports}{client_reader},
+           },
         },
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
+
+           # There's no particular reason to choose client_reader, but I
+           # couldn't think of a better place and I'm not sure we want to add
+           # more workers at this point
+           to_device    => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           account_data => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           receipts     => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -846,7 +858,7 @@ sub _start_synapse
          "worker_listeners"             => [
             {
                type      => "http",
-               resources => [{ names => ["client"] }],
+               resources => [{ names => ["client", "replication"] }],
                port      => $self->{ports}{client_reader},
                bind_address => $bind_host,
             },
@@ -1188,7 +1200,12 @@ EOCONFIG
 
 sub generate_haproxy_map
 {
-    return <<'EOCONFIG';
+   my $self = shift;
+
+   # The base haproxy routes. Note that we add more routes below if using
+   # haproxy. Also, the routing for GET requests below takes precedence over
+   # these routes.
+   my $haproxy_map = <<'EOCONFIG';
 ^/_matrix/client/(v2_alpha|r0)/sync$                  synchrotron
 ^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
 ^/_matrix/client/(api/v1|r0)/initialSync$             synchrotron
@@ -1223,6 +1240,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/state$             client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/login$                      client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/account/3pid$               client_reader
+^/_matrix/client/(api/v1|r0|unstable)/devices$                    client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               client_reader
 ^/_matrix/client/versions$                                        client_reader
@@ -1234,17 +1252,35 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/keys/claim                  client_reader
+^/_matrix/client/(api/v1|r0|unstable)/room_keys                   client_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
 ^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
 
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/redact                               event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send                                 event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/join/                                         event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/profile/                                      event_creator
 
 EOCONFIG
+
+   # Some things can only be moved off master when using redis.
+   if ( $self->{redis_host} ne '' ) {
+      $haproxy_map .= <<'EOCONFIG';
+
+^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/tag           client_reader
+^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  client_reader
+
+EOCONFIG
+   }
+
+   return $haproxy_map
 }
 
 sub generate_haproxy_get_map

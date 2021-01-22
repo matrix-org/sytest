@@ -160,7 +160,7 @@ test "Pushers created with a different access token are deleted on password chan
                pushkey             => "a_push_key",
                lang                => "en",
                data                => {
-                  url => "https://dummy.url/is/dummy",
+                  url => "https://dummy.url/_matrix/push/v1/notify",
                },
             },
          );
@@ -168,15 +168,17 @@ test "Pushers created with a different access token are deleted on password chan
          matrix_set_password( $user, $password, "my new password" );
       })->then( sub {
          do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/r0/pushers/set",
-            content => {
-               kind    => JSON::null,
-               app_id  => "sytest",
-               pushkey => "a_push_key",
-            },
-         )->main::expect_http_404;
-      })->then_done(1);
+            method  => "GET",
+            uri     => "/r0/pushers",
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pushers ) );
+         @{ $body->{pushers} } == 0 or die "Expected no pushers";
+
+         Future->done(1);
+      });
    };
 
 test "Pushers created with a the same access token are not deleted on password change",
@@ -197,20 +199,22 @@ test "Pushers created with a the same access token are not deleted on password c
             pushkey             => "a_push_key",
             lang                => "en",
             data                => {
-               url => "https://dummy.url/is/dummy",
+               url => "https://dummy.url/_matrix/push/v1/notify",
             },
          },
       )->then( sub {
          matrix_set_password( $user, $password, "my new password");
       })->then( sub {
          do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/r0/pushers/set",
-            content => {
-               kind    => JSON::null,
-               app_id  => "sytest",
-               pushkey => "a_push_key",
-            },
+            method  => "GET",
+            uri     => "/r0/pushers",
          );
-      })->then_done(1);
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( pushers ) );
+         @{ $body->{pushers} } == 1 or die "Expected one pushers";
+
+         Future->done(1);
+      });
    };
