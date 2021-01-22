@@ -189,6 +189,15 @@ sub _get_config
          base_path => "media_store",
       },
 
+      mscs => {
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/mscs.db" : $db_uri,
+         },
+         mscs => ["msc2836", "msc2946", "msc2444", "msc2753"],
+      },
+
       room_server => {
          database => {
             connection_string => 
