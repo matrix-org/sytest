@@ -39,6 +39,7 @@ The following environment variables can be set with `-e` to control the test run
  * `OFFLINE`: set non-empty to avoid updating the python or perl dependencies.
  * `BLACKLIST`: set non-empty to change the default blacklist file to the
    specified path relative to the Synapse directory
+ * `TIMEOUT_FACTOR`: sets a number that test timeouts are multiplied by.
 
 Some examples of running Synapse in different configurations:
 

@@ -557,7 +557,7 @@ sub rotate_logfile
    try_repeat {
       -f $logpath and return Future->done(1);
 
-      $self->loop->delay_future( after => 0.5 )->then_done(0);
+      main::delay( 0.5 )->then_done(0);
    } foreach => [ 1 .. 20 ],
      while => sub { !shift->get },
      otherwise => sub { die "Timed out waiting for synapse to recreate its log file" };

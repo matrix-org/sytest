@@ -59,7 +59,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
                do_request_json_for( $user,
                   method => "GET",
                   uri    => $is_initial ? "/r0/initialSync" : "/r0/events",
-                  params => { from => $user->eventstream_token, timeout => 500 }
+                  params => { from => $user->eventstream_token, timeout => 500 * $TIMEOUT_FACTOR }
                )->then( sub {
                   my ( $body ) = @_;
                   $user->eventstream_token = $body->{end};
