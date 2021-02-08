@@ -70,7 +70,6 @@ our @HOMESERVER_INFO = map {
                private_key      => "sytest_recaptcha_private_key",
             }, cas_config    => {
                server_url       => $test_server_info->client_location . "/cas",
-               service_url      => $location,
             },
          );
 
