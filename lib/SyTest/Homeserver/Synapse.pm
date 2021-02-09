@@ -152,7 +152,7 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $secure_port = $self->{ports}{synapse};
+   my $secure_port = $self->secure_port;
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
