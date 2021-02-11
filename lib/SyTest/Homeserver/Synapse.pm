@@ -171,7 +171,7 @@ sub start
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_config => $log_config_file,
-        public_baseurl => $self->public_baseurl,
+        public_baseurl => $self->{public_baseurl},
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
@@ -597,8 +597,8 @@ sub public_baseurl
 {
    my $self = shift;
    # run-tests.pl defines whether TLS should be used or not.
-   our $WANT_TLS;
-   return $WANT_TLS ?
+   my ( $want_tls ) = @_;
+   return $want_tls ?
       "https://$self->{bind_host}:" . $self->secure_port() :
       "http://$self->{bind_host}:" . $self->unsecure_port();
 }

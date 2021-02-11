@@ -166,7 +166,7 @@ sub configure
    my %params = @_;
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
-      recaptcha_config cas_config smtp_server_config
+      public_baseurl recaptcha_config cas_config smtp_server_config
       app_service_config_files
    );
 
