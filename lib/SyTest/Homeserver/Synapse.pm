@@ -152,7 +152,6 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $unsecure_port = $self->{ports}{synapse_unsecure};
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
@@ -172,7 +171,7 @@ sub start
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_config => $log_config_file,
-        public_baseurl => "http://${bind_host}:$unsecure_port",
+        public_baseurl => $self->{public_baseurl},
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
@@ -592,6 +591,16 @@ sub unsecure_port
 {
    my $self = shift;
    return $self->{ports}{synapse_unsecure};
+}
+
+sub public_baseurl
+{
+   my $self = shift;
+   # run-tests.pl defines whether TLS should be used or not.
+   my ( $want_tls ) = @_;
+   return $want_tls ?
+      "https://$self->{bind_host}:" . $self->secure_port() :
+      "http://$self->{bind_host}:" . $self->unsecure_port();
 }
 
 package SyTest::Homeserver::Synapse::Direct;
@@ -1106,6 +1115,12 @@ sub unsecure_port
 {
    my $self = shift;
    die "haproxy does not have an unsecure port mode\n";
+}
+
+sub public_baseurl
+{
+   my $self = shift;
+   return "https://$self->{bind_host}:" . $self->secure_port();
 }
 
 sub start
