@@ -152,7 +152,12 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $secure_port = $self->secure_port;
+
+   # run-tests.pl defines whether TLS should be used or not.
+   our $WANT_TLS;
+   my $public_baseurl = $WANT_TLS ?
+      "https://${bind_host}:" . $self->secure_port() :
+      "http://${bind_host}:" . $self->unsecure_port();
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
@@ -172,7 +177,7 @@ sub start
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_config => $log_config_file,
-        public_baseurl => "https://${bind_host}:$secure_port",
+        public_baseurl => $public_baseurl,
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
