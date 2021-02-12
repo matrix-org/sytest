@@ -330,6 +330,16 @@ sub unsecure_port
    return $self->{ports}{monolith_unsecure};
 }
 
+sub public_baseurl
+{
+    my $self = shift;
+    # run-tests.pl defines whether TLS should be used or not.
+    my ( $want_tls ) = @_;
+    return $want_tls ?
+       "https://$self->{bind_host}:" . $self->secure_port() :
+       "http://$self->{bind_host}:" . $self->unsecure_port();
+ }
+
 sub start
 {
    my $self = shift;
