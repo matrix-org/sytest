@@ -20,6 +20,4 @@ RUN /venv/bin/pip install -q --no-cache-dir lxml psycopg2 coverage codecov
 # and test
 RUN /venv/bin/pip uninstall -q --no-cache-dir -y matrix-synapse
 
-ADD docker/pydron.py /pydron.py
-
 ENTRYPOINT [ "/bin/bash", "/bootstrap.sh", "synapse" ]
