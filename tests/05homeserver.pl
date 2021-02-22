@@ -133,7 +133,7 @@ our @HOMESERVER_INFO = map {
 
             # if we can't start the first homeserver, we really might as well go home.
             if( $idx == 0 ) {
-               print STDERR "\nAborting test run due to failure to start test server\n";
+               warn( "Aborting test run due to failure to start test server" );
 
                # If we just exit then we need to call the AT_END functions
                # manually (if we don't we'll leak child processes).
