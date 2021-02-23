@@ -61,13 +61,6 @@ sub federation_host
 sub federation_port
 {
    my $self = shift;
-   return $self->secure_port;
-}
-
-sub secure_port
-{
-   my $self = shift;
-
    return $self->{secure_port};
 }
 

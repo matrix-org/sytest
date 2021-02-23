@@ -123,7 +123,7 @@ our @HOMESERVER_INFO = map {
             return Future->done( $info );
          })->on_fail( sub {
             my ( $exn, @details ) = @_;
-            warn( "Error starting server-$idx (on port ${\$server->secure_port}): $exn" );
+            warn( "Error starting server-$idx: $exn" );
 
             # if we can't start the first homeserver, we really might as well go home.
             if( $idx == 0 ) {
