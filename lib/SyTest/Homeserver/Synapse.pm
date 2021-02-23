@@ -569,7 +569,7 @@ sub server_name
    return $self->{bind_host} . ":" . $self->secure_port;
 }
 
-sub http_api_host
+sub federation_host
 {
    my $self = shift;
    return $self->{bind_host};

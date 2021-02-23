@@ -51,8 +51,6 @@ our @HOMESERVER_INFO = map {
 
          $loop->add( $server );
 
-         my $api_host = $server->http_api_host;
-
          my $location = $server->public_baseurl($WANT_TLS);
 
          $server->configure(
@@ -75,8 +73,10 @@ our @HOMESERVER_INFO = map {
             },
          );
 
-         my $info = ServerInfo( $server->server_name, $location,
-                                $api_host, $server->federation_port );
+         my $info = ServerInfo(
+            $server->server_name, $location,
+            $server->federation_host, $server->federation_port,
+         );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only

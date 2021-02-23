@@ -52,7 +52,7 @@ sub server_name
    return $self->{server_name};
 }
 
-sub http_api_host
+sub federation_host
 {
    my $self = shift;
    return $self->{host};

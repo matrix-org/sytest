@@ -69,7 +69,7 @@ sub _check_db_config
    return $self->SUPER::_check_db_config( @_ );
 }
 
-sub http_api_host
+sub federation_host
 {
    my $self = shift;
    return $self->{bind_host};
