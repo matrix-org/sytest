@@ -587,12 +587,6 @@ sub secure_port
    return $self->{ports}{synapse};
 }
 
-sub unsecure_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse_unsecure};
-}
-
 sub public_baseurl
 {
    my $self = shift;
@@ -1105,12 +1099,6 @@ sub secure_port
 {
    my $self = shift;
    return $self->{ports}{haproxy};
-}
-
-sub unsecure_port
-{
-   my $self = shift;
-   die "haproxy does not have an unsecure port mode\n";
 }
 
 sub public_baseurl

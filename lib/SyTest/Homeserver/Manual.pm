@@ -71,13 +71,6 @@ sub secure_port
    return $self->{secure_port};
 }
 
-sub unsecure_port
-{
-   my $self = shift;
-
-   return $self->{unsecure_port};
-}
-
 sub public_baseurl
 {
    my $self = shift;

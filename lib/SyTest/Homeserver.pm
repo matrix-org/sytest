@@ -136,13 +136,6 @@ federation port.
 This method should return the port number where the homeserver exposes a
 client-server API over HTTPS.
 
-=head2 unsecure_port
-
-   $hs->unsecure_port
-
-This method should return the port number where the homeserver exposes a
-client-server API over HTTP.
-
 =head2 public_baseurl
 
    $hs->public_baseurl
