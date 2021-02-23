@@ -143,6 +143,13 @@ client-server API over HTTPS.
 This method should return the port number where the homeserver exposes a
 client-server API over HTTP.
 
+=head2 public_baseurl
+
+   $hs->public_baseurl
+
+This method should returns the public base URL for the client-server API for
+this server.
+
 =cut
 
 sub _init

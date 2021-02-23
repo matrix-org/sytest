@@ -51,7 +51,7 @@ our @HOMESERVER_INFO = map {
 
          $loop->add( $server );
 
-         my $location = $server->public_baseurl($WANT_TLS);
+         my $location = $server->public_baseurl;
 
          $server->configure(
             smtp_server_config => $mail_server_info,

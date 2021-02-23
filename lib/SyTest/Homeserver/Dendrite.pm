@@ -332,13 +332,9 @@ sub unsecure_port
 
 sub public_baseurl
 {
-    my $self = shift;
-    # run-tests.pl defines whether TLS should be used or not.
-    my ( $want_tls ) = @_;
-    return $want_tls ?
-       "https://$self->{bind_host}:" . $self->secure_port() :
-       "http://$self->{bind_host}:" . $self->unsecure_port();
- }
+   my $self = shift;
+   return "https://$self->{bind_host}:" . $self->secure_port();
+}
 
 sub start
 {
