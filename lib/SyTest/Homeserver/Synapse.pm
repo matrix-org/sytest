@@ -1170,6 +1170,7 @@ defaults
 
 frontend http-in
     bind ${bind_host}:$ports->{haproxy} ssl crt $self->{paths}{pem_file}
+    http-request set-header X-Forwarded-Proto https if { ssl_fc }
 
     acl has_get_map path -m reg -M -f $self->{paths}{get_path_map_file}
     use_backend %[path,map_reg($self->{paths}{get_path_map_file},synapse)] if has_get_map METH_GET
