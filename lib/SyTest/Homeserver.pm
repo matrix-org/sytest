@@ -556,12 +556,18 @@ sub _run_command
 
    my $on_output = sub {
       my ( $stream, $buffref, $eof) = @_;
+
+      # write each complete line in the buffer
       while ( $$buffref =~ s/^(.*)\n// ) {
          &$diag($1);
       }
+
+      # if this is the end of the output, and there is
+      # anything left in the buffer, print out the remainder.
       if( $eof && $$buffref ) {
          &$diag($$buffref);
       }
+
       return 0;
    };
 
