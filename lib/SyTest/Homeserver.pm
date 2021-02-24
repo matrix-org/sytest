@@ -116,10 +116,10 @@ Homeserver interface.
 This method should return the server_name for the server (ie, the 'domain' part
 of any Matrix IDs it generates).
 
-=head2 http_api_host
+=head2 federation_host
 
 This method should return the hostname where the homeserver exposes the
-client-server and server-server APIs.
+server-server API.
 
 =head2 federation_port
 
@@ -129,19 +129,12 @@ This method should return the port number where the homeserver exposes a
 server-server API (over HTTPS). It may return undef if there is no known
 federation port.
 
-=head2 secure_port
+=head2 public_baseurl
 
-   $hs->secure_port
+   $hs->public_baseurl
 
-This method should return the port number where the homeserver exposes a
-client-server API over HTTPS.
-
-=head2 unsecure_port
-
-   $hs->unsecure_port
-
-This method should return the port number where the homeserver exposes a
-client-server API over HTTP.
+This method should returns the public base URL for the client-server API for
+this server.
 
 =cut
 
@@ -166,7 +159,7 @@ sub configure
    my %params = @_;
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
-      public_baseurl recaptcha_config cas_config smtp_server_config
+      recaptcha_config cas_config smtp_server_config
       app_service_config_files
    );
 

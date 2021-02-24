@@ -171,7 +171,7 @@ sub start
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_config => $log_config_file,
-        public_baseurl => $self->{public_baseurl},
+        public_baseurl => $self->public_baseurl,
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
@@ -569,7 +569,7 @@ sub server_name
    return $self->{bind_host} . ":" . $self->secure_port;
 }
 
-sub http_api_host
+sub federation_host
 {
    my $self = shift;
    return $self->{bind_host};
@@ -587,20 +587,10 @@ sub secure_port
    return $self->{ports}{synapse};
 }
 
-sub unsecure_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse_unsecure};
-}
-
 sub public_baseurl
 {
    my $self = shift;
-   # run-tests.pl defines whether TLS should be used or not.
-   my ( $want_tls ) = @_;
-   return $want_tls ?
-      "https://$self->{bind_host}:" . $self->secure_port() :
-      "http://$self->{bind_host}:" . $self->unsecure_port();
+   return "https://$self->{bind_host}:" . $self->secure_port;
 }
 
 package SyTest::Homeserver::Synapse::Direct;
@@ -1109,12 +1099,6 @@ sub secure_port
 {
    my $self = shift;
    return $self->{ports}{haproxy};
-}
-
-sub unsecure_port
-{
-   my $self = shift;
-   die "haproxy does not have an unsecure port mode\n";
 }
 
 sub public_baseurl
