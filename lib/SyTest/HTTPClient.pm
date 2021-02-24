@@ -17,7 +17,7 @@ my $json = JSON->new->convert_blessed(1)->utf8(1);
 use Future 0.33; # ->catch
 use List::Util qw( any );
 use Net::SSLeay 1.59; # TLSv1.2
-use Scalar::Util qw( blessed );
+use Scalar::Util qw( blessed reftype );
 
 use SyTest::JSONSensible;
 
@@ -97,8 +97,34 @@ sub do_request
          croak "This HTTP client is not allowed to perform $params{method} requests";
    }
 
+   # workaround for https://rt.cpan.org/Public/Bug/Display.html?id=134411
+   my $host_header = $uri->host;
+   if( ! ( $uri->scheme eq 'https' && $uri->port == 443 ) &&
+       ! ( $uri->scheme eq 'http' && $uri->port == 80 )
+      ) {
+       # nonstandard port: requires better Host header
+       $host_header .= ":" . $uri->port;
+   };
+   my $headers = delete $params{headers} // [];
+   if( reftype $headers eq "ARRAY" ) {
+      $headers = [
+         "Host" => $host_header,
+         @$headers,
+      ];
+   }
+   elsif( reftype $headers eq "HASH" ) {
+      $headers = {
+         "Host" => $host_header,
+         %$headers,
+      };
+   } else {
+      croak "headers must be an arrayref or hashref";
+   }
+
+
    $self->SUPER::do_request(
       %params,
+      headers => $headers,
       uri => $uri,
    )->then( sub {
       my ( $response ) = @_;
