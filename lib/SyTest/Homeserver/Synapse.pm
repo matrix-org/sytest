@@ -37,10 +37,11 @@ sub _init
 
    $self->SUPER::_init( $args );
 
+   # TODO: most of these ports are unused in monolith mode, and their
+   # allocations could be moved to SyTest::Homeserver::Synapse::ViaHaproxy::_init
    my $idx = $self->{hs_index};
    $self->{ports} = {
       synapse                  => main::alloc_port( "synapse[$idx]" ),
-      synapse_unsecure         => main::alloc_port( "synapse[$idx].unsecure" ),
       synapse_metrics          => main::alloc_port( "synapse[$idx].metrics" ),
       synapse_replication_tcp  => main::alloc_port( "synapse[$idx].replication_tcp" ),
 
@@ -88,8 +89,6 @@ sub _init
       event_persister2         => main::alloc_port( "event_persister2[$idx]" ),
       event_persister2_metrics => main::alloc_port( "event_persister2[$idx].metrics" ),
       event_persister2_manhole => main::alloc_port( "event_persister2[$idx].manhole" ),
-
-      haproxy => main::alloc_port( "haproxy[$idx]" ),
    };
 }
 
@@ -442,17 +441,6 @@ sub generate_listeners
 
    my @listeners;
 
-   if( my $unsecure_port = $self->{ports}{synapse_unsecure} ) {
-      push @listeners, {
-         type         => "http",
-         port         => $unsecure_port,
-         bind_address => $bind_host,
-         resources    => [{
-            names => [ "client", "federation", "replication", "metrics" ]
-         }]
-      }
-   }
-
    if( my $replication_tcp_port = $self->{ports}{synapse_replication_tcp} ) {
       push @listeners, {
          type         => "replication",
@@ -638,8 +626,9 @@ sub _init
       $self->{replication_torture_level} = $level;
    }
 
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( haproxy );
+   my $idx = $self->{hs_index};
+   $self->{ports}{synapse_unsecure} = main::alloc_port( "synapse[$idx].unsecure" );
+   $self->{ports}{haproxy} = main::alloc_port( "haproxy[$idx]" );
 }
 
 sub _check_db_config
@@ -647,7 +636,7 @@ sub _check_db_config
    my $self = shift;
    my ( %config ) = @_;
 
-   $config{type} eq "pg" or die "Dendron can only run against postgres";
+   $config{type} eq "pg" or die "Synapse can only run against postgres when in worker mode";
 
    return $self->SUPER::_check_db_config( @_ );
 }
@@ -1093,6 +1082,23 @@ sub _start_synapse
          } @worker_configs
       )
    })
+}
+
+sub generate_listeners
+{
+   my $self = shift;
+
+   return
+      {
+         type         => "http",
+         port         => $self->{ports}{synapse_unsecure},
+         bind_address => "127.0.0.1",
+         x_forwarded  => JSON::true,
+         resources    => [{
+            names => [ "client", "federation", "replication" ]
+         }]
+      },
+      $self->SUPER::generate_listeners;
 }
 
 sub secure_port
