@@ -536,7 +536,9 @@ sub await_connectable
 This method runs a specified command and returns a future which will complete
 when the process exits.
 
-The parameters are passed to C<IO::Loop->run_child>.
+Any output from the command is written as diagnostics.
+
+The parameters are passed to C<IO::Async::Process::new>.
 
 =cut
 
@@ -546,16 +548,40 @@ sub _run_command
    my %params = @_;
 
    my $cmd = $params{command}[0];
+   my $output = $self->{output};
+
+   my $diag = sub {
+      $output->diag( "\e[1;35m[$cmd]\e[m: $_[0]" );
+   };
+
+   my $on_output = sub {
+      my ( $stream, $buffref, $eof) = @_;
+
+      # write each complete line in the buffer
+      while ( $$buffref =~ s/^(.*)\n// ) {
+         &$diag($1);
+      }
+
+      # if this is the end of the output, and there is
+      # anything left in the buffer, print out the remainder.
+      if( $eof && $$buffref ) {
+         &$diag($$buffref);
+      }
+
+      return 0;
+   };
 
    my $fut = $self->loop->new_future;
-   $self->loop->run_child(
-      %params,
 
+   my $proc = IO::Async::Process->new(
+      %params,
+      stdout => { on_read => $on_output },
+      stderr => { on_read => $on_output },
       on_finish => sub {
-         my ( $pid, $exitcode, $stdout, $stderr ) = @_;
+         my ( undef, $exitcode ) = @_;
 
          if( $exitcode == 0 ) {
-            $fut->done( $stdout );
+            $fut->done();
             return;
          }
 
@@ -566,13 +592,11 @@ sub _run_command
             $failure = "$cmd failed $exitcode";
          }
 
-         if( $stderr ) {
-            $failure .= ": $stderr";
-         }
          $fut->fail( $failure );
-      }
+      },
    );
 
+   $self->loop->add($proc);
    return $fut;
 }
 
