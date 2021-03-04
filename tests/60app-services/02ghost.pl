@@ -185,6 +185,7 @@ test "Ghost user must register before joining room",
 
          content => {
             username => $unregistered_as_user_localpart,
+            type => "m.login.application_service",
          },
       );
    };
