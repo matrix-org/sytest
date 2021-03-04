@@ -14,6 +14,7 @@ test "AS can create a user",
 
          content => {
             username => "astest-01create-0-$TEST_RUN_ID",
+            type => "m.login.application_service",
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -38,6 +39,7 @@ test "AS can create a user with an underscore",
 
          content => {
             username => "_astest-01create-0-$TEST_RUN_ID",
+            type => "m.login.application_service",
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -63,6 +65,7 @@ test "AS can create a user with inhibit_login",
 
          content => {
             username => "astest-01create-1-$TEST_RUN_ID",
+            type => "m.login.application_service",
             inhibit_login => 1,
          },
       )->then( sub {
@@ -91,6 +94,7 @@ test "AS cannot create users outside its own namespace",
 
          content => {
             username => "a-different-user",
+            type => "m.login.application_service",
          }
       )->main::expect_http_4xx;
    };
@@ -175,6 +179,7 @@ sub matrix_register_as_ghost
 
       content => {
          username => $user_id,
+         type => "m.login.application_service",
       }
    )->then( sub {
       my ( $body ) = @_;
