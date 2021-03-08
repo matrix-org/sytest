@@ -126,6 +126,7 @@ sub _get_config
                 "file:$self->{hs_dir}/appservice_api.db" : $db_uri,
          },
          config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
+         disable_tls_validation => $JSON::true,
       },
 
       client_api => {
