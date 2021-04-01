@@ -3,16 +3,15 @@ ARG DEBIAN_VERSION=buster
 FROM matrixdotorg/sytest:${DEBIAN_VERSION}
 
 RUN apt-get -qq update && apt-get -qq install -y \
-    python3 python3-dev python3-virtualenv eatmydata \
+    python3 python3-dev python3-venv eatmydata \
     redis-server
-
-ENV PYTHON=python3
 
 # /src is where we expect Synapse to be
 RUN mkdir /src
 
 # Create the virutal env upfront so we don't need to keep reinstall dependencies
-RUN $PYTHON -m virtualenv -p $PYTHON /venv/
+# Manually upgrade pip to ensure it can locate Cryptography's binary wheels
+RUN python3 -m venv /venv && /venv/bin/pip install -U pip
 RUN /venv/bin/pip install -q --no-cache-dir matrix-synapse[all]
 RUN /venv/bin/pip install -q --no-cache-dir lxml psycopg2 coverage codecov
 

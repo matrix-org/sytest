@@ -6,14 +6,12 @@ are.
 
 Included currently is:
 
-- `matrixdotorg/sytest:stretch` and `matrixdotorg/sytest:buster`: base
-  containers with SyTest dependencies installed
-- `matrixdotorg/sytest-synapse:py35`: a container which will run SyTest against
-  Synapse on Python 3.5 + Stretch
-- `matrixdotorg/sytest-synapse:py37`: a container which will run SyTest against
-  Synapse on Python 3.7 + Buster
-- `matrixdotorg/sytest-dendrite:go113`: a container which will run SyTest
-  against Dendrite on Go 1.13 + Buster
+- `matrixdotorg/sytest` Base container with SyTest dependencies installed
+    - Tagged by underlying Debian image: `buster` or `testing`
+- `matrixdotorg/sytest-synapse`: Runs SyTest against Synapse
+    - Tagged by underlying Debian image: `buster` or `testing`
+- `matrixdotorg/sytest-dendrite:go113`: Runs SyTest against Dendrite on Go 1.13
+    - Currently uses Debian 10 (Buster) as its base image
 
 ## Target-specific details
 
@@ -26,7 +24,7 @@ it is useful to mount a volume there too.
 For example:
 
 ```
-docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py37
+docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:buster
 ```
 
 The following environment variables can be set with `-e` to control the test run:
@@ -48,7 +46,7 @@ Some examples of running Synapse in different configurations:
 
   ```
   docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -v /path/to/synapse\:/src:ro \
-      -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:py37
+      -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:buster
   ```
 
 * Running Synapse in worker mode using redis:
@@ -57,7 +55,7 @@ Some examples of running Synapse in different configurations:
   docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -e REDIS=1 \
        -v /path/to/synapse\:/src:ro \
        -v /path/to/where/you/want/logs\:/logs \
-       matrixdotorg/sytest-synapse:py35
+       matrixdotorg/sytest-synapse:buster
   ```
 
 ### Dendrite
@@ -82,7 +80,7 @@ the container:
 
 ```
 docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs \
-    -v /path/to/code/sytest\:/sytest:ro matrixdotorg/sytest-synapse:py35
+    -v /path/to/code/sytest\:/sytest:ro matrixdotorg/sytest-synapse:buster
 ```
 
 ## Running a single test file, and other sytest commandline options
@@ -91,7 +89,7 @@ You can pass arguments to sytest by adding them at the end of the
 docker command. For example:
 
 ```
-docker run --rm -it ... matrixdotorg/sytest-synapse:py37 tests/20profile-events.pl
+docker run --rm -it ... matrixdotorg/sytest-synapse:buster tests/20profile-events.pl
 ```
 
 ## Building the containers
