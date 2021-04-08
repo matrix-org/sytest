@@ -7,9 +7,9 @@ are.
 Included currently is:
 
 - `matrixdotorg/sytest` Base container with SyTest dependencies installed
-    - Tagged by underlying Debian image: `buster` or `testing`
+    - Tagged by underlying Debian/Ubuntu image: `bionic`, `buster` or `testing`
 - `matrixdotorg/sytest-synapse`: Runs SyTest against Synapse
-    - Tagged by underlying Debian image: `buster` or `testing`
+    - Tagged by underlying Debian/Ubunutu image: `bionic`, `buster` or `testing`
 - `matrixdotorg/sytest-dendrite:go113`: Runs SyTest against Dendrite on Go 1.13
     - Currently uses Debian 10 (Buster) as its base image
 

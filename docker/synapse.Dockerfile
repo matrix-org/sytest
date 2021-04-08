@@ -1,6 +1,5 @@
-ARG DEBIAN_VERSION=buster
-
-FROM matrixdotorg/sytest:${DEBIAN_VERSION}
+ARG SYTEST_IMAGE_TAG=buster
+FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
 RUN apt-get -qq update && apt-get -qq install -y \
     python3 python3-dev python3-venv eatmydata \
