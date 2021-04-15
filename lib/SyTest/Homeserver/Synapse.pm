@@ -320,6 +320,7 @@ sub start
            to_device    => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
            account_data => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
            receipts     => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           presence     => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -1260,6 +1261,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/keys/claim                  client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/room_keys                   client_reader
+^/_matrix/client/(api/v1|r0|unstable)/presence/                   client_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
