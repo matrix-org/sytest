@@ -130,6 +130,19 @@ sub _get_config
       },
 
       client_api => {
+         registration => {
+            flows => [
+               {
+               stages => [
+                  "m.login.email.identity",
+               ]
+            }, 
+            {
+               stages => [
+                  "m.login.dummy"
+               ]
+            }]
+         },
          database => {
             connection_string => 
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
