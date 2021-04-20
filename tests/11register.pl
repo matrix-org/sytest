@@ -214,7 +214,7 @@ sub await_id_validation_email {
 
       log_if_fail "ID server email /requestToken request", $body;
       assert_eq( $body->{email}, $address );
-      my $sid = $id_server->validate_email( $address, $body->{client_secret} );
+      my $sid = $id_server->validate_identity("email", $address, $body->{client_secret} );
       $req->respond_json({
          sid => $sid,
       });
@@ -817,7 +817,7 @@ test "Can register using an email address via identity server",
          })
       })->then( sub {
          my ( $body ) = @_;
-
+         
          assert_json_keys( $body, qw( user_id home_server ) );
          Future->done( 1 );
       });

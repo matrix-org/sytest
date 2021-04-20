@@ -260,7 +260,7 @@ sub validate_identity
 {
    my $self = shift;
    my ( $medium, $address, $client_secret ) = @_;
-
+   
    my $sid = "session_${\ $self->{sid}++ }";
 
    $self->{validated}{$sid} = {
@@ -573,17 +573,6 @@ sub on_bind
    $req->respond_json( \%resp );
 }
 
-sub validate_email
-{
-   my $self = shift;
-   my ( $address, $client_secret ) = @_;
-   my $sid = "session_${\ $self->{sid}++ }";
-   $self->{validated}{$sid} = {
-      medium => "email",
-      address => $address,
-   };
-   return $sid;
-}
 
 =head2 on_unbind
 
