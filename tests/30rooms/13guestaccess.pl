@@ -386,6 +386,8 @@ test "GET /publicRooms lists rooms",
 
                foreach my $room ( @{ $body->{chunk} } ) {
                   my $canonical_alias = $room->{canonical_alias};
+                  next unless $canonical_alias;
+
                   assert_json_boolean( my $world_readable = $room->{world_readable} );
                   assert_json_boolean( my $guest_can_join = $room->{guest_can_join} );
 
@@ -477,6 +479,7 @@ test "GET /publicRooms includes avatar URLs",
 
                foreach my $room ( @{ $body->{chunk} } ) {
                   my $canonical_alias = $room->{canonical_alias};
+                  next unless $canonical_alias;
 
                   if( $canonical_alias =~ m/^\Q#worldreadable:/ ) {
                      $isOK{worldreadable} =
