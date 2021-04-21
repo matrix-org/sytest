@@ -81,7 +81,8 @@ push our @EXPORT, qw( validate_email );
    });
 
 Runs through a `.../requestToken` flow specified by $path for verifying that an email address
-belongs to the user. Doesn't add the address to the account.
+belongs to the user. Doesn't add the address to the account. It does not submit token as
+validate_email does, but expects that mock identity server will validate email immediately.
 
 Returns the session id and client secret which can then be used for binding the address.
 
