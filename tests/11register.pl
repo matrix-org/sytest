@@ -207,7 +207,7 @@ sub await_id_validation_email {
    my ( $id_server, $address ) = @_;
 
    $id_server->await_request(
-      path=>"/_matrix/identity/v2/validate/email/requestToken",
+      path=>"/_matrix/identity/api/v1/validate/email/requestToken",
    )->then( sub {
       my ( $req ) = @_;
       my $body = $req->body_from_json;
@@ -756,6 +756,9 @@ test "Can register using an email address via identity server",
 
       my $email_address = 'testemail@example.com';
 
+
+      # print "\n\n$BIND_HOST\n\n\n";
+      # print "\n\n${id_server->name}\n\n\n";
       $http->do_request_json(
          method => "POST",
          uri    => "/r0/register",
@@ -817,7 +820,7 @@ test "Can register using an email address via identity server",
          })
       })->then( sub {
          my ( $body ) = @_;
-         
+
          assert_json_keys( $body, qw( user_id home_server ) );
          Future->done( 1 );
       });
