@@ -17,8 +17,8 @@ sub id_server_fixture
          $loop->add( $id_server );
 
          $id_server->listen(
-            host          => $BIND_HOST,
-            service       => "",
+            host          => "$BIND_HOST",
+            service       => $ID_SERVER_PORT,
             extensions    => [qw( SSL )],
             # Synapse currently only talks IPv4
             family        => "inet",

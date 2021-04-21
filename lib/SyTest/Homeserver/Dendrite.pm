@@ -100,7 +100,9 @@ sub _get_config
       global => {
          server_name => $self->server_name,
          private_key => $self->{paths}{matrix_key},
-
+         trusted_third_party_id_servers => [
+            "localhost:34586",
+         ],
          kafka => {
             use_naffka => $JSON::true,
             naffka_database => {
@@ -130,6 +132,7 @@ sub _get_config
       },
 
       client_api => {
+         custom_ca_path => "/sytest/keys/tls-selfsigned.crt",
          registration => {
             flows => [
                {

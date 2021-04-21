@@ -54,6 +54,7 @@ use Module::Pluggable
 binmode(STDOUT, ":utf8");
 
 our $BIND_HOST = "localhost";
+our $ID_SERVER_PORT = 34586;
 
 # a unique ID for this test run. It is used in some tests to create user IDs
 # and the like.
