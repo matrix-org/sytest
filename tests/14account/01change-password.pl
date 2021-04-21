@@ -160,7 +160,7 @@ test "Pushers created with a different access token are deleted on password chan
                pushkey             => "a_push_key",
                lang                => "en",
                data                => {
-                  url => "https://dummy.url/is/dummy",
+                  url => "https://dummy.url/_matrix/push/v1/notify",
                },
             },
          );
@@ -197,7 +197,7 @@ test "Pushers created with a the same access token are not deleted on password c
             pushkey             => "a_push_key",
             lang                => "en",
             data                => {
-               url => "https://dummy.url/is/dummy",
+               url => "https://dummy.url/_matrix/push/v1/notify",
             },
          },
       )->then( sub {

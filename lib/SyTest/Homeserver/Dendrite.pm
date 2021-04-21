@@ -197,11 +197,11 @@ sub _get_config
          },
       },
 
-      server_key_api => {
+      signing_key_server => {
          database => {
             connection_string => 
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/server_key_api.db" : $db_uri,
+               "file:$self->{hs_dir}/signingkeyserver.db" : $db_uri,
          },
       },
 

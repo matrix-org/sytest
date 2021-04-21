@@ -252,6 +252,7 @@ sub start
 
         # We remove the ip range blacklist which by default blocks federation
         # connections to local homeservers, of which sytest uses extensively
+        ip_range_blacklist => [],
         federation_ip_range_blacklist => [],
 
         # If we're using workers we need to disable these things in the main
@@ -1239,6 +1240,7 @@ sub generate_haproxy_map
 
 ^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
 
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/redact                               event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send                                 event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/join/                                         event_creator
