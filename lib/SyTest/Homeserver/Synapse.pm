@@ -89,6 +89,10 @@ sub _init
       event_persister2         => main::alloc_port( "event_persister2[$idx]" ),
       event_persister2_metrics => main::alloc_port( "event_persister2[$idx].metrics" ),
       event_persister2_manhole => main::alloc_port( "event_persister2[$idx].manhole" ),
+
+      writer         => main::alloc_port( "writer[$idx]" ),
+      writer_metrics => main::alloc_port( "writer[$idx].metrics" ),
+      writer_manhole => main::alloc_port( "writer[$idx].manhole" ),
    };
 }
 
@@ -309,18 +313,19 @@ sub start
               host => "$bind_host",
               port => $self->{ports}{client_reader},
            },
+           "writer" => {
+              host => "$bind_host",
+              port => $self->{ports}{writer},
+           },
         },
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
 
-           # There's no particular reason to choose client_reader, but I
-           # couldn't think of a better place and I'm not sure we want to add
-           # more workers at this point
-           to_device    => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
-           account_data => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
-           receipts     => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
-           presence     => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           to_device    => $self->{redis_host} ne '' ? [ "writer" ] : "master",
+           account_data => $self->{redis_host} ne '' ? [ "writer" ] : "master",
+           receipts     => $self->{redis_host} ne '' ? [ "writer" ] : "master",
+           presence     => $self->{redis_host} ne '' ? [ "writer" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -1051,6 +1056,40 @@ sub _start_synapse
       push @worker_configs, $event_persister2_config;
    }
 
+      {
+      my $writer_config = {
+         "worker_app"                   => "synapse.app.generic_worker",
+         "worker_name"                  => "writer",
+         "worker_pid_file"              => "$hsdir/writer.pid",
+         "worker_log_config"            => $self->configure_logger("writer"),
+         "worker_replication_host"      => "$bind_host",
+         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
+         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
+         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
+         "worker_listeners"             => [
+            {
+               type      => "http",
+               resources => [{ names => ["client", "replication"] }],
+               port      => $self->{ports}{writer},
+               bind_address => $bind_host,
+            },
+            {
+               type => "manhole",
+               port => $self->{ports}{writer_manhole},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["metrics"] }],
+               port      => $self->{ports}{writer_metrics},
+               bind_address => $bind_host,
+            },
+         ],
+      };
+
+      push @worker_configs, $writer_config;
+   }
+
    my @base_synapse_command = $self->_generate_base_synapse_command();
    my $idx = $self->{hs_index};
 
@@ -1247,9 +1286,6 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/state$             client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/login$                      client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/account/3pid$               client_reader
-^/_matrix/client/(api/v1|r0|unstable)/devices$                    client_reader
-^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 client_reader
-^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               client_reader
 ^/_matrix/client/versions$                                        client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/voip/turnServer$            client_reader
 ^/_matrix/client/(r0|unstable)/register$                          client_reader
@@ -1259,9 +1295,13 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
-^/_matrix/client/(api/v1|r0|unstable)/keys/claim                  client_reader
-^/_matrix/client/(api/v1|r0|unstable)/room_keys                   client_reader
-^/_matrix/client/(api/v1|r0|unstable)/presence/                   client_reader
+
+^/_matrix/client/(api/v1|r0|unstable)/devices$                    writer
+^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 writer
+^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               writer
+^/_matrix/client/(api/v1|r0|unstable)/keys/claim                  writer
+^/_matrix/client/(api/v1|r0|unstable)/room_keys                   writer
+^/_matrix/client/(api/v1|r0|unstable)/presence/                   writer
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
