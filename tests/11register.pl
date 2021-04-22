@@ -730,7 +730,7 @@ test "Can register using an email address",
                   auth => {
                      type           => "m.login.email.identity",
                      session        => $body->{session},
-                      threepid_creds => {
+                     threepid_creds => {
                         sid           => $sid_email,
                         client_secret => $client_secret,
                      },
