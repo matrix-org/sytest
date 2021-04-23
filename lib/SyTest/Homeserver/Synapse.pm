@@ -1056,7 +1056,7 @@ sub _start_synapse
       push @worker_configs, $event_persister2_config;
    }
 
-      {
+   {
       my $writer_config = {
          "worker_app"                   => "synapse.app.generic_worker",
          "worker_name"                  => "writer",
