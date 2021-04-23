@@ -9,7 +9,9 @@
 /synapse
 /test-server
 /var
+*.db
 \#*
 .vscode
 .coverage*
 .idea
+.DS_Store

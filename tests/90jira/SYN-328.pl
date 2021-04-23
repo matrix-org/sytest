@@ -16,7 +16,7 @@ multi_test "Typing notifications don't leak",
             method => "PUT",
             uri    => "/r0/rooms/$room_id/typing/:user_id",
 
-            content => { typing => JSON::true, timeout => 30000 }, # msec
+            content => { typing => JSON::true, timeout => 30000 * $TIMEOUT_FACTOR }, # msec
          );
       })->then( sub {
          Future->needs_all( map {

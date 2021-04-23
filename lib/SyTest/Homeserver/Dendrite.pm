@@ -189,6 +189,15 @@ sub _get_config
          base_path => "media_store",
       },
 
+      mscs => {
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/mscs.db" : $db_uri,
+         },
+         mscs => ["msc2836", "msc2946", "msc2444", "msc2753"],
+      },
+
       room_server => {
          database => {
             connection_string => 
@@ -320,6 +329,16 @@ sub unsecure_port
    my $self = shift;
    return $self->{ports}{monolith_unsecure};
 }
+
+sub public_baseurl
+{
+    my $self = shift;
+    # run-tests.pl defines whether TLS should be used or not.
+    my ( $want_tls ) = @_;
+    return $want_tls ?
+       "https://$self->{bind_host}:" . $self->secure_port() :
+       "http://$self->{bind_host}:" . $self->unsecure_port();
+ }
 
 sub start
 {

@@ -53,15 +53,17 @@ our @HOMESERVER_INFO = map {
 
          my $api_host = $server->http_api_host;
 
-         my $location = $WANT_TLS ?
-            "https://$api_host:" . $server->secure_port :
-            "http://$api_host:" . $server->unsecure_port;
+         my $location = $server->public_baseurl($WANT_TLS);
 
          $server->configure(
             smtp_server_config => $mail_server_info,
          );
 
          $server->configure(
+            # Annoyingly we ask the homeserver object for public_baseurl and then
+            # pass it back into the configuration since this is the only location
+            # we have $WANT_TLS.
+            public_baseurl => $location,
             # Config for testing recaptcha. 90jira/SYT-8.pl
             recaptcha_config => {
                siteverify_api   => $test_server_info->client_location .
@@ -70,7 +72,6 @@ our @HOMESERVER_INFO = map {
                private_key      => "sytest_recaptcha_private_key",
             }, cas_config    => {
                server_url       => $test_server_info->client_location . "/cas",
-               service_url      => $location,
             },
          );
 
@@ -121,7 +122,7 @@ our @HOMESERVER_INFO = map {
          Future->wait_any(
             $server->start,
 
-            $loop->delay_future( after => 60 )
+            delay( 60 )
                ->then_fail( "Timeout waiting for HS to start" ),
          )->then( sub {
             $OUTPUT->diag( "Started server-$idx" );

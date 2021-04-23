@@ -217,7 +217,7 @@ foreach my $i (
                      uri     => "/r0/rooms/$room_id/typing/:user_id",
                      content => {
                         typing => JSON::true,
-                        timeout => 5000,
+                        timeout => 5000 * $TIMEOUT_FACTOR,
                      },
                   ),
 

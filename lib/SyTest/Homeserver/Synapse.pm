@@ -152,7 +152,6 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $unsecure_port = $self->{ports}{synapse_unsecure};
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
@@ -172,7 +171,7 @@ sub start
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_config => $log_config_file,
-        public_baseurl => "http://${bind_host}:$unsecure_port",
+        public_baseurl => $self->{public_baseurl},
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
@@ -307,10 +306,21 @@ sub start
               host => "$bind_host",
               port => $self->{ports}{event_persister2},
            },
+           "client_reader" => {
+              host => "$bind_host",
+              port => $self->{ports}{client_reader},
+           },
         },
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
+
+           # There's no particular reason to choose client_reader, but I
+           # couldn't think of a better place and I'm not sure we want to add
+           # more workers at this point
+           to_device    => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           account_data => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           receipts     => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -546,7 +556,7 @@ sub rotate_logfile
    try_repeat {
       -f $logpath and return Future->done(1);
 
-      $self->loop->delay_future( after => 0.5 )->then_done(0);
+      main::delay( 0.5 )->then_done(0);
    } foreach => [ 1 .. 20 ],
      while => sub { !shift->get },
      otherwise => sub { die "Timed out waiting for synapse to recreate its log file" };
@@ -581,6 +591,16 @@ sub unsecure_port
 {
    my $self = shift;
    return $self->{ports}{synapse_unsecure};
+}
+
+sub public_baseurl
+{
+   my $self = shift;
+   # run-tests.pl defines whether TLS should be used or not.
+   my ( $want_tls ) = @_;
+   return $want_tls ?
+      "https://$self->{bind_host}:" . $self->secure_port() :
+      "http://$self->{bind_host}:" . $self->unsecure_port();
 }
 
 package SyTest::Homeserver::Synapse::Direct;
@@ -847,7 +867,7 @@ sub _start_synapse
          "worker_listeners"             => [
             {
                type      => "http",
-               resources => [{ names => ["client"] }],
+               resources => [{ names => ["client", "replication"] }],
                port      => $self->{ports}{client_reader},
                bind_address => $bind_host,
             },
@@ -1097,6 +1117,12 @@ sub unsecure_port
    die "haproxy does not have an unsecure port mode\n";
 }
 
+sub public_baseurl
+{
+   my $self = shift;
+   return "https://$self->{bind_host}:" . $self->secure_port();
+}
+
 sub start
 {
    my $self = shift;
@@ -1189,7 +1215,12 @@ EOCONFIG
 
 sub generate_haproxy_map
 {
-    return <<'EOCONFIG';
+   my $self = shift;
+
+   # The base haproxy routes. Note that we add more routes below if using
+   # haproxy. Also, the routing for GET requests below takes precedence over
+   # these routes.
+   my $haproxy_map = <<'EOCONFIG';
 ^/_matrix/client/(v2_alpha|r0)/sync$                  synchrotron
 ^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
 ^/_matrix/client/(api/v1|r0)/initialSync$             synchrotron
@@ -1224,6 +1255,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/state$             client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/login$                      client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/account/3pid$               client_reader
+^/_matrix/client/(api/v1|r0|unstable)/devices$                    client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               client_reader
 ^/_matrix/client/versions$                                        client_reader
@@ -1235,6 +1267,8 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/keys/claim                  client_reader
+^/_matrix/client/(api/v1|r0|unstable)/room_keys                   client_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
@@ -1247,6 +1281,21 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/profile/                                      event_creator
 
 EOCONFIG
+
+   # Some things can only be moved off master when using redis.
+   if ( $self->{redis_host} ne '' ) {
+      $haproxy_map .= <<'EOCONFIG';
+
+^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/tag           client_reader
+^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  client_reader
+
+EOCONFIG
+   }
+
+   return $haproxy_map
 }
 
 sub generate_haproxy_get_map
