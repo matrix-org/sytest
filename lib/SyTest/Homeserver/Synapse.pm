@@ -1241,6 +1241,9 @@ backend event_creator
 backend frontend_proxy
     server frontend_proxy ${bind_host}:$ports->{frontend_proxy}
 
+backend writer
+    server writer ${bind_host}:$ports->{writer}
+
 EOCONFIG
 }
 
@@ -1319,11 +1322,11 @@ EOCONFIG
    if ( $self->{redis_host} ne '' ) {
       $haproxy_map .= <<'EOCONFIG';
 
-^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          client_reader
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/tag           client_reader
-^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        client_reader
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       client_reader
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  client_reader
+^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          writer
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/tag           writer
+^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        writer
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       writer
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  writer
 
 EOCONFIG
    }
