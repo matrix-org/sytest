@@ -51,19 +51,11 @@ our @HOMESERVER_INFO = map {
 
          $loop->add( $server );
 
-         my $api_host = $server->http_api_host;
-
-         my $location = $server->public_baseurl($WANT_TLS);
-
          $server->configure(
             smtp_server_config => $mail_server_info,
          );
 
          $server->configure(
-            # Annoyingly we ask the homeserver object for public_baseurl and then
-            # pass it back into the configuration since this is the only location
-            # we have $WANT_TLS.
-            public_baseurl => $location,
             # Config for testing recaptcha. 90jira/SYT-8.pl
             recaptcha_config => {
                siteverify_api   => $test_server_info->client_location .
@@ -75,8 +67,10 @@ our @HOMESERVER_INFO = map {
             },
          );
 
-         my $info = ServerInfo( $server->server_name, $location,
-                                $api_host, $server->federation_port );
+         my $info = ServerInfo(
+            $server->server_name, $server->public_baseurl,
+            $server->federation_host, $server->federation_port,
+         );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only
@@ -129,11 +123,11 @@ our @HOMESERVER_INFO = map {
             return Future->done( $info );
          })->on_fail( sub {
             my ( $exn, @details ) = @_;
-            warn( "Error starting server-$idx (on port ${\$server->secure_port}): $exn" );
+            warn( "Error starting server-$idx: $exn" );
 
             # if we can't start the first homeserver, we really might as well go home.
             if( $idx == 0 ) {
-               print STDERR "\nAborting test run due to failure to start test server\n";
+               warn( "Aborting test run due to failure to start test server" );
 
                # If we just exit then we need to call the AT_END functions
                # manually (if we don't we'll leak child processes).

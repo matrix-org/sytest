@@ -116,10 +116,10 @@ Homeserver interface.
 This method should return the server_name for the server (ie, the 'domain' part
 of any Matrix IDs it generates).
 
-=head2 http_api_host
+=head2 federation_host
 
 This method should return the hostname where the homeserver exposes the
-client-server and server-server APIs.
+server-server API.
 
 =head2 federation_port
 
@@ -129,19 +129,12 @@ This method should return the port number where the homeserver exposes a
 server-server API (over HTTPS). It may return undef if there is no known
 federation port.
 
-=head2 secure_port
+=head2 public_baseurl
 
-   $hs->secure_port
+   $hs->public_baseurl
 
-This method should return the port number where the homeserver exposes a
-client-server API over HTTPS.
-
-=head2 unsecure_port
-
-   $hs->unsecure_port
-
-This method should return the port number where the homeserver exposes a
-client-server API over HTTP.
+This method should returns the public base URL for the client-server API for
+this server.
 
 =cut
 
@@ -166,7 +159,7 @@ sub configure
    my %params = @_;
 
    exists $params{$_} and $self->{$_} = delete $params{$_} for qw(
-      public_baseurl recaptcha_config cas_config smtp_server_config
+      recaptcha_config cas_config smtp_server_config
       app_service_config_files
    );
 
@@ -536,7 +529,9 @@ sub await_connectable
 This method runs a specified command and returns a future which will complete
 when the process exits.
 
-The parameters are passed to C<IO::Loop->run_child>.
+Any output from the command is written as diagnostics.
+
+The parameters are passed to C<IO::Async::Process::new>.
 
 =cut
 
@@ -546,16 +541,40 @@ sub _run_command
    my %params = @_;
 
    my $cmd = $params{command}[0];
+   my $output = $self->{output};
+
+   my $diag = sub {
+      $output->diag( "\e[1;35m[$cmd]\e[m: $_[0]" );
+   };
+
+   my $on_output = sub {
+      my ( $stream, $buffref, $eof) = @_;
+
+      # write each complete line in the buffer
+      while ( $$buffref =~ s/^(.*)\n// ) {
+         &$diag($1);
+      }
+
+      # if this is the end of the output, and there is
+      # anything left in the buffer, print out the remainder.
+      if( $eof && $$buffref ) {
+         &$diag($$buffref);
+      }
+
+      return 0;
+   };
 
    my $fut = $self->loop->new_future;
-   $self->loop->run_child(
-      %params,
 
+   my $proc = IO::Async::Process->new(
+      %params,
+      stdout => { on_read => $on_output },
+      stderr => { on_read => $on_output },
       on_finish => sub {
-         my ( $pid, $exitcode, $stdout, $stderr ) = @_;
+         my ( undef, $exitcode ) = @_;
 
          if( $exitcode == 0 ) {
-            $fut->done( $stdout );
+            $fut->done();
             return;
          }
 
@@ -566,13 +585,11 @@ sub _run_command
             $failure = "$cmd failed $exitcode";
          }
 
-         if( $stderr ) {
-            $failure .= ": $stderr";
-         }
          $fut->fail( $failure );
-      }
+      },
    );
 
+   $self->loop->add($proc);
    return $fut;
 }
 

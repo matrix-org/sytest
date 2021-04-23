@@ -184,7 +184,8 @@ test "Ghost user must register before joining room",
          uri    => "/r0/register",
 
          content => {
-            user => $unregistered_as_user_localpart,
+            username => $unregistered_as_user_localpart,
+            type => "m.login.application_service",
          },
       );
    };

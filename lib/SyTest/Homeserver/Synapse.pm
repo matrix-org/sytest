@@ -37,10 +37,11 @@ sub _init
 
    $self->SUPER::_init( $args );
 
+   # TODO: most of these ports are unused in monolith mode, and their
+   # allocations could be moved to SyTest::Homeserver::Synapse::ViaHaproxy::_init
    my $idx = $self->{hs_index};
    $self->{ports} = {
       synapse                  => main::alloc_port( "synapse[$idx]" ),
-      synapse_unsecure         => main::alloc_port( "synapse[$idx].unsecure" ),
       synapse_metrics          => main::alloc_port( "synapse[$idx].metrics" ),
       synapse_replication_tcp  => main::alloc_port( "synapse[$idx].replication_tcp" ),
 
@@ -88,8 +89,6 @@ sub _init
       event_persister2         => main::alloc_port( "event_persister2[$idx]" ),
       event_persister2_metrics => main::alloc_port( "event_persister2[$idx].metrics" ),
       event_persister2_manhole => main::alloc_port( "event_persister2[$idx].manhole" ),
-
-      haproxy => main::alloc_port( "haproxy[$idx]" ),
    };
 }
 
@@ -171,7 +170,7 @@ sub start
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_config => $log_config_file,
-        public_baseurl => $self->{public_baseurl},
+        public_baseurl => $self->public_baseurl,
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
@@ -442,17 +441,6 @@ sub generate_listeners
 
    my @listeners;
 
-   if( my $unsecure_port = $self->{ports}{synapse_unsecure} ) {
-      push @listeners, {
-         type         => "http",
-         port         => $unsecure_port,
-         bind_address => $bind_host,
-         resources    => [{
-            names => [ "client", "federation", "replication", "metrics" ]
-         }]
-      }
-   }
-
    if( my $replication_tcp_port = $self->{ports}{synapse_replication_tcp} ) {
       push @listeners, {
          type         => "replication",
@@ -569,7 +557,7 @@ sub server_name
    return $self->{bind_host} . ":" . $self->secure_port;
 }
 
-sub http_api_host
+sub federation_host
 {
    my $self = shift;
    return $self->{bind_host};
@@ -587,20 +575,10 @@ sub secure_port
    return $self->{ports}{synapse};
 }
 
-sub unsecure_port
-{
-   my $self = shift;
-   return $self->{ports}{synapse_unsecure};
-}
-
 sub public_baseurl
 {
    my $self = shift;
-   # run-tests.pl defines whether TLS should be used or not.
-   my ( $want_tls ) = @_;
-   return $want_tls ?
-      "https://$self->{bind_host}:" . $self->secure_port() :
-      "http://$self->{bind_host}:" . $self->unsecure_port();
+   return "https://$self->{bind_host}:" . $self->secure_port;
 }
 
 package SyTest::Homeserver::Synapse::Direct;
@@ -648,8 +626,9 @@ sub _init
       $self->{replication_torture_level} = $level;
    }
 
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( haproxy );
+   my $idx = $self->{hs_index};
+   $self->{ports}{synapse_unsecure} = main::alloc_port( "synapse[$idx].unsecure" );
+   $self->{ports}{haproxy} = main::alloc_port( "haproxy[$idx]" );
 }
 
 sub _check_db_config
@@ -657,7 +636,7 @@ sub _check_db_config
    my $self = shift;
    my ( %config ) = @_;
 
-   $config{type} eq "pg" or die "Dendron can only run against postgres";
+   $config{type} eq "pg" or die "Synapse can only run against postgres when in worker mode";
 
    return $self->SUPER::_check_db_config( @_ );
 }
@@ -1105,16 +1084,27 @@ sub _start_synapse
    })
 }
 
+sub generate_listeners
+{
+   my $self = shift;
+
+   return
+      {
+         type         => "http",
+         port         => $self->{ports}{synapse_unsecure},
+         bind_address => "127.0.0.1",
+         x_forwarded  => JSON::true,
+         resources    => [{
+            names => [ "client", "federation", "replication" ]
+         }]
+      },
+      $self->SUPER::generate_listeners;
+}
+
 sub secure_port
 {
    my $self = shift;
    return $self->{ports}{haproxy};
-}
-
-sub unsecure_port
-{
-   my $self = shift;
-   die "haproxy does not have an unsecure port mode\n";
 }
 
 sub public_baseurl
@@ -1180,6 +1170,7 @@ defaults
 
 frontend http-in
     bind ${bind_host}:$ports->{haproxy} ssl crt $self->{paths}{pem_file}
+    http-request set-header X-Forwarded-Proto https if { ssl_fc }
 
     acl has_get_map path -m reg -M -f $self->{paths}{get_path_map_file}
     use_backend %[path,map_reg($self->{paths}{get_path_map_file},synapse)] if has_get_map METH_GET

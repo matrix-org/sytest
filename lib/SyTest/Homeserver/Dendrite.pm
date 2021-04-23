@@ -69,7 +69,7 @@ sub _check_db_config
    return $self->SUPER::_check_db_config( @_ );
 }
 
-sub http_api_host
+sub federation_host
 {
    my $self = shift;
    return $self->{bind_host};
@@ -126,6 +126,7 @@ sub _get_config
                 "file:$self->{hs_dir}/appservice_api.db" : $db_uri,
          },
          config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
+         disable_tls_validation => $JSON::true,
       },
 
       client_api => {
@@ -332,13 +333,9 @@ sub unsecure_port
 
 sub public_baseurl
 {
-    my $self = shift;
-    # run-tests.pl defines whether TLS should be used or not.
-    my ( $want_tls ) = @_;
-    return $want_tls ?
-       "https://$self->{bind_host}:" . $self->secure_port() :
-       "http://$self->{bind_host}:" . $self->unsecure_port();
- }
+   my $self = shift;
+   return "https://$self->{bind_host}:" . $self->secure_port();
+}
 
 sub start
 {

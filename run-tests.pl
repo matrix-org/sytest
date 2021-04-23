@@ -53,8 +53,6 @@ use Module::Pluggable
 
 binmode(STDOUT, ":utf8");
 
-our $WANT_TLS = 1;  # This is shared with the test scripts
-
 our $BIND_HOST = "localhost";
 
 # a unique ID for this test run. It is used in some tests to create user IDs
@@ -100,8 +98,6 @@ GetOptions(
    'w|wait-at-end' => \my $WAIT_AT_END,
 
    'v|verbose+' => \(my $VERBOSE = 0),
-
-   'n|no-tls' => sub { $WANT_TLS = 0 },
 
    'work-directory=s' => \$WORK_DIR,
 
