@@ -234,6 +234,11 @@ sub _get_config
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/devices.db" : $db_uri,
          },
+         pusher_database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/pushers.db" : $db_uri,
+         },
       },
 
       logging => [{
