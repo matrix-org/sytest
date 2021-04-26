@@ -773,7 +773,7 @@ test "Can register using an email address via identity server",
 
          assert_json_keys( $body, qw( session flows ));
 
-         log_if_fail "No single m.login.email.identity stage registration flow found", $body;
+         log_if_fail "First /register body", $body;
 
          # Check that one of the flows' stages contains an "m.login.email.identity" stage
          my $has_flow;
