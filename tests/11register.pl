@@ -757,9 +757,6 @@ test "Can register using an email address via identity server",
 
       my $email_address = 'testemail@example.com';
 
-
-      # print "\n\n$BIND_HOST\n\n\n";
-      # print "\n\n${id_server->name}\n\n\n";
       $http->do_request_json(
          method => "POST",
          uri    => "/r0/register",
