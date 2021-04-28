@@ -52,7 +52,7 @@ sub server_name
    return $self->{server_name};
 }
 
-sub http_api_host
+sub federation_host
 {
    my $self = shift;
    return $self->{host};
@@ -61,21 +61,16 @@ sub http_api_host
 sub federation_port
 {
    my $self = shift;
-   return $self->secure_port;
-}
-
-sub secure_port
-{
-   my $self = shift;
-
    return $self->{secure_port};
 }
 
-sub unsecure_port
+sub public_baseurl
 {
    my $self = shift;
 
-   return $self->{unsecure_port};
+   return defined $self->{secure_port} ?
+      "https://$self->{host}:" . $self->{secure_port} :
+      "http://$self->{host}:" . $self->{unsecure_port};
 }
 
 sub start

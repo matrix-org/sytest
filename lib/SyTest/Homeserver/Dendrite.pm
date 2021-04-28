@@ -69,7 +69,7 @@ sub _check_db_config
    return $self->SUPER::_check_db_config( @_ );
 }
 
-sub http_api_host
+sub federation_host
 {
    my $self = shift;
    return $self->{bind_host};
@@ -126,6 +126,7 @@ sub _get_config
                 "file:$self->{hs_dir}/appservice_api.db" : $db_uri,
          },
          config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
+         disable_tls_validation => $JSON::true,
       },
 
       client_api => {
@@ -189,6 +190,15 @@ sub _get_config
          base_path => "media_store",
       },
 
+      mscs => {
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/mscs.db" : $db_uri,
+         },
+         mscs => ["msc2836", "msc2946", "msc2444", "msc2753"],
+      },
+
       room_server => {
          database => {
             connection_string => 
@@ -197,11 +207,11 @@ sub _get_config
          },
       },
 
-      server_key_api => {
+      signing_key_server => {
          database => {
             connection_string => 
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/server_key_api.db" : $db_uri,
+               "file:$self->{hs_dir}/signingkeyserver.db" : $db_uri,
          },
       },
 
@@ -319,6 +329,12 @@ sub unsecure_port
 {
    my $self = shift;
    return $self->{ports}{monolith_unsecure};
+}
+
+sub public_baseurl
+{
+   my $self = shift;
+   return "https://$self->{bind_host}:" . $self->secure_port();
 }
 
 sub start

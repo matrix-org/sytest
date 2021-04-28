@@ -14,6 +14,8 @@ sub matrix_typing
 {
    my ( $user, $room_id, %params ) = @_;
 
+   $params{timeout} *= $TIMEOUT_FACTOR if defined $params{timeout};
+
    do_request_json_for( $user,
       method => "PUT",
       uri    => "/r0/rooms/$room_id/typing/:user_id",

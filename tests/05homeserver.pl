@@ -51,12 +51,6 @@ our @HOMESERVER_INFO = map {
 
          $loop->add( $server );
 
-         my $api_host = $server->http_api_host;
-
-         my $location = $WANT_TLS ?
-            "https://$api_host:" . $server->secure_port :
-            "http://$api_host:" . $server->unsecure_port;
-
          $server->configure(
             smtp_server_config => $mail_server_info,
          );
@@ -70,12 +64,13 @@ our @HOMESERVER_INFO = map {
                private_key      => "sytest_recaptcha_private_key",
             }, cas_config    => {
                server_url       => $test_server_info->client_location . "/cas",
-               service_url      => $location,
             },
          );
 
-         my $info = ServerInfo( $server->server_name, $location,
-                                $api_host, $server->federation_port );
+         my $info = ServerInfo(
+            $server->server_name, $server->public_baseurl,
+            $server->federation_host, $server->federation_port,
+         );
 
          if( $idx == 0 ) {
             # Configure application services on first instance only
@@ -121,18 +116,18 @@ our @HOMESERVER_INFO = map {
          Future->wait_any(
             $server->start,
 
-            $loop->delay_future( after => 60 )
+            delay( 60 )
                ->then_fail( "Timeout waiting for HS to start" ),
          )->then( sub {
             $OUTPUT->diag( "Started server-$idx" );
             return Future->done( $info );
          })->on_fail( sub {
             my ( $exn, @details ) = @_;
-            warn( "Error starting server-$idx (on port ${\$server->secure_port}): $exn" );
+            warn( "Error starting server-$idx: $exn" );
 
             # if we can't start the first homeserver, we really might as well go home.
             if( $idx == 0 ) {
-               print STDERR "\nAborting test run due to failure to start test server\n";
+               warn( "Aborting test run due to failure to start test server" );
 
                # If we just exit then we need to call the AT_END functions
                # manually (if we don't we'll leak child processes).

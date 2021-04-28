@@ -127,6 +127,8 @@ sub matrix_get_events
 {
    my ( $user, %params ) = @_;
 
+   $params{timeout} *= $TIMEOUT_FACTOR if defined $params{timeout};
+
    do_request_json_for( $user,
       method => "GET",
       uri    => "/r0/events",
@@ -220,6 +222,8 @@ sub matrix_sync
    my ( $user, %params ) = @_;
 
    my $update_next_batch = delete $params{update_next_batch} // 1;
+
+   $params{timeout} *= $TIMEOUT_FACTOR if defined $params{timeout};
 
    do_request_json_for( $user,
       method  => "GET",

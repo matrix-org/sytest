@@ -29,7 +29,7 @@ test "Inviting an AS-hosted user asks the AS server",
 
             log_if_fail "Event", $event;
 
-            assert_json_keys( $event, qw( content room_id user_id ));
+            assert_json_keys( $event, qw( content room_id sender ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";
@@ -77,10 +77,10 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
             log_if_fail "Event", $event;
 
-            assert_json_keys( $event, qw( content room_id user_id state_key ));
+            assert_json_keys( $event, qw( content room_id sender state_key ));
 
             assert_eq($event->{room_id}, $room_id, "Event room_id");
-            assert_eq($event->{user_id}, $local_user->user_id, "Event user_id");
+            assert_eq($event->{sender}, $local_user->user_id, "Event sender");
             assert_eq($event->{state_key}, $local_user->user_id, "Event state_key");
 
             assert_json_keys( $event->{content}, qw( membership ));
@@ -111,7 +111,7 @@ test "Events in rooms with AS-hosted room aliases are sent to AS server",
 
             log_if_fail "Event", $event;
 
-            assert_json_keys( $event, qw( content room_id user_id ));
+            assert_json_keys( $event, qw( content room_id sender ));
 
             $event->{room_id} eq $room_id or
                die "Expected room_id to be $room_id";

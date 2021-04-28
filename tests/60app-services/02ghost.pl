@@ -46,11 +46,11 @@ multi_test "AS-ghosted users can use rooms via AS",
 
                log_if_fail "AS event", $event;
 
-               assert_json_keys( $event, qw( room_id user_id ));
+               assert_json_keys( $event, qw( room_id sender ));
 
                $event->{room_id} eq $room_id or
                   die "Expected room_id to be $room_id";
-               $event->{user_id} eq $ghost->user_id or
+               $event->{sender} eq $ghost->user_id or
                   die "Expected sender user_id to be ${\$ghost->user_id}";
 
                Future->done;
@@ -123,11 +123,11 @@ multi_test "AS-ghosted users can use rooms themselves",
 
                log_if_fail "AS event", $event;
 
-               assert_json_keys( $event, qw( room_id user_id ));
+               assert_json_keys( $event, qw( room_id sender ));
 
                $event->{room_id} eq $room_id or
                   die "Expected room_id to be $room_id";
-               $event->{user_id} eq $ghost->user_id or
+               $event->{sender} eq $ghost->user_id or
                   die "Expected sender user_id to be ${\$ghost->user_id}";
 
                Future->done;
@@ -184,7 +184,8 @@ test "Ghost user must register before joining room",
          uri    => "/r0/register",
 
          content => {
-            user => $unregistered_as_user_localpart,
+            username => $unregistered_as_user_localpart,
+            type => "m.login.application_service",
          },
       );
    };

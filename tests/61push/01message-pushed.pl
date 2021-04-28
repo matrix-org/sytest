@@ -1,3 +1,6 @@
+# Per the specification HTTP pushers must point to the following location.
+my $PUSH_LOCATION = "/_matrix/push/v1/notify";
+
 sub matrix_set_pusher {
    my ( $user, $location ) = @_;
 
@@ -82,7 +85,7 @@ multi_test "Test that a message is pushed",
          # message received may be due to Bob joining rather than the
          # message that Bob sent.
          matrix_set_pusher(
-            $alice, $test_server_info->client_location . "/alice_push",
+            $alice, $test_server_info->client_location . $PUSH_LOCATION,
          )->SyTest::pass_on_done( "Alice's pusher created" )
       })->then( sub {
          # Bob sends a message that should be pushed to Alice, since it is
@@ -90,7 +93,7 @@ multi_test "Test that a message is pushed",
 
          Future->needs_all(
             # TODO(check that the HTTP poke is actually the poke we wanted)
-            await_http_request( "/alice_push", sub {
+            await_http_request( $PUSH_LOCATION, sub {
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
@@ -132,7 +135,7 @@ multi_test "Test that a message is pushed",
          pass "Alice was pushed";  # Alice has gone down the stairs
 
          Future->needs_all(
-            await_http_request( "/alice_push", sub {
+            await_http_request( $PUSH_LOCATION, sub {
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
@@ -177,14 +180,14 @@ test "Invites are pushed",
       my $room_id;
 
       matrix_set_pusher(
-         $alice, $test_server_info->client_location . "/alice_push",
+         $alice, $test_server_info->client_location . $PUSH_LOCATION,
       )->then( sub {
          matrix_create_room( $bob, visibility => "private" );
       })->then( sub {
          ( $room_id ) = @_;
 
          Future->needs_all(
-            await_http_request( "/alice_push", sub {
+            await_http_request( $PUSH_LOCATION, sub {
                my ( $request ) = @_;
                my $body = $request->body_from_json;
 
@@ -218,7 +221,7 @@ test "Invites are pushed",
 
 =head2 setup_push
 
-   setup_push( $alice, $bob, $test_server_info, $loc )
+   setup_push( $alice, $bob, $test_server_info )
 
 Sets up push for $alice and creates a room with $alice and $bob. Returns a
 future with the room_id of the newly created room.
@@ -227,10 +230,10 @@ future with the room_id of the newly created room.
 
 sub setup_push
 {
-   my ( $alice, $bob, $test_server_info, $loc ) = @_;
+   my ( $alice, $bob, $test_server_info ) = @_;
    my $room_id;
 
-   my $target = $test_server_info->client_location . $loc;
+   my $target = $test_server_info->client_location . $PUSH_LOCATION;
    matrix_set_pusher(
       $alice, $target,
    )->then( sub {
@@ -253,7 +256,7 @@ sub setup_push
 
       log_if_fail "Joined room $room_id; waiting for push to start working";
 
-      wait_for_pusher_to_work( $bob, $room_id, $loc );
+      wait_for_pusher_to_work( $bob, $room_id );
    })->then( sub {
       Future->done( $room_id );
    })
@@ -262,7 +265,7 @@ sub setup_push
 
 =head2 wait_for_pusher_to_work
 
-   wait_for_pusher_to_work( $sending_user, $room_id, $push_location )
+   wait_for_pusher_to_work( $sending_user, $room_id )
 
 This is mostly a helper function for setup_push, but it might also help in some
 other situations when configuring a pusher.
@@ -275,10 +278,10 @@ that created the pusher) send messages to the room until a push arrives.
 
 sub wait_for_pusher_to_work
 {
-   my ( $sending_user, $room_id, $push_loc ) = @_;
+   my ( $sending_user, $room_id ) = @_;
 
    # a future which waits for a push to arrive
-   my $push_future = await_http_request( $push_loc, sub {
+   my $push_future = await_http_request( $PUSH_LOCATION, sub {
        my ( $request ) = @_;
        my $body = $request->body_from_json;
 
@@ -305,10 +308,10 @@ sub wait_for_pusher_to_work
 
 sub check_received_push_with_name
 {
-   my ( $bob, $room_id, $loc, $room_name ) = @_;
+   my ( $bob, $room_id, $room_name ) = @_;
 
    Future->needs_all(
-      await_http_request( $loc, sub {
+      await_http_request( $PUSH_LOCATION, sub {
          my ( $request ) = @_;
          my $body = $request->body_from_json;
 
@@ -352,7 +355,7 @@ test "Rooms with names are correctly named in pushes",
 
       my $name = "Test Name";
 
-      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      setup_push( $alice, $bob, $test_server_info )
       ->then( sub {
          ( $room_id ) = @_;
 
@@ -361,7 +364,7 @@ test "Rooms with names are correctly named in pushes",
             content => { name => $name },
          );
       })->then( sub {
-         check_received_push_with_name( $bob, $room_id, "/alice_push", $name )
+         check_received_push_with_name( $bob, $room_id, $name )
       });
    };
 
@@ -375,7 +378,7 @@ test "Rooms with canonical alias are correctly named in pushed",
       my ( $alice, $bob, $room_alias, $test_server_info ) = @_;
       my $room_id;
 
-      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      setup_push( $alice, $bob, $test_server_info )
       ->then( sub {
          ( $room_id ) = @_;
 
@@ -391,7 +394,7 @@ test "Rooms with canonical alias are correctly named in pushed",
             content => { alias => $room_alias },
          );
       })->then( sub {
-         check_received_push_with_name( $bob, $room_id, "/alice_push", $room_alias )
+         check_received_push_with_name( $bob, $room_id, $room_alias )
       });
    };
 
@@ -407,7 +410,7 @@ test "Rooms with many users are correctly pushed",
 
       my $name = "Test Name";
 
-      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      setup_push( $alice, $bob, $test_server_info )
       ->then( sub {
          ($room_id) = @_;
 
@@ -425,7 +428,7 @@ test "Rooms with many users are correctly pushed",
             content => { room_id => $room_id },
          )
       })->then( sub {
-         check_received_push_with_name( $bob, $room_id, "/alice_push", $name )
+         check_received_push_with_name( $bob, $room_id, $name )
       });
    };
 
@@ -443,14 +446,14 @@ test "Don't get pushed for rooms you've muted",
       # are received by push. This is because its "impossible" to test for the
       # absence of second push without doing a third.
 
-      setup_push( $alice, $bob, $test_server_info, "/alice_push" )
+      setup_push( $alice, $bob, $test_server_info )
       ->then( sub {
          ( $room_id ) = @_;
 
          log_if_fail "room_id", $room_id;
 
          Future->needs_all(
-            await_http_request( "/alice_push", sub {
+            await_http_request( $PUSH_LOCATION, sub {
                my ( $request ) = @_;
 
                log_if_fail "Got /alice_push request";
@@ -501,7 +504,7 @@ test "Don't get pushed for rooms you've muted",
             my $push_count = 0;  # Counts the number of pushes we've seen in this loop
 
             Future->needs_all(
-               await_http_request( "/alice_push", sub {
+               await_http_request( $PUSH_LOCATION, sub {
                   my ( $request ) = @_;
                   my $body = $request->body_from_json;
 
@@ -591,13 +594,13 @@ test "Rejected events are not pushed",
       log_if_fail "Regular event " . $room->id_for_event( $regular_event );
 
       matrix_set_pusher(
-         $alice, $test_server_info->client_location . "/alice_push",
+         $alice, $test_server_info->client_location . $PUSH_LOCATION,
       )->then( sub {
          # we need a second local user in the room, so that we can test if
          # alice's pusher is active.
          matrix_join_room( $bob, $room->room_id );
       })->then( sub {
-         wait_for_pusher_to_work( $bob, $room->room_id, "/alice_push" );
+         wait_for_pusher_to_work( $bob, $room->room_id );
       })->then( sub {
          Future->needs_all(
             # we send the rejected event first, and then the regular event, and
@@ -613,7 +616,7 @@ test "Rejected events are not pushed",
                );
             }),
 
-            await_http_request( "/alice_push" )->then( sub {
+            await_http_request( $PUSH_LOCATION )->then( sub {
                my ( $request ) = @_;
                my $body = $request->body_from_json;
                $request->respond_json( {} );

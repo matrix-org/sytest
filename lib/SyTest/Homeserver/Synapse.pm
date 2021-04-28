@@ -37,10 +37,11 @@ sub _init
 
    $self->SUPER::_init( $args );
 
+   # TODO: most of these ports are unused in monolith mode, and their
+   # allocations could be moved to SyTest::Homeserver::Synapse::ViaHaproxy::_init
    my $idx = $self->{hs_index};
    $self->{ports} = {
       synapse                  => main::alloc_port( "synapse[$idx]" ),
-      synapse_unsecure         => main::alloc_port( "synapse[$idx].unsecure" ),
       synapse_metrics          => main::alloc_port( "synapse[$idx].metrics" ),
       synapse_replication_tcp  => main::alloc_port( "synapse[$idx].replication_tcp" ),
 
@@ -88,8 +89,6 @@ sub _init
       event_persister2         => main::alloc_port( "event_persister2[$idx]" ),
       event_persister2_metrics => main::alloc_port( "event_persister2[$idx].metrics" ),
       event_persister2_manhole => main::alloc_port( "event_persister2[$idx].manhole" ),
-
-      haproxy => main::alloc_port( "haproxy[$idx]" ),
    };
 }
 
@@ -152,7 +151,6 @@ sub start
 
    my $listeners = [ $self->generate_listeners ];
    my $bind_host = $self->{bind_host};
-   my $unsecure_port = $self->{ports}{synapse_unsecure};
 
    my $macaroon_secret_key = "secret_$port";
    my $registration_shared_secret = "reg_secret";
@@ -172,7 +170,7 @@ sub start
    my $config_path = $self->{paths}{config} = $self->write_yaml_file( "config.yaml" => {
         server_name => $self->server_name,
         log_config => $log_config_file,
-        public_baseurl => "http://${bind_host}:$unsecure_port",
+        public_baseurl => $self->public_baseurl,
 
         # We configure synapse to use a TLS cert which is signed by our dummy CA...
         tls_certificate_path => $self->{paths}{cert_file},
@@ -252,6 +250,7 @@ sub start
 
         # We remove the ip range blacklist which by default blocks federation
         # connections to local homeservers, of which sytest uses extensively
+        ip_range_blacklist => [],
         federation_ip_range_blacklist => [],
 
         # If we're using workers we need to disable these things in the main
@@ -306,10 +305,21 @@ sub start
               host => "$bind_host",
               port => $self->{ports}{event_persister2},
            },
+           "client_reader" => {
+              host => "$bind_host",
+              port => $self->{ports}{client_reader},
+           },
         },
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
+
+           # There's no particular reason to choose client_reader, but I
+           # couldn't think of a better place and I'm not sure we want to add
+           # more workers at this point
+           to_device    => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           account_data => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
+           receipts     => $self->{redis_host} ne '' ? [ "client_reader" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -431,17 +441,6 @@ sub generate_listeners
 
    my @listeners;
 
-   if( my $unsecure_port = $self->{ports}{synapse_unsecure} ) {
-      push @listeners, {
-         type         => "http",
-         port         => $unsecure_port,
-         bind_address => $bind_host,
-         resources    => [{
-            names => [ "client", "federation", "replication", "metrics" ]
-         }]
-      }
-   }
-
    if( my $replication_tcp_port = $self->{ports}{synapse_replication_tcp} ) {
       push @listeners, {
          type         => "replication",
@@ -545,7 +544,7 @@ sub rotate_logfile
    try_repeat {
       -f $logpath and return Future->done(1);
 
-      $self->loop->delay_future( after => 0.5 )->then_done(0);
+      main::delay( 0.5 )->then_done(0);
    } foreach => [ 1 .. 20 ],
      while => sub { !shift->get },
      otherwise => sub { die "Timed out waiting for synapse to recreate its log file" };
@@ -558,7 +557,7 @@ sub server_name
    return $self->{bind_host} . ":" . $self->secure_port;
 }
 
-sub http_api_host
+sub federation_host
 {
    my $self = shift;
    return $self->{bind_host};
@@ -576,10 +575,10 @@ sub secure_port
    return $self->{ports}{synapse};
 }
 
-sub unsecure_port
+sub public_baseurl
 {
    my $self = shift;
-   return $self->{ports}{synapse_unsecure};
+   return "https://$self->{bind_host}:" . $self->secure_port;
 }
 
 package SyTest::Homeserver::Synapse::Direct;
@@ -627,8 +626,9 @@ sub _init
       $self->{replication_torture_level} = $level;
    }
 
-   defined $self->{ports}{$_} or croak "Need a '$_' port\n"
-      for qw( haproxy );
+   my $idx = $self->{hs_index};
+   $self->{ports}{synapse_unsecure} = main::alloc_port( "synapse[$idx].unsecure" );
+   $self->{ports}{haproxy} = main::alloc_port( "haproxy[$idx]" );
 }
 
 sub _check_db_config
@@ -636,7 +636,7 @@ sub _check_db_config
    my $self = shift;
    my ( %config ) = @_;
 
-   $config{type} eq "pg" or die "Dendron can only run against postgres";
+   $config{type} eq "pg" or die "Synapse can only run against postgres when in worker mode";
 
    return $self->SUPER::_check_db_config( @_ );
 }
@@ -846,7 +846,7 @@ sub _start_synapse
          "worker_listeners"             => [
             {
                type      => "http",
-               resources => [{ names => ["client"] }],
+               resources => [{ names => ["client", "replication"] }],
                port      => $self->{ports}{client_reader},
                bind_address => $bind_host,
             },
@@ -1084,16 +1084,33 @@ sub _start_synapse
    })
 }
 
+sub generate_listeners
+{
+   my $self = shift;
+
+   return
+      {
+         type         => "http",
+         port         => $self->{ports}{synapse_unsecure},
+         bind_address => "127.0.0.1",
+         x_forwarded  => JSON::true,
+         resources    => [{
+            names => [ "client", "federation", "replication" ]
+         }]
+      },
+      $self->SUPER::generate_listeners;
+}
+
 sub secure_port
 {
    my $self = shift;
    return $self->{ports}{haproxy};
 }
 
-sub unsecure_port
+sub public_baseurl
 {
    my $self = shift;
-   die "haproxy does not have an unsecure port mode\n";
+   return "https://$self->{bind_host}:" . $self->secure_port();
 }
 
 sub start
@@ -1153,6 +1170,7 @@ defaults
 
 frontend http-in
     bind ${bind_host}:$ports->{haproxy} ssl crt $self->{paths}{pem_file}
+    http-request set-header X-Forwarded-Proto https if { ssl_fc }
 
     acl has_get_map path -m reg -M -f $self->{paths}{get_path_map_file}
     use_backend %[path,map_reg($self->{paths}{get_path_map_file},synapse)] if has_get_map METH_GET
@@ -1188,7 +1206,12 @@ EOCONFIG
 
 sub generate_haproxy_map
 {
-    return <<'EOCONFIG';
+   my $self = shift;
+
+   # The base haproxy routes. Note that we add more routes below if using
+   # haproxy. Also, the routing for GET requests below takes precedence over
+   # these routes.
+   my $haproxy_map = <<'EOCONFIG';
 ^/_matrix/client/(v2_alpha|r0)/sync$                  synchrotron
 ^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
 ^/_matrix/client/(api/v1|r0)/initialSync$             synchrotron
@@ -1223,6 +1246,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/state$             client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/login$                      client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/account/3pid$               client_reader
+^/_matrix/client/(api/v1|r0|unstable)/devices$                    client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               client_reader
 ^/_matrix/client/versions$                                        client_reader
@@ -1234,17 +1258,35 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/keys/claim                  client_reader
+^/_matrix/client/(api/v1|r0|unstable)/room_keys                   client_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
 ^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
 
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/redact                               event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send                                 event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/join/                                         event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/profile/                                      event_creator
 
 EOCONFIG
+
+   # Some things can only be moved off master when using redis.
+   if ( $self->{redis_host} ne '' ) {
+      $haproxy_map .= <<'EOCONFIG';
+
+^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/tag           client_reader
+^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  client_reader
+
+EOCONFIG
+   }
+
+   return $haproxy_map
 }
 
 sub generate_haproxy_get_map
