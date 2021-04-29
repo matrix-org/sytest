@@ -90,9 +90,9 @@ sub _init
       event_persister2_metrics => main::alloc_port( "event_persister2[$idx].metrics" ),
       event_persister2_manhole => main::alloc_port( "event_persister2[$idx].manhole" ),
 
-      writer         => main::alloc_port( "writer[$idx]" ),
-      writer_metrics => main::alloc_port( "writer[$idx].metrics" ),
-      writer_manhole => main::alloc_port( "writer[$idx].manhole" ),
+      stream_writer         => main::alloc_port( "stream_writer[$idx]" ),
+      stream_writer_metrics => main::alloc_port( "stream_writer[$idx].metrics" ),
+      stream_writer_manhole => main::alloc_port( "stream_writer[$idx].manhole" ),
    };
 }
 
@@ -313,19 +313,19 @@ sub start
               host => "$bind_host",
               port => $self->{ports}{client_reader},
            },
-           "writer" => {
+           "stream_writer" => {
               host => "$bind_host",
-              port => $self->{ports}{writer},
+              port => $self->{ports}{stream_writer},
            },
         },
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
 
-           to_device    => $self->{redis_host} ne '' ? [ "writer" ] : "master",
-           account_data => $self->{redis_host} ne '' ? [ "writer" ] : "master",
-           receipts     => $self->{redis_host} ne '' ? [ "writer" ] : "master",
-           presence     => $self->{redis_host} ne '' ? [ "writer" ] : "master",
+           to_device    => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           account_data => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           receipts     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           presence     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -1057,11 +1057,11 @@ sub _start_synapse
    }
 
    {
-      my $writer_config = {
+      my $stream_writer_config = {
          "worker_app"                   => "synapse.app.generic_worker",
-         "worker_name"                  => "writer",
-         "worker_pid_file"              => "$hsdir/writer.pid",
-         "worker_log_config"            => $self->configure_logger("writer"),
+         "worker_name"                  => "stream_writer",
+         "worker_pid_file"              => "$hsdir/stream_writer.pid",
+         "worker_log_config"            => $self->configure_logger("stream_writer"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
@@ -1070,24 +1070,24 @@ sub _start_synapse
             {
                type      => "http",
                resources => [{ names => ["client", "replication"] }],
-               port      => $self->{ports}{writer},
+               port      => $self->{ports}{stream_writer},
                bind_address => $bind_host,
             },
             {
                type => "manhole",
-               port => $self->{ports}{writer_manhole},
+               port => $self->{ports}{stream_writer_manhole},
                bind_address => $bind_host,
             },
             {
                type      => "http",
                resources => [{ names => ["metrics"] }],
-               port      => $self->{ports}{writer_metrics},
+               port      => $self->{ports}{stream_writer_metrics},
                bind_address => $bind_host,
             },
          ],
       };
 
-      push @worker_configs, $writer_config;
+      push @worker_configs, $stream_writer_config;
    }
 
    my @base_synapse_command = $self->_generate_base_synapse_command();
@@ -1241,8 +1241,8 @@ backend event_creator
 backend frontend_proxy
     server frontend_proxy ${bind_host}:$ports->{frontend_proxy}
 
-backend writer
-    server writer ${bind_host}:$ports->{writer}
+backend stream_writer
+    server stream_writer ${bind_host}:$ports->{stream_writer}
 
 EOCONFIG
 }
@@ -1299,12 +1299,12 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
 
-^/_matrix/client/(api/v1|r0|unstable)/devices$                    writer
-^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 writer
-^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               writer
-^/_matrix/client/(api/v1|r0|unstable)/keys/claim                  writer
-^/_matrix/client/(api/v1|r0|unstable)/room_keys                   writer
-^/_matrix/client/(api/v1|r0|unstable)/presence/                   writer
+^/_matrix/client/(api/v1|r0|unstable)/devices$                    stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/keys/claim                  stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/room_keys                   stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/presence/                   stream_writer
 
 ^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
 
@@ -1322,11 +1322,11 @@ EOCONFIG
    if ( $self->{redis_host} ne '' ) {
       $haproxy_map .= <<'EOCONFIG';
 
-^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          writer
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/tag           writer
-^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        writer
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       writer
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  writer
+^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/tag           stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  stream_writer
 
 EOCONFIG
    }
