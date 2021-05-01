@@ -190,8 +190,10 @@ test "The only membership state included in an incremental sync is for senders i
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         my $joined_rooms = $body->{rooms}{join};
-         assert_deeply_eq($joined_rooms, {});
+         if( exists $body->{rooms} and exists $body->{rooms}{join} ) {
+            my $joined_rooms = $body->{rooms}{join};
+            assert_deeply_eq($joined_rooms, {});
+         }
          Future->done(1);
       });
    };
