@@ -135,16 +135,9 @@ sub _get_config
          custom_ca_path => "/sytest/keys/tls-selfsigned.crt",
          registration => {
             flows => [
-               {
-               stages => [
-                  "m.login.email.identity",
-               ]
-            }, 
-            {
-               stages => [
-                  "m.login.dummy"
-               ]
-            }]
+               { stages => [ "m.login.email.identity" ]},
+               { stages => [ "m.login.dummy" ]},
+            ],
          },
          database => {
             connection_string => 
