@@ -227,13 +227,13 @@ test "Newly joined room includes presence in incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( presence ));
-         assert_json_keys( $body->{presence}, qw( events ));
-         assert_json_list( $body->{presence}{events} );
+         if ( exists $body->{presence} and exists $body->{presence}{events} ) {
+            assert_json_list( $body->{presence}{events} );
 
-         my $presence = $body->{presence}{events};
+            my $presence = $body->{presence}{events};
 
-         assert_eq( scalar @$presence, 0, "number of presence events" );
+            assert_eq( scalar @$presence, 0, "number of presence events" );
+         }
 
          Future->done(1);
       });
@@ -289,13 +289,13 @@ test "Get presence for newly joined members in incremental sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( presence ));
-         assert_json_keys( $body->{presence}, qw( events ));
-         assert_json_list( $body->{presence}{events} );
+         if ( exists $body->{presence} and exists $body->{presence}{events} ) {
+            assert_json_list( $body->{presence}{events} );
 
-         my $presence = $body->{presence}{events};
+            my $presence = $body->{presence}{events};
 
-         assert_eq( scalar @$presence, 0, "number of presence events" );
+            assert_eq( scalar @$presence, 0, "number of presence events" );
+         }
 
          Future->done(1);
       });
