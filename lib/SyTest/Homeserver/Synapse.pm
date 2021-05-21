@@ -192,6 +192,10 @@ sub start
             per_second => 1000,
             burst_count => 1000,
         },
+        rc_third_party_invite => {
+           per_second => 1000,
+           burst_count => 1000,
+        },
         rc_login => {
             address => {
                 per_second => 1000,
@@ -278,6 +282,11 @@ sub start
         user_agent_suffix => "homeserver[". $self->{hs_index} . "]",
 
         require_membership_for_aliases => "false",
+
+        account_validity => {
+           enabled => "true",
+           period => "6w",
+        },
 
         # Enable ephemeral message support (MSC2228)
         enable_ephemeral_messages => "true",

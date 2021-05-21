@@ -1,6 +1,4 @@
-ARG DEBIAN_VERSION=buster
-
-FROM matrixdotorg/sytest:${DEBIAN_VERSION}
+FROM matrixdotorg/sytest:dinsic
 
 RUN apt-get -qq update && apt-get -qq install -y \
     python3 python3-dev python3-venv eatmydata \
