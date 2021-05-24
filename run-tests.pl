@@ -181,9 +181,6 @@ Options:
    -v, --verbose                - increase the verbosity of output and
                                   synapse's logging level
 
-   -n, --no-tls                 - prefer plaintext client connections where
-                                  possible
-
        --exclude-deprecated     - don't run tests that specifically test deprecated
                                   endpoints
 
