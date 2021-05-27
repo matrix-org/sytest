@@ -9,6 +9,7 @@
 /synapse
 /test-server
 /var
+*.db
 \#*
 signingkeyserver.db
 .vscode

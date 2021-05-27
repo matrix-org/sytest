@@ -190,8 +190,10 @@ test "The only membership state included in an incremental sync is for senders i
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
-         my $joined_rooms = $body->{rooms}{join};
-         assert_deeply_eq($joined_rooms, {});
+         if( exists $body->{rooms} and exists $body->{rooms}{join} ) {
+            my $joined_rooms = $body->{rooms}{join};
+            assert_deeply_eq($joined_rooms, {});
+         }
          Future->done(1);
       });
    };
@@ -597,13 +599,7 @@ test "Old members are included in gappy incr LL sync if they start speaking",
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
@@ -613,21 +609,9 @@ test "Old members are included in gappy incr LL sync if they start speaking",
             $bob->user_id,
          ]);
 
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $charlie, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $charlie, $room_id, 10 );
       })->then( sub {
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
@@ -684,13 +668,7 @@ test "Members from the gap are included in gappy incr LL sync",
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
@@ -702,13 +680,7 @@ test "Members from the gap are included in gappy incr LL sync",
 
          matrix_join_room( $dave, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $charlie, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $charlie, $room_id, 10 );
       })->then( sub {
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {

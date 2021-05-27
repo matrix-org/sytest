@@ -1,6 +1,6 @@
-ARG DEBIAN_VERSION=buster
+ARG BASE_IMAGE=debian:buster
 
-FROM debian:${DEBIAN_VERSION}
+FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND noninteractive
 

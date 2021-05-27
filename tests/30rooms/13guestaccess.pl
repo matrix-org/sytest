@@ -59,10 +59,10 @@ test "Guest users can send messages to guest_access rooms if joined",
 
                my ( $event ) = @$chunk;
 
-               assert_json_keys( $event, qw( type room_id user_id content ));
+               assert_json_keys( $event, qw( type room_id sender content ));
 
-               $event->{user_id} eq $guest_user->user_id or
-                  die "expected user_id to be ".$guest_user->user_id;
+               $event->{sender} eq $guest_user->user_id or
+                  die "expected sender to be ".$guest_user->user_id;
 
                $event->{content}->{body} eq "sup" or
                   die "content to be sup";
@@ -386,6 +386,8 @@ test "GET /publicRooms lists rooms",
 
                foreach my $room ( @{ $body->{chunk} } ) {
                   my $canonical_alias = $room->{canonical_alias};
+                  next unless $canonical_alias;
+
                   assert_json_boolean( my $world_readable = $room->{world_readable} );
                   assert_json_boolean( my $guest_can_join = $room->{guest_can_join} );
 
@@ -477,6 +479,7 @@ test "GET /publicRooms includes avatar URLs",
 
                foreach my $room ( @{ $body->{chunk} } ) {
                   my $canonical_alias = $room->{canonical_alias};
+                  next unless $canonical_alias;
 
                   if( $canonical_alias =~ m/^\Q#worldreadable:/ ) {
                      $isOK{worldreadable} =

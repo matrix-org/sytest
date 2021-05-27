@@ -268,10 +268,12 @@ test "Previously left rooms don't appear in the leave section of sync",
       })->then( sub {
          my ( $body ) = @_;
 
-         my $leave = $body->{rooms}{leave};
+         if( exists $body->{rooms} and exists $body->{rooms}{leave} ) {
+            my $leave = $body->{rooms}{leave};
 
-         assert_json_object( $leave );
-         keys %$leave == 0 or die "Expected no rooms in 'leave' state";
+            assert_json_object( $leave );
+            keys %$leave == 0 or die "Expected no rooms in 'leave' state";
+         }
 
          Future->done(1);
       });

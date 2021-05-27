@@ -71,6 +71,11 @@ sub diagwarn
    shift;
    my ( $message ) = @_;
    print "#** $message\n";
+
+   # print warnings to stderr as well, because they only happen when something
+   # goes wrong and it's annoying to have to fish around in the TAP file for
+   # them.
+   print STDERR "WARN: $message\n";
 }
 
 sub status {}

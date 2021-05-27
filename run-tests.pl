@@ -53,8 +53,6 @@ use Module::Pluggable
 
 binmode(STDOUT, ":utf8");
 
-our $WANT_TLS = 1;  # This is shared with the test scripts
-
 our $BIND_HOST = "localhost";
 
 # a unique ID for this test run. It is used in some tests to create user IDs
@@ -78,6 +76,10 @@ our $INCLUDE_DEPRECATED_ENDPOINTS = 1;
 # where we put working files (server configs, mostly)
 our $WORK_DIR = ".";
 
+# all timeouts in tests should be multiplied by this
+our $TIMEOUT_FACTOR = $ENV{'TIMEOUT_FACTOR'} // 1;
+$TIMEOUT_FACTOR > 0 or die "Invalid timeout factor";
+
 Getopt::Long::Configure('pass_through');
 GetOptions(
    'I|server-implementation=s' => \$SERVER_IMPL,
@@ -96,8 +98,6 @@ GetOptions(
    'w|wait-at-end' => \my $WAIT_AT_END,
 
    'v|verbose+' => \(my $VERBOSE = 0),
-
-   'n|no-tls' => sub { $WANT_TLS = 0 },
 
    'work-directory=s' => \$WORK_DIR,
 
@@ -180,9 +180,6 @@ Options:
 
    -v, --verbose                - increase the verbosity of output and
                                   synapse's logging level
-
-   -n, --no-tls                 - prefer plaintext client connections where
-                                  possible
 
        --exclude-deprecated     - don't run tests that specifically test deprecated
                                   endpoints
@@ -415,7 +412,7 @@ sub alloc_port
 sub delay
 {
    my ( $secs ) = @_;
-   $loop->delay_future( after => $secs );
+   $loop->delay_future( after => $secs * $TIMEOUT_FACTOR );
 }
 
 # Handy utility wrapper around Future::Utils::try_repeat_until_success which
@@ -764,14 +761,14 @@ sub _run_test0
 
       Future->wait_any(
          $f_setup,
-         $loop->delay_future( after => 60 )
+         delay( 60 )
             ->then_fail( "Timed out waiting for setup" )
       )->get;
 
       Future->wait_any(
          $f_test,
 
-         $loop->delay_future( after => $test->timeout // 10 )
+         delay( $test->timeout // 10 )
             ->then_fail( "Timed out waiting for test" )
       )->get;
 

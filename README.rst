@@ -122,6 +122,19 @@ using ``--python``::
 
     ./run-tests.pl --python ../synapse/env/bin/python
 
+If you're seeing the following error when trying to run against Synapse,
+make sure you have your Synapse Python virtualenv(venv) activated: ``source ../synapse/env/bin/Activate``::
+
+    $ ./run-tests.pl
+    ...
+    ** Error starting server-0 (on port 8800): python exited 1: /Users/myuser/.pyenv/versions/3.8.6/bin/python: Error while finding module specification for 'synapse.app.homeserver' (ModuleNotFoundError: No module named 'synapse')
+    ❌
+
+    $ source ../synapse/env/bin/Activate
+    (synapse) $ ./run-tests.pl
+    ...
+    ✅
+
 To obtain greater visibility on why a particular test is failing, two
 additional options can be passed to print extra information. The
 ``--client-log`` flag (shortened to ``-C``) will print HTTP requests made and
@@ -144,7 +157,16 @@ suitable for dictConfig_ called ``log.config`` (it can be copied from a running
 synapse) and place it within the homeserver configuration directory
 (``localhost-<port>``).
 
+A blacklist file can be used to mark certain tests as expected to fail. These
+tests will still be run, but their failure will not cause the entire test suite
+to fail. To use a blacklist file pass the ``--test-blacklist-file`` option
+(shortened to ``-B``). For example, if you are testing Synapse, you will
+probably want to use Synapse's sytest-blacklist_::
+
+    ./run-tests.pl -B synapse/sytest-blacklist
+
 .. _dictConfig: https://docs.python.org/2/library/logging.config.html#logging.config.dictConfig
+.. _sytest-blacklist: https://github.com/matrix-org/synapse/blob/develop/sytest-blacklist
 
 Plugins
 ~~~~~~~

@@ -71,23 +71,23 @@ test "PUT /presence/:user_id/status updates my presence",
 
    proves => [qw( can_set_presence )],
 
-   do => sub {
+   check => sub {
       my ( $user ) = @_;
 
       matrix_set_presence_status( $user, "online",
          status_msg => $status_msg,
-      )
-   },
+      )->then( sub {
+         # If presence is on a different worker it may take a while for it to
+         # propagate.
+         retry_until_success {
+            matrix_get_presence_status( $user )->then( sub {
+               my ( $body ) = @_;
 
-   check => sub {
-      my ( $user ) = @_;
+               ( $body->{status_msg} // "" ) eq $status_msg or
+                  die "Incorrect status_msg";
 
-      matrix_get_presence_status( $user )->then( sub {
-         my ( $body ) = @_;
-
-         ( $body->{status_msg} // "" ) eq $status_msg or
-            die "Incorrect status_msg";
-
-         Future->done(1);
-      });
+               Future->done(1);
+            });
+         }
+      })
    };

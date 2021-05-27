@@ -241,7 +241,7 @@ sub _kill_process
    return Future->needs_any(
       $finished_future->without_cancel,
 
-      $self->loop->delay_future( after => 30 )->then( sub {
+      main::delay( 30 )->then( sub {
          $self->{output}->diag( "Timed out waiting for ${\ $proc_info->name }; sending SIGKILL" );
          $process->kill( 'KILL' );
          Future->done;
