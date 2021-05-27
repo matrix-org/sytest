@@ -1298,6 +1298,10 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
 ^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
+^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/event              client_reader
+^/_matrix/client/(api/v1|r0|unstable)/joined_rooms                client_reader
+^/_matrix/client/(api/v1|r0|unstable/.*)/rooms/.*/aliases         client_reader
+^/_matrix/client/(api/v1|r0|unstable)/search                      client_reader
 
 ^/_matrix/client/(api/v1|r0|unstable)/devices$                    stream_writer
 ^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 stream_writer
