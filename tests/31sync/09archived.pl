@@ -312,10 +312,11 @@ test "Left rooms appear in the leave section of full state sync",
       });
    };
 
-
+use Data::Dumper;
 test "Archived rooms only contain history from before the user left",
    requires => [ local_user_fixtures( 2, with_events => 0 ),
                  qw( can_sync ) ],
+
 
    check => sub {
       my ( $user_a, $user_b ) = @_;
@@ -370,7 +371,8 @@ test "Archived rooms only contain history from before the user left",
       })->then( sub {
          my ( $body ) = @_;
 
-         log_if_fail "Returned sync body initial", $body;
+         print STDERR "\nReturned sync body $body" . Dumper($body) . "\n";
+         log_if_fail "Returned sync body", $body;
 
          # We should only expect to see events between the join and leave events
          my $room = $body->{rooms}{leave}{$room_id};

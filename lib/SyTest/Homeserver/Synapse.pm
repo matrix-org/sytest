@@ -418,6 +418,8 @@ sub _start_synapse
    my $bind_host = $self->{bind_host};
    my @synapse_command = $self->_generate_base_synapse_command();
 
+   print "Starting synapse with command: @synapse_command\n";
+
    $self->_start_process_and_await_notify(
       setup => [ env => $env ],
       command => \@synapse_command,

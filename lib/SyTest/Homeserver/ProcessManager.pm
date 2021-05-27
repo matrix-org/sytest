@@ -323,7 +323,6 @@ sub _await_ready_notification
    # byte.
    my $random_id = join "", map { chr 65 + rand 25 } 1 .. 20;
    my $path = "\0sytest-$random_id.sock";
-   
    print STDERR "New unix socket $path\n";
 
    # We replace null byte with '@' to allow us to pass it in via env. (This is
@@ -335,6 +334,8 @@ sub _await_ready_notification
    # Create a future that gets resolved when we receive a `READY=1`
    # notification.
    my $poke_fut = Future->new;
+
+   print STDERR "feawfefe\n";
 
    my $socket = IO::Async::Socket->new(
       on_recv => sub {
@@ -354,7 +355,12 @@ sub _await_ready_notification
          die "Cannot recv - $errno\n";
       },
    );
+   print STDERR "rdtnb\n";
    $loop->add( $socket );
+   print STDERR "kuykuyyyukyukg\n";
+
+   print STDERR "Binding unix socket $path\n";
+   print STDERR "jytjuytyjyjjy\n";
 
    print STDERR "Binding unix socket $path\n";
    print STDERR "jytjuytyjyjjy\n";

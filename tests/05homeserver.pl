@@ -2,6 +2,8 @@ use Future::Utils qw( fmap_void );
 
 use Cwd qw( abs_path );
 
+use Carp;
+
 my $N_HOMESERVERS = 2;
 
 my @servers;
@@ -128,7 +130,9 @@ our @HOMESERVER_INFO = map {
             return Future->done( $info );
          })->on_fail( sub {
             my ( $exn, @details ) = @_;
-            warn( "Error starting server-$idx (on port ${\$server->secure_port}): $exn" );
+            warn( "Error starting server-$idx: $exn \@details=@details" );
+            warn("ServerInfo: $location, $api_host, " . $server->server_name . " " . $server->federation_port);
+            confess "asdf";
 
             # if we can't start the first homeserver, we really might as well go home.
             if( $idx == 0 ) {
