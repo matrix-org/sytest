@@ -33,7 +33,7 @@ while ( my $result = $parser->next ) {
          my $number = $result->number;
          my $description = $result->description;
 
-         print "::error ::FAILURE:#$number: $description\n";
+         print "::error ::FAILURE: #$number: $description\n";
          print "::group::Logs\n"
       } elsif ( $result->directive and not $result->is_actual_ok ) {
          $expected_fail++;
@@ -53,3 +53,5 @@ printf "Totals: %i passed, %i expected fail, %i failed\n", (
    $expected_fail,
    scalar $parser->failed,
 );
+
+exit 1 if $parser->failed;
