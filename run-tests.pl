@@ -430,14 +430,18 @@ sub delay
 #   }, max_iterations => 20,
 #      initial_delay => 0.01;
 #
-# Will fail if the code block fails `max_iterations` (default 10) times.
+# Will fail if the code block fails `max_iterations` (default 7) times.
 #
 sub retry_until_success(&%)
 {
    my ( $code, %params ) = @_;
 
    my $delay = $params{initial_delay} // 0.1;
-   my $max_iter = $params{max_iterations} // 10;
+
+   # 7 iterations means a total delay of
+   #  0.1 * (1 + 1.5 + 1.5^2 + ... + 1.5^5 )
+   #    =~ 2.0 seconds.
+   my $max_iter = $params{max_iterations} // 7;
    my $iter = 0;
 
    try_repeat {
