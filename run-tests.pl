@@ -415,26 +415,41 @@ sub delay
    $loop->delay_future( after => $secs * $TIMEOUT_FACTOR );
 }
 
-# Handy utility wrapper around Future::Utils::try_repeat_until_success which
-# includes a delay on retry (and logs the reason for failure)
-sub retry_until_success(&)
-{
-   my ( $code ) = @_;
 
-   my $delay = 0.1;
+# Retries a code block until it returns a successful Future.
+#
+# Includes a delay between each call, and logs the reason for failure.
+#
+# The code block is called with the iteration number.
+#
+# Example:
+#
+#   retry_until_success {
+#      my ( $iter ) = @_;
+#      ...
+#   }, max_iterations => 20,
+#      initial_delay => 0.01;
+#
+# Will fail if the code block fails `max_iterations` (default 10) times.
+#
+sub retry_until_success(&%)
+{
+   my ( $code, %params ) = @_;
+
+   my $delay = $params{initial_delay} // 0.1;
+   my $max_iter = $params{max_iterations} // 10;
    my $iter = 0;
 
    try_repeat {
-      ( $iter++ ?
-            delay( $delay *= 1.5 ) :
-            Future->done )
-         ->then( $code )
-         ->on_fail( sub {
-            my ( $exc ) = @_;
-            chomp $exc;
-            log_if_fail("Iteration $iter: not ready yet: $exc");
-         });
-   }  until => sub { !$_[0]->failure };
+      ( $iter ? delay( $delay *= 1.5 ) : Future->done )
+      ->then( sub {
+         Future->call( $code, $iter++ );
+      })->on_fail( sub {
+         my ( $exc ) = @_;
+         chomp $exc;
+         log_if_fail("Iteration $iter++: not ready yet: $exc");
+      });
+   } until => sub { $iter > $max_iter || !$_[0]->failure };
 }
 
 # Another wrapper which repeats (with delay) until the block returns a true
