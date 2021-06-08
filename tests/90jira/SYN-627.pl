@@ -22,15 +22,27 @@ test "Events come down the correct room",
       })->then( sub {
          matrix_sync( $user );
       })->then( sub {
-         # send messages into all but the last room.
          Future->needs_all( map {
             my $room_id = $_;
 
             matrix_send_room_text_message( $user, $room_id, body => "$room_id" );
-         } @rooms[0 .. @rooms - 2] );
+         } @rooms );
       })->then( sub {
-         # send a message into the last room
-         matrix_send_room_text_message_synced( $user, $rooms[-1], body => $rooms[-1] );
+         # Wait until we see all rooms come down the sync stream.
+         retry_until_success {
+            matrix_sync(
+               $user, since => $user->sync_next_batch, update_next_batch => 0
+            )->then( sub {
+               my ( $body ) = @_;
+
+               foreach my $room_id ( @rooms ) {
+                  my $room = $body->{rooms}{join}{$room_id};
+
+                  assert_json_keys( $room, qw( timeline ));
+                  @{ $room->{timeline}{events} } == 1 or die "Expected exactly one event";
+               }
+            })
+         }
       })->then( sub {
          matrix_sync_again( $user );
       })->then( sub {
