@@ -26,6 +26,7 @@ sub _init
 
    $self->{args} = {
       bindir => "../dendrite/bin",
+      print_output  => 0,
    };
 
    $self->SUPER::_init( @_ );
@@ -42,6 +43,7 @@ sub get_options
 
    return (
       'd|dendrite-binary-directory=s' => \$self->{args}{bindir},
+      'S|server-log+' => \$self->{args}{print_output},
       $self->SUPER::get_options(),
    );
 }
