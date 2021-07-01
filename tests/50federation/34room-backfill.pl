@@ -364,14 +364,18 @@ test "Backfilled events whose prev_events are in a different room do not allow c
          );
       })->then( sub {
          # wait for it to arrive
-         my $filter = $json->encode( { room => { timeline => { limit => 2 }}} );
          await_sync_timeline_contains(
             $creator_user, $room2_id,
-            filter => $filter,
             check => sub {
                $_[0]->{event_id} eq $event_id_S
             },
          );
+      })->then( sub {
+         my $filter = $json->encode( { room => { timeline => { limit => 2 }}} );
+         matrix_sync(
+            $creator_user,
+            filter => $filter,
+         )
       })->then( sub {
          my ( $sync_body ) = @_;
          my $room2_sync = $sync_body->{rooms}->{join}->{$room2_id};
