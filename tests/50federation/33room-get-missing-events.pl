@@ -419,7 +419,7 @@ test "outliers whose auth_events are in a different room are correctly rejected"
 # * Add a "good" event into the room history and send it.
 # * The homeserver attempts to get the missing event (with the bad data).
 # * The homeserver should reject the "good" event.
-# * To check this we send some another valid event pointing at the "good" event,
+# * To check this we send another valid event pointing at the "good" event,
 #   and wait for a call to `/get_missing_events` for that event (thus proving
 #   that the homeserver rejected the good event).
 test "Outbound federation will ignore a missing event with bad JSON for room version 6",
