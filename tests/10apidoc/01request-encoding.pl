@@ -6,7 +6,7 @@ test "POST rejects invalid utf-8 in JSON",
    do => sub {
       my ( $http ) = @_;
 
-      my $reqbody = '{ "test": "a' . chr(0x81) . '" }';
+      my $reqbody = '{ "username": "a' . chr(0x81) . '" }';
 
       $http->do_request(
          method => "POST",
@@ -18,7 +18,8 @@ test "POST rejects invalid utf-8 in JSON",
       ->then( sub {
          my ( $response ) = @_;
          my $body = decode_json( $response->content );
-         assert_eq( $body->{errcode}, "M_NOT_JSON", 'responsecode' );
+         defined $body->{errcode} && ($body->{errcode} eq "M_NOT_JSON" || $body->{errcode} eq "M_BAD_JSON") or
+            croak "Got ${\ pp $$body->{errcode} }, expected M_NOT_JSON or M_BAD_JSON for responsecode";
          Future->done( 1 );
       });
    };
