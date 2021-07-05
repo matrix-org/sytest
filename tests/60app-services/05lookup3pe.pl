@@ -1,6 +1,6 @@
 use List::UtilsBy qw( sort_by );
 
-use constant AS_PREFIX => "/_matrix/app/unstable";
+use constant AS_PREFIX => "/_matrix/app/v1";
 
 sub stub_empty_result
 {

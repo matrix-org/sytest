@@ -42,7 +42,7 @@ sub new
    my %futures_by_type;
 
    my $f = repeat {
-      $await_http->( qr{^\Q$path\E/transactions/\d+$}, sub { 1 },
+      $await_http->( qr{^\Q$path\E/_matrix/app/v1/transactions/\d+$}, sub { 1 },
          timeout => 0,
       )->then( sub {
          my ( $request ) = @_;

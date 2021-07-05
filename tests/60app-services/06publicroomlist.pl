@@ -1,4 +1,4 @@
-use constant AS_PREFIX => "/_matrix/app/unstable";
+use constant AS_PREFIX => "/_matrix/app/v1";
 
 
 sub get_room_list_synced
