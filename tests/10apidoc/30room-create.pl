@@ -21,7 +21,7 @@ test "POST /createRoom makes a public room",
       )->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( room_id room_alias ));
+         assert_json_keys( $body, qw( room_id ));
          assert_json_nonempty_string( $body->{room_id} );
 
          Future->done(1);
