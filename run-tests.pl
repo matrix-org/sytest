@@ -645,7 +645,7 @@ sub _push_test
    }
 
    if( exists $params{implementation_specific} ) {
-       if ( $HS_FACTORY->implementation_name() ne $params{implementation_specific} ) {
+       if (grep { $_ ne $HS_FACTORY->implementation_name() } $params{implementation_specific}) {
            return;
        }
    }
