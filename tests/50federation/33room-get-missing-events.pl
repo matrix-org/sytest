@@ -574,3 +574,5 @@ sub respond_to_get_missing_events
 
    Future->done;
 }
+
+push our @EXPORT, qw( respond_to_get_missing_events );
