@@ -507,7 +507,7 @@ test "Inbound federation can receive invite rejections",
 
          my $protoevent = $resp->{event};
          assert_json_keys( $protoevent, qw(
-            event_id origin room_id sender type content state_key depth prev_events auth_events
+            room_id sender type content state_key depth prev_events auth_events
          ));
 
          assert_eq( $protoevent->{type}, "m.room.member", 'event type' );
