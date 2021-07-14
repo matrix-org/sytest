@@ -424,6 +424,8 @@ The resultant future completes with the room_id.
 
 =cut
 
+my $txn_id = 1000000;
+
 sub matrix_create_room_synced
 {
    my ( $user, %params ) = @_;
@@ -436,11 +438,12 @@ sub matrix_create_room_synced
 
       matrix_do_and_wait_for_sync( $user,
          do => sub {
-            my $uri = "/r0/rooms/$room_id/send/m.room.test";
+            my $uri = "/r0/rooms/$room_id/send/m.room.test/$txn_id";
+            $txn_id++;
 
             do_request_json_for(
                $user,
-               method => "POST",
+               method => "PUT",
                uri    => $uri,
                content => {},
             );
