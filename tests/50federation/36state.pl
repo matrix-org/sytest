@@ -747,11 +747,12 @@ test "Federation handles empty auth_events in state_ids sanely",
          )->then( sub {
             # creator user should eventually receive X and C.
             Future->needs_all(
-               await_event_for( $creator, filter => sub {
-                  ( $_[0]->{event_id} // '' ) eq $sent_event_c->{event_id};
+               await_sync_timeline_contains( $creator, $room_id, check => sub {
+                  log_if_fail "/sync " , $_;
+                  return $_[0]->{event_id} eq $missing_event_x->{event_id};
                }),
-               await_event_for( $creator, filter => sub {
-                  ( $_[0]->{event_id} // '' ) eq $missing_event_x->{event_id};
+               await_sync_timeline_contains( $creator, $room_id, check => sub {
+                  return $_[0]->{event_id} eq $sent_event_c->{event_id};
                }),
             );
          });
