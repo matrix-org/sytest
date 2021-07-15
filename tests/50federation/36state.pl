@@ -143,8 +143,10 @@ test "Federation rejects inbound events where the prev_events cannot be found",
       )->then( sub {
          ( $room ) = @_;
 
+         my $latest_event = $room->get_current_state_event( "m.room.member", $user_id );
+
          # Generate but don't send an event
-         my $missing_event = $room->create_and_insert_event(
+         my ( $missing_event, $missing_event_id ) = $room->create_and_insert_event(
             type => "m.room.message",
 
             sender  => $user_id,
@@ -168,33 +170,74 @@ test "Federation rejects inbound events where the prev_events cannot be found",
             },
          );
 
-         Future->needs_all(
-            $inbound_server->await_request_get_missing_events( $room_id )
-            ->then( sub {
-               my ( $req ) = @_;
 
-               # Return no events, which should cause a rejection.
-               $req->respond_json( {
-                  events => [],
-               } );
+         log_if_fail "Missing event ID", $missing_event_id;
+         log_if_fail "Sent event ID", $sent_event_id;
 
-               Future->done(1);
+         # Sending $sent_event over and refusing to return $missing_event should
+         # result in the server dropping $sent_event.
+         #
+         # We test this by:
+         #  1. Ensuring that /state_ids isn't called on $missing_event (which
+         #     would indicate the server is still processing $sent_event). This
+         #     check is needed as if we return nothing for `/state_ids` the
+         #     server will stop processing $sent_event.
+         #  2. Sending another event that references $sent_event should trigger
+         #     a call to `/get_missing_events`.
+         Future->wait_any(
+            $inbound_server->await_request_state_ids(
+               $room_id, $missing_event_id,
+            )->then( sub {
+               # The server tried to continue processing $sent_event, which it
+               # shouldn't do.
+               die "Server asked for the state at missing event";
+
+               Future->done;
             }),
 
-            $outbound_client->send_transaction(
-               pdus => [ $sent_event ],
-               destination => $first_home_server,
+            Future->needs_all(
+               $inbound_server->await_request_get_missing_events( $room_id )
+               ->then( sub {
+                  my ( $req ) = @_;
+
+                  # Return no events, which should cause a rejection.
+                  respond_to_get_missing_events( $req, $room, $latest_event, $sent_event, [] );
+               }),
+
+               $outbound_client->send_transaction(
+                  pdus => [ $sent_event ],
+                  destination => $first_home_server,
+               ),
             )->then( sub {
-               # we expect the event to be rejected.
-               my ( $body ) = @_;
-               log_if_fail "send_transaction response", $body;
-               assert_ok(
-                  defined( $body->{pdus}->{ $sent_event_id }->{error} ),
-                  "/send accepted faulty event",
+               # Create a new event referencing $sent_event and send it to the
+               # server.
+               my ( $new_event, $new_event_id ) = $room->create_and_insert_event(
+                  type => "m.room.message",
+
+                  prev_events => $room->make_event_refs( $sent_event ),
+
+                  sender  => $user_id,
+                  content => {
+                     body => "Message 3",
+                  },
                );
 
-               Future->done(1);
-            }),
+               Future->needs_all(
+                  $inbound_server->await_request_get_missing_events( $room_id )
+                  ->then( sub {
+                     my ( $req ) = @_;
+
+                     # We expect `/get_missing_events` to be called and for the
+                     # server to be missing $sent_event.
+                     respond_to_get_missing_events( $req, $room, $latest_event, $new_event, [] )
+                  }),
+
+                  $outbound_client->send_transaction(
+                     pdus => [ $new_event ],
+                     destination => $first_home_server,
+                  ),
+               );
+            })
          );
       });
    };
@@ -704,11 +747,12 @@ test "Federation handles empty auth_events in state_ids sanely",
          )->then( sub {
             # creator user should eventually receive X and C.
             Future->needs_all(
-               await_event_for( $creator, filter => sub {
-                  ( $_[0]->{event_id} // '' ) eq $sent_event_c->{event_id};
+               await_sync_timeline_contains( $creator, $room_id, check => sub {
+                  log_if_fail "/sync " , $_;
+                  return $_[0]->{event_id} eq $missing_event_x->{event_id};
                }),
-               await_event_for( $creator, filter => sub {
-                  ( $_[0]->{event_id} // '' ) eq $missing_event_x->{event_id};
+               await_sync_timeline_contains( $creator, $room_id, check => sub {
+                  return $_[0]->{event_id} eq $sent_event_c->{event_id};
                }),
             );
          });

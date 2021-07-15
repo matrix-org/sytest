@@ -507,7 +507,7 @@ test "Inbound federation can receive invite rejections",
 
          my $protoevent = $resp->{event};
          assert_json_keys( $protoevent, qw(
-            event_id origin room_id sender type content state_key depth prev_events auth_events
+            room_id sender type content state_key depth prev_events auth_events
          ));
 
          assert_eq( $protoevent->{type}, "m.room.member", 'event type' );
@@ -603,7 +603,7 @@ test "Inbound federation rejects incorrectly-signed invite rejections",
          $leave_event = $resp->{event};
 
          $leave_event->{origin} = $outbound_client->server_name;
-         $leave_event->{origin_server_ts} = $outbound_client->time_ms;
+         $leave_event->{origin_server_ts} = JSON::number($outbound_client->time_ms);
          $leave_event->{event_id} = $leave_event_id = $outbound_client->datastore->next_event_id();
 
          # let's start by sending it back without any signatures

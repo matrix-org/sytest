@@ -418,7 +418,10 @@ test "outliers whose auth_events are in a different room are correctly rejected"
 # * Add an event with "bad" data into the room history, but don't send it.
 # * Add a "good" event into the room history and send it.
 # * The homeserver attempts to get the missing event (with the bad data).
-# * Ensure that fetching the event results in an error.
+# * The homeserver should reject the "good" event.
+# * To check this we send another valid event pointing at the "good" event,
+#   and wait for a call to `/get_missing_events` for that event (thus proving
+#   that the homeserver rejected the good event).
 test "Outbound federation will ignore a missing event with bad JSON for room version 6",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  federated_rooms_fixture( room_opts => { room_version => "6" } ) ],
@@ -449,6 +452,7 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
             bad_val => 1.1,
          },
       );
+      my $missing_event_id = $room->id_for_event( $missing_event );
 
       log_if_fail "Missing event", $missing_event;
 
@@ -470,68 +474,105 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
 
       log_if_fail "Sent event", $sent_event;
 
+      # We now create create another event that references the "good" event
+      # above. If the good event was correctly rejected then we'll see an
+      # attempt to fetch it via `/get_missing_events`
+      my $marker_event = $room->create_and_insert_event(
+         type => "m.room.message",
+
+         prev_events => $room->make_event_refs( $sent_event ),
+
+         sender  => $user_id,
+         content => {
+            body    => "Message 3",
+         },
+      );
+      my $marker_event_id = $room->id_for_event( $marker_event );
+
       Future->needs_all(
          $inbound_server->await_request_get_missing_events( $room_id )
          ->then( sub {
             my ( $req ) = @_;
-            my $body = $req->body_from_json;
-
-            log_if_fail "Body", $body;
-
-            assert_json_keys( $body, qw( earliest_events latest_events limit ));
-            # TODO: min_depth but I have no idea what it does
-
-            assert_json_list( my $earliest = $body->{earliest_events} );
-            @$earliest == 1 or
-               die "Expected a single 'earliest_event' ID";
-            # It is expected that the earliest event is the m.room.member event,
-            # but it is possible that the caches have not yet been invalidated
-            # so also allow any of that event's previous events.
-            my @expected = @{$latest_event->{prev_events}};
-            push( @expected, $room->id_for_event( $latest_event ) );
-            assert_ok( any { $earliest->[0] eq $_ } @expected,
-               "'earliest_events' did not match" );
-
-            assert_json_list( my $latest = $body->{latest_events} );
-            @$latest == 1 or
-               die "Expected a single 'latest_events' ID";
-            assert_eq( $latest->[0], $sent_event_id,
-               'latest_events[0]' );
 
             my @events = $datastore->get_backfill_events(
-               start_at    => $latest,
-               stop_before => $earliest,
-               limit       => $body->{limit},
+               start_at    => [ $sent_event_id ],
+               stop_before => [ $latest_event->{event_id} ],
+               limit       => 10,
             );
 
-            log_if_fail "Backfilling", @events;
+            log_if_fail "Backfilling", \@events;
 
-            $req->respond_json( {
-               events => \@events,
-            } );
-
-            Future->done;
+            respond_to_get_missing_events( $req, $room, $latest_event, $sent_event, \@events )
          }),
 
          # Can't use send_event here because that checks none were rejected.
          $outbound_client->send_transaction(
             destination => $first_home_server,
             pdus => [ $sent_event ],
-         )->then( sub {
-            my ( $body ) = @_;
+         ),
+      )->then( sub {
+         log_if_fail "Sending marker event and waiting for /get_missing_events";
 
-            log_if_fail "Send response", $body;
+         Future->needs_all(
+            $inbound_server->await_request_get_missing_events( $room_id )
+            ->then( sub {
+               my ( $req ) = @_;
 
-            assert_json_keys( $body, 'pdus' );
-            # 'pdus' is a map from event id to error details.
-            my $pdus = $body->{pdus};
-
-            # Sending the event fails since fetching the event results in
-            # invalid JSON, thus we expect an error for the sent PDU.
-            assert_json_keys( $pdus, $sent_event_id );
-            assert_json_keys( $pdus->{$sent_event_id}, qw( error ) );
-
-            Future->done;
-         }),
-      );
+               respond_to_get_missing_events( $req, $room, $latest_event, $marker_event, [ $sent_event ] )
+            }),
+            $outbound_client->send_transaction(
+               destination => $first_home_server,
+               pdus => [ $marker_event ],
+            )
+         )
+      });
    };
+
+
+=head2 respond_to_get_missing_events
+
+   respond_to_get_missing_events( $body, $room, $earliest_event, $latest_event, $events_to_return )
+
+Respond to a `/get_missing_events` request for the given room.
+
+Asserts that the request has an `earliest_events` field matching the given
+`$earliest_event`, and similarly that the request has a `latest_events` field
+that matches the given `$latest_event`.
+
+Responds to the request with the given set of `$events_to_return`.
+
+=cut
+
+sub respond_to_get_missing_events
+{
+   my ( $req, $room, $earliest_event, $latest_event, $events_to_return ) = @_;
+   my $body = $req->body_from_json;
+
+   log_if_fail "/get_missing_events body", $body;
+
+   assert_json_list( my $earliest = $body->{earliest_events} );
+   @$earliest == 1 or
+      die "Expected a single 'earliest_event' ID";
+
+   # It is expected that the earliest event is the m.room.member event,
+   # but it is possible that the caches have not yet been invalidated
+   # so also allow any of that event's previous events.
+   my @expected = @{$earliest_event->{prev_events}};
+   push( @expected, $room->id_for_event( $earliest_event ) );
+   assert_ok( any { $earliest->[0] eq $_ } @expected,
+      "'earliest_events' did not match" );
+
+   assert_json_list( my $latest = $body->{latest_events} );
+   @$latest == 1 or
+      die "Expected a single 'latest_events' ID";
+   assert_eq( $latest->[0], $room->id_for_event( $latest_event ),
+      'latest_events[0]' );
+
+   $req->respond_json( {
+      events => $events_to_return,
+   } );
+
+   Future->done;
+}
+
+push our @EXPORT, qw( respond_to_get_missing_events );

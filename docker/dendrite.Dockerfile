@@ -1,7 +1,7 @@
 ARG SYTEST_IMAGE_TAG=buster
 FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
-ARG GO_VERSION=1.14.15
+ARG GO_VERSION=1.15.13
 ENV GO_DOWNLOAD https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz
 
 RUN mkdir -p /goroot /gopath
