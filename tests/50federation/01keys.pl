@@ -175,7 +175,7 @@ test "Key notary server should return an expired key if it can't find any others
 
       my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
       my $key_id = "ed25519:key_0";
-      my $key_expiry = ( time - 86400 ) * 1000; # -24h in msec
+      my $key_expiry = int(( time - 86400 ) * 1000); # -24h in msec
       my $key_response = build_key_response(
          server_name => $test_server_name,
          key => $skey,
@@ -282,7 +282,7 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
 
       my ( $pkey1, $skey1 ) = Crypt::NaCl::Sodium->sign->keypair;
       my $key_id_1 = "ed25519:key_1";
-      my $key1_expiry = ( int( time ) - 86400 ) * 1000; # -24h in msec
+      my $key1_expiry = int(( time - 86400 ) * 1000); # -24h in msec
 
       # start with a request for key 1
       Future->needs_all(
@@ -337,7 +337,7 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
 
             key_query_via_post(
                $http_client, $notary_server, $test_server_name, $key_id_1,
-               min_valid_until_ts => time * 1000,
+               min_valid_until_ts => int(time * 1000),
             )->then( sub {
                my ( $body ) = @_;
                log_if_fail "Notary response for request 2", $body;
