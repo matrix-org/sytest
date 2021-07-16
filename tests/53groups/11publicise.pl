@@ -1,4 +1,5 @@
 test "Get/set local group publicity",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -30,6 +31,7 @@ test "Get/set local group publicity",
    };
 
 test "Bulk get group publicity",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ), remote_user_fixture( with_events => 0 ) ],
 
    do => sub {

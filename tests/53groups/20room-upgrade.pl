@@ -16,6 +16,7 @@ use Future::Utils qw( repeat );
 use List::Util qw( all first none );
 
 test "Room is transitioned on local and remote groups upon room upgrade",
+   deprecated_endpoints => 1,
    requires => [
       local_admin_fixture(),
       remote_admin_fixture(),

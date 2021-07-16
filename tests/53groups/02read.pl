@@ -5,6 +5,7 @@ foreach my $viewer_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
    my $test_name = $viewer_fixture == $local_viewer_fixture ? "local" : "remote";
 
    test "Get $test_name group profile",
+      deprecated_endpoints => 1,
       requires => [ local_admin_fixture( with_events => 0 ), $viewer_fixture ],
 
       do => sub {
@@ -34,6 +35,7 @@ foreach my $viewer_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
       };
 
    test "Get $test_name group users",
+      deprecated_endpoints => 1,
       requires => [ local_admin_fixture( with_events => 0 ), $viewer_fixture ],
 
       do => sub {
@@ -54,6 +56,7 @@ foreach my $viewer_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
       };
 
    test "Add/remove $test_name group rooms",
+      deprecated_endpoints => 1,
       requires => [ local_admin_fixture( with_events => 0 ), $viewer_fixture ],
 
       do => sub {
@@ -96,6 +99,7 @@ foreach my $viewer_fixture ( $local_viewer_fixture, $remote_viewer_fixture) {
       };
 
    test "Get $test_name group summary",
+      deprecated_endpoints => 1,
       requires => [ local_admin_fixture( with_events => 0 ), $viewer_fixture ],
 
       do => sub {

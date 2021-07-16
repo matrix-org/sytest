@@ -2,6 +2,7 @@ use Future::Utils qw( try_repeat_until_success );
 
 
 test "Local group invites come down sync",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -49,6 +50,7 @@ test "Local group invites come down sync",
 
 
 test "Group creator sees group in sync",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -94,6 +96,7 @@ test "Group creator sees group in sync",
    };
 
 test "Group creator sees group in initial sync",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {

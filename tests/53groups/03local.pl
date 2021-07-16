@@ -1,4 +1,5 @@
 test "Add local group users",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -28,6 +29,7 @@ test "Add local group users",
    };
 
 test "Remove self from local group",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -62,6 +64,7 @@ test "Remove self from local group",
    };
 
 test "Remove other from local group",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
