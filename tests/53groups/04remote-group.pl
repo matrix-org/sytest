@@ -1,4 +1,5 @@
 test "Add remote group users",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), remote_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -25,6 +26,7 @@ test "Add remote group users",
    };
 
 test "Remove self from remote group",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), remote_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -59,6 +61,7 @@ test "Remove self from remote group",
    };
 
 test "Listing invited users of a remote group when not a member returns a 403",
+    deprecated_endpoints => 1,
     requires => [ local_admin_fixture( with_events => 0 ), remote_user_fixture( with_events => 0 ) ],
 
     do => sub {

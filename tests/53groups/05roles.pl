@@ -1,4 +1,5 @@
 test "Add group role",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -26,6 +27,7 @@ test "Add group role",
    };
 
 test "Remove group role",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -47,6 +49,7 @@ test "Remove group role",
 
 
 test "Get group roles",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
