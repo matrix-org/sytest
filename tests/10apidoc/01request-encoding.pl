@@ -6,7 +6,7 @@ test "POST rejects invalid utf-8 in JSON",
    do => sub {
       my ( $http ) = @_;
 
-      my $reqbody = '{ "test": "a' . chr(0x81) . '" }';
+      my $reqbody = '{ "username": "a' . chr(0x81) . '" }';
 
       $http->do_request(
          method => "POST",
