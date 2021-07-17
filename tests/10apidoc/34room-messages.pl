@@ -128,6 +128,12 @@ sub matrix_send_room_text_message
    )
 }
 
+# This first sends a message, then does a /sync without since parameter.
+# That /sync will most likely return the whole timeline for the room
+# so we can't use it's prev_batch in the /messages API. So we send
+# a 2nd message, and then do a /sync with since set to the previous
+# /sync's next_batch. We can then fetch messages with the 2nd /sync's
+# prev_batch that are before first /sync.
 test "GET /rooms/:room_id/messages returns a message",
    requires => [ local_user_and_room_fixtures(),
                  qw( can_send_message )],
@@ -138,12 +144,18 @@ test "GET /rooms/:room_id/messages returns a message",
       my ( $user, $room_id ) = @_;
 
       matrix_send_room_text_message( $user, $room_id,
-         body => "Here is the message content",
+         body => "Here is the first message",
       )->then( sub {
-         matrix_sync( $user )
+         matrix_sync( $user );
+      })->then( sub {
+	 matrix_send_room_text_message( $user, $room_id,
+            body => "Here is a second message",
+         )
+      })->then( sub {
+         matrix_sync_again( $user );
       })->then( sub {
          my ( $sync_body ) = @_;
-         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
+         my $prev_batch = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
 
          do_request_json_for( $user,
             method => "GET",
@@ -152,7 +164,7 @@ test "GET /rooms/:room_id/messages returns a message",
             # With no params this does "forwards from END"; i.e. nothing useful
             params => {
                 dir => "b",
-                from => $token,
+                from => $prev_batch,
             },
          )
       })->then( sub {
@@ -163,6 +175,10 @@ test "GET /rooms/:room_id/messages returns a message",
 
          scalar @{ $body->{chunk} } > 0 or
             die "Expected some messages but got none at all\n";
+
+         assert_eq( $body->{chunk}[0]{type}, 'm.room.message');
+         assert_eq( $body->{chunk}[0]{content}{msgtype}, 'm.text');
+         assert_eq( $body->{chunk}[0]{content}{body}, 'Here is the first message');
 
          Future->done(1);
       });
@@ -176,12 +192,18 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
       my ( $user, $room_id ) = @_;
 
       matrix_send_room_text_message( $user, $room_id,
-         body => "Here is the message content",
+         body => "Here is the first message",
       )->then( sub {
-         matrix_sync( $user )
+         matrix_sync( $user );
+      })->then( sub {
+	 matrix_send_room_text_message( $user, $room_id,
+            body => "Here is a second message",
+         )
+      })->then( sub {
+         matrix_sync_again( $user );
       })->then( sub {
          my ( $sync_body ) = @_;
-         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
+         my $prev_batch = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
 
          do_request_json_for( $user,
             method => "GET",
@@ -190,7 +212,7 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
             params => {
                dir => "b",
                filter => '{ "lazy_load_members" : true }',
-               from => $token,
+               from => $prev_batch,
             },
          )
       })->then( sub {
