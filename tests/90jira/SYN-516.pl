@@ -23,7 +23,7 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
         })->then( sub {
             ( $room_id ) = @_;
 
-            matrix_typing( $user, $room_id, typing => 1, timeout => 30000 )
+            matrix_typing( $user, $room_id, typing => JSON::true, timeout => 30000 )
                 ->SyTest::pass_on_done( "Sent typing notification" );
         })->then( sub {
             matrix_send_room_message( $user, $room_id,
