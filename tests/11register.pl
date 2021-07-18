@@ -345,7 +345,7 @@ test "registration is idempotent, without username specified",
          my ( $body ) = @_;
 
          # check that worked okay...
-         assert_json_keys( $body, qw( user_id home_server access_token ));
+         assert_json_keys( $body, qw( user_id access_token ));
 
          $user_id = $body->{user_id};
 
@@ -367,7 +367,7 @@ test "registration is idempotent, without username specified",
 
          # we should have got an equivalent response
          # (ie. success, and the same user id)
-         assert_json_keys( $body, qw( user_id home_server access_token ));
+         assert_json_keys( $body, qw( user_id access_token ));
 
          assert_eq( $body->{user_id}, $user_id );
 
@@ -419,7 +419,7 @@ test "registration is idempotent, with username specified",
          my ( $body ) = @_;
 
          # check that worked okay...
-         assert_json_keys( $body, qw( user_id home_server access_token ));
+         assert_json_keys( $body, qw( user_id access_token ));
 
          # now try to register again with the same session
          $http->do_request_json(
@@ -440,13 +440,15 @@ test "registration is idempotent, with username specified",
 
          # we should have got an equivalent response
          # (ie. success, and the same user id)
-         assert_json_keys( $body, qw( user_id home_server access_token ));
+         assert_json_keys( $body, qw( user_id access_token ));
 
          my $actual_user_id = $body->{user_id};
-         my $home_server = $body->{home_server};
+         if (defined $body->{home_server}) {
+            my $home_server = $body->{home_server};
 
-         assert_eq( $actual_user_id, "\@$localpart:$home_server",
-            "registered user ID" );
+            assert_eq( $actual_user_id, "\@$localpart:$home_server",
+               "registered user ID" );
+         }
 
          Future->done( 1 );
       });
@@ -493,13 +495,15 @@ test "registration remembers parameters",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( user_id home_server access_token ));
+         assert_json_keys( $body, qw( user_id access_token ));
 
          my $actual_user_id = $body->{user_id};
-         my $home_server = $body->{home_server};
+         if (defined $body->{home_server}) {
+            my $home_server = $body->{home_server};
 
-         assert_eq( $actual_user_id, "\@$localpart:$home_server",
-            "registered user ID" );
+            assert_eq( $actual_user_id, "\@$localpart:$home_server",
+               "registered user ID" );
+         }
 
          my $user = new_User(
             http          => $http,
@@ -555,7 +559,7 @@ test "registration accepts non-ascii passwords",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( user_id home_server access_token ));
+         assert_json_keys( $body, qw( user_id access_token ));
          Future->done( 1 );
       });
    };
@@ -600,16 +604,18 @@ test "registration with inhibit_login inhibits login",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( user_id home_server ));
+         assert_json_keys( $body, qw( user_id ));
          foreach ( qw( device_id access_token )) {
             exists $body->{$_} and die "Got an unexpected a '$_' key";
          }
 
          my $actual_user_id = $body->{user_id};
-         my $home_server = $body->{home_server};
+         if (defined $body->{home_server}) {
+            my $home_server = $body->{home_server};
 
-         assert_eq( $actual_user_id, "\@$localpart:$home_server",
-            "registered user ID" );
+            assert_eq( $actual_user_id, "\@$localpart:$home_server",
+               "registered user ID" );
+         }
 
          Future->done( 1 );
       });
@@ -693,7 +699,7 @@ test "Can register using an email address",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( user_id home_server ) );
+         assert_json_keys( $body, qw( user_id ) );
          Future->done( 1 );
       });
    };
