@@ -1,4 +1,5 @@
 test "POST /rooms/:room_id/send/:event_type sends a message",
+   deprecated_endpoints => 1,
    requires => [ local_user_and_room_fixtures() ],
 
    do => sub {
