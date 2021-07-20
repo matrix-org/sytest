@@ -13,7 +13,10 @@ sub matrix_deactivate_account
       content => {
          auth => {
             type     => "m.login.password",
-            user     => $user->user_id,
+            identifier => {
+               type => "m.id.user",
+               user => $user->user_id,
+            },
             password => $password,
          },
          %opts,
