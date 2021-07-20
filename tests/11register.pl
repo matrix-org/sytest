@@ -575,7 +575,7 @@ test "registration with inhibit_login inhibits login",
          content => {
             username => $localpart,
             password => "s3kr1t",
-            inhibit_login => 1,
+            inhibit_login => JSON::true,
          },
       )->main::expect_http_401->then( sub {
          my ( $response ) = @_;

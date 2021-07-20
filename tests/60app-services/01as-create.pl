@@ -66,7 +66,7 @@ test "AS can create a user with inhibit_login",
          content => {
             username => "astest-01create-1-$TEST_RUN_ID",
             type => "m.login.application_service",
-            inhibit_login => 1,
+            inhibit_login => JSON::true,
          },
       )->then( sub {
          my ( $body ) = @_;
