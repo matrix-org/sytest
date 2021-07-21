@@ -43,12 +43,14 @@ test "Can't deactivate account with wrong password",
 
          my $body = decode_json $resp->content;
 
-         assert_json_keys( $body, qw( error errcode params completed flows ));
+         assert_json_keys( $body, qw( error errcode params flows ));
 
          my $errcode = $body->{errcode};
 
          $errcode eq "M_FORBIDDEN" or
             die "Expected errcode to be M_FORBIDDEN but was $errcode";
+
+         exists $body->{completed} and die "Got an unexpected a 'completed' key";
 
          Future->done(1);
       });
