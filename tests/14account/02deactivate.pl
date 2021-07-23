@@ -50,7 +50,7 @@ test "Can't deactivate account with wrong password",
          $errcode eq "M_FORBIDDEN" or
             die "Expected errcode to be M_FORBIDDEN but was $errcode";
 
-         exists $body->{completed} and die "Got an unexpected a 'completed' key";
+         exists $body->{completed} and die "Got an unexpected 'completed' key";
 
          Future->done(1);
       });
