@@ -602,7 +602,7 @@ test "registration with inhibit_login inhibits login",
 
          assert_json_keys( $body, qw( user_id home_server ));
          foreach ( qw( device_id access_token )) {
-            exists $body->{$_} and die "Got an unexpected a '$_' key";
+            exists $body->{$_} and die "Got an unexpected '$_' key";
          }
 
          my $actual_user_id = $body->{user_id};
