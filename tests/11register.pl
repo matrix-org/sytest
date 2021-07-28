@@ -615,16 +615,6 @@ test "registration with inhibit_login inhibits login",
       });
    };
 
-test "User signups are forbidden from starting with '_'",
-   requires => [ $main::API_CLIENTS[0] ],
-
-   do => sub {
-      my ( $http ) = @_;
-
-      matrix_register_user( $http, "_badname_here" )
-         ->main::expect_http_4xx;
-   };
-
 test "Can register using an email address",
    requires => [ $main::API_CLIENTS[0], localpart_fixture(), id_server_fixture() ],
 
