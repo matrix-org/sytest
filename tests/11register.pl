@@ -648,7 +648,7 @@ test "Can register using an email address",
          log_if_fail "No single m.login.email.identity stage registration flow found", $body;
 
          # Check that one of the flows' stages contains an "m.login.email.identity" stage
-         my $has_flow;
+         my $has_flow = 0;
          foreach my $idx ( 0 .. $#{ $body->{flows} } ) {
             my $flow = $body->{flows}[$idx];
             my $stages = $flow->{stages} || [];
