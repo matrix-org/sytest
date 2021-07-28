@@ -19,7 +19,10 @@ sub matrix_set_password
       content => {
          auth => {
             type => "m.login.password",
-            user     => $user->user_id,
+            identifier => {
+               type => "m.id.user",
+               user => $user->user_id,
+            },
             password => $old_password,
          },
          new_password => $new_password,
@@ -40,7 +43,10 @@ test "After changing password, can't log in with old password",
 
             content => {
                type     => "m.login.password",
-               user     => $user->user_id,
+               identifier => {
+                  type => "m.id.user",
+                  user => $user->user_id,
+               },
                password => $password,
             }
          # We don't mandate the exact failure code here
@@ -64,7 +70,10 @@ test "After changing password, can log in with new password",
 
             content => {
                type     => "m.login.password",
-               user     => $user->user_id,
+               identifier => {
+                  type => "m.id.user",
+                  user => $user->user_id,
+               },
                password => "my new password",
             }
          );
@@ -126,7 +135,10 @@ test "After changing password, different sessions can optionally be kept",
             content => {
                auth => {
                   type           => "m.login.password",
-                  user           => $user->user_id,
+                  identifier => {
+                     type => "m.id.user",
+                     user => $user->user_id,
+                  },
                   password       => $password,
                },
                new_password => "my new password",
