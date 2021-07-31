@@ -68,6 +68,7 @@ test "Presence change reports an event to myself",
 my $friend_status = "Status of a Friend";
 
 test "Friends presence changes reports events",
+   deprecated_endpoints => 1,
    requires => [ local_user_fixture(), local_user_fixture(),
                  qw( can_set_presence can_invite_presence )],
 
