@@ -415,7 +415,10 @@ test "The operation must be consistent through an interactive authentication ses
          matrix_delete_device( $user, $SECOND_DEVICE_ID, {
              auth => {
                 type     => "m.login.password",
-                user     => $user->user_id,
+                identifier => {
+                   type => "m.id.user",
+                   user => $user->user_id,
+                },
                 password => $user->password,
                 session  => $body->{session},
              }
