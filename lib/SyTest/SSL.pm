@@ -59,10 +59,10 @@ sub create_ssl_cert
       "-subj", "/CN=$server_name",
    ) == 0 or die "openssl req failed $?";
 
-   # Create extenion file
+   # Create extension file
    my $ext_file = "$cert_file.ext";
    open(my $fh, '>', $ext_file) or die "Could not open file '$filename' $!";
-   print $fh "subjectAltName=\@alts\n[alts]\nDNS=$server_name\n";
+   print $fh "subjectAltName=DNS:$server_name\n";
    close $fh;
 
    # sign it with the CA
