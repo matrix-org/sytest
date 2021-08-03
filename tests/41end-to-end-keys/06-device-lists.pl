@@ -139,7 +139,10 @@ test "Local delete device changes appear in v2 /sync",
          matrix_delete_device( $user2, $user2->device_id, {
              auth => {
                  type     => "m.login.password",
-                 user     => $user2->user_id,
+                 identifier => {
+                    type => "m.id.user",
+                    user => $user2->user_id,
+                 },
                  password => $user2->password,
              }
          });
@@ -256,7 +259,10 @@ test "Device deletion propagates over federation",
          matrix_delete_device( $user2, $user2->device_id, {
              auth => {
                  type     => "m.login.password",
-                 user     => $user2->user_id,
+                 identifier => {
+                    type => "m.id.user",
+                    user => $user2->user_id,
+                 },
                  password => $user2->password,
              }
          });

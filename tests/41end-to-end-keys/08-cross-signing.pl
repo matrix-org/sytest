@@ -15,9 +15,12 @@ test "Can upload self-signing keys",
 
       matrix_set_cross_signing_key( $user, {
           "auth" => {
-              "type"     => "m.login.password",
-              "user"     => $user_id,
-              "password" => $user->password,
+              type     => "m.login.password",
+              identifier => {
+                 type => "m.id.user",
+                 user => $user->user_id,
+              },
+              password => $user->password,
           },
           "master_key" => {
               # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
