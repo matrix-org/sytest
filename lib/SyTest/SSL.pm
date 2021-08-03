@@ -61,7 +61,7 @@ sub create_ssl_cert
 
    # Create extension file
    my $ext_file = "$cert_file.ext";
-   open(my $fh, '>', $ext_file) or die "Could not open file '$filename' $!";
+   open(my $fh, '>', $ext_file) or die "Could not open file '$ext_file': $!";
    print $fh "subjectAltName=DNS:$server_name\n";
    close $fh;
 
@@ -72,4 +72,3 @@ sub create_ssl_cert
       "-out", $cert_file, "-extfile", $ext_file,
    ) == 0 or die "openssl x509 failed $?";
 }
-
