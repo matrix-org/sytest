@@ -59,11 +59,16 @@ sub create_ssl_cert
       "-subj", "/CN=$server_name",
    ) == 0 or die "openssl req failed $?";
 
+   # Create extension file
+   my $ext_file = "$cert_file.ext";
+   open(my $fh, '>', $ext_file) or die "Could not open file '$ext_file': $!";
+   print $fh "subjectAltName=DNS:$server_name\n";
+   close $fh;
+
    # sign it with the CA
    system(
       "openssl", "x509", "-req", "-in", $csr_file,
       "-CA", "keys/ca.crt", "-CAkey", "keys/ca.key", "-set_serial", 1,
-      "-out", $cert_file,
+      "-out", $cert_file, "-extfile", $ext_file,
    ) == 0 or die "openssl x509 failed $?";
 }
-
