@@ -12,7 +12,7 @@ multi_test "Can claim one time key using POST",
          uri     => "/r0/keys/upload",
          content => {
             one_time_keys => {
-               "test_algorithm:test_id", "test+base64+key"
+               "test_algorithm:test_id", "iDBFAwt4T0ntzaZXwEevrKfmelFUMj8KS6n6kYhBPzU"
             }
          }
       )->SyTest::pass_on_done( "Uploaded one-time keys" )
@@ -43,7 +43,7 @@ multi_test "Can claim one time key using POST",
          my $alice_device_keys = $alice_keys->{$device_id};
          assert_json_keys( $alice_device_keys, "test_algorithm:test_id" );
 
-         "test+base64+key" eq $alice_device_keys->{"test_algorithm:test_id"} or
+         "iDBFAwt4T0ntzaZXwEevrKfmelFUMj8KS6n6kYhBPzU" eq $alice_device_keys->{"test_algorithm:test_id"} or
             die "Unexpected key base64";
 
          pass "Took one time key";

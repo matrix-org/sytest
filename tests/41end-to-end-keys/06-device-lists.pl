@@ -316,7 +316,7 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
       })->then( sub {
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { x => "x2" } } )
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { "ed25519:test" => "cmltKURmLTRV86hBT_jh8AFH9RAdz0yAZOfvlBUQqP8" } } )
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
@@ -370,9 +370,9 @@ test "If remote user leaves room we no longer receive device updates",
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
          # there must be e2e keys for the devices, otherwise they don't appear in /query.
-         matrix_put_e2e_keys( $remote2, device_keys => { keys => { x => "x" } } );
+         matrix_put_e2e_keys( $remote2, device_keys => { keys => { "ed25519:test" => "aI2BUUeIQ0Y8T7Tv7jJh2ADagpoWdtHf4XipFPvjXI8" } } );
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { x => "y" } } );
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { "ed25519:test" => "j9eIBhARnZg5vhKzp8zm1A6up1LmSiDoXuDqTTIvkcI" } } );
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
 
@@ -391,7 +391,7 @@ test "If remote user leaves room we no longer receive device updates",
             log_if_fail "keys after remote_leaver uploaded keys", $body;
             assert_json_keys( $body, qw( device_keys ));
             my $update = $body->{device_keys}->{ $remote_leaver->user_id }->{ $remote_leaver->device_id };
-            assert_eq( $update->{keys}{x}, "y" );
+            assert_eq( $update->{keys}{"ed25519:test"}, "j9eIBhARnZg5vhKzp8zm1A6up1LmSiDoXuDqTTIvkcI" );
             Future->done;
          });
       })->then( sub {
@@ -403,10 +403,10 @@ test "If remote user leaves room we no longer receive device updates",
 
          # now /finally/ we can test what we came here for. Both remote users update their
          # device keys, and we check that we only get an update for one of them.
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { x => "x2" } } )
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { "ed25519:test" => "2NNgAXoqO06lZc3FOOKj76daZT8CmbHmmJKr29Jv85g" } } )
       })->then( sub {
          log_if_fail "Remote_leaver " . $remote_leaver->user_id . " updated keys";
-         matrix_put_e2e_keys( $remote2, device_keys => { keys => { x => "x2" } } )
+         matrix_put_e2e_keys( $remote2, device_keys => { keys => { "ed25519:test" => "c3op6BJi8aUnDGA541Q6TbTPmbiy1GqGv-zzXDQM9Us" } } )
       })->then( sub {
          log_if_fail "Remote user 2 " . $remote2->user_id . " updated keys";
 
@@ -578,7 +578,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
 
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { x => "x2" } } )
+         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { "ed25519:test" => "72Fyh13X3itrbsWXHGQkqozmasfNRE6AEQPGbQFIykc" } } )
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
@@ -754,7 +754,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $remote_user, device_keys => { keys => { x => "x2" } } )
+         matrix_put_e2e_keys( $remote_user, device_keys => { keys => { "ed25519:test" => "jAV9juztEM6Fjda60eut1GYyaP6QFlkfCd609celbwo" } } )
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
