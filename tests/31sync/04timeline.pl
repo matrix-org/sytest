@@ -387,7 +387,7 @@ test "A prev_batch token from incremental sync can be used in the v1 messages AP
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id, body => "1" );
+         matrix_send_room_text_message_synced( $user, $room_id, body => "1" );
       })->then( sub {
          ( $event_id_1 ) = @_;
          matrix_sync( $user )
@@ -403,6 +403,9 @@ test "A prev_batch token from incremental sync can be used in the v1 messages AP
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
+
+	 log_if_fail "Sync for room", $room;
+
          assert_json_keys( $room, qw( timeline state ephemeral ));
          assert_json_keys( $room->{state}, qw( events ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
