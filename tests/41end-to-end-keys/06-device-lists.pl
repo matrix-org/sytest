@@ -397,10 +397,26 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
 
          # now one of the remote users leaves the room...
-         matrix_leave_room_synced( $remote_leaver, $room_id );
+         matrix_leave_room( $remote_leaver, $room_id );
       })->then( sub {
          log_if_fail "Remote_leaver " . $remote_leaver->user_id . " left room";
 
+         # wait for the leave to propagate to the creators homeserver
+         await_sync_timeline_contains( $creator, $room_id, check => sub {
+            my ( $event ) = @_;
+
+            assert_json_keys( $event, qw( type content sender ));
+
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{sender} eq $remote_leaver->user_id;
+
+            assert_json_keys( my $content = $event->{content}, qw( membership ));
+
+            return unless $content->{membership} eq "leave";
+
+            return 1;
+         });
+      })->then( sub {
          # now /finally/ we can test what we came here for. Both remote users update their
          # device keys, and we check that we only get an update for one of them.
          matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { "ed25519:test" => "2NNgAXoqO06lZc3FOOKj76daZT8CmbHmmJKr29Jv85g" } } )
