@@ -410,7 +410,6 @@ test "If remote user leaves room we no longer receive device updates",
             return unless $event->{type} eq "m.room.member";
             return unless $event->{sender} eq $remote_leaver->user_id;
 
-
             assert_json_keys( my $content = $event->{content}, qw( membership ));
 
             return unless $content->{membership} eq "leave";
@@ -418,7 +417,6 @@ test "If remote user leaves room we no longer receive device updates",
             return 1;
          });
       })->then( sub {
-
          # now /finally/ we can test what we came here for. Both remote users update their
          # device keys, and we check that we only get an update for one of them.
          matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { x => "x2" } } )
