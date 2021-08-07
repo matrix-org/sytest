@@ -28,8 +28,6 @@ test "PUT /rooms/:room_id/typing/:user_id sets typing notification",
 test "PUT /rooms/:room_id/typing/:user_id without timeout fails",
    requires => [ local_user_and_room_fixtures() ],
 
-   proves => [qw( can_set_room_typing )],
-
    do => sub {
       my ( $user, $room_id ) = @_;
 
@@ -49,8 +47,6 @@ test "PUT /rooms/:room_id/typing/:user_id without timeout fails",
 
 test "PUT /rooms/:room_id/typing/:user_id with invalid json fails",
    requires => [ local_user_and_room_fixtures() ],
-
-   proves => [qw( can_set_room_typing )],
 
    do => sub {
       my ( $user, $room_id ) = @_;
