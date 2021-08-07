@@ -12,8 +12,8 @@ multi_test "New federated private chats get full presence information (SYN-115)"
 
       # Flush event streams for both; as a side-effect will mark presence 'online'
       Future->needs_all(
-         flush_events_for( $alice ),
-         flush_events_for( $bob   ),
+         matrix_sync( $alice ),
+         matrix_sync( $bob   ),
       )->then( sub {
 
          # Have Alice create a new private room
@@ -29,7 +29,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       })->then( sub {
 
          # Bob should receive the invite
-         await_event_for( $bob, filter => sub {
+         await_sync_timeline_contains( $bob, $room_id, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member" and
                           $event->{room_id} eq $room_id and
@@ -45,37 +45,26 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             ->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
 
-         # At this point, both users should see both users' presence, either
-         # right now via global /initialSync, or should soon receive an
-         # m.presence event from /events.
+         # At this point, both users should see both users' presence
          Future->needs_all( map {
             my $user = $_;
 
             my %presence_by_userid;
 
             my $f = repeat {
-               my $is_initial = !$_[0];
+               matrix_sync_again ( $user, timeout => 500 * $TIMEOUT_FACTOR );
+               my ( $body ) = @_;
+               $user->next_batch = $body->{next_batch};
 
-               do_request_json_for( $user,
-                  method => "GET",
-                  uri    => $is_initial ? "/r0/initialSync" : "/r0/events",
-                  params => { from => $user->eventstream_token, timeout => 500 * $TIMEOUT_FACTOR }
-               )->then( sub {
-                  my ( $body ) = @_;
-                  $user->eventstream_token = $body->{end};
+               my @events = $body->{presence}->{events};
 
-                  my @presence = $is_initial
-                     ? @{ $body->{presence} }
-                     : grep { $_->{type} eq "m.presence" } @{ $body->{chunk} };
+               foreach my $event ( @events ) {
+                  my $user_id = $event->{content}{user_id};
+                  pass "User ${\$user->user_id} received presence for $user_id";
+                  $presence_by_userid{$user_id} = $event;
+               }
 
-                  foreach my $event ( @presence ) {
-                     my $user_id = $event->{content}{user_id};
-                     pass "User ${\$user->user_id} received presence for $user_id";
-                     $presence_by_userid{$user_id} = $event;
-                  }
-
-                  Future->done(1);
-               });
+               Future->done(1);
             } until => sub { keys %presence_by_userid == 2 };
 
             Future->wait_any(

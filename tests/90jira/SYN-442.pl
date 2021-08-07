@@ -22,7 +22,7 @@ multi_test "Test that we can be reinvited to a room we created",
             ->SyTest::pass_on_done( "User A invited user B" )
       })->then( sub {
 
-         await_event_for( $user_2, filter => sub {
+         await_sync_timeline_contains( $user_2, $room_id, filter => sub {
             my ( $event ) = @_;
             return 0 unless $event->{type} eq "m.room.member";
             return 0 unless $event->{content}->{membership} eq "invite";

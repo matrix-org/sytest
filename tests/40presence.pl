@@ -19,7 +19,7 @@ test "Presence changes are reported to local room members",
                  qw( can_set_presence )],
 
    do => sub {
-      my ( $senduser, $local_user, undef ) = @_;
+      my ( $senduser, $local_user, $room_id ) = @_;
 
       matrix_set_presence_status( $senduser, "online",
          status_msg => $status_msg,
@@ -27,7 +27,7 @@ test "Presence changes are reported to local room members",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, filter => sub {
+            await_sync_timeline_contains( $recvuser, $room_id, filter => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.presence";
 
