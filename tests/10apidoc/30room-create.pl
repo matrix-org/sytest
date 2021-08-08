@@ -287,8 +287,7 @@ The following options have defaults:
 commandline.
 
 The resultant future completes with two values: the room_id from the
-/createRoom response; the room_alias from the /createRoom response (which is
-non-standard and its use is deprecated).
+/createRoom response; the room_alias.
 
 =cut
 
@@ -313,7 +312,14 @@ sub matrix_create_room
    )->then( sub {
       my ( $body ) = @_;
 
-      Future->done( $body->{room_id}, $body->{room_alias} );
+      # The /createRoom response can contain a non-standard room
+      # alias reply, which use has been deprecated.
+      if (defined $body->{room_alias}) {
+         assert_eq( $body->{room_alias}, $opts{rom_alias_name},
+            "room alias" );
+      }
+
+      Future->done( $body->{room_id}, $opts{room_alias_name} );
    });
 }
 
