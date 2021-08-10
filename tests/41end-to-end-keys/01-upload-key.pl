@@ -55,6 +55,7 @@ test "Rejects invalid device keys",
    do => sub {
       my ( $user ) = @_;
 
+      # algorithms, keys and signatures are required fields, but missing
       do_request_json_for( $user,
          method  => "POST",
          uri     => "/r0/keys/upload",
