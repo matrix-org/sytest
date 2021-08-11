@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -xe
 #
 # This script is run by the bootstrap.sh script in the docker image.
 #
