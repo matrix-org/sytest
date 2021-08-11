@@ -48,19 +48,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      # From https://stackoverflow.com/a/58035262 . Surprising that GHA doesn't provide this by default?
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
+#      # From https://stackoverflow.com/a/58035262 . Surprising that GHA doesn't provide this by default?
+#      - name: Extract branch name
+#        shell: bash
+#        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+#        id: extract_branch
       - name: Checkout synapse
         uses: actions/checkout@v2
         with:
           repository: matrix-org/synapse
+          # TODO get this to use our branch, if that exists in synapse
           ref: develop
-          path: 'src'
+          path: '/src'
       - name: Run sytest
-        working-directory: /sytest
         run: bash -xe /bootstrap.sh synapse
       - name: Summarise results.tap
 #        if: ${{ always() }}
