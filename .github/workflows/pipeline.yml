@@ -16,6 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - homeserver-implementation: synapse
           - sytest-tag: bionic
 
     container:
@@ -26,7 +27,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: TODO Prepare test blacklist
-      - name: Run bootstrap script
-        run: bash /bootstrap.sh synapse
+        run: "false"
+      - name: Run sytest
+        run: bash /bootstrap.sh ${{ matrix.homeserver-implementation }}
+      - name: Summarise results.tap
+        if: ${{ always() }}
+        run: "false"
+#        run: /sytest/scripts/tap_to_gha.pl /logs/results.tap
       - name: TODO upload artifacts
+        run: "false"
       - name: TODO annotate logs
+        run: "false"
