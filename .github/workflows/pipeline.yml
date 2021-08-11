@@ -50,11 +50,12 @@ jobs:
             denrite-full-http: full-http
 
     container:
-      image: matrixdotorg/sytest-${{ matrix.homeserver-implementation }}:${{ matrix.sytest-tag }}
+      # The colon is icky. Better way? Could just include the image explicitly?
+      image: matrixdotorg/sytest-${{ matrix.homeserver-implementation }}${{ matrix.sytest-tag && ":" }}${{ matrix.sytest-tag }}
       volumes:
         # TODO PWD mounted as /sytest was originally mounted as readonly. Could pass -v directly?
         - ${{ github.workspace }}:/sytest
-        - ./logs:/logs
+        - ${{ github.workspace }}/logs:/logs
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
         WORKERS: ${{ matrix.synapse-workers && 1 }}
