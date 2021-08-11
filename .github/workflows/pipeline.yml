@@ -52,9 +52,9 @@ jobs:
     container:
       image: matrixdotorg/sytest-${{ matrix.homeserver-implementation }}:${{ matrix.sytest-tag }}
       volumes:
-        - ${{ github.workspace }}:/src
-        # TODO PWD mounted as /sytest was originally mounted as readonly. Could pass -v directly
-        - ".:/sytest"
+        # TODO PWD mounted as /sytest was originally mounted as readonly. Could pass -v directly?
+        - ${{ github.workspace }}:/sytest
+        - ./logs:/logs
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
         WORKERS: ${{ matrix.synapse-workers && 1 }}
