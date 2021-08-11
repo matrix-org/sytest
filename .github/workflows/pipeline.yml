@@ -16,58 +16,49 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - homeserver-implementation: synapse
-            sytest-tag: bionic
+          - sytest-tag: bionic
 
-#          - homeserver-implementation: synapse
-#            sytest-tag: bionic
-#            postgres: postgres
-#
-#          - homeserver-implementation: synapse
-#            sytest-tag: bionic
-#            postgres: postgres
-#            synapse-workers: workers
-#
-#          - homeserver-implementation: synapse
-#            sytest-tag: testing
-#            postgres: postgres
-#
-#          - homeserver-implementation: synapse
-#            sytest-tag: testing
-#            postgres: postgres
-#            synapse-workers: workers
-#
-#          - homeserver-implementation: dendrite
-#            postgres: postgres
-#
-#          - homeserver-implementation: dendrite
-#            postgres: postgres
-#            denrite-full-http: full-http
-#
-#          - homeserver-implementation: dendrite
-#
-#          - homeserver-implementation: dendrite
-#            denrite-full-http: full-http
+          - sytest-tag: bionic
+            postgres: postgres
+
+          - sytest-tag: bionic
+            postgres: postgres
+            workers: workers
+
+          - sytest-tag: testing
+            postgres: postgres
+
+          - sytest-tag: testing
+            postgres: postgres
+            workers: workers
 
     container:
-      # The colon is icky. Better way? Could just include the image explicitly?
-      image: matrixdotorg/sytest-${{ matrix.homeserver-implementation }}${{ matrix.sytest-tag && ':' }}${{ matrix.sytest-tag }}
+      image: matrixdotorg/sytest-synapse:${{ matrix.sytest-tag }}
       volumes:
-        # Bootstrap script expects the sytest source available at /sytest.
+        # bootstrap.sh expects the sytest source available at /sytest.
         # TODO Buildkite mounted /sytest as readonly. Can we do this on GHA? Do we need it?
         - ${{ github.workspace }}:/sytest
-        # But synapse_sytest.sh expects it at /src
-        # TODO could change the bootstrap script to pass SYTEST_SOURCE=/sytest
-        - ${{ github.workspace }}:/src
-        - ${{ github.workspace }}/logs:/logs
+        # synapse_sytest.sh expects a synapse checkout at /src
+        - ${{ github.workspace }}/synapse:/src
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
         WORKERS: ${{ matrix.synapse-workers && 1 }}
-        BLACKLIST: ${{ (matrix.synapse-workers && 'synapse-blacklist-with-workers') || 'synapse-blacklist' }}
+        BLACKLIST: ${{ (matrix.workers && 'synapse-blacklist-with-workers') || 'synapse-blacklist' }}
         API: ${{ matrix.dendrite-full-http && 1 }}
 
     steps:
       - uses: actions/checkout@v2
+      # From https://stackoverflow.com/a/58035262 . Surprising that GHA doesn't provide this by default?
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+      - name: Checkout synapse
+        uses: actions/checkout@v2
+        with:
+          repository: matrix-org/synapse
+          ref: develop
+          path: 'src'
       - name: Run sytest
         working-directory: /sytest
         run: bash -xe /bootstrap.sh ${{ matrix.homeserver-implementation }}
@@ -78,3 +69,15 @@ jobs:
         run: "false"
       - name: TODO annotate logs
         run: "false"
+
+#          - homeserver-implementation: dendrite
+#            postgres: postgres
+#
+#          - homeserver-implementation: dendrite
+#            postgres: postgres
+#            denrite-full-http: full-http
+#
+#          - homeserver-implementation: dendrite
+#
+#          - homeserver-implementation: dendrite
+#            denrite-full-http: full-http
