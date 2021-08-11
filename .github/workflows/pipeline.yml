@@ -1,0 +1,32 @@
+name: Run sytest
+on:
+  push:
+    branches: ["develop", "release-*"]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sytest:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sytest-tag: bionic
+
+    container:
+      image: matrixdotorg/sytest-${{ matrix.sytest-tag }}
+      volumes:
+        - ${{ github.workspace }}:/src
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: TODO Prepare test blacklist
+      - name: Run bootstrap script
+        run: bash /bootstrap.sh synapse
+      - name: TODO upload artifacts
+      - name: TODO annotate logs
