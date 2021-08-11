@@ -2,9 +2,9 @@
 #
 # This script is run by the bootstrap.sh script in the docker image.
 #
-# It expects to find the synapse source in /src, and a virtualenv in /venv.
-# It installs synapse into the virtualenv, configures sytest according to the
-# env vars, and runs sytest.
+# It expects to find the synapse source in $SYNAPSE_SOURCE (default /src),
+# and a virtualenv in /venv. It installs synapse into the virtualenv,
+# configures sytest according to the env vars, and runs sytest.
 #
 
 # Run the sytests.
@@ -160,10 +160,10 @@ fi
 # Run the tests
 echo >&2 "+++ Running tests"
 
-export COVERAGE_PROCESS_START="/src/.coveragerc"
+export COVERAGE_PROCESS_START="$SYNAPSE_SOURCE/.coveragerc"
 
 RUN_TESTS=(
-    perl -I "$SYTEST_LIB" /sytest/run-tests.pl --python=/venv/bin/python --synapse-directory=/src -B "/src/$BLACKLIST" --coverage -O tap --all
+    perl -I "$SYTEST_LIB" /sytest/run-tests.pl --python=/venv/bin/python --synapse-directory="$SYNAPSE_SOURCE" -B "$SYNAPSE_SOURCe/$BLACKLIST" --coverage -O tap --all
     --work-directory="/work"
 )
 
@@ -198,10 +198,10 @@ echo >&2 "--- Copying assets"
 
 # Copy out the logs
 rsync --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
-#cp /.coverage.* /src || true
+#cp /.coverage.* "$SYNAPSE_SOURCE" || true
 
-#cd /src
-#export TOP=/src
+#cd "$SYNAPSE_SOURCE"
+#export TOP="$SYNAPSE_SOURCE"
 #/venv/bin/coverage combine
 
 if [ $TEST_STATUS -ne 0 ]; then
