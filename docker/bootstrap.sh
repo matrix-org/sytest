@@ -53,6 +53,7 @@ echo "--- Preparing sytest for ${SYTEST_TARGET}"
 export SYTEST_LIB="/sytest/lib"
 
 if [ -x "/sytest/scripts/${SYTEST_TARGET}_sytest.sh" ]; then
+    echo hello I am really running this line
     export SYNAPSE_SOURCE="/sytest"
     exec "/sytest/scripts/${SYTEST_TARGET}_sytest.sh" "$@"
 
