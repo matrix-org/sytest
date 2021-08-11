@@ -37,7 +37,7 @@ jobs:
       volumes:
         # bootstrap.sh expects the sytest source available at /sytest.
         # TODO Buildkite mounted /sytest as readonly. Can we do this on GHA? Do we need it?
-        - ${{ github.workspace }}:/sytest
+        - ${{ github.workspace }}/sytest:/sytest
         # synapse_sytest.sh expects a synapse checkout at /src
         - ${{ github.workspace }}/synapse:/src
       env:
@@ -47,7 +47,8 @@ jobs:
         API: ${{ matrix.dendrite-full-http && 1 }}
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout sytest
+        uses: actions/checkout@v2
 #      # From https://stackoverflow.com/a/58035262 . Surprising that GHA doesn't provide this by default?
 #      - name: Extract branch name
 #        shell: bash
@@ -59,7 +60,6 @@ jobs:
           repository: matrix-org/synapse
           # TODO get this to use our branch, if that exists in synapse
           ref: develop
-          path: '/src'
       - name: Run sytest
         run: bash -xe /bootstrap.sh synapse
       - name: Summarise results.tap
