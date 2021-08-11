@@ -18,19 +18,19 @@ jobs:
         include:
           - sytest-tag: bionic
 
-          - sytest-tag: bionic
-            postgres: postgres
-
-          - sytest-tag: bionic
-            postgres: postgres
-            workers: workers
-
-          - sytest-tag: testing
-            postgres: postgres
-
-          - sytest-tag: testing
-            postgres: postgres
-            workers: workers
+#          - sytest-tag: bionic
+#            postgres: postgres
+#
+#          - sytest-tag: bionic
+#            postgres: postgres
+#            workers: workers
+#
+#          - sytest-tag: testing
+#            postgres: postgres
+#
+#          - sytest-tag: testing
+#            postgres: postgres
+#            workers: workers
 
     container:
       image: matrixdotorg/sytest-synapse:${{ matrix.sytest-tag }}
@@ -61,7 +61,7 @@ jobs:
           path: 'src'
       - name: Run sytest
         working-directory: /sytest
-        run: bash -xe /bootstrap.sh ${{ matrix.homeserver-implementation }}
+        run: bash -xe /bootstrap.sh synapse
       - name: Summarise results.tap
 #        if: ${{ always() }}
         run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
