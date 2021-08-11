@@ -1,7 +1,7 @@
 name: Run sytest
 on:
   push:
-    branches: ["develop", "release-*"]
+    branches: ["develop", "release-*", "github-actions"]
   pull_request:
 
 concurrency:
