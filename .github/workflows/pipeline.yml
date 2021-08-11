@@ -19,35 +19,35 @@ jobs:
           - homeserver-implementation: synapse
             sytest-tag: bionic
 
-          - homeserver-implementation: synapse
-            sytest-tag: bionic
-            postgres: postgres
-
-          - homeserver-implementation: synapse
-            sytest-tag: bionic
-            postgres: postgres
-            synapse-workers: workers
-
-          - homeserver-implementation: synapse
-            sytest-tag: testing
-            postgres: postgres
-
-          - homeserver-implementation: synapse
-            sytest-tag: testing
-            postgres: postgres
-            synapse-workers: workers
-
-          - homeserver-implementation: dendrite
-            postgres: postgres
-
-          - homeserver-implementation: dendrite
-            postgres: postgres
-            denrite-full-http: full-http
-
-          - homeserver-implementation: dendrite
-
-          - homeserver-implementation: dendrite
-            denrite-full-http: full-http
+#          - homeserver-implementation: synapse
+#            sytest-tag: bionic
+#            postgres: postgres
+#
+#          - homeserver-implementation: synapse
+#            sytest-tag: bionic
+#            postgres: postgres
+#            synapse-workers: workers
+#
+#          - homeserver-implementation: synapse
+#            sytest-tag: testing
+#            postgres: postgres
+#
+#          - homeserver-implementation: synapse
+#            sytest-tag: testing
+#            postgres: postgres
+#            synapse-workers: workers
+#
+#          - homeserver-implementation: dendrite
+#            postgres: postgres
+#
+#          - homeserver-implementation: dendrite
+#            postgres: postgres
+#            denrite-full-http: full-http
+#
+#          - homeserver-implementation: dendrite
+#
+#          - homeserver-implementation: dendrite
+#            denrite-full-http: full-http
 
     container:
       # The colon is icky. Better way? Could just include the image explicitly?
@@ -68,7 +68,7 @@ jobs:
         working-directory: /sytest
         run: bash -xe /bootstrap.sh ${{ matrix.homeserver-implementation }}
       - name: Summarise results.tap
-        if: ${{ always() }}
+#        if: ${{ always() }}
         run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
       - name: TODO upload artifacts
         run: "false"
