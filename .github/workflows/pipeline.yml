@@ -16,24 +16,65 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - homeserver-implementation: synapse
+          - name: "Synapse - :python: 3.6 / SQLite / Monolith"
+            homeserver-implementation: synapse
             sytest-tag: bionic
+
+          - name: "Synapse - :python: 3.6 / :postgres: 10 / Monolith"
+            homeserver-implementation: synapse
+            sytest-tag: bionic
+            postgres: postgres
+
+          - name: "Synapse - :python: 3.6 / :postgres: 10 / Workers"
+            homeserver-implementation: synapse
+            sytest-tag: bionic
+            postgres: postgres
+            synapse-workers: workers
+
+          - name: "Synapse - :python: 3.9 / :postgres: 13 / Monolith"
+            homeserver-implementation: synapse
+            sytest-tag: testing
+            postgres: postgres
+
+          - name: "Synapse - :python: 3.9 / :postgres: 13 / Workers"
+            homeserver-implementation: synapse
+            sytest-tag: testing
+            postgres: postgres
+            synapse-workers: workers
+
+          - name: "Dendrite - :postgres:"
+            homeserver-implementation: dendrite
+            postgres: postgres
+
+          - name: "Dendrite - :postgres: / full HTTP APIs"
+            homeserver-implementation: dendrite
+            postgres: postgres
+            denrite-full-http: yes
+
+          - name: "Dendrite - :sqlite:"
+            homeserver-implementation: dendrite
+
+          - name: "Dendrite - :sqlite: / full HTTP APIs"
+            homeserver-implementation: dendrite
+            denrite-full-http: yes
 
     container:
       image: matrixdotorg/sytest-${{ matrix.homeserver-implementation }}:${{ matrix.sytest-tag }}
       volumes:
         - ${{ github.workspace }}:/src
+      env:
+        POSTGRES: ${{ matrix.postgres && 1 }}
+        WORKERS: ${{ matrix.synapse-workers && 1 }}
+        BLACKLIST: ${{ (matrix.synapse-workers && "synapse-blacklist-with-workers") || "synapse-blacklist" }}
+        API: ${{ matrix.dendrite-full-http && 1 }}
 
     steps:
       - uses: actions/checkout@v2
-      - name: TODO Prepare test blacklist
-        run: "false"
       - name: Run sytest
         run: bash /bootstrap.sh ${{ matrix.homeserver-implementation }}
       - name: Summarise results.tap
         if: ${{ always() }}
-        run: "false"
-#        run: /sytest/scripts/tap_to_gha.pl /logs/results.tap
+        run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
       - name: TODO upload artifacts
         run: "false"
       - name: TODO annotate logs
