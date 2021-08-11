@@ -17,10 +17,10 @@ jobs:
       matrix:
         include:
           - homeserver-implementation: synapse
-          - sytest-tag: bionic
+            sytest-tag: bionic
 
     container:
-      image: matrixdotorg/sytest-${{ matrix.sytest-tag }}
+      image: matrixdotorg/sytest-${{ matrix.homeserver-implementation }}:${{ matrix.sytest-tag }}
       volumes:
         - ${{ github.workspace }}:/src
 
