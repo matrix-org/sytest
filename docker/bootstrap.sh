@@ -53,6 +53,7 @@ echo "--- Preparing sytest for ${SYTEST_TARGET}"
 export SYTEST_LIB="/sytest/lib"
 
 if [ -x "/sytest/scripts/${SYTEST_TARGET}_sytest.sh" ]; then
+    export SYNAPSE_SOURCE="/sytest"
     exec "/sytest/scripts/${SYTEST_TARGET}_sytest.sh" "$@"
 
 elif [ -x "/sytest/docker/${SYTEST_TARGET}_sytest.sh" ]; then
