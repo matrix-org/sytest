@@ -119,6 +119,9 @@ fi
 # it will otherwise try to build it in-tree, which means writing changes to the
 # source volume outside the container.)
 #
+
+echo Help I\'m stuck in $PWD
+
 if [ -d "$SYNAPSE_SOURCE" ]; then
     echo "Creating tarball from synapse source"
     tar -C "$SYNAPSE_SOURCE" -czf /tmp/synapse.tar.gz \
