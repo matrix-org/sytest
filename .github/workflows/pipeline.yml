@@ -68,8 +68,14 @@ jobs:
       - name: Summarise results.tap
 #        if: ${{ always() }}
         run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
-      - name: TODO upload artifacts
-        run: "false"
+      - name: Upload SyTest logs
+        uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: Sytest Logs - ${{ job.status }} - (Synapse, ${{ join(matrix.*, ', ') }})
+          path: |
+            /logs/results.tap
+            /logs/**/*.log*
       - name: TODO annotate logs
         run: "false"
 
