@@ -16,47 +16,38 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "Synapse - :python: 3.6 / SQLite / Monolith"
-            homeserver-implementation: synapse
+          - homeserver-implementation: synapse
             sytest-tag: bionic
 
-          - name: "Synapse - :python: 3.6 / :postgres: 10 / Monolith"
-            homeserver-implementation: synapse
+          - homeserver-implementation: synapse
             sytest-tag: bionic
             postgres: postgres
 
-          - name: "Synapse - :python: 3.6 / :postgres: 10 / Workers"
-            homeserver-implementation: synapse
+          - homeserver-implementation: synapse
             sytest-tag: bionic
             postgres: postgres
             synapse-workers: workers
 
-          - name: "Synapse - :python: 3.9 / :postgres: 13 / Monolith"
-            homeserver-implementation: synapse
+          - homeserver-implementation: synapse
             sytest-tag: testing
             postgres: postgres
 
-          - name: "Synapse - :python: 3.9 / :postgres: 13 / Workers"
-            homeserver-implementation: synapse
+          - homeserver-implementation: synapse
             sytest-tag: testing
             postgres: postgres
             synapse-workers: workers
 
-          - name: "Dendrite - :postgres:"
-            homeserver-implementation: dendrite
+          - homeserver-implementation: dendrite
             postgres: postgres
 
-          - name: "Dendrite - :postgres: / full HTTP APIs"
-            homeserver-implementation: dendrite
+          - homeserver-implementation: dendrite
             postgres: postgres
-            denrite-full-http: yes
+            denrite-full-http: full-http
 
-          - name: "Dendrite - :sqlite:"
-            homeserver-implementation: dendrite
+          - homeserver-implementation: dendrite
 
-          - name: "Dendrite - :sqlite: / full HTTP APIs"
-            homeserver-implementation: dendrite
-            denrite-full-http: yes
+          - homeserver-implementation: dendrite
+            denrite-full-http: full-http
 
     container:
       image: matrixdotorg/sytest-${{ matrix.homeserver-implementation }}:${{ matrix.sytest-tag }}
