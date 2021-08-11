@@ -7,23 +7,17 @@ set -ex
 export SYTEST_TARGET="$1"
 shift
 
-env | sort
+env | sort | cat
 
 if [ -d "/sytest" ]; then
     # If the user has mounted in a SyTest checkout, use that.
+    # This is the case for sytest's GitHub Actions.
     echo "Using local sytests"
 else
     echo "--- Trying to get same-named sytest branch..."
-
-    # Check if we're running under GitHub Actions. If so it can tell us what
-    # Synapse/Dendrite branch we're running
-    if [ -n "$GITHUB_HEAD_REF" ]; then
-        branch_name=$GITHUB_HEAD_REF
-    else
-        # Otherwise, try and find the branch that the Synapse/Dendrite checkout
-        # is using. Fall back to develop if unknown.
-        branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
-    fi
+    # Otherwise, try and find the branch that the Synapse/Dendrite checkout
+    # is using. Fall back to develop if unknown.
+    branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
 
     if [ "$SYTEST_TARGET" == "dendrite" ] && [ "$branch_name" == "master" ]; then
         # Dendrite uses master as its main branch. If the branch is master, we probably want sytest develop
