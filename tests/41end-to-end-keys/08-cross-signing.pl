@@ -160,12 +160,12 @@ test "Changing master key notifies local users",
          matrix_put_e2e_keys( $user1, device_keys => {
              "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
              "keys" => {
-                 "curve25519:".$device_id => "curve25519+key",
-                 "ed25519:".$device_id => "ed25519+key",
+                 "curve25519:".$device_id => "IQ/Hu4GGOaxIpMavovFYGouVJeIP2miSfysv+Db3NXg",
+                 "ed25519:".$device_id => "MKkClRdltZlOHyCzxiDrm7MsDAsohXmAyeu2cYO6how",
              },
              "signatures" => {
                  $user_id => {
-                     "ed25519:".$device_id => "self+signature",
+                     "ed25519:".$device_id => "KUQR2vSQvcv40MiKoJSW7kfi9vBDhmUtzZ9/pBzteYZVNw8KB0INPle3w71huQY/6tkk3Kfi/mzo7cNkiiHkuQ",
                  },
              },
          } );
@@ -188,8 +188,8 @@ test "Changing master key notifies local users",
              "device_id" => $device_id,
              "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
              "keys" => {
-                 "curve25519:".$device_id => "curve25519+key",
-                 "ed25519:".$device_id => "ed25519+key",
+                 "curve25519:".$device_id => "IQ/Hu4GGOaxIpMavovFYGouVJeIP2miSfysv+Db3NXg",
+                 "ed25519:".$device_id => "MKkClRdltZlOHyCzxiDrm7MsDAsohXmAyeu2cYO6how",
              }
          };
          sign_json(
@@ -222,7 +222,7 @@ test "Changing master key notifies local users",
                            "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ" );
          assert_deeply_eq( $content->{device_keys}->{$user_id}->{$device_id}
                            ->{signatures}->{$user_id}, {
-            "ed25519:".$device_id => "self+signature",
+            "ed25519:".$device_id => "KUQR2vSQvcv40MiKoJSW7kfi9vBDhmUtzZ9/pBzteYZVNw8KB0INPle3w71huQY/6tkk3Kfi/mzo7cNkiiHkuQ",
             "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ" => $cross_signature,
          } );
 
@@ -240,7 +240,7 @@ test "Changing master key notifies local users",
                            "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ" );
          assert_deeply_eq( $content->{device_keys}->{$user_id}->{$device_id}
                            ->{signatures}->{$user_id}, {
-            "ed25519:".$device_id => "self+signature",
+            "ed25519:".$device_id => "KUQR2vSQvcv40MiKoJSW7kfi9vBDhmUtzZ9/pBzteYZVNw8KB0INPle3w71huQY/6tkk3Kfi/mzo7cNkiiHkuQ",
             "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ" => $cross_signature,
          } );
 
@@ -511,12 +511,12 @@ test "uploading self-signing key notifies over federation",
       matrix_put_e2e_keys( $user2, device_keys => {
              "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
              "keys" => {
-                 "curve25519:".$user2_device => "curve25519+key",
-                 "ed25519:".$user2_device => "ed25519+key",
+                 "curve25519:".$user2_device => "IQ/Hu4GGOaxIpMavovFYGouVJeIP2miSfysv+Db3NXg",
+                 "ed25519:".$user2_device => "MKkClRdltZlOHyCzxiDrm7MsDAsohXmAyeu2cYO6how",
              },
              "signatures" => {
                  $user2_id => {
-                     "ed25519:".$user2_device => "self+signature",
+                     "ed25519:".$user2_device => "KUQR2vSQvcv40MiKoJSW7kfi9vBDhmUtzZ9/pBzteYZVNw8KB0INPle3w71huQY/6tkk3Kfi/mzo7cNkiiHkuQ",
                  },
              },
       } )->then( sub {
@@ -615,8 +615,8 @@ test "uploading signed devices gets propagated over federation",
           "device_id" => $user2_device,
           "algorithms" => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
           "keys" => {
-              "curve25519:$user2_device" => "curve25519+key",
-              "ed25519:$user2_device" => "ed25519+key",
+              "curve25519:$user2_device" => "IQ/Hu4GGOaxIpMavovFYGouVJeIP2miSfysv+Db3NXg",
+              "ed25519:$user2_device" => "MKkClRdltZlOHyCzxiDrm7MsDAsohXmAyeu2cYO6how",
           }
       };
       my $cross_signature;
