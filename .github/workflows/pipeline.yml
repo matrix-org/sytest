@@ -65,7 +65,7 @@ jobs:
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
         WORKERS: ${{ matrix.synapse-workers && 1 }}
-        BLACKLIST: ${{ (matrix.synapse-workers && "synapse-blacklist-with-workers") || "synapse-blacklist" }}
+        BLACKLIST: ${{ (matrix.synapse-workers && 'synapse-blacklist-with-workers') || 'synapse-blacklist' }}
         API: ${{ matrix.dendrite-full-http && 1 }}
 
     steps:
