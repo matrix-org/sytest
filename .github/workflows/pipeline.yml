@@ -56,9 +56,9 @@ jobs:
         # Bootstrap script expects the sytest source available at /sytest.
         # TODO Buildkite mounted /sytest as readonly. Can we do this on GHA? Do we need it?
         - ${{ github.workspace }}:/sytest
-        # synapse_sytest.sh seems to expect it at /src, but the bootstrap script will feed
-        # it /sytest via an environment variable
-        # - ${{ github.workspace }}:/src
+        # But synapse_sytest.sh expects it at /src
+        # TODO could change the bootstrap script to pass SYTEST_SOURCE=/sytest
+        - ${{ github.workspace }}:/src
         - ${{ github.workspace }}/logs:/logs
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}

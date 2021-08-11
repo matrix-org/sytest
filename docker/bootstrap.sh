@@ -7,8 +7,6 @@ set -ex
 export SYTEST_TARGET="$1"
 shift
 
-env | sort | cat
-
 if [ -d "/sytest" ]; then
     # If the user has mounted in a SyTest checkout, use that.
     # This is the case for sytest's GitHub Actions.
@@ -52,20 +50,14 @@ echo "--- Preparing sytest for ${SYTEST_TARGET}"
 
 export SYTEST_LIB="/sytest/lib"
 
-
-echo "DMR 1"
 if [ -x "/sytest/scripts/${SYTEST_TARGET}_sytest.sh" ]; then
-    echo "DMR 2"
-    export SYNAPSE_SOURCE="/sytest"
     exec "/sytest/scripts/${SYTEST_TARGET}_sytest.sh" "$@"
 
 elif [ -x "/sytest/docker/${SYTEST_TARGET}_sytest.sh" ]; then
-    echo "DMR 3"
     # old branches of sytest used to put the sytest running script in the "/docker" directory
     exec "/sytest/docker/${SYTEST_TARGET}_sytest.sh" "$@"
 
 else
-    echo "DMR 4"
     PLUGIN_RUNNER=$(find /sytest/plugins/ -type f -name "${SYTEST_TARGET}_sytest.sh" -print)
     if [ -n PLUGIN_RUNNER ]; then
         exec ${PLUGIN_RUNNER} "$@"
