@@ -7,16 +7,18 @@ set -ex
 export SYTEST_TARGET="$1"
 shift
 
+env | sort
+
 if [ -d "/sytest" ]; then
     # If the user has mounted in a SyTest checkout, use that.
     echo "Using local sytests"
 else
     echo "--- Trying to get same-named sytest branch..."
 
-    # Check if we're running in buildkite, if so it can tell us what
+    # Check if we're running under GitHub Actions. If so it can tell us what
     # Synapse/Dendrite branch we're running
-    if [ -n "$BUILDKITE_BRANCH" ]; then
-        branch_name=$BUILDKITE_BRANCH
+    if [ -n "$GITHUB_HEAD_REF" ]; then
+        branch_name=$GITHUB_HEAD_REF
     else
         # Otherwise, try and find the branch that the Synapse/Dendrite checkout
         # is using. Fall back to develop if unknown.
