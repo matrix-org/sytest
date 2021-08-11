@@ -62,6 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run sytest
+        working-directory: /sytest
         run: bash /bootstrap.sh ${{ matrix.homeserver-implementation }}
       - name: Summarise results.tap
         if: ${{ always() }}
