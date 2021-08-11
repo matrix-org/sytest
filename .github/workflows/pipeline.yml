@@ -18,19 +18,19 @@ jobs:
         include:
           - sytest-tag: bionic
 
-#          - sytest-tag: bionic
-#            postgres: postgres
-#
-#          - sytest-tag: bionic
-#            postgres: postgres
-#            workers: workers
-#
-#          - sytest-tag: testing
-#            postgres: postgres
-#
-#          - sytest-tag: testing
-#            postgres: postgres
-#            workers: workers
+          - sytest-tag: bionic
+            postgres: postgres
+
+          - sytest-tag: bionic
+            postgres: postgres
+            workers: workers
+
+          - sytest-tag: testing
+            postgres: postgres
+
+          - sytest-tag: testing
+            postgres: postgres
+            workers: workers
 
     container:
       image: matrixdotorg/sytest-synapse:${{ matrix.sytest-tag }}
@@ -56,12 +56,14 @@ jobs:
 #        shell: bash
 #        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
 #        id: extract_branch
+      # TODO get this to use our branch, if that exists in synapse
+      # TODO synapse has a similar need when its tests.yml checks out complement.
+      # Could we turn "Checkout complement" into a new GitHub Action?
       - name: Checkout synapse
         uses: actions/checkout@v2
         with:
           repository: matrix-org/synapse
           path: synapse
-          # TODO get this to use our branch, if that exists in synapse
           ref: develop
       - name: Run sytest
         run: bash -xe /bootstrap.sh synapse
