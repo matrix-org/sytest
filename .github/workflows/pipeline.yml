@@ -100,9 +100,6 @@ jobs:
             /logs/results.tap
             /logs/**/*.log*
 
-      - name: TODO annotate logs
-        run: "false"
-
 #          - homeserver-implementation: dendrite
 #            postgres: postgres
 #
