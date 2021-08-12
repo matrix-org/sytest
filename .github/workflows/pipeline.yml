@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           BRANCH=${GITHUB_REF#refs/heads/}
-          (wget -O - https://github.com/matrix-org/synapse/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/synapse/archive/master.tar.gz) \
+          (wget -O - https://github.com/matrix-org/synapse/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/synapse/archive/develop.tar.gz) \
             | tar -xz --strip-components=1 -C /src/
 
       - name: Run sytest
@@ -102,38 +102,12 @@ jobs:
         with:
           path: sytest
 
-      # From https://stackoverflow.com/a/58035262
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-
-      - name: Find dendrite ${{ steps.extract_branch.outputs.branch }} branch
-        id: find_dendrite_branch
-        uses: octokit/request-action@v2.1.0
-        with:
-          route: GET /repos/matrix-org/dendrite/branches/${{ steps.extract_branch.outputs.branch }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-
-      - name: Select dendrite branch to checkout
-        id: select_dendrite_branch
+      - name: Fetch corresponding synapse branch
         shell: bash
         run: |
-          if [ ${{ steps.find_dendrite_branch.outcome }} == "success" ]; then
-            branch=${{ steps.extract_branch.outputs.branch }}
-          else
-            branch=master
-          fi
-          echo "::set-output name=branch::$branch"
-
-      - name: Checkout dendrite ${{ steps.select_dendrite_branch.outputs.branch }} branch
-        uses: actions/checkout@v2
-        with:
-          repository: matrix-org/dendrite
-          path: dendrite
-          ref: ${{ steps.select_dendrite_branch.outputs.branch }}
+          BRANCH=${GITHUB_REF#refs/heads/}
+          (wget -O - https://github.com/matrix-org/dendrite/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/dendrite/archive/master.tar.gz) \
+            | tar -xz --strip-components=1 -C /src/
 
       - name: Run sytest
         run: bash -xe /bootstrap.sh dendrite
