@@ -43,7 +43,7 @@ jobs:
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
         WORKERS: ${{ matrix.synapse-workers && 1 }}
-        BLACKLIST: ${{ (matrix.workers && '.ci/worker-blacklist') || 'sytest-blacklist' }}
+        BLACKLIST: ${{ (matrix.workers && 'synapse-blacklist-with-workers') || 'sytest-blacklist' }}
         API: ${{ matrix.dendrite-full-http && 1 }}
 
     steps:
@@ -58,6 +58,10 @@ jobs:
           BRANCH=${GITHUB_REF#refs/heads/}
           (wget -O - https://github.com/matrix-org/synapse/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/synapse/archive/develop.tar.gz) \
             | tar -xz --strip-components=1 -C /src/
+
+      - name: Prepare blacklist file
+        if: ${{ matrix.workers }}
+        run: cat /src/sytest-blacklist /src/.ci/worker-blacklist > /src/synapse-blacklist-with-workers
 
       - name: Run sytest
         run: bash -xe /bootstrap.sh synapse
