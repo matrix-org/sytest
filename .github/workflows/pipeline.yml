@@ -58,7 +58,7 @@ jobs:
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: extract_branch
 
-      - name: Find synapse `${{ steps.extract_branch.outputs.branch }}` branch
+      - name: Find synapse ${{ steps.extract_branch.outputs.branch }} branch
         id: find_synapse_branch
         uses: octokit/request-action@v2.1.0
         with:
@@ -77,7 +77,7 @@ jobs:
           fi
           echo "::set-output name=branch::$branch"
 
-      - name: Checkout synapse `${{ steps.select_synapse_branch.outputs.branch }}` branch
+      - name: Checkout synapse ${{ steps.select_synapse_branch.outputs.branch }} branch
         uses: actions/checkout@v2
         with:
           repository: matrix-org/synapse
