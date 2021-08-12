@@ -70,7 +70,7 @@ rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /
 
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
-    perl /sytest/scripts/format_tap.pl /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
+    perl /sytest/scripts/format_tap.pl /logs/results.tap "$GITHUB_SHA" >/logs/annotate.md
     # If show-expected-fail-tests logged something, put it into the annotation
     # Annotations from a failed build show at the top of buildkite, alerting
     # developers quickly as to what needs to change in the black/whitelist.

@@ -52,30 +52,24 @@ jobs:
         with:
           path: sytest
 
-      # From https://stackoverflow.com/a/58035262
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-
-      - name: Find synapse ${{ steps.extract_branch.outputs.branch }} branch
-        id: find_synapse_branch
-        uses: octokit/request-action@v2.1.0
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          route: GET /repos/matrix-org/synapse/branches/${{ steps.extract_branch.outputs.branch }}
-        continue-on-error: true
-
-      - name: Select synapse branch to checkout
+      - name: Select corresponding synapse branch
         id: select_synapse_branch
         shell: bash
         run: |
-          if [ ${{ steps.find_synapse_branch.outcome }} == "success" ]; then
-            branch=${{ steps.extract_branch.outputs.branch }}
+          BRANCH=${GITHUB_REF#refs/heads/}
+          STATUS_CODE=$(curl -X GET \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -o /dev/null -w "%{http_code}"
+            https://api.github.com/repos/matrix-org/synapse/branches/$BRANCH
+          )
+          if [ STATUS_CODE == 200 ]; then
+            echo ::set-output name=branch:$BRANCH
           else
-            branch=develop
+            echo ::set-output name=branch:develop
           fi
-          echo "::set-output name=branch::$branch"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout synapse ${{ steps.select_synapse_branch.outputs.branch }} branch
         uses: actions/checkout@v2
@@ -137,8 +131,9 @@ jobs:
         id: find_dendrite_branch
         uses: octokit/request-action@v2.1.0
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           route: GET /repos/matrix-org/dendrite/branches/${{ steps.extract_branch.outputs.branch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
       - name: Select dendrite branch to checkout
