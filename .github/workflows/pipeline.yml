@@ -62,8 +62,8 @@ jobs:
         id: find_synapse_branch
         uses: octokit/request-action@v2.1.0
         with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           route: GET /repos/matrix-org/synapse/branches/${{ steps.extract_branch.outputs.branch }}
-          ref: ${{ steps.extract_branch.outputs.branch }}
         continue-on-error: true
 
       - name: Select synapse branch to checkout
