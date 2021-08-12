@@ -56,7 +56,8 @@ jobs:
         shell: bash
         run: |
           BRANCH=${GITHUB_REF#refs/heads/}
-          (wget -O - https://github.com/matrix-org/synapse/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/synapse/archive/master.tar.gz) | tar -xz --strip-components=1 -C /src/"
+          (wget -O - https://github.com/matrix-org/synapse/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/synapse/archive/master.tar.gz) \
+            | tar -xz --strip-components=1 -C /src/
 
       - name: Run sytest
         run: bash -xe /bootstrap.sh synapse
