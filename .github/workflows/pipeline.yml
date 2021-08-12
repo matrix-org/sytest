@@ -51,25 +51,37 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: sytest
-#      # From https://stackoverflow.com/a/58035262 . Surprising that GHA doesn't provide this by default?
-#      - name: Extract branch name
-#        shell: bash
-#        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-#        id: extract_branch
-      # TODO get this to use our branch, if that exists in synapse
-      # TODO synapse has a similar need when its tests.yml checks out complement.
-      # Could we turn "Checkout complement" into a new GitHub Action?
-      - name: Checkout synapse
+
+      # From https://stackoverflow.com/a/58035262 . Surprising that GHA doesn't provide this by default?
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: Try to checkout synapse `${{ steps.extract_branch.outputs.branch }}` branch
+        id: checkout_synapse_branch
+        uses: actions/checkout@v2
+        with:
+          repository: matrix-org/synapse
+          path: synapse
+          ref: ${{ steps.extract_branch.outputs.branch }}
+        continue-on-error: true
+
+      - name: Checkout synapse `develop` branch
+        if: ${{ steps.checkout_synapse_branch.outcome != 'success' }}
         uses: actions/checkout@v2
         with:
           repository: matrix-org/synapse
           path: synapse
           ref: develop
+
       - name: Run sytest
         run: bash -xe /bootstrap.sh synapse
+
       - name: Summarise results.tap
-#        if: ${{ always() }}
+        if: ${{ always() }}
         run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
+
       - name: Upload SyTest logs
         uses: actions/upload-artifact@v2
         if: ${{ always() }}
@@ -78,6 +90,7 @@ jobs:
           path: |
             /logs/results.tap
             /logs/**/*.log*
+
       - name: TODO annotate logs
         run: "false"
 
