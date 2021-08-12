@@ -39,7 +39,7 @@ jobs:
         # TODO Buildkite mounted /sytest as readonly. Can we do this on GHA? Do we need it?
         - ${{ github.workspace }}/sytest:/sytest
         # synapse_sytest.sh expects a synapse checkout at /src
-        - ${{ github.workspace }}/synapse:/src
+        - ${{ github.workspace }}/dendrite:/src
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
         WORKERS: ${{ matrix.synapse-workers && 1 }}
