@@ -100,14 +100,77 @@ jobs:
             /logs/results.tap
             /logs/**/*.log*
 
-#          - homeserver-implementation: dendrite
-#            postgres: postgres
-#
-#          - homeserver-implementation: dendrite
-#            postgres: postgres
-#            denrite-full-http: full-http
-#
-#          - homeserver-implementation: dendrite
-#
-#          - homeserver-implementation: dendrite
-#            denrite-full-http: full-http
+  dendrite:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        db: ["sqlite", "postgres"]
+        api: ["not-full-http", "full-http"]
+
+    container:
+      image: matrixdotorg/sytest-dendrite
+      volumes:
+        # bootstrap.sh expects the sytest source available at /sytest.
+        # TODO Buildkite mounted /sytest as readonly. Can we do this on GHA? Do we need it?
+        - ${{ github.workspace }}/sytest:/sytest
+        # synapse_sytest.sh expects a synapse checkout at /src
+        - ${{ github.workspace }}/synapse:/src
+      env:
+        POSTGRES: ${{ matrix.db == 'postgres' }}
+        API: ${{ matrix.api == 'full-http' }}
+
+    steps:
+      - name: Checkout sytest
+        uses: actions/checkout@v2
+        with:
+          path: sytest
+
+      # From https://stackoverflow.com/a/58035262
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: Find dendrite ${{ steps.extract_branch.outputs.branch }} branch
+        id: find_dendrite_branch
+        uses: octokit/request-action@v2.1.0
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          route: GET /repos/matrix-org/dendrite/branches/${{ steps.extract_branch.outputs.branch }}
+        continue-on-error: true
+
+      - name: Select dendrite branch to checkout
+        id: select_dendrite_branch
+        shell: bash
+        run: |
+          if [ ${{ steps.find_dendrite_branch.outcome }} == "success" ]; then
+            branch=${{ steps.extract_branch.outputs.branch }}
+          else
+            branch=master
+          fi
+          echo "::set-output name=branch::$branch"
+
+      - name: Checkout dendrite ${{ steps.select_dendrite_branch.outputs.branch }} branch
+        uses: actions/checkout@v2
+        with:
+          repository: matrix-org/dendrite
+          path: dendrite
+          ref: ${{ steps.select_dendrite_branch.outputs.branch }}
+
+      - name: Run sytest
+        run: bash -xe /bootstrap.sh dendrite
+
+      - name: Summarise results.tap
+        if: ${{ always() }}
+        run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
+
+      - name: Upload SyTest logs
+        uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: Sytest Logs - ${{ job.status }} - (Dendrite, ${{ join(matrix.*, ', ') }})
+          path: |
+            /logs/results.tap
+            /logs/**/*.log*
