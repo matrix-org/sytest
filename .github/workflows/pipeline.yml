@@ -52,31 +52,11 @@ jobs:
         with:
           path: sytest
 
-      - name: Select corresponding synapse branch
-        id: select_synapse_branch
+      - name: Fetch corresponding synapse branch
         shell: bash
         run: |
           BRANCH=${GITHUB_REF#refs/heads/}
-          STATUS_CODE=$(curl -X GET \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -o /dev/null -w "%{http_code}"
-            https://api.github.com/repos/matrix-org/synapse/branches/$BRANCH
-          )
-          if [ STATUS_CODE == 200 ]; then
-            echo ::set-output name=branch:$BRANCH
-          else
-            echo ::set-output name=branch:develop
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Checkout synapse ${{ steps.select_synapse_branch.outputs.branch }} branch
-        uses: actions/checkout@v2
-        with:
-          repository: matrix-org/synapse
-          path: synapse
-          ref: ${{ steps.select_synapse_branch.outputs.branch }}
+          (wget -O - https://github.com/matrix-org/synapse/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/synapse/archive/master.tar.gz) | tar -xz --strip-components=1 -C /src/"
 
       - name: Run sytest
         run: bash -xe /bootstrap.sh synapse
