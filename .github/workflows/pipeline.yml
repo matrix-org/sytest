@@ -13,30 +13,30 @@ concurrency:
 
 jobs:
   synapse:
-    name: Synapse - ${{ matrix.label }}
+    name: "Synapse: ${{ matrix.label }}"
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - label: Py3.6 / SQLite / Monolith
+          - label: Py 3.6, SQLite, Monolith
             sytest-tag: bionic
 
-          - label: Py3.6 / PGSQL 10 / Monolith
+          - label: Py 3.6, PG 10, Monolith
             sytest-tag: bionic
             postgres: postgres
 
-          - label: Py3.6 / PGSQL10 / Workers
+          - label: Py 3.6, PG 10, Workers
             sytest-tag: bionic
             postgres: postgres
             workers: workers
 
-          - label: Py3.9 / PGSQL13 / Monolith
+          - label: Py 3.9, PG 13, Monolith
             sytest-tag: testing
             postgres: postgres
 
-          - label: Py3.9 / PGSQL13 / Workers
+          - label: Py 3.9, PG 13, Workers
             sytest-tag: testing
             postgres: postgres
             workers: workers
@@ -91,20 +91,20 @@ jobs:
 
   dendrite:
     runs-on: ubuntu-latest
-    name: Dendrite - ${{ matrix.label }}
+    name: "Dendrite: ${{ matrix.label }}"
     strategy:
       fail-fast: false
       matrix:
         include:
-          - label: "SQLite"
+          - label: SQLite
 
-          - label: "SQLite / full HTTP APIs"
+          - label: SQLite, full HTTP APIs
             api: full-http
 
-          - label: "Postgres"
+          - label: Postgres
             postgres: postgres
 
-          - label: "Postgres / full HTTP APIs"
+          - label: Postgres, full HTTP APIs
             postgres: postgres
             api: full-http
 
