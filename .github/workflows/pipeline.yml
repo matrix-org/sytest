@@ -106,7 +106,7 @@ jobs:
         with:
           path: sytest
 
-      - name: Fetch corresponding synapse branch
+      - name: Fetch corresponding dendrite branch
         shell: bash
         run: |
           BRANCH=${GITHUB_REF#refs/heads/}
