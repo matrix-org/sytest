@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   synapse:
-    name: Synapse - ${{ matrix.job-name }}
+    name: Synapse - ${{ matrix.label }}
     runs-on: ubuntu-latest
 
     strategy:
@@ -84,19 +84,29 @@ jobs:
         uses: actions/upload-artifact@v2
         if: ${{ always() }}
         with:
-          name: Sytest Logs - ${{ job.status }} - (Synapse, ${{ join(matrix.*, ', ') }})
+          name: Sytest Logs - ${{ job.status }} - (Synapse, ${{ matrix.label }})
           path: |
             /logs/results.tap
             /logs/**/*.log*
 
   dendrite:
     runs-on: ubuntu-latest
-    name: Dendrite - ${{ matrix.db }} ${{ (matrix.api == 'full-http') && 'full HTTP APIs' }}
+    name: Dendrite - ${{ matrix.label }}
     strategy:
       fail-fast: false
       matrix:
-        db: ["sqlite", "postgres"]
-        api: ["not-full-http", "full-http"]
+        include:
+          - label: "SQLite"
+
+          - label: "SQLite / full HTTP APIs"
+            api: full-http
+
+          - label: "Postgres"
+            postgres: postgres
+
+          - label: "Postgres / full HTTP APIs"
+            postgres: postgres
+            api: full-http
 
     container:
       image: matrixdotorg/sytest-dendrite
@@ -107,8 +117,8 @@ jobs:
         # synapse_sytest.sh expects a synapse checkout at /src
         - ${{ github.workspace }}/dendrite:/src
       env:
-        POSTGRES: ${{ matrix.db == 'postgres' }}
-        API: ${{ matrix.api == 'full-http' }}
+        POSTGRES: ${{ matrix.postgres && 1 }}
+        API: ${{ matrix.api && 1 }}
 
     steps:
       - name: Checkout sytest
