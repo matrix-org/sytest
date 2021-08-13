@@ -20,23 +20,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: Python 3.6 / SQLite / Monolith
+          - label: Py3.6 / SQLite / Monolith
             sytest-tag: bionic
 
-          - label: Python 3.6 / Postgres 10 / Monolith
+          - label: Py3.6 / PGSQL 10 / Monolith
             sytest-tag: bionic
             postgres: postgres
 
-          - label: Python 3.6 / Postgres 10 / Workers
+          - label: Py3.6 / PGSQL10 / Workers
             sytest-tag: bionic
             postgres: postgres
             workers: workers
 
-          - label: Python 3.9 / Postgres 13 / Monolith
+          - label: Py3.9 / PGSQL13 / Monolith
             sytest-tag: testing
             postgres: postgres
 
-          - label: Python 3.9 / Postgres 13 / Workers
+          - label: Py3.9 / PGSQL13 / Workers
             sytest-tag: testing
             postgres: postgres
             workers: workers
