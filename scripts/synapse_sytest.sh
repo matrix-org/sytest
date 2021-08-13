@@ -201,6 +201,7 @@ rsync --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /log
 #export TOP=/src
 #/venv/bin/coverage combine
 
+# Generate annotate.md This is Buildkite-specific.
 if [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
     perl /sytest/scripts/format_tap.pl /logs/results.tap "$GITHUB_SHA" >/logs/annotate.md
