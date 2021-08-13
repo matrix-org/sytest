@@ -13,25 +13,31 @@ concurrency:
 
 jobs:
   synapse:
+    name: Synapse - ${{ matrix.job-name }}
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - sytest-tag: bionic
+          - label: Python 3.6 / SQLite / Monolith
+            sytest-tag: bionic
 
-          - sytest-tag: bionic
+          - label: Python 3.6 / Postgres 10 / Monolith
+            sytest-tag: bionic
             postgres: postgres
 
-          - sytest-tag: bionic
+          - label: Python 3.6 / Postgres 10 / Workers
+            sytest-tag: bionic
             postgres: postgres
             workers: workers
 
-          - sytest-tag: testing
+          - label: Python 3.9 / Postgres 13 / Monolith
+            sytest-tag: testing
             postgres: postgres
 
-          - sytest-tag: testing
+          - label: Python 3.9 / Postgres 13 / Workers
+            sytest-tag: testing
             postgres: postgres
             workers: workers
 
@@ -85,7 +91,7 @@ jobs:
 
   dendrite:
     runs-on: ubuntu-latest
-
+    name: Dendrite - ${{ matrix.db }} ${{ (matrix.api == 'full-http') && 'full HTTP APIs' }}
     strategy:
       fail-fast: false
       matrix:
