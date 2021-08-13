@@ -4,6 +4,9 @@ on:
     branches: ["develop", "release-*"]
   pull_request:
 
+# Only run this action once per pull request/branch; restart if a new commit arrives.
+# C.f. https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# and https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -67,6 +70,7 @@ jobs:
         run: bash -xe /bootstrap.sh synapse
 
       - name: Summarise results.tap
+        # Use always() to run this step even if previous ones failed.
         if: ${{ always() }}
         run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
 
