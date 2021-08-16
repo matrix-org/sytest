@@ -99,42 +99,6 @@ test "Fails to upload self-signing key without master key",
       })->main::expect_http_400;
    };
 
-test "Can upload keys with unknown algorithms or formats",
-    requires => [ local_user_fixture(), qw( can_upload_self_signing_keys ) ],
-    do => sub {
-      my ( $user ) = @_;
-      my $user_id = $user->user_id;
-
-      matrix_set_cross_signing_key( $user, {
-         "auth" => {
-              "type"     => "m.login.password",
-              "user"     => $user_id,
-              "password" => $user->password,
-          },
-          "master_key" => {
-              "user_id" => $user_id,
-              "usage" => ["master"],
-              "keys" => {
-                  "unknownalgorithm:foo" => "some+key+that+is+not+base64!",
-              },
-          },
-      })->then( sub {
-         matrix_get_e2e_keys( $user, $user_id );
-      })->then( sub {
-         my ( $content ) = @_;
-
-         log_if_fail "key query content", $content;
-
-         assert_deeply_eq( $content->{master_key}, {
-            "user_id" => $user_id,
-              "usage" => ["master"],
-              "keys" => {
-                  "unknownalgorithm:foo" => "some+key+that+is+not+base64!",
-              },
-         } );
-      });
-    };
-
 test "Changing master key notifies local users",
    requires => [ local_user_fixtures( 2 ), qw( can_upload_self_signing_keys ) ],
 
