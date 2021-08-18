@@ -51,9 +51,8 @@ jobs:
         - ${{ github.workspace }}/synapse:/src
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
-        WORKERS: ${{ matrix.synapse-workers && 1 }}
+        WORKERS: ${{ matrix.workers && 1 }}
         BLACKLIST: ${{ (matrix.workers && 'synapse-blacklist-with-workers') || 'sytest-blacklist' }}
-        API: ${{ matrix.dendrite-full-http && 1 }}
 
     steps:
       - name: Checkout sytest
@@ -73,7 +72,11 @@ jobs:
         run: cat /src/sytest-blacklist /src/.ci/worker-blacklist > /src/synapse-blacklist-with-workers
 
       - name: Run sytest
-        run: bash -xe /bootstrap.sh synapse
+        run: |
+          echo POSTGRES=${POSTGRES:-<NOT SET>}
+          echo WORKERS=${WORKERS:-<NOT SET>}
+          echo BLACKLIST=${BLACKLIST:-<NOT SET>}
+          bash -xe /bootstrap.sh synapse
 
       - name: Summarise results.tap
         # Use always() to run this step even if previous ones failed.
@@ -134,7 +137,10 @@ jobs:
             | tar -xz --strip-components=1 -C /src/
 
       - name: Run sytest
-        run: bash -xe /bootstrap.sh dendrite
+        run: |
+          echo POSTGRES=${POSTGRES:-<NOT SET>}
+          echo API=${API:-<NOT SET>}
+          bash -xe /bootstrap.sh dendrite
 
       - name: Summarise results.tap
         if: ${{ always() }}
