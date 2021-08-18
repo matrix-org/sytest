@@ -67,7 +67,7 @@ jobs:
           (wget -O - https://github.com/matrix-org/synapse/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/synapse/archive/develop.tar.gz) \
             | tar -xz --strip-components=1 -C /src/
 
-      - name: Prepare blacklist file
+      - name: Prepare blacklist file for running with workers
         if: ${{ matrix.workers }}
         run: cat /src/sytest-blacklist /src/.ci/worker-blacklist > /src/synapse-blacklist-with-workers
 
