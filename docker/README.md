@@ -17,9 +17,12 @@ Included currently is:
 
 ### Synapse
 
-The `sytest-synapse` images expect a checkout of the synapse git repository to
-be mounted at `/src`; additionally, server logs will be written to `/logs`, so
-it is useful to mount a volume there too.
+The `sytest-synapse` and `sytest-dendrite` images expect a checkout of the 
+homeserver git repository to be mounted at `/src`; otherwise, the image will
+try to fetch that repository from GitHub.
+
+Additionally, server logs will be written to `/logs`, so it is useful to mount
+a volume there too.
 
 For example:
 
@@ -29,6 +32,8 @@ docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs
 
 The following environment variables can be set with `-e` to control the test run:
 
+ * `SYTEST_BRANCH`: controls which branch of synapse or dendrite we fetch when  `/src`
+   is missing. If omitted or if that branch doesn't exist, we'll fetch the  appropriate development branch.
  * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of sqlite.
  * `WORKERS`: set non-empty to test a worker-mode deployment rather than a
    monolith. Requires `POSTGRES`.
