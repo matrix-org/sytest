@@ -1,8 +1,8 @@
 # SyTest Docker Images
 
 These Dockerfiles create containers for running SyTest in various
-configurations. SyTest is not included in these images, but its dependencies
-are.
+configurations. SyTest is not [included in these images by default](#selecting-a-sytest-checkout),
+but its dependencies are.
 
 Included currently is:
 
@@ -17,12 +17,9 @@ Included currently is:
 
 ### Synapse
 
-The `sytest-synapse` and `sytest-dendrite` images expect a checkout of the 
-homeserver git repository to be mounted at `/src`; otherwise, the image will
-try to fetch that repository from GitHub.
-
-Additionally, server logs will be written to `/logs`, so it is useful to mount
-a volume there too.
+The `sytest-synapse` images expect a checkout of the synapse git repository to
+be mounted at `/src`; additionally, server logs will be written to `/logs`, so
+it is useful to mount a volume there too.
 
 For example:
 
@@ -32,8 +29,6 @@ docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs
 
 The following environment variables can be set with `-e` to control the test run:
 
- * `SYTEST_BRANCH`: controls which branch of synapse or dendrite we fetch when  `/src`
-   is missing. If omitted or if that branch doesn't exist, we'll fetch the  appropriate development branch.
  * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of sqlite.
  * `WORKERS`: set non-empty to test a worker-mode deployment rather than a
    monolith. Requires `POSTGRES`.
@@ -73,11 +68,20 @@ it is useful to mount a volume there too.
 docker run --rm -it -v /path/to/dendrite\:/src:ro -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-dendrite
 ```
 
-## Using the local checkout of Sytest
+## Selecting a checkout of Sytest
 
-By default, the images download an appropriate branch of Sytest. (Normally
-either a branch with the same name as that of the target homeserver, or
-`develop`).
+The images do not contain a copy of Sytest; by default, they download
+an appropriate branch of Sytest. Normally this is either a branch with
+the same name as that of the target homeserver, or `develop`.
+This can be overridden with the environment variable `SYTEST_BRANCH`,
+for example:
+
+```
+docker run --rm -it \
+    -e SYTEST_BRANCH="my-sytest-branch"
+    -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs
+    matrixdotorg/sytest-synapse:buster
+```
 
 If you would like to run tests with an existing checkout of Sytest, add a
 volume to the docker command mounting the checkout to the `/sytest` folder in
