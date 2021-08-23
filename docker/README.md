@@ -1,7 +1,8 @@
 # SyTest Docker Images
 
 These Dockerfiles create containers for running SyTest in various
-configurations. SyTest is not [included in these images by default](#selecting-a-sytest-checkout),
+configurations. SyTest is not included in these images (see 
+[Selecting a checkout of SyTest](#selecting-a-sytest-checkout)),
 but its dependencies are.
 
 Included currently is:
