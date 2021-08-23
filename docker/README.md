@@ -84,6 +84,9 @@ docker run --rm -it \
     matrixdotorg/sytest-synapse:buster
 ```
 
+If the branch referred to by `SYTEST_BRANCH` does not exist, `develop` is used
+instead.
+
 If you would like to run tests with an existing checkout of Sytest, add a
 volume to the docker command mounting the checkout to the `/sytest` folder in
 the container:
