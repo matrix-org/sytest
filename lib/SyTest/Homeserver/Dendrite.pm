@@ -100,6 +100,7 @@ sub _get_config
       global => {
          server_name => $self->server_name,
          private_key => $self->{paths}{matrix_key},
+         presence_enabled => $JSON::true,
 
          kafka => {
             use_naffka => $JSON::true,
