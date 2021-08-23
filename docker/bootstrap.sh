@@ -12,11 +12,10 @@ if [ -d "/sytest" ]; then
     echo "Using local sytests"
 else
     echo "--- Trying to get same-named sytest branch..."
-
-    # Check if we're running in buildkite, if so it can tell us what
+    # Check if we're running in CI. If so it can tell us what
     # Synapse/Dendrite branch we're running
-    if [ -n "$BUILDKITE_BRANCH" ]; then
-        branch_name=$BUILDKITE_BRANCH
+    if [ -n "$SYTEST_BRANCH" ]; then
+        branch_name="$SYTEST_BRANCH"
     else
         # Otherwise, try and find the branch that the Synapse/Dendrite checkout
         # is using. Fall back to develop if unknown.
