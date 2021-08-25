@@ -136,7 +136,7 @@ test "Can re-join room if re-invited",
 
          log_if_fail "room_id", $room_id;
 
-         matrix_put_room_state( $creator, $room_id,
+         matrix_put_room_state_synced( $creator, $room_id,
             type      => "m.room.join_rules",
             state_key => "",
             content   => {
