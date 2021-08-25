@@ -68,7 +68,7 @@ echo >&2 "--- Copying assets"
 # Copy out the logs
 rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
 
-# Generate annotate.md This is Buildkite-specific.
+# Generate annotate.md. This is Buildkite-specific.
 if [ -n "$BUILDKITE_LABEL" ] && [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
     perl /sytest/scripts/format_tap.pl /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md

@@ -1,7 +1,7 @@
 name: Run sytest
 on:
   push:
-    branches: ["develop", "release-*", "github-actions"]
+    branches: ["develop", "release-*"]
   pull_request:
 
 # Only run this action once per pull request/branch; restart if a new commit arrives.
@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: Py 3.6, SQLite, Monolith
+          - label: Py 3.6, SQLite 3.22.0, Monolith
             sytest-tag: bionic
 
           - label: Py 3.6, PG 10, Monolith
