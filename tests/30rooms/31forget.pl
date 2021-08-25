@@ -136,7 +136,7 @@ test "Can re-join room if re-invited",
 
          log_if_fail "room_id", $room_id;
 
-         matrix_put_room_state( $creator, $room_id,
+         matrix_put_room_state_synced( $creator, $room_id,
             type      => "m.room.join_rules",
             state_key => "",
             content   => {
@@ -167,7 +167,8 @@ test "Can re-join room if re-invited",
          any { $_->{type} eq "m.room.message" && $_->{content}->{body} eq "before leave" } @{ $body->{chunk} }
             or die "Should have seen before leave message";
 
-         matrix_send_room_text_message( $creator, $room_id, body => "after rejoin" );
+         # have the creator send another message, and ensure the joiner can see it.
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "after rejoin" );
       })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 1 );
       })->then( sub {
