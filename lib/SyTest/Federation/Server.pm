@@ -338,7 +338,6 @@ sub mk_await_request_pair
 
       return $self->{$okey}{$ikey} = Future->new
          ->on_cancel( sub {
-            warn "Cancelling unused $shortname await for @paramvalues";
             delete $self->{$okey}{$ikey};
          });
    };

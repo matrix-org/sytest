@@ -363,7 +363,9 @@ test "Backfilled events whose prev_events are in a different room do not allow c
             destination => $synapse_server_name,
          );
       })->then( sub {
-         # wait for it to arrive
+         # wait for S to arrive
+         log_if_fail "Awating arrival of event S $event_id_S in room $room2_id";
+
          await_sync_timeline_contains(
             $creator_user, $room2_id,
             check => sub {
@@ -379,12 +381,33 @@ test "Backfilled events whose prev_events are in a different room do not allow c
       })->then( sub {
          my ( $sync_body ) = @_;
          my $room2_sync = $sync_body->{rooms}->{join}->{$room2_id};
-         log_if_fail "sync body", $room2_sync;
+         log_if_fail "sync body for room2 $room2_id", $room2_sync;
 
          my $prev_batch = $room2_sync->{timeline}->{prev_batch};
          assert_ok( $prev_batch, "prev_batch" );
 
-         # now back-paginate, and provide event Q (and P, for good measure) when the
+         # the server may or may not see the prev_event link to P as a hole in the dag,
+         # and send us another state_ids request at Q. We give it a response if so.
+         my $state_ids_fut = $inbound_server->await_request_state_ids(
+            $room2_id, $event_id_Q,
+         )->then( sub {
+            my ( $req, @params ) = @_;
+            log_if_fail "/state_ids request", \@params;
+
+            my %state  = %{ $room2->{current_state} };
+            my $resp = {
+               pdu_ids => [
+                  map { $room2->id_for_event( $_ ) } values( %state ),
+                 ],
+               auth_chain_ids => $room2->event_ids_from_refs( $event_Q->{auth_events} ),
+            };
+
+            log_if_fail "/state_ids response", $resp;
+            $req->respond_json( $resp );
+            Future->done(1);
+         });
+
+         # now back-paginate, and provide event Q when the
          # server backfills.
          Future->needs_all(
             do_request_json_for(
@@ -395,45 +418,31 @@ test "Backfilled events whose prev_events are in a different room do not allow c
                   dir  => "b",
                   from => $prev_batch,
                },
-            ),
+            )->on_done(sub {
+               my ( $resp ) = @_;
+               log_if_fail "Pagination request completed", $resp;
+            }),
 
             $inbound_server->await_request_backfill( $room2_id )->then( sub {
-               my ( $req ) = @_;
+               my ( $req, @params ) = @_;
+
+               log_if_fail "Incoming /backfill request", \@params;
 
                $req->respond_json( {
                   origin           => $inbound_server->server_name,
                   origin_server_ts => $inbound_server->time_ms,
                   pdus             => [
                      $event_Q,
-                     $event_P,
                   ],
                });
                Future->done;
             }),
-
-            # the server will (should) see the prev_event link to P as a hole in the dag,
-            # so will send us another state_ids request at Q.
-            $inbound_server->await_request_state_ids(
-               $room2_id, $event_id_Q,
-            )->then( sub {
-               my ( $req, @params ) = @_;
-               log_if_fail "/state_ids request", \@params;
-
-               my %state  = %{ $room2->{current_state} };
-               my $resp = {
-                  pdu_ids => [
-                     map { $room2->id_for_event( $_ ) } values( %state ),
-                  ],
-                  auth_chain_ids => $room2->event_ids_from_refs( $event_Q->{auth_events} ),
-               };
-
-               log_if_fail "/state_ids response", $resp;
-               $req->respond_json( $resp );
-               Future->done(1);
-             }),
          )->then( sub {
              my ( $messages ) = @_;
              log_if_fail "/messages result", $messages;
+
+             # cancel the state_ids responder, if it didn't get used.
+             $state_ids_fut->cancel();
 
              # ensure that P does not feature in the list.
              die 'too few events' if @{$messages->{chunk}} < 2;
