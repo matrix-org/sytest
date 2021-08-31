@@ -1,0 +1,156 @@
+name: Run sytest
+on:
+  push:
+    branches: ["develop", "release-*"]
+  pull_request:
+
+# Only run this action once per pull request/branch; restart if a new commit arrives.
+# C.f. https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# and https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#github-context
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synapse:
+    name: "Synapse: ${{ matrix.label }}"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Py 3.6, SQLite 3.22.0, Monolith
+            sytest-tag: bionic
+
+          - label: Py 3.6, PG 10, Monolith
+            sytest-tag: bionic
+            postgres: postgres
+
+          - label: Py 3.6, PG 10, Workers
+            sytest-tag: bionic
+            postgres: postgres
+            workers: workers
+
+          - label: debian-testing, Monolith
+            sytest-tag: testing
+            postgres: postgres
+
+          - label: debian-testing, Workers
+            sytest-tag: testing
+            postgres: postgres
+            workers: workers
+
+    container:
+      image: matrixdotorg/sytest-synapse:${{ matrix.sytest-tag }}
+      volumes:
+        # bootstrap.sh expects the sytest source available at /sytest.
+        # TODO Buildkite mounted /sytest as readonly. Can we do this on GHA? Do we need it?
+        - ${{ github.workspace }}/sytest:/sytest
+        # synapse_sytest.sh expects a synapse checkout at /src
+        - ${{ github.workspace }}/synapse:/src
+      env:
+        POSTGRES: ${{ matrix.postgres && 1 }}
+        WORKERS: ${{ matrix.workers && 1 }}
+        BLACKLIST: ${{ (matrix.workers && 'synapse-blacklist-with-workers') || 'sytest-blacklist' }}
+
+    steps:
+      - name: Checkout sytest
+        uses: actions/checkout@v2
+        with:
+          path: sytest
+
+      - name: Fetch corresponding synapse branch
+        shell: bash
+        run: |
+          BRANCH=${GITHUB_REF#refs/heads/}
+          (wget -O - https://github.com/matrix-org/synapse/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/synapse/archive/develop.tar.gz) \
+            | tar -xz --strip-components=1 -C /src/
+
+      - name: Prepare blacklist file for running with workers
+        if: ${{ matrix.workers }}
+        run: cat /src/sytest-blacklist /src/.ci/worker-blacklist > /src/synapse-blacklist-with-workers
+
+      - name: Run sytest
+        run: |
+          echo POSTGRES=${POSTGRES:-<NOT SET>}
+          echo WORKERS=${WORKERS:-<NOT SET>}
+          echo BLACKLIST=${BLACKLIST:-<NOT SET>}
+          bash -xe /bootstrap.sh synapse
+
+      - name: Summarise results.tap
+        # Use always() to run this step even if previous ones failed.
+        if: ${{ always() }}
+        run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
+
+      - name: Upload SyTest logs
+        uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: Sytest Logs - ${{ job.status }} - (Synapse, ${{ matrix.label }})
+          path: |
+            /logs/results.tap
+            /logs/**/*.log*
+
+  dendrite:
+    runs-on: ubuntu-latest
+    name: "Dendrite: ${{ matrix.label }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: SQLite
+
+          - label: SQLite, full HTTP APIs
+            api: full-http
+
+          - label: Postgres
+            postgres: postgres
+
+          - label: Postgres, full HTTP APIs
+            postgres: postgres
+            api: full-http
+
+    container:
+      image: matrixdotorg/sytest-dendrite
+      volumes:
+        # bootstrap.sh expects the sytest source available at /sytest.
+        # TODO Buildkite mounted /sytest as readonly. Can we do this on GHA? Do we need it?
+        - ${{ github.workspace }}/sytest:/sytest
+        # synapse_sytest.sh expects a synapse checkout at /src
+        - ${{ github.workspace }}/dendrite:/src
+      env:
+        POSTGRES: ${{ matrix.postgres && 1 }}
+        API: ${{ matrix.api && 1 }}
+
+    steps:
+      - name: Checkout sytest
+        uses: actions/checkout@v2
+        with:
+          path: sytest
+
+      - name: Fetch corresponding dendrite branch
+        shell: bash
+        run: |
+          BRANCH=${GITHUB_REF#refs/heads/}
+          (wget -O - https://github.com/matrix-org/dendrite/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/dendrite/archive/master.tar.gz) \
+            | tar -xz --strip-components=1 -C /src/
+
+      - name: Run sytest
+        run: |
+          echo POSTGRES=${POSTGRES:-<NOT SET>}
+          echo API=${API:-<NOT SET>}
+          bash -xe /bootstrap.sh dendrite
+
+      - name: Summarise results.tap
+        if: ${{ always() }}
+        run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
+
+      - name: Upload SyTest logs
+        uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: Sytest Logs - ${{ job.status }} - (Dendrite, ${{ join(matrix.*, ', ') }})
+          path: |
+            /logs/results.tap
+            /logs/**/*.log*
