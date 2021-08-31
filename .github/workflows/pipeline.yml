@@ -32,11 +32,11 @@ jobs:
             postgres: postgres
             workers: workers
 
-          - label: Py 3.9, PG 13, Monolith
+          - label: debian-testing, Monolith
             sytest-tag: testing
             postgres: postgres
 
-          - label: Py 3.9, PG 13, Workers
+          - label: debian-testing, Workers
             sytest-tag: testing
             postgres: postgres
             workers: workers
