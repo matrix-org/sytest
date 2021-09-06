@@ -1,7 +1,3 @@
-Dummy to get tests to runnnn
-
-Again now that I've made a corresponding branch
-
 SyTest
 ======
 
