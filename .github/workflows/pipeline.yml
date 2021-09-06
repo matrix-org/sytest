@@ -81,7 +81,7 @@ jobs:
             fi
             (wget -O - "https://github.com/matrix-org/synapse/archive/$BRANCH_NAME.tar.gz" \
               | tar -xz --strip-components=1 -C /src/) \
-              && echo "Successully downloaded and extracted $BRANCH_NAME.tar.gz" \
+              && echo "Successfully downloaded and extracted $BRANCH_NAME.tar.gz" \
               && break
           done
 
