@@ -10,7 +10,8 @@ test "Can fetch a user's pushers",
       my $device_display_name = "A testing machine";
       my $pushkey = "This is my pushkey";
       my $lang = "en";
-      my $customdata = "This is some custom data";
+      my $url = "https://dummy.url/_matrix/push/v1/notify";
+      my $format = "id_event_only";
 
       # create a pusher
       do_request_json_for( $alice,
@@ -18,14 +19,15 @@ test "Can fetch a user's pushers",
          uri     => "/r0/pushers/set",
          content => {
             profile_tag         => $profile_tag,
-            kind                => "test",
+            kind                => "http",
             app_id              => $app_id,
             app_display_name    => $app_display_name,
             device_display_name => $device_display_name,
             pushkey             => $pushkey,
             lang                => $lang,
             data                => {
-               testcustom => $customdata,
+               url => $url,
+               format => $format,
             },
          },
       )->then( sub {
@@ -50,7 +52,8 @@ test "Can fetch a user's pushers",
          assert_eq( $pusher->{device_display_name}, $device_display_name, "device_display_name");
          assert_eq( $pusher->{pushkey}, $pushkey, "pushkey");
          assert_eq( $pusher->{lang}, $lang, "lang");
-         assert_eq( $pusher->{data}{testcustom}, $customdata, "custom data");
+         assert_eq( $pusher->{data}{url}, $url, "URL");
+         assert_eq( $pusher->{data}{format}, $format, "format");
 
          Future->done(1);
       });
