@@ -60,12 +60,30 @@ jobs:
         with:
           path: sytest
 
+      # TODO the shell script below is nicked from complement. We use this pattern
+      # in a few places. Can we make this an Action so it's easier to reuse?
       - name: Fetch corresponding synapse branch
         shell: bash
         run: |
-          BRANCH=${GITHUB_REF#refs/heads/}
-          (wget -O - https://github.com/matrix-org/synapse/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/synapse/archive/develop.tar.gz) \
-            | tar -xz --strip-components=1 -C /src/
+          # Attempt to use the version of synapse which best matches the current
+          # build. Depending on whether this is a PR or release, etc. we need to
+          # use different fallbacks.
+          #
+          # 1. First check if there's a similarly named branch (GITHUB_HEAD_REF
+          #    for pull requests, otherwise GITHUB_REF).
+          # 2. Attempt to use the base branch, e.g. when merging into release-vX.Y
+          #    (GITHUB_BASE_REF for pull requests).
+          # 3. Use the default synapse branch ("develop").
+          for BRANCH_NAME in "$GITHUB_HEAD_REF" "$GITHUB_BASE_REF" "${GITHUB_REF#refs/heads/}" "develop"; do
+            # Skip empty branch names and merge commits.
+            if [[ -z "$BRANCH_NAME" || $BRANCH_NAME =~ ^refs/pull/.* ]]; then
+              continue
+            fi
+            (wget -O - "https://github.com/matrix-org/synapse/archive/$BRANCH_NAME.tar.gz" \
+              | tar -xz --strip-components=1 -C /src/) \
+              && echo "Successfully downloaded and extracted $BRANCH_NAME.tar.gz" \
+              && break
+          done
 
       - name: Prepare blacklist file for running with workers
         if: ${{ matrix.workers }}
@@ -129,12 +147,30 @@ jobs:
         with:
           path: sytest
 
+      # TODO the shell script below is nicked from complement. We use this pattern
+      # in a few places. Can we make this an Action so it's easier to reuse?
       - name: Fetch corresponding dendrite branch
         shell: bash
         run: |
-          BRANCH=${GITHUB_REF#refs/heads/}
-          (wget -O - https://github.com/matrix-org/dendrite/archive/$BRANCH.tar.gz || wget -O - https://github.com/matrix-org/dendrite/archive/master.tar.gz) \
-            | tar -xz --strip-components=1 -C /src/
+          # Attempt to use the version of dendrite which best matches the current
+          # build. Depending on whether this is a PR or release, etc. we need to
+          # use different fallbacks.
+          #
+          # 1. First check if there's a similarly named branch (GITHUB_HEAD_REF
+          #    for pull requests, otherwise GITHUB_REF).
+          # 2. Attempt to use the base branch, e.g. when merging into release-vX.Y
+          #    (GITHUB_BASE_REF for pull requests).
+          # 3. Use the default dendrite branch ("master").
+          for BRANCH_NAME in "$GITHUB_HEAD_REF" "$GITHUB_BASE_REF" "${GITHUB_REF#refs/heads/}" "master"; do
+            # Skip empty branch names and merge commits.
+            if [[ -z "$BRANCH_NAME" || $BRANCH_NAME =~ ^refs/pull/.* ]]; then
+              continue
+            fi
+            (wget -O - "https://github.com/matrix-org/dendrite/archive/$BRANCH_NAME.tar.gz" \
+              | tar -xz --strip-components=1 -C /src/) \
+              && echo "Successfully downloaded and extracted $BRANCH_NAME.tar.gz" \
+              && break
+          done
 
       - name: Run sytest
         run: |
