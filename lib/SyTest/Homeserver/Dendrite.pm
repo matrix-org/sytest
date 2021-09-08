@@ -236,6 +236,14 @@ sub _get_config
          },
       },
 
+      push_server => {
+         database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/push_server.db" : $db_uri,
+         },
+      },
+
       logging => [{
          type => 'file',
          level => 'trace',
