@@ -115,6 +115,8 @@ jobs:
           file: docker/base.Dockerfile
           build-args: "SYTEST_IMAGE_TAG=${{ matrix.base_image }}"
           tags: ${{ matrix.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
 
       # Workaround to stop caches growing forever. See
       # https://github.com/docker/build-push-action/blob/master/docs/advanced/cache.md#local-cache
