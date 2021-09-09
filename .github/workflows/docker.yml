@@ -45,11 +45,11 @@ jobs:
           labels: "gitsha1=${{ github.sha }}"
           file: docker/base.Dockerfile
           build-args: "BASE_IMAGE=${{ matrix.base_image }}"
-          target:
+          tags:
             dmrobertsonelement/sytest:${{ matrix.tag }}
 
   build-dependent-images:
-    name: "Build sytest-(${{ matrix.dockerfile }}:${{ matrix.sytest_image_tag }})"
+    name: "Build sytest-${{ matrix.dockerfile }}:${{ matrix.sytest_image_tag }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -89,4 +89,4 @@ jobs:
           labels: "gitsha1=${{ github.sha }}"
           file: docker/base.Dockerfile
           build-args: "SYTEST_IMAGE_TAG=${{ matrix.base_image }}"
-          tag: ${{ matrix.tags }}
+          tags: ${{ matrix.tags }}
