@@ -48,6 +48,7 @@ jobs:
           tags: dmrobertsonelement/sytest:${{ matrix.tag }}
 
   build-dependent-images:
+    needs: build-sytest-images
     name: "Build sytest-${{ matrix.dockerfile }}:${{ matrix.sytest_image_tag }}"
     runs-on: ubuntu-latest
     strategy:
