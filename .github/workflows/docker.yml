@@ -37,6 +37,14 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # From https://evilmartians.com/chronicles/build-images-on-github-actions-with-docker-layer-caching#the-cache-dance-off
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-buildx
+
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
@@ -46,6 +54,15 @@ jobs:
           file: docker/base.Dockerfile
           build-args: "BASE_IMAGE=${{ matrix.base_image }}"
           tags: dmrobertsonelement/sytest:${{ matrix.tag }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+
+      # Workaround to stop caches growing forever. See
+      # https://github.com/docker/build-push-action/blob/master/docs/advanced/cache.md#local-cache
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   build-dependent-images:
     needs: build-sytest-images
@@ -81,6 +98,14 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # From https://evilmartians.com/chronicles/build-images-on-github-actions-with-docker-layer-caching#the-cache-dance-off
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-buildx
+
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
@@ -90,3 +115,10 @@ jobs:
           file: docker/base.Dockerfile
           build-args: "SYTEST_IMAGE_TAG=${{ matrix.base_image }}"
           tags: ${{ matrix.tags }}
+
+      # Workaround to stop caches growing forever. See
+      # https://github.com/docker/build-push-action/blob/master/docs/advanced/cache.md#local-cache
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
