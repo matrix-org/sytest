@@ -107,8 +107,10 @@ docker run --rm -it ... matrixdotorg/sytest-synapse:buster tests/20profile-event
 
 ## Building the containers
 
-The containers are built by executing `./build.sh`. You will then have to push
-them up to Docker Hub with `./push.sh`.
+These are automatically build and deployed on the `develop` branch by GitHub Actions.
+See `.github/workflows.docker.yml` for the gory details.
+
+Historically, the containers were built by executing `./build.sh`, then pushed up to Docker Hub with `./push.sh`.
 
 ## Loading sytest plugins at start
 

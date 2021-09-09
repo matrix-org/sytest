@@ -1,5 +1,6 @@
 #! /usr/bin/env bash
 
+# Now handled by a Github Action. See .github/workflows/docker.yml
 set -ex
 
 cd $(dirname $0)

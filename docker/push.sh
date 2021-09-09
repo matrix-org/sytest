@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -ex
+# Now handled by a Github Action. See .github/workflows/docker.yml
 
 cd $(dirname $0)
 
