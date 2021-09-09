@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   build-base-images:
+    name: Base image
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -48,6 +49,7 @@ jobs:
             dmrobertsonelement/sytest:${{ matrix.tag }}
 
   build-dependent-images:
+    name: "Homeserver image (${{ matrix.dockerfile }}:${{ matrix.sytest_image_tag }})"
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -61,7 +63,7 @@ jobs:
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: ["dmrobertsonelement/sytest-synapse:testing"]
-          - sytest_iage_tag: buster
+          - sytest_image_tag: buster
             dockerfile: dendrite
             tags: ["dmrobertsonelement/sytest-dendrite:go113", "dmrobertsonelement/sytest-dendrite:latest"]
 
