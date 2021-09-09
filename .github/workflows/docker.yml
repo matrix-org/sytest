@@ -52,7 +52,7 @@ jobs:
           file: docker/base.Dockerfile
           build-args: "BASE_IMAGE=${{ matrix.base_image }}"
           target:
-            matrixdotorg/sytest:${{ matrix.tag }}
+            dmrobertsonelement/sytest:${{ matrix.tag }}
 
   build-dependent-images:
     runs-on: ubuntu-latest
@@ -61,16 +61,16 @@ jobs:
         include:
           - sytest_image_tag: bionic
             dockerfile: synapse
-            tags: [matrixdotorg/sytest-synapse:bionic]
+            tags: [dmrobertsonelement/sytest-synapse:bionic]
           - sytest_image_tag: buster
             dockerfile: synapse
-            tags: [matrixdotorg/sytest-synapse:buster]
+            tags: [dmrobertsonelement/sytest-synapse:buster]
           - sytest_image_tag: testing
             dockerfile: synapse
-            tags: [matrixdotorg/sytest-synapse:testing]
+            tags: [dmrobertsonelement/sytest-synapse:testing]
           - sytest_iage_tag: buster
             dockerfile: dendrite
-            tags: [matrixdotorg/sytest-dendrite:go113, matrixdotorg/sytest-dendrite:latest]
+            tags: [dmrobertsonelement/sytest-dendrite:go113, dmrobertsonelement/sytest-dendrite:latest]
 
     steps:
       - <<: *buildx
