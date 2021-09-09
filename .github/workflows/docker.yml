@@ -45,8 +45,7 @@ jobs:
           labels: "gitsha1=${{ github.sha }}"
           file: docker/base.Dockerfile
           build-args: "BASE_IMAGE=${{ matrix.base_image }}"
-          tags:
-            dmrobertsonelement/sytest:${{ matrix.tag }}
+          tags: dmrobertsonelement/sytest:${{ matrix.tag }}
 
   build-dependent-images:
     name: "Build sytest-${{ matrix.dockerfile }}:${{ matrix.sytest_image_tag }}"
@@ -56,16 +55,16 @@ jobs:
         include:
           - sytest_image_tag: bionic
             dockerfile: synapse
-            tags: ["dmrobertsonelement/sytest-synapse:bionic"]
+            tags: "dmrobertsonelement/sytest-synapse:bionic"
           - sytest_image_tag: buster
             dockerfile: synapse
-            tags: ["dmrobertsonelement/sytest-synapse:buster"]
+            tags: "dmrobertsonelement/sytest-synapse:buster"
           - sytest_image_tag: testing
             dockerfile: synapse
-            tags: ["dmrobertsonelement/sytest-synapse:testing"]
+            tags: "dmrobertsonelement/sytest-synapse:testing"
           - sytest_image_tag: buster
             dockerfile: dendrite
-            tags: ["dmrobertsonelement/sytest-dendrite:go113", "dmrobertsonelement/sytest-dendrite:latest"]
+            tags: "dmrobertsonelement/sytest-dendrite:go113,dmrobertsonelement/sytest-dendrite:latest"
 
     steps:
       - name: Set up Docker Buildx
