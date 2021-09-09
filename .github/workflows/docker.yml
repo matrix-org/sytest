@@ -1,0 +1,87 @@
+# GitHub actions workflow which builds and publishes the docker images.
+
+name: Build and deploy docker images
+
+on:
+  push:
+    branches: [ develop, dmr/publish-docker-images ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-base-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - base_image: ubuntu:bionic
+            tag: bionic
+          - base_image: debian:buster
+            tag: buster
+          - base_image: debian:testing
+            tag: testing
+    steps:
+      - &buildx
+        name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - &inspect
+        name: Inspect builder
+        run: docker buildx inspect
+
+      - &login
+        name: Log in to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          pull: true
+          push: true
+          labels: "gitsha1=${{ github.sha }}"
+          file: docker/base.Dockerfile
+          build-args: "BASE_IMAGE=${{ matrix.base_image }}"
+          target:
+            matrixdotorg/sytest:${{ matrix.tag }}
+
+  build-dependent-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - sytest_image_tag: bionic
+            dockerfile: synapse
+            tags: [matrixdotorg/sytest-synapse:bionic]
+          - sytest_image_tag: buster
+            dockerfile: synapse
+            tags: [matrixdotorg/sytest-synapse:buster]
+          - sytest_image_tag: testing
+            dockerfile: synapse
+            tags: [matrixdotorg/sytest-synapse:testing]
+          - sytest_iage_tag: buster
+            dockerfile: dendrite
+            tags: [matrixdotorg/sytest-dendrite:go113, matrixdotorg/sytest-dendrite:latest]
+
+    steps:
+      - <<: *buildx
+      - <<: *inspect
+      - <<: *login
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          pull: true
+          push: true
+          labels: "gitsha1=${{ github.sha }}"
+          file: docker/base.Dockerfile
+          build-args: "SYTEST_IMAGE_TAG=${{ matrix.base_image }}"
+          tag: ${{ matrix.tags }}
