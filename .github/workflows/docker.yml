@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  build-base-images:
-    name: Base image
+  build-sytest-images:
+    name: "Build sytest:${{ matrix.tag }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -49,7 +49,7 @@ jobs:
             dmrobertsonelement/sytest:${{ matrix.tag }}
 
   build-dependent-images:
-    name: "Homeserver image (${{ matrix.dockerfile }}:${{ matrix.sytest_image_tag }})"
+    name: "Build sytest-(${{ matrix.dockerfile }}:${{ matrix.sytest_image_tag }})"
     runs-on: ubuntu-latest
     strategy:
       matrix:
