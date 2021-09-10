@@ -4,7 +4,7 @@ name: Build and deploy docker images
 
 on:
   push:
-    branches: [ develop, dmr/publish-docker-images ]
+    branches: [ develop ]
   workflow_dispatch:
 
 permissions:
