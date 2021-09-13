@@ -82,12 +82,11 @@ test "Server correctly handles incoming m.device_list_update",
          alias   => $room_alias,
       );
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/join/$room_alias",
 
-         content => {},
-      )->then( sub {
+      matrix_sync($user)
+      ->then( sub {
+          matrix_join_room_synced($user, $room_alias)
+      })->then( sub {
          Future->needs_all(
             $inbound_server->await_request_user_devices( $creator_id )
             ->then( sub {
@@ -122,6 +121,9 @@ test "Server correctly handles incoming m.device_list_update",
                }
             )
          )
+      })->then( sub {
+          sync_until_user_in_device_list($user, new_User(server_name => "", http => "", user_id =>
+              $creator_id))
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
@@ -160,6 +162,9 @@ test "Server correctly handles incoming m.device_list_update",
                }
             }
          )
+      })->then( sub {
+          sync_until_user_in_device_list($user, new_User(server_name => "", http => "", user_id =>
+              $creator_id))
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
