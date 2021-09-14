@@ -107,7 +107,7 @@ docker run --rm -it ... matrixdotorg/sytest-synapse:buster tests/20profile-event
 
 ## Building the containers
 
-These are automatically build and deployed on the `develop` branch by GitHub Actions.
+These are automatically built and deployed on the `develop` branch by GitHub Actions.
 See `.github/workflows.docker.yml` for the gory details.
 
 ## Loading sytest plugins at start
