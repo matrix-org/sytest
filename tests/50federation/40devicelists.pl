@@ -564,9 +564,9 @@ test "Device list doesn't change if remote server is down",
          })
       );
 
-      # First we successfully request the remote user's keys while the remote server is up.
+      # First we succesfully request the remote user's keys while the remote server is up.
       # We do this once they share a room.
-      matrix_create_room_synced(
+      matrix_create_room(
          $local_user,
          preset => "public_chat",
       )->then( sub {
@@ -575,14 +575,6 @@ test "Device list doesn't change if remote server is down",
             server_name => $local_user->server_name,
             room_id     => $room_id,
             user_id     => $outbound_client_user,
-         )
-      # Wait for the user to see the join.
-      })->then( sub {
-         matrix_sync($local_user)
-      })->then( sub {
-         sync_until_user_in_device_list(
-            $local_user,
-            new_User(server_name => "", http => "", user_id => $outbound_client_user)
          )
       })->then( sub {
          do_request_json_for( $local_user,
@@ -597,17 +589,8 @@ test "Device list doesn't change if remote server is down",
       })->then( sub {
          ( $first_keys_query_body ) = @_;
          map {$_->cancel} @respond_with_keys;
-         log_if_fail "first_keys_query_body";
          log_if_fail (Dumper $first_keys_query_body);
-      })->then( sub {
-         # Need to ensure the local server has enough time to cache/store our response.
-         # This will definitely have happened when the user's sync result sees
-         # $outbound_client_user in the list of changes for a second time)
-         sync_until_user_in_device_list(
-            $local_user,
-            new_User(server_name => "", http => "", user_id => $outbound_client_user)
-         )
-      })->then( sub {
+
          # We take the remote server 'offline' and then make the same request
          # for the users keys. We expect no change in the keys. We respond with
          # 400 instead of 503 to avoid the server being marked as down.
@@ -646,7 +629,6 @@ test "Device list doesn't change if remote server is down",
             }
          };
 
-         log_if_fail "second_keys_query_body";
          log_if_fail (Dumper $second_keys_query_body);
          assert_deeply_eq( $second_keys_query_body->{ device_keys }, $first_keys_query_body->{ device_keys }, "Query matches while federation server is down." );
          Future->done(1)
