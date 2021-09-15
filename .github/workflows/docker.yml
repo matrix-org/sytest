@@ -87,6 +87,6 @@ jobs:
           pull: true
           push: true
           labels: "gitsha1=${{ github.sha }}"
-          file: docker/base.Dockerfile
-          build-args: "SYTEST_IMAGE_TAG=${{ matrix.base_image }}"
+          file: docker/${{ matrix.dockerfile }}.Dockerfile
+          build-args: "SYTEST_IMAGE_TAG=${{ matrix.sytest_image_tag }}"
           tags: ${{ matrix.tags }}
