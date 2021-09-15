@@ -227,7 +227,7 @@ sub add_email_for_user {
             three_pid_creds => {
                id_server       => $id_server->name,
                id_access_token => $id_access_token,
-               sid             => $sid,
+               sid             => "$sid",
                client_secret   => $client_secret,
             },
          },
