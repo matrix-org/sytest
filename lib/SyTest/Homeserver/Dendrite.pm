@@ -246,12 +246,11 @@ sub _get_config
                "file:$self->{hs_dir}/threepids.db" : $db_uri,
          },
          email => {
-            enabled => JSON::false,
-            templates_path => "/src/res/default",
+            enabled => JSON::true,
+            from => 'synapse@localhost',
+            templates_path => '/src/res/default',
             smtp => {
-               host => "localhost:25",
-               user => "exampleusername",
-               password => "examplepassword",
+               host => $self->{smtp_server_config}->{host} . ':' . $self->{smtp_server_config}->{port},
             },
       },
 
