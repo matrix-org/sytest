@@ -591,7 +591,7 @@ test "Device list doesn't change if remote server is down",
       })->then( sub {
          # Don't expect this sync to do anything, but it sets a next_batch_token
          # on the local_user object, which is required by sync_until_user_in_device_list
-         matrix_sync($local_user)
+         matrix_sync( $local_user )
       })->then( sub {
          do_request_json_for( $local_user,
             method  => "POST",
@@ -604,7 +604,7 @@ test "Device list doesn't change if remote server is down",
          )
       })->then( sub {
          ( $first_keys_query_body ) = @_;
-         log_if_fail("first_keys_query_body", $first_keys_query_body);
+         log_if_fail "first_keys_query_body", $first_keys_query_body;
          assert_eq(
             $first_keys_query_body->{device_keys}->{$outbound_client_user}->{CURIOSITY_ROVER}->{user_id},
             $outbound_client_user,
@@ -650,20 +650,20 @@ test "Device list doesn't change if remote server is down",
                }
             }
          )->then( sub {
-            my ($body) = @_;
-            log_if_fail("Attempted second request", $body);
+            my ( $body ) = @_;
+            log_if_fail "Attempted second request", $body;
             # Failed requests have an empty device_list and a nonempty failures list.
-            assert_json_keys($body, "device_keys");
-            assert_json_object($body->{device_keys});
-            assert_json_keys($body->{device_keys}, $outbound_client_user);
-            my $size = scalar keys %{$body->{device_keys}};
+            assert_json_keys( $body, "device_keys" );
+            assert_json_object( $body->{device_keys} );
+            assert_json_keys( $body->{device_keys}, $outbound_client_user );
+            my $size = scalar keys %{ $body->{device_keys} };
             $size eq 1 or die "Expected device_keys to contain exactly one entry, not " . $size;
 
             # Failed requests have an empty device_list and a nonempty failures list.
-            assert_json_keys($body, "failures");
-            $size = scalar keys %{$body->{failures}};
+            assert_json_keys( $body, "failures" );
+            $size = scalar keys %{ $body->{failures} };
             $size eq 0 or die "Expected failures to be empty, not of size " . $size;
-            Future->done($body);
+            Future->done( $body );
          })
       })->then( sub {
          ( $second_keys_query_body ) = @_;
@@ -676,7 +676,7 @@ test "Device list doesn't change if remote server is down",
                }
             }
          };
-         log_if_fail("second_keys_query_body",$second_keys_query_body);
+         log_if_fail "second_keys_query_body",$second_keys_query_body;
          assert_deeply_eq( $second_keys_query_body->{ device_keys }, $first_keys_query_body->{ device_keys }, "Query matches while federation server is down." );
          Future->done(1)
       })
