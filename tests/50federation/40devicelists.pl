@@ -122,8 +122,7 @@ test "Server correctly handles incoming m.device_list_update",
             )
          )
       })->then( sub {
-          sync_until_user_in_device_list($user, new_User(server_name => "", http => "", user_id =>
-              $creator_id))
+          sync_until_user_in_device_list_id($user, $creator_id)
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
@@ -163,8 +162,7 @@ test "Server correctly handles incoming m.device_list_update",
             }
          )
       })->then( sub {
-          sync_until_user_in_device_list($user, new_User(server_name => "", http => "", user_id =>
-              $creator_id))
+          sync_until_user_in_device_list_id($user, $creator_id)
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
@@ -639,7 +637,7 @@ test "Device list doesn't change if remote server is down",
          #   replication
          #
          # Sync so that we have a chance for the replication to propagate.
-         sync_until_user_in_device_list($local_user, new_User(user_id=>$outbound_client_user, http=>"", server_name=>""));
+         sync_until_user_in_device_list_id($local_user, $outbound_client_user)
       })->then( sub {
          do_request_json_for( $local_user,
             method  => "POST",
