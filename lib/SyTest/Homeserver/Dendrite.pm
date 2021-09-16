@@ -252,6 +252,7 @@ sub _get_config
             smtp => {
                host => $self->{smtp_server_config}->{host} . ':' . $self->{smtp_server_config}->{port},
             },
+         },
       },
 
       push_server => {
