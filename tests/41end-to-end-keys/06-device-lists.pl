@@ -1,7 +1,8 @@
 use Future::Utils qw( try_repeat_until_success );
 #use Devel::StackTrace;
 
-push our @EXPORT, qw( is_user_in_changed_list sync_until_user_in_device_list );
+push our @EXPORT, qw( is_user_in_changed_list sync_until_user_in_device_list
+                      sync_until_user_in_device_list_id );
 
 sub is_user_in_changed_list
 {
@@ -13,16 +14,20 @@ sub is_user_in_changed_list
 }
 
 
-# returns a Future which resolves to the body of the sync result which contains
-# the change notification
 sub sync_until_user_in_device_list
 {
    my ( $syncing_user, $user_to_wait_for, %params ) = @_;
+   sync_until_user_in_device_list_id($syncing_user, $user_to_wait_for->user_id, %params)
+}
+
+# returns a Future which resolves to the body of the sync result which contains
+# the change notification
+sub sync_until_user_in_device_list_id
+{
+   my ( $syncing_user, $wait_for_id, %params ) = @_;
 
    my $device_list = $params{device_list} // 'changed';
    my $msg = $params{msg} // 'sync_until_user_in_device_list';
-
-   my $wait_for_id = $user_to_wait_for->user_id;
 
    # my $trace = Devel::StackTrace->new(no_args => 1);
    # log_if_fail $trace->frame(1)->as_string();
