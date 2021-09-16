@@ -100,6 +100,7 @@ sub _get_config
       global => {
          server_name => $self->server_name,
          private_key => $self->{paths}{matrix_key},
+         presence_enabled => $JSON::true,
 
          kafka => {
             use_naffka => $JSON::true,
@@ -233,6 +234,11 @@ sub _get_config
             connection_string => 
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/devices.db" : $db_uri,
+         },
+         presence_database => {
+            connection_string =>
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/presence.db" : $db_uri,
          },
       },
 
