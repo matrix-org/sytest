@@ -393,7 +393,7 @@ sub assert_state_room_members_match {
 
    my @members = grep { $_->{type} eq 'm.room.member' } @{ $events };
    @members == scalar @{ $member_ids }
-      or die "Expected only ".(scalar @{ $member_ids })." membership events";
+      or die "Expected only ".(scalar @{ $member_ids })." membership events (got ".(scalar @members).")";
 
    my $found_senders = {};
    my $found_state_keys = {};
