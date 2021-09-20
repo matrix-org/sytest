@@ -31,7 +31,11 @@ sub do_request_json_for
       params       => \%params,
       request_user => $user_id,
       %args,
-   );
+   )->on_done(sub {
+      my ($content, $response) = @_;
+      log_if_fail("Got response from $uri: see " . $response->header("x-request-id") // "<no request
+      id>");
+   })
 }
 
 
