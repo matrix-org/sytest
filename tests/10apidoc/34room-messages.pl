@@ -148,7 +148,7 @@ test "GET /rooms/:room_id/messages returns a message",
       )->then( sub {
          matrix_sync( $user );
       })->then( sub {
-	 matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message( $user, $room_id,
             body => "Here is a second message",
          )
       })->then( sub {
@@ -196,7 +196,7 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
       )->then( sub {
          matrix_sync( $user );
       })->then( sub {
-	 matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message( $user, $room_id,
             body => "Here is a second message",
          )
       })->then( sub {
