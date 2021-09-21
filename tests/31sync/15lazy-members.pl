@@ -99,7 +99,7 @@ test "The only membership state included in an initial sync is for all the sende
             )
          }, foreach => [ 1 .. 10 ])
       })->then( sub {
-         # Ensure synapse has propagated this message to Alice's synchotron
+         # Ensure synapse has propagated this message to Alice's sync stream
          await_sync_timeline_contains( $alice, $room_id, check => sub {
             my ($event) = @_;
             log_if_fail "event", $event;
