@@ -103,10 +103,9 @@ test "The only membership state included in an initial sync is for all the sende
          await_sync_timeline_contains( $alice, $room_id, check => sub {
             my ($event) = @_;
             log_if_fail "event", $event;
-            my $result = $event->{type} eq "m.room.message" &&
+            return $event->{type} eq "m.room.message" &&
                $event->{sender} eq $charlie->user_id &&
                $event->{content}->{body} eq "Message 10";
-            $result
          })
       })->then( sub {
          $alice->sync_next_batch == 0 or croak "Alice should not have a next batch token set";
