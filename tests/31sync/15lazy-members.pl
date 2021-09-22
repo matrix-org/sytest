@@ -99,9 +99,20 @@ test "The only membership state included in an initial sync is for all the sende
             )
          }, foreach => [ 1 .. 10 ])
       })->then( sub {
+         # Ensure synapse has propagated this message to Alice's sync stream
+         await_sync_timeline_contains( $alice, $room_id, check => sub {
+            my ($event) = @_;
+            log_if_fail "event", $event;
+            return $event->{type} eq "m.room.message" &&
+               $event->{sender} eq $charlie->user_id &&
+               $event->{content}->{body} eq "Message 10";
+         })
+      })->then( sub {
+         $alice->sync_next_batch == 0 or croak "Alice should not have a next batch token set";
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
+         log_if_fail "alice's initial sync returned", $body->{rooms}->{join}->{$room_id}->{timeline};
          assert_room_members ( $body, $room_id, [ $alice->user_id, $charlie->user_id ]);
          Future->done(1);
       });
