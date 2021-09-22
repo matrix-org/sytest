@@ -531,13 +531,10 @@ test "Leaves are present in non-gapped incremental syncs",
             body => "Hello world",
          )
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
+      })->then( sub {
+         # Ensure server has propagated those messages to Alice's sync stream
+         await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $bob->user_id, 10 ));
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
@@ -546,13 +543,9 @@ test "Leaves are present in non-gapped incremental syncs",
 
          matrix_leave_room_synced( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 5 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 5 );
+      })->then( sub {
+         await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $bob->user_id, 5 ));
       })->then( sub {
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
