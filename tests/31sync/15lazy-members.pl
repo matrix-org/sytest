@@ -97,32 +97,14 @@ test "The only membership state included in an initial sync is for all the sende
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $charlie, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $charlie, $room_id, 10 );
       })->then( sub {
          # Ensure synapse has propagated this message to Alice's sync stream
-         await_sync_timeline_contains( $alice, $room_id, check => sub {
-            my ($event) = @_;
-            log_if_fail "event", $event;
-            return $event->{type} eq "m.room.message" &&
-               $event->{sender} eq $charlie->user_id &&
-               $event->{content}->{body} eq "Message 10";
-         })
+         await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $charlie->user_id, 10 ));
       })->then( sub {
-         $alice->sync_next_batch == 0 or croak "Alice should not have a next batch token set";
+         defined( $alice->sync_next_batch ) and die "Alice should not have a next batch token set";
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
