@@ -361,49 +361,38 @@ test "Gapped incremental syncs include all state changes",
       })->then( sub {
          matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
+      })->then( sub {
+         log_if_fail "Bob successfully sent first batch of 10 filler messages, checking Alice can see them...";
+         await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $bob->user_id, 10 ));
       })->then( sub {
          log_if_fail "Alice's first sync...";
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [ $alice->user_id, $bob->user_id ]);
-
-         log_if_fail "Dave joins the room...";
+         log_if_fail "Alice's first sync is good. Dave joins the room...";
          matrix_join_room_synced( $dave, $room_id );
       })->then( sub {
          log_if_fail "Charlie sends a load of messages...";
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $charlie, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 20 ])
+         matrix_send_filler_messages_synced( $charlie, $room_id, 20 );
+      })->then( sub {
+         log_if_fail "Charlie sent filler messages, checking Alice can see them...";
+         await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $charlie->user_id, 20 ));
       })->then( sub {
          log_if_fail "Alice's second sync...";
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [ $charlie->user_id, $dave->user_id ]);
-
-         log_if_fail "Dave leaves the room...";
+         log_if_fail "Alice's second sync is good. Dave leaves the room...";
          matrix_leave_room_synced( $dave, $room_id );
       })->then( sub {
          log_if_fail "Charlie sends another load of messages...";
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $charlie, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 20 ])
+         matrix_send_filler_messages_synced( $charlie, $room_id, 20 );
+      })->then( sub {
+         log_if_fail "Charlie sent filler messages, checking Alice can see them...";
+         await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $charlie->user_id, 20 ));
       })->then( sub {
          log_if_fail "Alice's third sync...";
          matrix_sync_again( $alice, filter => $filter_id );
