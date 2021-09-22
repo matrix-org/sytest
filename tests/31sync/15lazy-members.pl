@@ -157,13 +157,7 @@ test "The only membership state included in an incremental sync is for senders i
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message_synced( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
@@ -252,13 +246,7 @@ test "The only membership state included in a gapped incremental sync is for sen
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
@@ -267,21 +255,9 @@ test "The only membership state included in a gapped incremental sync is for sen
 
          matrix_join_room( $dave, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $dave, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $dave, $room_id, 10 );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $charlie, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $charlie, $room_id, 10 );
       })->then( sub {
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
@@ -724,21 +700,9 @@ test "We don't send redundant membership state across incremental syncs by defau
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message_synced( $charlie, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 5 ])
+         matrix_send_filler_messages_synced( $charlie, $room_id, 5 );
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
@@ -812,21 +776,9 @@ test "We do send redundant membership state across incremental syncs if asked",
       })->then( sub {
          matrix_join_room( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message_synced( $charlie, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 5 ])
+         matrix_send_filler_messages_synced( $charlie, $room_id, 5 );
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
