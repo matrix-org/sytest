@@ -1,5 +1,19 @@
 use Future::Utils qw( repeat );
 
+# returns a sub suitable for passing to `await_sync_timeline_contains` which checks if
+# the event is a filler event from the given sender with the given number.
+sub check_filler_event {
+   my ( $expected_sender, $expected_filler_number ) = @_;
+
+   return sub {
+      my ($event) = @_;
+      log_if_fail "check_filler_event: event", $event;
+      return $event->{type} eq "a.made.up.filler.type" &&
+         $event->{sender} eq $expected_sender &&
+         $event->{content}->{filler} == $expected_filler_number;
+   }
+}
+
 test "Lazy loading parameters in the filter are strictly boolean",
    requires => [ local_user_fixtures( 1 ),
                  qw( can_sync ) ],
@@ -446,33 +460,30 @@ test "Old leaves are present in gapped incremental syncs",
       })->then( sub {
          matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $charlie, $room_id,
+         matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "Hello world",
          )
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
+         log_if_fail "Bob successfully sent first batch of 10 filler messages, checking Alice can see them";
+         await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $bob->user_id, 10 ));
+      })->then( sub {
+         log_if_fail "Doing Alice's first full sync";
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [ $alice->user_id, $bob->user_id ]);
-
+         log_if_fail "Alice's first sync is good. Charlie leaves...";
          matrix_leave_room_synced( $charlie, $room_id );
       })->then( sub {
-         repeat( sub {
-            my $msgnum = $_[0];
-
-            matrix_send_room_text_message( $bob, $room_id,
-               body => "Message $msgnum",
-            )
-         }, foreach => [ 1 .. 10 ])
+         log_if_fail "Bob sends more messages...";
+         matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
+         log_if_fail "Bob successfully sent second batch of 10 filler messages, checking Alice can see them";
+         await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $bob->user_id, 10 ));
+      })->then( sub {
+         log_if_fail "Syncing again from Alice";
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
