@@ -157,7 +157,16 @@ suitable for dictConfig_ called ``log.config`` (it can be copied from a running
 synapse) and place it within the homeserver configuration directory
 (``localhost-<port>``).
 
+A blacklist file can be used to mark certain tests as expected to fail. These
+tests will still be run, but their failure will not cause the entire test suite
+to fail. To use a blacklist file pass the ``--test-blacklist-file`` option
+(shortened to ``-B``). For example, if you are testing Synapse, you will
+probably want to use Synapse's sytest-blacklist_::
+
+    ./run-tests.pl -B synapse/sytest-blacklist
+
 .. _dictConfig: https://docs.python.org/2/library/logging.config.html#logging.config.dictConfig
+.. _sytest-blacklist: https://github.com/matrix-org/synapse/blob/develop/sytest-blacklist
 
 Plugins
 ~~~~~~~

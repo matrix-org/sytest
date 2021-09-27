@@ -474,7 +474,7 @@ test "Only room members can list aliases of a room",
          do_request_json_for(
             $other_user,
             method => "GET",
-            uri  => "/unstable/org.matrix.msc2432/rooms/$room_id/aliases",
+            uri  => "/r0/rooms/$room_id/aliases",
          );
       })->then( sub {
          my ( $res ) = @_;
@@ -484,7 +484,7 @@ test "Only room members can list aliases of a room",
          do_request_json_for(
             $third_user,
             method => "GET",
-            uri  => "/unstable/org.matrix.msc2432/rooms/$room_id/aliases",
+            uri  => "/r0/rooms/$room_id/aliases",
          );
       })->main::expect_http_403;
    };

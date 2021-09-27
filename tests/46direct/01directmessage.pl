@@ -70,7 +70,7 @@ sub matrix_recv_device_message
       return 1 if $f->failure;
       my $resp = $f->get;
       log_if_fail "Sync response", $resp;
-      if( exists $resp->{to_device}{events} ) {
+      if( exists $resp->{to_device} and exists $resp->{to_device}{events} ) {
         return scalar @{ $resp->{to_device}{events} };
       }
    };

@@ -148,6 +148,7 @@ test "Latest account data comes down in room initialSync",
 
 
 test "Account data appears in v1 /events stream",
+   deprecated_endpoints => 1,
    requires => [ local_user_fixture( with_events => 1 ) ],
 
    check => sub {
@@ -168,6 +169,7 @@ test "Account data appears in v1 /events stream",
 
 
 test "Room account data appears in v1 /events stream",
+   deprecated_endpoints => 1,
    requires => [ local_user_and_room_fixtures() ],
 
    check => sub {

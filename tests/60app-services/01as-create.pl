@@ -66,7 +66,7 @@ test "AS can create a user with inhibit_login",
          content => {
             username => "astest-01create-1-$TEST_RUN_ID",
             type => "m.login.application_service",
-            inhibit_login => 1,
+            inhibit_login => JSON::true,
          },
       )->then( sub {
          my ( $body ) = @_;
@@ -75,7 +75,7 @@ test "AS can create a user with inhibit_login",
 
          assert_json_keys( $body, qw( user_id home_server ));
          foreach ( qw( device_id access_token )) {
-            exists $body->{$_} and die "Got an unexpected a '$_' key";
+            exists $body->{$_} and die "Got an unexpected '$_' key";
          }
 
          Future->done(1);

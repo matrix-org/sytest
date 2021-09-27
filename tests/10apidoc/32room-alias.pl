@@ -63,11 +63,11 @@ test "GET /rooms/:room_id/aliases lists aliases",
          do_request_json_for(
             $user,
             method => "GET",
-            uri => "/unstable/org.matrix.msc2432/rooms/$room_id/aliases",
+            uri => "/r0/rooms/$room_id/aliases",
          );
       })->then( sub {
          my ( $res ) = @_;
-         log_if_fail "response from /aliases", $res;
+         log_if_fail "response from /aliases before change:", $res;
 
          assert_json_keys( $res, qw( aliases ));
          assert_json_empty_list( $res->{aliases} );
@@ -80,18 +80,24 @@ test "GET /rooms/:room_id/aliases lists aliases",
             content => { room_id => $room_id },
          );
       })->then( sub {
-         # ... and recheck
-         do_request_json_for(
-            $user,
-            method => "GET",
-            uri => "/unstable/org.matrix.msc2432/rooms/$room_id/aliases",
-         );
-      })->then( sub {
          my ( $res ) = @_;
-         log_if_fail "response from /aliases", $res;
+         log_if_fail "response from PUT /directory:", $res;
 
-         assert_json_keys( $res, qw( aliases ));
-         assert_deeply_eq($res->{aliases}, [ $room_alias ]);
-         Future->done;
+         # ... and recheck. Might need to try this a few times while the caches
+         # get flushed.
+         retry_until_success {
+            my ( $iter ) = @_;
+            return do_request_json_for(
+               $user,
+               method => "GET",
+               uri => "/r0/rooms/$room_id/aliases",
+            )->then( sub {
+               my ( $res ) = @_;
+               log_if_fail "$iter: response from /aliases", $res;
+               assert_json_keys( $res, qw( aliases ));
+               assert_deeply_eq($res->{aliases}, [ $room_alias ]);
+               Future->done;
+            });
+         }
       });
    };

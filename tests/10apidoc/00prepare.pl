@@ -16,7 +16,10 @@ sub do_request_json_for
    croak "must give a method" unless $args{method};
 
    my $user_id = $user->user_id;
-   ( my $uri = delete $args{uri} ) =~ s/:user_id/$user_id/g;
+   my $uri = delete $args{uri};
+   if( $uri ) {
+      $uri =~ s/:user_id/$user_id/g;
+   }
 
    my %params = (
       access_token => $user->access_token,
@@ -26,7 +29,7 @@ sub do_request_json_for
    $user->http->do_request_json(
       uri          => $uri,
       params       => \%params,
-      request_user => $user->user_id,
+      request_user => $user_id,
       %args,
    );
 }

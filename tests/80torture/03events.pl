@@ -15,6 +15,7 @@ test "GET /initialSync with non-numeric 'limit'",
    };
 
 test "GET /events with non-numeric 'limit'",
+   deprecated_endpoints => 1,
    requires => [ $main::SPYGLASS_USER ],
 
    check => sub {
@@ -29,6 +30,7 @@ test "GET /events with non-numeric 'limit'",
    };
 
 test "GET /events with negative 'limit'",
+   deprecated_endpoints => 1,
    requires => [ $main::SPYGLASS_USER ],
 
    check => sub {
@@ -43,6 +45,7 @@ test "GET /events with negative 'limit'",
    };
 
 test "GET /events with non-numeric 'timeout'",
+   deprecated_endpoints => 1,
    requires => [ $main::SPYGLASS_USER ],
 
    check => sub {

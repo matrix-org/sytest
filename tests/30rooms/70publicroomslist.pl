@@ -69,6 +69,8 @@ test "Name/topic keys are correct",
                   my $topic = $room->{topic};
                   my $canonical_alias = $room->{canonical_alias};
 
+                  next unless $canonical_alias;
+
                   foreach my $alias_local ( keys %rooms ) {
                      $canonical_alias =~ m/^\Q#$alias_local:\E/ or next;
 
@@ -161,7 +163,7 @@ test "Can paginate public room list",
       # First we fill up the room list a bit (note there will probably already
       # be entries in it).
       ( try_repeat {
-         my $n = $_;
+         my ($n) = @_;
          matrix_create_room( $user, visibility => "public" )->on_done( sub {
             my ( $body ) = @_;
             log_if_fail "Created room $n", $body;
@@ -210,7 +212,7 @@ test "Can paginate public room list",
          log_if_fail "Forward counts", \%counts;
 
          # We expect to see every room exactly once.
-         assert_eq( scalar( keys %counts ), $num_rooms );
+         assert_eq scalar( keys %counts ), $num_rooms, "number of rooms";
          all { $_ == 1 } values %counts or die "Saw a room more than once iterating forwards";
 
          # We now reset the counts and try iterating backwards, ensuring we see
@@ -286,8 +288,8 @@ test "Can search public room list",
                assert_json_keys( $body, qw( chunk ) );
 
                # We only expect to find a single result
-               assert_eq( scalar @{ $body->{chunk} }, 1 );
-               assert_eq( $body->{chunk}[0]{room_id}, $room_id );
+               assert_eq scalar @{ $body->{chunk} }, 1, "Number of results";
+               assert_eq $body->{chunk}[0]{room_id}, $room_id, "Room id";
 
                Future->done( 1 );
             })->on_fail( sub {
@@ -338,8 +340,8 @@ test "Asking for a remote rooms list, but supplying the local server's name, ret
                assert_json_keys( $body, qw( chunk ) );
 
                # We only expect to find a single result
-               assert_eq( scalar @{ $body->{chunk} }, 1 );
-               assert_eq( $body->{chunk}[0]{room_id}, $room_id );
+               assert_eq scalar @{ $body->{chunk} }, 1, "number of results";
+               assert_eq $body->{chunk}[0]{room_id}, $room_id, "room id";
 
                Future->done( 1 );
             })->on_fail( sub {

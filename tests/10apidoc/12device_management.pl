@@ -224,7 +224,10 @@ test "DELETE /device/{deviceId}",
          matrix_delete_device( $user, $DEVICE_ID, {
              auth => {
                  type     => "m.login.password",
-                 user     => $user->user_id,
+                 identifier => {
+                    type => "m.id.user",
+                    user => $user->user_id,
+                 },
                  password => "cashewnuts",
              }
          });
@@ -242,7 +245,10 @@ test "DELETE /device/{deviceId}",
          matrix_delete_device( $user, $DEVICE_ID, {
              auth => {
                  type     => "m.login.password",
-                 user     => $user->user_id,
+                 identifier => {
+                    type => "m.id.user",
+                    user => $user->user_id,
+                 },
                  password => $user->password,
              }
          });
@@ -292,7 +298,10 @@ test "DELETE /device/{deviceId} requires UI auth user to match device owner",
          matrix_delete_device( $alice, $DEVICE_ID, {
              auth => {
                  type     => "m.login.password",
-                 user     => $eve->user_id,
+                 identifier => {
+                    type => "m.id.user",
+                    user => $eve->user_id,
+                 },
                  password => $eve->password,
              },
          })->main::expect_http_403;
@@ -304,7 +313,10 @@ test "DELETE /device/{deviceId} requires UI auth user to match device owner",
          matrix_delete_device( $alice, $DEVICE_ID, {
              auth => {
                  type     => "m.login.password",
-                 user     => $alice->user_id,
+                 identifier => {
+                    type => "m.id.user",
+                    user => $alice->user_id,
+                 },
                  password => $alice->password,
              },
          });

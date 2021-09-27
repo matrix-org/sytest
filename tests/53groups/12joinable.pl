@@ -1,4 +1,5 @@
 test "Joinability comes down summary",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -37,6 +38,7 @@ test "Joinability comes down summary",
    };
 
 test "Set group joinable and join it",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -66,6 +68,7 @@ test "Set group joinable and join it",
    };
 
 test "Group is not joinable by default",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -82,6 +85,7 @@ test "Group is not joinable by default",
    };
 
 test "Group is joinable over federation",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), remote_user_fixture( with_events => 0 ) ],
 
    do => sub {

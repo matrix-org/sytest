@@ -1,4 +1,5 @@
 test "Add group category",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -26,6 +27,7 @@ test "Add group category",
    };
 
 test "Remove group category",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -47,6 +49,7 @@ test "Remove group category",
 
 
 test "Get group categories",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {

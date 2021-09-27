@@ -17,7 +17,7 @@ test "Can upload device keys",
                device_id => $user->device_id,
             },
             one_time_keys => {
-               "my_algorithm:my_id_1", "my+base64+key"
+               "my_algorithm:my_id_1", "KIhHVkAQi8r41aPNql2zTqQsInpFa8XdslQLC8F8BHc"
             }
          }
       )->then( sub {
@@ -163,7 +163,7 @@ sub matrix_put_e2e_keys
       content => {
          device_keys => \%device_keys,
          one_time_keys => {
-            "my_algorithm:my_id_1" => "my+base64+key",
+            "ed25519:test" => "xnuozvb3VBxu2hr9Wc5Xe5pj7hbqyr7djaCANodTRAk",
          }
       }
    );

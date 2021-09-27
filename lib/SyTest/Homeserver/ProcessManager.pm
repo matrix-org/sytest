@@ -317,16 +317,11 @@ sub _await_ready_notification
 
    my $loop = $self->loop;
 
-   # Create a random abstract socket name. Abstract sockets start with a null
-   # byte.
+   # We can't use an abstract namespace socket because it fails to bind on macOS
    my $random_id = join "", map { chr 65 + rand 25 } 1 .. 20;
-   my $path = "\0sytest-$random_id.sock";
+   my $path = "/tmp/sytest-$random_id.sock";
 
-   # We replace null byte with '@' to allow us to pass it in via env. (This is
-   # as per the sd_notify spec).
-   my $path_env = $path;
-   $path_env =~ s/\0/\@/g;
-   $env->{"NOTIFY_SOCKET"} = $path_env;
+   $env->{"NOTIFY_SOCKET"} = $path;
 
    # Create a future that gets resolved when we receive a `READY=1`
    # notification.
@@ -336,7 +331,7 @@ sub _await_ready_notification
       on_recv => sub {
          my ( $self, $dgram, $addr ) = @_;
 
-         # Payloads are newline separated list of varalbe assignments.
+         # Payloads are newline separated list of variable assignments.
          foreach my $line ( split(/\n/, $dgram) ) {
             if ( $line eq "READY=1" ) {
                $poke_fut->done;
@@ -351,6 +346,11 @@ sub _await_ready_notification
       },
    );
    $loop->add( $socket );
+
+   # Clean up the socket file after we're done
+   $poke_fut->on_done( sub {
+      unlink($path);
+   });
 
    $socket->bind( {
       family   => "unix",

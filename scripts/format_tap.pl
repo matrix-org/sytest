@@ -1,4 +1,7 @@
 #!/usr/bin/perl
+#
+# Write a summary of a TAP file in a format suitable for Buildkite Annotations
+
 use strict;
 use warnings FATAL => 'all';
 

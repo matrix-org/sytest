@@ -1,4 +1,5 @@
 test "Add room to group summary",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -37,6 +38,7 @@ test "Add room to group summary",
 # Luke claims that adding room to group summary removes the room_id
 # when fetching the rooms in a group
 test "Adding room to group summary keeps room_id when fetching rooms in group",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -73,6 +75,7 @@ test "Adding room to group summary keeps room_id when fetching rooms in group",
 
 
 test "Adding multiple rooms to group summary have correct order",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -121,6 +124,7 @@ test "Adding multiple rooms to group summary have correct order",
    };
 
 test "Remove room from group summary",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -170,6 +174,7 @@ test "Remove room from group summary",
 
 
 test "Add room to group summary with category",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -217,6 +222,7 @@ test "Add room to group summary with category",
    };
 
 test "Remove room from group summary with category",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -263,6 +269,7 @@ test "Remove room from group summary with category",
 
 
 test "Add user to group summary",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -296,6 +303,7 @@ test "Add user to group summary",
 
 
 test "Adding multiple users to group summary have correct order",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -335,6 +343,7 @@ test "Adding multiple users to group summary have correct order",
    };
 
 test "Remove user from group summary",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -372,6 +381,7 @@ test "Remove user from group summary",
 
 
 test "Add user to group summary with role",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -413,6 +423,7 @@ test "Add user to group summary with role",
    };
 
 test "Remove user from group summary with role",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ), local_user_fixture( with_events => 0 ) ],
 
    do => sub {

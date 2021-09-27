@@ -187,7 +187,7 @@ sub _get_config
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/media_api.db" : $db_uri,
          },
-         base_path => "media_store",
+         base_path => "$self->{hs_dir}/media_store",
       },
 
       mscs => {

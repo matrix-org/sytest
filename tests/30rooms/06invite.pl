@@ -159,8 +159,11 @@ sub invited_user_can_reject_invite
 
       # Check that invitee no longer sees the invite
 
-      assert_json_object( $body->{rooms}{invite} );
-      keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+      if( exists $body->{rooms} and exists $body->{rooms}{invite} ) {
+         assert_json_object( $body->{rooms}{invite} );
+         keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+      }
+
       Future->done(1);
    });
 }
@@ -203,8 +206,10 @@ sub invited_user_can_reject_invite_for_empty_room
 
       # Check that invitee no longer sees the invite
 
-      assert_json_object( $body->{rooms}{invite} );
-      keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+      if( exists $body->{rooms} and exists $body->{rooms}{invite} ) {
+         assert_json_object( $body->{rooms}{invite} );
+         keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+      }
       Future->done(1);
    });
 }
@@ -235,8 +240,12 @@ test "Invited user can reject local invite after originator leaves",
          my ( $body ) = @_;
 
          log_if_fail "Sync body", $body;
-         assert_json_object( $body->{rooms}{invite} );
-         keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+
+         if( exists $body->{rooms} and exists $body->{rooms}{invite} ) {
+            assert_json_object( $body->{rooms}{invite} );
+            keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+         }
+
          Future->done(1);
       });
    };

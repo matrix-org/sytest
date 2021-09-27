@@ -1,4 +1,5 @@
 test "Create group",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -27,6 +28,7 @@ test "Create group",
    };
 
 test "Add group rooms",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
@@ -48,6 +50,7 @@ test "Add group rooms",
 
 
 test "Remove group rooms",
+   deprecated_endpoints => 1,
    requires => [ local_admin_fixture( with_events => 0 ) ],
 
    do => sub {
