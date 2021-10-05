@@ -23,7 +23,7 @@ test "Forgotten room messages cannot be paginated",
 
       matrix_join_room( $user, $room_id )
       ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "sup" )
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "sup" )
       })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 1 );
       })->then( sub {
