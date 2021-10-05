@@ -57,8 +57,18 @@ test "Forgotten room messages cannot be paginated",
          assert_eq( $content->{membership}, "leave",
             "membership state" );
 
-         matrix_get_room_messages( $user, $room_id, limit => 1 )
-            ->main::expect_http_403;
+         # Need to repeat this, because we may need to give Synapse time to
+         # replicate the "forgot" state from the worker handling
+         # POST /rooms/ROOM/forget (master?) to the worker handling
+         # GET /rooms/ROOM/messages (client_reader).
+         # (AFAICS forgetting a room doesn't have any other visible effects.)
+         repeat_until_true {
+            matrix_get_room_messages($user, $room_id, limit => 1)
+               ->main::check_http_code(
+               403 => "ok",
+               200 => "redo",
+            );
+         };
       });
    };
 
