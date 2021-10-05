@@ -32,7 +32,7 @@ test "Presence changes are reported to local room members",
                return unless $event->{type} eq "m.presence";
 
                assert_json_keys( $event, qw( type content sender ));
-               assert_json_keys( $event->{content}, qw( presence last_active_ago currently_active ));
+               assert_json_keys( $event->{content}, qw( presence last_active_ago ));
                $event->{sender} eq $senduser->user_id or return;
 
                # Disabled for now; see SYT-34
@@ -59,7 +59,7 @@ test "Presence changes are also reported to remote room members",
          return unless $event->{type} eq "m.presence";
 
          assert_json_keys( $event, qw( type content sender ));
-         assert_json_keys( $event->{content}, qw( presence last_active_ago currently_active ));
+         assert_json_keys( $event->{content}, qw( presence last_active_ago ));
 
          # The next presence message we get might not necessarily be the
          # one we were expecting, given this is remote. Wait to get the

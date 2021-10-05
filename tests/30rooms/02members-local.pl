@@ -110,7 +110,7 @@ test "Existing members see new members' presence",
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
          assert_json_keys( $event, qw( type content sender ));
-         assert_json_keys( $event->{content}, qw( presence last_active_ago currently_active ));
+         assert_json_keys( $event->{content}, qw( presence last_active_ago ));
          return unless $event->{sender} eq $local_user->user_id;
          return 1;
       });
