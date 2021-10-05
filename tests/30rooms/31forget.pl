@@ -1,5 +1,20 @@
 use List::Util qw( any none );
 
+push our @EXPORT, qw( matrix_forget_room );
+
+sub matrix_forget_room
+{
+   my ( $user, $room_id ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/r0/rooms/$room_id/forget",
+
+      content => {},
+   )->then_done(1);
+}
+
 test "Forgotten room messages cannot be paginated",
    requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
 
@@ -183,18 +198,3 @@ test "Can re-join room if re-invited",
          Future->done( 1 );
       });
    };
-
-push our @EXPORT, qw( matrix_forget_room );
-
-sub matrix_forget_room
-{
-   my ( $user, $room_id ) = @_;
-   is_User( $user ) or croak "Expected a User; got $user";
-
-   do_request_json_for( $user,
-      method => "POST",
-      uri    => "/r0/rooms/$room_id/forget",
-
-      content => {},
-   )->then_done(1);
-}
