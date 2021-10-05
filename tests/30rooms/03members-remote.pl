@@ -164,12 +164,13 @@ test "Existing members see new member's presence",
    do => sub {
       my ( $first_user, $user, $room_id, $room_alias ) = @_;
 
-      await_event_for( $first_user, filter => sub {
+      await_sync_presence_contains( $first_user, check => sub {
          my ( $event ) = @_;
+
          return unless $event->{type} eq "m.presence";
-         assert_json_keys( $event, qw( type content ));
-         assert_json_keys( my $content = $event->{content}, qw( user_id presence ));
-         return unless $content->{user_id} eq $user->user_id;
+         assert_json_keys( $event, qw( type content sender ));
+         assert_json_keys( $event->{content}, qw( presence last_active_ago currently_active ));
+         return unless any { $event->{sender} } eq $user->user_id;
 
          return 1;
       });

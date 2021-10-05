@@ -27,15 +27,13 @@ test "Presence changes are reported to local room members",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, filter => sub {
+            await_sync_presence_contains( $recvuser, check => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.presence";
 
-               assert_json_keys( $event, qw( type content ));
-               assert_json_keys( my $content = $event->{content},
-                  qw( user_id presence ));
-
-               $content->{user_id} eq $senduser->user_id or return;
+               assert_json_keys( $event, qw( type content sender ));
+               assert_json_keys( $event->{content}, qw( presence last_active_ago currently_active ));
+               $event->{sender} eq $senduser->user_id or return;
 
                # Disabled for now; see SYT-34
                # assert_json_keys( $content, qw( status_msg ));
@@ -56,18 +54,17 @@ test "Presence changes are also reported to remote room members",
    do => sub {
       my ( $senduser, $remote_user, undef ) = @_;
 
-      await_event_for( $remote_user, filter => sub {
+      await_sync_presence_contains( $remote_user, check => sub {
          my ( $event ) = @_;
          return unless $event->{type} eq "m.presence";
 
-         assert_json_keys( $event, qw( type content ));
-         assert_json_keys( my $content = $event->{content},
-            qw( user_id presence ));
+         assert_json_keys( $event, qw( type content sender ));
+         assert_json_keys( $event->{content}, qw( presence last_active_ago currently_active ));
 
          # The next presence message we get might not necessarily be the
          # one we were expecting, given this is remote. Wait to get the
          # right one
-         $content->{user_id} eq $senduser->user_id or return;
+         $event->{sender} eq $senduser->user_id or return;
 
          return 1;
       });
@@ -84,12 +81,12 @@ test "Presence changes to UNAVAILABLE are reported to local room members",
          Future->needs_all( map {
             my $recvuser = $_;
 
-            await_event_for( $recvuser, filter => sub {
+            await_sync_presence_contains( $recvuser, check => sub {
                my ( $event ) = @_;
                return unless $event->{type} eq "m.presence";
 
                my $content = $event->{content};
-               return unless $content->{user_id} eq $senduser->user_id;
+               return unless $event->{sender} eq $senduser->user_id;
 
                return unless $content->{presence} eq "unavailable";
 
@@ -106,13 +103,13 @@ test "Presence changes to UNAVAILABLE are reported to remote room members",
    do => sub {
       my ( $senduser, $remote_user, undef ) = @_;
 
-      await_event_for( $remote_user, filter => sub {
+      await_sync_presence_contains( $remote_user, check => sub {
          my ( $event ) = @_;
 
          return unless $event->{type} eq "m.presence";
 
          my $content = $event->{content};
-         return unless $content->{user_id} eq $senduser->user_id;
+         return unless $event->{sender} eq $senduser->user_id;
 
          return unless $content->{presence} eq "unavailable";
 
