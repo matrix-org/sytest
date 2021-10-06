@@ -191,11 +191,11 @@ test "Inbound federation accepts a second soft-failed event",
       # (The effect of #5090 was that M1 was incorrectly excluded from the
       # forward-extremities.)
 
-      my $join_event_id;
+      my $join_event;
       my $event_id_pl1;
-      my $event_id_m1;
-      my $event_id_sf1;
-      my $event_id_sf2;
+      my $event_m1;
+      my $event_sf1;
+      my $event_sf2;
 
       # First we join the room (event J1)
       $outbound_client->join_room(
@@ -208,7 +208,7 @@ test "Inbound federation accepts a second soft-failed event",
          log_if_fail "Joined room";
 
          # Grab the join to use as a prev event
-         $join_event_id = $room->get_current_state_event( "m.room.member", $remote_user_id )->{event_id};
+         $join_event = $room->get_current_state_event( "m.room.member", $remote_user_id );
 
          # Make sure client is up to date
          await_sync_timeline_contains( $creator, $room_id, check => sub {
@@ -243,62 +243,59 @@ test "Inbound federation accepts a second soft-failed event",
          log_if_fail "Blocked new SF events";
 
          # send a regular message (event m1), which should be accepted
-         my $event = $room->create_and_insert_event(
+         $event_m1 = $room->create_and_insert_event(
             event_id_suffix => "m1",
-            prev_events => [ [ $join_event_id, {} ] ],
+            prev_events => $room->make_event_refs( $join_event ),
             sender  => $remote_user_id,
             type => "m.room.message",
             content => { body => "M1" },
          );
 
-         $event_id_m1 = $event->{event_id};
-
-         log_if_fail "Sending", $event;
+         log_if_fail "Sending M1 ".$room->id_for_event( $event_m1 ),
+            $event_m1;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_m1,
             destination => $first_home_server,
          );
       })->then( sub {
          # send an event which will be soft-failed (sf1)
-         my $event = $room->create_and_insert_event(
+         $event_sf1 = $room->create_and_insert_event(
             event_id_suffix => "sf1",
-            prev_events => [ [ $event_id_m1, {} ] ],
+            prev_events => $room->make_event_refs( $event_m1 ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF1" },
          );
 
-         $event_id_sf1 = $event->{event_id};
-
-         log_if_fail "Sending blocked event 1", $event;
+         log_if_fail "Sending blocked event 1 ".$room->id_for_event( $event_sf1 ),
+            $event_sf1;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_sf1,
             destination => $first_home_server,
          );
       })->then( sub {
          # send a second soft-fail event
-         my $event = $room->create_and_insert_event(
+         $event_sf2 = $room->create_and_insert_event(
             event_id_suffix => "sf2",
-            prev_events => [ [ $event_id_m1, {} ] ],
+            prev_events => $room->make_event_refs( $event_m1 ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF2" },
          );
 
-         $event_id_sf2 = $event->{event_id};
-
-         log_if_fail "Sending blocked event 2", $event;
+         log_if_fail "Sending blocked event 2 ".$room->id_for_event( $event_sf2 ),
+            $event_sf2;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_sf2,
             destination => $first_home_server,
          );
       })->then( sub {
          # make sure that at least M1 has propagated
          await_sync_timeline_contains( $creator, $room_id, check => sub {
-            return $_[0]->{event_id} eq $event_id_m1;
+            return $_[0]->{event_id} eq $room->id_for_event( $event_m1 );
          });
       })->then( sub {
          # now tell synapse to send a regular message, and check it
@@ -315,7 +312,7 @@ test "Inbound federation accepts a second soft-failed event",
                log_if_fail "Received prev_event_ids", $prev_event_ids;
                assert_elements_eq(
                   $prev_event_ids,
-                  [ $event_id_pl1, $event_id_m1 ],
+                  [ $event_id_pl1, $room->id_for_event( $event_m1 ) ],
                   "prev_event ids",
                );
 
