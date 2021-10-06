@@ -2,7 +2,6 @@ test "Inbound federation correctly soft fails events",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(
                     user_opts => { with_events => 1 },
-                    room_opts => { room_version => "1" },
                  ),
                  federation_user_id_fixture() ],
 
@@ -162,7 +161,6 @@ test "Inbound federation accepts a second soft-failed event",
       $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
       local_user_and_room_fixtures(
          user_opts => { with_events => 1 },
-         room_opts => { room_version => "1" }
       ),
       federation_user_id_fixture(),
    ],
@@ -357,7 +355,6 @@ test "Inbound federation correctly handles soft failed events as extremities",
       $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
       local_user_and_room_fixtures(
          user_opts => { with_events => 1 },
-          room_opts => { room_version => "1" },
       ),
       federation_user_id_fixture(),
    ],
