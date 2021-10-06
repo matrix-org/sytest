@@ -248,7 +248,6 @@ sub _get_config
          email => {
             enabled => JSON::true,
             from => 'synapse@localhost',
-            templates_path => '/src/res/default',
             smtp => {
                host => $self->{smtp_server_config}->{host} . ':' . $self->{smtp_server_config}->{port},
             },
