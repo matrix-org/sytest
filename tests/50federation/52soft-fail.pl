@@ -12,10 +12,10 @@ test "Inbound federation correctly soft fails events",
 
       my $room;
 
-      # We'll grab out some event IDs to use as prev events
-      my $join_event_id;
+      # We'll grab out some events to use as prev events
+      my $join_event;
       my $power_level_event_id;
-      my $denied_event_id;
+      my $denied_event;
 
       # We're going to construct a room graph like:
       #
@@ -47,7 +47,7 @@ test "Inbound federation correctly soft fails events",
          log_if_fail "Joined room";
 
          # Grab the join to use as a prev event
-         $join_event_id = $room->get_current_state_event( "m.room.member", $user_id )->{event_id};
+         $join_event = $room->get_current_state_event( "m.room.member", $user_id );
 
          # Make sure client is up to date
          await_sync_timeline_contains( $creator, $room_id, check => sub {
@@ -85,10 +85,10 @@ test "Inbound federation correctly soft fails events",
 
          # Now let's send a message (event C), carefully avoiding referencing
          # the new PL event.
-         my $event = $room->create_and_insert_event(
+         $denied_event = $room->create_and_insert_event(
             type => "m.room.message",
 
-            prev_events => [ [ $join_event_id, {} ] ],
+            prev_events => $room->make_event_refs( $join_event ),
 
             sender  => $user_id,
             content => {
@@ -96,20 +96,21 @@ test "Inbound federation correctly soft fails events",
             },
          );
 
-         $denied_event_id = $event->{event_id};
-
-         log_if_fail "Sending blocked event", $event;
+         log_if_fail "Sending blocked event ".$room->id_for_event( $denied_event ),
+            $denied_event;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $denied_event,
             destination => $first_home_server,
          );
       })->then( sub {
          # Now send a non-message (event D)
+         my $pl_event = $inbound_server->datastore->get_event( $power_level_event_id );
+         die "did not receive PL event" unless $pl_event;
          my $event = $room->create_and_insert_event(
             type => "m.room.other_message_type",
 
-            prev_events => [ [ $denied_event_id, {} ], [ $power_level_event_id, {} ] ],
+            prev_events => $room->make_event_refs( $denied_event, $pl_event ),
 
             sender  => $user_id,
             content => {
@@ -117,7 +118,8 @@ test "Inbound federation correctly soft fails events",
             },
          );
 
-         log_if_fail "Sending allowed event", $event;
+         log_if_fail "Sending allowed event ".$room->id_for_event( $event ),
+            $event;
 
          $outbound_client->send_event(
             event => $event,
