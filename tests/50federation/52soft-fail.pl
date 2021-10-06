@@ -17,6 +17,8 @@ test "Inbound federation correctly soft fails events",
       my $power_level_event_id;
       my $denied_event;
 
+      my @remote_auth_events;
+
       # We're going to construct a room graph like:
       #
       #        A
@@ -60,6 +62,16 @@ test "Inbound federation correctly soft fails events",
       })->then( sub {
          log_if_fail "Got join down sync";
 
+         # before we change the state of the room, stash enough of the
+         # current state that we can build events on another branch of
+         # the DAG.
+         @remote_auth_events = (
+            $room->get_current_state_event( "m.room.create" ),
+            $room->get_current_state_event( "m.room.join_rules" ),
+            $room->get_current_state_event( "m.room.power_levels" ),
+            $join_event,
+         );
+
          # Let's now block message sends (event B)
          matrix_change_room_power_levels( $creator, $room_id, sub {
             my ( $levels ) = @_;
@@ -88,6 +100,7 @@ test "Inbound federation correctly soft fails events",
          $denied_event = $room->create_and_insert_event(
             type => "m.room.message",
 
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             prev_events => $room->make_event_refs( $join_event ),
 
             sender  => $user_id,
@@ -197,6 +210,8 @@ test "Inbound federation accepts a second soft-failed event",
       my $event_sf1;
       my $event_sf2;
 
+      my @remote_auth_events;
+
       # First we join the room (event J1)
       $outbound_client->join_room(
          server_name => $first_home_server,
@@ -220,6 +235,16 @@ test "Inbound federation accepts a second soft-failed event",
          });
       })->then( sub {
          log_if_fail "Got join down sync";
+
+         # before we change the state of the room, stash enough of the
+         # current state that we can build events on another branch of
+         # the DAG.
+         @remote_auth_events = (
+            $room->get_current_state_event( "m.room.create" ),
+            $room->get_current_state_event( "m.room.join_rules" ),
+            $room->get_current_state_event( "m.room.power_levels" ),
+            $join_event,
+         );
 
          # Let's now block sf message sends (event PL1)
          matrix_change_room_power_levels( $creator, $room_id, sub {
@@ -245,6 +270,7 @@ test "Inbound federation accepts a second soft-failed event",
          # send a regular message (event m1), which should be accepted
          $event_m1 = $room->create_and_insert_event(
             event_id_suffix => "m1",
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             prev_events => $room->make_event_refs( $join_event ),
             sender  => $remote_user_id,
             type => "m.room.message",
@@ -262,6 +288,7 @@ test "Inbound federation accepts a second soft-failed event",
          # send an event which will be soft-failed (sf1)
          $event_sf1 = $room->create_and_insert_event(
             event_id_suffix => "sf1",
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             prev_events => $room->make_event_refs( $event_m1 ),
             sender  => $remote_user_id,
             type => "test.sf",
@@ -279,6 +306,7 @@ test "Inbound federation accepts a second soft-failed event",
          # send a second soft-fail event
          $event_sf2 = $room->create_and_insert_event(
             event_id_suffix => "sf2",
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             prev_events => $room->make_event_refs( $event_m1 ),
             sender  => $remote_user_id,
             type => "test.sf",
@@ -385,6 +413,8 @@ test "Inbound federation correctly handles soft failed events as extremities",
       my $event_sf2;
       my $event_m2;
 
+      my @remote_auth_events;
+
       # First we join the room (event J1)
       $outbound_client->join_room(
          server_name => $first_home_server,
@@ -408,6 +438,16 @@ test "Inbound federation correctly handles soft failed events as extremities",
          });
       })->then( sub {
          log_if_fail "Got join down sync";
+
+         # before we change the state of the room, stash enough of the
+         # current state that we can build events on another branch of
+         # the DAG.
+         @remote_auth_events = (
+            $room->get_current_state_event( "m.room.create" ),
+            $room->get_current_state_event( "m.room.join_rules" ),
+            $room->get_current_state_event( "m.room.power_levels" ),
+            $join_event,
+         );
 
          # Let's now block sf message sends (event PL1)
          matrix_change_room_power_levels( $creator, $room_id, sub {
@@ -433,6 +473,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
          $event_m1 = $room->create_and_insert_event(
             event_id_suffix => "m1",
             prev_events => $room->make_event_refs( $join_event ),
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             sender  => $remote_user_id,
             type => "m.room.message",
             content => { body => "M1" },
@@ -450,6 +491,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
          $event_sf1 = $room->create_and_insert_event(
             event_id_suffix => "sf1",
             prev_events => $room->make_event_refs( $event_m1 ),
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF1" },
@@ -467,6 +509,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
          $event_sf2 = $room->create_and_insert_event(
             event_id_suffix => "sf2",
             prev_events => $room->make_event_refs( $event_sf1 ),
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF2" },
