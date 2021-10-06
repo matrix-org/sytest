@@ -309,15 +309,14 @@ test "Inbound federation accepts a second soft-failed event",
                log_if_fail "Received event", $event;
                assert_eq( $event->{content}{body}, "m3", "event content body" );
 
-               my %prev_event_ids = (
-                  map { ($_->[0], 1) } ( @{$event->{prev_events}}),
+               my $prev_event_ids = $room->event_ids_from_refs( $event->{prev_events} );
+               log_if_fail "Received prev_event_ids", $prev_event_ids;
+               assert_elements_eq(
+                  $prev_event_ids,
+                  [ $event_id_pl1, $event_id_m1 ],
+                  "prev_event ids",
                );
-               log_if_fail "prev_event_ids", \%prev_event_ids;
-               assert_deeply_eq( \%prev_event_ids, {
-                     $event_id_pl1 => 1,
-                     $event_id_m1 => 1,
-                  }, "prev_event ids",
-               );
+
                Future->done(1);
             }),
          );
@@ -520,14 +519,10 @@ test "Inbound federation correctly handles soft failed events as extremities",
                my ( $event ) = @_;
                log_if_fail "Received event", $event;
                assert_eq( $event->{content}{body}, "m3", "event content body" );
-
-               my %prev_event_ids = (
-                  map { ($_->[0], 1) } ( @{$event->{prev_events}}),
-               );
-               log_if_fail "prev_event_ids", \%prev_event_ids;
-               assert_deeply_eq( \%prev_event_ids, {
-                     $event_id_m2 => 1,
-                  }, "prev_event ids",
+               my $prev_event_ids = $room->event_ids_from_refs( $event->{prev_events} );
+               log_if_fail "Received prev_event_ids", $prev_event_ids;
+               assert_elements_eq(
+                  $prev_event_ids, [ $event_id_m2 ], "prev_event ids",
                );
                Future->done(1);
             }),
