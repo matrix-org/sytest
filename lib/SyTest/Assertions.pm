@@ -12,6 +12,7 @@ our @EXPORT_OK = qw(
    assert_ok
    assert_eq
    assert_deeply_eq
+   assert_elements_eq
 
    assert_json_object
    assert_json_keys
@@ -133,6 +134,55 @@ sub assert_deeply_eq
 {
    my ( $got, $want, $name ) = @_;
    _assert_deeply_eq( $got, $want, undef, $name );
+}
+
+=head2 assert_elements_eq
+
+   assert_elements_eq( $got, $want, $name )
+
+Fails the test if $got is not an array, or if the entries in $got are
+not the same as those in $want (ignoring ordering).
+
+Only a shallow comparison is made between elements (ie, if they are references,
+they must be refs to exactly the same object).
+
+=cut
+
+sub assert_elements_eq
+{
+   my ( $got, $want, $name ) = @_;
+
+   if( ref $got ne "ARRAY" )  {
+      croak "Expected an array for $name but got ${\ pp $got }";
+   }
+
+   # for quick lookup, build a hash of the entries in $got
+   my %got_elts = map { $_ => 1 } @$got;
+
+   # go through the entries in $want, checking if they are in %got_elts
+   # and crossing them off if so.
+   my @missing_elts;
+   foreach my $want_elt ( @$want ) {
+      if( exists $got_elts{ $want_elt } ) {
+         delete $got_elts{ $want_elt };
+      } else {
+         push @missing_elts, $want_elt;
+      }
+   }
+
+   my @msgs;
+   if( @missing_elts ) {
+      push @msgs, "Missing values: ${\ pp( @missing_elts ) }."
+   }
+
+   # any elements left in %got_elts must be absent from $want.
+   if( %got_elts ) {
+      push @msgs, "Extra values: ${\ pp( keys %got_elts ) }.";
+   }
+
+   if( @msgs ) {
+      croak "Mismatch for $name: ". join(" ", @msgs);
+   }
 }
 
 =head2 assert_json_object

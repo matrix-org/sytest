@@ -2,7 +2,6 @@ test "Inbound federation correctly soft fails events",
    requires => [ $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
                  local_user_and_room_fixtures(
                     user_opts => { with_events => 1 },
-                    room_opts => { room_version => "1" },
                  ),
                  federation_user_id_fixture() ],
 
@@ -12,10 +11,12 @@ test "Inbound federation correctly soft fails events",
 
       my $room;
 
-      # We'll grab out some event IDs to use as prev events
-      my $join_event_id;
+      # We'll grab out some events to use as prev events
+      my $join_event;
       my $power_level_event_id;
-      my $denied_event_id;
+      my $denied_event;
+
+      my @remote_auth_events;
 
       # We're going to construct a room graph like:
       #
@@ -47,7 +48,7 @@ test "Inbound federation correctly soft fails events",
          log_if_fail "Joined room";
 
          # Grab the join to use as a prev event
-         $join_event_id = $room->get_current_state_event( "m.room.member", $user_id )->{event_id};
+         $join_event = $room->get_current_state_event( "m.room.member", $user_id );
 
          # Make sure client is up to date
          await_sync_timeline_contains( $creator, $room_id, check => sub {
@@ -59,6 +60,16 @@ test "Inbound federation correctly soft fails events",
          });
       })->then( sub {
          log_if_fail "Got join down sync";
+
+         # before we change the state of the room, stash enough of the
+         # current state that we can build events on another branch of
+         # the DAG.
+         @remote_auth_events = (
+            $room->get_current_state_event( "m.room.create" ),
+            $room->get_current_state_event( "m.room.join_rules" ),
+            $room->get_current_state_event( "m.room.power_levels" ),
+            $join_event,
+         );
 
          # Let's now block message sends (event B)
          matrix_change_room_power_levels( $creator, $room_id, sub {
@@ -85,10 +96,11 @@ test "Inbound federation correctly soft fails events",
 
          # Now let's send a message (event C), carefully avoiding referencing
          # the new PL event.
-         my $event = $room->create_and_insert_event(
+         $denied_event = $room->create_and_insert_event(
             type => "m.room.message",
 
-            prev_events => [ [ $join_event_id, {} ] ],
+            auth_events => $room->make_event_refs( @remote_auth_events ),
+            prev_events => $room->make_event_refs( $join_event ),
 
             sender  => $user_id,
             content => {
@@ -96,20 +108,21 @@ test "Inbound federation correctly soft fails events",
             },
          );
 
-         $denied_event_id = $event->{event_id};
-
-         log_if_fail "Sending blocked event", $event;
+         log_if_fail "Sending blocked event ".$room->id_for_event( $denied_event ),
+            $denied_event;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $denied_event,
             destination => $first_home_server,
          );
       })->then( sub {
          # Now send a non-message (event D)
+         my $pl_event = $inbound_server->datastore->get_event( $power_level_event_id );
+         die "did not receive PL event" unless $pl_event;
          my $event = $room->create_and_insert_event(
             type => "m.room.other_message_type",
 
-            prev_events => [ [ $denied_event_id, {} ], [ $power_level_event_id, {} ] ],
+            prev_events => $room->make_event_refs( $denied_event, $pl_event ),
 
             sender  => $user_id,
             content => {
@@ -117,7 +130,8 @@ test "Inbound federation correctly soft fails events",
             },
          );
 
-         log_if_fail "Sending allowed event", $event;
+         log_if_fail "Sending allowed event ".$room->id_for_event( $event ),
+            $event;
 
          $outbound_client->send_event(
             event => $event,
@@ -147,7 +161,6 @@ test "Inbound federation accepts a second soft-failed event",
       $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
       local_user_and_room_fixtures(
          user_opts => { with_events => 1 },
-         room_opts => { room_version => "1" }
       ),
       federation_user_id_fixture(),
    ],
@@ -189,11 +202,13 @@ test "Inbound federation accepts a second soft-failed event",
       # (The effect of #5090 was that M1 was incorrectly excluded from the
       # forward-extremities.)
 
-      my $join_event_id;
+      my $join_event;
       my $event_id_pl1;
-      my $event_id_m1;
-      my $event_id_sf1;
-      my $event_id_sf2;
+      my $event_m1;
+      my $event_sf1;
+      my $event_sf2;
+
+      my @remote_auth_events;
 
       # First we join the room (event J1)
       $outbound_client->join_room(
@@ -206,7 +221,7 @@ test "Inbound federation accepts a second soft-failed event",
          log_if_fail "Joined room";
 
          # Grab the join to use as a prev event
-         $join_event_id = $room->get_current_state_event( "m.room.member", $remote_user_id )->{event_id};
+         $join_event = $room->get_current_state_event( "m.room.member", $remote_user_id );
 
          # Make sure client is up to date
          await_sync_timeline_contains( $creator, $room_id, check => sub {
@@ -218,6 +233,16 @@ test "Inbound federation accepts a second soft-failed event",
          });
       })->then( sub {
          log_if_fail "Got join down sync";
+
+         # before we change the state of the room, stash enough of the
+         # current state that we can build events on another branch of
+         # the DAG.
+         @remote_auth_events = (
+            $room->get_current_state_event( "m.room.create" ),
+            $room->get_current_state_event( "m.room.join_rules" ),
+            $room->get_current_state_event( "m.room.power_levels" ),
+            $join_event,
+         );
 
          # Let's now block sf message sends (event PL1)
          matrix_change_room_power_levels( $creator, $room_id, sub {
@@ -241,62 +266,62 @@ test "Inbound federation accepts a second soft-failed event",
          log_if_fail "Blocked new SF events";
 
          # send a regular message (event m1), which should be accepted
-         my $event = $room->create_and_insert_event(
+         $event_m1 = $room->create_and_insert_event(
             event_id_suffix => "m1",
-            prev_events => [ [ $join_event_id, {} ] ],
+            auth_events => $room->make_event_refs( @remote_auth_events ),
+            prev_events => $room->make_event_refs( $join_event ),
             sender  => $remote_user_id,
             type => "m.room.message",
             content => { body => "M1" },
          );
 
-         $event_id_m1 = $event->{event_id};
-
-         log_if_fail "Sending", $event;
+         log_if_fail "Sending M1 ".$room->id_for_event( $event_m1 ),
+            $event_m1;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_m1,
             destination => $first_home_server,
          );
       })->then( sub {
          # send an event which will be soft-failed (sf1)
-         my $event = $room->create_and_insert_event(
+         $event_sf1 = $room->create_and_insert_event(
             event_id_suffix => "sf1",
-            prev_events => [ [ $event_id_m1, {} ] ],
+            auth_events => $room->make_event_refs( @remote_auth_events ),
+            prev_events => $room->make_event_refs( $event_m1 ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF1" },
          );
 
-         $event_id_sf1 = $event->{event_id};
-
-         log_if_fail "Sending blocked event 1", $event;
+         log_if_fail "Sending blocked event 1 ".$room->id_for_event( $event_sf1 ),
+            $event_sf1;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_sf1,
             destination => $first_home_server,
          );
       })->then( sub {
          # send a second soft-fail event
-         my $event = $room->create_and_insert_event(
+         $event_sf2 = $room->create_and_insert_event(
             event_id_suffix => "sf2",
-            prev_events => [ [ $event_id_m1, {} ] ],
+            auth_events => $room->make_event_refs( @remote_auth_events ),
+            prev_events => $room->make_event_refs( $event_m1 ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF2" },
          );
 
-         $event_id_sf2 = $event->{event_id};
-
-         log_if_fail "Sending blocked event 2", $event;
+         log_if_fail "Sending blocked event 2 ".$room->id_for_event( $event_sf2 ),
+            $event_sf2;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_sf2,
             destination => $first_home_server,
          );
       })->then( sub {
          # make sure that at least M1 has propagated
          await_sync_timeline_contains( $creator, $room_id, check => sub {
-            return $_[0]->{event_id} eq $event_id_m1;
+            return $_[0]->{event_id} eq $room->id_for_event( $event_m1 );
          });
       })->then( sub {
          # now tell synapse to send a regular message, and check it
@@ -309,15 +334,14 @@ test "Inbound federation accepts a second soft-failed event",
                log_if_fail "Received event", $event;
                assert_eq( $event->{content}{body}, "m3", "event content body" );
 
-               my %prev_event_ids = (
-                  map { ($_->[0], 1) } ( @{$event->{prev_events}}),
+               my $prev_event_ids = $room->event_ids_from_refs( $event->{prev_events} );
+               log_if_fail "Received prev_event_ids", $prev_event_ids;
+               assert_elements_eq(
+                  $prev_event_ids,
+                  [ $event_id_pl1, $room->id_for_event( $event_m1 ) ],
+                  "prev_event ids",
                );
-               log_if_fail "prev_event_ids", \%prev_event_ids;
-               assert_deeply_eq( \%prev_event_ids, {
-                     $event_id_pl1 => 1,
-                     $event_id_m1 => 1,
-                  }, "prev_event ids",
-               );
+
                Future->done(1);
             }),
          );
@@ -331,7 +355,6 @@ test "Inbound federation correctly handles soft failed events as extremities",
       $main::OUTBOUND_CLIENT, $main::INBOUND_SERVER,
       local_user_and_room_fixtures(
          user_opts => { with_events => 1 },
-          room_opts => { room_version => "1" },
       ),
       federation_user_id_fixture(),
    ],
@@ -380,12 +403,14 @@ test "Inbound federation correctly handles soft failed events as extremities",
       # (The effect of #5269 was that M1 was incorrectly included as a
       # forward-extremity.)
 
-      my $join_event_id;
+      my $join_event;
       my $event_id_pl1;
-      my $event_id_m1;
-      my $event_id_sf1;
-      my $event_id_sf2;
-      my $event_id_m2;
+      my $event_m1;
+      my $event_sf1;
+      my $event_sf2;
+      my $event_m2;
+
+      my @remote_auth_events;
 
       # First we join the room (event J1)
       $outbound_client->join_room(
@@ -398,7 +423,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
          log_if_fail "Joined room";
 
          # Grab the join to use as a prev event
-         $join_event_id = $room->get_current_state_event( "m.room.member", $remote_user_id )->{event_id};
+         $join_event = $room->get_current_state_event( "m.room.member", $remote_user_id );
 
          # Make sure client is up to date
          await_sync_timeline_contains( $creator, $room_id, check => sub {
@@ -411,6 +436,16 @@ test "Inbound federation correctly handles soft failed events as extremities",
       })->then( sub {
          log_if_fail "Got join down sync";
 
+         # before we change the state of the room, stash enough of the
+         # current state that we can build events on another branch of
+         # the DAG.
+         @remote_auth_events = (
+            $room->get_current_state_event( "m.room.create" ),
+            $room->get_current_state_event( "m.room.join_rules" ),
+            $room->get_current_state_event( "m.room.power_levels" ),
+            $join_event,
+         );
+
          # Let's now block sf message sends (event PL1)
          matrix_change_room_power_levels( $creator, $room_id, sub {
             my ( $levels ) = @_;
@@ -421,6 +456,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
          my ( $body ) = @_;
 
          $event_id_pl1 = $body->{event_id};
+         log_if_fail "Blocked new SF events with PL event $event_id_pl1";
 
          # Wait for change to propagate
          await_sync_timeline_contains( $creator, $room_id, check => sub {
@@ -430,85 +466,81 @@ test "Inbound federation correctly handles soft failed events as extremities",
             return 1;
          });
       })->then( sub {
-         log_if_fail "Blocked new SF events";
-
          # send a regular message (event m1), which should be accepted
-         my $event = $room->create_and_insert_event(
+         $event_m1 = $room->create_and_insert_event(
             event_id_suffix => "m1",
-            prev_events => [ [ $join_event_id, {} ] ],
+            prev_events => $room->make_event_refs( $join_event ),
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             sender  => $remote_user_id,
             type => "m.room.message",
             content => { body => "M1" },
          );
 
-         $event_id_m1 = $event->{event_id};
-
-         log_if_fail "Sending", $event;
+         log_if_fail "Sending valid message M1 ".$room->id_for_event( $event_m1 ),
+            $event_m1;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_m1,
             destination => $first_home_server,
          );
       })->then( sub {
          # send an event which will be soft-failed (sf1)
-         my $event = $room->create_and_insert_event(
+         $event_sf1 = $room->create_and_insert_event(
             event_id_suffix => "sf1",
-            prev_events => [ [ $event_id_m1, {} ] ],
+            prev_events => $room->make_event_refs( $event_m1 ),
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF1" },
          );
 
-         $event_id_sf1 = $event->{event_id};
-
-         log_if_fail "Sending blocked event 1", $event;
+         log_if_fail "Sending blocked event 1 ".$room->id_for_event( $event_sf1 ),
+            $event_sf1;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_sf1,
             destination => $first_home_server,
          );
       })->then( sub {
-         # send an event which will be soft-failed (sf2)
-         my $event = $room->create_and_insert_event(
+         # send another event which will be soft-failed (sf2)
+         $event_sf2 = $room->create_and_insert_event(
             event_id_suffix => "sf2",
-            prev_events => [ [ $event_id_sf1, {} ] ],
+            prev_events => $room->make_event_refs( $event_sf1 ),
+            auth_events => $room->make_event_refs( @remote_auth_events ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF2" },
          );
 
-         $event_id_sf2 = $event->{event_id};
-
-         log_if_fail "Sending blocked event 2", $event;
+         log_if_fail "Sending blocked event 2 ".$room->id_for_event( $event_sf2 ),
+            $event_sf2;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_sf2,
             destination => $first_home_server,
          );
       })->then( sub {
-         log_if_fail "Sending new M2 event";
-
          # send a regular message (event m2), which should be accepted
-         my $event = $room->create_and_insert_event(
+         my $event_pl1 = $inbound_server->datastore->get_event( $event_id_pl1 );
+         $event_m2 = $room->create_and_insert_event(
             event_id_suffix => "m2",
-            prev_events => [ [ $event_id_pl1, {} ], [ $event_id_sf2, {} ] ],
+            prev_events => $room->make_event_refs( $event_pl1, $event_sf2 ),
             sender  => $remote_user_id,
             type => "m.room.message",
             content => { body => "M2" },
          );
 
-         $event_id_m2 = $event->{event_id};
-
-         log_if_fail "Sending", $event;
+         log_if_fail "Sending new valid M2 event ".$room->id_for_event( $event_m2 ),
+            $event_m2;
 
          $outbound_client->send_event(
-            event => $event,
+            event => $event_m2,
             destination => $first_home_server,
          );
       })->then( sub {
-         # make sure that M2 has propagated
+         log_if_fail "Waiting for M2 to propagate to server under test";
          await_sync_timeline_contains( $creator, $room_id, check => sub {
-            return $_[0]->{event_id} eq $event_id_m2;
+            return $_[0]->{event_id} eq $room->id_for_event( $event_m2 );
          });
       })->then( sub {
          # now tell synapse to send a regular message, and check it
@@ -520,14 +552,10 @@ test "Inbound federation correctly handles soft failed events as extremities",
                my ( $event ) = @_;
                log_if_fail "Received event", $event;
                assert_eq( $event->{content}{body}, "m3", "event content body" );
-
-               my %prev_event_ids = (
-                  map { ($_->[0], 1) } ( @{$event->{prev_events}}),
-               );
-               log_if_fail "prev_event_ids", \%prev_event_ids;
-               assert_deeply_eq( \%prev_event_ids, {
-                     $event_id_m2 => 1,
-                  }, "prev_event ids",
+               my $prev_event_ids = $room->event_ids_from_refs( $event->{prev_events} );
+               log_if_fail "Received prev_event_ids", $prev_event_ids;
+               assert_elements_eq(
+                  $prev_event_ids, [ $room->id_for_event( $event_m2 ) ], "prev_event ids",
                );
                Future->done(1);
             }),
