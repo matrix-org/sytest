@@ -1,5 +1,20 @@
 use List::Util qw( any none );
 
+push our @EXPORT, qw( matrix_forget_room );
+
+sub matrix_forget_room
+{
+   my ( $user, $room_id ) = @_;
+   is_User( $user ) or croak "Expected a User; got $user";
+
+   do_request_json_for( $user,
+      method => "POST",
+      uri    => "/r0/rooms/$room_id/forget",
+
+      content => {},
+   )->then_done(1);
+}
+
 test "Forgotten room messages cannot be paginated",
    requires => [ local_user_and_room_fixtures(), local_user_fixture() ],
 
@@ -8,7 +23,7 @@ test "Forgotten room messages cannot be paginated",
 
       matrix_join_room( $user, $room_id )
       ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "sup" )
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "sup" )
       })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 1 );
       })->then( sub {
@@ -42,8 +57,18 @@ test "Forgotten room messages cannot be paginated",
          assert_eq( $content->{membership}, "leave",
             "membership state" );
 
-         matrix_get_room_messages( $user, $room_id, limit => 1 )
-            ->main::expect_http_403;
+         # Need to repeat this, because we may need to give Synapse time to
+         # replicate the "forgot" state from the worker handling
+         # POST /rooms/ROOM/forget (master?) to the worker handling
+         # GET /rooms/ROOM/messages (client_reader).
+         # (AFAICS forgetting a room doesn't have any other visible effects.)
+         retry_until_success {
+            matrix_get_room_messages($user, $room_id, limit => 1)
+               ->main::check_http_code(
+               403 => "ok",
+               200 => "redo",
+            );
+         };
       });
    };
 
@@ -183,18 +208,3 @@ test "Can re-join room if re-invited",
          Future->done( 1 );
       });
    };
-
-push our @EXPORT, qw( matrix_forget_room );
-
-sub matrix_forget_room
-{
-   my ( $user, $room_id ) = @_;
-   is_User( $user ) or croak "Expected a User; got $user";
-
-   do_request_json_for( $user,
-      method => "POST",
-      uri    => "/r0/rooms/$room_id/forget",
-
-      content => {},
-   )->then_done(1);
-}
