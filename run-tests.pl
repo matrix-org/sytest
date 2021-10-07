@@ -891,6 +891,11 @@ $OUTPUT->status(
 
 # Now run the tests
 my $prev_filename;
+
+if ( scalar( @TESTS ) eq 0 ) {
+   die "No tests to run. Did you misspell a test file name?";
+}
+
 foreach my $test ( @TESTS ) {
    if( !$prev_filename or $prev_filename ne $test->file ) {
       $OUTPUT->run_file( $prev_filename = $test->file );
