@@ -62,7 +62,7 @@ test "Forgotten room messages cannot be paginated",
          # POST /rooms/ROOM/forget (master?) to the worker handling
          # GET /rooms/ROOM/messages (client_reader).
          # (AFAICS forgetting a room doesn't have any other visible effects.)
-         repeat_until_true {
+         retry_until_success {
             matrix_get_room_messages($user, $room_id, limit => 1)
                ->main::check_http_code(
                403 => "ok",
