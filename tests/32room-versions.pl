@@ -2,7 +2,7 @@ use URI::Escape qw( uri_escape );
 use SyTest::Federation::Client;
 
 # We test that some basic functionality works across all room versions
-foreach my $version ( @{ (SyTest::Federation::Client::SUPPORTED_ROOM_VERSIONS)[0] } ) {
+foreach my $version ( @{ (SyTest::Federation::Client::SUPPORTED_ROOM_VERSIONS) } ) {
    multi_test "User can create and send/receive messages in a room with version $version",
       requires => [ local_user_fixture() ],
 
