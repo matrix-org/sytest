@@ -164,7 +164,7 @@ test "Can paginate public room list",
       # be entries in it).
       ( try_repeat {
          my ($n) = @_;
-         matrix_create_room( $user, visibility => "public" )->on_done( sub {
+         matrix_create_room_synced( $user, visibility => "public" )->on_done( sub {
             my ( $body ) = @_;
             log_if_fail "Created room $n", $body;
          });
