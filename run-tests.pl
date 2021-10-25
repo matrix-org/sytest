@@ -86,7 +86,6 @@ GetOptions(
    'C|client-log+' => \my $CLIENT_LOG,
 
    # Whitelist and Blacklist files with test names to run.
-   # Both cannot be set at once
    'W|test-whitelist-file=s' => \$WHITELIST_FILE,
    'B|test-blacklist-file=s' => \$BLACKLIST_FILE,
 
@@ -148,13 +147,18 @@ Options:
                                    ~~ @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                                       shift( @homeserver_implementations ) || ''
 
-   -W, --test-whitelist-file    - whitelist file containing test names to run
-                                  One per line. Cannot be used in conjunction
-                                  with --test-blacklist-file
+   -W, --test-whitelist-file    - whitelist file containing test names to count
+                                  success/failure for. One per line. All tests will
+                                  run regardless of whether this file is present or not.
+                                  However, if this file is provided, only tests in this
+                                  list will count towards the overall test suite outcome,
+                                  and all other tests will be marked as EXPECTED FAIL.
 
-   -B, --test-blacklist-file    - blacklist file containing test names to not run
-                                  One per line. Cannot be used in conjunction
-                                  with --test-whitelist-file
+   -B, --test-blacklist-file    - blacklist file containing test names to ignore
+                                  test outcome, regardless of success or failure.
+                                  Useful for flakey tests. One per line. If a test name
+                                  is present in this file and the whitelist, the blacklist
+                                  takes priority.
 
    -C, --client-log             - enable logging of requests made by the
                                   internal HTTP client. Also logs the internal
@@ -217,12 +221,6 @@ our $HS_FACTORY = $hs_factory_class -> new();
 
 Getopt::Long::Configure("no_passthrough");
 GetOptions($HS_FACTORY->get_options()) or usage(1);
-
-# Check if both options have been set
-if( $BLACKLIST_FILE and $WHITELIST_FILE ) {
-   die "Not allowed to set both whitelist and blacklist options.\n";
-   exit 1
-}
 
 # Read in test blacklist rules if set
 my %TEST_BLACKLIST;

@@ -43,7 +43,7 @@ echo >&2 "+++ Running tests"
 
 TEST_STATUS=0
 mkdir -p /logs
-./run-tests.pl -I Dendrite::Monolith -d $GOBIN -W /src/sytest-whitelist -O tap --all \
+./run-tests.pl -I Dendrite::Monolith -d $GOBIN -W /src/sytest-whitelist -B /src/sytest-blacklist -O tap --all \
     --work-directory="/work" --exclude-deprecated \
     "$@" > /logs/results.tap &
 pid=$!
