@@ -147,12 +147,18 @@ Options:
                                    ~~ @<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                                       shift( @homeserver_implementations ) || ''
 
-   -W, --test-whitelist-file    - whitelist file containing test names to run
-                                  One per line.
+   -W, --test-whitelist-file    - whitelist file containing test names to count
+                                  success/failure for. One per line. All tests will
+                                  run regardless of whether this file is present or not.
+                                  However, if this file is provided, only tests in this
+                                  list will count towards the overall test suite outcome,
+                                  and all other tests will be marked as EXPECTED FAIL.
 
-   -B, --test-blacklist-file    - blacklist file containing test names to not run
-                                  One per line. If a test name is present in this
-                                  file and the whitelist, the blacklist takes priority.
+   -B, --test-blacklist-file    - blacklist file containing test names to ignore
+                                  test outcome, regardless of success or failure.
+                                  Useful for flakey tests. One per line. If a test name
+                                  is present in this file and the whitelist, the blacklist
+                                  takes priority.
 
    -C, --client-log             - enable logging of requests made by the
                                   internal HTTP client. Also logs the internal
