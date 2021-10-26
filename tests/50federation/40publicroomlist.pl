@@ -1,5 +1,5 @@
 # Copied from 30rooms/70publicroomslist.pl, modified to test the federation publicRooms API
-test "Name/topic keys are correct",
+test "Federation publicRoom Name/topic keys are correct",
    requires => [ local_user_fixture(), $main::OUTBOUND_CLIENT ],
 
    check => sub {
