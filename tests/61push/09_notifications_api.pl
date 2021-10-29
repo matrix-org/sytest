@@ -18,11 +18,13 @@ test "Notifications can be viewed with GET /notifications",
 
          matrix_join_room( $user2, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $user2, $room_id,
+         matrix_send_room_text_message_synced( $user2, $room_id,
             body => "Test message 1",
          );
       })->then( sub {
          my ( $event_id ) = @_;
+
+         log_if_fail( "Sent Test message 1" );
 
          # We need to send a read receipt before the server will start
          # calculating notifications.
@@ -37,8 +39,10 @@ test "Notifications can be viewed with GET /notifications",
          # push rules and 2) we need to call /notifications repeatedly as it
          # might take a while for messages to propagate.
 
+         log_if_fail( "Advanced room receipt 1" );
+
          retry_until_success {
-            matrix_send_room_text_message( $user2, $room_id,
+            matrix_send_room_text_message_synced( $user2, $room_id,
                body => "Test message 2",
             )->then(sub {
                do_request_json_for( $user1,
@@ -63,6 +67,8 @@ test "Notifications can be viewed with GET /notifications",
       })->then( sub {
          my ( $notif ) = @_;
 
+         log_if_fail( "Sent Test message 2" );
+
          # Check the notif has the expected keys
          assert_json_keys( $notif, qw( room_id actions event read ts ) );
          assert_ok( exists $notif->{profile_tag}, "profile_tag defined" );
@@ -70,13 +76,15 @@ test "Notifications can be viewed with GET /notifications",
 
          # Now we send a message and advance the read receipt up until that
          # point, and test that notifications becomes empty
-         matrix_send_room_text_message( $user2, $room_id,
+         matrix_send_room_text_message_synced( $user2, $room_id,
             body => "Test message 3",
          );
       })->then( sub {
          my ( $event_id ) = @_;
 
-         matrix_advance_room_receipt( $user1, $room_id, "m.read" => $event_id );
+         log_if_fail( "Sent Test message 3" );
+
+         matrix_advance_room_receipt_synced( $user1, $room_id, "m.read" => $event_id );
       })->then( sub {
          retry_until_success {
             do_request_json_for( $user1,
@@ -96,4 +104,3 @@ test "Notifications can be viewed with GET /notifications",
          }
       });
    };
-
