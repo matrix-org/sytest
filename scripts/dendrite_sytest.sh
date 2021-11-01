@@ -61,12 +61,13 @@ fi
 
 # Check for new tests to be added to the test whitelist
 /src/show-expected-fail-tests.sh /logs/results.tap /src/sytest-whitelist \
-    /src/sytest-blacklist > /work/show_expected_fail_tests_output.txt || TEST_STATUS=$?
+    /src/sytest-blacklist | tee /work/show_expected_fail_tests_output.txt || TEST_STATUS=$?
 
 echo >&2 "--- Copying assets"
 
 # Copy out the logs
 rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+find /logs | xargs -r chmod go+rX
 
 # Generate annotate.md. This is Buildkite-specific.
 if [ -n "$BUILDKITE_LABEL" ] && [ $TEST_STATUS -ne 0 ]; then
