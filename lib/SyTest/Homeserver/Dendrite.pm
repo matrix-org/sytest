@@ -240,6 +240,18 @@ sub _get_config
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/presence.db" : $db_uri,
          },
+         threepid_database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/threepids.db" : $db_uri,
+         },
+         email => {
+            enabled => JSON::true,
+            from => 'synapse@localhost',
+            smtp => {
+               host => $self->{smtp_server_config}->{host} . ':' . $self->{smtp_server_config}->{port},
+            },
+         },
       },
 
       push_server => {
