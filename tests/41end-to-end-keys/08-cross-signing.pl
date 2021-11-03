@@ -659,14 +659,14 @@ test "uploading signed devices gets propagated over federation",
 
          log_if_fail "key query content1", $content;
 
-	 # Check that we do in fact see the master key when querying the
-	 # devices.
-	 assert_json_keys( $content->{master_keys}, $user2_id );
-	 assert_json_keys( $content->{master_keys}->{$user2_id}, "keys");
-	 assert_json_keys( $content->{master_keys}->{$user2_id}{keys},
-		 "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk");
+         # Check that we do in fact see the master key when querying the
+         # devices.
+         assert_json_keys( $content->{master_keys}, $user2_id );
+         assert_json_keys( $content->{master_keys}->{$user2_id}, "keys");
+         assert_json_keys( $content->{master_keys}->{$user2_id}{keys},
+            "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk");
 
-	 matrix_sync_again( $user1 )
+         matrix_sync_again( $user1 )
       })->then( sub {
          sign_json(
             $device, secret_key => $self_signing_secret_key,
@@ -688,7 +688,7 @@ test "uploading signed devices gets propagated over federation",
 
          log_if_fail "key query content2", $content;
 
-	 # Check that fetching the devices again returns the new signature
+         # Check that fetching the devices again returns the new signature
          assert_json_keys( $content->{device_keys}->{$user2_id}->{$user2_device}, "signatures" );
 
          assert_deeply_eq( $content->{device_keys}->{$user2_id}->{$user2_device}->{signatures}, {

@@ -241,7 +241,7 @@ sub configure_logger
 
       loggers => {
          synapse => {
-            level => "INFO"
+            level => "DEBUG"
          }
       },
 
