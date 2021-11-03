@@ -6,6 +6,7 @@ use 5.010;
 use base qw( SyTest::Homeserver );
 
 use Carp;
+use Socket qw( pack_sockaddr_un );
 
 use Future::Utils qw( try_repeat );
 
@@ -1189,15 +1190,37 @@ sub generate_haproxy_config
    my $bind_host = $self->{bind_host};
    my $ports = $self->{ports};
 
+   # open a logfile for haproxy
+   my $haproxy_log = $self->{hs_dir} . "/haproxy.log";
+   open my $log_fh, ">", $haproxy_log
+      or die "Cannot open $haproxy_log for writing - $!";
+
+   # create a syslog listener on a unix pipe, which will write to the logfile.
+   my $socket = IO::Async::Socket->new(
+      on_recv => sub {
+         my ( undef, $dgram, $addr ) = @_;
+         # syslog messages have some basic format, but
+         # they are readable enough for our purposes.
+         syswrite( $log_fh, $dgram );
+      },
+   );
+   my $log_sock = $self->{hs_dir} . "/haproxy_log.sock";
+   my $sockaddr = ::pack_sockaddr_un( $log_sock );
+   $socket->bind([ 'unix', 'dgram', 0, $sockaddr ]) or die "Could not bind syslog socket: $!";
+   $self->add_child( $socket );
+
    return <<"EOCONFIG";
 global
     tune.ssl.default-dh-param 2048
+    log $log_sock local0 debug
 
     ssl-default-bind-ciphers "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL !eNULL !LOW !3DES !MD5 !EXP !PSK !SRP !DSS !RC4"
     ssl-default-bind-options no-sslv3
 
 defaults
     mode http
+    log global
+    option httplog
 
     timeout connect 5s
     timeout client 90s
