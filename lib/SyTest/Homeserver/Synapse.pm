@@ -1204,7 +1204,7 @@ sub generate_haproxy_config
          syswrite( $log_fh, $dgram );
       },
    );
-   my $log_sock = $self->{hs_dir} . "/log.sock";
+   my $log_sock = $self->{hs_dir} . "/haproxy_log.sock";
    my $sockaddr = ::pack_sockaddr_un( $log_sock );
    $socket->bind([ 'unix', 'dgram', 0, $sockaddr ]) or die "Could not bind syslog socket: $!";
    $self->add_child( $socket );
