@@ -1,3 +1,5 @@
+use JSON qw( decode_json );
+
 my $fixture = local_user_fixture();
 
 test "Can upload device keys",
@@ -15,6 +17,16 @@ test "Can upload device keys",
             device_keys => {
                user_id => $user->user_id,
                device_id => $user->device_id,
+               algorithms => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
+               keys => {
+                 "curve25519:".$user->device_id => "curve25519+key",
+                 "ed25519:".$user->device_id => "ed25519+key",
+               },
+               signatures => {
+                 $user->user_id => {
+                     "ed25519:".$user->device_id => "self+signature",
+                 },
+               },
             },
             one_time_keys => {
                "my_algorithm:my_id_1", "KIhHVkAQi8r41aPNql2zTqQsInpFa8XdslQLC8F8BHc"
@@ -32,6 +44,36 @@ test "Can upload device keys",
             die "Expected 1 one time key";
 
          Future->done(1)
+      })
+  };
+
+test "Rejects invalid device keys",
+   requires => [ $fixture ],
+
+   proves => [qw( can_upload_e2e_keys )],
+
+   do => sub {
+      my ( $user ) = @_;
+
+      # algorithms, keys and signatures are required fields, but missing
+      do_request_json_for( $user,
+         method  => "POST",
+         uri     => "/r0/keys/upload",
+         content => {
+            device_keys => {
+               user_id => $user->user_id,
+               device_id => $user->device_id,
+            },
+            one_time_keys => {
+               "my_algorithm:my_id_1", "KIhHVkAQi8r41aPNql2zTqQsInpFa8XdslQLC8F8BHc"
+            }
+         }
+      )->main::expect_http_400()
+      ->then( sub {
+         my ( $response ) = @_;
+         my $body = decode_json( $response->content );
+         assert_eq( $body->{errcode}, "M_BAD_JSON", 'responsecode' );
+         Future->done( 1 );
       })
   };
 
