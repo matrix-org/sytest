@@ -53,13 +53,11 @@ multi_test "Test that a message is pushed",
          # We also wait for the push notification for it
 
          Future->needs_all(
-            await_event_for( $bob, filter => sub {
-               my ( $event ) = @_;
-               return unless $event->{type} eq "m.room.member" and
-                  $event->{room_id} eq $room_id and
-                  $event->{state_key} eq $bob->user_id and
-                  $event->{content}{membership} eq "invite";
-               return 1;
+            await_sync( $bob, check => sub {
+               my ( $body ) = @_;
+
+               return 0 unless exists $body->{rooms}{invite}{$room_id};
+               return $body->{rooms}{invite}{$room_id};
             })->SyTest::pass_on_done( "Bob received invite" ),
 
             matrix_invite_user_to_room( $alice, $bob, $room_id ),
@@ -69,14 +67,17 @@ multi_test "Test that a message is pushed",
          # Bob accepts the invite by joining the room
          matrix_join_room( $bob, $room_id )
       })->then( sub {
-         await_event_for( $alice, filter => sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.member";
-            return 1;
+         my $join_event;
+         await_sync_timeline_contains( $alice, $room_id, check => sub {
+               my ( $event ) = @_;
+               return unless $event->{type} eq "m.room.member";
+               return unless $event->{content}{membership} eq "join";
+               $join_event = $event;
+               return 1;
          })->then( sub {
             my ( $event ) = @_;
             matrix_advance_room_receipt( $alice, $room_id,
-               "m.read" => $event->{event_id}
+               "m.read" => $join_event->{event_id}
             );
          });
       })->then( sub {

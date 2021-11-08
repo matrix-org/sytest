@@ -1,8 +1,9 @@
 # SyTest Docker Images
 
 These Dockerfiles create containers for running SyTest in various
-configurations. SyTest is not included in these images, but its dependencies
-are.
+configurations. SyTest is not included in these images (see 
+[Selecting a checkout of SyTest](#selecting-a-sytest-checkout)),
+but its dependencies are.
 
 Included currently is:
 
@@ -68,11 +69,23 @@ it is useful to mount a volume there too.
 docker run --rm -it -v /path/to/dendrite\:/src:ro -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-dendrite
 ```
 
-## Using the local checkout of Sytest
+## Selecting a checkout of Sytest
 
-By default, the images download an appropriate branch of Sytest. (Normally
-either a branch with the same name as that of the target homeserver, or
-`develop`).
+The images do not contain a copy of Sytest; by default, they download
+an appropriate branch of Sytest. Normally this is either a branch with
+the same name as that of the target homeserver, or `develop`.
+This can be overridden with the environment variable `SYTEST_BRANCH`,
+for example:
+
+```
+docker run --rm -it \
+    -e SYTEST_BRANCH="my-sytest-branch"
+    -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs
+    matrixdotorg/sytest-synapse:buster
+```
+
+If the branch referred to by `SYTEST_BRANCH` does not exist, `develop` is used
+instead.
 
 If you would like to run tests with an existing checkout of Sytest, add a
 volume to the docker command mounting the checkout to the `/sytest` folder in
@@ -94,8 +107,8 @@ docker run --rm -it ... matrixdotorg/sytest-synapse:buster tests/20profile-event
 
 ## Building the containers
 
-The containers are built by executing `./build.sh`. You will then have to push
-them up to Docker Hub with `./push.sh`.
+These are automatically built and deployed on the `develop` branch by GitHub Actions.
+See `.github/workflows.docker.yml` for the gory details.
 
 ## Loading sytest plugins at start
 

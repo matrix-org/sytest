@@ -82,12 +82,11 @@ test "Server correctly handles incoming m.device_list_update",
          alias   => $room_alias,
       );
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/r0/join/$room_alias",
 
-         content => {},
-      )->then( sub {
+      matrix_sync($user)
+      ->then( sub {
+          matrix_join_room_synced($user, $room_alias)
+      })->then( sub {
          Future->needs_all(
             $inbound_server->await_request_user_devices( $creator_id )
             ->then( sub {
@@ -122,6 +121,8 @@ test "Server correctly handles incoming m.device_list_update",
                }
             )
          )
+      })->then( sub {
+          sync_until_user_in_device_list_id($user, $creator_id)
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
@@ -160,6 +161,8 @@ test "Server correctly handles incoming m.device_list_update",
                }
             }
          )
+      })->then( sub {
+          sync_until_user_in_device_list_id($user, $creator_id)
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
@@ -480,7 +483,6 @@ test "Local device key changes get to remote servers with correct prev_id",
       });
    };
 
-use Data::Dumper;
 test "Device list doesn't change if remote server is down",
    # see https://github.com/matrix-org/synapse/issues/5441
 
@@ -558,19 +560,36 @@ test "Device list doesn't change if remote server is down",
             Future->done(1)
          })
       );
-
-      # First we succesfully request the remote user's keys while the remote server is up.
+      my $room_id;
+      # First we successfully request the remote user's keys while the remote server is up.
       # We do this once they share a room.
-      matrix_create_room(
+      matrix_create_room_synced(
          $local_user,
          preset => "public_chat",
       )->then( sub {
-         my ( $room_id ) = @_;
+         ( $room_id ) = @_;
          $outbound_client->join_room(
             server_name => $local_user->server_name,
             room_id     => $room_id,
             user_id     => $outbound_client_user,
          )
+      # Before making the key request, we need to ensure the server under test
+      # recognises that $local_user and $outbound_client_user now share a room.
+      })->then( sub {
+         await_sync_timeline_contains(
+            $local_user,
+            $room_id,
+            check => sub {
+               my ($event) = @_;
+               return $event->{type} eq "m.room.member" &&
+                  $event->{state_key} eq $outbound_client_user &&
+                  $event->{content}{membership} eq "join";
+            }
+         );
+      })->then( sub {
+         # Don't expect this sync to do anything, but it sets a next_batch_token
+         # on the local_user object, which is required by sync_until_user_in_device_list
+         matrix_sync( $local_user )
       })->then( sub {
          do_request_json_for( $local_user,
             method  => "POST",
@@ -583,9 +602,13 @@ test "Device list doesn't change if remote server is down",
          )
       })->then( sub {
          ( $first_keys_query_body ) = @_;
+         log_if_fail "first_keys_query_body", $first_keys_query_body;
+         assert_eq(
+            $first_keys_query_body->{device_keys}->{$outbound_client_user}->{CURIOSITY_ROVER}->{user_id},
+            $outbound_client_user,
+            "outbound client user mxid"
+         );
          map {$_->cancel} @respond_with_keys;
-         log_if_fail (Dumper $first_keys_query_body);
-
          # We take the remote server 'offline' and then make the same request
          # for the users keys. We expect no change in the keys. We respond with
          # 400 instead of 503 to avoid the server being marked as down.
@@ -603,6 +626,19 @@ test "Device list doesn't change if remote server is down",
                Future->done(1)
             })
          );
+      })->then( sub {
+         # Synapse with workers would often fail this test, because
+         # - the device list info retrieved over federation was written to DB
+         #   by the master worker
+         # - the master worker notifies the others over replication, so the
+         #   workers can invalidate their caches
+         # - the second request (that we're about to send out) would sometimes
+         #   arrive at the stream_writer worker before it'd been notified over
+         #   replication
+         #
+         # Sync so that we have a chance for the replication to propagate.
+         sync_until_user_in_device_list_id($local_user, $outbound_client_user)
+      })->then( sub {
          do_request_json_for( $local_user,
             method  => "POST",
             uri     => "/r0/keys/query",
@@ -611,11 +647,26 @@ test "Device list doesn't change if remote server is down",
                   $outbound_client_user => []
                }
             }
-         )
+         )->then( sub {
+            my ( $body ) = @_;
+            log_if_fail "Attempted second request", $body;
+            # Failed requests have an empty device_list and a nonempty failures list.
+            assert_json_keys( $body, "device_keys" );
+            assert_json_object( $body->{device_keys} );
+            assert_json_keys( $body->{device_keys}, $outbound_client_user );
+            my $size = scalar keys %{ $body->{device_keys} };
+            $size eq 1 or die "Expected device_keys to contain exactly one entry, not " . $size;
+
+            # Failed requests have an empty device_list and a nonempty failures list.
+            assert_json_keys( $body, "failures" );
+            $size = scalar keys %{ $body->{failures} };
+            $size eq 0 or die "Expected failures to be empty, not of size " . $size;
+            Future->done( $body );
+         })
       })->then( sub {
          ( $second_keys_query_body ) = @_;
          map {$_->cancel} @respond_400;
-         # The unsiged field is optional in the spec so we remove it from any response.
+         # The unsigned field is optional in the spec so we remove it from any response.
          foreach ($first_keys_query_body, $second_keys_query_body) {
             while (my ($user_key, $devices) = each %{$_->{ device_keys }} ) {
                while (my ($device_key, $values) = each %$devices) {
@@ -623,8 +674,7 @@ test "Device list doesn't change if remote server is down",
                }
             }
          };
-
-         log_if_fail (Dumper $second_keys_query_body);
+         log_if_fail "second_keys_query_body",$second_keys_query_body;
          assert_deeply_eq( $second_keys_query_body->{ device_keys }, $first_keys_query_body->{ device_keys }, "Query matches while federation server is down." );
          Future->done(1)
       })

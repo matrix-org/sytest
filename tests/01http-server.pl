@@ -47,6 +47,9 @@ sub start_test_server_ssl {
    );
 }
 
+# List of Awaiter structs
+my @pending_awaiters;
+
 our $TEST_SERVER_INFO = fixture(
    requires => [],
 
@@ -58,6 +61,8 @@ our $TEST_SERVER_INFO = fixture(
 
       my $http_client;
       my $server_info;
+
+      @pending_awaiters = ();
 
       start_test_server_ssl( $http_server )->then( sub {
          my ( $listener ) = @_;
@@ -134,9 +139,6 @@ our $TEST_SERVER_INFO = fixture(
       });
    },
 );
-
-# List of Awaiter structs
-my @pending_awaiters;
 
 package SyTest::HTTPServer {
    use base qw( Net::Async::HTTP::Server );
