@@ -697,6 +697,12 @@ test "uploading signed devices gets propagated over federation",
             },
          } );
 
+         # Check that we still see the master key when querying the devices.
+         assert_json_keys( $content->{master_keys}, $user2_id );
+         assert_json_keys( $content->{master_keys}->{$user2_id}, "keys");
+         assert_json_keys( $content->{master_keys}->{$user2_id}{keys},
+            "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk");
+
          Future->done(1);
       });
    };
