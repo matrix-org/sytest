@@ -682,7 +682,17 @@ test "uploading signed devices gets propagated over federation",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
-         matrix_get_e2e_keys( $user1, $user2_id );
+         repeat_until_true {
+            # Wait until user1 sees signatures uploaded by user2.
+            # We repeat_until_true because this is sensitive to replication delays.
+            matrix_get_e2e_keys( $user1, $user2_id )
+            ->then(sub {
+               my ( $content ) = @_;
+               if ( exists $content->{device_keys}->{$user2_id}->{$user2_device}->{"signatures"}) {
+                  return $content;
+               }
+            });
+         };
       })->then( sub {
          my ( $content ) = @_;
 
@@ -739,7 +749,7 @@ sub matrix_upload_signatures {
    do_request_json_for(
       $user,
       method  => "POST",
-      uri     => "/unstable/keys/signatures/upload",
+      uri     => "/unstable/keys/signatures/upload", # available under /v3/ for matrix 1.1
       content => $signatures,
    );
 }
