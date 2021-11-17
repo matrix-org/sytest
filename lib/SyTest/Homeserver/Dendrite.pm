@@ -102,6 +102,11 @@ sub _get_config
          private_key => $self->{paths}{matrix_key},
          presence_enabled => $JSON::true,
 
+         jetstream => {
+             storage_path => $self->{hs_dir},
+             in_memory => $JSON::true,
+         },
+
          kafka => {
             use_naffka => $JSON::true,
             naffka_database => {
