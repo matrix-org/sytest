@@ -454,10 +454,16 @@ sub retry_until_success(&%)
    } until => sub { $iter > $max_iter || !$_[0]->failure };
 }
 
+# /!\ You probably DON'T want to use repeat_until true /!\
+# It means that genuine test failures get turned into test timeouts.
+# Prefer retry_until_success, which limits the number of retries.
+#
 # Another wrapper which repeats (with delay) until the block returns a true
 # value. If the block fails entirely then it aborts, does not retry.
 sub repeat_until_true(&)
 {
+  warnings::warnif("deprecated",
+     "repeat_until_true is deprecated, use retry_until_success instead");
    my ( $code ) = @_;
 
    my $delay = 0.1;
