@@ -682,21 +682,21 @@ test "uploading signed devices gets propagated over federation",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
-         repeat_until_true {
+         retry_until_success {
             # Wait until user1 sees signatures uploaded by user2.
-            # We repeat_until_true because this is sensitive to replication delays.
-            matrix_get_e2e_keys( $user1, $user2_id )
-            ->then( sub {
+            # We retry_until_success because this is sensitive to replication delays.
+            matrix_get_e2e_keys( $user1, $user2_id )->then( sub {
                my ( $content ) = @_;
-               if ( exists $content->{device_keys}->{$user2_id}->{$user2_device}->{"signatures"} ) {
-                  return $content;
-               }
+               log_if_fail "key query content2", $content;
+               $content->{device_keys}->{$user2_id}->{$user2_device}->{"signatures"}
+                  or die "No 'signatures' key present";
+               Future->done( $content );
             });
          };
       })->then( sub {
          my ( $content ) = @_;
 
-         log_if_fail "key query content2", $content;
+         log_if_fail "key query content3", $content;
 
          # Check that fetching the devices again returns the new signature
          assert_json_keys( $content->{device_keys}->{$user2_id}->{$user2_device}, "signatures" );
