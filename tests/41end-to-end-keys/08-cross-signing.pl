@@ -686,9 +686,9 @@ test "uploading signed devices gets propagated over federation",
             # Wait until user1 sees signatures uploaded by user2.
             # We repeat_until_true because this is sensitive to replication delays.
             matrix_get_e2e_keys( $user1, $user2_id )
-            ->then(sub {
+            ->then( sub {
                my ( $content ) = @_;
-               if ( exists $content->{device_keys}->{$user2_id}->{$user2_device}->{"signatures"}) {
+               if ( exists $content->{device_keys}->{$user2_id}->{$user2_device}->{"signatures"} ) {
                   return $content;
                }
             });
