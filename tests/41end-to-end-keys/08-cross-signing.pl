@@ -688,7 +688,7 @@ test "uploading signed devices gets propagated over federation",
             matrix_get_e2e_keys( $user1, $user2_id )->then( sub {
                my ( $content ) = @_;
                log_if_fail "key query content2", $content;
-               $content->{device_keys}->{$user2_id}->{$user2_device}->{"signatures"}
+               $content->{device_keys}{$user2_id}{$user2_device}{"signatures"}
                   or die "No 'signatures' key present";
                Future->done( $content );
             });
