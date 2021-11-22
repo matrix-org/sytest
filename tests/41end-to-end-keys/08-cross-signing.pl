@@ -680,8 +680,6 @@ test "uploading signed devices gets propagated over federation",
              }
          } );
       })->then( sub {
-         sync_until_user_in_device_list( $user1, $user2 );
-      })->then( sub {
          retry_until_success {
             # Wait until user1 sees signatures uploaded by user2.
             # We retry_until_success because this is sensitive to replication delays.
