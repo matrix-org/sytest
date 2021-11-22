@@ -167,16 +167,13 @@ sub _get_config
       },
 
       federation_api => {
-         federation_certificates => [$self->{paths}{tls_cert}],
-      },
-
-      federation_sender => {
          database => {
              connection_string => 
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/federation_sender.db" : $db_uri,
          },
          disable_tls_validation => $JSON::true,
+         federation_certificates => [$self->{paths}{tls_cert}],
       },
 
       key_server => {
@@ -210,14 +207,6 @@ sub _get_config
             connection_string => 
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/room_server.db" : $db_uri,
-         },
-      },
-
-      signing_key_server => {
-         database => {
-            connection_string => 
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/signingkeyserver.db" : $db_uri,
          },
       },
 
