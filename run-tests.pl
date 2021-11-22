@@ -462,8 +462,8 @@ sub retry_until_success(&%)
 # value. If the block fails entirely then it aborts, does not retry.
 sub repeat_until_true(&)
 {
-  warnings::warnif("deprecated",
-     "repeat_until_true is deprecated, use retry_until_success instead");
+   warnings::warnif( "deprecated",
+      "repeat_until_true is deprecated, use retry_until_success instead" );
    my ( $code ) = @_;
 
    my $delay = 0.1;
