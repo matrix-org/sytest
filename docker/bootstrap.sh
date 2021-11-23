@@ -17,8 +17,6 @@ else
     # Synapse/Dendrite branch we're running
     if [ -n "$SYTEST_BRANCH" ]; then
         branch_name="$SYTEST_BRANCH"
-    elif [ -n "$BUILDKITE_BRANCH" ]; then
-        branch_name="$BUILDKITE_BRANCH"
     else
         # Otherwise, try and find the branch that the Synapse/Dendrite checkout
         # is using. Fall back to develop if unknown.
