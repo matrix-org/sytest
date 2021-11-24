@@ -680,13 +680,30 @@ test "uploading signed devices gets propagated over federation",
              }
          } );
       })->then( sub {
-         sync_until_user_in_device_list( $user1, $user2 );
-      })->then( sub {
-         matrix_get_e2e_keys( $user1, $user2_id );
+         retry_until_success {
+            # Wait until user1 sees signatures uploaded by user2. It's _not_ sufficient
+            # to just wait for user2's device to become visible to user1.
+            #
+            # On server1 hosting user 2:
+            #
+            #     user2 joins a room
+            #     user2 uploads signatures
+            #
+            # On server0, user1 syncs until they see user2's device. This is racey: the
+            # sync may complete before the signatures have uploaded, propagated over
+            # federation to server 1 and then over replication to the sync worker.
+            matrix_get_e2e_keys( $user1, $user2_id )->then( sub {
+               my ( $content ) = @_;
+               log_if_fail "key query content2", $content;
+               $content->{device_keys}{$user2_id}{$user2_device}{"signatures"}
+                  or die "No 'signatures' key present";
+               Future->done( $content );
+            });
+         };
       })->then( sub {
          my ( $content ) = @_;
 
-         log_if_fail "key query content2", $content;
+         log_if_fail "key query content3", $content;
 
          # Check that fetching the devices again returns the new signature
          assert_json_keys( $content->{device_keys}->{$user2_id}->{$user2_device}, "signatures" );
@@ -739,7 +756,7 @@ sub matrix_upload_signatures {
    do_request_json_for(
       $user,
       method  => "POST",
-      uri     => "/unstable/keys/signatures/upload",
+      uri     => "/unstable/keys/signatures/upload", # available under /v3/ for matrix 1.1
       content => $signatures,
    );
 }
