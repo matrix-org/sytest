@@ -105,7 +105,7 @@ sub _get_config
          kafka => {
             use_naffka => $JSON::true,
             naffka_database => {
-               connection_string => 
+               connection_string =>
                    ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                    "file:$self->{hs_dir}/naffka.db" : $db_uri,
             },
@@ -122,7 +122,7 @@ sub _get_config
 
       app_service_api => {
          database => {
-            connection_string => 
+            connection_string =>
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/appservice_api.db" : $db_uri,
          },
@@ -132,7 +132,7 @@ sub _get_config
 
       client_api => {
          database => {
-            connection_string => 
+            connection_string =>
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/client_api.db" : $db_uri,
          },
@@ -155,7 +155,7 @@ sub _get_config
 
       current_state_server => {
           database => {
-             connection_string => 
+             connection_string =>
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/current_state_server.db" : $db_uri,
           },
@@ -167,7 +167,7 @@ sub _get_config
 
       federation_sender => {
          database => {
-             connection_string => 
+             connection_string =>
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/federation_sender.db" : $db_uri,
          },
@@ -176,7 +176,7 @@ sub _get_config
 
       key_server => {
          database => {
-             connection_string => 
+             connection_string =>
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/key_server.db" : $db_uri,
          },
@@ -184,7 +184,7 @@ sub _get_config
 
       media_api => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/media_api.db" : $db_uri,
          },
@@ -193,16 +193,20 @@ sub _get_config
 
       mscs => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/mscs.db" : $db_uri,
          },
          mscs => ["msc2836", "msc2946", "msc2444", "msc2753"],
       },
 
+      push_server => {
+         disable_tls_validation => $JSON::true,
+      },
+
       room_server => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/room_server.db" : $db_uri,
          },
@@ -210,7 +214,7 @@ sub _get_config
 
       signing_key_server => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/signingkeyserver.db" : $db_uri,
          },
@@ -218,7 +222,7 @@ sub _get_config
 
       sync_api => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/sync_api.db" : $db_uri,
          },
@@ -226,12 +230,12 @@ sub _get_config
 
       user_api => {
          account_database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/accounts.db" : $db_uri,
          },
          device_database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/devices.db" : $db_uri,
          },
@@ -244,7 +248,7 @@ sub _get_config
 
       push_server => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/push_server.db" : $db_uri,
          },
