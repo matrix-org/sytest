@@ -266,6 +266,7 @@ sub start
         update_user_directory => ( not $self->{workers} ),
         enable_media_repo     => ( not $self->{workers} ),
         run_background_tasks_on  => ( $self->{workers} ? "background_worker1" : "master" ),
+        worker_to_update_user_directory  => ( $self->{workers} ? "user_dir1" : "null" ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
