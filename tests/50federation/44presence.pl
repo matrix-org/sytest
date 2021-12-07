@@ -1,7 +1,6 @@
 use Future::Utils qw( repeat );
 
 multi_test "New federated private chats get full presence information (SYN-115)",
-   # TODO: deprecated endpoint used in this test
    requires => [ local_user_fixture(), remote_user_fixture( with_events => 1 ),
                  qw( can_create_private_room )],
 
@@ -29,15 +28,12 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       })->then( sub {
 
          # Bob should receive the invite
-         await_event_for( $bob, filter => sub {
-            my ( $event ) = @_;
-            return unless $event->{type} eq "m.room.member" and
-                          $event->{room_id} eq $room_id and
-                          $event->{state_key} eq $bob->user_id and
-                          $event->{content}{membership} eq "invite";
+         await_sync( $bob, check => sub {
+            my ( $body ) = @_;
 
-            return 1;
-         })->SyTest::pass_on_done( "Received invite" )
+            return 0 unless exists $body->{rooms}{invite}{$room_id};
+            return $body->{rooms}{invite}{$room_id};
+         })->SyTest::pass_on_done( "Bob received invite" ),
       })->then( sub {
 
          # Bob accepts the invite by joining the room
@@ -54,22 +50,18 @@ multi_test "New federated private chats get full presence information (SYN-115)"
             my %presence_by_userid;
 
             my $f = repeat {
-               my $is_initial = !$_[0];
 
-               do_request_json_for( $user,
-                  method => "GET",
-                  uri    => $is_initial ? "/r0/initialSync" : "/r0/events",
-                  params => { from => $user->eventstream_token, timeout => 500 * $TIMEOUT_FACTOR }
-               )->then( sub {
+               await_sync_presence_contains( $user, check => sub {
+                  my ( $event ) = @_;
+                  return unless $event->{type} eq "m.presence";
+                  return 1;
+               })->then( sub {
                   my ( $body ) = @_;
-                  $user->eventstream_token = $body->{end};
-
-                  my @presence = $is_initial
-                     ? @{ $body->{presence} }
-                     : grep { $_->{type} eq "m.presence" } @{ $body->{chunk} };
+                  my @presence = @{ $body->{presence}{events} };
 
                   foreach my $event ( @presence ) {
-                     my $user_id = $event->{content}{user_id};
+                     
+                     my $user_id = $event->{sender};
                      pass "User ${\$user->user_id} received presence for $user_id";
                      $presence_by_userid{$user_id} = $event;
                   }

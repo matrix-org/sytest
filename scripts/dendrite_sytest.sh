@@ -43,7 +43,7 @@ echo >&2 "+++ Running tests"
 
 TEST_STATUS=0
 mkdir -p /logs
-./run-tests.pl -I Dendrite::Monolith -d $GOBIN -W /src/sytest-whitelist -O tap --all \
+./run-tests.pl -I Dendrite::Monolith -d $GOBIN -W /src/sytest-whitelist -B /src/sytest-blacklist -O tap --all \
     --work-directory="/work" --exclude-deprecated \
     "$@" > /logs/results.tap &
 pid=$!
@@ -61,14 +61,16 @@ fi
 
 # Check for new tests to be added to the test whitelist
 /src/show-expected-fail-tests.sh /logs/results.tap /src/sytest-whitelist \
-    /src/sytest-blacklist > /work/show_expected_fail_tests_output.txt || TEST_STATUS=$?
+    /src/sytest-blacklist | tee /work/show_expected_fail_tests_output.txt || TEST_STATUS=$?
 
 echo >&2 "--- Copying assets"
 
 # Copy out the logs
 rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+find /logs | xargs -r chmod go+rX
 
-if [ $TEST_STATUS -ne 0 ]; then
+# Generate annotate.md. This is Buildkite-specific.
+if [ -n "$BUILDKITE_LABEL" ] && [ $TEST_STATUS -ne 0 ]; then
     # Build the annotation
     perl /sytest/scripts/format_tap.pl /logs/results.tap "$BUILDKITE_LABEL" >/logs/annotate.md
     # If show-expected-fail-tests logged something, put it into the annotation
