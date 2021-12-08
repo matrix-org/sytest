@@ -263,9 +263,12 @@ sub start
         start_pushers         => ( not $self->{workers} ),
         notify_appservices    => ( not $self->{workers} ),
         send_federation       => ( not $self->{workers} ),
-        update_user_directory => ( not $self->{workers} ),
         enable_media_repo     => ( not $self->{workers} ),
         run_background_tasks_on  => ( $self->{workers} ? "background_worker1" : "master" ),
+        worker_to_update_user_directory  => ( $self->{workers} ? "user_dir" : "null" ),
+        # update_user_directory is kept for backwards compatibility,
+        # worker_to_update_user_directory is prioritized before this option.
+        update_user_directory => ( not $self->{workers} ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
