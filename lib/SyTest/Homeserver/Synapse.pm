@@ -265,7 +265,7 @@ sub start
         send_federation       => ( not $self->{workers} ),
         enable_media_repo     => ( not $self->{workers} ),
         run_background_tasks_on  => ( $self->{workers} ? "background_worker1" : "master" ),
-        worker_to_update_user_directory  => ( $self->{workers} ? "user_dir" : "null" ),
+        worker_to_update_user_directory  => ( $self->{workers} ? "user_dir" : undef ),
         # update_user_directory is kept for backwards compatibility,
         # worker_to_update_user_directory is prioritized before this option.
         update_user_directory => ( not $self->{workers} ),
