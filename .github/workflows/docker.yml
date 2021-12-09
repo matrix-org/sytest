@@ -7,6 +7,9 @@ on:
     branches: [ develop ]
   workflow_dispatch:
 
+env:
+  PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7
+
 permissions:
   contents: read
 
@@ -28,6 +31,9 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v1
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
       - name: Inspect builder
         run: docker buildx inspect
 
@@ -46,6 +52,7 @@ jobs:
           file: docker/base.Dockerfile
           build-args: "BASE_IMAGE=${{ matrix.base_image }}"
           tags: matrixdotorg/sytest:${{ matrix.tag }}
+          platforms: ${{ env.PLATFORMS }}
 
   build-dependent-images:
     needs: build-sytest-images
@@ -65,12 +72,15 @@ jobs:
             tags: "matrixdotorg/sytest-synapse:testing"
           - sytest_image_tag: buster
             dockerfile: dendrite
-            tags: "matrixdotorg/sytest-dendrite:go113,matrixdotorg/sytest-dendrite:latest"
+            tags: "matrixdotorg/sytest-dendrite:latest"
 
     steps:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
 
       - name: Inspect builder
         run: docker buildx inspect
@@ -90,3 +100,4 @@ jobs:
           file: docker/${{ matrix.dockerfile }}.Dockerfile
           build-args: "SYTEST_IMAGE_TAG=${{ matrix.sytest_image_tag }}"
           tags: ${{ matrix.tags }}
+          platforms: ${{ env.PLATFORMS }}
