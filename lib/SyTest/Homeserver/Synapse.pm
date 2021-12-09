@@ -266,7 +266,7 @@ sub start
         enable_media_repo     => ( not $self->{workers} ),
         run_background_tasks_on  => ( $self->{workers} ? "background_worker1" : "master" ),
         $self->{workers} ? (
-            worker_to_update_user_directory  => "user_dir",
+            update_user_directory_on  => "user_dir",
         ) : (),
         # update_user_directory is kept for backwards compatibility,
         # worker_to_update_user_directory is prioritized before this option.
