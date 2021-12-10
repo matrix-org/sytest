@@ -102,6 +102,11 @@ sub _get_config
          private_key => $self->{paths}{matrix_key},
          presence_enabled => $JSON::true,
 
+         jetstream => {
+             storage_path => $self->{hs_dir},
+             in_memory => $JSON::true,
+         },
+
          kafka => {
             use_naffka => $JSON::true,
             naffka_database => {
@@ -162,16 +167,13 @@ sub _get_config
       },
 
       federation_api => {
-         federation_certificates => [$self->{paths}{tls_cert}],
-      },
-
-      federation_sender => {
          database => {
              connection_string =>
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/federation_sender.db" : $db_uri,
          },
          disable_tls_validation => $JSON::true,
+         federation_certificates => [$self->{paths}{tls_cert}],
       },
 
       key_server => {
@@ -212,14 +214,6 @@ sub _get_config
          },
       },
 
-      signing_key_server => {
-         database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/signingkeyserver.db" : $db_uri,
-         },
-      },
-
       sync_api => {
          database => {
             connection_string =>
@@ -243,6 +237,18 @@ sub _get_config
             connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/presence.db" : $db_uri,
+         },
+         threepid_database => {
+            connection_string => 
+               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
+               "file:$self->{hs_dir}/threepids.db" : $db_uri,
+         },
+         email => {
+            enabled => JSON::true,
+            from => 'synapse@localhost',
+            smtp => {
+               host => $self->{smtp_server_config}->{host} . ':' . $self->{smtp_server_config}->{port},
+            },
          },
       },
 
