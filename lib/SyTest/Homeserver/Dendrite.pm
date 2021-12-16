@@ -202,10 +202,6 @@ sub _get_config
          mscs => ["msc2836", "msc2946", "msc2444", "msc2753"],
       },
 
-      push_server => {
-         disable_tls_validation => $JSON::true,
-      },
-
       room_server => {
          database => {
             connection_string =>
@@ -253,6 +249,7 @@ sub _get_config
       },
 
       push_server => {
+         disable_tls_validation => $JSON::true,
          database => {
             connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
