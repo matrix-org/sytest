@@ -20,15 +20,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: Py 3.6, SQLite 3.22.0, Monolith
-            sytest-tag: bionic
+          - label: Py 3.9, SQLite 3.31.1, Monolith
+            sytest-tag: focal
 
-          - label: Py 3.6, PG 10, Monolith
-            sytest-tag: bionic
+          - label: Py 3.9, PG 12, Monolith
+            sytest-tag: focal
             postgres: postgres
 
-          - label: Py 3.6, PG 10, Workers
-            sytest-tag: bionic
+          - label: Py 3.9, PG 12, Workers
+            sytest-tag: focal
             postgres: postgres
             workers: workers
 
