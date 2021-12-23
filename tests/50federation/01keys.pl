@@ -1,10 +1,7 @@
 use List::Util qw( first );
-
-use Crypt::NaCl::Sodium;
-
+use Crypt::Ed25519;
 use Protocol::Matrix qw( encode_json_for_signing sign_json encode_base64_unpadded );
-
-my $crypto_sign = Crypt::NaCl::Sodium->sign;
+use SyTest::Crypto qw( ed25519_nacl_keypair );
 
 test "Federation key API allows unsigned requests for keys",
    requires => [ $main::HOMESERVER_INFO[0], $main::HTTP_CLIENT ],
@@ -65,7 +62,7 @@ test "Federation key API allows unsigned requests for keys",
 
          log_if_fail "Signed bytes", $signed_bytes ;
 
-         $crypto_sign->verify( $signature, $signed_bytes, $key ) or
+         Crypt::Ed25519::verify( $signed_bytes, $key, $signature ) or
             die "Signature verification failed";
 
          # old_verify_keys is mandatory, even if it's empty
@@ -157,7 +154,7 @@ foreach my $method (keys %FETCHERS) {
             )->then( sub {
                my ( $server_key ) = @_;
 
-               $crypto_sign->verify( $signature, $signed_bytes, $server_key ) or
+               Crypt::Ed25519::verify( $signed_bytes, $server_key, $signature ) or
                   die "Signature verification failed";
 
                Future->done(1);
@@ -173,7 +170,7 @@ test "Key notary server should return an expired key if it can't find any others
       my ( $notary_server, $http_client, $http_server ) = @_;
       my $test_server_name = $http_server->server_name;
 
-      my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
+      my ( $pkey, $skey ) = ed25519_nacl_keypair;
       my $key_id = "ed25519:key_0";
       my $key_expiry = int(( time - 86400 ) * 1000); # -24h in msec
       my $key_response = build_key_response(
@@ -280,7 +277,7 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
       # origin server, and key_2, which is just used to sign an itermediate
       # response.
 
-      my ( $pkey1, $skey1 ) = Crypt::NaCl::Sodium->sign->keypair;
+      my ( $pkey1, $skey1 ) = ed25519_nacl_keypair;
       my $key_id_1 = "ed25519:key_1";
       my $key1_expiry = int(( time - 86400 ) * 1000); # -24h in msec
 
@@ -324,7 +321,7 @@ test "Key notary server must not overwrite a valid key with a spurious result fr
 
                log_if_fail "Request 2 from notary server: " . $request->method . " " . $request->path;
 
-               my ( $pkey2, $skey2 ) = Crypt::NaCl::Sodium->sign->keypair;
+               my ( $pkey2, $skey2 ) = ed25519_nacl_keypair;
                $request->respond_json( build_key_response(
                   server_name => $test_server_name,
                   key => $skey2,

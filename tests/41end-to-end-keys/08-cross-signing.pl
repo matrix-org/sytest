@@ -1,8 +1,6 @@
-use Crypt::NaCl::Sodium;
+use SyTest::Crypto qw( ed25519_nacl_keypair );
 use MIME::Base64;
 use Protocol::Matrix qw( sign_json );
-
-my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 test "Can upload self-signing keys",
    requires => [ local_user_fixture() ],
@@ -109,8 +107,8 @@ test "Changing master key notifies local users",
       my $user_id = $user1->user_id;
       my $device_id = $user1->device_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
-      my ( $self_signing_pubkey, $self_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $self_signing_pubkey, $self_signing_secret_key ) = ed25519_nacl_keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
       my $cross_signature;
 
       matrix_sync( $user1 )->then(sub {
@@ -259,9 +257,9 @@ test "Changing user-signing key notifies local users",
       my $device_id = $user1->device_id;
       my $user2_id = $user2->user_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
-      my ( $self_signing_pubkey, $self_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
-      my ( $user_signing_pubkey, $user_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "4TL4AjRYwDVwD3pqQzcor+ez/euOB1/q78aTJ+czDNs" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $self_signing_pubkey, $self_signing_secret_key ) = ed25519_nacl_keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
+      my ( $user_signing_pubkey, $user_signing_secret_key ) = ed25519_nacl_keypair( decode_base64( "4TL4AjRYwDVwD3pqQzcor+ez/euOB1/q78aTJ+czDNs" ) );
       my $cross_signature;
 
       matrix_sync( $user1 )->then(sub {
@@ -422,7 +420,7 @@ test "can fetch self-signing keys over federation",
 
       my $user2_id = $user2->user_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
       my $self_signing_key = {
          # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
          "user_id" => $user2_id,
@@ -493,7 +491,7 @@ test "uploading self-signing key notifies over federation",
 
       my $room_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
       my $self_signing_key = {
          # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
          "user_id" => $user2_id,
@@ -592,8 +590,8 @@ test "uploading signed devices gets propagated over federation",
 
       my $room_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
-      my ( $self_signing_pubkey, $self_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $self_signing_pubkey, $self_signing_secret_key ) = ed25519_nacl_keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
       my $self_signing_key = {
          # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
          "user_id" => $user2_id,
