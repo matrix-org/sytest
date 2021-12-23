@@ -16,6 +16,8 @@ requires 'Alien::Sodium', '<2.0', 'AJGB/Alien-Sodium-1.0.8.0.tar.gz';
 #
 requires 'Crypt::NaCl::Sodium';
 
+requires 'Crypt::Ed25519';
+
 requires 'Data::Dump';
 
 # DBD::Pg fails to install if DBI is not already installed before we start.

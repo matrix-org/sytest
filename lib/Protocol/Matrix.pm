@@ -9,11 +9,11 @@ use strict;
 use warnings;
 use 5.014; # s///r
 
-our $VERSION = '0.02';
+our $VERSION = '0.02.sytest20211223';
 
 use Carp;
 
-use Crypt::NaCl::Sodium;
+use Crypt::Ed25519;
 use Digest::SHA qw( sha256 );
 use JSON;
 use MIME::Base64 qw( encode_base64 decode_base64 );
@@ -32,8 +32,6 @@ our @EXPORT_OK = qw(
    sign_event_json signed_event_json
    verify_event_json_signature
 );
-
-my $sign = Crypt::NaCl::Sodium->sign;
 
 my $json_canon = JSON->new
                      ->convert_blessed
@@ -106,12 +104,25 @@ character string. This is re-exported from L<MIME::Base64> for convenience.
 
    sign_json( $data, secret_key => $key, origin => $name, key_id => $id )
 
+or:
+
+   sign_json( $data,
+      eddsa_secret_key => $secret_key,
+      eddsa_public_key => $public_key,
+      origin => $name,
+      key_id => $id,
+   )
+
 Modifies the given HASH reference in-place to add a signature. This signature
 is created from the given key, and annotated as being from the given origin
 name and key ID. Existing signatures already in the hash are not disturbed.
 
-The C<$key> should be a plain byte string or L<Data::Locker> object obtained
-from L<Crypt::NaCl::Sodium::sign>'s C<keypair> method.
+The key can be specified in one of two ways: either with C<secret_key>, in
+which case the C<$key> should be a plain byte string or L<Data::Locker> object
+obtained from L<Crypt::NaCl::Sodium::sign>'s C<keypair> method; or with
+C<eddsa_secret_key> with a key returned by
+L<Crypt::Ed25519::eddsa_secret_key>. In the latter case C<eddsa_public_key> is
+optional, and the public key will be derived if not given.
 
 =cut
 
@@ -119,12 +130,26 @@ sub sign_json
 {
    my ( $data, %args ) = @_;
 
-   my $key = $args{secret_key} or croak "Require a 'secret_key'";
-
    my $origin = $args{origin} or croak "Require an 'origin'";
    my $key_id = $args{key_id} or croak "Require a 'key_id'";
 
-   my $signature = $sign->mac( encode_json_for_signing( $data ), $key );
+   my ( $secret_key, $public_key );
+   if( exists $args{secret_key} ) {
+      my $key = $args{secret_key};
+
+      # libsodium's "private keys" are actually 64-byte tuples of (seed, public key).
+      # fish them out for use with eddsa_sign.
+      length( $key ) == 64 or croak "secret_key must be 64 bytes";
+      $secret_key = substr( $key, 0, 32 );
+      $public_key = substr( $key, 32, 32 );
+   } elsif( exists $args{eddsa_secret_key} ) {
+      $secret_key = $args{eddsa_secret_key};
+      $public_key = $args{eddsa_public_key} // Crypt::Ed25519::eddsa_public_key( $secret_key );
+   } else {
+       croak "Require a secret key";
+   }
+
+   my $signature = Crypt::Ed25519::eddsa_sign( encode_json_for_signing( $data ), $public_key, $secret_key );
 
    $data->{signatures}{$origin}{$key_id} = encode_base64_unpadded( $signature );
 }
@@ -175,7 +200,14 @@ sub verify_json_signature
    my $signature = $data->{signatures}{$origin}{$key_id} or
       croak "No signature from '$origin' using key '$key_id'";
 
-   $sign->verify( decode_base64( $signature ), encode_json_for_signing( $data ), $key ) or
+   my $decoded = decode_base64( $signature );
+
+   # Crypt::Ed25519::verify ignores garbage at the end of the
+   # signature, so let's check that now.
+   length( $decoded ) == 64 or
+     croak "Invalid signature";
+
+   Crypt::Ed25519::verify( encode_json_for_signing( $data ), $key, $decoded ) or
       croak "Signature verification failed";
 }
 
@@ -247,7 +279,7 @@ sub redacted_event
 
 =head2 sign_event_json
 
-   sign_event_json( $data, secret_key => $key, origin => $name, key_id => $id )
+   sign_event_json( $data, ... )
 
 Modifies the given HASH reference in-place to add a hash and signature,
 presuming it to be a Matrix event structure. This operates in a fashion
@@ -258,8 +290,6 @@ analogous to L</sign_json>.
 sub sign_event_json
 {
    my ( $event, %args ) = @_;
-
-   my $key = $args{secret_key} or croak "Require a 'secret_key'";
 
    my $origin = $args{origin} or croak "Require an 'origin'";
    my $key_id = $args{key_id} or croak "Require a 'key_id'";
