@@ -368,7 +368,8 @@ sub build_key_response {
    my $skey = $params{key};
    my $expiry = $params{valid_until_ts};
 
-   my $pkey = Crypt::NaCl::Sodium->sign->public_key( $skey );
+   # libsodium's "private keys" are actually 64-byte tuples of (seed, public key).
+   my $pkey = substr( $skey, 32, 32);
 
    my $response = {
       server_name => $server_name,
