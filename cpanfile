@@ -36,6 +36,7 @@ requires 'File::Slurper';
 # Future 0.45 allows you to return immediate values from sequence functions.
 requires 'Future', '>= 0.45';
 requires 'Getopt::Long';
+requires 'HTTP::Request';
 requires 'IO::Async', '>= 0.69';
 requires 'IO::Async::SSL';
 requires 'IO::Socket::IP', '>= 0.04';
@@ -54,7 +55,6 @@ requires 'Module::Pluggable';
 requires 'Net::Async::HTTP', '>= 0.39';
 requires 'Net::Async::HTTP::Server', '>= 0.09';
 requires 'Net::SSLeay', '>= 1.59';
-requires 'Protocol::Matrix', '>= 0.02';
 requires 'Struct::Dumb', '>= 0.04';
 requires 'URI::Escape';
 requires 'YAML::XS';
