@@ -1,20 +1,6 @@
 # vim:ft=perl
 
-# Sodium won't install without this.
-requires 'Alien::Base::ModuleBuild';
-
 requires 'Class::Method::Modifiers';
-
-# workaround for https://github.com/matrix-org/sytest/issues/942:
-# Crypt::NaCl::Sodium won't install with Alien::Sodium 2.0.
-requires 'Alien::Sodium', '<2.0', 'AJGB/Alien-Sodium-1.0.8.0.tar.gz';
-
-# this can be a pain to install.
-#
-# We used to have a libcrypt-nacl-sodium-perl deb, but it was only built for
-# perl 5.14.2.
-#
-requires 'Crypt::NaCl::Sodium';
 
 requires 'Crypt::Ed25519';
 
