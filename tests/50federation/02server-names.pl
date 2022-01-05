@@ -1,3 +1,5 @@
+use SyTest::Crypto qw( ed25519_nacl_keypair );
+
 # check that the rules around server_names are enforced
 
 test "Non-numeric ports in server names are rejected",
@@ -6,7 +8,7 @@ test "Non-numeric ports in server names are rejected",
    do => sub {
       my ( $info, $user ) = @_;
 
-      my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
+      my ( $pkey, $skey ) = ed25519_nacl_keypair;
 
       my $datastore = SyTest::Federation::Datastore->new(
          server_name => "localhost:http",

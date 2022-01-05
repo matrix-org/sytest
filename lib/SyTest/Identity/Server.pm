@@ -5,7 +5,7 @@ use warnings;
 
 use base qw( Net::Async::HTTP::Server );
 
-use Crypt::NaCl::Sodium;
+use SyTest::Crypto qw( ed25519_nacl_keypair );
 use List::Util qw( any );
 use List::UtilsBy qw( extract_first_by );
 use Protocol::Matrix qw( encode_base64_unpadded sign_json );
@@ -14,8 +14,6 @@ use SyTest::HTTPServer::Request;
 use HTTP::Response;
 use Digest::SHA qw( sha256 );
 use Struct::Dumb qw( struct );
-
-my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 my $next_token = 0;
 
@@ -64,8 +62,8 @@ sub rotate_keys
 {
    my $self = shift;
 
-   ( $self->{public_key}, $self->{private_key} ) = $crypto_sign->keypair;
-   ( $self->{ephemeral_public_key}, $self->{ephemeral_private_key} ) = $crypto_sign->keypair;
+   ( $self->{public_key}, $self->{private_key} ) = ed25519_nacl_keypair;
+   ( $self->{ephemeral_public_key}, $self->{ephemeral_private_key} ) = ed25519_nacl_keypair;
 
    $self->{keys} = {
       "ed25519:0" => encode_base64_unpadded( $self->{public_key} ),
