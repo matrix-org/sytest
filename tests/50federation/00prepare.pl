@@ -5,11 +5,10 @@ Net::Async::HTTP->VERSION( '0.39' ); # ->GET with 'headers'
 
 require IO::Async::SSL;
 
-use Crypt::NaCl::Sodium;
-
 use SyTest::Federation::Datastore;
 use SyTest::Federation::Client;
 use SyTest::Federation::Server;
+use SyTest::Crypto qw( ed25519_nacl_keypair );
 
 push our @EXPORT, qw( INBOUND_SERVER OUTBOUND_CLIENT create_federation_server );
 
@@ -28,7 +27,7 @@ sub create_federation_server
       # common name.
       my $server_name = sprintf "%s:%d", $BIND_HOST, $sock->sockport;
 
-      my ( $pkey, $skey ) = Crypt::NaCl::Sodium->sign->keypair;
+      my ( $pkey, $skey ) = ed25519_nacl_keypair;
 
       my $datastore = SyTest::Federation::Datastore->new(
          server_name => $server_name,
