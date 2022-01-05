@@ -102,13 +102,17 @@ character string. This is re-exported from L<MIME::Base64> for convenience.
 
 =head2 sign_json
 
-   sign_json( $data, secret_key => $key, origin => $name, key_id => $id )
+   sign_json( $data,
+      secret_key => $sodium_secret_key,
+      origin => $name,
+      key_id => $id,
+   )
 
 or:
 
    sign_json( $data,
-      eddsa_secret_key => $secret_key,
-      eddsa_public_key => $public_key,
+      eddsa_secret_key => $eddsa_secret_key,
+      eddsa_public_key => $eddsa_public_key,
       origin => $name,
       key_id => $id,
    )
@@ -117,12 +121,24 @@ Modifies the given HASH reference in-place to add a signature. This signature
 is created from the given key, and annotated as being from the given origin
 name and key ID. Existing signatures already in the hash are not disturbed.
 
-The key can be specified in one of two ways: either with C<secret_key>, in
-which case the C<$key> should be a plain byte string or L<Data::Locker> object
-obtained from L<Crypt::NaCl::Sodium::sign>'s C<keypair> method; or with
-C<eddsa_secret_key> with a key returned by
-L<Crypt::Ed25519::eddsa_secret_key>. In the latter case C<eddsa_public_key> is
-optional, and the public key will be derived if not given.
+The key can be specified in one of two ways:
+
+=over
+
+=item
+
+For C<secret_key>, the C<$sodium_secret_key> should be a plain byte string or
+L<Data::BytesLocker> object obtained from L<Crypt::NaCl::Sodium::sign>'s
+C<keypair> method.
+
+=item
+
+Alternatively, for C<eddsa_secret_key>, the C<$eddsa_secret_key> should be a
+key returned by L<Crypt::Ed25519::eddsa_secret_key>. In this case
+C<eddsa_public_key> is optional, and the public key will be derived from the
+secret key if not given.
+
+=back
 
 =cut
 
