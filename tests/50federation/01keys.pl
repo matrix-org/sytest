@@ -57,6 +57,7 @@ test "Federation key API allows unsigned requests for keys",
 
          assert_base64_unpadded( $signature );
          $signature = decode_base64 $signature;
+         assert_eq( length( $signature ), 64, "signature length" );
 
          my $signed_bytes = encode_json_for_signing( $body );
 
@@ -145,6 +146,7 @@ foreach my $method (keys %FETCHERS) {
 
             assert_base64_unpadded( $signature_base64 );
             my $signature = decode_base64 $signature_base64;
+            assert_eq( length( $signature ), 64, "signature length" );
 
             my $signed_bytes = encode_json_for_signing( $key );
 
