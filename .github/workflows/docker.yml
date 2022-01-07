@@ -17,8 +17,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - base_image: ubuntu:bionic
-            tag: bionic
+          - base_image: ubuntu:focal
+            tag: focal
           - base_image: debian:buster
             tag: buster
           - base_image: debian:testing
@@ -54,9 +54,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - sytest_image_tag: bionic
+          - sytest_image_tag: focal
             dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:bionic"
+            tags: "matrixdotorg/sytest-synapse:focal"
           - sytest_image_tag: buster
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:buster"
