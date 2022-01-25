@@ -23,6 +23,8 @@ jobs:
             tag: buster
           - base_image: debian:testing
             tag: testing
+          - base_image: debian:bookworm
+            tag: bookworm
     steps:
       - name: Set up Docker Buildx
         id: buildx
@@ -60,6 +62,9 @@ jobs:
           - sytest_image_tag: buster
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:buster"
+          - sytest_image_tag: bookworm
+            dockerfile: synapse
+            tags: "matrixdotorg/sytest-synapse:bookworm"
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
