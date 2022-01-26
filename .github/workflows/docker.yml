@@ -62,9 +62,6 @@ jobs:
           - sytest_image_tag: buster
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:buster"
-          - sytest_image_tag: bookworm
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:bookworm"
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
@@ -95,3 +92,13 @@ jobs:
           file: docker/${{ matrix.dockerfile }}.Dockerfile
           build-args: "SYTEST_IMAGE_TAG=${{ matrix.sytest_image_tag }}"
           tags: ${{ matrix.tags }}
+
+      - name: Build and push 3.10
+          uses: docker/build-push-action@v2
+          with:
+            pull: true
+            push: true
+            labels: "gitsha1=${{ github.sha }}"
+            file: docker/synapse3_10.Dockerfile
+            build-args: "SYTEST_IMAGE_TAG=bookworm"
+            tags: "matrixdotorg/sytest-synapse:bookworm"
