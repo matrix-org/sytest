@@ -95,7 +95,7 @@ jobs:
 
   build-synapse3_10-image:
     needs: build-sytest-images
-    name: "Build sytest-synapse3_10.Dockerfile:bookworm"
+    name: "Build sytest-synapse:bookworm"
     runs-on: ubuntu-latest
 
     steps:
