@@ -94,7 +94,7 @@ jobs:
           tags: ${{ matrix.tags }}
 
       - name: Build and push 3.10
-          uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v2
           with:
             pull: true
             push: true
