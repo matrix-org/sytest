@@ -95,10 +95,10 @@ jobs:
 
       - name: Build and push 3.10
         uses: docker/build-push-action@v2
-          with:
-            pull: true
-            push: true
-            labels: "gitsha1=${{ github.sha }}"
-            file: docker/synapse3_10.Dockerfile
-            build-args: "SYTEST_IMAGE_TAG=bookworm"
-            tags: "matrixdotorg/sytest-synapse:bookworm"
+        with:
+          pull: true
+          push: true
+          labels: "gitsha1=${{ github.sha }}"
+          file: docker/synapse3_10.Dockerfile
+          build-args: "SYTEST_IMAGE_TAG=bookworm"
+          tags: "matrixdotorg/sytest-synapse:bookworm"
