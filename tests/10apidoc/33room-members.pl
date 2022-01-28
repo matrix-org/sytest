@@ -479,21 +479,15 @@ sub matrix_create_and_join_room
    })->then( sub {
       # Best not to join remote users concurrently because of
       #   https://matrix.org/jira/browse/SYN-318
-      my %members_by_server = partition_by { $_->http } @other_members;
-
-      my @local_members = @{ delete $members_by_server{ $creator->http } // [] };
-      my @remote_members = map { @$_ } values %members_by_server;
-
+      # Also best not to join users concurrently AT ALL because it is inherently racey, particularly
+      # over federation. The DAG can fork if local/remote users join concurrently because the
+      # make_join can be given the same prev_events as the local ongoing join, resulting in a later
+      # send_join which has those prev_events set and NOT the local join as the prev_events.
       Future->needs_all(
          ( fmap {
             my $user = shift;
             matrix_join_room_synced( $user, $room_alias_fullname )
-         } foreach => \@remote_members ),
-
-         map {
-            my $user = $_;
-            matrix_join_room_synced( $user, $room_alias_fullname )
-         } @local_members,
+         } foreach => \@other_members ),
       )
    })->then( sub {
       log_if_fail "Created room_id=$room_id";
