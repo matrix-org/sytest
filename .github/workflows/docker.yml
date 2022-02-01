@@ -93,9 +93,9 @@ jobs:
           build-args: "SYTEST_IMAGE_TAG=${{ matrix.sytest_image_tag }}"
           tags: ${{ matrix.tags }}
 
-  build-synapse3_10-image:
+build-synapse3_10-image:
     needs: build-sytest-images
-    name: "Build sytest-synapse:bookworm"
+    name: "Build sytest-synapse:bookworm-python3.10"
     runs-on: ubuntu-latest
 
     steps:
@@ -112,12 +112,14 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Build and push 3.10
+      - name: Build and push py3.10 image
         uses: docker/build-push-action@v2
         with:
           pull: true
           push: true
           labels: "gitsha1=${{ github.sha }}"
           file: docker/synapse3_10.Dockerfile
-          build-args: "SYTEST_IMAGE_TAG=bookworm"
-          tags: "matrixdotorg/sytest-synapse:bookworm"
+          build-args: |
+            "SYTEST_IMAGE_TAG=bookworm-python3.10"
+            "PYTHON_VERSION=python3.10"
+          tags: "matrixdotorg/sytest-synapse:bookworm-python3.10"
