@@ -118,7 +118,7 @@ jobs:
           pull: true
           push: true
           labels: "gitsha1=${{ github.sha }}"
-          file: docker/synapse3_10.Dockerfile
+          file: docker/synapse.Dockerfile
           build-args: |
             "SYTEST_IMAGE_TAG=bookworm-python3.10"
             "PYTHON_VERSION=python3.10"
