@@ -93,7 +93,7 @@ jobs:
           build-args: "SYTEST_IMAGE_TAG=${{ matrix.sytest_image_tag }}"
           tags: ${{ matrix.tags }}
 
-build-synapse3_10-image:
+  build-synapse3_10-image:
     needs: build-sytest-images
     name: "Build sytest-synapse:bookworm-python3.10"
     runs-on: ubuntu-latest
