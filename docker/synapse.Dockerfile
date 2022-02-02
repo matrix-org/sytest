@@ -5,6 +5,9 @@ ARG PYTHON_VERSION_VENV=python3-venv
 
 FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
+ARG PYTHON_VERSION
+ARG PYTHON_VERSION_DEV
+ARG PYTHON_VERSION_VENV
 RUN apt-get -qq update && apt-get -qq install -y \
     ${PYTHON_VERSION} ${PYTHON_VERSION_DEV} ${PYTHON_VERSION_VENV} eatmydata \
     redis-server
