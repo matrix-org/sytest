@@ -122,4 +122,6 @@ jobs:
           build-args: |
             "SYTEST_IMAGE_TAG=bookworm"
             "PYTHON_VERSION=python3.10"
+            "PYTHON_VERSION_DEV=python3-dev"
+            "PYTHON_VERSION_VENV=python3-venv"
           tags: "matrixdotorg/sytest-synapse:bookworm-python3.10"

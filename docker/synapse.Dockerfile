@@ -1,10 +1,12 @@
 ARG SYTEST_IMAGE_TAG=buster
 ARG PYTHON_VERSION=python3
+ARG PYTHON_VERSION_DEV=python3-dev
+ARG PYTHON_VERSION_VENV=python3-venv
 
 FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
 RUN apt-get -qq update && apt-get -qq install -y \
-    $PYTHON_VERSION $PYTHON_VERSION-dev $PYTHON_VERSION-venv eatmydata \
+    ${PYTHON_VERSION} ${PYTHON_VERSION_DEV} ${PYTHON_VERSION_VENV} eatmydata \
     redis-server
 
 # /src is where we expect Synapse to be
