@@ -14,7 +14,7 @@ RUN mkdir /src
 
 # Create the virutal env upfront so we don't need to keep reinstall dependencies
 # Manually upgrade pip to ensure it can locate Cryptography's binary wheels
-RUN $PYTHON_VERSION -m venv /venv && /venv/bin/pip install -U pip
+RUN ${PYTHON_VERSION} -m venv /venv && /venv/bin/pip install -U pip
 RUN /venv/bin/pip install -q --no-cache-dir matrix-synapse[all]
 RUN /venv/bin/pip install -q --no-cache-dir lxml psycopg2 coverage codecov
 
