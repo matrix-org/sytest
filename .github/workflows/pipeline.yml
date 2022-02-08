@@ -33,11 +33,11 @@ jobs:
             workers: workers
 
           - label: Py 3.10, PG 14, Monolith
-            sytest-tag: bookworm
+            sytest-tag: bookworm-python3.10
             postgres: postgres
 
           - label: Py 3.10, PG 14, Workers
-            sytest-tag: bookworm
+            sytest-tag: bookworm-python3.10
             postgres: postgres
             workers: workers
 
