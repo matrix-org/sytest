@@ -1350,14 +1350,13 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|unstable)/profile/                                      event_creator
 ^/_matrix/client/(api/v1|r0|unstable)/createRoom                                    event_creator
 
-^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/typing          stream_writer
-
 EOCONFIG
 
    # Some things can only be moved off master when using redis.
    if ( $self->{redis_host} ne '' ) {
       $haproxy_map .= <<'EOCONFIG';
 
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/typing     stream_writer
 ^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          stream_writer
 ^/_matrix/client/(api/v1|r0|unstable)/.*/tags                stream_writer
 ^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        stream_writer
