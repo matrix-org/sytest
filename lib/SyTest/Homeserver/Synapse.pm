@@ -332,6 +332,7 @@ sub start
            account_data => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            receipts     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            presence     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           typing       => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -1355,8 +1356,9 @@ EOCONFIG
    if ( $self->{redis_host} ne '' ) {
       $haproxy_map .= <<'EOCONFIG';
 
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/typing     stream_writer
 ^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/tag           stream_writer
+^/_matrix/client/(api/v1|r0|unstable)/.*/tags                stream_writer
 ^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        stream_writer
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       stream_writer
 ^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  stream_writer
