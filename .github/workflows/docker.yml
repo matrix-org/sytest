@@ -23,6 +23,8 @@ jobs:
             tag: buster
           - base_image: debian:testing
             tag: testing
+          - base_image: debian:bookworm
+            tag: bookworm
     steps:
       - name: Set up Docker Buildx
         id: buildx
@@ -57,15 +59,25 @@ jobs:
           - sytest_image_tag: focal
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:focal"
+            build_args: "SYTEST_IMAGE_TAG=focal"
           - sytest_image_tag: buster
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:buster"
+            build_args: "SYTEST_IMAGE_TAG=buster"
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
+            build_args: "SYTEST_IMAGE_TAG=testing"
+          - sytest_image_tag: bookworm
+            dockerfile: synapse
+            tags: "matrixdotorg/sytest-synapse:bookworm-python3.10"
+            build_args: |
+              SYTEST_IMAGE_TAG=bookworm
+              PYTHON_VERSION=python3.10
           - sytest_image_tag: buster
             dockerfile: dendrite
             tags: "matrixdotorg/sytest-dendrite:go113,matrixdotorg/sytest-dendrite:latest"
+            build_args: "SYTEST_IMAGE_TAG=buster"
 
     steps:
       - name: Set up Docker Buildx
@@ -88,5 +100,9 @@ jobs:
           push: true
           labels: "gitsha1=${{ github.sha }}"
           file: docker/${{ matrix.dockerfile }}.Dockerfile
-          build-args: "SYTEST_IMAGE_TAG=${{ matrix.sytest_image_tag }}"
+          build-args: ${{ matrix.build_args }}
           tags: ${{ matrix.tags }}
+
+
+
+
