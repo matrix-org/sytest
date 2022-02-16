@@ -514,8 +514,8 @@ test "Device list doesn't change if remote server is down",
                device_id => "CURIOSITY_ROVER",
                algorithms => ["fast", "and broken"],
                keys => {
-                  "c" => "sharp",
-                  "b" => "flat"
+                  "c" => "c2hhcnA",
+                  "b" => "ZmxhdA"
                },
                signatures => {
                   $outbound_client_user => {"ed25519:JLAFKJWSCS" => "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"},
@@ -533,8 +533,8 @@ test "Device list doesn't change if remote server is down",
                   device_id => "CURIOSITY_ROVER",
                   algorithms => ["fast", "and broken"],
                   keys => {
-                     "c" => "sharp",
-                     "b" => "flat"
+                     "c" => "c2hhcnA",
+                     "b" => "ZmxhdA"
                   },
                   signatures => {
                      $outbound_client_user => {"ed25519:JLAFKJWSCS" => "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"}
