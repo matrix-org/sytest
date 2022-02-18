@@ -202,6 +202,7 @@ sub _get_config
       },
 
       user_api => {
+         push_gateway_disable_tls_validation => $JSON::true,
          account_database => {
             connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
@@ -228,15 +229,6 @@ sub _get_config
             smtp => {
                host => $self->{smtp_server_config}->{host} . ':' . $self->{smtp_server_config}->{port},
             },
-         },
-      },
-
-      push_server => {
-         disable_tls_validation => $JSON::true,
-         database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/push_server.db" : $db_uri,
          },
       },
 
