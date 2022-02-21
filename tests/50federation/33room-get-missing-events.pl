@@ -496,7 +496,7 @@ test "Outbound federation will ignore a missing event with bad JSON for room ver
 
             my @events = $datastore->get_backfill_events(
                start_at    => [ $sent_event_id ],
-               stop_before => [ $latest_event->{event_id} ],
+               stop_before => [ $room->id_for_event( $latest_event ) ],
                limit       => 10,
             );
 
