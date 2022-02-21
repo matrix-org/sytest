@@ -65,6 +65,39 @@ sub make_request
    return SyTest::HTTPServer::Request->new( @_ );
 }
 
+=head2 on_request
+
+    $server->on_request( $req );
+
+Not intended to be called outside this class: rather it is a callback handler
+and is called by L<Net::Async::HTTP::Server> when an incoming HTTP request is
+received.
+
+It will check that the request has a correct Authorization header, and then
+look for an C<on_request_federation_x_y_z...> method, where C<x>, C<y>, C<z>
+match the components of the path in the requested URI.
+
+If no such handler is found, a 404 is returned. Otherwise, the handler can
+return a Future which returns one of:
+
+=over 4
+
+=item C<undef>
+
+If no value is returned, it is asumed the handler has already fully handled the request.
+
+=item C<response => $response >
+
+C<$response> should be an <HTTP::Response> object, to be returned to the client.
+
+=item C<json => $obj >
+
+C<$obj> is JSON-encoded and returned as a 200 response.
+
+=back
+
+=cut
+
 sub on_request
 {
    my $self = shift;
@@ -318,6 +351,59 @@ sub on_request_federation_v2_send_join
       state      => \@state_events,
    } );
 }
+
+=head2 mk_await_request_pair
+
+   __PACKAGE__->mk_await_request_pair(
+      $versionprefix, $shortname, [ $param_name1, $param_name2, ... ],
+   );
+
+Adds a method which adds a handler for incoming federation requests to
+the federation endpoint C</_matrix/federation/$versionprefix/$shortname>.
+
+Not intended for use outside this class, but documented here for completeness.
+
+The parameter names, C<$param_name1> etc, should start with C<:> for a path
+parameter (in which case the rest of the name is ignored), or C<?> for a query
+parameter (in which case the rest of the name gives the name of the query
+parameter).
+
+When called, the following method is defined for the class:
+
+=over 4
+
+=item await_request_${versionprefix}_${shortname}( $param1, $param2, ... )
+
+   $server->await_request_vN_shortname( $param1, $param2 )->then( sub {
+      my ( $req, @params ) = @_;
+   });
+
+Returns a Future which will complete when the endpoint is called with the
+parameters named C<$param_name1>, C<$param_name2>, ... having values
+C<$param1>, C<$param2>, ...
+
+The Future's result is the incoming C<Net::Async::HTTP::Server::Request>, and
+the complete parameter value list. The caller function is expected to add
+callbacks to the Future which will send a response to the request.
+
+=back
+
+If C<$versionprefix> is C<v1>, then C<await_request_${shortname}> is also added
+as a (deprecated) alias.
+
+Only one awaiter can be active at a time for a given combination of endpoint
+and parameters. If no awaiter is found for a received request, we fall back to
+the previous C<on_request_federation_${versionprefix}_${shortname}> method.
+
+Cancelling the returned Future (including letting it be garbage-collected)
+removes the awaiter.
+
+B<Implementation note>: C<await_request_${versionprefix}_${shortname}> is
+implemented by adding (or overriding) an
+C<on_request_federation_${versionprefix}_${shortname}> method, which is called
+by the automatic dispatch in C<on_request>.
+
+=cut
 
 sub mk_await_request_pair
 {
