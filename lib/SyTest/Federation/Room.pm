@@ -177,7 +177,7 @@ sub create_initial_events
       croak "Require a 'creator'";
 
    my $room_version = $args{room_version} // (
-      $self->room_version == 1 ? undef : $self->room_version
+      $self->room_version eq "1" ? undef : $self->room_version
    );
 
    $self->create_and_insert_event(
