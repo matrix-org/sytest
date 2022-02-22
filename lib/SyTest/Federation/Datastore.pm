@@ -260,7 +260,11 @@ sub get_backfill_events
 
    my @event_ids = @$start_at;
 
-   my %exclude = map { $_ => 1 } @{ $params{stop_before} // [] };
+   my @stop_before = @{ $params{stop_before} // [] };
+   foreach my $sb ( @stop_before ) {
+      carp "uninitialised value in stop_before" unless $sb;
+   }
+   my %exclude = map { $_ => 1 } @stop_before;
 
    my @events;
    while( @event_ids and @events < $limit ) {

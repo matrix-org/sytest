@@ -883,14 +883,14 @@ test "Outbound federation rejects send_join responses with no m.room.create even
                map { $_->[0] } @{ $event->{auth_events} }
             );
 
-            # filter out the m.room.create event
-            @auth_chain = grep { $_->{type} ne 'm.room.create' } @auth_chain;
+            # filter out the m.room.create event from the state response
+            my @state_events = grep { $_->{type} ne 'm.room.create' } $room->current_state_events;
 
             $req->respond_json(
                # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
                my $response = [ 200, {
                   auth_chain => \@auth_chain,
-                  state      => [ $room->current_state_events ],
+                  state      => \@state_events,
                } ]
             );
 
