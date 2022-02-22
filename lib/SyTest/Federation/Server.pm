@@ -84,7 +84,7 @@ return a Future which returns one of:
 
 =item C<undef>
 
-If no value is returned, it is asumed the handler has already fully handled the request.
+If no value is returned, it is assumed the handler has already fully handled the request.
 
 =item C<response => $response >
 
