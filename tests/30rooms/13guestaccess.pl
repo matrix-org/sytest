@@ -244,7 +244,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
             assert_eq( $membership, "join", "membership" );
 
             Future->needs_all(
-               await_event_for( $local_user, filter => sub {
+               await_sync_timeline_contains( $local_user, $room_id, check => sub {
                   my ( $event ) = @_;
                   return $event->{type} eq "m.room.guest_access" && $event->{content}->{guest_access} eq "forbidden";
                }),
@@ -256,11 +256,12 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
                },
             );
          })->then( sub {
-            repeat_until_true {
+            retry_until_success {
                matrix_get_room_membership( $local_user, $room_id, $guest_user )
                ->then( sub {
                   my ( $membership ) = @_;
-                  Future->done( $membership eq "leave" );
+                  $membership eq "leave" or die "Expected membership to be 'leave'";
+                  Future->done(1);
                })
             };
          });
