@@ -317,7 +317,7 @@ test "registration is idempotent, without username specified",
          uri    => "/r0/register",
 
          content => {
-            password => "s3kr1t",
+            password => "sUp3rs3kr1t",
          },
       )->main::expect_http_401->then( sub {
          my ( $response ) = @_;
@@ -334,7 +334,7 @@ test "registration is idempotent, without username specified",
             uri    => "/r0/register",
 
             content => {
-               password => "s3kr1t",
+               password => "sUp3rs3kr1t",
                auth     => {
                   session => $session,
                   type    => "m.login.dummy",
@@ -355,7 +355,7 @@ test "registration is idempotent, without username specified",
             uri    => "/r0/register",
 
             content => {
-               password => "s3kr1t",
+               password => "sUp3rs3kr1t",
                auth     => {
                   session => $session,
                   type    => "m.login.dummy",
@@ -390,7 +390,7 @@ test "registration is idempotent, with username specified",
 
          content => {
             username => $localpart,
-            password => "s3kr1t",
+            password => "sUp3rs3kr1t",
          },
       )->main::expect_http_401->then( sub {
          my ( $response ) = @_;
@@ -408,7 +408,7 @@ test "registration is idempotent, with username specified",
 
             content => {
                username => $localpart,
-               password => "s3kr1t",
+               password => "sUp3rs3kr1t",
                auth     => {
                   session => $session,
                   type    => "m.login.dummy",
@@ -428,7 +428,7 @@ test "registration is idempotent, with username specified",
 
             content => {
                username => $localpart,
-               password => "s3kr1t",
+               password => "sUp3rs3kr1t",
                auth     => {
                   session => $session,
                   type    => "m.login.dummy",
@@ -468,7 +468,7 @@ test "registration remembers parameters",
 
          content => {
             username => $localpart,
-            password => "s3kr1t",
+            password => "sUp3rs3kr1t",
             device_id => "xyzzy",
             initial_device_display_name => "display_name",
          },
@@ -578,7 +578,7 @@ test "registration with inhibit_login inhibits login",
 
          content => {
             username => $localpart,
-            password => "s3kr1t",
+            password => "sUp3rs3kr1t",
             inhibit_login => JSON::true,
          },
       )->main::expect_http_401->then( sub {
