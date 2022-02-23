@@ -108,7 +108,7 @@ test "Local new device changes appear in v2 /sync",
       })->then( sub {
          matrix_login_again_with_user( $user2 )
       })->then( sub {
-         repeat_until_true {
+         retry_until_success {
             matrix_sync_again( $user1, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -331,7 +331,7 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
       })->then( sub {
          matrix_join_room( $remote_leaver, $room_id );
       })->then( sub {
-         repeat_until_true {
+         retry_until_success {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                my ( $body ) = @_;
@@ -435,7 +435,7 @@ test "If remote user leaves room we no longer receive device updates",
          # sure that remote_leaver *doesn't* appear in the meantime.
 
          my $wait_for_id = $remote2->user_id;
-         repeat_until_true {
+         retry_until_success {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                 my ( $body ) = @_;
@@ -454,7 +454,7 @@ test "If remote user leaves room we no longer receive device updates",
                    any { $_ eq $wait_for_id } @changed_list
                 );
              });
-          };
+          }, max_iterations => 20;
       });
    };
 
@@ -758,6 +758,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
       matrix_create_room_synced( $creator,
          invite => [ $remote_user->user_id ],
          preset => "private_chat",  # Allow default PL users to invite others
+         power_level_content_override => { invite => 0 }, 
       )->then( sub {
          ( $room_id ) = @_;
 
@@ -779,9 +780,12 @@ test "If user leaves room, remote user changes device and rejoins we see update 
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
-         try_repeat_until_success {
-            matrix_invite_user_to_room( $remote_user, $creator, $room_id )
-         }
+         retry_until_success {
+           matrix_invite_user_to_room( $remote_user, $creator, $room_id 
+           )->then( sub {
+               Future->done(1);
+            })
+         }, max_iterations => 20;
       })->then( sub {
          matrix_join_room_synced( $creator, $room_id )
       })->then( sub {
