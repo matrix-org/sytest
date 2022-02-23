@@ -185,6 +185,7 @@ sub check_tag_event {
 
 
 test "Tags appear in the v1 /events stream",
+   deprecated_endpoints => 1;
    requires => [ local_user_fixture( with_events => 1 ),
                  qw( can_add_tag can_remove_tag ) ],
 

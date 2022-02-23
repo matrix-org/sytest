@@ -68,10 +68,9 @@ multi_test "AS-ghosted users can use rooms via AS",
          )
       })->SyTest::pass_on_done( "User posted message via AS" )
       ->then( sub {
-         await_event_for( $creator, filter => sub {
+         await_sync_timeline_contains( $creator, $room_id, check => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
-            return unless $event->{room_id} eq $room_id;
 
             log_if_fail "Event", $event;
 
@@ -79,7 +78,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
             $content->{body} eq "Message from AS directly" or
                die "Expected 'body' as 'Message from AS directly'";
-            $event->{user_id} eq $ghost->user_id or
+            $event->{sender} eq $ghost->user_id or
                die "Expected sender user_id as ${\$ghost->user_id}";
 
             return 1;
@@ -139,10 +138,9 @@ multi_test "AS-ghosted users can use rooms themselves",
          )
       })->SyTest::pass_on_done( "Ghost posted message themselves" )
       ->then( sub {
-         await_event_for( $creator, filter => sub {
+         await_sync_timeline_contains( $creator, $room_id, check => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.message";
-            return unless $event->{room_id} eq $room_id;
 
             log_if_fail "Event", $event;
 
@@ -150,7 +148,7 @@ multi_test "AS-ghosted users can use rooms themselves",
 
             $content->{body} eq "Message from AS Ghost" or
                die "Expected 'body' as 'Message from AS Ghost'";
-            $event->{user_id} eq $ghost->user_id or
+            $event->{sender} eq $ghost->user_id or
                die "Expected sender user_id as ${\$ghost->user_id}";
 
             return 1;
