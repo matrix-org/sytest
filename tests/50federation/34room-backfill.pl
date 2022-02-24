@@ -442,41 +442,10 @@ test "Backfilled events whose prev_events are in a different room do not allow c
             return Future->new();
          });
 
-         # the server may also send a /state request; be prepared to answer that.
-         # (it may, alternatively, send individual /event requests)
-         my $state_req_fut = $inbound_server->await_request_v1_state(
-            $room2->{room_id}, $event_id_Q,
-         )->then( sub {
-            my ( $req, @params ) = @_;
-            log_if_fail "/state request (2)", \@params;
-
-
-            my %state  = %{ $room2->{current_state} };
-            my $resp = {
-               state => [ values( %state ) ],
-
-               # XXX we're supposed to return the whole auth chain here,
-               # not just Q's auth_events. It doesn't matter too much
-               # here though.
-               auth_chain => [
-                  map { $inbound_server->datastore->get_event( $_ ) } @{ $room2->event_ids_from_refs( $event_Q->{auth_events} ) },
-               ],
-            };
-
-            log_if_fail "/state response (2)", $resp;
-            $req->respond_json( $resp );
-
-            # return a future which never completes, so that wait_any is not
-            # satisfied.
-            return Future->new();
-         });
-
-
          # now back-paginate, and provide event Q when the
          # server backfills.
          Future->wait_any(
             $state_ids_fut,
-            $state_req_fut,
 
             Future->needs_all(
                do_request_json_for(
