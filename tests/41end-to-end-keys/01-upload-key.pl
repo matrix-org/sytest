@@ -197,6 +197,9 @@ sub matrix_put_e2e_keys
    my %device_keys = %$dk;
    $device_keys{user_id} = $user->user_id;
    $device_keys{device_id} = $user->device_id;
+   $device_keys{signatures} = $device_keys{signatures} // { $user->user_id => {"ed25519:".$user->device_id => "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"} };
+   $device_keys{keys} = $device_keys{keys} // { "ed25519:".$user->device_id => "cmltKURmLTRV86hBT_jh8AFH9RAdz0yAZOfvlBUQqP8" };
+   $device_keys{algorithms} = $device_keys{algorithms} // ["m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2"];
 
    do_request_json_for( $user,
       method => "POST",

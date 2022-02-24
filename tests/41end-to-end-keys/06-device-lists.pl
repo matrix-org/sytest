@@ -71,19 +71,7 @@ test "Local device key changes appear in v2 /sync",
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
-         do_request_json_for( $user2,
-            method  => "POST",
-            uri     => "/r0/keys/upload",
-            content => {
-               device_keys => {
-                  user_id   => $user2->user_id,
-                  device_id => $user2->device_id,
-               },
-               one_time_keys => {
-                  "my_algorithm:my_id_1" => "my+base64+key"
-               }
-            }
-         )
+         matrix_put_e2e_keys ( $user2 )
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       });
@@ -479,19 +467,7 @@ test "Local device key changes appear in /keys/changes",
 
          $from_token = $body->{next_batch};
 
-         do_request_json_for( $user2,
-            method  => "POST",
-            uri     => "/r0/keys/upload",
-            content => {
-               device_keys => {
-                  user_id   => $user2->user_id,
-                  device_id => $user2->device_id,
-               },
-               one_time_keys => {
-                  "my_algorithm:my_id_1" => "my+base64+key"
-               }
-            }
-         )
+         matrix_put_e2e_keys ( $user2 )
       })->then( sub {
          matrix_sync_again( $user1 );
       })->then( sub {
