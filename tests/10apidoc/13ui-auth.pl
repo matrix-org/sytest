@@ -369,7 +369,7 @@ test "The user must be consistent through an interactive authentication session 
          my ( $device ) = @_;
          assert_json_keys(
             $device,
-            qw( device_id user_id display_name ),
+            qw( device_id display_name ),
          );
          assert_eq( $device->{device_id}, $DEVICE_ID );
          assert_eq( $device->{display_name}, "device display" );
@@ -430,7 +430,7 @@ test "The operation must be consistent through an interactive authentication ses
          my ( $device ) = @_;
          assert_json_keys(
             $device,
-            qw( device_id user_id display_name ),
+            qw( device_id display_name ),
          );
          assert_eq( $device->{device_id}, $SECOND_DEVICE_ID );
          assert_eq( $device->{display_name}, "device display" );
