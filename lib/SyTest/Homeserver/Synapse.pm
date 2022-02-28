@@ -230,6 +230,7 @@ sub start
         },
 
         enable_registration => "true",
+        enable_registration_without_verification => "true",
         databases => \%db_configs,
         macaroon_secret_key => $macaroon_secret_key,
         registration_shared_secret => $registration_shared_secret,
