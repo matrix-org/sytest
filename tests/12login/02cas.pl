@@ -10,7 +10,7 @@ test "login types include SSO",
 
       $http->do_request_json(
          method => "GET",
-         uri => "/r0/login",
+         uri => "/v3/login",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -37,7 +37,7 @@ test "/login/cas/redirect redirects if the old m.login.cas login type is listed"
 
       $http->do_request(
          method => "GET",
-         uri    => "/r0/login/cas/redirect",
+         uri    => "/v3/login/cas/redirect",
          params => {
             redirectUrl => $REDIRECT_URL,
          },

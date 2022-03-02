@@ -19,7 +19,7 @@ test "Local device key changes get to remote servers",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_alias",
+         uri    => "/v3/join/$room_alias",
 
          content => {},
       )->then( sub {
@@ -126,7 +126,7 @@ test "Server correctly handles incoming m.device_list_update",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/keys/query",
+            uri     => "/v3/keys/query",
             content => {
                device_keys => {
                   $creator_id => [ "random_device_id" ],
@@ -166,7 +166,7 @@ test "Server correctly handles incoming m.device_list_update",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/keys/query",
+            uri     => "/v3/keys/query",
             content => {
                device_keys => {
                   $creator_id => [ "random_device_id" ],
@@ -238,7 +238,7 @@ test "Server correctly resyncs when client query keys and there is no remote cac
          }),
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/keys/query",
+            uri     => "/v3/keys/query",
             content => {
                device_keys => {
                   $federated_user_id => [],
@@ -300,7 +300,7 @@ test "Server correctly resyncs when server leaves and rejoins a room",
          }),
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/keys/query",
+            uri     => "/v3/keys/query",
             content => {
                device_keys => {
                   $federated_user_id => [],
@@ -375,7 +375,7 @@ test "Server correctly resyncs when server leaves and rejoins a room",
             }),
             do_request_json_for( $user,
                method  => "POST",
-               uri     => "/r0/keys/query",
+               uri     => "/v3/keys/query",
                content => {
                   device_keys => {
                      $federated_user_id => [],
@@ -422,13 +422,13 @@ test "Local device key changes get to remote servers with correct prev_id",
 
       do_request_json_for( $user1,
          method => "POST",
-         uri    => "/r0/join/$room_alias",
+         uri    => "/v3/join/$room_alias",
 
          content => {},
       )->then( sub {
          do_request_json_for( $user2,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )
@@ -593,7 +593,7 @@ test "Device list doesn't change if remote server is down",
       })->then( sub {
          do_request_json_for( $local_user,
             method  => "POST",
-            uri     => "/r0/keys/query",
+            uri     => "/v3/keys/query",
             content => {
                device_keys => {
                   $outbound_client_user => []
@@ -641,7 +641,7 @@ test "Device list doesn't change if remote server is down",
       })->then( sub {
          do_request_json_for( $local_user,
             method  => "POST",
-            uri     => "/r0/keys/query",
+            uri     => "/v3/keys/query",
             content => {
                device_keys => {
                   $outbound_client_user => []
@@ -736,7 +736,7 @@ test "If a device list update goes missing, the server resyncs on the next one",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_alias",
+         uri    => "/v3/join/$room_alias",
 
          content => {},
       )->then( sub {
@@ -811,7 +811,7 @@ test "If a device list update goes missing, the server resyncs on the next one",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/keys/query",
+            uri     => "/v3/keys/query",
             content => {
                device_keys => {
                   $creator_id => [ $device_id ],

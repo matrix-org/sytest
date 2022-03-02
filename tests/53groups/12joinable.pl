@@ -120,7 +120,7 @@ sub matrix_set_group_join_policy
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/settings/m.join_policy",
+      uri     => "/v3/groups/$group_id/settings/m.join_policy",
       content => {
          "m.join_policy" => {
              "type" => $join_policy,

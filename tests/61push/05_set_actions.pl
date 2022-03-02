@@ -8,7 +8,7 @@ sub check_change_action {
       # Check that the actions match.
       do_request_json_for( $user,
          method  => "GET",
-         uri     => "/r0/pushrules/$scope/$kind/$rule_id/actions",
+         uri     => "/v3/pushrules/$scope/$kind/$rule_id/actions",
       )->on_done( sub {
          my ( $body ) = @_;
 

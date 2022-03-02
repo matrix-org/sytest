@@ -7,7 +7,7 @@ sub matrix_set_pusher {
    do_request_json_for(
       $user,
       method  => "POST",
-      uri     => "/r0/pushers/set",
+      uri     => "/v3/pushers/set",
       content => {
          profile_tag         => "tag",
          kind                => "http",
@@ -385,7 +385,7 @@ test "Rooms with canonical alias are correctly named in pushed",
 
          do_request_json_for( $bob,
             method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
+            uri    => "/v3/directory/room/$room_alias",
 
             content => { room_id => $room_id },
          )
@@ -424,7 +424,7 @@ test "Rooms with many users are correctly pushed",
       })->then( sub {
          do_request_json_for( $bob,
             method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
+            uri    => "/v3/directory/room/$room_alias",
 
             content => { room_id => $room_id },
          )
@@ -490,7 +490,7 @@ test "Don't get pushed for rooms you've muted",
       })->then( sub {
          do_request_json_for( $alice,
             method  => "PUT",
-            uri     => "/r0/pushrules/global/room/$room_id",
+            uri     => "/v3/pushrules/global/room/$room_id",
             content => { actions => [ "dont_notify" ] },
          )
       })->then( sub {

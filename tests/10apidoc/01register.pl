@@ -13,7 +13,7 @@ test "GET /register yields a set of flows",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {},
       )->main::expect_http_401
@@ -23,11 +23,11 @@ test "GET /register yields a set of flows",
          # Despite being an HTTP failure, the body is still JSON encoded and
          # has useful information
          assert_eq( $response->content_type, "application/json",
-            'POST /r0/register results in application/json 401 failure'
+            'POST /v3/register results in application/json 401 failure'
          );
 
          my $body = decode_json( $response->content );
-         log_if_fail "/r0/register flow information", $body;
+         log_if_fail "/v3/register flow information", $body;
 
          assert_json_keys( $body, qw( flows ));
          ref $body->{flows} eq "ARRAY" or die "Expected 'flows' as a list";
@@ -60,7 +60,7 @@ test "POST /register can create a user",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             auth => {
@@ -87,7 +87,7 @@ test "POST /register downcases capitals in usernames",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             auth => {
@@ -117,7 +117,7 @@ test "POST /register returns the same device_id as that in the request",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             auth => {
@@ -159,7 +159,7 @@ foreach my $chr (split '', '!":?\@[]{|}£é' . "\n'" ) {
          # registration without the dodgy char should be ok
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/register",
+            uri    => "/v3/register",
 
             content => $reqbody,
          )->then( sub {
@@ -167,7 +167,7 @@ foreach my $chr (split '', '!":?\@[]{|}£é' . "\n'" ) {
             $reqbody->{username} .= $chr;
             $http->do_request_json(
                method => "POST",
-               uri    => "/r0/register",
+               uri    => "/v3/register",
                content => $reqbody,
             );
          })->main::expect_http_400()
@@ -204,7 +204,7 @@ foreach my $chr (split '', 'q3._=-/' ) {
 
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/register",
+            uri    => "/v3/register",
 
             content => $reqbody,
          );
@@ -242,7 +242,7 @@ sub matrix_register_user
 
    $http->do_request_json(
       method => "POST",
-      uri    => "/r0/register",
+      uri    => "/v3/register",
 
       content => {
          auth => {
@@ -510,7 +510,7 @@ sub setup_user
       my $user = $f->get;
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/profile/:user_id/displayname",
+         uri    => "/v3/profile/:user_id/displayname",
 
          content => { displayname => $displayname },
       )->then_done( $user );
@@ -521,7 +521,7 @@ sub setup_user
       my $user = $f->get;
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/profile/:user_id/avatar_url",
+         uri    => "/v3/profile/:user_id/avatar_url",
 
          content => { avatar_url => $avatar_url },
       )->then_done( $user );
@@ -532,7 +532,7 @@ sub setup_user
       my $user = $f->get;
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/presence/:user_id/status",
+         uri    => "/v3/presence/:user_id/status",
 
          content => {
             presence   => $presence,

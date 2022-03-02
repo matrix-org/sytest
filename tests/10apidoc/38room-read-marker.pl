@@ -14,7 +14,7 @@ test "POST /rooms/:room_id/read_markers can create read marker",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/read_markers",
+            uri    => "/v3/rooms/$room_id/read_markers",
 
             content => {
                "m.fully_read" => $event_id,
@@ -32,7 +32,7 @@ sub matrix_advance_room_read_marker
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/rooms/$room_id/read_markers",
+      uri    => "/v3/rooms/$room_id/read_markers",
 
       content => {
          "m.fully_read" => $event_id,

@@ -16,7 +16,7 @@ test "Can logout current device",
          do_request_json_for(
             $other_login,
             method => "GET",
-            uri => "/r0/devices",
+            uri => "/v3/devices",
          );
       })->then( sub {
          my ( $devices ) = @_;
@@ -28,7 +28,7 @@ test "Can logout current device",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/logout",
+            uri    => "/v3/logout",
             content => {},
          )
       })->then( sub {
@@ -44,7 +44,7 @@ test "Can logout current device",
          do_request_json_for(
             $other_login,
             method => "GET",
-            uri => "/r0/devices",
+            uri => "/v3/devices",
          );
       })->then( sub {
          my ( $devices ) = @_;
@@ -74,7 +74,7 @@ test "Can logout all devices",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/logout/all",
+            uri    => "/v3/logout/all",
             content => {},
          )
       })->then( sub {
@@ -104,7 +104,7 @@ test "Request to logout with invalid an access token is rejected",
 
       $http->do_request_json(
          method  => "POST",
-         uri     => "/r0/logout",
+         uri     => "/v3/logout",
          content => {},
          params  => { access_token => "an/invalid/token" },
       )->main::expect_http_401->then( sub {
@@ -124,7 +124,7 @@ test "Request to logout without an access token is rejected",
 
       $http->do_request_json(
          method  => "POST",
-         uri     => "/r0/logout",
+         uri     => "/v3/logout",
          content => {},
       )->main::expect_http_401->then( sub {
          my ( $resp ) = @_;

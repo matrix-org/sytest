@@ -11,7 +11,7 @@ test "Users cannot kick users from a room they are not in",
 
       do_request_json_for( $creator,
          method => "POST",
-         uri    => "/r0/rooms/$room_id/kick",
+         uri    => "/v3/rooms/$room_id/kick",
 
          content => { user_id => $fake_user_id, reason => "testing" },
       )->main::expect_http_403; # 403 for kicking a user who isn't in the room
@@ -29,7 +29,7 @@ test "Users cannot kick users who have already left a room",
 
         do_request_json_for( $creator,
            method => "POST",
-           uri    => "/r0/rooms/$room_id/kick",
+           uri    => "/v3/rooms/$room_id/kick",
 
            content => { user_id => $kicked_user->user_id, reason => "testing" },
         )->then( sub {
@@ -48,7 +48,7 @@ test "Users cannot kick users who have already left a room",
         })->then( sub {
             do_request_json_for( $creator,
                 method => "POST",
-                uri    => "/r0/rooms/$room_id/kick",
+                uri    => "/v3/rooms/$room_id/kick",
 
                 content => { user_id => $kicked_user->user_id, reason => "testing" },
             )->main::expect_http_403; # 403 for kicking a user who isn't in the room anymore

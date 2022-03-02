@@ -43,7 +43,7 @@ sub upload_test_image
    # Because we're POST'ing non-JSON
    return $user->http->do_request(
       method => "POST",
-      full_uri => "/_matrix/media/r0/upload",
+      full_uri => "/_matrix/media/v3/upload",
       params => {
          access_token => $user->access_token,
       },
@@ -64,7 +64,7 @@ sub fetch_and_validate_thumbnail
 
    return $http->do_request(
       method => "GET",
-      full_uri => "/_matrix/media/r0/thumbnail/" .
+      full_uri => "/_matrix/media/v3/thumbnail/" .
          join( "", $mxc_uri->authority, $mxc_uri->path ),
       params => {
          width  => 32,

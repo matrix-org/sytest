@@ -14,7 +14,7 @@ multi_test "Typing notifications don't leak",
 
          do_request_json_for( $creator,
             method => "PUT",
-            uri    => "/r0/rooms/$room_id/typing/:user_id",
+            uri    => "/v3/rooms/$room_id/typing/:user_id",
 
             content => { typing => JSON::true, timeout => 30000 * $TIMEOUT_FACTOR }, # msec
          );

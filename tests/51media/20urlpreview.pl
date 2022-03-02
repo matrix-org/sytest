@@ -66,7 +66,7 @@ multi_test "Test URL preview",
 
          $user->http->do_request(
             method   => "GET",
-            full_uri => "/_matrix/media/r0/preview_url",
+            full_uri => "/_matrix/media/v3/preview_url",
             params   => {
                url          => $test_server_info->client_location . "/test.html",
                access_token => $user->access_token,

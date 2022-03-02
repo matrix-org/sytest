@@ -136,7 +136,7 @@ foreach my $versionprefix ( qw( v1 v2 ) ) {
 
             do_request_json_for( $user,
                method => "POST",
-               uri    => "/r0/join/$room_alias",
+               uri    => "/v3/join/$room_alias",
 
                content => {},
             )->then( sub {
@@ -198,7 +198,7 @@ test "Outbound federation passes make_join failures through to the client",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->main::expect_http_400
@@ -800,7 +800,7 @@ test "Outbound federation correctly handles unsupported room versions",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->main::expect_http_400
@@ -901,7 +901,7 @@ test "Outbound federation rejects send_join responses with no m.room.create even
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->main::expect_http_error()->then( sub {
@@ -984,7 +984,7 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->main::expect_http_error()->then( sub {
@@ -1078,7 +1078,7 @@ test "Event with an invalid signature in the send_join response should not cause
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->then( sub {

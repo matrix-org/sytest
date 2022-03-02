@@ -60,7 +60,7 @@ test "Outbound federation can backfill events",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->then( sub {
@@ -413,7 +413,7 @@ test "Backfilled events whose prev_events are in a different room do not allow c
             do_request_json_for(
                $creator_user,
                method => "GET",
-               uri    => "/r0/rooms/$room2_id/messages",
+               uri    => "/v3/rooms/$room2_id/messages",
                params => {
                   dir  => "b",
                   from => $prev_batch,

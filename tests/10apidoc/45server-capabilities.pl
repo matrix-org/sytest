@@ -6,7 +6,7 @@ test "GET /capabilities is present and well formed for registered user",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/capabilities",
+            uri    => "/v3/capabilities",
          )->then( sub {
             my ( $body ) = @_;
             assert_json_keys( $body->{capabilities}, qw( m.room_versions m.change_password ));
@@ -15,7 +15,7 @@ test "GET /capabilities is present and well formed for registered user",
       };
 
 
-test "GET /r0/capabilities is not public",
+test "GET /v3/capabilities is not public",
    requires => [ $main::API_CLIENTS[0] ],
 
    do => sub {
@@ -23,7 +23,7 @@ test "GET /r0/capabilities is not public",
 
       $http->do_request_json(
          method => "GET",
-         uri    => "/r0/capabilities",
+         uri    => "/v3/capabilities",
       )->main::expect_http_401->then( sub {
          Future->done( 1 );
       })

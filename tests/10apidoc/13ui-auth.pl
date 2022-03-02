@@ -14,7 +14,7 @@ sub cas_login_fixture {
 
          $http->do_request_json(
             method => "GET",
-            uri    => "/r0/login",
+            uri    => "/v3/login",
          )->then(sub {
             my ($body) = @_;
 
@@ -99,6 +99,8 @@ sub matrix_login_with_cas
    # hope to get redirected back to
    my $REDIRECT_URL = "https://client?p=http%3A%2F%2Fserver";
 
+   # note: the URL returned here contains r0 because of
+   # https://github.com/matrix-org/synapse/blob/f44d729d4ccae61bc0cdd5774acb3233eb5f7c13/synapse/config/cas.py#L41
    my $HS_URI = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
 
    # the ticket our mocked-up CAS server "generates"
@@ -110,7 +112,7 @@ sub matrix_login_with_cas
       wait_for_cas_request( "/cas/login" ),
       $http->do_request(
          method => "GET",
-         uri    => "/r0/login/sso/redirect",
+         uri    => "/v3/login/sso/redirect",
          params => {
             redirectUrl => $REDIRECT_URL,
          },
@@ -170,7 +172,7 @@ sub matrix_login_with_cas
       # step 7: the client uses the loginToken via the /login API.
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/login",
+         uri    => "/v3/login",
 
          content => {
             type     => "m.login.token",

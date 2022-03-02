@@ -7,7 +7,7 @@ test "POST /rooms/:room_id/send/:event_type sends a message",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/rooms/$room_id/send/m.room.message",
+         uri    => "/v3/rooms/$room_id/send/m.room.message",
 
          content => { msgtype => "m.message", body => "Here is the message content" },
       )->then( sub {
@@ -31,7 +31,7 @@ test "PUT /rooms/:room_id/send/:event_type/:txn_id sends a message",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/rooms/$room_id/send/m.room.message/$txn_id",
+         uri    => "/v3/rooms/$room_id/send/m.room.message/$txn_id",
 
          content => { msgtype => "m.message", body => "Here is the message content" },
       )->then( sub {
@@ -54,7 +54,7 @@ test "PUT /rooms/:room_id/send/:event_type/:txn_id deduplicates the same txn id"
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/rooms/$room_id/send/m.room.message/$txn_id",
+         uri    => "/v3/rooms/$room_id/send/m.room.message/$txn_id",
 
          content => { msgtype => "m.message", body => "Here is the message content" },
       )->then( sub {
@@ -64,7 +64,7 @@ test "PUT /rooms/:room_id/send/:event_type/:txn_id deduplicates the same txn id"
 
          do_request_json_for( $user,
             method => "PUT",
-            uri    => "/r0/rooms/$room_id/send/m.room.message/$txn_id",
+            uri    => "/v3/rooms/$room_id/send/m.room.message/$txn_id",
 
             content => { msgtype => "m.message", body => "Here is the message content" },
          )
@@ -94,7 +94,7 @@ sub matrix_send_room_message
 
    my $type = $opts{type} // "m.room.message";
 
-   my $uri = "/r0/rooms/$room_id/send/$type";
+   my $uri = "/v3/rooms/$room_id/send/$type";
    $opts{txn_id} //= $global_txn_id++;
    $uri = "$uri/$opts{txn_id}";
 
@@ -147,7 +147,7 @@ test "GET /rooms/:room_id/messages returns a message",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/messages",
+            uri    => "/v3/rooms/$room_id/messages",
 
             # With no params this does "forwards from END"; i.e. nothing useful
             params => {
@@ -185,7 +185,7 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/messages",
+            uri    => "/v3/rooms/$room_id/messages",
 
             params => {
                dir => "b",
@@ -232,7 +232,7 @@ sub matrix_get_room_messages
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/rooms/$room_id/messages",
+         uri    => "/v3/rooms/$room_id/messages",
 
          params => \%params,
       );
