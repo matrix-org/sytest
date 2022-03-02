@@ -99,7 +99,9 @@ sub matrix_login_with_cas
    # hope to get redirected back to
    my $REDIRECT_URL = "https://client?p=http%3A%2F%2Fserver";
 
-   my $HS_URI = $homeserver_info->client_location . "/_matrix/client/v3/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
+   # note: the URL returned here contains r0 because of
+   # https://github.com/matrix-org/synapse/blob/f44d729d4ccae61bc0cdd5774acb3233eb5f7c13/synapse/config/cas.py#L41
+   my $HS_URI = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
 
    # the ticket our mocked-up CAS server "generates"
    my $CAS_TICKET = "goldenticket";
@@ -206,7 +208,7 @@ sub make_ticket_request
    # Note that we skip almost all of the CAS flow since it isn't important
    # for this test. The user just needs to end up back at the homeserver
    # with a valid ticket (and the original UI Auth session ID).
-   my $login_uri = $homeserver_info->client_location . "/_matrix/client/v3/login/cas/ticket?session=$session&ticket=$CAS_TICKET";
+   my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?session=$session&ticket=$CAS_TICKET";
 
    Future->needs_all(
       wait_for_cas_request(
