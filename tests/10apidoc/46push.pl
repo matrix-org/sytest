@@ -25,7 +25,7 @@ sub matrix_add_push_rule
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/pushrules/$scope/$kind/$rule_id",
+      uri     => "/v3/pushrules/$scope/$kind/$rule_id",
       params  => \%params,
       content => $rule_body,
    );
@@ -47,7 +47,7 @@ sub matrix_delete_push_rule
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/r0/pushrules/$scope/$kind/$rule_id",
+      uri     => "/v3/pushrules/$scope/$kind/$rule_id",
    );
 }
 
@@ -68,7 +68,7 @@ sub matrix_set_push_rule_enabled
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/pushrules/$scope/$kind/$rule_id/enabled",
+      uri     => "/v3/pushrules/$scope/$kind/$rule_id/enabled",
       content => { enabled => $enabled },
    );
 }
@@ -90,7 +90,7 @@ sub matrix_set_push_rule_actions
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/pushrules/$scope/$kind/$rule_id/actions",
+      uri     => "/v3/pushrules/$scope/$kind/$rule_id/actions",
       content => { actions => $actions },
    );
 }
@@ -113,7 +113,7 @@ sub matrix_get_push_rule
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/r0/pushrules/$scope/$kind/$rule_id",
+      uri     => "/v3/pushrules/$scope/$kind/$rule_id",
    );
 }
 
@@ -132,7 +132,7 @@ sub matrix_get_push_rules
    # Trailing slash indicates retrieving ALL push rules for this user
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/r0/pushrules/",
+      uri     => "/v3/pushrules/",
    )->on_done( sub {
       my ( $body ) = @_;
 

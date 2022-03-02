@@ -10,7 +10,7 @@ test "AS can create a user",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => "astest-01create-0-$TEST_RUN_ID",
@@ -35,7 +35,7 @@ test "AS can create a user with an underscore",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => "_astest-01create-0-$TEST_RUN_ID",
@@ -61,7 +61,7 @@ test "AS can create a user with inhibit_login",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => "astest-01create-1-$TEST_RUN_ID",
@@ -90,7 +90,7 @@ test "AS cannot create users outside its own namespace",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => "a-different-user",
@@ -121,7 +121,7 @@ test "AS can make room aliases",
 
       do_request_json_for( $as_user,
          method => "PUT",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
 
          content => {
             room_id => $room_id,
@@ -131,7 +131,7 @@ test "AS can make room aliases",
 
          do_request_json_for( $as_user,
             method => "GET",
-            uri    => "/r0/directory/room/$room_alias",
+            uri    => "/v3/directory/room/$room_alias",
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -158,7 +158,7 @@ test "Regular users cannot create room aliases within the AS namespace",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
 
          content => {
             room_id => $room_id,
@@ -175,7 +175,7 @@ sub matrix_register_as_ghost
 
    do_request_json_for( $as_user,
       method => "POST",
-      uri    => "/r0/register",
+      uri    => "/v3/register",
 
       content => {
          username => $user_id,

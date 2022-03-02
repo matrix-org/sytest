@@ -10,7 +10,7 @@ test "POST rejects invalid utf-8 in JSON",
 
       $http->do_request(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => $reqbody,
          content_type =>"application/json",

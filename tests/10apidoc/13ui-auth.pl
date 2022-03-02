@@ -14,7 +14,7 @@ sub cas_login_fixture {
 
          $http->do_request_json(
             method => "GET",
-            uri    => "/r0/login",
+            uri    => "/v3/login",
          )->then(sub {
             my ($body) = @_;
 
@@ -99,7 +99,7 @@ sub matrix_login_with_cas
    # hope to get redirected back to
    my $REDIRECT_URL = "https://client?p=http%3A%2F%2Fserver";
 
-   my $HS_URI = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
+   my $HS_URI = $homeserver_info->client_location . "/_matrix/client/v3/login/cas/ticket?redirectUrl=" . uri_escape($REDIRECT_URL);
 
    # the ticket our mocked-up CAS server "generates"
    my $CAS_TICKET = "goldenticket";
@@ -110,7 +110,7 @@ sub matrix_login_with_cas
       wait_for_cas_request( "/cas/login" ),
       $http->do_request(
          method => "GET",
-         uri    => "/r0/login/sso/redirect",
+         uri    => "/v3/login/sso/redirect",
          params => {
             redirectUrl => $REDIRECT_URL,
          },
@@ -170,7 +170,7 @@ sub matrix_login_with_cas
       # step 7: the client uses the loginToken via the /login API.
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/login",
+         uri    => "/v3/login",
 
          content => {
             type     => "m.login.token",
@@ -206,7 +206,7 @@ sub make_ticket_request
    # Note that we skip almost all of the CAS flow since it isn't important
    # for this test. The user just needs to end up back at the homeserver
    # with a valid ticket (and the original UI Auth session ID).
-   my $login_uri = $homeserver_info->client_location . "/_matrix/client/r0/login/cas/ticket?session=$session&ticket=$CAS_TICKET";
+   my $login_uri = $homeserver_info->client_location . "/_matrix/client/v3/login/cas/ticket?session=$session&ticket=$CAS_TICKET";
 
    Future->needs_all(
       wait_for_cas_request(

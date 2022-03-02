@@ -8,7 +8,7 @@ test "GET /initialSync with non-numeric 'limit'",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/initialSync",
+         uri    => "/v3/initialSync",
 
          params => { limit => "hello" },
       )->main::expect_http_4xx;
@@ -68,7 +68,7 @@ test "Event size limits",
       Future->needs_all(
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/rooms/$room_id/send/m.room.message",
+            uri     => "/v3/rooms/$room_id/send/m.room.message",
             content => {
                msgtype => "m.text",
                body    => "A" x 70000,
@@ -77,7 +77,7 @@ test "Event size limits",
 
          do_request_json_for( $user,
             method  => "PUT",
-            uri     => "/r0/rooms/$room_id/state/oooooooh",
+            uri     => "/v3/rooms/$room_id/state/oooooooh",
             content => {
                key => "O" x 70000,
             }

@@ -17,7 +17,7 @@ test "Can search for an event by body",
 
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/search",
+            uri     => "/v3/search",
             content => {
                search_categories => {
                   room_events => {
@@ -87,7 +87,7 @@ test "Can get context around search results",
       }, foreach => [ 1 .. 7 ] )->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri    => "/r0/search",
+            uri    => "/v3/search",
             content => $search_query,
          );
       })->then( sub {
@@ -149,7 +149,7 @@ test "Can back-paginate search results",
         }, foreach => [ 0 .. 19 ] )->then( sub {
             do_request_json_for( $user,
                                  method  => "POST",
-                                 uri     => "/r0/search",
+                                 uri     => "/v3/search",
                                  content => $search_query,
             );
         })->then( sub {
@@ -176,7 +176,7 @@ test "Can back-paginate search results",
 
             do_request_json_for( $user,
                                  method  => "POST",
-                                 uri     => "/r0/search",
+                                 uri     => "/v3/search",
                                  params  => { next_batch => $next_batch },
                                  content => $search_query,
             );
@@ -204,7 +204,7 @@ test "Can back-paginate search results",
 
             do_request_json_for( $user,
                                  method  => "POST",
-                                 uri     => "/r0/search",
+                                 uri     => "/v3/search",
                                  params  => { next_batch => $next_batch },
                                  content => $search_query,
             );
@@ -260,7 +260,7 @@ test "Search works across an upgraded room and its predecessor",
 
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/search",
+            uri     => "/v3/search",
             content => {
                search_categories => {
                   room_events => {
@@ -334,7 +334,7 @@ foreach my $ordering_type ( qw ( rank recent ) ) {
          })->then( sub {
             do_request_json_for( $user,
                method  => "POST",
-               uri     => "/r0/search",
+               uri     => "/v3/search",
                content => {
                   search_categories => {
                      room_events => {

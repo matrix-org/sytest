@@ -60,7 +60,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
             do_request_json_for( $as_user,
                method => "PUT",
-               uri    => "/r0/directory/room/$room_alias",
+               uri    => "/v3/directory/room/$room_alias",
 
                content => {
                   room_id => $room_id,
@@ -91,7 +91,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
 
          do_request_json_for( $local_user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )

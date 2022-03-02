@@ -8,7 +8,7 @@ sub matrix_get_device {
    return do_request_json_for(
       $user,
       method => "GET",
-      uri    => "/r0/devices/${device_id}",
+      uri    => "/v3/devices/${device_id}",
    );
 }
 
@@ -18,7 +18,7 @@ sub matrix_set_device_display_name {
     return do_request_json_for(
         $user,
         method => "PUT",
-        uri    => "/r0/devices/${device_id}",
+        uri    => "/v3/devices/${device_id}",
         content => {
             display_name => $display_name,
         },
@@ -31,7 +31,7 @@ sub matrix_delete_device {
     return do_request_json_for(
         $user,
         method  => "DELETE",
-        uri     => "/r0/devices/${device_id}",
+        uri     => "/v3/devices/${device_id}",
         content => $request_body,
     );
 }
@@ -72,7 +72,7 @@ test "GET /device/{deviceId} gives a 404 for unknown devices",
       do_request_json_for(
          $user,
          method => "GET",
-         uri    => "/r0/devices/unknown_device",
+         uri    => "/v3/devices/unknown_device",
       )->main::expect_http_404;
    };
 
@@ -106,7 +106,7 @@ test "GET /devices",
           do_request_json_for(
              $user,
              method => "GET",
-             uri => "/r0/devices",
+             uri => "/v3/devices",
           );
       })->then( sub {
          my ( $devices ) = @_;
@@ -151,7 +151,7 @@ test "PUT /device/{deviceId} updates device fields",
          do_request_json_for(
             $user,
             method => "PUT",
-            uri    => "/r0/devices/${DEVICE_ID}",
+            uri    => "/v3/devices/${DEVICE_ID}",
             content => {
                display_name => "new display name",
             },
@@ -179,7 +179,7 @@ test "PUT /device/{deviceId} gives a 404 for unknown devices",
       do_request_json_for(
          $user,
          method => "PUT",
-         uri    => "/r0/devices/unknown_device",
+         uri    => "/v3/devices/unknown_device",
          content => {
             display_name => "new display name",
          },
@@ -206,7 +206,7 @@ test "DELETE /device/{deviceId}",
          do_request_json_for(
             $other_login,
             method  => "GET",
-            uri     => "/r0/sync",
+            uri     => "/v3/sync",
          );
       })->then( sub {
          # attempt request with empty auth dict
@@ -262,7 +262,7 @@ test "DELETE /device/{deviceId}",
             do_request_json_for(
                $other_login,
                method  => "GET",
-               uri     => "/r0/sync",
+               uri     => "/v3/sync",
             )->main::check_http_code(
                401 => "ok",
                200 => "redo",

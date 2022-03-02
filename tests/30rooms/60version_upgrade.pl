@@ -48,7 +48,7 @@ sub upgrade_room {
    do_request_json_for(
       $user,
       method  => "POST",
-      uri     => "/r0/rooms/$room_id/upgrade",
+      uri     => "/v3/rooms/$room_id/upgrade",
       content => {
          new_version => $new_version,
       },
@@ -242,7 +242,7 @@ foreach my $vis ( qw( public private ) ) {
          do_request_json_for(
             $creator,
             method   => "PUT",
-            uri      => "/r0/directory/list/room/$room_id",
+            uri      => "/v3/directory/list/room/$room_id",
             content  => {
                visibility => $vis,
             },
@@ -258,7 +258,7 @@ foreach my $vis ( qw( public private ) ) {
             do_request_json_for(
                $creator,
                method   => "GET",
-               uri      => "/r0/directory/list/room/$new_room_id",
+               uri      => "/v3/directory/list/room/$new_room_id",
             );
          })->then( sub {
             my ( $response ) = @_;
@@ -431,7 +431,7 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
          do_request_json_for(
             $upgrader,
             method  => "GET",
-            uri     => "/r0/rooms/$url_encoded_new_room_id/state/m.room.power_levels/",
+            uri     => "/v3/rooms/$url_encoded_new_room_id/state/m.room.power_levels/",
             content => {},
          );
       })->then( sub {
@@ -449,7 +449,7 @@ test "/upgrade preserves the power level of the upgrading user in old and new ro
          do_request_json_for(
             $upgrader,
             method => "GET",
-            uri    => "/r0/rooms/$url_encoded_old_room_id/state/m.room.power_levels/",
+            uri    => "/v3/rooms/$url_encoded_old_room_id/state/m.room.power_levels/",
             content => {},
          );
       })->then( sub {
@@ -663,13 +663,13 @@ test "/upgrade moves aliases to the new room",
       do_request_json_for(
          $creator,
          method => "PUT",
-         uri    => "/r0/directory/room/$room_alias_1",
+         uri    => "/v3/directory/room/$room_alias_1",
          content => { room_id => $room_id },
       )->then( sub {
          do_request_json_for(
             $creator,
             method => "PUT",
-            uri    => "/r0/directory/room/$room_alias_2",
+            uri    => "/v3/directory/room/$room_alias_2",
             content => { room_id => $room_id },
          );
       })->then( sub {
@@ -716,7 +716,7 @@ test "/upgrade moves aliases to the new room",
          do_request_json_for(
             $creator,
             method => "GET",
-            uri    => "/r0/directory/room/$room_alias_1",
+            uri    => "/v3/directory/room/$room_alias_1",
          )->then( sub {
             my ( $body ) = @_;
 
@@ -725,7 +725,7 @@ test "/upgrade moves aliases to the new room",
             do_request_json_for(
                $creator,
                method => "GET",
-               uri    => "/r0/directory/room/$room_alias_2",
+               uri    => "/v3/directory/room/$room_alias_2",
             );
          })->then( sub {
             my ( $body ) = @_;
@@ -763,7 +763,7 @@ test "/upgrade moves remote aliases to the new room",
          do_request_json_for(
             $remote_user,
             method => "PUT",
-            uri    => "/r0/directory/room/$remote_room_alias",
+            uri    => "/v3/directory/room/$remote_room_alias",
             content => { room_id => $room_id },
          );
       })->then( sub {
@@ -788,7 +788,7 @@ test "/upgrade moves remote aliases to the new room",
             do_request_json_for(
                $remote_user,
                method => "GET",
-               uri    => "/r0/directory/room/$remote_room_alias",
+               uri    => "/v3/directory/room/$remote_room_alias",
             )->then( sub {
                my ( $body ) = @_;
 
@@ -817,7 +817,7 @@ test "/upgrade preserves direct room state",
       do_request_json_for(
          $creator,
          method => "PUT",
-         uri    => "/r0/user/$user_id/account_data/m.direct",
+         uri    => "/v3/user/$user_id/account_data/m.direct",
          content => { $user_id => [$room_id] },
       )->then( sub {
          upgrade_room_synced(
@@ -847,7 +847,7 @@ test "/upgrade preserves room federation ability",
 
       do_request_json_for( $creator,
          method => "POST",
-         uri    => "/r0/createRoom",
+         uri    => "/v3/createRoom",
 
          content => {
             creation_content => {
@@ -869,7 +869,7 @@ test "/upgrade preserves room federation ability",
 
          do_request_json_for( $creator,
             method => "GET",
-            uri    => "/r0/rooms/$new_room_id/state/m.room.create",
+            uri    => "/v3/rooms/$new_room_id/state/m.room.create",
          )
       })->then( sub {
          my ( $state ) = @_;
@@ -1052,7 +1052,7 @@ test "Local and remote users' homeservers remove a room from their public direct
       })->then(sub {
          do_request_json_for( $remote_joiner,
             method => "PUT",
-            uri    => "/r0/directory/list/room/$room_id",
+            uri    => "/v3/directory/list/room/$room_id",
 
             content => {
                visibility => "public",
@@ -1075,7 +1075,7 @@ test "Local and remote users' homeservers remove a room from their public direct
          retry_until_success {
             do_request_json_for( $creator,
                method => "GET",
-               uri    => "/r0/publicRooms",
+               uri    => "/v3/publicRooms",
             )->then( sub {
                # Check public rooms list for local user
                my ( $body ) = @_;
@@ -1101,7 +1101,7 @@ test "Local and remote users' homeservers remove a room from their public direct
          retry_until_success {
             do_request_json_for( $remote_joiner,
                method => "GET",
-               uri    => "/r0/publicRooms",
+               uri    => "/v3/publicRooms",
             )->then( sub {
             # Check public rooms list for remote user
                my ( $body ) = @_;

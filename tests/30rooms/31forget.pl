@@ -9,7 +9,7 @@ sub matrix_forget_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/rooms/$room_id/forget",
+      uri    => "/v3/rooms/$room_id/forget",
 
       content => {},
    )->then_done(1);
@@ -112,7 +112,7 @@ test "Can forget room you've been kicked from",
       })->then( sub {
          do_request_json_for( $creator,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/kick",
+            uri    => "/v3/rooms/$room_id/kick",
 
             content => { user_id => $user->user_id },
          );

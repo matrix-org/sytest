@@ -46,7 +46,7 @@ test "Name/topic keys are correct",
          retry_until_success {
             $http->do_request_json(
                method => "GET",
-               uri    => "/r0/publicRooms",
+               uri    => "/v3/publicRooms",
             )->then( sub {
                my ( $body ) = @_;
 
@@ -128,7 +128,7 @@ test "Can get remote public room list",
 
          do_request_json_for( $remote_user,
             method => "GET",
-            uri    => "/r0/publicRooms",
+            uri    => "/v3/publicRooms",
 
             params => { server => $first_home_server },
          )
@@ -174,7 +174,7 @@ test "Can paginate public room list",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/publicRooms",
+            uri    => "/v3/publicRooms",
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -188,7 +188,7 @@ test "Can paginate public room list",
          try_repeat {
             do_request_json_for( $user,
                method => "POST",
-               uri    => "/r0/publicRooms",
+               uri    => "/v3/publicRooms",
 
                content => { limit => 3, since => $next_batch },
             )->then( sub {
@@ -223,7 +223,7 @@ test "Can paginate public room list",
          try_repeat {
             do_request_json_for( $user,
                method => "POST",
-               uri    => "/r0/publicRooms",
+               uri    => "/v3/publicRooms",
 
                content => { limit => 3, since => $prev_batch },
             )->then( sub {
@@ -273,7 +273,7 @@ test "Can search public room list",
          retry_until_success {
             do_request_json_for( $local_user,
                method => "POST",
-               uri    => "/r0/publicRooms",
+               uri    => "/v3/publicRooms",
 
                content => {
                   filter => {
@@ -319,7 +319,7 @@ test "Asking for a remote rooms list, but supplying the local server's name, ret
          retry_until_success {
             do_request_json_for( $local_user,
                method => "POST",
-               uri    => "/r0/publicRooms",
+               uri    => "/v3/publicRooms",
 
                # Ask the local server for a remote room list, but supply the local server's server_name
                # Server should return the local public rooms list

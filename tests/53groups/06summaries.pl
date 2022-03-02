@@ -469,7 +469,7 @@ sub matrix_add_room_to_group_summary
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/summary/rooms/$room_id",
+      uri     => "/v3/groups/$group_id/summary/rooms/$room_id",
       content => \%opts,
    );
 }
@@ -480,7 +480,7 @@ sub matrix_add_room_to_group_summary_category
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/summary/categories/$category_id/rooms/$room_id",
+      uri     => "/v3/groups/$group_id/summary/categories/$category_id/rooms/$room_id",
       content => \%opts,
    );
 }
@@ -491,7 +491,7 @@ sub matrix_remove_room_from_group_summary_category
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/r0/groups/$group_id/summary/categories/$category_id/rooms/$room_id",
+      uri     => "/v3/groups/$group_id/summary/categories/$category_id/rooms/$room_id",
    );
 }
 
@@ -502,7 +502,7 @@ sub matrix_remove_room_from_group_summary
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/r0/groups/$group_id/summary/rooms/$room_id",
+      uri     => "/v3/groups/$group_id/summary/rooms/$room_id",
    );
 }
 
@@ -514,7 +514,7 @@ sub matrix_add_user_to_group_summary
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/summary/users/$user_id",
+      uri     => "/v3/groups/$group_id/summary/users/$user_id",
       content => \%opts,
    );
 }
@@ -525,7 +525,7 @@ sub matrix_add_user_to_group_summary_role
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/summary/roles/$role_id/users/$user_id",
+      uri     => "/v3/groups/$group_id/summary/roles/$role_id/users/$user_id",
       content => \%opts,
    );
 }
@@ -536,7 +536,7 @@ sub matrix_remove_user_from_group_summary_role
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/r0/groups/$group_id/summary/roles/$role_id/users/$user_id",
+      uri     => "/v3/groups/$group_id/summary/roles/$role_id/users/$user_id",
    );
 }
 
@@ -547,6 +547,6 @@ sub matrix_remove_user_from_group_summary
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/r0/groups/$group_id/summary/users/$user_id",
+      uri     => "/v3/groups/$group_id/summary/users/$user_id",
    );
 }

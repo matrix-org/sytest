@@ -6,7 +6,7 @@ sub ban_user_synced
       do => sub {
          do_request_json_for( $banner,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/ban",
+            uri    => "/v3/rooms/$room_id/ban",
             content => { user_id => $bannee->user_id, reason => "testing" },
          );
       },
@@ -123,7 +123,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
       })->then( sub {
          do_request_json_for( $user_a,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/ban",
+            uri    => "/v3/rooms/$room_id/ban",
             content => { user_id => $user_b->user_id, reason => "testing" },
          );
       })->then( sub {

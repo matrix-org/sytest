@@ -14,7 +14,7 @@ sub get_room_list_synced
    repeat_until_true {
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/publicRooms",
+         uri    => "/v3/publicRooms",
 
          content => $content,
       )->then( sub {
@@ -50,7 +50,7 @@ test "AS can publish rooms in their own list",
 
          do_request_json_for( $as_user,
             method => "PUT",
-            uri    => "/r0/directory/list/appservice/$network_id/$room_id",
+            uri    => "/v3/directory/list/appservice/$network_id/$room_id",
 
             content => {
                visibility => "public",
@@ -95,7 +95,7 @@ test "AS can publish rooms in their own list",
 
          do_request_json_for( $as_user,
             method => "DELETE",
-            uri    => "/r0/directory/list/appservice/$network_id/$room_id",
+            uri    => "/v3/directory/list/appservice/$network_id/$room_id",
          )
       })->then( sub {
          get_room_list_synced( $local_user,
@@ -137,7 +137,7 @@ test "AS and main public room lists are separate",
 
          do_request_json_for( $as_user,
             method => "PUT",
-            uri    => "/r0/directory/list/appservice/$network_id/$room_id",
+            uri    => "/v3/directory/list/appservice/$network_id/$room_id",
 
             content => {
                visibility => "public",
@@ -146,7 +146,7 @@ test "AS and main public room lists are separate",
       })->then( sub {
          do_request_json_for( $local_user,
             method => "PUT",
-            uri    => "/r0/directory/list/room/$room_id",
+            uri    => "/v3/directory/list/room/$room_id",
 
             content => {
                visibility => "public",
@@ -179,14 +179,14 @@ test "AS and main public room lists are separate",
 
          do_request_json_for( $local_user,
             method => "POST",
-            uri    => "/r0/publicRooms",
+            uri    => "/v3/publicRooms",
 
             content => { include_all_networks => "true", limit => 1000000 }
          )
       })->then( sub {
          do_request_json_for( $as_user,
             method => "DELETE",
-            uri    => "/r0/directory/list/appservice/$network_id/$room_id",
+            uri    => "/v3/directory/list/appservice/$network_id/$room_id",
          )
       })->then( sub {
          get_room_list_synced( $local_user,

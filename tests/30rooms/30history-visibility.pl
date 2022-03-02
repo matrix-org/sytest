@@ -193,7 +193,7 @@ foreach my $i (
                Future->needs_all(
                   do_request_json_for( $user,
                      method  => "POST",
-                     uri     => "/r0/rooms/$room_id/receipt/m.read/${ \uri_escape( $sent_event_id ) }",
+                     uri     => "/v3/rooms/$room_id/receipt/m.read/${ \uri_escape( $sent_event_id ) }",
                      content => {},
                   ),
 
@@ -214,7 +214,7 @@ foreach my $i (
                Future->needs_all(
                   do_request_json_for( $user,
                      method  => "PUT",
-                     uri     => "/r0/rooms/$room_id/typing/:user_id",
+                     uri     => "/v3/rooms/$room_id/typing/:user_id",
                      content => {
                         typing => JSON::true,
                         timeout => 5000 * $TIMEOUT_FACTOR,
@@ -257,7 +257,7 @@ foreach my $i (
 
          do_request_json_for( $nonjoined_user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/state",
+            uri    => "/v3/rooms/$room_id/state",
          );
       },
    );
@@ -278,7 +278,7 @@ foreach my $i (
 
          do_request_json_for( $nonjoined_user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/state/m.room.member/".$user->user_id,
+            uri    => "/v3/rooms/$room_id/state/m.room.member/".$user->user_id,
          );
       },
    );
@@ -371,7 +371,7 @@ foreach my $i (
          })->then( sub {
             do_request_json_for( $nonjoined_user,
                method => "GET",
-               uri    => "/r0/rooms/$room_id/state/m.room.member/".$user->user_id,
+               uri    => "/v3/rooms/$room_id/state/m.room.member/".$user->user_id,
             );
          });
       },

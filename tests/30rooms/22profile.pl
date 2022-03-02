@@ -5,7 +5,7 @@ foreach my $datum (qw( displayname avatar_url )) {
       do => sub {
          my ( $user, $room_id ) = @_;
 
-         my $uri = "/r0/profile/:user_id/$datum";
+         my $uri = "/v3/profile/:user_id/$datum";
 
          do_request_json_for( $user,
             method => "GET",
@@ -26,7 +26,7 @@ foreach my $datum (qw( displayname avatar_url )) {
          })->then( sub {
             do_request_json_for( $user,
                method => "GET",
-               uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
+               uri    => "/v3/rooms/$room_id/state/m.room.member/:user_id",
             )
          })->then( sub {
             my ( $body ) = @_;
