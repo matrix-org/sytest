@@ -24,6 +24,16 @@ foreach my $datum (qw( displayname avatar_url )) {
                },
             )
          })->then( sub {
+             await_sync_timeline_or_state_contains( $user, $room_id, check => sub {
+               my ( $event ) = @_;
+
+               return unless $event->{type} eq "m.room.member";
+               return unless $event->{state_key} eq $user->user_id;
+               return unless $event->{content}->{$datum} eq "LemurLover";
+
+               return 1;
+            });
+         })->then( sub {
             do_request_json_for( $user,
                method => "GET",
                uri    => "/v3/rooms/$room_id/state/m.room.member/:user_id",
