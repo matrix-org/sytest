@@ -59,7 +59,7 @@ sub upload_test_content
 
    $user->http->do_request(
       method       => "POST",
-      full_uri     => "/_matrix/media/r0/upload",
+      full_uri     => "/_matrix/media/v3/upload",
       content      => "Test media file",
       content_type => "text/plain",
 
@@ -99,7 +99,7 @@ sub get_media
 
    $http->do_request(
       method   => "GET",
-      full_uri => "/_matrix/media/r0/download/$content_id",
+      full_uri => "/_matrix/media/v3/download/$content_id",
    )->then( sub {
       my ( $body, $response ) = @_;
 
@@ -228,7 +228,7 @@ test "Can download specifying a different Unicode file name",
 
       $http->do_request(
          method   => "GET",
-         full_uri => "/_matrix/media/r0/download/$content_id/$alt_filename_encoded",
+         full_uri => "/_matrix/media/v3/download/$content_id/$alt_filename_encoded",
       )->then( sub {
          my ( $body, $response ) = @_;
 

@@ -15,7 +15,7 @@ sub gen_client_secret {
    validate_email(
       $http, $address,
       id_server => $id_server,
-      path => "/r0/account/3pid/email/requestToken",
+      path => "/v3/account/3pid/email/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
    });
@@ -74,7 +74,7 @@ push our @EXPORT, qw( validate_email );
    validate_msisdn(
       $http, $phone_number, $country_code,
       id_server => $id_server,
-      path => "/r0/account/3pid/msisdn/requestToken",
+      path => "/v3/account/3pid/msisdn/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
    });
@@ -215,14 +215,14 @@ sub add_email_for_user {
    validate_email(
       $user->http, $address,
       id_server => $id_server,
-      path => "/r0/account/3pid/email/requestToken",
+      path => "/v3/account/3pid/email/requestToken",
    )->then( sub {
       my ( $sid, $client_secret ) = @_;
 
       # now tell the HS to add the 3pid
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/account/3pid",
+         uri    => "/v3/account/3pid",
          content => {
             three_pid_creds => {
                id_server       => $id_server->name,
@@ -270,7 +270,7 @@ multi_test "Register with a recaptcha",
 
          $http->do_request_json(
             method  => "POST",
-            uri     => "/r0/register",
+            uri     => "/v3/register",
             content => {
                username => $localpart,
                password => "my secret",
@@ -314,7 +314,7 @@ test "registration is idempotent, without username specified",
       # Start a session
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             password => "sUp3rs3kr1t",
@@ -331,7 +331,7 @@ test "registration is idempotent, without username specified",
          # Now register a user
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/register",
+            uri    => "/v3/register",
 
             content => {
                password => "sUp3rs3kr1t",
@@ -352,7 +352,7 @@ test "registration is idempotent, without username specified",
          # now try to register again with the same session
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/register",
+            uri    => "/v3/register",
 
             content => {
                password => "sUp3rs3kr1t",
@@ -386,7 +386,7 @@ test "registration is idempotent, with username specified",
       # Start a session
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => $localpart,
@@ -404,7 +404,7 @@ test "registration is idempotent, with username specified",
          # Now register a user
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/register",
+            uri    => "/v3/register",
 
             content => {
                username => $localpart,
@@ -424,7 +424,7 @@ test "registration is idempotent, with username specified",
          # now try to register again with the same session
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/register",
+            uri    => "/v3/register",
 
             content => {
                username => $localpart,
@@ -464,7 +464,7 @@ test "registration remembers parameters",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => $localpart,
@@ -483,7 +483,7 @@ test "registration remembers parameters",
 
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/register",
+            uri    => "/v3/register",
 
             content => {
                auth     => {
@@ -528,7 +528,7 @@ test "registration accepts non-ascii passwords",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => $localpart,
@@ -547,7 +547,7 @@ test "registration accepts non-ascii passwords",
 
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/register",
+            uri    => "/v3/register",
 
             content => {
                auth     => {
@@ -574,7 +574,7 @@ test "registration with inhibit_login inhibits login",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => $localpart,
@@ -592,7 +592,7 @@ test "registration with inhibit_login inhibits login",
 
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/register",
+            uri    => "/v3/register",
 
             content => {
                auth     => {
@@ -631,7 +631,7 @@ test "Can register using an email address",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => $localpart,
@@ -663,14 +663,14 @@ test "Can register using an email address",
             $http,
             $email_address,
             id_server => $id_server,
-            path => "/r0/register/email/requestToken",
+            path => "/v3/register/email/requestToken",
          )->then( sub {
             my ( $sid_email, $client_secret ) = @_;
 
             # attempt to register with the 3pid
             $http->do_request_json(
                method => "POST",
-               uri    => "/r0/register",
+               uri    => "/v3/register",
                content => {
                   auth => {
                      type           => "m.login.email.identity",

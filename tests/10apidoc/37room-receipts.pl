@@ -16,7 +16,7 @@ test "POST /rooms/:room_id/receipt can create receipts",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/receipt/m.read/$event_id",
+            uri    => "/v3/rooms/$room_id/receipt/m.read/$event_id",
 
             content => {},
          );
@@ -33,7 +33,7 @@ sub matrix_advance_room_receipt
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/rooms/$room_id/receipt/$type/$event_id",
+      uri    => "/v3/rooms/$room_id/receipt/$type/$event_id",
 
       content => {},
    )->then_done();

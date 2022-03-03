@@ -36,7 +36,7 @@ foreach my $test_put ( @$TO_CHECK_PUT ) {
 
          do_request_json_for( $user,
             method  => "PUT",
-            uri     => "/r0/pushrules$path",
+            uri     => "/v3/pushrules$path",
             content => $rule,
          )->main::expect_http_400;
       };
@@ -62,7 +62,7 @@ foreach my $test_get ( @$TO_CHECK_GET_400 ) {
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/pushrules$path",
+            uri     => "/v3/pushrules$path",
          )->main::expect_http_400;
       };
 };
@@ -82,7 +82,7 @@ foreach my $test_get ( @$TO_CHECK_GET_404 ) {
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/pushrules$path",
+            uri     => "/v3/pushrules$path",
          )->main::expect_http_404;
       };
 };

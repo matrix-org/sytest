@@ -10,7 +10,7 @@ test "Create group",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/r0/create_group",
+         uri     => "/v3/create_group",
          content => {
             localpart => $localpart,
             profile   => {
@@ -97,7 +97,7 @@ sub matrix_create_group
 
    do_request_json_for( $user,
       method  => "POST",
-      uri     => "/r0/create_group",
+      uri     => "/v3/create_group",
       content => {
          localpart => $localpart,
          profile   => { %opts },
@@ -124,7 +124,7 @@ sub matrix_add_group_rooms
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/admin/rooms/$room_id",
+      uri     => "/v3/groups/$group_id/admin/rooms/$room_id",
       content => {},
    );
 }
@@ -145,7 +145,7 @@ sub matrix_remove_group_rooms
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/r0/groups/$group_id/admin/rooms/$room_id",
+      uri     => "/v3/groups/$group_id/admin/rooms/$room_id",
    );
 }
 

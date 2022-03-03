@@ -118,7 +118,7 @@ sub matrix_invite_group_user
 
    do_request_json_for( $inviter,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/admin/users/invite/$invitee_id",
+      uri     => "/v3/groups/$group_id/admin/users/invite/$invitee_id",
       content => {},
    );
 }
@@ -140,7 +140,7 @@ sub matrix_remove_group_user
 
    do_request_json_for( $inviter,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/admin/users/remove/$invitee_id",
+      uri     => "/v3/groups/$group_id/admin/users/remove/$invitee_id",
       content => {},
    );
 }
@@ -160,7 +160,7 @@ sub matrix_accept_group_invite
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/self/accept_invite",
+      uri     => "/v3/groups/$group_id/self/accept_invite",
       content => {},
    );
 }
@@ -180,7 +180,7 @@ sub matrix_join_group
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/self/join",
+      uri     => "/v3/groups/$group_id/self/join",
       content => {},
    );
 }
@@ -200,7 +200,7 @@ sub matrix_leave_group
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/groups/$group_id/self/leave",
+      uri     => "/v3/groups/$group_id/self/leave",
       content => {},
    );
 }
@@ -223,7 +223,7 @@ sub matrix_get_joined_groups
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/r0/joined_groups",
+      uri    => "/v3/joined_groups",
    );
 }
 
@@ -253,6 +253,6 @@ sub matrix_get_invited_group_users
 
     do_request_json_for( $user,
         method => "GET",
-        uri    => "/r0/groups/$group_id/invited_users"
+        uri    => "/v3/groups/$group_id/invited_users"
     )
 }

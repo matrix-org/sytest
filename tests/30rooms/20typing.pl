@@ -18,7 +18,7 @@ sub matrix_typing
 
    do_request_json_for( $user,
       method => "PUT",
-      uri    => "/r0/rooms/$room_id/typing/:user_id",
+      uri    => "/v3/rooms/$room_id/typing/:user_id",
       content => \%params,
    );
 }

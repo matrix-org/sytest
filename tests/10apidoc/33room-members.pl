@@ -26,7 +26,7 @@ test "POST /rooms/:room_id/join can join a room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/rooms/$room_id/join",
+         uri    => "/v3/rooms/$room_id/join",
 
          content => {},
       )->then( sub {
@@ -68,7 +68,7 @@ sub matrix_join_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/join/$room",
+      uri    => "/v3/join/$room",
       params => \%params,
 
       content => \%content,
@@ -93,7 +93,7 @@ test "POST /join/:room_alias can join a room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_alias",
+         uri    => "/v3/join/$room_alias",
 
          content => {},
       )->then( sub {
@@ -129,7 +129,7 @@ test "POST /join/:room_id can join a room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_id",
+         uri    => "/v3/join/$room_id",
 
          content => {},
       )->then( sub {
@@ -166,7 +166,7 @@ test "POST /join/:room_id can join a room with custom content",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_id",
+         uri    => "/v3/join/$room_id",
 
          content => { "foo" => "bar" },
       )->then( sub {
@@ -205,7 +205,7 @@ test "POST /join/:room_alias can join a room with custom content",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_alias",
+         uri    => "/v3/join/$room_alias",
 
          content => { "foo" => "bar" },
       )->then( sub {
@@ -246,7 +246,7 @@ test "POST /rooms/:room_id/leave can leave a room",
       ->then( sub {
          do_request_json_for( $joiner_to_leave,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/leave",
+            uri    => "/v3/rooms/$room_id/leave",
 
             content => {},
          )
@@ -286,7 +286,7 @@ sub matrix_leave_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/rooms/$room_id/leave",
+      uri    => "/v3/rooms/$room_id/leave",
 
       content => {},
    )->then_done(1);
@@ -303,7 +303,7 @@ test "POST /rooms/:room_id/invite can send an invite",
 
       do_request_json_for( $creator,
          method => "POST",
-         uri    => "/r0/rooms/$room_id/invite",
+         uri    => "/v3/rooms/$room_id/invite",
 
          content => { user_id => $invited_user->user_id },
       )->then( sub {
@@ -346,7 +346,7 @@ sub matrix_invite_user_to_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/rooms/$room_id/invite",
+      uri    => "/v3/rooms/$room_id/invite",
 
       content => { user_id => $invitee_id }
    )->then( sub {
@@ -367,7 +367,7 @@ test "POST /rooms/:room_id/ban can ban a user",
 
       do_request_json_for( $creator,
          method => "POST",
-         uri    => "/r0/rooms/$room_id/ban",
+         uri    => "/v3/rooms/$room_id/ban",
 
          content => {
             user_id => $banned_user->user_id,

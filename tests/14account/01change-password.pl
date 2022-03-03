@@ -15,7 +15,7 @@ sub matrix_set_password
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/account/password",
+      uri    => "/v3/account/password",
       content => {
          auth => {
             type => "m.login.password",
@@ -39,7 +39,7 @@ test "After changing password, can't log in with old password",
       matrix_set_password( $user, $password, "my new password" )->then( sub {
          $user->http->do_request_json(
             method => "POST",
-            uri    => "/r0/login",
+            uri    => "/v3/login",
 
             content => {
                type     => "m.login.password",
@@ -66,7 +66,7 @@ test "After changing password, can log in with new password",
       matrix_set_password( $user, $password, "my new password" )->then( sub {
          $user->http->do_request_json(
             method => "POST",
-            uri    => "/r0/login",
+            uri    => "/v3/login",
 
             content => {
                type     => "m.login.password",
@@ -131,7 +131,7 @@ test "After changing password, different sessions can optionally be kept",
       })->then( sub {
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/account/password",
+            uri    => "/v3/account/password",
             content => {
                auth => {
                   type           => "m.login.password",
@@ -162,7 +162,7 @@ test "Pushers created with a different access token are deleted on password chan
 
          do_request_json_for( $other_login,
             method  => "POST",
-            uri     => "/r0/pushers/set",
+            uri     => "/v3/pushers/set",
             content => {
                profile_tag         => "tag",
                kind                => "http",
@@ -181,7 +181,7 @@ test "Pushers created with a different access token are deleted on password chan
       })->then( sub {
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/pushers",
+            uri     => "/v3/pushers",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -201,7 +201,7 @@ test "Pushers created with a the same access token are not deleted on password c
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/r0/pushers/set",
+         uri     => "/v3/pushers/set",
          content => {
             profile_tag         => "tag",
             kind                => "http",
@@ -219,7 +219,7 @@ test "Pushers created with a the same access token are not deleted on password c
       })->then( sub {
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/pushers",
+            uri     => "/v3/pushers",
          );
       })->then( sub {
          my ( $body ) = @_;

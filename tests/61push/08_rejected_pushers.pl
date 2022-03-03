@@ -7,7 +7,7 @@ sub create_pusher
 
    do_request_json_for( $user,
       method  => "POST",
-      uri     => "/r0/pushers/set",
+      uri     => "/v3/pushers/set",
       content => {
          profile_tag         => "tag1",
          kind                => "http",
@@ -83,7 +83,7 @@ multi_test "Test that rejected pushers are removed.",
          retry_until_success {
             do_request_json_for( $alice,
                method  => "GET",
-               uri     => "/r0/pushers",
+               uri     => "/v3/pushers",
             )->then( sub {
                my ( $body ) = @_;
 
@@ -113,7 +113,7 @@ multi_test "Test that rejected pushers are removed.",
          retry_until_success {
             do_request_json_for( $alice,
                method  => "GET",
-               uri     => "/r0/pushers",
+               uri     => "/v3/pushers",
             )->then( sub {
                my ( $body ) = @_;
 

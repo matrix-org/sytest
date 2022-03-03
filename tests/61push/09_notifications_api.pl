@@ -47,7 +47,7 @@ test "Notifications can be viewed with GET /notifications",
             )->then(sub {
                do_request_json_for( $user1,
                   method  => "GET",
-                  uri     => "/unstable/notifications",
+                  uri     => "/v3/notifications",
                )->then( sub {
                   my ( $body ) = @_;
 
@@ -89,7 +89,7 @@ test "Notifications can be viewed with GET /notifications",
          retry_until_success {
             do_request_json_for( $user1,
                method  => "GET",
-               uri     => "/unstable/notifications",
+               uri     => "/v3/notifications",
             )->then( sub {
                my ( $body ) = @_;
 

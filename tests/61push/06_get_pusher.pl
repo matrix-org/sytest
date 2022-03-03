@@ -17,7 +17,7 @@ test "Can fetch a user's pushers",
       # create a pusher
       do_request_json_for( $alice,
          method  => "POST",
-         uri     => "/r0/pushers/set",
+         uri     => "/v3/pushers/set",
          content => {
             profile_tag         => $profile_tag,
             kind                => "http",
@@ -35,7 +35,7 @@ test "Can fetch a user's pushers",
       )->then( sub {
          do_request_json_for( $alice,
             method  => "GET",
-            uri     => "/r0/pushers",
+            uri     => "/v3/pushers",
          );
       })->then( sub {
          my ( $body ) = @_;

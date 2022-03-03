@@ -37,7 +37,7 @@ sub matrix_redact_event
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/rooms/$room_id/redact/$esc_event_id",
+      uri    => "/v3/rooms/$room_id/redact/$esc_event_id",
       content => \%params,
    )->then( sub {
       my ( $body ) = @_;
@@ -102,7 +102,7 @@ test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
 
          do_request_json_for( $creator,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/redact/$to_redact",
+            uri    => "/v3/rooms/$room_id/redact/$to_redact",
             content => {},
          );
       });
@@ -123,7 +123,7 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
 
          do_request_json_for( $sender,
                method => "POST",
-               uri    => "/r0/rooms/$room_id/redact/$to_redact",
+               uri    => "/v3/rooms/$room_id/redact/$to_redact",
                content => {},
          );
       });
@@ -144,7 +144,7 @@ test "POST /rooms/:room_id/redact/:event_id as random user does not redact messa
 
          do_request_json_for( $redactor,
                method => "POST",
-               uri    => "/r0/rooms/$room_id/redact/$to_redact",
+               uri    => "/v3/rooms/$room_id/redact/$to_redact",
                content => {},
          )->main::expect_http_403;
       });
@@ -189,7 +189,7 @@ test "Redaction of a redaction redacts the redaction reason",
          # fetch the redaction and check the reason is in place
          do_request_json_for( $creator,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $redaction_id ) }",
+            uri     => "/v3/rooms/$room_id/event/${ \uri_escape( $redaction_id ) }",
          );
       })->then( sub {
          my ( $event ) = @_;
@@ -205,7 +205,7 @@ test "Redaction of a redaction redacts the redaction reason",
 
          do_request_json_for( $creator,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $redaction_id ) }",
+            uri     => "/v3/rooms/$room_id/event/${ \uri_escape( $redaction_id ) }",
          );
       })->then( sub {
          my ( $event ) = @_;

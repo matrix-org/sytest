@@ -17,7 +17,7 @@ multi_test "Can quarantine media in rooms",
       # Because we're POST'ing non-JSON
       $user->http->do_request(
          method => "POST",
-         full_uri => "/_matrix/media/r0/upload",
+         full_uri => "/_matrix/media/v3/upload",
          params => {
             access_token => $user->access_token,
          },
@@ -51,13 +51,13 @@ multi_test "Can quarantine media in rooms",
       ->then( sub {
          $user->http->do_request(
             method   => "GET",
-            full_uri => "/_matrix/media/r0/download/$content_id",
+            full_uri => "/_matrix/media/v3/download/$content_id",
          )->main::expect_http_404;
       })->SyTest::pass_on_done( "404 on getting quarantined local media" )
       ->then( sub {
          $user->http->do_request(
             method => "GET",
-            full_uri => "/_matrix/media/r0/thumbnail/$content_id",
+            full_uri => "/_matrix/media/v3/thumbnail/$content_id",
             params => {
                width  => 32,
                height => 32,
@@ -68,13 +68,13 @@ multi_test "Can quarantine media in rooms",
       ->then( sub {
          $remote_user->http->do_request(
             method   => "GET",
-            full_uri => "/_matrix/media/r0/download/$content_id",
+            full_uri => "/_matrix/media/v3/download/$content_id",
          )->main::expect_http_404;
       })->SyTest::pass_on_done( "404 on getting quarantined remote media" )
       ->then( sub {
          $remote_user->http->do_request(
             method => "GET",
-            full_uri => "/_matrix/media/r0/thumbnail/$content_id",
+            full_uri => "/_matrix/media/v3/thumbnail/$content_id",
             params => {
                width  => 32,
                height => 32,

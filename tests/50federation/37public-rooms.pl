@@ -20,7 +20,7 @@ test "Inbound federation can get public room list",
 
         do_request_json_for( $creator,
            method   => "PUT",
-           uri      => "/r0/directory/list/room/$room_id",
+           uri      => "/v3/directory/list/room/$room_id",
            content  => {
              visibility => "public",
           },

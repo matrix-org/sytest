@@ -142,7 +142,7 @@ sub matrix_get_group_profile
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/r0/groups/$group_id/profile",
+      uri     => "/v3/groups/$group_id/profile",
    );
 }
 
@@ -152,7 +152,7 @@ sub matrix_get_group_users
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/r0/groups/$group_id/users",
+      uri    => "/v3/groups/$group_id/users",
    );
 }
 
@@ -175,7 +175,7 @@ sub matrix_get_group_rooms
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/r0/groups/$group_id/rooms",
+      uri    => "/v3/groups/$group_id/rooms",
    );
 }
 
@@ -195,6 +195,6 @@ sub matrix_get_group_summary
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/r0/groups/$group_id/summary",
+      uri    => "/v3/groups/$group_id/summary",
    );
 }

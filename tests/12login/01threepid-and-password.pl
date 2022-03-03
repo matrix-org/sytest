@@ -14,7 +14,7 @@ test "Can login with 3pid and password using m.login.password",
       ->then( sub {
          $http->do_request_json(
             method => "POST",
-            uri    => "/r0/login",
+            uri    => "/v3/login",
 
             content => {
                type     => "m.login.password",

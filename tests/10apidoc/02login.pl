@@ -11,7 +11,7 @@ my $registered_user_fixture = fixture(
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             auth => {
@@ -38,7 +38,7 @@ test "GET /login yields a set of flows",
 
       $http->do_request_json(
          method => "GET",
-         uri => "/r0/login",
+         uri => "/v3/login",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -78,7 +78,7 @@ test "POST /login can log in as a user",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/login",
+         uri    => "/v3/login",
 
          content => {
             type     => "m.login.password",
@@ -113,7 +113,7 @@ test "POST /login returns the same device_id as that in the request",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/login",
+         uri    => "/v3/login",
 
          content => {
             type     => "m.login.password",
@@ -148,7 +148,7 @@ test "POST /login can log in as a user with just the local part of the id",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/login",
+         uri    => "/v3/login",
 
          content => {
             type     => "m.login.password",
@@ -179,7 +179,7 @@ test "POST /login as non-existing user is rejected",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/login",
+         uri    => "/v3/login",
 
          content => {
             type     => "m.login.password",
@@ -201,7 +201,7 @@ test "POST /login wrong password is rejected",
 
       $http->do_request_json(
          method => "POST",
-         uri    => "/r0/login",
+         uri    => "/v3/login",
 
          content => {
             type     => "m.login.password",
@@ -237,7 +237,7 @@ sub matrix_login_again_with_user
 
    $user->http->do_request_json(
       method  => "POST",
-      uri     => "/r0/login",
+      uri     => "/v3/login",
       content  => {
          type     => "m.login.password",
          identifier => {

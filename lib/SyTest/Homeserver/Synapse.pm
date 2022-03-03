@@ -1284,10 +1284,10 @@ sub generate_haproxy_map
    # haproxy. Also, the routing for GET requests below takes precedence over
    # these routes.
    my $haproxy_map = <<'EOCONFIG';
-^/_matrix/client/(v2_alpha|r0)/sync$                  synchrotron
+^/_matrix/client/(v2_alpha|r0|v3)/sync$                  synchrotron
 ^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
-^/_matrix/client/(api/v1|r0)/initialSync$             synchrotron
-^/_matrix/client/(api/v1|r0)/rooms/[^/]+/initialSync$ synchrotron
+^/_matrix/client/(api/v1|r0|v3)/initialSync$             synchrotron
+^/_matrix/client/(api/v1|r0|v3)/rooms/[^/]+/initialSync$ synchrotron
 
 ^/_matrix/media/    media_repository
 
@@ -1311,44 +1311,44 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/user/devices/                 federation_reader
 ^/_matrix/key/v2/query                                federation_reader
 
-^/_matrix/client/(api/v1|r0|unstable)/publicRooms$                client_reader
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/joined_members$    client_reader
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/context/.*$        client_reader
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/members$           client_reader
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/state$             client_reader
-^/_matrix/client/(api/v1|r0|unstable)/login$                      client_reader
-^/_matrix/client/(api/v1|r0|unstable)/account/3pid$               client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/publicRooms$                client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/joined_members$    client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/context/.*$        client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/members$           client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/state$             client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/login$                      client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/account/3pid$               client_reader
 ^/_matrix/client/versions$                                        client_reader
-^/_matrix/client/(api/v1|r0|unstable)/voip/turnServer$            client_reader
-^/_matrix/client/(r0|unstable)/register$                          client_reader
-^/_matrix/client/(r0|unstable)/auth/.*/fallback/web$              client_reader
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/messages$          client_reader
-^/_matrix/client/(api/v1|r0|unstable)/get_groups_publicised$      client_reader
-^/_matrix/client/(api/v1|r0|unstable)/joined_groups$              client_reader
-^/_matrix/client/(api/v1|r0|unstable)/publicised_groups$          client_reader
-^/_matrix/client/(api/v1|r0|unstable)/publicised_groups/          client_reader
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/event              client_reader
-^/_matrix/client/(api/v1|r0|unstable)/joined_rooms                client_reader
-^/_matrix/client/(api/v1|r0|unstable/.*)/rooms/.*/aliases         client_reader
-^/_matrix/client/(api/v1|r0|unstable)/search                      client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/voip/turnServer$            client_reader
+^/_matrix/client/(r0|v3|unstable)/register$                          client_reader
+^/_matrix/client/(r0|v3|unstable)/auth/.*/fallback/web$              client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/messages$          client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/get_groups_publicised$      client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/joined_groups$              client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/publicised_groups$          client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/publicised_groups/          client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/event              client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/joined_rooms                client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable/.*)/rooms/.*/aliases         client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/search                      client_reader
 
-^/_matrix/client/(api/v1|r0|unstable)/devices$                    stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/keys/query$                 stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/keys/changes$               stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/keys/claim                  stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/room_keys                   stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/presence/                   stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/devices$                    stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/keys/query$                 stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/keys/changes$               stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/keys/claim                  stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/room_keys                   stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/presence/                   stream_writer
 
-^/_matrix/client/(api/v1|r0|unstable)/keys/upload  frontend_proxy
+^/_matrix/client/(api/v1|r0|v3|unstable)/keys/upload  frontend_proxy
 
-^/_matrix/client/(r0|unstable|v2_alpha)/user_directory/    user_dir
+^/_matrix/client/(r0|v3|unstable|v2_alpha)/user_directory/    user_dir
 
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/redact                               event_creator
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/send                                 event_creator
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
-^/_matrix/client/(api/v1|r0|unstable)/join/                                         event_creator
-^/_matrix/client/(api/v1|r0|unstable)/profile/                                      event_creator
-^/_matrix/client/(api/v1|r0|unstable)/createRoom                                    event_creator
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/redact                               event_creator
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/send                                 event_creator
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
+^/_matrix/client/(api/v1|r0|v3|unstable)/join/                                         event_creator
+^/_matrix/client/(api/v1|r0|v3|unstable)/profile/                                      event_creator
+^/_matrix/client/(api/v1|r0|v3|unstable)/createRoom                                    event_creator
 
 EOCONFIG
 
@@ -1356,12 +1356,12 @@ EOCONFIG
    if ( $self->{redis_host} ne '' ) {
       $haproxy_map .= <<'EOCONFIG';
 
-^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/typing     stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/sendToDevice/          stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/.*/tags                stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/.*/account_data        stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/receipt       stream_writer
-^/_matrix/client/(api/v1|r0|unstable)/rooms/.*/read_markers  stream_writer
+^/_matrix/client/(api/v1|r0|v3|v3|unstable)/rooms/.*/typing     stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/sendToDevice/          stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/.*/tags                stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/.*/account_data        stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/receipt       stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/read_markers  stream_writer
 
 EOCONFIG
    }
@@ -1373,10 +1373,10 @@ sub generate_haproxy_get_map
 {
     return <<'EOCONFIG';
 # pushrules should be here, but the tests seem to be racy.
-# ^/_matrix/client/(api/v1|r0|unstable)/pushrules/            client_reader
-^/_matrix/client/(api/v1|r0|unstable)/groups/               client_reader
-^/_matrix/client/r0/user/[^/]*/account_data/                client_reader
-^/_matrix/client/r0/user/[^/]*/rooms/[^/]*/account_data/    client_reader
+# ^/_matrix/client/(api/v1|r0|v3|unstable)/pushrules/            client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/groups/               client_reader
+^/_matrix/client/(r0|v3)/user/[^/]*/account_data/                client_reader
+^/_matrix/client/(r0|v3)/user/[^/]*/rooms/[^/]*/account_data/    client_reader
 
 ^/_matrix/federation/v1/groups/                             federation_reader
 EOCONFIG

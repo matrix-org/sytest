@@ -4,7 +4,7 @@ use URI::Escape qw( uri_escape );
 
    my $event = matrix_get_event( $user, $room_id, $event_id ) -> get;
 
-Makes a /_matrix/client/r0/rooms/{roomId}/event/{eventId} request. Returns the event.
+Makes a /_matrix/client/v3/rooms/{roomId}/event/{eventId} request. Returns the event.
 
 =cut
 
@@ -15,7 +15,7 @@ sub matrix_get_event
    return do_request_json_for(
       $user,
       method  => "GET",
-      uri     => "/r0/rooms/${ \uri_escape( $room_id ) }/event/${ \uri_escape( $event_id ) }",
+      uri     => "/v3/rooms/${ \uri_escape( $room_id ) }/event/${ \uri_escape( $event_id ) }",
    );
 }
 
@@ -34,7 +34,7 @@ test "/event/ on joined room works",
 
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id ) }",
+            uri     => "/v3/rooms/$room_id/event/${ \uri_escape( $event_id ) }",
          )->then( sub {
             my ( $body ) = @_;
 
@@ -61,7 +61,7 @@ test "/event/ on non world readable room does not work",
 
          do_request_json_for( $other_user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id ) }",
+            uri     => "/v3/rooms/$room_id/event/${ \uri_escape( $event_id ) }",
          );
       })->main::expect_http_404;
    };
@@ -101,13 +101,13 @@ test "/event/ does not allow access to events before the user joined",
          # we shouldn't be able to get the event before we joined.
          do_request_json_for( $other_user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id_1 ) }",
+            uri     => "/v3/rooms/$room_id/event/${ \uri_escape( $event_id_1 ) }",
          );
       })->main::expect_http_404->then( sub {
          # we should be able to get the event after we joined.
          do_request_json_for( $other_user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $event_id_2 ) }",
+            uri     => "/v3/rooms/$room_id/event/${ \uri_escape( $event_id_2 ) }",
          );
       })->then( sub {
          my ( $body ) = @_;

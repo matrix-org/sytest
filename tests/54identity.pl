@@ -60,7 +60,7 @@ test "Can bind and unbind 3PID via homeserver",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/account/3pid/delete",
+            uri    => "/v3/account/3pid/delete",
             content => {
                medium  => $medium,
                address => $address,
@@ -91,7 +91,7 @@ test "Can unbind 3PID via homeserver when bound out of band",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/account/3pid/delete",
+         uri    => "/v3/account/3pid/delete",
          content => {
             medium    => $medium,
             address   => $address,

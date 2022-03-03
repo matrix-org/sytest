@@ -12,7 +12,7 @@ test "Can upload device keys",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/r0/keys/upload",
+         uri     => "/v3/keys/upload",
          content => {
             device_keys => {
                user_id => $user->user_id,
@@ -58,7 +58,7 @@ test "Rejects invalid device keys",
       # algorithms, keys and signatures are required fields, but missing
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/r0/keys/upload",
+         uri     => "/v3/keys/upload",
          content => {
             device_keys => {
                user_id => $user->user_id,
@@ -86,7 +86,7 @@ test "Should reject keys claiming to belong to a different user",
       do_request_json_for(
          $user,
          method  => "POST",
-         uri     => "/r0/keys/upload",
+         uri     => "/v3/keys/upload",
          content => {
             device_keys => {
                user_id => "\@50-e2e-alice:localhost:8480",
@@ -203,7 +203,7 @@ sub matrix_put_e2e_keys
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/keys/upload",
+      uri    => "/v3/keys/upload",
 
       content => {
          device_keys => \%device_keys,
@@ -227,7 +227,7 @@ sub matrix_get_e2e_keys {
 
    do_request_json_for( $from_user,
        method  => "POST",
-       uri     => "/r0/keys/query",
+       uri     => "/v3/keys/query",
        content => {
           device_keys => {
              $target_user_id => $devices // []
