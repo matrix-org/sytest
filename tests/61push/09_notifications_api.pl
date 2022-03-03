@@ -1,16 +1,46 @@
+sub create_pusher
+{
+   my ( $user, $app_id, $push_key, $url ) = @_;
+
+   do_request_json_for( $user,
+      method  => "POST",
+      uri     => "/v3/pushers/set",
+      content => {
+         profile_tag         => "tag1",
+         kind                => "http",
+         app_id              => $app_id,
+         app_display_name    => "sytest_display_name",
+         device_display_name => "device_display_name",
+         pushkey             => $push_key,
+         lang                => "en",
+         data                => { url => $url },
+      },
+   );
+}
+
 test "Notifications can be viewed with GET /notifications",
    requires => [ local_user_fixture( with_events => 0 ),
                  local_user_fixture( with_events => 0 ),
+                 $main::TEST_SERVER_INFO,
                ],
 
    check => sub {
-      my ( $user1, $user2 ) = @_;
+      my ( $user1, $user2, $test_server_info ) = @_;
 
+      my $url = $test_server_info->client_location . "/_matrix/push/v1/notify";
       my $room_id;
 
       matrix_add_push_rule( $user1, 'global', 'content', 'anything', {
          pattern => "*",
          actions => [ "notify" ]
+      })->then( sub {
+         create_pusher(
+            $user1, "sytest", "key_1", "$url",
+         )
+      })->then(sub {
+         create_pusher(
+            $user2, "sytest", "key_2", "$url",
+         )
       })->then( sub {
          matrix_create_room( $user1 );
       })->then( sub {
