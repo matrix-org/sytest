@@ -48,11 +48,7 @@ sub sync_until_user_in_device_list_id
          log_if_fail "$msg: found $wait_for_id in $device_list";
          return $body;
       },
-   )->then(sub {
-      my ( $result ) = @_;
-      log_if_fail "returning", $result;
-      return Future->done( $result );
-   })
+   )
 }
 
 
