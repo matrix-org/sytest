@@ -43,7 +43,7 @@ sub sync_until_user_in_device_list_id
       return unless any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} };
 
       log_if_fail "$msg: found $wait_for_id in $device_list";
-      return 1;
+      return Future->done( $body );
    });
 }
 
