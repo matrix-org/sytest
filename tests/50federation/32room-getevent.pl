@@ -45,12 +45,22 @@ test "Inbound federation redacts events from erased users",
    requires => [
       $main::OUTBOUND_CLIENT,
       federated_rooms_fixture(),
+      local_user_fixture(),
    ],
 
+   # On the homeserver under test, have a user `creator` create a public room.
+   # A second user `remaining_user` on the same HS joins too.
+   # Sytest acts as a second homeserver and join a user (`user_id`) to that room.
+   # The `creator` sends a message, then requests deactivation with erasure.
+   # The homeserver under test should redact that event. Sytest confirms this by
+   # re-requesting that event. (The `remaining_user` ensures that the homeserver under
+   # test is still in the room.)
+
    do => sub {
-      my ( $outbound_client, $creator, $user_id, $room ) = @_;
+      my ( $outbound_client, $creator, $user_id, $room, $remaining_user ) = @_;
       my $first_home_server = $creator->server_name;
       my $room_id = $room->room_id;
+      matrix_join_room($remaining_user, $room_id);
 
       my $message_id;
 
@@ -79,7 +89,7 @@ test "Inbound federation redacts events from erased users",
          # Check that the content is right
          assert_eq( $event->{content}->{body}, "body1" );
 
-         # now do the erasure
+         # The `creator` requests that their account be deactivated.
          matrix_deactivate_account( $creator, erase => JSON::true );
       })->then( sub {
          # re-fetch the event and check that it is redacted.
