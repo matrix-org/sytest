@@ -35,17 +35,21 @@ sub sync_until_user_in_device_list_id
    log_if_fail "$msg: waiting for $wait_for_id in $device_list";
 
    return await_sync( $syncing_user, check => sub {
-       my ( $body ) = @_;
-       log_if_fail "$msg: body", $body;
+      my ( $body ) = @_;
+      log_if_fail "$msg: body", $body;
 
-      return Future->done(0) unless
+      return unless
          $body->{device_lists} &&
          $body->{device_lists}{$device_list} &&
          any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} };
 
       log_if_fail "$msg: found $wait_for_id in $device_list";
-      return Future->done( $body );
-   });
+      return $body;
+   })->then(sub {
+      my ( $result ) = @_;
+      log_if_fail "returning", $result;
+      return Future->done( $result );
+   })
 }
 
 
@@ -456,9 +460,8 @@ test "Local device key changes appear in /keys/changes",
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $from_token = $body->{next_batch};
+         my ( $sync_request ) = @_;
+         $from_token = $sync_request->{next_batch};
 
          do_request_json_for( $user2,
             method  => "POST",
@@ -476,9 +479,8 @@ test "Local device key changes appear in /keys/changes",
       })->then( sub {
          matrix_sync_again( $user1 );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $to_token = $body->{next_batch};
+         my ( $sync_request ) = @_;
+         $to_token = $sync_request->{next_batch};
 
          do_request_json_for( $user1,
             method => "GET",
@@ -516,17 +518,15 @@ test "New users appear in /keys/changes",
 
          matrix_sync( $user1 );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $from_token = $body->{next_batch};
+         my ( $sync_request ) = @_;
+         $from_token = $sync_request->{next_batch};
 
          matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync_again( $user1 );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $to_token = $body->{next_batch};
+         my ( $sync_request ) = @_;
+         $to_token = $sync_request->{next_batch};
 
          do_request_json_for( $user1,
             method => "GET",
@@ -576,7 +576,8 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
-         $from_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
@@ -592,7 +593,8 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
-         $to_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $to_token = $sync_result->{next_batch};
 
          do_request_json_for( $creator,
             method => "GET",
@@ -642,7 +644,8 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
       })->then( sub {
          sync_until_user_in_device_list( $creator, $other_user );
       })->then( sub {
-         $from_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_leave_room_synced( $other_user, $room_id )
       })->then( sub {
@@ -651,13 +654,15 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
             device_list => "left",
          );
       })->then( sub {
+         my ( $sync_result ) = @_;
+
          do_request_json_for( $creator,
             method => "GET",
             uri    => "/v3/keys/changes",
 
             params => {
                from => $from_token,
-               to   => $creator->sync_next_batch,
+               to   => $sync_result->{next_batch},
             }
          )
       })->then( sub {
@@ -696,7 +701,8 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
       })->then( sub {
          sync_until_user_in_device_list( $creator, $other_user );
       })->then( sub {
-         $from_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
@@ -705,13 +711,15 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
             device_list => "left",
          );
       })->then( sub {
+         my ( $sync_result ) = @_;
+
          do_request_json_for( $creator,
             method => "GET",
             uri    => "/v3/keys/changes",
 
             params => {
                from => $from_token,
-               to   => $creator->sync_next_batch,
+               to   => $sync_result->{next_batch},
             }
          )
       })->then( sub {
@@ -753,7 +761,8 @@ test "If user leaves room, remote user changes device and rejoins we see update 
             $creator, $remote_user, msg => 'First body',
          );
       })->then( sub {
-         $from_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
@@ -774,7 +783,8 @@ test "If user leaves room, remote user changes device and rejoins we see update 
             $creator, $remote_user, msg => 'Second body',
          );
       })->then( sub {
-         $to_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $to_token = $sync_result->{next_batch};
 
          do_request_json_for( $creator,
             method => "GET",
