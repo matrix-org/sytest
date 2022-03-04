@@ -34,24 +34,17 @@ sub sync_until_user_in_device_list_id
 
    log_if_fail "$msg: waiting for $wait_for_id in $device_list";
 
-   return repeat_until_true {
-      matrix_sync_again( $syncing_user, timeout => 1000 )
-      ->then( sub {
-         my ( $body ) = @_;
+   return await_sync( $syncing_user, check => sub {
+       my ( $body ) = @_;
+       log_if_fail "$msg: body", $body;
 
-         log_if_fail "$msg: body", $body;
+      return unless $body->{device_lists};
+      return unless $body->{device_lists}{changed};
+      return unless any { $_ eq $wait_for_id } @{ $body->{device_lists}{changed} };
 
-         if(
-            $body->{device_lists} &&
-            $body->{device_lists}{$device_list} &&
-            any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} }
-         ) {
-            log_if_fail "$msg: found $wait_for_id in $device_list";
-            return Future->done( $body );
-         }
-         return Future->done(0);
-      });
-   };
+      log_if_fail "$msg: found $wait_for_id in $device_list";
+      return 1;
+   });
 }
 
 
