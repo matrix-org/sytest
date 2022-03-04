@@ -108,20 +108,7 @@ test "Local new device changes appear in v2 /sync",
       })->then( sub {
          matrix_login_again_with_user( $user2 )
       })->then( sub {
-         retry_until_success {
-            matrix_sync_again( $user1, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Body", $body;
-
-               Future->done(
-                  $body->{device_lists} &&
-                  $body->{device_lists}{changed} &&
-                  any { $_ eq $user2->user_id } @{ $body->{device_lists}{changed} }
-               );
-            });
-         };
+         sync_until_user_in_device_list( $user1, $user2 );
       });
    };
 
