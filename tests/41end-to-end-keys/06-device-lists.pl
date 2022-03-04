@@ -39,8 +39,8 @@ sub sync_until_user_in_device_list_id
        log_if_fail "$msg: body", $body;
 
       return unless $body->{device_lists};
-      return unless $body->{device_lists}{changed};
-      return unless any { $_ eq $wait_for_id } @{ $body->{device_lists}{changed} };
+      return unless $body->{device_lists}{$device_list};
+      return unless any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} };
 
       log_if_fail "$msg: found $wait_for_id in $device_list";
       return 1;
