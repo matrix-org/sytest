@@ -34,18 +34,21 @@ sub sync_until_user_in_device_list_id
 
    log_if_fail "$msg: waiting for $wait_for_id in $device_list";
 
-   return await_sync( $syncing_user, check => sub {
-      my ( $body ) = @_;
-      log_if_fail "$msg: body", $body;
+   return await_sync( $syncing_user, 
+      update_next_batch => 1,
+      check => sub {
+         my ( $body ) = @_;
+         log_if_fail "$msg: body", $body;
 
-      return unless
-         $body->{device_lists} &&
-         $body->{device_lists}{$device_list} &&
-         any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} };
+         return unless
+            $body->{device_lists} &&
+            $body->{device_lists}{$device_list} &&
+            any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} };
 
-      log_if_fail "$msg: found $wait_for_id in $device_list";
-      return $body;
-   })->then(sub {
+         log_if_fail "$msg: found $wait_for_id in $device_list";
+         return $body;
+      },
+   )->then(sub {
       my ( $result ) = @_;
       log_if_fail "returning", $result;
       return Future->done( $result );
