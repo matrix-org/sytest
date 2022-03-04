@@ -459,8 +459,8 @@ test "Local device key changes appear in /keys/changes",
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
-         my ( $sync_request ) = @_;
-         $from_token = $sync_request->{next_batch};
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          do_request_json_for( $user2,
             method  => "POST",
@@ -478,8 +478,8 @@ test "Local device key changes appear in /keys/changes",
       })->then( sub {
          matrix_sync_again( $user1 );
       })->then( sub {
-         my ( $sync_request ) = @_;
-         $to_token = $sync_request->{next_batch};
+         my ( $sync_result ) = @_;
+         $to_token = $sync_result->{next_batch};
 
          do_request_json_for( $user1,
             method => "GET",
@@ -517,15 +517,15 @@ test "New users appear in /keys/changes",
 
          matrix_sync( $user1 );
       })->then( sub {
-         my ( $sync_request ) = @_;
-         $from_token = $sync_request->{next_batch};
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync_again( $user1 );
       })->then( sub {
-         my ( $sync_request ) = @_;
-         $to_token = $sync_request->{next_batch};
+         my ( $sync_result ) = @_;
+         $to_token = $sync_result->{next_batch};
 
          do_request_json_for( $user1,
             method => "GET",
