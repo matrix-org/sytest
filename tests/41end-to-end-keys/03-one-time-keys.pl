@@ -9,7 +9,7 @@ multi_test "Can claim one time key using POST",
 
       do_request_json_for( $user,
          method  => "POST",
-         uri     => "/r0/keys/upload",
+         uri     => "/v3/keys/upload",
          content => {
             one_time_keys => {
                "test_algorithm:test_id", "iDBFAwt4T0ntzaZXwEevrKfmelFUMj8KS6n6kYhBPzU"
@@ -19,7 +19,7 @@ multi_test "Can claim one time key using POST",
       ->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/keys/claim",
+            uri     => "/v3/keys/claim",
             content => {
                one_time_keys => {
                   $user->user_id => {
@@ -51,7 +51,7 @@ multi_test "Can claim one time key using POST",
          # a second claim should give no keys
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/keys/claim",
+            uri     => "/v3/keys/claim",
             content => {
                one_time_keys => {
                   $user->user_id => {

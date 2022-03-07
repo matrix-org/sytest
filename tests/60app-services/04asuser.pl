@@ -32,7 +32,7 @@ test "AS user (not ghost) can join room without registering, with user_id query 
       })->then( sub {
          do_request_json_for( $as_user,
             method => "POST",
-            uri    => "/r0/join/$room_id",
+            uri    => "/v3/join/$room_id",
 
             params => {
                user_id => $as_user->user_id,

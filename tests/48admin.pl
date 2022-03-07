@@ -46,7 +46,7 @@ test "/whois",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/admin/whois/".$user->user_id,
+            uri    => "/v3/admin/whois/".$user->user_id,
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -411,7 +411,7 @@ multi_test "Shutdown room",
       ->then( sub {
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/directory/room/$room_alias",
+            uri    => "/v3/directory/room/$room_alias",
          );
       })->then( sub {
          my ( $body ) = @_;

@@ -39,7 +39,7 @@ test "GET /initialSync initially",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/initialSync",
+         uri    => "/v3/initialSync",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -63,7 +63,7 @@ sub matrix_initialsync
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/r0/initialSync",
+      uri    => "/v3/initialSync",
 
       params => {
          ( map { defined $args{$_} ? ( $_ => $args{$_} ) : () }
@@ -227,7 +227,7 @@ sub matrix_sync
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/r0/sync",
+      uri     => "/v3/sync",
       params  => \%params,
    )->on_done( sub {
       my ( $body ) = @_;

@@ -31,7 +31,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
          do_request_json_for( $as_user,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/join",
+            uri    => "/v3/rooms/$room_id/join",
             params => {
                user_id => $ghost->user_id,
             },
@@ -58,7 +58,7 @@ multi_test "AS-ghosted users can use rooms via AS",
 
             do_request_json_for( $as_user,
                method => "POST",
-               uri    => "/r0/rooms/$room_id/send/m.room.message",
+               uri    => "/v3/rooms/$room_id/send/m.room.message",
                params => {
                   user_id => $ghost->user_id,
                },
@@ -166,7 +166,7 @@ test "Ghost user must register before joining room",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/r0/rooms/$room_id/join",
+         uri    => "/v3/rooms/$room_id/join",
          params => {
             user_id => "@".$unregistered_as_user_localpart.":".$hs_info->server_name,
          },
@@ -179,7 +179,7 @@ test "Ghost user must register before joining room",
 
       do_request_json_for( $as_user,
          method => "POST",
-         uri    => "/r0/register",
+         uri    => "/v3/register",
 
          content => {
             username => $unregistered_as_user_localpart,
@@ -204,7 +204,7 @@ test "AS can set avatar for ghosted users",
 
       $http->do_request_json(
          method => "GET",
-         uri    => "/r0/profile/$user_id/avatar_url",
+         uri    => "/v3/profile/$user_id/avatar_url",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -223,7 +223,7 @@ test "AS can set avatar for ghosted users",
       do_request_json_for(
          $as_user,
          method => "PUT",
-         uri    => "/r0/profile/$user_id/avatar_url",
+         uri    => "/v3/profile/$user_id/avatar_url",
          params => {
             user_id => $user_id,
          },
@@ -247,7 +247,7 @@ test "AS can set displayname for ghosted users",
 
       $http->do_request_json(
          method => "GET",
-         uri    => "/r0/profile/$user_id/displayname",
+         uri    => "/v3/profile/$user_id/displayname",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -283,7 +283,7 @@ sub as_set_displayname_for_user {
    do_request_json_for(
       $as_user,
       method => "PUT",
-      uri    => "/r0/profile/$user_id/displayname",
+      uri    => "/v3/profile/$user_id/displayname",
       content => { displayname => $displayname },
       params => {
          user_id => $user_id,

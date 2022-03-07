@@ -18,7 +18,7 @@ sub matrix_add_account_data
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/user/:user_id/account_data/$type",
+      uri     => "/v3/user/:user_id/account_data/$type",
       content => $content
    );
 }
@@ -37,7 +37,7 @@ sub matrix_add_room_account_data
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/user/:user_id/rooms/$room_id/account_data/$type",
+      uri     => "/v3/user/:user_id/rooms/$room_id/account_data/$type",
       content => $content
    );
 }
@@ -56,7 +56,7 @@ sub matrix_get_account_data
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/r0/user/:user_id/account_data/$type",
+      uri     => "/v3/user/:user_id/account_data/$type",
    );
 }
 
@@ -74,7 +74,7 @@ sub matrix_get_room_account_data
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/r0/user/:user_id/rooms/$room_id/account_data/$type",
+      uri     => "/v3/user/:user_id/rooms/$room_id/account_data/$type",
    );
 }
 

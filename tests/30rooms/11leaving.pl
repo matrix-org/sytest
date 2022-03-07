@@ -161,7 +161,7 @@ test "Can get rooms/{roomId}/members for a departed room (SPEC-216)",
 
         do_request_json_for( $user,
             method => "GET",
-            uri => "/r0/rooms/$room_id/members",
+            uri => "/v3/rooms/$room_id/members",
         )->then( sub {
             my ( $body ) = @_;
 

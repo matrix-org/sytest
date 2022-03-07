@@ -34,13 +34,13 @@ sub check_add_push_rule
       # Trailing slash indicates retrieving ALL push rules for this scope/kind
       do_request_json_for( $user,
          method  => "GET",
-         uri     => "/r0/pushrules/$scope/$kind/",
+         uri     => "/v3/pushrules/$scope/$kind/",
       )->on_done( $check_rule_list );
    })->then( sub {
       # Trailing slash indicates retrieving ALL push rules for this scope
        do_request_json_for( $user,
          method  => "GET",
-         uri     => "/r0/pushrules/$scope/",
+         uri     => "/v3/pushrules/$scope/",
       )->on_done( sub {
          my ( $body ) = @_;
 
@@ -58,7 +58,7 @@ sub check_add_push_rule
       # Check that the rule is enabled.
       do_request_json_for( $user,
          method  => "GET",
-         uri     => "/r0/pushrules/$scope/$kind/$rule_id/enabled",
+         uri     => "/v3/pushrules/$scope/$kind/$rule_id/enabled",
       )->on_done( sub {
          my ( $body ) = @_;
 
@@ -68,7 +68,7 @@ sub check_add_push_rule
       # Check that the actions match.
       do_request_json_for( $user,
          method  => "GET",
-         uri     => "/r0/pushrules/$scope/$kind/$rule_id/actions",
+         uri     => "/v3/pushrules/$scope/$kind/$rule_id/actions",
       )->on_done( sub {
          my ( $body ) = @_;
 

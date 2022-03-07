@@ -59,7 +59,7 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
          # re-check the original event
          do_request_json_for( $creator,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $msg_event_id ) }",
+            uri     => "/v3/rooms/$room_id/event/${ \uri_escape( $msg_event_id ) }",
          );
       })->then( sub {
          my ( $ev ) = @_;
@@ -80,7 +80,7 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
          # if we now fetch the event, it should be redacted by the redaction event
          do_request_json_for( $creator,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $msg_event_id ) }",
+            uri     => "/v3/rooms/$room_id/event/${ \uri_escape( $msg_event_id ) }",
          );
       })->then( sub {
          my ( $ev ) = @_;
@@ -108,7 +108,7 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
          # re-check the original event
          do_request_json_for( $creator,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/event/${ \uri_escape( $msg_event_id ) }",
+            uri     => "/v3/rooms/$room_id/event/${ \uri_escape( $msg_event_id ) }",
          );
       })->then( sub {
          my ( $ev ) = @_;

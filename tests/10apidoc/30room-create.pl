@@ -11,7 +11,7 @@ test "POST /createRoom makes a public room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/createRoom",
+         uri    => "/v3/createRoom",
 
          content => {
             visibility      => "public",
@@ -38,7 +38,7 @@ test "POST /createRoom makes a private room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/createRoom",
+         uri    => "/v3/createRoom",
 
          content => {
             visibility => "private",
@@ -64,7 +64,7 @@ test "POST /createRoom makes a private room with invites",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/createRoom",
+         uri    => "/v3/createRoom",
 
          content => {
             visibility => "private",
@@ -97,7 +97,7 @@ test "POST /createRoom makes a room with a name",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/state/m.room.name",
+            uri    => "/v3/rooms/$room_id/state/m.room.name",
          )
       })->then( sub {
          my ( $state ) = @_;
@@ -129,7 +129,7 @@ test "POST /createRoom makes a room with a topic",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/state/m.room.topic",
+            uri    => "/v3/rooms/$room_id/state/m.room.topic",
          )
       })->then( sub {
          my ( $state ) = @_;
@@ -308,7 +308,7 @@ sub matrix_create_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/createRoom",
+      uri    => "/v3/createRoom",
       content => \%opts,
    )->then( sub {
       my ( $body ) = @_;
@@ -438,7 +438,7 @@ sub matrix_create_room_synced
 
       matrix_do_and_wait_for_sync( $user,
          do => sub {
-            my $uri = "/r0/rooms/$room_id/send/m.room.test/$txn_id";
+            my $uri = "/v3/rooms/$room_id/send/m.room.test/$txn_id";
             $txn_id++;
 
             do_request_json_for(

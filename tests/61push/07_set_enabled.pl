@@ -9,7 +9,7 @@ sub check_change_enabled
       # Check that the actions match.
       do_request_json_for( $user,
          method  => "GET",
-         uri     => "/r0/pushrules/$scope/$kind/$rule_id/enabled",
+         uri     => "/v3/pushrules/$scope/$kind/$rule_id/enabled",
       )->on_done( sub {
          my ( $body ) = @_;
 

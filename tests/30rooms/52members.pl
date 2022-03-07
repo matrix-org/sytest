@@ -11,7 +11,7 @@ test "Can get rooms/{roomId}/members",
 
          do_request_json_for( $user1,
             method => "GET",
-            uri => "/r0/rooms/$room_id/members",
+            uri => "/v3/rooms/$room_id/members",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -58,7 +58,7 @@ test "Can get rooms/{roomId}/members at a given point",
       })->then( sub {
          do_request_json_for( $user1,
             method => "GET",
-            uri => "/r0/rooms/$room_id/members",
+            uri => "/v3/rooms/$room_id/members",
             params => {
                at => $at_token
             }
@@ -91,7 +91,7 @@ test "Can filter rooms/{roomId}/members",
       })->then( sub {
          do_request_json_for( $user1,
             method => "GET",
-            uri => "/r0/rooms/$room_id/members",
+            uri => "/v3/rooms/$room_id/members",
             params => {
                not_membership => 'leave',
             }
@@ -104,7 +104,7 @@ test "Can filter rooms/{roomId}/members",
 
          do_request_json_for( $user1,
             method => "GET",
-            uri => "/r0/rooms/$room_id/members",
+            uri => "/v3/rooms/$room_id/members",
             params => {
                membership => 'leave',
             }
@@ -117,7 +117,7 @@ test "Can filter rooms/{roomId}/members",
 
          do_request_json_for( $user1,
             method => "GET",
-            uri => "/r0/rooms/$room_id/members",
+            uri => "/v3/rooms/$room_id/members",
             params => {
                membership => 'join',
             }
