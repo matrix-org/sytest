@@ -122,7 +122,7 @@ fi
 if [ -d "$SYNAPSE_SOURCE" ]; then
     echo "Creating tarball from synapse source"
     tar -C "$SYNAPSE_SOURCE" -czf /tmp/synapse.tar.gz \
-        synapse README.rst
+        synapse README.rst pyproject.toml
     SYNAPSE_SOURCE="/tmp/synapse.tar.gz"
 elif [ ! -r "$SYNAPSE_SOURCE" ]; then
     echo "Unable to read synapse source at $SYNAPSE_SOURCE" >&2
