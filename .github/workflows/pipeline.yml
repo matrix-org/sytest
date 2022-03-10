@@ -122,6 +122,10 @@ jobs:
   dendrite:
     runs-on: ubuntu-latest
     name: "Dendrite: ${{ matrix.label }}"
+
+    # Sytests often fail against Dendrite, so don't fail the whole job.
+    continue-on-error: true
+  
     strategy:
       fail-fast: false
       matrix:
