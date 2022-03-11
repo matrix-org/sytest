@@ -514,8 +514,6 @@ sub retry_until_success(&%)
 # The final result is either the result of the code block on success, or the
 # most recent failure.
 #
-# Will fail if the code block fails `max_iterations` (default 7) times.
-#
 sub repeat_until_true(&%)
 {
    my ( $code, %params ) = @_;
