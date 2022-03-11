@@ -423,7 +423,8 @@ sub delay
 # By default, if the resulting Future fails, the code block will be retried
 # (until the iteration count is exhausted). This behaviour can be changed by
 # setting the `retry_fails` parameter to 0, which will cause the failure to
-# propagate immediately.
+# propagate immediately; this is only useful when also providing a `check`
+# parameter.
 #
 # A CODE reference may be passed in the `check` parameter. If so, it is
 # called with the successful result of the Future. If it fails (ie, calls `die`),
