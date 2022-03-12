@@ -243,8 +243,84 @@ test "Federation rejects inbound events where the prev_events cannot be found",
    };
 
 
+foreach my $endpoint( qw( state state_ids ) ) {
+   test "/$endpoint returns M_NOT_FOUND for an outlier",
+      requires => [
+         $main::INBOUND_SERVER,
+         $main::OUTBOUND_CLIENT,
+         federated_rooms_fixture(),
+      ],
+
+      do => sub {
+         my ( $inbound_server, $outbound_client, $creator, $user_id, $room ) = @_;
+
+         send_and_await_outlier(
+            $inbound_server, $outbound_client, $room, $user_id, $creator,
+         )->then( sub {
+            my ( $outlier_event ) = @_;
+            my $event_id = $room->id_for_event( $outlier_event );
+
+            my $uri = "/v1/$endpoint/".$room->room_id;
+            log_if_fail "Making request /_matrix/federation/$uri for outlier event $event_id";
+
+            $outbound_client->do_request_json(
+               method   => "GET",
+               hostname => $creator->server_name,
+               uri      => "/v1/state/".$room->room_id,
+               params   => { event_id => $event_id },
+            );
+         })->main::expect_m_not_found();
+      };
+}
+
 foreach my $type ( qw( message state ) ) {
-   test "Room state at a rejected $type event is the same as its predecessor",
+   foreach my $endpoint( qw( state state_ids ) ) {
+      test "/$endpoint returns M_NOT_FOUND for a rejected $type event",
+         requires => [
+            $main::OUTBOUND_CLIENT,
+            federated_rooms_fixture(),
+         ],
+
+         do => sub {
+            my ( $outbound_client, $creator_user, $sytest_user_id, $room ) = @_;
+            my $first_home_server = $creator_user->server_name;
+
+            # we send an event which will be rejected (due to having a sender not in the room)
+            my ( $rejected_event, $rejected_event_id ) = $room->create_and_insert_event(
+               type => "m.room.$type",
+               $type eq 'state' ? ( state_key => "" ) : (),
+
+               sender  => '@fake_sender:' . $outbound_client->server_name,
+               content => { body => "Rejected" },
+               auth_events => $room->make_event_refs(
+                  $room->get_current_state_event( "m.room.create" ),
+                  $room->get_current_state_event( "m.room.power_levels" ),
+               ),
+            );
+
+            log_if_fail "sending rejected event $rejected_event_id", $rejected_event;
+
+            $outbound_client->send_event(
+               event => $rejected_event,
+               destination => $first_home_server,
+            )->then( sub {
+               # follow up with a regular event, to make sure the rejected event got through
+               send_and_await_event( $outbound_client, $room, $creator_user, sender => $sytest_user_id );
+            })->then( sub {
+               # now request the state at the rejected event
+               my $uri = "/v1/$endpoint/".$room->room_id;
+               log_if_fail "Making request /_matrix/federation/$uri for event $rejected_event_id";
+               $outbound_client->do_request_json(
+                  method   => "GET",
+                  hostname => $first_home_server,
+                  uri      => $uri,
+                  params   => { event_id => $rejected_event_id },
+               );
+            })->main::expect_m_not_found();
+         };
+   }
+
+   test "Room state after a rejected $type event is the same as before",
       requires => [
          $main::OUTBOUND_CLIENT,
          federated_rooms_fixture(),
@@ -309,7 +385,7 @@ foreach my $type ( qw( message state ) ) {
             );
          })->then( sub {
             my ( $body ) = @_;
-            log_if_fail "state_ids response", $body;
+            log_if_fail "state_ids response after regular event $regular_event_id", $body;
 
             my @sorted_state = sort @{ $body->{pdu_ids} };
             assert_deeply_eq( \@sorted_state, \@initial_state_events );
