@@ -129,6 +129,8 @@ elif [ ! -r "$SYNAPSE_SOURCE" ]; then
     exit 1
 fi
 
+echo TODO: use poetry env here
+exit 1
 if [ -n "$OFFLINE" ]; then
     # if we're in offline mode, just put synapse into the virtualenv, and
     # hope that the deps are up-to-date.
