@@ -47,11 +47,12 @@ test "Read markers appear in initial v2 /sync",
             return unless @{ $account_data } == 1;
             my $read_marker = $account_data->[0];
 
-            $read_marker->{type} eq "m.fully_read" or die "Unexpected event type";
+            $read_marker->{type} eq "m.fully_read"
+               or die "Unexpected event type";
             $read_marker->{content}{event_id} eq $event_id
                or die "Expected to see a marker for $event_id";
 
-            return Future->done(1);
+            Future->done(1);
          })
       })
    };
