@@ -1,4 +1,5 @@
 use JSON qw( decode_json );
+use List::Util qw( first );
 
 my $user_fixture = local_user_fixture();
 
@@ -287,8 +288,10 @@ The following options have defaults:
 commandline.
 
 The resultant future completes with two values: the room_id from the
-/createRoom response; the room_alias from the /createRoom response (which is
-non-standard and its use is deprecated).
+/createRoom response; and the room_alias. room_alias will be loaded from 
+/createRoom (if it exists, which is non-standard and its use is deprecated) or
+it will find the alias by loading room's aliases, in case that it's missing
+from /crateRoom.
 
 =cut
 
@@ -313,7 +316,21 @@ sub matrix_create_room
    )->then( sub {
       my ( $body ) = @_;
 
-      Future->done( $body->{room_id}, $body->{room_alias} );
+      if (defined $body->{room_alias}) {
+         Future->done( $body->{room_id}, $body->{room_alias});
+      } else {
+         my $room_id = $body->{room_id};
+
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/v3/rooms/$room_id/aliases",
+         )-> then( sub {
+            my ( $aliases_body ) = @_;
+            my $room_alias = first { index($_, $opts{room_alias_name}) >= 0 } @{$aliases_body->{aliases}};
+
+            Future->done($body->{room_id}, $room_alias);
+         })
+      }
    });
 }
 
