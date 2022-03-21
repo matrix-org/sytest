@@ -222,6 +222,20 @@ test "/purge_history by ts",
    };
 
 test "Can backfill purged history",
+   # we create three users:
+   #  - an admin on server 0
+   #  - a room creator on server 0
+   #  - a second room member on server 1
+   #
+   # We then send a bunch of messages on both servers (and make sure that
+   # they are received at both ends).
+   #
+   # We then purge the events on server 0, and do an initialsync to check
+   # that the events were actually purged.
+   #
+   # Finally, we back-paginate on server 0. It should backfill the purged events
+   # from server 1 and return them to us.
+
    requires => [ local_admin_fixture(), local_user_and_room_fixtures(),
                  remote_user_fixture(), qw( can_paginate_room_remotely ) ],
    implementation_specific => ['synapse'],
@@ -266,7 +280,7 @@ test "Can backfill purged history",
             await_message_in_room( $remote_user, $room_id, $last_local_id )
          )
       })->then( sub {
-         # ... and half as the remote. This is useful to esnre that both local
+         # ... and half as the remote. This is useful to ensure that both local
          # and remote events are handled correctly.
          repeat( sub {
             my $msgnum = $_[0];
