@@ -229,6 +229,9 @@ sub create_event
    my $self = shift;
    my %fields = @_;
 
+   defined $fields{$_} or croak "Every event needs a '$_' field"
+      for qw( type content sender );
+
    my @auth_events = grep { defined } (
       $self->get_current_state_event( "m.room.create" ),
       $self->get_current_state_event( "m.room.join_rules" ),
