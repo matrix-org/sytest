@@ -125,7 +125,7 @@ test "Checking local federation server",
 
 =head2 send_and_await_event
 
-   send_and_await_event( $outbound_client, $room, $user, %fields ) -> then( sub {
+   send_and_await_event( $outbound_client, $room, $server_user, %fields ) -> then( sub {
       my ( $event_id ) = @_;
    });
 
