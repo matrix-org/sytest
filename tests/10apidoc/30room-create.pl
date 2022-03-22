@@ -291,7 +291,7 @@ The resultant future completes with two values: the room_id from the
 /createRoom response; and the room_alias. room_alias will be loaded from 
 /createRoom (if it exists, which is non-standard and its use is deprecated) or
 it will find the alias by loading room's aliases, in case that it's missing
-from /crateRoom.
+from /createRoom.
 
 =cut
 
