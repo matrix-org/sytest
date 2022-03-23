@@ -4,16 +4,19 @@ FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
 ARG PYTHON_VERSION=python3
 RUN apt-get -qq update && apt-get -qq install -y \
-    ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv eatmydata \
-    redis-server
+    ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
+    ${PYTHON_VERSION}-pip eatmydata redis-server
+
+RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.12
 
 # /src is where we expect Synapse to be
 RUN mkdir /src
 
 # Download a cache of build dependencies to support offline mode.
+# `setuptools` and `wheel` are only required for pre-poetry Synapse versions.
 # These version numbers are arbitrary and were the latest at the time.
 RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
-        setuptools==60.10.0 wheel==0.37.1
+        poetry-core==1.0.8 setuptools==60.10.0 wheel==0.37.1
 
 # Create the virutal env upfront so we don't need to keep reinstall dependencies
 # Manually upgrade pip to ensure it can locate Cryptography's binary wheels
