@@ -133,11 +133,11 @@ if [ -n "$OFFLINE" ]; then
     # if we're in offline mode, just put synapse into the virtualenv, and
     # hope that the deps are up-to-date.
     #
-    # --no-use-pep517 works around what appears to be a pip issue
-    # (https://github.com/pypa/pip/issues/5402 possibly) where pip wants
-    # to reinstall any requirements for the build system, even if they are
-    # already installed.
-    /venv/bin/pip install --no-index --no-use-pep517 "$SYNAPSE_SOURCE"
+    # pip will want to install any requirements for the build system
+    # (https://github.com/pypa/pip/issues/5402), so we have to provide a
+    # directory of pre-downloaded build requirements.
+    /venv/bin/pip install --no-index --find-links /pypi-offline-cache \
+        "$SYNAPSE_SOURCE"
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.

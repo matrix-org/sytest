@@ -10,6 +10,11 @@ RUN apt-get -qq update && apt-get -qq install -y \
 # /src is where we expect Synapse to be
 RUN mkdir /src
 
+# Download a cache of build dependencies to support offline mode.
+# These version numbers are arbitrary and were the latest at the time.
+RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
+        setuptools==60.10.0 wheel==0.37.1
+
 # Create the virutal env upfront so we don't need to keep reinstall dependencies
 # Manually upgrade pip to ensure it can locate Cryptography's binary wheels
 RUN ${PYTHON_VERSION} -m venv /venv && /venv/bin/pip install -U pip
