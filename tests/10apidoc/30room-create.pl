@@ -315,22 +315,17 @@ sub matrix_create_room
       content => \%opts,
    )->then( sub {
       my ( $body ) = @_;
+      my $room_id = $body->{room_id};
 
-      if (defined $body->{room_alias}) {
-         Future->done( $body->{room_id}, $body->{room_alias});
-      } else {
-         my $room_id = $body->{room_id};
+      do_request_json_for( $user,
+         method => "GET",
+         uri    => "/v3/rooms/$room_id/aliases",
+      )-> then( sub {
+         my ( $aliases_body ) = @_;
+         my $room_alias = first { index($_, $opts{room_alias_name}) >= 0 } @{$aliases_body->{aliases}};
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/v3/rooms/$room_id/aliases",
-         )-> then( sub {
-            my ( $aliases_body ) = @_;
-            my $room_alias = first { index($_, $opts{room_alias_name}) >= 0 } @{$aliases_body->{aliases}};
-
-            Future->done($body->{room_id}, $room_alias);
-         })
-      }
+         Future->done($body->{room_id}, $room_alias);
+      })
    });
 }
 
