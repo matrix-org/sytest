@@ -135,11 +135,33 @@ if [ -n "$OFFLINE" ]; then
     # pip will want to install any requirements for the build system
     # (https://github.com/pypa/pip/issues/5402), so we have to provide a
     # directory of pre-downloaded build requirements.
+    echo "Installing Synapse using pip in offline mode..."
     /venv/bin/pip install --no-index --find-links /pypi-offline-cache /synapse
 else
-    # We've already created the virtualenv, but lets double check we have all
-    # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir /synapse[redis]
+    if [ -f "/synapse/poetry.lock" ]; then
+        # Install Synapse and dependencies using poetry, respecting the lockfile.
+        # The virtual env will already be populated with dependencies from the
+        # Docker build.
+        echo "Installing Synapse using poetry..."
+        if [ -d /synapse/.venv ]; then
+            # There was a virtual env in the source directory for some reason.
+            # We want to use our own, so remove it.
+            rm -rf /synapse/.venv
+        fi
+        ln -s -T /venv /synapse/.venv # reuse the existing virtual env
+        pushd /synapse
+        poetry install --extras redis
+        popd
+    else
+        # Install Synapse and dependencies using pip. As of pip 20.1, this will
+        # try to build Synapse in-tree, which means writing changes to the source
+        # directory.
+        # The virtual env will already be populated with dependencies from the
+        # Docker build.
+        echo "Installing Synapse using pip..."
+        /venv/bin/pip install -q --upgrade --no-cache-dir /synapse[redis]
+    fi
+
     /venv/bin/pip install -q --upgrade --no-cache-dir \
         lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
 
