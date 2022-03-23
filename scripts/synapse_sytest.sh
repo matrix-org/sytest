@@ -114,20 +114,19 @@ fi
 # default value for SYNAPSE_SOURCE
 : ${SYNAPSE_SOURCE:=/src}
 
-# if we're running against a source directory, turn it into a tarball.  pip
-# will then unpack it to a temporary location, and build it.  (As of pip 20.1,
-# it will otherwise try to build it in-tree, which means writing changes to the
-# source volume outside the container.)
-#
-if [ -d "$SYNAPSE_SOURCE" ]; then
-    echo "Creating tarball from synapse source"
-    tar -C "$SYNAPSE_SOURCE" -czf /tmp/synapse.tar.gz \
-        synapse setup.py README.rst MANIFEST.in
-    SYNAPSE_SOURCE="/tmp/synapse.tar.gz"
-elif [ ! -r "$SYNAPSE_SOURCE" ]; then
+if [ ! -r "$SYNAPSE_SOURCE" ]; then
     echo "Unable to read synapse source at $SYNAPSE_SOURCE" >&2
     exit 1
 fi
+
+if [ ! -d "$SYNAPSE_SOURCE" ]; then
+    echo "$SYNAPSE_SOURCE must be a source directory" >&2
+    exit 1
+fi
+
+# Make a copy of the source directory to avoid writing changes to the source
+# volume outside the container.
+cp -r "$SYNAPSE_SOURCE" /synapse
 
 if [ -n "$OFFLINE" ]; then
     # if we're in offline mode, just put synapse into the virtualenv, and
@@ -136,12 +135,11 @@ if [ -n "$OFFLINE" ]; then
     # pip will want to install any requirements for the build system
     # (https://github.com/pypa/pip/issues/5402), so we have to provide a
     # directory of pre-downloaded build requirements.
-    /venv/bin/pip install --no-index --find-links /pypi-offline-cache \
-        "$SYNAPSE_SOURCE"
+    /venv/bin/pip install --no-index --find-links /pypi-offline-cache /synapse
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir "$SYNAPSE_SOURCE"[redis]
+    /venv/bin/pip install -q --upgrade --no-cache-dir /synapse[redis]
     /venv/bin/pip install -q --upgrade --no-cache-dir \
         lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
 

@@ -23,7 +23,7 @@ RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.12
 # We use the second option and make `.venv` a symlink.
 RUN poetry config virtualenvs.in-project true
 
-# /src is where we expect Synapse to be
+# /src is where we expect the Synapse source directory to be mounted
 RUN mkdir /src
 
 # Download a cache of build dependencies to support offline mode.
