@@ -54,7 +54,7 @@ test "Inbound federation can query room alias directory",
 
       my $room_id;
 
-      matrix_create_room( $user )
+      matrix_create_room_synced( $user )
       ->then( sub {
          ( $room_id ) = @_;
 
