@@ -5,7 +5,7 @@ FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 ARG PYTHON_VERSION=python3
 RUN apt-get -qq update && apt-get -qq install -y \
     ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
-    ${PYTHON_VERSION}-pip eatmydata redis-server
+    python3-pip eatmydata redis-server
 
 RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.12
 
