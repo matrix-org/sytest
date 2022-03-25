@@ -20,4 +20,8 @@ RUN /venv/bin/pip install -q --no-cache-dir lxml psycopg2 coverage codecov
 # and test
 RUN /venv/bin/pip uninstall -q --no-cache-dir -y matrix-synapse
 
+# Pre-install test dependencies installed by `scripts/synapse_sytest.sh`.
+RUN /venv/bin/pip install -q --no-cache-dir \
+        lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
+
 ENTRYPOINT [ "/bin/bash", "/bootstrap.sh", "synapse" ]
