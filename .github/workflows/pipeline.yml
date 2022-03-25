@@ -120,8 +120,12 @@ jobs:
             /logs/**/*.log*
 
   dendrite:
+    # dendrite is currently flaky, so disable the tests for now
+    if: false
+  
     runs-on: ubuntu-latest
     name: "Dendrite: ${{ matrix.label }}"
+
     strategy:
       fail-fast: false
       matrix:
