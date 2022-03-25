@@ -55,7 +55,6 @@ RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
 # Manually upgrade pip to ensure it can locate Cryptography's binary wheels
 RUN ${PYTHON_VERSION} -m venv /venv && /venv/bin/pip install -U pip
 RUN /venv/bin/pip install -q --no-cache-dir matrix-synapse[all]
-RUN /venv/bin/pip install -q --no-cache-dir lxml psycopg2 coverage codecov
 
 # Uninstall matrix-synapse package so it doesn't collide with the version we try
 # and test
@@ -63,6 +62,6 @@ RUN /venv/bin/pip uninstall -q --no-cache-dir -y matrix-synapse
 
 # Pre-install test dependencies installed by `scripts/synapse_sytest.sh`.
 RUN /venv/bin/pip install -q --no-cache-dir \
-        lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
+        coverage codecov tap.py coverage_enable_subprocess
 
 ENTRYPOINT [ "/bin/bash", "/bootstrap.sh", "synapse" ]

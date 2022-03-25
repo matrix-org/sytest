@@ -150,7 +150,7 @@ else
         fi
         ln -s -T /venv /synapse/.venv # reuse the existing virtual env
         pushd /synapse
-        poetry install --extras redis
+        poetry install --extras all
         popd
     else
         # Install Synapse and dependencies using pip. As of pip 20.1, this will
@@ -159,11 +159,11 @@ else
         # The virtual env will already be populated with dependencies from the
         # Docker build.
         echo "Installing Synapse using pip..."
-        /venv/bin/pip install -q --upgrade --no-cache-dir /synapse[redis]
+        /venv/bin/pip install -q --upgrade --no-cache-dir /synapse[all]
     fi
 
     /venv/bin/pip install -q --upgrade --no-cache-dir \
-        lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
+        coverage codecov tap.py coverage_enable_subprocess
 
     # Make sure all Perl deps are installed -- this is done in the docker build
     # so will only install packages added since the last Docker build
