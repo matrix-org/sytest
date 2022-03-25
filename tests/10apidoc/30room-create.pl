@@ -317,12 +317,11 @@ sub matrix_create_room
       my ( $body ) = @_;
       my $room_id = $body->{room_id};
 
-      if (defined $opts{room_alias_name}) {
-         my $room_alias = sprintf( '#%s:%s', $opts{room_alias_name}, $user->server_name );
-         Future->done($body->{room_id}, $room_alias);
-      } else {
-         Future->done($body->{room_id}, undef);
+      my $room_alias;
+      if( defined $opts{room_alias_name} ) {
+         $room_alias = sprintf( '#%s:%s', $opts{room_alias_name}, $user->server_name );
       }
+      Future->done( $room_id, $room_alias );
    });
 }
 
