@@ -216,12 +216,7 @@ sub send_and_await_outlier {
       sender => $sending_user_id,
       state_key => $sending_user_id,
       content => { membership => 'join' },
-      auth_events => $room->make_event_refs(
-         $room->get_current_state_event( "m.room.create" ),
-         $room->get_current_state_event( "m.room.power_levels" ),
-         $room->get_current_state_event( "m.room.member", $sending_user_id ),
-        ),
-     );
+   );
 
    my ( $backfilled_event_R, $backfilled_event_id_R ) = $room->create_and_insert_event(
       type        => "m.room.message",
