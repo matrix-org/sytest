@@ -414,11 +414,26 @@ sub delay
 }
 
 
-# Retries a code block until it returns a successful Future.
+# Retries a code block until it succeeds, with a limited number of retries.
 #
 # Includes a delay between each call, and logs the reason for failure.
 #
-# The code block is called with the iteration number.
+# The code block is called with the iteration number, and must return a Future.
+#
+# By default, if the resulting Future fails, the code block will be retried
+# (until the iteration count is exhausted). This behaviour can be changed by
+# setting the `retry_fails` parameter to 0, which will cause the failure to
+# propagate immediately; this is only useful when also providing a `check`
+# parameter.
+#
+# A CODE reference may be passed in the `check` parameter. If so, it is
+# called with the successful result of the Future. If it fails (ie, calls `die`),
+# the code block will be retried (even if retry_fails is false).
+#
+# Will fail if the code block fails `max_iterations` (default 7) times.
+#
+# The final result is either the result of the code block on success, or the
+# most recent failure.
 #
 # Example:
 #
@@ -426,57 +441,92 @@ sub delay
 #      my ( $iter ) = @_;
 #      ...
 #   }, max_iterations => 20,
-#      initial_delay => 0.01;
+#      initial_delay => 0.01,
+#      retry_fails => 0,
+#      check => sub { die "bad result" unless $_[0] == 134 };
 #
-# Will fail if the code block fails `max_iterations` (default 7) times.
 #
 sub retry_until_success(&%)
 {
    my ( $code, %params ) = @_;
 
    my $delay = $params{initial_delay} // 0.1;
+   my $retry_fails = $params{retry_fails} // 1;
+
+   # by default, any return value will do.
+   my $check = $params{check} // sub {};
 
    # 7 iterations means a total delay of
    #  0.1 * (1 + 1.5 + 1.5^2 + ... + 1.5^5 )
    #    =~ 2.0 seconds.
    my $max_iter = $params{max_iterations} // 7;
    my $iter = 0;
+   my $done = 0;
 
    try_repeat {
-      ( $iter ? delay( $delay *= 1.5 ) : Future->done )
+      my $f = ( $iter ? delay( $delay *= 1.5 ) : Future->done )
       ->then( sub {
          Future->call( $code, $iter++ );
-      })->on_fail( sub {
-         my ( $exc ) = @_;
-         chomp $exc;
-         log_if_fail("Iteration $iter++: not ready yet: $exc");
       });
-   } until => sub { $iter > $max_iter || !$_[0]->failure };
+
+      if( !$retry_fails ) {
+         # stop the loop immediately if the code fails
+         $f->on_fail( sub { $done = 1 } );
+      }
+
+      # check the result. If it's bad, we need to turn the succeeding Future
+      # into a failing one (so we need ->then rather than ->on_done)
+      $f = $f->then( sub {
+         &$check( @_ );
+         $done = 1;
+         # pass good values through unchanged.
+         Future->done( @_ );
+      });
+
+      $f->on_fail( sub {
+         if( !$done ) {
+            my ( $msg ) = @_;
+            chomp $msg;
+            log_if_fail("Iteration $iter: not ready yet: ".$msg);
+         }
+      });
+   } until => sub { $done || $iter > $max_iter };
 }
 
-# /!\ You probably DON'T want to use repeat_until true /!\
-# It means that genuine test failures get turned into test timeouts.
-# Prefer retry_until_success, which limits the number of retries.
+
+# Repeat a code block until it returns a truthy value.
 #
-# Another wrapper which repeats (with delay) until the block returns a true
-# value. If the block fails entirely then it aborts, does not retry.
-sub repeat_until_true(&)
+# Includes a delay between each call, and logs the reason for failure.
+#
+# The code block is called with the iteration number, and must return a Future.
+# If the Future resolves to a falsey value, the code block will be retried.
+# If it fails, the loop is aborted.
+#
+# Example:
+#
+#   repeat_until_true {
+#      my ( $iter ) = @_;
+#      ...
+#   }, max_iterations => 20,
+#      initial_delay => 0.01;
+#
+# Will fail if the code block fails `max_iterations` (default 7) times.
+#
+# The final result is either the result of the code block on success, or the
+# most recent failure.
+#
+sub repeat_until_true(&%)
 {
-   warnings::warnif( "deprecated",
-      "repeat_until_true is deprecated, use retry_until_success instead" );
-   my ( $code ) = @_;
-
-   my $delay = 0.1;
-
-   repeat {
-      my $prev_f = shift;
-
-      ( $prev_f ?
-            delay( $delay *= 1.5 ) :
-            Future->done )
-         ->then( $code );
-   }  until => sub { $_[0]->get };
+   my ( $code, %params ) = @_;
+   return retry_until_success \&$code,
+      check => sub {
+         my $res = $_[0];
+         die "repeat_until_true: block returned $res" unless $res;
+      },
+      retry_fails => 0,
+      %params;
 }
+
 
 # wrapper around Future::with_cancel which works around a bug whereby the
 # returned future does not keep a reference to the old future, which means it
