@@ -31,6 +31,8 @@ sub await_purge_complete {
 test "/whois",
    requires => [ $main::API_CLIENTS[0] ],
 
+   timeout => 10,
+
    do => sub {
       my ( $http ) = @_;
 
@@ -45,8 +47,11 @@ test "/whois",
       ->then( sub {
          ( $user ) = @_;
 
+         # Synapse flushes IP addresses to the database every 5 seconds, so we
+         # need to keep checking because the IP address won't appear for a few
+         # seconds (unless the worker that flushes the IP addresses is the same
+         # as the one that handles /whois).
          retry_until_success {
-            sleep 1;
             do_request_json_for( $user,
                method => "GET",
                uri    => "/v3/admin/whois/".$user->user_id,
@@ -67,7 +72,7 @@ test "/whois",
 
                Future->done( 1 );
             });
-         }
+         }, initial_delay => 0.5;
       });
    };
 
