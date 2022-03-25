@@ -1,5 +1,4 @@
 use JSON qw( decode_json );
-use List::Util qw( first );
 
 my $user_fixture = local_user_fixture();
 
@@ -288,10 +287,9 @@ The following options have defaults:
 commandline.
 
 The resultant future completes with two values: the room_id from the
-/createRoom response; and the room_alias. room_alias will be loaded from 
-/createRoom (if it exists, which is non-standard and its use is deprecated) or
-it will find the alias by loading room's aliases, in case that it's missing
-from /createRoom.
+/createRoom response; and the room_alias. If room_alias_name is present
+in %opts, an alias will be built with the given alias and user's server name.
+Othwerwise, it will return undef.
 
 =cut
 
