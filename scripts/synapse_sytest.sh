@@ -141,9 +141,9 @@ if [ -n "$OFFLINE" ]; then
 else
     # We've already created the virtualenv, but lets double check we have all
     # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir "$SYNAPSE_SOURCE"[redis]
+    /venv/bin/pip install -q --upgrade --no-cache-dir "$SYNAPSE_SOURCE"[all]
     /venv/bin/pip install -q --upgrade --no-cache-dir \
-        lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
+        coverage codecov tap.py coverage_enable_subprocess
 
     # Make sure all Perl deps are installed -- this is done in the docker build
     # so will only install packages added since the last Docker build
