@@ -472,6 +472,13 @@ test "Outbound federation requests missing prev_events and then asks for /state_
          log_if_fail "Sent events B, C: " . $sent_event_b->{event_id} .
             ", " . $sent_event_c->{event_id};
 
+         # build a state map from the room's current state and our extra events
+         my %room_state_at_y = %{ $room->{current_state} };
+         foreach my $event ( $missing_state_s, $missing_state_t ) {
+            my $k = join "\0", $event->{type}, $event->{state_key};
+            $room_state_at_y{$k} = $event;
+         }
+
          Future->needs_all(
             $outbound_client->send_event(
                event       => $sent_event_c,
@@ -505,20 +512,13 @@ test "Outbound federation requests missing prev_events and then asks for /state_
                my ( $req ) = @_;
                log_if_fail "/state_ids request";
 
-               # build a state map from the room's current state and our extra events
-               my %state = %{ $room->{current_state} };
-               foreach my $event ( $missing_state_s, $missing_state_t ) {
-                  my $k = join "\0", $event->{type}, $event->{state_key};
-                  $state{$k} = $event;
-               }
-
                my @auth_chain = $inbound_server->{datastore}->get_auth_chain_events(
-                  map { $_->{event_id} } values( %state )
+                  map { $_->{event_id} } values( %room_state_at_y )
                );
 
                my $resp = {
                   pdu_ids => [
-                     map { $_->{event_id} } values( %state ),
+                     map { $_->{event_id} } values( %room_state_at_y ),
                   ],
                   auth_chain_ids => [
                      map { $_->{event_id} } @auth_chain,
@@ -532,17 +532,45 @@ test "Outbound federation requests missing prev_events and then asks for /state_
                Future->done(1);
             }),
          )->then( sub {
+            # the server may send a /state request; be prepared to answer that.
+            # (it may, alternatively, send individual /event requests)
+            my $state_req_fut = $inbound_server->await_request_v1_state(
+               $room_id, $missing_event_y->{event_id},
+            )->then( sub {
+               my ( $req, @params ) = @_;
+               log_if_fail "/state request", \@params;
+
+               my $resp = {
+                  state => [ values( %room_state_at_y ) ],
+                  auth_chain => [
+                     map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) }
+                        values( %room_state_at_y )
+                  ],
+               };
+
+               log_if_fail "/state response", $resp;
+               $req->respond_json( $resp );
+
+               # return a future which never completes, so that wait_any is not
+               # satisfied.
+               return Future->new();
+            });
+
             # creator user should eventually receive the events
-            Future->needs_all(
-               await_sync_timeline_contains($creator, $room_id, check => sub {
-                  my ( $event ) = @_;
-                  return $event->{event_id} eq $sent_event_c->{event_id}
-               }),
-               await_sync_timeline_contains($creator, $room_id, check => sub {
-                  my ( $event ) = @_;
-                  log_if_fail "/sync event", $event;
-                  return $event->{event_id} eq $missing_event_x->{event_id}
-               }),
+            Future->wait_any(
+               $state_req_fut,
+
+               Future->needs_all(
+                  await_sync_timeline_contains($creator, $room_id, check => sub {
+                     my ( $event ) = @_;
+                     return $event->{event_id} eq $sent_event_c->{event_id}
+                  }),
+                  await_sync_timeline_contains($creator, $room_id, check => sub {
+                     my ( $event ) = @_;
+                     log_if_fail "/sync event", $event;
+                     return $event->{event_id} eq $missing_event_x->{event_id}
+                  }),
+               ),
             );
          })->then( sub {
             # check the 'current' state of the room after state resolution
@@ -745,15 +773,41 @@ test "Federation handles empty auth_events in state_ids sanely",
                Future->done(1);
             }),
          )->then( sub {
+            # the server may send a /state request; be prepared to answer that.
+            # (it may, alternatively, send individual /event requests)
+            my $state_req_fut = $inbound_server->await_request_v1_state(
+               $room_id, $missing_event_y->{event_id},
+            )->then( sub {
+               my ( $req, @params ) = @_;
+               log_if_fail "/state request", \@params;
+
+               my $resp = {
+                  state => [ values( %{ $room->{current_state} } ) ],
+                  auth_chain => [],
+               };
+
+               log_if_fail "/state response", $resp;
+               $req->respond_json( $resp );
+
+               # return a future which never completes, so that wait_any is not
+               # satisfied.
+               return Future->new();
+            });
+
+
             # creator user should eventually receive X and C.
-            Future->needs_all(
-               await_sync_timeline_contains( $creator, $room_id, check => sub {
-                  log_if_fail "/sync " , $_;
-                  return $_[0]->{event_id} eq $missing_event_x->{event_id};
-               }),
-               await_sync_timeline_contains( $creator, $room_id, check => sub {
-                  return $_[0]->{event_id} eq $sent_event_c->{event_id};
-               }),
+            Future->wait_any(
+               $state_req_fut,
+
+               Future->needs_all(
+                  await_sync_timeline_contains( $creator, $room_id, check => sub {
+                     log_if_fail "/sync " , $_;
+                     return $_[0]->{event_id} eq $missing_event_x->{event_id};
+                  }),
+                  await_sync_timeline_contains( $creator, $room_id, check => sub {
+                     return $_[0]->{event_id} eq $sent_event_c->{event_id};
+                  }),
+               ),
             );
          });
       });
