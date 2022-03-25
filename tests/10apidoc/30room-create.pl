@@ -287,8 +287,9 @@ The following options have defaults:
 commandline.
 
 The resultant future completes with two values: the room_id from the
-/createRoom response; the room_alias from the /createRoom response (which is
-non-standard and its use is deprecated).
+/createRoom response; and the room_alias. If room_alias_name is present
+in %opts, an alias will be built with the given alias and user's server name.
+Othwerwise, it will return undef.
 
 =cut
 
@@ -312,8 +313,13 @@ sub matrix_create_room
       content => \%opts,
    )->then( sub {
       my ( $body ) = @_;
+      my $room_id = $body->{room_id};
 
-      Future->done( $body->{room_id}, $body->{room_alias} );
+      my $room_alias;
+      if( defined $opts{room_alias_name} ) {
+         $room_alias = sprintf( '#%s:%s', $opts{room_alias_name}, $user->server_name );
+      }
+      Future->done( $room_id, $room_alias );
    });
 }
 
