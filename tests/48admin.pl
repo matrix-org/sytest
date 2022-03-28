@@ -274,6 +274,8 @@ test "Can backfill purged history",
       })->then( sub {
          my ( $last_local_id ) = @_;
 
+         log_if_fail "last_local_id: $last_local_id; waiting for both users to see it";
+
          # Wait until both users see the last event
          Future->needs_all(
             await_message_in_room( $user, $room_id, $last_local_id ),
@@ -292,7 +294,7 @@ test "Can backfill purged history",
       })->then( sub {
          ( $last_event_id ) = @_;
 
-         log_if_fail "last_event_id", $last_event_id;
+         log_if_fail "last_event_id: $last_event_id; waiting for both users to see it";
 
          # Wait until both users see the last event
          Future->needs_all(
@@ -300,6 +302,7 @@ test "Can backfill purged history",
             await_message_in_room( $remote_user, $room_id, $last_event_id )
          )
       })->then( sub {
+         log_if_fail "Purging events before $last_event_id";
          do_request_json_for( $admin,
             method   => "POST",
             full_uri => "/_synapse/admin/v1/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
@@ -314,6 +317,8 @@ test "Can backfill purged history",
       })->then( sub {
          my ( $purge_status ) = @_;
          assert_eq( $purge_status, 'complete' );
+
+         log_if_fail "Purge complete: syncing to check success";
 
          matrix_sync( $user )
       })->then( sub {
@@ -345,17 +350,16 @@ test "Can backfill purged history",
          my @missing_event_ids = grep { $_ ne $last_event_id } @event_ids;
 
          # Keep paginating untill we see all the old messages.
-         repeat( sub {
-            log_if_fail "prev_batch", $prev_batch;
+         repeat_until_true {
+            log_if_fail "prev_batch: $prev_batch";
+
             matrix_get_room_messages( $user, $room_id,
                limit => 20,
                from => $prev_batch,
-            )->on_done( sub {
+            )->then( sub {
                my ( $body ) = @_;
 
                log_if_fail( "Pagination result", $body );
-
-               $prev_batch ne $body->{end} or die "Pagination token did not change";
 
                $prev_batch = $body->{end};
 
@@ -366,8 +370,9 @@ test "Can backfill purged history",
                }
 
                log_if_fail "Missing", \@missing_event_ids;
-            })
-         }, while => sub { scalar @missing_event_ids > 0 });
+               return (scalar @missing_event_ids == 0);
+            });
+         };
       });
    };
 
