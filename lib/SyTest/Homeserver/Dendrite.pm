@@ -357,6 +357,7 @@ sub _start_monolith
 
    my $output = $self->{output};
    my $loop = $self->loop;
+   my $idx = $self->{hs_index};
 
    $output->diag( "Starting monolith server" );
    my @command = (
@@ -384,6 +385,7 @@ sub _start_monolith
       command => [ @command ],
       connect_host => $self->{bind_host},
       connect_port => $self->secure_port,
+      name => "dendrite-$idx-monolith",
    )->else( sub {
       die "Unable to start dendrite monolith: $_[0]\n";
    })->on_done( sub {
