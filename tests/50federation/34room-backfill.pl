@@ -314,7 +314,7 @@ test "Backfilled events whose prev_events are in a different room do not allow c
 
          my %state  = %{ $room2->{current_state} };
          my $resp = {
-            state => [ values( %state ) ],
+            pdus => [ values( %state ) ],
 
             # XXX we're supposed to return the whole auth chain here,
             # not just Q's auth_events. It doesn't matter too much

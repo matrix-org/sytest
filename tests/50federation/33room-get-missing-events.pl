@@ -386,7 +386,7 @@ test "outliers whose auth_events are in a different room are correctly rejected"
             log_if_fail "/state request", \@params;
 
             my $resp = {
-               state => [ values( %initial_room2_state ) ],
+               pdus => [ values( %initial_room2_state ) ],
                auth_chain => [
                   map { $inbound_server->datastore->get_event( $_ ) } @{ $room2->event_ids_from_refs( $event_Q->{auth_events} ) },
                ],

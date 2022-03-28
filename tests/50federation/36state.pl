@@ -541,7 +541,7 @@ test "Outbound federation requests missing prev_events and then asks for /state_
                log_if_fail "/state request", \@params;
 
                my $resp = {
-                  state => [ values( %room_state_at_y ) ],
+                  pdus => [ values( %room_state_at_y ) ],
                   auth_chain => [
                      map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) }
                         values( %room_state_at_y )
@@ -782,7 +782,7 @@ test "Federation handles empty auth_events in state_ids sanely",
                log_if_fail "/state request", \@params;
 
                my $resp = {
-                  state => [ values( %{ $room->{current_state} } ) ],
+                  pdus => [ values( %{ $room->{current_state} } ) ],
                   auth_chain => [],
                };
 
