@@ -377,21 +377,49 @@ test "outliers whose auth_events are in a different room are correctly rejected"
             Future->done(1);
          }),
       )->then( sub {
-         # wait for S to turn up
-         await_sync_timeline_contains(
-            $creator_user, $room2->room_id, check => sub {
-               my ( $event ) = @_;
-               log_if_fail "Got event in room2", $event;
+         # the server may send a /state request; be prepared to answer that.
+         # (it may, alternatively, send individual /event requests)
+         my $state_req_fut = $inbound_server->await_request_v1_state(
+            $room2->{room_id}, $event_id_Q,
+         )->then( sub {
+            my ( $req, @params ) = @_;
+            log_if_fail "/state request", \@params;
 
-               my $event_id = $event->{event_id};
+            my $resp = {
+               pdus => [ values( %initial_room2_state ) ],
+               auth_chain => [
+                  map { $inbound_server->datastore->get_event( $_ ) } @{ $room2->event_ids_from_refs( $event_Q->{auth_events} ) },
+               ],
+            };
 
-               # if either Q or R show up, that's a problem
-               if( $event->{sender} eq $sytest_user_1 ) {
-                  die "Got an event $event_id from a user who shouldn't be a member";
-               }
+            log_if_fail "/state response", $resp;
+            $req->respond_json( $resp );
 
-               return $event_id eq $event_id_S;
-            },
+            # return a future which never completes, so that wait_any is not
+            # satisfied.
+            return Future->new();
+         });
+
+
+         # wait for either S to turn up in /sync, or $state_req_fut to fail.
+         Future->wait_any(
+            $state_req_fut,
+
+            await_sync_timeline_contains(
+               $creator_user, $room2->room_id, check => sub {
+                  my ( $event ) = @_;
+                  log_if_fail "Got event in room2", $event;
+
+                  my $event_id = $event->{event_id};
+
+                  # if either Q or R show up, that's a problem
+                  if( $event->{sender} eq $sytest_user_1 ) {
+                     die "Got an event $event_id from a user who shouldn't be a member";
+                  }
+
+                  return $event_id eq $event_id_S;
+               },
+            ),
          );
       })->then( sub {
          # finally, check that the state in room 2 looks correct.
