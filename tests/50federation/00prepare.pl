@@ -125,7 +125,7 @@ test "Checking local federation server",
 
 =head2 send_and_await_event
 
-   send_and_await_event( $outbound_client, $room, $user, %fields ) -> then( sub {
+   send_and_await_event( $outbound_client, $room, $server_user, %fields ) -> then( sub {
       my ( $event_id ) = @_;
    });
 
@@ -136,7 +136,7 @@ I<$main::OUTBOUND_CLIENT>, which is used to send the event.
 
 I<$room> should be the L<SyTest::Federation::Room> in which to send the event.
 
-I<$user> should be a L<User> which will poll for receiving the event.
+I<$server_user> should be a L<User> which will poll for receiving the event.
 
 The remainder of the arguments (I<%fields>) are passed into
 L<SyTest::Federation::Room/create_and_insert_event>. They should include at
@@ -167,6 +167,130 @@ sub send_and_await_event {
    )->then_done( $event_id );
 }
 push @EXPORT, qw( send_and_await_event );
+
+
+=head2 send_and_await_outlier
+
+   send_and_await_outlier(
+      $inbound_server, $outbound_client, $room, $sending_user_id, $receiving_user,
+   )->then( sub {
+      my ( $outlier_event ) = @_;
+   });
+
+Arranges for an outlier event to be sent over federation.
+
+I<$inbound_server> should be a L<SyTest::Federation:Server>, likely
+I<$main::INBOUND_SERVER>, which will handle the incoming federation requests
+involved.
+
+I<$outbound_client> should be a L<SyTest::Federation::Client>, most likely
+I<$main::OUTBOUND_CLIENT>, which is used to send the event.
+
+I<$room> should be the L<SyTest::Federation::Room> in which to send the event.
+
+I<$sending_user_id> is a user on the Sytest federation server, and should be a
+member of the room.
+
+I<$receiving_user> should be a L<User> on the server under test, which will
+poll for receiving the event. Must also be a member of the room.
+
+The created outlier is returned.
+
+=cut
+
+sub send_and_await_outlier {
+   my ( $inbound_server, $outbound_client, $room, $sending_user_id, $receiving_user ) = @_;
+
+   # to construct an outlier, we create three events, Q, R, S.
+   #
+   # We send S over federation, and allow the server to backfill R, leaving
+   # the server with a gap in the dag. It therefore requests the state at Q,
+   # which leads to Q being persisted as an outlier.
+
+   my $first_home_server = $receiving_user->server_name;
+   my $room_id = $room->room_id;
+   my %initial_room_state  = %{ $room->{current_state} };
+
+   my ( $outlier_event_Q, $outlier_event_id_Q ) = $room->create_and_insert_event(
+      type => 'm.room.member',
+      sender => $sending_user_id,
+      state_key => $sending_user_id,
+      content => { membership => 'join' },
+   );
+
+   my ( $backfilled_event_R, $backfilled_event_id_R ) = $room->create_and_insert_event(
+      type        => "m.room.message",
+      sender      => $sending_user_id,
+      content     => { body => "backfilled event R" },
+   );
+
+   my ( $sent_event_S, $sent_event_id_S ) = $room->create_and_insert_event(
+      type        => "m.room.message",
+      sender      => $sending_user_id,
+      content     => { body => "sent event S" },
+   );
+
+   log_if_fail "create_outlier_event: events Q, R, S", [ $outlier_event_id_Q, $backfilled_event_id_R, $sent_event_id_S ];
+
+   Future->needs_all(
+      # send S
+      $outbound_client->send_event(
+         event => $sent_event_S,
+         destination => $first_home_server,
+      ),
+
+      # we expect to get a missing_events request
+      $inbound_server->await_request_get_missing_events( $room_id )
+      ->then( sub {
+         my ( $req ) = @_;
+         my $body = $req->body_from_json;
+         log_if_fail "create_outlier_event: /get_missing_events request", $body;
+
+         assert_deeply_eq(
+            $body->{latest_events},
+            [ $sent_event_id_S ],
+            "create_outlier_event: latest_events in /get_missing_events request",
+        );
+
+        # just return R
+        my $resp = { events => [ $backfilled_event_R ] };
+
+        log_if_fail "create_outlier_event: /get_missing_events response", $resp;
+        $req->respond_json( $resp );
+        Future->done(1);
+     }),
+
+     # there will still be a gap, so then we expect a state_ids request
+     $inbound_server->await_request_state_ids(
+        $room_id, $outlier_event_id_Q,
+     )->then( sub {
+        my ( $req, @params ) = @_;
+        log_if_fail "create_outlier_event: /state_ids request", \@params;
+
+        my $resp = {
+           pdu_ids => [
+              map { $room->id_for_event( $_ ) } values( %initial_room_state ),
+           ],
+           auth_chain_ids => $room->event_ids_from_refs( $outlier_event_Q->{auth_events} ),
+        };
+
+        log_if_fail "create_outlier_event: /state_ids response", $resp;
+        $req->respond_json( $resp );
+        Future->done(1);
+      }),
+    )->then( sub {
+      # wait for S to turn up in /sync
+      await_sync_timeline_contains(
+         $receiving_user, $room_id, check => sub {
+            my ( $event ) = @_;
+            log_if_fail "create_outlier_event: Got event", $event;
+            my $event_id = $event->{event_id};
+            return $event_id eq $sent_event_id_S;
+         },
+      );
+   })->then_done( $outlier_event_Q, $backfilled_event_R, $sent_event_S );
+}
+push @EXPORT, qw( send_and_await_outlier );
 
 
 my $next_user_id = 0;
