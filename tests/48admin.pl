@@ -51,8 +51,8 @@ test "/whois",
          # need to keep checking because the IP address won't appear for a few
          # seconds (unless the worker that flushes the IP addresses is the same
          # as the one that handles /whois).
-         retry_until_success {
-            do_request_json_for( $user,
+         return retry_until_success sub {
+            return do_request_json_for( $user,
                method => "GET",
                uri    => "/v3/admin/whois/".$user->user_id,
             )->then( sub {
@@ -67,12 +67,22 @@ test "/whois",
                   assert_json_list( $value->{sessions} );
                   assert_json_keys( $value->{sessions}[0], "connections" );
                   assert_json_list( $value->{sessions}[0]{connections} );
-                  assert_json_keys( $value->{sessions}[0]{connections}[0], qw( ip last_seen user_agent ) );
+                  assert_json_object( $value->{sessions}[0]{connections}[0] );
                }
 
-               Future->done( 1 );
+               Future->done( $body->{devices} );
             });
-         }, initial_delay => 0.5;
+         }, initial_delay => 0.5,
+            check => sub {
+               # Once the connections object is ready, check that it contains
+               # the right keys.
+               foreach my $value ( values %{ $_[0] } ) {
+                  assert_json_keys(
+                     $value->{sessions}[0]{connections}[0],
+                     qw( ip last_seen user_agent )
+                  );
+               }
+            };
       });
    };
 
