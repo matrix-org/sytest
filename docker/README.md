@@ -30,7 +30,9 @@ docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs
 
 The following environment variables can be set with `-e` to control the test run:
 
- * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of sqlite.
+ * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of SQLite.
+ * `MULTI_POSTGRES`: set non-empty (along with `POSTGRES`) to test against multiple
+   PostgreSQL databases where the main store and state store are split.
  * `WORKERS`: set non-empty to test a worker-mode deployment rather than a
    monolith. Requires `POSTGRES`.
  * `REDIS`: set non-empty to use redis replication rather than old
