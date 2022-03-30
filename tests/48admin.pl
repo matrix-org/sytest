@@ -76,7 +76,8 @@ test "/whois",
             check => sub {
                # Once the connections object is ready, check that it contains
                # the right keys.
-               foreach my $value ( values %{ $_[0] } ) {
+               my ( $devices ) = @_; 
+               foreach my $value ( values %$devices ) {
                   assert_json_keys(
                      $value->{sessions}[0]{connections}[0],
                      qw( ip last_seen user_agent )
