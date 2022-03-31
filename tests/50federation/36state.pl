@@ -836,7 +836,8 @@ test "Federation handles empty auth_events in state_ids sanely",
                # be prepared to answer that.  (it may, alternatively, send individual
                # /event requests)
                $state_req_fut = await_and_handle_request_state(
-                  $inbound_server, $room, $missing_event_y->{event_id}, \@state
+                  $inbound_server, $room, $missing_event_y->{event_id}, \@state,
+                  auth_chain => [],
                );
 
                $req->respond_json( $resp );

@@ -128,17 +128,23 @@ test "Checking local federation server",
 
    $fut = await_and_handle_request_state(
        $inbound_server, $event_id, [ $state_event, $state_event, ... ],
+       auth_chain => [ $auth_event, $auth_event, ... ],
    );
 
 Awaits an inbound request to `/_matrix/federation/v1/state/$room_id?event_id=$event_id`,
 and, when it arrives, sends a response with the given state.
 
+I<auth_chain> is optional; if omitted, the auth chain is calculated based on
+the given state events.
+
 =cut
 
 sub await_and_handle_request_state {
-   my ( $inbound_server, $room, $event_id, $state_events ) = @_;
+   my ( $inbound_server, $room, $event_id, $state_events, %args ) = @_;
 
-   my @auth_chain = map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) } @$state_events;
+   my $auth_chain = $args{auth_chain} // [
+      map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) } @$state_events
+   ];
 
    $inbound_server->await_request_v1_state(
       $room->room_id, $event_id,
@@ -148,7 +154,7 @@ sub await_and_handle_request_state {
 
       my $resp = {
          pdus => $state_events,
-         auth_chain => \@auth_chain,
+         auth_chain => $auth_chain,
       };
 
       log_if_fail "/state response", $resp;
