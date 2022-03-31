@@ -17,12 +17,8 @@ test "Local device key changes get to remote servers",
          alias   => $room_alias,
       );
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/v3/join/$room_alias",
-
-         content => {},
-      )->then( sub {
+      matrix_join_room_synced( $user, $room_alias)
+      ->then( sub {
          Future->needs_all(
             $inbound_server->await_edu( "m.device_list_update", sub {1} )
             ->then( sub {
