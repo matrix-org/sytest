@@ -31,8 +31,6 @@ sub await_purge_complete {
 test "/whois",
    requires => [ $main::API_CLIENTS[0] ],
 
-   timeout => 10,
-
    do => sub {
       my ( $http ) = @_;
 
