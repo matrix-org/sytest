@@ -337,12 +337,7 @@ sub send_and_await_outlier {
             },
          ),
       );
-   })->then( sub {
-      # cancel the /state handler, if it was unused
-      $state_req_fut->cancel();
-
-      return Future->done( $outlier_event_Q, $backfilled_event_R, $sent_event_S );
-   });
+   })->then_done( $outlier_event_Q, $backfilled_event_R, $sent_event_S );
 }
 push @EXPORT, qw( send_and_await_outlier );
 
