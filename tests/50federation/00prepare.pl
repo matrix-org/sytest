@@ -279,14 +279,41 @@ sub send_and_await_outlier {
         Future->done(1);
       }),
     )->then( sub {
+      # the server may send a /state request; be prepared to answer that.
+      # (it may, alternatively, send individual /event requests)
+      my $state_req_fut = $inbound_server->await_request_v1_state(
+         $room_id, $outlier_event_id_Q,
+      )->then( sub {
+         my ( $req, @params ) = @_;
+         log_if_fail "/state request", \@params;
+
+         my $resp = {
+            pdus => [ values( %initial_room_state ) ],
+            auth_chain => [
+               map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) }
+                  values( %initial_room_state )
+               ],
+         };
+
+         log_if_fail "/state response", $resp;
+         $req->respond_json( $resp );
+
+         # return a future which never completes, so that wait_any is not
+         # satisfied.
+         return Future->new();
+      });
+
       # wait for S to turn up in /sync
-      await_sync_timeline_contains(
-         $receiving_user, $room_id, check => sub {
-            my ( $event ) = @_;
-            log_if_fail "create_outlier_event: Got event", $event;
-            my $event_id = $event->{event_id};
-            return $event_id eq $sent_event_id_S;
-         },
+      Future->wait_any(
+         $state_req_fut,
+         await_sync_timeline_contains(
+            $receiving_user, $room_id, check => sub {
+               my ( $event ) = @_;
+               log_if_fail "create_outlier_event: Got event", $event;
+               my $event_id = $event->{event_id};
+               return $event_id eq $sent_event_id_S;
+            },
+         ),
       );
    })->then_done( $outlier_event_Q, $backfilled_event_R, $sent_event_S );
 }
