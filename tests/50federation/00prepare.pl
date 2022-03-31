@@ -123,6 +123,41 @@ test "Checking local federation server",
       });
    };
 
+
+=head2 await_and_handle_request_state
+
+   $fut = await_and_handle_request_state(
+       $inbound_server, $event_id, [ $state_event, $state_event, ... ],
+   );
+
+Awaits an inbound request to `/_matrix/federation/v1/state/$room_id?event_id=$event_id`,
+and, when it arrives, sends a response with the given state.
+
+=cut
+
+sub await_and_handle_request_state {
+   my ($inbound_server, $room, $event_id, $state_events ) = @_;
+
+   my @auth_chain = map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) } @$state_events;
+
+   $inbound_server->await_request_v1_state(
+      $room->room_id, $event_id,
+   )->then( sub {
+      my ( $req, @params ) = @_;
+      log_if_fail "/state request", \@params;
+
+      my $resp = {
+         pdus => $state_events,
+         auth_chain => \@auth_chain,
+      };
+
+      log_if_fail "/state response", $resp;
+      $req->respond_json( $resp );
+   });
+}
+push @EXPORT, qw( await_and_handle_request_state );
+
+
 =head2 send_and_await_event
 
    send_and_await_event( $outbound_client, $room, $server_user, %fields ) -> then( sub {
@@ -281,36 +316,26 @@ sub send_and_await_outlier {
          # once we respond to `/state_ids`, the server may send a /state request;
          # be prepared to answer that.  (it may, alternatively, send individual
          # /event requests)
-         $state_req_fut = $inbound_server->await_request_v1_state(
-            $room_id, $outlier_event_id_Q,
-         )->then( sub {
-            my ( $req, @params ) = @_;
-            log_if_fail "/state request", \@params;
-
-            my $resp = {
-               pdus => [ values( %initial_room_state ) ],
-               auth_chain => [
-                  map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) }
-                  values( %initial_room_state )
-               ],
-            };
-
-            log_if_fail "/state response", $resp;
-            $req->respond_json( $resp );
-         });
+         $state_req_fut = await_and_handle_request_state(
+            $inbound_server, $room, $outlier_event_id_Q, [ values( %initial_room_state ) ]
+         );
 
          $req->respond_json( $resp );
          Future->done(1);
       }),
    )->then( sub {
-      # wait for S to turn up in /sync
-      await_sync_timeline_contains(
-         $receiving_user, $room_id, check => sub {
-            my ( $event ) = @_;
-            log_if_fail "create_outlier_event: Got event", $event;
-            my $event_id = $event->{event_id};
-            return $event_id eq $sent_event_id_S;
-         },
+      # wait for either S to turn up in /sync, or $state_req_fut to fail.
+      Future->wait_any(
+         $state_req_fut->then( sub { Future->new() } ),
+
+         await_sync_timeline_contains(
+            $receiving_user, $room_id, check => sub {
+               my ( $event ) = @_;
+               log_if_fail "create_outlier_event: Got event", $event;
+               my $event_id = $event->{event_id};
+               return $event_id eq $sent_event_id_S;
+            },
+         ),
       );
    })->then( sub {
       # cancel the /state handler, if it was unused
