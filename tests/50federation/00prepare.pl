@@ -232,6 +232,8 @@ sub send_and_await_outlier {
 
    log_if_fail "create_outlier_event: events Q, R, S", [ $outlier_event_id_Q, $backfilled_event_id_R, $sent_event_id_S ];
 
+   my $state_req_fut;
+
    Future->needs_all(
       # send S
       $outbound_client->send_event(
@@ -258,64 +260,64 @@ sub send_and_await_outlier {
         log_if_fail "create_outlier_event: /get_missing_events response", $resp;
         $req->respond_json( $resp );
         Future->done(1);
-     }),
-
-     # there will still be a gap, so then we expect a state_ids request
-     $inbound_server->await_request_state_ids(
-        $room_id, $outlier_event_id_Q,
-     )->then( sub {
-        my ( $req, @params ) = @_;
-        log_if_fail "create_outlier_event: /state_ids request", \@params;
-
-        my $resp = {
-           pdu_ids => [
-              map { $room->id_for_event( $_ ) } values( %initial_room_state ),
-           ],
-           auth_chain_ids => $room->event_ids_from_refs( $outlier_event_Q->{auth_events} ),
-        };
-
-        log_if_fail "create_outlier_event: /state_ids response", $resp;
-        $req->respond_json( $resp );
-        Future->done(1);
       }),
-    )->then( sub {
-      # the server may send a /state request; be prepared to answer that.
-      # (it may, alternatively, send individual /event requests)
-      my $state_req_fut = $inbound_server->await_request_v1_state(
+
+      # there will still be a gap, so then we expect a state_ids request
+      $inbound_server->await_request_state_ids(
          $room_id, $outlier_event_id_Q,
       )->then( sub {
          my ( $req, @params ) = @_;
-         log_if_fail "/state request", \@params;
+         log_if_fail "create_outlier_event: /state_ids request", \@params;
 
          my $resp = {
-            pdus => [ values( %initial_room_state ) ],
-            auth_chain => [
-               map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) }
-                  values( %initial_room_state )
-               ],
+            pdu_ids => [
+               map { $room->id_for_event( $_ ) } values( %initial_room_state ),
+            ],
+            auth_chain_ids => $room->event_ids_from_refs( $outlier_event_Q->{auth_events} ),
          };
 
-         log_if_fail "/state response", $resp;
+         log_if_fail "create_outlier_event: /state_ids response", $resp;
+
+         # once we respond to `/state_ids`, the server may send a /state request;
+         # be prepared to answer that.  (it may, alternatively, send individual
+         # /event requests)
+         $state_req_fut = $inbound_server->await_request_v1_state(
+            $room_id, $outlier_event_id_Q,
+         )->then( sub {
+            my ( $req, @params ) = @_;
+            log_if_fail "/state request", \@params;
+
+            my $resp = {
+               pdus => [ values( %initial_room_state ) ],
+               auth_chain => [
+                  map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) }
+                  values( %initial_room_state )
+               ],
+            };
+
+            log_if_fail "/state response", $resp;
+            $req->respond_json( $resp );
+         });
+
          $req->respond_json( $resp );
-
-         # return a future which never completes, so that wait_any is not
-         # satisfied.
-         return Future->new();
-      });
-
+         Future->done(1);
+      }),
+   )->then( sub {
       # wait for S to turn up in /sync
-      Future->wait_any(
-         $state_req_fut,
-         await_sync_timeline_contains(
-            $receiving_user, $room_id, check => sub {
-               my ( $event ) = @_;
-               log_if_fail "create_outlier_event: Got event", $event;
-               my $event_id = $event->{event_id};
-               return $event_id eq $sent_event_id_S;
-            },
-         ),
+      await_sync_timeline_contains(
+         $receiving_user, $room_id, check => sub {
+            my ( $event ) = @_;
+            log_if_fail "create_outlier_event: Got event", $event;
+            my $event_id = $event->{event_id};
+            return $event_id eq $sent_event_id_S;
+         },
       );
-   })->then_done( $outlier_event_Q, $backfilled_event_R, $sent_event_S );
+   })->then( sub {
+      # cancel the /state handler, if it was unused
+      $state_req_fut->cancel();
+
+      return Future->done( $outlier_event_Q, $backfilled_event_R, $sent_event_S );
+   });
 }
 push @EXPORT, qw( send_and_await_outlier );
 
