@@ -304,33 +304,7 @@ test "Backfilled events whose prev_events are in a different room do not allow c
 
       log_if_fail "events P, Q, R, S", [ $event_id_P, $event_id_Q, $event_id_R, $event_id_S ];
 
-      # the server may send a /state request; be prepared to answer that.
-      # (it may, alternatively, send individual /event requests)
-      my $state_req_fut = $inbound_server->await_request_v1_state(
-         $room2->{room_id}, $event_id_Q,
-      )->then( sub {
-         my ( $req, @params ) = @_;
-         log_if_fail "/state request (1)", \@params;
-
-         my %state  = %{ $room2->{current_state} };
-         my $resp = {
-            pdus => [ values( %state ) ],
-
-            # XXX we're supposed to return the whole auth chain here,
-            # not just Q's auth_events. It doesn't matter too much
-            # here though.
-            auth_chain => [
-               map { $inbound_server->datastore->get_event( $_ ) } @{ $room2->event_ids_from_refs( $event_Q->{auth_events} ) },
-            ],
-         };
-
-         log_if_fail "/state response (1)", $resp;
-         $req->respond_json( $resp );
-
-         # return a future which never completes, so that wait_any is not
-         # satisfied.
-         return Future->new();
-      });
+      my $state_req_fut;
 
       Future->needs_all(
          # kick things off by sending S over federation
@@ -381,6 +355,14 @@ test "Backfilled events whose prev_events are in a different room do not allow c
             };
 
             log_if_fail "/state_ids response (1)", $resp;
+
+            # once we respond to /state_ids, the server may send a /state request;
+            # be prepared to answer that.  (it may, alternatively, send individual
+            # /event requests)
+            $state_req_fut = await_and_handle_request_state(
+               $inbound_server, $room2, $event_id_Q, [ values( %state ) ]
+            );
+
             $req->respond_json( $resp );
             Future->done(1);
          }),
@@ -395,14 +377,14 @@ test "Backfilled events whose prev_events are in a different room do not allow c
 
          # wait for either S to turn up in /sync, or $state_req_fut to fail.
          Future->wait_any(
-            $state_req_fut,
+            $state_req_fut->then( sub { Future->new() } ),
 
             await_sync_timeline_contains(
                $creator_user, $room2_id,
                check => sub {
                   $_[0]->{event_id} eq $event_id_S
                },
-              ),
+            ),
          );
       })->then( sub {
          my $filter = $json->encode( { room => { timeline => { limit => 2 }}} );
