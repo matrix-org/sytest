@@ -419,14 +419,14 @@ test "If remote user leaves room we no longer receive device updates",
          # sure that remote_leaver *doesn't* appear in the meantime.
 
          my $wait_for_id = $remote2->user_id;
-         retry_until_success {
+         retry_until_success sub {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                 my ( $body ) = @_;
 
                 log_if_fail "waiting for $wait_for_id in 'changed'", $body;
 
-                return Future->done(0) unless
+                die "No device_lists->changed entry" unless
                    $body->{device_lists} &&
                    $body->{device_lists}{changed};
 
@@ -769,7 +769,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
-         retry_until_success {
+         retry_until_success sub {
            matrix_invite_user_to_room( $remote_user, $creator, $room_id 
            )->then( sub {
                Future->done(1);

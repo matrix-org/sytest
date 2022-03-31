@@ -435,9 +435,22 @@ sub delay
 # The final result is either the result of the code block on success, or the
 # most recent failure.
 #
-# Example:
+# Simple Example (common case):
 #
 #   retry_until_success {
+#      my ( $iter ) = @_;
+#      ...
+#   };
+#
+#
+# Advanced Example (custom timings or check subroutine):
+#   Note the `sub` keyword before the anonymous subroutine block! You MUST have
+#   that there[^1] otherwise the other arguments are parsed as new, separate
+#   expressions and lead to a future that is not awaited.
+#   [^1]: You could also remove the comma after the end of the block and before
+#         `max_iterations`, but that seems more obscure and ugly.
+#
+#   retry_until_success sub {
 #      my ( $iter ) = @_;
 #      ...
 #   }, max_iterations => 20,
@@ -502,13 +515,23 @@ sub retry_until_success(&%)
 # If the Future resolves to a falsey value, the code block will be retried.
 # If it fails, the loop is aborted.
 #
-# Example:
+# Simple Example (no extra arguments):
 #
 #   repeat_until_true {
 #      my ( $iter ) = @_;
 #      ...
+#   };
+#
+#
+# Example with extra arguments:
+#   Note that you must use the `sub` keyword in this situation.
+#
+#   repeat_until_true sub {
+#      my ( $iter ) = @_;
+#      ...
 #   }, max_iterations => 20,
 #      initial_delay => 0.01;
+#
 #
 # Will fail if the code block fails `max_iterations` (default 7) times.
 #
