@@ -136,7 +136,7 @@ and, when it arrives, sends a response with the given state.
 =cut
 
 sub await_and_handle_request_state {
-   my ($inbound_server, $room, $event_id, $state_events ) = @_;
+   my ( $inbound_server, $room, $event_id, $state_events ) = @_;
 
    my @auth_chain = map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) } @$state_events;
 
