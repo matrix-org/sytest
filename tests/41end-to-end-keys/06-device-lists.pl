@@ -426,7 +426,7 @@ test "If remote user leaves room we no longer receive device updates",
 
                 log_if_fail "waiting for $wait_for_id in 'changed'", $body;
 
-                return Future->done(0) unless
+                die "No device_lists->changed entry" unless
                    $body->{device_lists} &&
                    $body->{device_lists}{changed};
 
