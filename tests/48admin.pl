@@ -51,8 +51,8 @@ test "/whois",
          # need to keep checking because the IP address won't appear for a few
          # seconds (unless the worker that flushes the IP addresses is the same
          # as the one that handles /whois).
-         return retry_until_success sub {
-            return do_request_json_for( $user,
+         repeat_until_true sub {
+            do_request_json_for( $user,
                method => "GET",
                uri    => "/v3/admin/whois/".$user->user_id,
             )->then( sub {
@@ -62,28 +62,29 @@ test "/whois",
                assert_eq( $body->{user_id}, $user->user_id, "user_id" );
                assert_json_object( $body->{devices} );
 
+               # Whether we've found a connection with the right keys
+               # (ip, last_seen, user_agent).
+               my $found_connections = 0;
+
                foreach my $value ( values %{ $body->{devices} } ) {
                   assert_json_keys( $value, "sessions" );
                   assert_json_list( $value->{sessions} );
                   assert_json_keys( $value->{sessions}[0], "connections" );
                   assert_json_list( $value->{sessions}[0]{connections} );
-                  assert_json_object( $value->{sessions}[0]{connections}[0] );
+                  foreach my $connection ( @{ $value->{sessions}[0]{connections} } ) {
+                     assert_json_object( $connection );
+                     assert_json_keys(
+                        $connection,
+                        qw( ip last_seen user_agent )
+                     );
+
+                     $found_connections = 1;
+                  }
                }
 
-               Future->done( $body->{devices} );
+               Future->done( $found_connections );
             });
-         }, initial_delay => 0.5,
-            check => sub {
-               # Once the connections object is ready, check that it contains
-               # the right keys.
-               my ( $devices ) = @_; 
-               foreach my $value ( values %$devices ) {
-                  assert_json_keys(
-                     $value->{sessions}[0]{connections}[0],
-                     qw( ip last_seen user_agent )
-                  );
-               }
-            };
+         }, initial_delay => 0.5;
       });
    };
 
