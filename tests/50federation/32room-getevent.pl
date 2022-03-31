@@ -60,14 +60,14 @@ test "Inbound federation redacts events from erased users",
       my ( $outbound_client, $creator, $user_id, $room, $remaining_user ) = @_;
       my $first_home_server = $creator->server_name;
       my $room_id = $room->room_id;
-      matrix_join_room($remaining_user, $room_id);
-
       my $message_id;
 
-      # have the creator send a message into the room, which we will try to
-      # fetch.
-      matrix_send_room_text_message( $creator, $room_id, body => "body1" )
+      matrix_join_room( $remaining_user, $room_id )
       ->then( sub {
+         # have the creator send a message into the room, which we will try to
+         # fetch.
+         matrix_send_room_text_message( $creator, $room_id, body => "body1" );
+      })->then( sub {
          ( $message_id ) = @_;
 
          $outbound_client->do_request_json(
