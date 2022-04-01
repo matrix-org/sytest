@@ -419,7 +419,7 @@ test "If remote user leaves room we no longer receive device updates",
          # sure that remote_leaver *doesn't* appear in the meantime.
 
          my $wait_for_id = $remote2->user_id;
-         retry_until_success sub {
+         retry_until_success {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                 my ( $body ) = @_;
