@@ -69,8 +69,10 @@ test "/whois",
                   assert_json_list( $value->{sessions} );
                   assert_json_keys( $value->{sessions}[0], "connections" );
                   assert_json_list( $value->{sessions}[0]{connections} );
+                  # The `connections` may not yet be populated. If there *is* a connection,
+                  # we check that it has the right shape. If `connections` is still empty, we
+                  # tell `repeat_until_true` to retry by returning a falsey value.
                   foreach my $connection ( @{ $value->{sessions}[0]{connections} } ) {
-                     assert_json_object( $connection );
                      assert_json_keys(
                         $connection,
                         qw( ip last_seen user_agent )
