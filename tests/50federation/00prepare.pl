@@ -123,6 +123,47 @@ test "Checking local federation server",
       });
    };
 
+
+=head2 await_and_handle_request_state
+
+   $fut = await_and_handle_request_state(
+       $inbound_server, $event_id, [ $state_event, $state_event, ... ],
+       auth_chain => [ $auth_event, $auth_event, ... ],
+   );
+
+Awaits an inbound request to `/_matrix/federation/v1/state/$room_id?event_id=$event_id`,
+and, when it arrives, sends a response with the given state.
+
+I<auth_chain> is optional; if omitted, the auth chain is calculated based on
+the given state events.
+
+=cut
+
+sub await_and_handle_request_state {
+   my ( $inbound_server, $room, $event_id, $state_events, %args ) = @_;
+
+   my $auth_chain = $args{auth_chain} // [
+      map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) } @$state_events
+   ];
+
+   $inbound_server->await_request_v1_state(
+      $room->room_id, $event_id,
+   )->then( sub {
+      my ( $req, @params ) = @_;
+      log_if_fail "/state request", \@params;
+
+      my $resp = {
+         pdus => $state_events,
+         auth_chain => $auth_chain,
+      };
+
+      log_if_fail "/state response", $resp;
+      $req->respond_json( $resp );
+   });
+}
+push @EXPORT, qw( await_and_handle_request_state );
+
+
 =head2 send_and_await_event
 
    send_and_await_event( $outbound_client, $room, $server_user, %fields ) -> then( sub {
@@ -232,6 +273,8 @@ sub send_and_await_outlier {
 
    log_if_fail "create_outlier_event: events Q, R, S", [ $outlier_event_id_Q, $backfilled_event_id_R, $sent_event_id_S ];
 
+   my $state_req_fut;
+
    Future->needs_all(
       # send S
       $outbound_client->send_event(
@@ -258,35 +301,47 @@ sub send_and_await_outlier {
         log_if_fail "create_outlier_event: /get_missing_events response", $resp;
         $req->respond_json( $resp );
         Future->done(1);
-     }),
-
-     # there will still be a gap, so then we expect a state_ids request
-     $inbound_server->await_request_state_ids(
-        $room_id, $outlier_event_id_Q,
-     )->then( sub {
-        my ( $req, @params ) = @_;
-        log_if_fail "create_outlier_event: /state_ids request", \@params;
-
-        my $resp = {
-           pdu_ids => [
-              map { $room->id_for_event( $_ ) } values( %initial_room_state ),
-           ],
-           auth_chain_ids => $room->event_ids_from_refs( $outlier_event_Q->{auth_events} ),
-        };
-
-        log_if_fail "create_outlier_event: /state_ids response", $resp;
-        $req->respond_json( $resp );
-        Future->done(1);
       }),
-    )->then( sub {
-      # wait for S to turn up in /sync
-      await_sync_timeline_contains(
-         $receiving_user, $room_id, check => sub {
-            my ( $event ) = @_;
-            log_if_fail "create_outlier_event: Got event", $event;
-            my $event_id = $event->{event_id};
-            return $event_id eq $sent_event_id_S;
-         },
+
+      # there will still be a gap, so then we expect a state_ids request
+      $inbound_server->await_request_state_ids(
+         $room_id, $outlier_event_id_Q,
+      )->then( sub {
+         my ( $req, @params ) = @_;
+         log_if_fail "create_outlier_event: /state_ids request", \@params;
+
+         my $resp = {
+            pdu_ids => [
+               map { $room->id_for_event( $_ ) } values( %initial_room_state ),
+            ],
+            auth_chain_ids => $room->event_ids_from_refs( $outlier_event_Q->{auth_events} ),
+         };
+
+         log_if_fail "create_outlier_event: /state_ids response", $resp;
+
+         # once we respond to `/state_ids`, the server may send a /state request;
+         # be prepared to answer that.  (it may, alternatively, send individual
+         # /event requests)
+         $state_req_fut = await_and_handle_request_state(
+            $inbound_server, $room, $outlier_event_id_Q, [ values( %initial_room_state ) ]
+         );
+
+         $req->respond_json( $resp );
+         Future->done(1);
+      }),
+   )->then( sub {
+      # wait for either S to turn up in /sync, or $state_req_fut to fail.
+      Future->wait_any(
+         $state_req_fut->then( sub { Future->new() } ),
+
+         await_sync_timeline_contains(
+            $receiving_user, $room_id, check => sub {
+               my ( $event ) = @_;
+               log_if_fail "create_outlier_event: Got event", $event;
+               my $event_id = $event->{event_id};
+               return $event_id eq $sent_event_id_S;
+            },
+         ),
       );
    })->then_done( $outlier_event_Q, $backfilled_event_R, $sent_event_S );
 }

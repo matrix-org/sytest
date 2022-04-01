@@ -555,6 +555,8 @@ test "Outbound federation requests missing prev_events and then asks for /state_
             $room_state_at_y{$k} = $event;
          }
 
+         my $state_req_fut;
+
          Future->needs_all(
             $outbound_client->send_event(
                event       => $sent_event_c,
@@ -603,38 +605,21 @@ test "Outbound federation requests missing prev_events and then asks for /state_
 
                log_if_fail "/state_ids response", $resp;
 
+               # once we respond to `/state_ids`, the server may send a /state request;
+               # be prepared to answer that.  (it may, alternatively, send individual
+               # /event requests)
+               $state_req_fut = await_and_handle_request_state(
+                  $inbound_server, $room, $missing_event_y->{event_id}, [ values( %room_state_at_y ) ]
+               );
+
                $req->respond_json( $resp );
 
                Future->done(1);
             }),
          )->then( sub {
-            # the server may send a /state request; be prepared to answer that.
-            # (it may, alternatively, send individual /event requests)
-            my $state_req_fut = $inbound_server->await_request_v1_state(
-               $room_id, $missing_event_y->{event_id},
-            )->then( sub {
-               my ( $req, @params ) = @_;
-               log_if_fail "/state request", \@params;
-
-               my $resp = {
-                  pdus => [ values( %room_state_at_y ) ],
-                  auth_chain => [
-                     map { $inbound_server->datastore->get_auth_chain_events( $room->id_for_event( $_ )) }
-                        values( %room_state_at_y )
-                  ],
-               };
-
-               log_if_fail "/state response", $resp;
-               $req->respond_json( $resp );
-
-               # return a future which never completes, so that wait_any is not
-               # satisfied.
-               return Future->new();
-            });
-
-            # creator user should eventually receive the events
+            # Wait for either the creator user to receive the events, or $state_req_fut to fail.
             Future->wait_any(
-               $state_req_fut,
+               $state_req_fut->then( sub { Future->new() } ),
 
                Future->needs_all(
                   await_sync_timeline_contains($creator, $room_id, check => sub {
@@ -803,6 +788,8 @@ test "Federation handles empty auth_events in state_ids sanely",
             ", " . $missing_event_y->{event_id};
          log_if_fail "Sent event C: " . $sent_event_c->{event_id};
 
+         my $state_req_fut;
+
          Future->needs_all(
             $outbound_client->send_event(
                event       => $sent_event_c,
@@ -835,45 +822,32 @@ test "Federation handles empty auth_events in state_ids sanely",
             )->then( sub {
                my ( $req ) = @_;
 
+               my @state = values( %{ $room->{current_state} } );
                my $resp = {
                   pdu_ids => [
-                     map { $_->{event_id} } values( %{ $room->{current_state} } ),
+                     map { $_->{event_id} } @state,
                   ],
                   auth_chain_ids => [],
                };
 
                log_if_fail "/state_ids response", $resp;
 
+               # once we respond to `/state_ids`, the server may send a /state request;
+               # be prepared to answer that.  (it may, alternatively, send individual
+               # /event requests)
+               $state_req_fut = await_and_handle_request_state(
+                  $inbound_server, $room, $missing_event_y->{event_id}, \@state,
+                  auth_chain => [],
+               );
+
                $req->respond_json( $resp );
 
                Future->done(1);
             }),
          )->then( sub {
-            # the server may send a /state request; be prepared to answer that.
-            # (it may, alternatively, send individual /event requests)
-            my $state_req_fut = $inbound_server->await_request_v1_state(
-               $room_id, $missing_event_y->{event_id},
-            )->then( sub {
-               my ( $req, @params ) = @_;
-               log_if_fail "/state request", \@params;
-
-               my $resp = {
-                  pdus => [ values( %{ $room->{current_state} } ) ],
-                  auth_chain => [],
-               };
-
-               log_if_fail "/state response", $resp;
-               $req->respond_json( $resp );
-
-               # return a future which never completes, so that wait_any is not
-               # satisfied.
-               return Future->new();
-            });
-
-
             # creator user should eventually receive X and C.
             Future->wait_any(
-               $state_req_fut,
+               $state_req_fut->then_done( Future->new() ),
 
                Future->needs_all(
                   await_sync_timeline_contains( $creator, $room_id, check => sub {
