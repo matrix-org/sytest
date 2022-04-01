@@ -40,30 +40,51 @@ test "/whois",
       # tightly control the actions taken by that user.
       # Conceivably this API may change based on the number of API calls the
       # user made, for instance.
+
       matrix_register_user( $http, "admin" )
       ->then( sub {
          ( $user ) = @_;
 
-         do_request_json_for( $user,
-            method => "GET",
-            uri    => "/v3/admin/whois/".$user->user_id,
-         )
-      })->then( sub {
-         my ( $body ) = @_;
+         # Synapse flushes IP addresses to the database every 5 seconds, so we
+         # need to keep checking because the IP address won't appear for a few
+         # seconds (unless the worker that flushes the IP addresses is the same
+         # as the one that handles /whois).
+         repeat_until_true sub {
+            do_request_json_for( $user,
+               method => "GET",
+               uri    => "/v3/admin/whois/".$user->user_id,
+            )->then( sub {
+               my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( devices user_id ) );
-         assert_eq( $body->{user_id}, $user->user_id, "user_id" );
-         assert_json_object( $body->{devices} );
+               assert_json_keys( $body, qw( devices user_id ) );
+               assert_eq( $body->{user_id}, $user->user_id, "user_id" );
+               assert_json_object( $body->{devices} );
 
-         foreach my $value ( values %{ $body->{devices} } ) {
-            assert_json_keys( $value, "sessions" );
-            assert_json_list( $value->{sessions} );
-            assert_json_keys( $value->{sessions}[0], "connections" );
-            assert_json_list( $value->{sessions}[0]{connections} );
-            assert_json_keys( $value->{sessions}[0]{connections}[0], qw( ip last_seen user_agent ) );
-         }
+               # Whether we've found a connection with the right keys
+               # (ip, last_seen, user_agent).
+               my $found_connections = 0;
 
-         Future->done( 1 );
+               foreach my $value ( values %{ $body->{devices} } ) {
+                  assert_json_keys( $value, "sessions" );
+                  assert_json_list( $value->{sessions} );
+                  assert_json_keys( $value->{sessions}[0], "connections" );
+                  assert_json_list( $value->{sessions}[0]{connections} );
+                  # The `connections` may not yet be populated. If there *is* a connection,
+                  # we check that it has the right shape. If `connections` is still empty, we
+                  # tell `repeat_until_true` to retry by returning a falsey value.
+                  foreach my $connection ( @{ $value->{sessions}[0]{connections} } ) {
+                     assert_json_keys(
+                        $connection,
+                        qw( ip last_seen user_agent )
+                     );
+
+                     $found_connections = 1;
+                  }
+               }
+
+               Future->done( $found_connections );
+            });
+         }, initial_delay => 0.5;
       });
    };
 
