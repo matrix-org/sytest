@@ -1310,7 +1310,6 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/event_auth/                   federation_reader
 ^/_matrix/federation/v1/exchange_third_party_invite/  federation_reader
 ^/_matrix/federation/v1/send/                         federation_reader
-^/_matrix/federation/v1/get_groups_publicised         federation_reader
 ^/_matrix/federation/v1/user/devices/                 federation_reader
 ^/_matrix/key/v2/query                                federation_reader
 
@@ -1326,10 +1325,6 @@ sub generate_haproxy_map
 ^/_matrix/client/(r0|v3|unstable)/register$                          client_reader
 ^/_matrix/client/(r0|v3|unstable)/auth/.*/fallback/web$              client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/messages$          client_reader
-^/_matrix/client/(api/v1|r0|v3|unstable)/get_groups_publicised$      client_reader
-^/_matrix/client/(api/v1|r0|v3|unstable)/joined_groups$              client_reader
-^/_matrix/client/(api/v1|r0|v3|unstable)/publicised_groups$          client_reader
-^/_matrix/client/(api/v1|r0|v3|unstable)/publicised_groups/          client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/event              client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/joined_rooms                client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable/.*)/rooms/.*/aliases         client_reader
@@ -1377,11 +1372,8 @@ sub generate_haproxy_get_map
     return <<'EOCONFIG';
 # pushrules should be here, but the tests seem to be racy.
 # ^/_matrix/client/(api/v1|r0|v3|unstable)/pushrules/            client_reader
-^/_matrix/client/(api/v1|r0|v3|unstable)/groups/               client_reader
 ^/_matrix/client/(r0|v3)/user/[^/]*/account_data/                client_reader
 ^/_matrix/client/(r0|v3)/user/[^/]*/rooms/[^/]*/account_data/    client_reader
-
-^/_matrix/federation/v1/groups/                             federation_reader
 EOCONFIG
 }
 
