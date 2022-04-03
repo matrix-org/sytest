@@ -223,3 +223,41 @@ test "Redaction of a redaction redacts the redaction reason",
          Future->done;
       });
    };
+
+test "PUT /rooms/:room_id/redact/:event_id/:txn_id is idempotent",
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_send_message )],
+
+   do => sub {
+      my ( $creator, $sender ) = @_;
+      my $txn_id = random_transaction_id();
+      my ( $event_id_1, $event_id_2 );
+
+      make_room_and_message( [ $creator, $sender ], $sender )
+      ->then( sub {
+         my ( $room_id, $to_redact ) = @_;
+
+         $to_redact = uri_escape( $to_redact );
+
+         do_request_json_for( $creator,
+            method => "PUT",
+            uri    => "/v3/rooms/$room_id/redact/$to_redact/$txn_id",
+            content => {},
+         )->then( sub {
+            my ( $body ) = @_;
+            $event_id_1 = $body->{event_id};
+
+            do_request_json_for( $creator,
+               method => "PUT",
+               uri    => "/v3/rooms/$room_id/redact/$to_redact/$txn_id",
+               content => {},
+            )->then(sub {
+               my ( $body ) = @_;
+               $event_id_2 = $body->{event_id};
+               assert_eq( $event_id_1, $event_id_2 );
+
+               Future->done(1);
+            })
+         });
+      })
+   };
