@@ -30,7 +30,7 @@ Makes a /redact request
 
 sub random_transaction_id
 {
-   join "", map { chr 65 + rand 26 } 1 .. 20;
+   join "", map { chr (65 + rand 26) } 1 .. 20;
 }
 
 sub matrix_redact_event
@@ -243,7 +243,8 @@ test "PUT /rooms/:room_id/redact/:event_id/:txn_id is idempotent",
             method => "PUT",
             uri    => "/v3/rooms/$room_id/redact/$to_redact/$txn_id",
             content => {},
-         )->then( sub {
+         )
+         ->then( sub {
             my ( $body ) = @_;
             $event_id_1 = $body->{event_id};
 
@@ -251,13 +252,13 @@ test "PUT /rooms/:room_id/redact/:event_id/:txn_id is idempotent",
                method => "PUT",
                uri    => "/v3/rooms/$room_id/redact/$to_redact/$txn_id",
                content => {},
-            )->then(sub {
-               my ( $body ) = @_;
-               $event_id_2 = $body->{event_id};
-               assert_eq( $event_id_1, $event_id_2 );
-
-               Future->done(1);
-            })
-         });
+            );
+         })
+         ->then(sub {
+            my ( $body ) = @_;
+            $event_id_2 = $body->{event_id};
+            assert_eq( $event_id_1, $event_id_2 );
+         })
       })
    };
+
