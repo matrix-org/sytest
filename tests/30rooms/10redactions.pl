@@ -30,7 +30,7 @@ Makes a /redact request
 
 sub random_transaction_id
 {
-   join "", map { chr (65 + rand 26) } 1 .. 20;
+   join "", map { chr( 65 + rand 26 )} 1 .. 20;
 }
 
 sub matrix_redact_event
@@ -261,4 +261,3 @@ test "PUT /rooms/:room_id/redact/:event_id/:txn_id is idempotent",
          })
       })
    };
-
