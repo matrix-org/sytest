@@ -100,7 +100,10 @@ sub _get_config
       global => {
          server_name => $self->server_name,
          private_key => $self->{paths}{matrix_key},
-         presence_enabled => $JSON::true,
+         presence => {
+            enable_outbound => JSON::true,
+            enable_inbound => JSON::true,
+         },
 
          jetstream => {
              storage_path => $self->{hs_dir},
@@ -119,11 +122,6 @@ sub _get_config
       },
 
       client_api => {
-         database => {
-            connection_string =>
-                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                "file:$self->{hs_dir}/client_api.db" : $db_uri,
-         },
          registration_shared_secret => "reg_secret",
 
          $self->{recaptcha_config} ? (
@@ -139,14 +137,6 @@ sub _get_config
          rate_limiting => {
             enabled => $JSON::false,
          },
-      },
-
-      current_state_server => {
-          database => {
-             connection_string =>
-                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                "file:$self->{hs_dir}/current_state_server.db" : $db_uri,
-          },
       },
 
       federation_api => {
@@ -207,21 +197,6 @@ sub _get_config
             connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/accounts.db" : $db_uri,
-         },
-         device_database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/devices.db" : $db_uri,
-         },
-         presence_database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/presence.db" : $db_uri,
-         },
-         threepid_database => {
-            connection_string => 
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/threepids.db" : $db_uri,
          },
          email => {
             enabled => JSON::true,
