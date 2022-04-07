@@ -809,7 +809,7 @@ test "We do send redundant membership state across incremental syncs if asked",
    };
 
 
-test "Rejecing invite over federation doesn't break incremental /sync",
+test "Rejecting invite over federation doesn't break incremental /sync",
    requires => [ remote_user_fixture(),
       do {
          my $creator = local_user_fixture();
