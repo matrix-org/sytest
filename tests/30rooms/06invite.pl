@@ -28,6 +28,8 @@ sub inviteonly_room_fixture
    )
 }
 
+push our @EXPORT, qw( inviteonly_room_fixture );
+
 multi_test "Can invite users to invite-only rooms",
    # TODO: deprecated endpoint used in this test
    requires => do {
