@@ -807,3 +807,51 @@ test "We do send redundant membership state across incremental syncs if asked",
          Future->done(1);
       });
    };
+
+
+test "Rejecting invite over federation doesn't break incremental /sync",
+   requires => [ remote_user_fixture(),
+      do {
+         my $creator = local_user_fixture();
+         $creator, inviteonly_room_fixture( creator => $creator );
+      }
+   ],
+
+   check => sub {
+      my ( $invitee, $creator, $room_id ) = @_;
+
+      my ( $filter_id );
+
+      matrix_create_filter( $invitee, {
+         room => {
+            state => {
+               lazy_load_members => JSON::true,
+               include_redundant_members => JSON::true,
+            },
+            timeline => {
+               limit => 10
+            },
+         }
+      })->then( sub {
+         ( $filter_id ) = @_;
+
+         matrix_sync( $invitee, filter => $filter_id )
+      })->then( sub {
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
+      })->then( sub {
+         matrix_leave_room_synced( $invitee, $room_id )
+      })->then( sub {
+         matrix_sync_again( $invitee, filter => $filter_id )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         # Check that invitee no longer sees the invite
+
+         if( exists $body->{rooms} and exists $body->{rooms}{invite} ) {
+            assert_json_object( $body->{rooms}{invite} );
+            keys %{ $body->{rooms}{invite} } and die "Expected empty dictionary";
+         }
+
+         Future->done( 1 );
+      });
+   };
