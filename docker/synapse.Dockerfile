@@ -64,4 +64,13 @@ RUN /venv/bin/pip uninstall -q --no-cache-dir -y matrix-synapse
 RUN /venv/bin/pip install -q --no-cache-dir \
         coverage codecov tap.py coverage_enable_subprocess
 
+# Poetry runs multiple pip operations in parallel. Unfortunately this results
+# in race conditions when a dependency is installed while another dependency
+# is being up/downgraded in `scripts/synapse_sytest.sh`. Configure poetry to
+# serialize `pip` operations.
+# See https://github.com/matrix-org/synapse/issues/12419
+# TODO: Once poetry 1.2.0 has been released, use the `installer.max-workers`
+#       config option instead.
+RUN poetry config experimental.new-installer false
+
 ENTRYPOINT [ "/bin/bash", "/bootstrap.sh", "synapse" ]
