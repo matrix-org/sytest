@@ -9,6 +9,14 @@ RUN apt-get -qq update && apt-get -qq install -y \
 
 RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.12
 
+# According to https://python-poetry.org/docs/configuration/,
+# poetry stores its config in `$XDG_CONFIG_HOME/pypoetry/config.toml` or
+# `$HOME/.config/pypoetry/config.toml` if `XFG_CONFIG_HOME` is undefined.
+# GitHub Actions changes `$HOME` to `/github/home` at runtime, which makes
+# poetry look for its config in the wrong place. Explicitly set
+# `XDG_CONFIG_HOME` so that poetry always looks in the same place.
+ENV XDG_CONFIG_HOME /root/.config
+
 # As part of the Docker build, we attempt to pre-install Synapse's dependencies
 # in the hope that it speeds up the real install of Synapse. To make this work,
 # we have to reuse the same virtual env both times. There are three ways to do
