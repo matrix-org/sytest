@@ -21,7 +21,7 @@ RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.12
 #  3. Run poetry with a virtual env already active. Poetry will use the active
 #     virtual env, if there is one.
 # We use the second option and make `.venv` a symlink.
-RUN poetry config virtualenvs.in-project true
+ENV POETRY_VIRTUALENVS_IN_PROJECT true
 
 # /src is where we expect the Synapse source directory to be mounted
 RUN mkdir /src
@@ -67,10 +67,14 @@ RUN /venv/bin/pip install -q --no-cache-dir \
 # Poetry runs multiple pip operations in parallel. Unfortunately this results
 # in race conditions when a dependency is installed while another dependency
 # is being up/downgraded in `scripts/synapse_sytest.sh`. Configure poetry to
-# serialize `pip` operations.
+# serialize `pip` operations by setting `experimental.new-installer` to a falsy
+# value.
 # See https://github.com/matrix-org/synapse/issues/12419
 # TODO: Once poetry 1.2.0 has been released, use the `installer.max-workers`
 #       config option instead.
-RUN poetry config experimental.new-installer false
+# poetry has a bug where this environment variable is not converted to a
+# boolean, so we choose a falsy string value for it. It's fixed in 1.2.0,
+# where we'll be wanting to use `installer.max-workers` anyway.
+ENV POETRY_EXPERIMENTAL_NEW_INSTALLER ""
 
 ENTRYPOINT [ "/bin/bash", "/bootstrap.sh", "synapse" ]
