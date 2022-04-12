@@ -72,6 +72,9 @@ RUN /venv/bin/pip install -q --no-cache-dir \
 # See https://github.com/matrix-org/synapse/issues/12419
 # TODO: Once poetry 1.2.0 has been released, use the `installer.max-workers`
 #       config option instead.
+# poetry has a bug where this environment variable is not converted to a
+# boolean, so we choose a falsy string value for it. It's fixed in 1.2.0,
+# where we'll be wanting to use `installer.max-workers` anyway.
 ENV POETRY_EXPERIMENTAL_NEW_INSTALLER ""
 
 ENTRYPOINT [ "/bin/bash", "/bootstrap.sh", "synapse" ]
