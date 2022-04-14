@@ -158,8 +158,10 @@ else
         # directory.
         # The virtual env will already be populated with dependencies from the
         # Docker build.
+        # Keeping this option around allows us to `pip install` from wheel in synapse's
+        # "latest dependencies" job.
         echo "Installing Synapse using pip..."
-        /venv/bin/pip install -q --upgrade --no-cache-dir /synapse[all]
+        /venv/bin/pip install -q --upgrade --upgrade-strategy eager --no-cache-dir /synapse[all]
     fi
 
     /venv/bin/pip install -q --upgrade --no-cache-dir \
