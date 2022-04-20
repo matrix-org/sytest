@@ -28,16 +28,22 @@ Makes a /redact request
 
 =cut
 
+sub random_transaction_id
+{
+   join "", map { chr( 65 + rand 26 )} 1 .. 20;
+}
+
 sub matrix_redact_event
 {
    my ( $user, $room_id, $event_id, %params ) = @_;
 
    $room_id = uri_escape( $room_id );
    my $esc_event_id = uri_escape( $event_id );
+   my $txn_id = random_transaction_id();
 
    do_request_json_for( $user,
-      method => "POST",
-      uri    => "/v3/rooms/$room_id/redact/$esc_event_id",
+      method => "PUT",
+      uri    => "/v3/rooms/$room_id/redact/$esc_event_id/$txn_id",
       content => \%params,
    )->then( sub {
       my ( $body ) = @_;
@@ -87,7 +93,7 @@ sub matrix_redact_event_synced
 
 push @EXPORT, qw( matrix_redact_event_synced );
 
-test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
+test "PUT /rooms/:room_id/redact/:event_id/:txn_id as power user redacts message",
    requires => [ local_user_fixtures( 2 ),
                  qw( can_send_message )],
 
@@ -97,18 +103,19 @@ test "POST /rooms/:room_id/redact/:event_id as power user redacts message",
       make_room_and_message( [ $creator, $sender ], $sender )
       ->then( sub {
          my ( $room_id, $to_redact ) = @_;
+         my $txn_id = random_transaction_id();
 
          $to_redact = uri_escape( $to_redact );
 
          do_request_json_for( $creator,
-            method => "POST",
-            uri    => "/v3/rooms/$room_id/redact/$to_redact",
+            method => "PUT",
+            uri    => "/v3/rooms/$room_id/redact/$to_redact/$txn_id",
             content => {},
          );
       });
    };
 
-test "POST /rooms/:room_id/redact/:event_id as original message sender redacts message",
+test "PUT /rooms/:room_id/redact/:event_id/:txn_id as original message sender redacts message",
    requires => [ local_user_fixtures( 2 ),
                  qw( can_send_message )],
 
@@ -118,18 +125,19 @@ test "POST /rooms/:room_id/redact/:event_id as original message sender redacts m
       make_room_and_message( [ $creator, $sender ], $sender )
       ->then( sub {
          my ( $room_id, $to_redact ) = @_;
+         my $txn_id = random_transaction_id();
 
          $to_redact = uri_escape( $to_redact );
 
          do_request_json_for( $sender,
-               method => "POST",
-               uri    => "/v3/rooms/$room_id/redact/$to_redact",
+               method => "PUT",
+               uri    => "/v3/rooms/$room_id/redact/$to_redact/$txn_id",
                content => {},
          );
       });
    };
 
-test "POST /rooms/:room_id/redact/:event_id as random user does not redact message",
+test "PUT /rooms/:room_id/redact/:event_id/:txn_id as random user does not redact message",
    requires => [ local_user_fixtures( 3 ),
                  qw( can_send_message )],
 
@@ -139,18 +147,18 @@ test "POST /rooms/:room_id/redact/:event_id as random user does not redact messa
       make_room_and_message( [ $creator, $sender, $redactor ], $sender )
       ->then( sub {
          my ( $room_id, $to_redact ) = @_;
-
+         my $txn_id = random_transaction_id();
          $to_redact = uri_escape( $to_redact );
 
          do_request_json_for( $redactor,
-               method => "POST",
-               uri    => "/v3/rooms/$room_id/redact/$to_redact",
+               method => "PUT",
+               uri    => "/v3/rooms/$room_id/redact/$to_redact/$txn_id",
                content => {},
          )->main::expect_http_403;
       });
    };
 
-test "POST /redact disallows redaction of event in different room",
+test "PUT /redact disallows redaction of event in different room",
    requires => [ local_user_and_room_fixtures(), local_user_and_room_fixtures() ],
 
    do => sub {
@@ -213,5 +221,43 @@ test "Redaction of a redaction redacts the redaction reason",
          exists $event->{content}->{reason} and die "Redaction was not redacted";
 
          Future->done;
+      });
+   };
+
+test "PUT /rooms/:room_id/redact/:event_id/:txn_id is idempotent",
+   requires => [ local_user_fixtures( 2 ),
+                 qw( can_send_message )],
+
+   do => sub {
+      my ( $creator, $sender ) = @_;
+      my $txn_id = random_transaction_id();
+      my ( $event_id_1, $event_id_2 );
+      my $room_id;
+      my $to_redact;
+
+      make_room_and_message( [ $creator, $sender ], $sender )
+      ->then( sub {
+         ( $room_id, $to_redact ) = @_;
+
+         $to_redact = uri_escape( $to_redact );
+
+         do_request_json_for( $creator,
+            method => "PUT",
+            uri    => "/v3/rooms/$room_id/redact/$to_redact/$txn_id",
+            content => {},
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         $event_id_1 = $body->{event_id};
+
+         do_request_json_for( $creator,
+            method => "PUT",
+            uri    => "/v3/rooms/$room_id/redact/$to_redact/$txn_id",
+            content => {},
+         );
+      })->then( sub {
+         my ( $body ) = @_;
+         $event_id_2 = $body->{event_id};
+         assert_eq( $event_id_1, $event_id_2 );
       });
    };
