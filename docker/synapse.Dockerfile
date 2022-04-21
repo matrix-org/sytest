@@ -32,33 +32,22 @@ RUN mkdir /src
 RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
         poetry-core==1.0.8 setuptools==60.10.0 wheel==0.37.1
 
-# TODO: Once poetry lands in the develop branch of Synapse, uncomment these
-#       lines and delete the pip version of the virtual env preparation.
 # Create the virtual env upfront so we don't need to keep reinstalling
 # dependencies.
-# RUN wget -q https://github.com/matrix-org/synapse/archive/develop.tar.gz \
-#         -O /synapse.tar.gz && \
-#     mkdir /synapse && \
-#     tar -C /synapse --strip-components=1 -xf synapse.tar.gz && \
-#     ln -s -T /venv /synapse/.venv && \
-#     cd /synapse && \
-#     poetry install -q --no-root --extras all && \
-#     # Finally clean up the poetry cache and the copy of Synapse.
-#     # This must be done in the same RUN command, otherwise intermediate layers
-#     # of the Docker image will contain all the unwanted files we think we've
-#     # deleted.
-#     rm -rf `poetry config cache-dir` && \
-#     rm -rf /synapse && \
-#     rm /synapse.tar.gz
-
-# Create the virutal env upfront so we don't need to keep reinstall dependencies
-# Manually upgrade pip to ensure it can locate Cryptography's binary wheels
-RUN ${PYTHON_VERSION} -m venv /venv && /venv/bin/pip install -U pip
-RUN /venv/bin/pip install -q --no-cache-dir matrix-synapse[all]
-
-# Uninstall matrix-synapse package so it doesn't collide with the version we try
-# and test
-RUN /venv/bin/pip uninstall -q --no-cache-dir -y matrix-synapse
+RUN wget -q https://github.com/matrix-org/synapse/archive/develop.tar.gz \
+        -O /synapse.tar.gz && \
+    mkdir /synapse && \
+    tar -C /synapse --strip-components=1 -xf synapse.tar.gz && \
+    ln -s -T /venv /synapse/.venv && \
+    cd /synapse && \
+    poetry install -q --no-root --extras all && \
+    # Finally clean up the poetry cache and the copy of Synapse.
+    # This must be done in the same RUN command, otherwise intermediate layers
+    # of the Docker image will contain all the unwanted files we think we've
+    # deleted.
+    rm -rf `poetry config cache-dir` && \
+    rm -rf /synapse && \
+    rm /synapse.tar.gz
 
 # Pre-install test dependencies installed by `scripts/synapse_sytest.sh`.
 RUN /venv/bin/pip install -q --no-cache-dir \
