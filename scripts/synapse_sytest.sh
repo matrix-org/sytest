@@ -144,7 +144,7 @@ if [ -n "$OFFLINE" ]; then
     echo "Installing Synapse using pip in offline mode..."
     /venv/bin/pip install --no-deps --no-index --find-links /pypi-offline-cache /synapse
 
-    if ! pip check ; then
+    if ! /venv/bin/pip check ; then
         echo "There are unmet dependencies which can't be installed in offline mode" >&2
         exit 1
     fi
