@@ -135,8 +135,19 @@ if [ -n "$OFFLINE" ]; then
     # pip will want to install any requirements for the build system
     # (https://github.com/pypa/pip/issues/5402), so we have to provide a
     # directory of pre-downloaded build requirements.
+    #
+    # We need both the `--no-deps` and `--no-index` flags for offline mode:
+    # `--no-index` only prevents PyPI usage and does not stop pip from
+    # installing dependencies from git.
+    # `--no-deps` skips installing dependencies but does not stop pip from
+    # pulling Synapse's build dependencies from PyPI.
     echo "Installing Synapse using pip in offline mode..."
-    /venv/bin/pip install --no-index --find-links /pypi-offline-cache /synapse
+    /venv/bin/pip install --no-deps --no-index --find-links /pypi-offline-cache /synapse
+
+    if ! pip check ; then
+        echo "There are unmet dependencies which can't be installed in offline mode" >&2
+        exit 1
+    fi
 else
     if [ -f "/synapse/poetry.lock" ]; then
         # Install Synapse and dependencies using poetry, respecting the lockfile.
