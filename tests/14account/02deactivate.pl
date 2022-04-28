@@ -9,7 +9,7 @@ sub matrix_deactivate_account
 
    do_request_json_for( $user,
       method  => "POST",
-      uri     => "/r0/account/deactivate",
+      uri     => "/v3/account/deactivate",
       content => {
          auth => {
             type     => "m.login.password",
@@ -67,7 +67,7 @@ test "After deactivating account, can't log in with password",
       ->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/login",
+            uri     => "/v3/login",
             content => {
                type     => "m.login.password",
                identifier => {
@@ -97,7 +97,7 @@ test "After deactivating account, can't log in with an email",
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
-            uri     => "/r0/login",
+            uri     => "/v3/login",
             content => {
                identifier => {
                   "type"    => "m.id.thirdparty",

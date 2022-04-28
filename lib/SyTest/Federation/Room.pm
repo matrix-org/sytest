@@ -177,7 +177,7 @@ sub create_initial_events
       croak "Require a 'creator'";
 
    my $room_version = $args{room_version} // (
-      $self->room_version == 1 ? undef : $self->room_version
+      $self->room_version eq "1" ? undef : $self->room_version
    );
 
    $self->create_and_insert_event(
@@ -228,6 +228,9 @@ sub create_event
 {
    my $self = shift;
    my %fields = @_;
+
+   defined $fields{$_} or croak "Every event needs a '$_' field"
+      for qw( type content sender );
 
    my @auth_events = grep { defined } (
       $self->get_current_state_event( "m.room.create" ),

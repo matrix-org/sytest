@@ -96,33 +96,24 @@ sub _get_config
    );
 
    return (
-      version => 1,
+      version => 2,
       global => {
          server_name => $self->server_name,
          private_key => $self->{paths}{matrix_key},
-         presence_enabled => $JSON::true,
+         presence => {
+            enable_outbound => JSON::true,
+            enable_inbound => JSON::true,
+         },
 
-         kafka => {
-            use_naffka => $JSON::true,
-            naffka_database => {
-               connection_string => 
-                   ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                   "file:$self->{hs_dir}/naffka.db" : $db_uri,
-            },
-            topics => {
-               output_room_event  => 'roomserverOutput',
-               output_client_data => 'clientapiOutput',
-               user_updates => 'userUpdates',
-               output_typing_event => 'eduServerTypingOutput',
-               output_send_to_device_event => 'eduServerSendToDeviceOutput',
-               output_key_change_event => 'output_key_change_event',
-            },
+         jetstream => {
+             storage_path => $self->{hs_dir},
+             in_memory => $JSON::true,
          },
       },
 
       app_service_api => {
          database => {
-            connection_string => 
+            connection_string =>
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/appservice_api.db" : $db_uri,
          },
@@ -131,11 +122,6 @@ sub _get_config
       },
 
       client_api => {
-         database => {
-            connection_string => 
-                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                "file:$self->{hs_dir}/client_api.db" : $db_uri,
-         },
          registration_shared_secret => "reg_secret",
 
          $self->{recaptcha_config} ? (
@@ -153,30 +139,19 @@ sub _get_config
          },
       },
 
-      current_state_server => {
-          database => {
-             connection_string => 
-                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                "file:$self->{hs_dir}/current_state_server.db" : $db_uri,
-          },
-      },
-
       federation_api => {
-         federation_certificates => [$self->{paths}{tls_cert}],
-      },
-
-      federation_sender => {
          database => {
-             connection_string => 
+             connection_string =>
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/federation_sender.db" : $db_uri,
          },
          disable_tls_validation => $JSON::true,
+         federation_certificates => [$self->{paths}{tls_cert}],
       },
 
       key_server => {
          database => {
-             connection_string => 
+             connection_string =>
                 ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                 "file:$self->{hs_dir}/key_server.db" : $db_uri,
          },
@@ -184,7 +159,7 @@ sub _get_config
 
       media_api => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/media_api.db" : $db_uri,
          },
@@ -193,7 +168,7 @@ sub _get_config
 
       mscs => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/mscs.db" : $db_uri,
          },
@@ -202,48 +177,26 @@ sub _get_config
 
       room_server => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/room_server.db" : $db_uri,
          },
       },
 
-      signing_key_server => {
-         database => {
-            connection_string => 
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/signingkeyserver.db" : $db_uri,
-         },
-      },
-
       sync_api => {
          database => {
-            connection_string => 
+            connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
                "file:$self->{hs_dir}/sync_api.db" : $db_uri,
          },
       },
 
       user_api => {
+         push_gateway_disable_tls_validation => $JSON::true,
          account_database => {
-            connection_string => 
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/accounts.db" : $db_uri,
-         },
-         device_database => {
-            connection_string => 
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/devices.db" : $db_uri,
-         },
-         presence_database => {
             connection_string =>
                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/presence.db" : $db_uri,
-         },
-         threepid_database => {
-            connection_string => 
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/threepids.db" : $db_uri,
+               "file:$self->{hs_dir}/accounts.db" : $db_uri,
          },
          email => {
             enabled => JSON::true,
@@ -251,14 +204,6 @@ sub _get_config
             smtp => {
                host => $self->{smtp_server_config}->{host} . ':' . $self->{smtp_server_config}->{port},
             },
-         },
-      },
-
-      push_server => {
-         database => {
-            connection_string => 
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/push_server.db" : $db_uri,
          },
       },
 
@@ -387,6 +332,7 @@ sub _start_monolith
 
    my $output = $self->{output};
    my $loop = $self->loop;
+   my $idx = $self->{hs_index};
 
    $output->diag( "Starting monolith server" );
    my @command = (
@@ -414,6 +360,7 @@ sub _start_monolith
       command => [ @command ],
       connect_host => $self->{bind_host},
       connect_port => $self->secure_port,
+      name => "dendrite-$idx-monolith",
    )->else( sub {
       die "Unable to start dendrite monolith: $_[0]\n";
    })->on_done( sub {

@@ -1,8 +1,6 @@
-use Crypt::NaCl::Sodium;
+use SyTest::Crypto qw( ed25519_nacl_keypair );
 use MIME::Base64;
 use Protocol::Matrix qw( sign_json );
-
-my $crypto_sign = Crypt::NaCl::Sodium->sign;
 
 test "Can upload self-signing keys",
    requires => [ local_user_fixture() ],
@@ -109,8 +107,8 @@ test "Changing master key notifies local users",
       my $user_id = $user1->user_id;
       my $device_id = $user1->device_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
-      my ( $self_signing_pubkey, $self_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $self_signing_pubkey, $self_signing_secret_key ) = ed25519_nacl_keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
       my $cross_signature;
 
       matrix_sync( $user1 )->then(sub {
@@ -259,9 +257,9 @@ test "Changing user-signing key notifies local users",
       my $device_id = $user1->device_id;
       my $user2_id = $user2->user_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
-      my ( $self_signing_pubkey, $self_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
-      my ( $user_signing_pubkey, $user_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "4TL4AjRYwDVwD3pqQzcor+ez/euOB1/q78aTJ+czDNs" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $self_signing_pubkey, $self_signing_secret_key ) = ed25519_nacl_keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
+      my ( $user_signing_pubkey, $user_signing_secret_key ) = ed25519_nacl_keypair( decode_base64( "4TL4AjRYwDVwD3pqQzcor+ez/euOB1/q78aTJ+czDNs" ) );
       my $cross_signature;
 
       matrix_sync( $user1 )->then(sub {
@@ -422,7 +420,7 @@ test "can fetch self-signing keys over federation",
 
       my $user2_id = $user2->user_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
       my $self_signing_key = {
          # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
          "user_id" => $user2_id,
@@ -493,7 +491,7 @@ test "uploading self-signing key notifies over federation",
 
       my $room_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
       my $self_signing_key = {
          # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
          "user_id" => $user2_id,
@@ -592,8 +590,8 @@ test "uploading signed devices gets propagated over federation",
 
       my $room_id;
 
-      my ( $master_pubkey, $master_secret_key ) = $crypto_sign->keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
-      my ( $self_signing_pubkey, $self_signing_secret_key ) = $crypto_sign->keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
+      my ( $master_pubkey, $master_secret_key ) = ed25519_nacl_keypair( decode_base64( "2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0" ) );
+      my ( $self_signing_pubkey, $self_signing_secret_key ) = ed25519_nacl_keypair( decode_base64( "HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8" ) );
       my $self_signing_key = {
          # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
          "user_id" => $user2_id,
@@ -653,6 +651,21 @@ test "uploading signed devices gets propagated over federation",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
+         matrix_get_e2e_keys( $user1, $user2_id );
+      })->then( sub {
+         my ( $content ) = @_;
+
+         log_if_fail "key query content1", $content;
+
+         # Check that we do in fact see the master key when querying the
+         # devices.
+         assert_json_keys( $content->{master_keys}, $user2_id );
+         assert_json_keys( $content->{master_keys}->{$user2_id}, "keys");
+         assert_json_keys( $content->{master_keys}->{$user2_id}{keys},
+            "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk");
+
+         matrix_sync_again( $user1 )
+      })->then( sub {
          sign_json(
             $device, secret_key => $self_signing_secret_key,
             origin => $user2_id, key_id => "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ"
@@ -665,14 +678,32 @@ test "uploading signed devices gets propagated over federation",
              }
          } );
       })->then( sub {
-         sync_until_user_in_device_list( $user1, $user2 );
-      })->then( sub {
-         matrix_get_e2e_keys( $user1, $user2_id );
+         retry_until_success {
+            # Wait until user1 sees signatures uploaded by user2. It's _not_ sufficient
+            # to just wait for user2's device to become visible to user1.
+            #
+            # On server1 hosting user 2:
+            #
+            #     user2 joins a room
+            #     user2 uploads signatures
+            #
+            # On server0, user1 syncs until they see user2's device. This is racey: the
+            # sync may complete before the signatures have uploaded, propagated over
+            # federation to server 1 and then over replication to the sync worker.
+            matrix_get_e2e_keys( $user1, $user2_id )->then( sub {
+               my ( $content ) = @_;
+               log_if_fail "key query content2", $content;
+               $content->{device_keys}{$user2_id}{$user2_device}{"signatures"}
+                  or die "No 'signatures' key present";
+               Future->done( $content );
+            });
+         };
       })->then( sub {
          my ( $content ) = @_;
 
-         log_if_fail "key query content", $content;
+         log_if_fail "key query content3", $content;
 
+         # Check that fetching the devices again returns the new signature
          assert_json_keys( $content->{device_keys}->{$user2_id}->{$user2_device}, "signatures" );
 
          assert_deeply_eq( $content->{device_keys}->{$user2_id}->{$user2_device}->{signatures}, {
@@ -680,6 +711,12 @@ test "uploading signed devices gets propagated over federation",
                "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ" => $cross_signature
             },
          } );
+
+         # Check that we still see the master key when querying the devices.
+         assert_json_keys( $content->{master_keys}, $user2_id );
+         assert_json_keys( $content->{master_keys}->{$user2_id}, "keys");
+         assert_json_keys( $content->{master_keys}->{$user2_id}{keys},
+            "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk");
 
          Future->done(1);
       });
@@ -717,7 +754,7 @@ sub matrix_upload_signatures {
    do_request_json_for(
       $user,
       method  => "POST",
-      uri     => "/unstable/keys/signatures/upload",
+      uri     => "/unstable/keys/signatures/upload", # available under /v3/ for matrix 1.1
       content => $signatures,
    );
 }

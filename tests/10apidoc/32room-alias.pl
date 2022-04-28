@@ -23,7 +23,7 @@ test "PUT /directory/room/:room_alias creates alias",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
 
          content => {
             room_id => $room_id,
@@ -36,7 +36,7 @@ test "PUT /directory/room/:room_alias creates alias",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -63,7 +63,7 @@ test "GET /rooms/:room_id/aliases lists aliases",
          do_request_json_for(
             $user,
             method => "GET",
-            uri => "/r0/rooms/$room_id/aliases",
+            uri => "/v3/rooms/$room_id/aliases",
          );
       })->then( sub {
          my ( $res ) = @_;
@@ -76,7 +76,7 @@ test "GET /rooms/:room_id/aliases lists aliases",
          do_request_json_for(
             $user,
             method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
+            uri    => "/v3/directory/room/$room_alias",
             content => { room_id => $room_id },
          );
       })->then( sub {
@@ -90,7 +90,7 @@ test "GET /rooms/:room_id/aliases lists aliases",
             return do_request_json_for(
                $user,
                method => "GET",
-               uri => "/r0/rooms/$room_id/aliases",
+               uri => "/v3/rooms/$room_id/aliases",
             )->then( sub {
                my ( $res ) = @_;
                log_if_fail "$iter: response from /aliases", $res;

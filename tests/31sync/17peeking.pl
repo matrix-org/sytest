@@ -12,7 +12,7 @@ test "Local users can peek into world_readable rooms by room ID",
       matrix_set_room_history_visibility( $user, $room_id, "world_readable" )->then(sub {
          do_request_json_for( $peeking_user,
             method => "POST",
-            uri    => "/r0/peek/$room_id",
+            uri    => "/v3/peek/$room_id",
             content => {},
          )
       })->then( sub {
@@ -88,7 +88,7 @@ for my $visibility (qw(shared invited joined)) {
          matrix_set_room_history_visibility( $user, $room_id, $visibility )->then(sub {
             do_request_json_for( $peeking_user,
                method => "POST",
-               uri    => "/r0/peek/$room_id",
+               uri    => "/v3/peek/$room_id",
                content => {},
             );
          })->main::expect_http_403()
@@ -116,7 +116,7 @@ test "Local users can peek by room alias",
       matrix_set_room_history_visibility( $user, $room_id, "world_readable" )->then(sub {
          do_request_json_for( $peeking_user,
             method => "POST",
-            uri    => "/r0/peek/#$room_alias_name:".$user->http->server_name,
+            uri    => "/v3/peek/#$room_alias_name:".$user->http->server_name,
             content => {},
          )
       })->then(sub {
@@ -155,7 +155,7 @@ test "Peeked rooms only turn up in the sync for the device who peeked them",
          $peeking_user_device2 = $_[0];
          do_request_json_for( $peeking_user,
             method => "POST",
-            uri    => "/r0/peek/$room_id",
+            uri    => "/v3/peek/$room_id",
             content => {},
          )
       })->then(sub {

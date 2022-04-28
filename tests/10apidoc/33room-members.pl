@@ -26,7 +26,7 @@ test "POST /rooms/:room_id/join can join a room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/rooms/$room_id/join",
+         uri    => "/v3/rooms/$room_id/join",
 
          content => {},
       )->then( sub {
@@ -68,7 +68,7 @@ sub matrix_join_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/join/$room",
+      uri    => "/v3/join/$room",
       params => \%params,
 
       content => \%content,
@@ -93,7 +93,7 @@ test "POST /join/:room_alias can join a room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_alias",
+         uri    => "/v3/join/$room_alias",
 
          content => {},
       )->then( sub {
@@ -129,7 +129,7 @@ test "POST /join/:room_id can join a room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_id",
+         uri    => "/v3/join/$room_id",
 
          content => {},
       )->then( sub {
@@ -166,7 +166,7 @@ test "POST /join/:room_id can join a room with custom content",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_id",
+         uri    => "/v3/join/$room_id",
 
          content => { "foo" => "bar" },
       )->then( sub {
@@ -205,7 +205,7 @@ test "POST /join/:room_alias can join a room with custom content",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/join/$room_alias",
+         uri    => "/v3/join/$room_alias",
 
          content => { "foo" => "bar" },
       )->then( sub {
@@ -246,7 +246,7 @@ test "POST /rooms/:room_id/leave can leave a room",
       ->then( sub {
          do_request_json_for( $joiner_to_leave,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/leave",
+            uri    => "/v3/rooms/$room_id/leave",
 
             content => {},
          )
@@ -286,7 +286,7 @@ sub matrix_leave_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/rooms/$room_id/leave",
+      uri    => "/v3/rooms/$room_id/leave",
 
       content => {},
    )->then_done(1);
@@ -303,7 +303,7 @@ test "POST /rooms/:room_id/invite can send an invite",
 
       do_request_json_for( $creator,
          method => "POST",
-         uri    => "/r0/rooms/$room_id/invite",
+         uri    => "/v3/rooms/$room_id/invite",
 
          content => { user_id => $invited_user->user_id },
       )->then( sub {
@@ -346,7 +346,7 @@ sub matrix_invite_user_to_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/rooms/$room_id/invite",
+      uri    => "/v3/rooms/$room_id/invite",
 
       content => { user_id => $invitee_id }
    )->then( sub {
@@ -367,7 +367,7 @@ test "POST /rooms/:room_id/ban can ban a user",
 
       do_request_json_for( $creator,
          method => "POST",
-         uri    => "/r0/rooms/$room_id/ban",
+         uri    => "/v3/rooms/$room_id/ban",
 
          content => {
             user_id => $banned_user->user_id,
@@ -479,21 +479,15 @@ sub matrix_create_and_join_room
    })->then( sub {
       # Best not to join remote users concurrently because of
       #   https://matrix.org/jira/browse/SYN-318
-      my %members_by_server = partition_by { $_->http } @other_members;
-
-      my @local_members = @{ delete $members_by_server{ $creator->http } // [] };
-      my @remote_members = map { @$_ } values %members_by_server;
-
+      # Also best not to join users concurrently AT ALL because it is inherently racey, particularly
+      # over federation. The DAG can fork if local/remote users join concurrently because the
+      # make_join can be given the same prev_events as the local ongoing join, resulting in a later
+      # send_join which has those prev_events set and NOT the local join as the prev_events.
       Future->needs_all(
          ( fmap {
             my $user = shift;
             matrix_join_room_synced( $user, $room_alias_fullname )
-         } foreach => \@remote_members ),
-
-         map {
-            my $user = $_;
-            matrix_join_room_synced( $user, $room_alias_fullname )
-         } @local_members,
+         } foreach => \@other_members ),
       )
    })->then( sub {
       log_if_fail "Created room_id=$room_id";

@@ -14,7 +14,7 @@ sub matrix_add_tag
 
    do_request_json_for( $user,
       method  => "PUT",
-      uri     => "/r0/user/:user_id/rooms/$room_id/tags/$tag",
+      uri     => "/v3/user/:user_id/rooms/$room_id/tags/$tag",
       content => $content
    );
 }
@@ -34,7 +34,7 @@ sub matrix_remove_tag
 
    do_request_json_for( $user,
       method  => "DELETE",
-      uri     => "/r0/user/:user_id/rooms/$room_id/tags/$tag",
+      uri     => "/v3/user/:user_id/rooms/$room_id/tags/$tag",
       content => {}
    );
 }
@@ -54,7 +54,7 @@ sub matrix_list_tags
 
    do_request_json_for( $user,
       method  => "GET",
-      uri     => "/r0/user/:user_id/rooms/$room_id/tags",
+      uri     => "/v3/user/:user_id/rooms/$room_id/tags",
    )->then( sub {
       my ( $body ) = @_;
 
@@ -185,6 +185,7 @@ sub check_tag_event {
 
 
 test "Tags appear in the v1 /events stream",
+   deprecated_endpoints => 1,
    requires => [ local_user_fixture( with_events => 1 ),
                  qw( can_add_tag can_remove_tag ) ],
 

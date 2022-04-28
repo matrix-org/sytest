@@ -5,7 +5,7 @@ test "Can read configuration endpoint",
         my ( $http, $user ) = @_;
         $http->do_request_json(
             method   => "GET",
-            full_uri => "/_matrix/media/r0/config",
+            full_uri => "/_matrix/media/v3/config",
             params => {
                 access_token => $user->access_token,
             }

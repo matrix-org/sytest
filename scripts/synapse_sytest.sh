@@ -114,36 +114,69 @@ fi
 # default value for SYNAPSE_SOURCE
 : ${SYNAPSE_SOURCE:=/src}
 
-# if we're running against a source directory, turn it into a tarball.  pip
-# will then unpack it to a temporary location, and build it.  (As of pip 20.1,
-# it will otherwise try to build it in-tree, which means writing changes to the
-# source volume outside the container.)
-#
-if [ -d "$SYNAPSE_SOURCE" ]; then
-    echo "Creating tarball from synapse source"
-    tar -C "$SYNAPSE_SOURCE" -czf /tmp/synapse.tar.gz \
-        synapse scripts setup.py README.rst synctl MANIFEST.in
-    SYNAPSE_SOURCE="/tmp/synapse.tar.gz"
-elif [ ! -r "$SYNAPSE_SOURCE" ]; then
+if [ ! -r "$SYNAPSE_SOURCE" ]; then
     echo "Unable to read synapse source at $SYNAPSE_SOURCE" >&2
     exit 1
 fi
+
+if [ ! -d "$SYNAPSE_SOURCE" ]; then
+    echo "$SYNAPSE_SOURCE must be a source directory" >&2
+    exit 1
+fi
+
+# Make a copy of the source directory to avoid writing changes to the source
+# volume outside the container.
+cp -r "$SYNAPSE_SOURCE" /synapse
 
 if [ -n "$OFFLINE" ]; then
     # if we're in offline mode, just put synapse into the virtualenv, and
     # hope that the deps are up-to-date.
     #
-    # --no-use-pep517 works around what appears to be a pip issue
-    # (https://github.com/pypa/pip/issues/5402 possibly) where pip wants
-    # to reinstall any requirements for the build system, even if they are
-    # already installed.
-    /venv/bin/pip install --no-index --no-use-pep517 "$SYNAPSE_SOURCE"
+    # pip will want to install any requirements for the build system
+    # (https://github.com/pypa/pip/issues/5402), so we have to provide a
+    # directory of pre-downloaded build requirements.
+    #
+    # We need both the `--no-deps` and `--no-index` flags for offline mode:
+    # `--no-index` only prevents PyPI usage and does not stop pip from
+    # installing dependencies from git.
+    # `--no-deps` skips installing dependencies but does not stop pip from
+    # pulling Synapse's build dependencies from PyPI.
+    echo "Installing Synapse using pip in offline mode..."
+    /venv/bin/pip install --no-deps --no-index --find-links /pypi-offline-cache /synapse
+
+    if ! /venv/bin/pip check ; then
+        echo "There are unmet dependencies which can't be installed in offline mode" >&2
+        exit 1
+    fi
 else
-    # We've already created the virtualenv, but lets double check we have all
-    # deps.
-    /venv/bin/pip install -q --upgrade --no-cache-dir "$SYNAPSE_SOURCE"[redis]
+    if [ -f "/synapse/poetry.lock" ]; then
+        # Install Synapse and dependencies using poetry, respecting the lockfile.
+        # The virtual env will already be populated with dependencies from the
+        # Docker build.
+        echo "Installing Synapse using poetry..."
+        if [ -d /synapse/.venv ]; then
+            # There was a virtual env in the source directory for some reason.
+            # We want to use our own, so remove it.
+            rm -rf /synapse/.venv
+        fi
+        ln -s -T /venv /synapse/.venv # reuse the existing virtual env
+        pushd /synapse
+        poetry install --extras all
+        popd
+    else
+        # Install Synapse and dependencies using pip. As of pip 20.1, this will
+        # try to build Synapse in-tree, which means writing changes to the source
+        # directory.
+        # The virtual env will already be populated with dependencies from the
+        # Docker build.
+        # Keeping this option around allows us to `pip install` from wheel in synapse's
+        # "latest dependencies" job.
+        echo "Installing Synapse using pip..."
+        /venv/bin/pip install -q --upgrade --upgrade-strategy eager --no-cache-dir /synapse[all]
+    fi
+
     /venv/bin/pip install -q --upgrade --no-cache-dir \
-        lxml psycopg2 coverage codecov tap.py coverage_enable_subprocess
+        coverage codecov tap.py coverage_enable_subprocess
 
     # Make sure all Perl deps are installed -- this is done in the docker build
     # so will only install packages added since the last Docker build

@@ -42,9 +42,6 @@ ADD cpanfile ./cpanfile
 RUN perl ./install-deps.pl -T
 RUN rm cpanfile install-deps.pl
 
-# this is a dependency of the TAP-JUnit converter
-RUN cpan XML::Generator
-
 # /logs is where we should expect logs to end up
 RUN mkdir /logs
 

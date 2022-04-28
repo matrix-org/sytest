@@ -10,10 +10,13 @@ test "/context/ on joined room works",
          body => "hello, world",
       )->then( sub {
          my ( $event_id ) = @_;
-
+         await_sync_timeline_contains( $user, $room_id, check => sub {
+            my ( $event ) = @_;
+            return $event->{event_id} eq $event_id;
+         });
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
+            uri     => "/v3/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
          );
       })->then( sub {
          my ( $body ) = @_;
@@ -34,10 +37,13 @@ test "/context/ on non world readable room does not work",
          body => "hello, world",
       )->then( sub {
          my ( $event_id ) = @_;
-
+         await_sync_timeline_contains( $user, $room_id, check => sub {
+            my ( $event ) = @_;
+            return $event->{event_id} eq $event_id;
+         });
          do_request_json_for( $other_user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
+            uri     => "/v3/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
          );
       })->main::expect_http_403;
    };
@@ -73,9 +79,14 @@ test "/context/ returns correct number of events",
 
          log_if_fail "After event", $event_after_id;
 
+         await_sync_timeline_contains( $user, $room_id, check => sub {
+            my ( $event ) = @_;
+            return $event->{event_id} eq $event_after_id;
+         });
+
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_middle_id ) }",
+            uri     => "/v3/rooms/$room_id/context/${ \uri_escape( $event_middle_id ) }",
             params    => {
                limit => 2,
             }
@@ -118,9 +129,14 @@ test "/context/ with lazy_load_members filter works",
       })->then( sub {
          my ( $event_id ) = @_;
 
+         await_sync_timeline_contains( $user, $room_id, check => sub {
+            my ( $event ) = @_;
+            return $event->{event_id} eq $event_id;
+         });
+
          do_request_json_for( $user,
             method  => "GET",
-            uri     => "/r0/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
+            uri     => "/v3/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
             params  => {
                limit => 2,
                filter  => '{ "lazy_load_members" : true }',

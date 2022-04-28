@@ -11,7 +11,7 @@ test "POST /createRoom makes a public room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/createRoom",
+         uri    => "/v3/createRoom",
 
          content => {
             visibility      => "public",
@@ -38,7 +38,7 @@ test "POST /createRoom makes a private room",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/createRoom",
+         uri    => "/v3/createRoom",
 
          content => {
             visibility => "private",
@@ -64,7 +64,7 @@ test "POST /createRoom makes a private room with invites",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/createRoom",
+         uri    => "/v3/createRoom",
 
          content => {
             visibility => "private",
@@ -97,7 +97,7 @@ test "POST /createRoom makes a room with a name",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/state/m.room.name",
+            uri    => "/v3/rooms/$room_id/state/m.room.name",
          )
       })->then( sub {
          my ( $state ) = @_;
@@ -129,7 +129,7 @@ test "POST /createRoom makes a room with a topic",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/state/m.room.topic",
+            uri    => "/v3/rooms/$room_id/state/m.room.topic",
          )
       })->then( sub {
          my ( $state ) = @_;
@@ -287,8 +287,9 @@ The following options have defaults:
 commandline.
 
 The resultant future completes with two values: the room_id from the
-/createRoom response; the room_alias from the /createRoom response (which is
-non-standard and its use is deprecated).
+/createRoom response; and the room_alias. If room_alias_name is present
+in %opts, an alias will be built with the given alias and user's server name.
+Othwerwise, it will return undef.
 
 =cut
 
@@ -308,12 +309,17 @@ sub matrix_create_room
 
    do_request_json_for( $user,
       method => "POST",
-      uri    => "/r0/createRoom",
+      uri    => "/v3/createRoom",
       content => \%opts,
    )->then( sub {
       my ( $body ) = @_;
+      my $room_id = $body->{room_id};
 
-      Future->done( $body->{room_id}, $body->{room_alias} );
+      my $room_alias;
+      if( defined $opts{room_alias_name} ) {
+         $room_alias = sprintf( '#%s:%s', $opts{room_alias_name}, $user->server_name );
+      }
+      Future->done( $room_id, $room_alias );
    });
 }
 
@@ -438,7 +444,7 @@ sub matrix_create_room_synced
 
       matrix_do_and_wait_for_sync( $user,
          do => sub {
-            my $uri = "/r0/rooms/$room_id/send/m.room.test/$txn_id";
+            my $uri = "/v3/rooms/$room_id/send/m.room.test/$txn_id";
             $txn_id++;
 
             do_request_json_for(

@@ -20,15 +20,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: Py 3.6, SQLite 3.22.0, Monolith
-            sytest-tag: bionic
+          - label: Py 3.8, SQLite 3.31.1, Monolith
+            sytest-tag: focal
 
-          - label: Py 3.6, PG 10, Monolith
-            sytest-tag: bionic
+          - label: Py 3.8, PG 12, Monolith
+            sytest-tag: focal
             postgres: postgres
 
-          - label: Py 3.6, PG 10, Workers
-            sytest-tag: bionic
+          - label: Py 3.8, PG 12, Workers
+            sytest-tag: focal
+            postgres: postgres
+            workers: workers
+
+          - label: Py 3.10, PG 14, Monolith
+            sytest-tag: bookworm-python3.10
+            postgres: postgres
+
+          - label: Py 3.10, PG 14, Workers
+            sytest-tag: bookworm-python3.10
             postgres: postgres
             workers: workers
 
@@ -111,8 +120,12 @@ jobs:
             /logs/**/*.log*
 
   dendrite:
+    # dendrite is currently flaky, so disable the tests for now
+    if: false
+  
     runs-on: ubuntu-latest
     name: "Dendrite: ${{ matrix.label }}"
+
     strategy:
       fail-fast: false
       matrix:

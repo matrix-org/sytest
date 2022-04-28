@@ -31,7 +31,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id fetches my membership",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
+         uri    => "/v3/rooms/$room_id/state/m.room.member/:user_id",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -57,7 +57,7 @@ test "GET /rooms/:room_id/state/m.room.member/:user_id?format=event fetches my m
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
+         uri    => "/v3/rooms/$room_id/state/m.room.member/:user_id",
          params => {
             format => "event",
          },
@@ -88,7 +88,7 @@ test "GET /rooms/:room_id/state/m.room.power_levels fetches powerlevels",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/rooms/$room_id/state/m.room.power_levels",
+         uri    => "/v3/rooms/$room_id/state/m.room.power_levels",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -112,7 +112,7 @@ test "GET /rooms/:room_id/joined_members fetches my membership",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/rooms/$room_id/joined_members",
+         uri    => "/v3/rooms/$room_id/joined_members",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -167,7 +167,7 @@ test "GET /publicRooms lists newly-created room",
 
       $http->do_request_json(
          method => "GET",
-         uri    => "/r0/publicRooms",
+         uri    => "/v3/publicRooms",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -198,7 +198,7 @@ test "GET /directory/room/:room_alias yields room ID",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -221,7 +221,7 @@ test "GET /joined_rooms lists newly-created room",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/joined_rooms",
+         uri    => "/v3/joined_rooms",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -248,7 +248,7 @@ test "POST /rooms/:room_id/state/m.room.name sets name",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/rooms/$room_id/state/m.room.name",
+         uri    => "/v3/rooms/$room_id/state/m.room.name",
 
          content => { name => $name },
       )->then( sub {
@@ -274,7 +274,7 @@ test "GET /rooms/:room_id/state/m.room.name gets name",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/rooms/$room_id/state/m.room.name",
+         uri    => "/v3/rooms/$room_id/state/m.room.name",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -299,7 +299,7 @@ test "POST /rooms/:room_id/state/m.room.topic sets topic",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/rooms/$room_id/state/m.room.topic",
+         uri    => "/v3/rooms/$room_id/state/m.room.topic",
 
          content => { topic => $topic },
       )->then( sub {
@@ -325,7 +325,7 @@ test "GET /rooms/:room_id/state/m.room.topic gets topic",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/rooms/$room_id/state/m.room.topic",
+         uri    => "/v3/rooms/$room_id/state/m.room.topic",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -348,7 +348,7 @@ test "GET /rooms/:room_id/state fetches entire room state",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/rooms/$room_id/state",
+         uri    => "/v3/rooms/$room_id/state",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -375,7 +375,7 @@ test "POST /createRoom with creation content",
 
       do_request_json_for( $user,
          method => "POST",
-         uri    => "/r0/createRoom",
+         uri    => "/v3/createRoom",
 
          content => {
             creation_content => {
@@ -390,7 +390,7 @@ test "POST /createRoom with creation content",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/state/m.room.create",
+            uri    => "/v3/rooms/$room_id/state/m.room.create",
          )
       })->then( sub {
          my ( $state ) = @_;
@@ -419,7 +419,7 @@ sub matrix_get_room_state
    do_request_json_for( $user,
       method => "GET",
       uri    => join( "/",
-         "/r0/rooms/$room_id/state", grep { defined } $opts{type}, $opts{state_key}
+         "/v3/rooms/$room_id/state", grep { defined } $opts{type}, $opts{state_key}
       ),
    );
 }
@@ -484,7 +484,7 @@ sub matrix_put_room_state
    do_request_json_for( $user,
       method => "PUT",
       uri    => join( "/",
-         "/r0/rooms/$room_id/state", grep { defined } $opts{type}, $opts{state_key}
+         "/v3/rooms/$room_id/state", grep { defined } $opts{type}, $opts{state_key}
       ),
 
       content => $opts{content},
@@ -514,7 +514,7 @@ sub matrix_initialsync_room
 
    do_request_json_for( $user,
       method => "GET",
-      uri    => "/r0/rooms/$room_id/initialSync",
+      uri    => "/v3/rooms/$room_id/initialSync",
       params => \%params,
    );
 }

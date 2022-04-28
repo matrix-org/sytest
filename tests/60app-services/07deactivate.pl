@@ -7,7 +7,7 @@ test "AS can deactivate a user",
       do_request_json_for(
          $as_user,
          method  => "POST",
-         uri     => "/r0/account/deactivate",
+         uri     => "/v3/account/deactivate",
          params  => { user_id => $ghost->user_id },
          content => {},
       );

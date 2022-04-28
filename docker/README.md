@@ -8,9 +8,9 @@ but its dependencies are.
 Included currently is:
 
 - `matrixdotorg/sytest` Base container with SyTest dependencies installed
-    - Tagged by underlying Debian/Ubuntu image: `bionic`, `buster` or `testing`
+    - Tagged by underlying Debian/Ubuntu image: `focal`, `buster` or `testing`
 - `matrixdotorg/sytest-synapse`: Runs SyTest against Synapse
-    - Tagged by underlying Debian/Ubunutu image: `bionic`, `buster` or `testing`
+    - Tagged by underlying Debian/Ubunutu image: `focal`, `buster` or `testing`
 - `matrixdotorg/sytest-dendrite:go113`: Runs SyTest against Dendrite on Go 1.13
     - Currently uses Debian 10 (Buster) as its base image
 
@@ -30,7 +30,9 @@ docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs
 
 The following environment variables can be set with `-e` to control the test run:
 
- * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of sqlite.
+ * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of SQLite.
+ * `MULTI_POSTGRES`: set non-empty (along with `POSTGRES`) to test against multiple
+   PostgreSQL databases where the main store and state store are split.
  * `WORKERS`: set non-empty to test a worker-mode deployment rather than a
    monolith. Requires `POSTGRES`.
  * `REDIS`: set non-empty to use redis replication rather than old

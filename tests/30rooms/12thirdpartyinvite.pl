@@ -21,7 +21,7 @@ test "Can invite existing 3pid",
 
          do_request_json_for( $inviter,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/invite",
+            uri    => "/v3/rooms/$room_id/invite",
 
             content => {
                id_server       => $id_server->name,
@@ -68,7 +68,7 @@ test "Can invite existing 3pid with no ops into a private room",
 
          do_request_json_for( $inviter,
             method => "POST",
-            uri    => "/r0/rooms/$room_id/invite",
+            uri    => "/v3/rooms/$room_id/invite",
 
             content => {
                id_server       => $id_server->name,
@@ -495,7 +495,7 @@ sub do_3pid_invite {
 
    do_request_json_for( $inviter,
       method  => "POST",
-      uri     => "/r0/rooms/$room_id/invite",
+      uri     => "/v3/rooms/$room_id/invite",
       content => {
          id_server       => $id_server->name,
          id_access_token => $id_server->get_access_token,

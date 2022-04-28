@@ -22,7 +22,7 @@ test "Outbound federation can query room alias directory",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
          log_if_fail "Query response", $body;
@@ -54,13 +54,13 @@ test "Inbound federation can query room alias directory",
 
       my $room_id;
 
-      matrix_create_room( $user )
+      matrix_create_room_synced( $user )
       ->then( sub {
          ( $room_id ) = @_;
 
          do_request_json_for( $user,
             method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
+            uri    => "/v3/directory/room/$room_alias",
 
             content => {
                room_id => $room_id,

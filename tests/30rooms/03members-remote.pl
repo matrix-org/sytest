@@ -38,7 +38,7 @@ test "Remote users can join room by alias",
       flush_events_for( $user )->then( sub {
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          );

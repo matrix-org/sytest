@@ -136,7 +136,7 @@ foreach my $versionprefix ( qw( v1 v2 ) ) {
 
             do_request_json_for( $user,
                method => "POST",
-               uri    => "/r0/join/$room_alias",
+               uri    => "/v3/join/$room_alias",
 
                content => {},
             )->then( sub {
@@ -198,7 +198,7 @@ test "Outbound federation passes make_join failures through to the client",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->main::expect_http_400
@@ -800,7 +800,7 @@ test "Outbound federation correctly handles unsupported room versions",
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->main::expect_http_400
@@ -883,14 +883,14 @@ test "Outbound federation rejects send_join responses with no m.room.create even
                map { $_->[0] } @{ $event->{auth_events} }
             );
 
-            # filter out the m.room.create event
-            @auth_chain = grep { $_->{type} ne 'm.room.create' } @auth_chain;
+            # filter out the m.room.create event from the state response
+            my @state_events = grep { $_->{type} ne 'm.room.create' } $room->current_state_events;
 
             $req->respond_json(
                # /v1/send_join has an extraneous [200, ...] wrapper (see MSC1802)
                my $response = [ 200, {
                   auth_chain => \@auth_chain,
-                  state      => [ $room->current_state_events ],
+                  state      => \@state_events,
                } ]
             );
 
@@ -901,7 +901,7 @@ test "Outbound federation rejects send_join responses with no m.room.create even
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->main::expect_http_error()->then( sub {
@@ -984,7 +984,7 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->main::expect_http_error()->then( sub {
@@ -1078,7 +1078,7 @@ test "Event with an invalid signature in the send_join response should not cause
 
          do_request_json_for( $user,
             method => "POST",
-            uri    => "/r0/join/$room_alias",
+            uri    => "/v3/join/$room_alias",
 
             content => {},
          )->then( sub {

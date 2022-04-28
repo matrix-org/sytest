@@ -72,7 +72,7 @@ test "Can download specifying a different ASCII file name",
 
       $http->do_request(
          method   => "GET",
-         full_uri => "/_matrix/media/r0/download/$content_id/also_ascii",
+         full_uri => "/_matrix/media/v3/download/$content_id/also_ascii",
       )->then( sub {
          my ( $body, $response ) = @_;
 
@@ -108,7 +108,7 @@ test "Can fetch images in room",
       })->then( sub {
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/messages",
+            uri    => "/v3/rooms/$room_id/messages",
             params => {
                filter => '{"contains_url":true}',
                dir    => 'b',

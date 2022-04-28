@@ -23,7 +23,7 @@ test "Unnamed room comes with a name summary",
          ( $room_id ) = @_;
          matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id );
+         matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
@@ -70,7 +70,7 @@ test "Named room comes with just joined member count summary",
       })->then( sub {
          matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id );
+         matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {

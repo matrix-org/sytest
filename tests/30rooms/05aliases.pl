@@ -24,7 +24,7 @@ test "Room aliases can contain Unicode",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
 
          content => { room_id => $room_id },
       );
@@ -37,7 +37,7 @@ test "Room aliases can contain Unicode",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -60,7 +60,7 @@ test "Remote room alias queries can handle Unicode",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
       )->then( sub {
          my ( $body ) = @_;
 
@@ -234,13 +234,13 @@ test "Regular users can add and delete aliases when m.room.aliases is restricted
       })->then( sub {
          do_request_json_for( $other_user,
             method => "PUT",
-            uri    => "/r0/directory/room/$alias",
+            uri    => "/v3/directory/room/$alias",
             content => { room_id => $room_id },
          );
       })->then( sub {
          do_request_json_for( $other_user,
             method => "DELETE",
-            uri    => "/r0/directory/room/$alias",
+            uri    => "/v3/directory/room/$alias",
             content => {},
          );
       });
@@ -252,13 +252,13 @@ sub _test_can_create_and_delete_alias {
 
    do_request_json_for( $user,
       method => "PUT",
-      uri    => "/r0/directory/room/$alias",
+      uri    => "/v3/directory/room/$alias",
 
       content => { room_id => $room_id },
    )->then( sub {
       do_request_json_for( $user,
         method => "DELETE",
-        uri    => "/r0/directory/room/$alias",
+        uri    => "/v3/directory/room/$alias",
 
         content => {},
       )
@@ -277,7 +277,7 @@ test "Deleting a non-existent alias should return a 404",
       do_request_json_for(
          $user,
          method => "DELETE",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
          content => {},
       )->main::expect_m_not_found;
    };
@@ -291,13 +291,13 @@ test "Users can't delete other's aliases",
 
       do_request_json_for( $user,
          method => "PUT",
-         uri    => "/r0/directory/room/$room_alias",
+         uri    => "/v3/directory/room/$room_alias",
 
          content => { room_id => $room_id },
       )->then( sub {
          do_request_json_for( $other_user,
            method => "DELETE",
-           uri    => "/r0/directory/room/$room_alias",
+           uri    => "/v3/directory/room/$room_alias",
 
            content => {},
          )->main::expect_http_403;
@@ -325,14 +325,14 @@ test "Users with sufficient power-level can delete other's aliases",
       })->then( sub {
          do_request_json_for( $user,
            method => "PUT",
-           uri    => "/r0/directory/room/$room_alias",
+           uri    => "/v3/directory/room/$room_alias",
 
            content => { room_id => $room_id },
          )
       })->then( sub {
          do_request_json_for( $other_user,
            method => "DELETE",
-           uri    => "/r0/directory/room/$room_alias",
+           uri    => "/v3/directory/room/$room_alias",
 
            content => {},
          )
@@ -343,7 +343,7 @@ test "Users with sufficient power-level can delete other's aliases",
          do_request_json_for(
             $user,
             method => "GET",
-            uri  => "/r0/directory/room/$room_alias",
+            uri  => "/v3/directory/room/$room_alias",
          );
       })->main::expect_http_404;
    };
@@ -363,7 +363,7 @@ test "Can delete canonical alias",
 
          do_request_json_for( $creator,
             method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
+            uri    => "/v3/directory/room/$room_alias",
 
             content => { room_id => $room_id },
          )
@@ -375,7 +375,7 @@ test "Can delete canonical alias",
       })->then( sub {
          do_request_json_for( $creator,
            method => "DELETE",
-           uri    => "/r0/directory/room/$room_alias",
+           uri    => "/v3/directory/room/$room_alias",
 
            content => {},
          )
@@ -407,14 +407,14 @@ test "Alias creators can delete alias with no ops",
 
          do_request_json_for( $other_user,
             method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
+            uri    => "/v3/directory/room/$room_alias",
 
             content => { room_id => $room_id },
          )
       })->then( sub {
          do_request_json_for( $other_user,
            method => "DELETE",
-           uri    => "/r0/directory/room/$room_alias",
+           uri    => "/v3/directory/room/$room_alias",
 
            content => {},
          )
@@ -436,7 +436,7 @@ test "Alias creators can delete canonical alias with no ops",
 
          do_request_json_for( $other_user,
             method => "PUT",
-            uri    => "/r0/directory/room/$room_alias",
+            uri    => "/v3/directory/room/$room_alias",
 
             content => { room_id => $room_id },
          )
@@ -448,7 +448,7 @@ test "Alias creators can delete canonical alias with no ops",
       })->then( sub {
          do_request_json_for( $other_user,
            method => "DELETE",
-           uri    => "/r0/directory/room/$room_alias",
+           uri    => "/v3/directory/room/$room_alias",
 
            content => {},
          )
@@ -474,7 +474,7 @@ test "Only room members can list aliases of a room",
          do_request_json_for(
             $other_user,
             method => "GET",
-            uri  => "/r0/rooms/$room_id/aliases",
+            uri  => "/v3/rooms/$room_id/aliases",
          );
       })->then( sub {
          my ( $res ) = @_;
@@ -484,7 +484,7 @@ test "Only room members can list aliases of a room",
          do_request_json_for(
             $third_user,
             method => "GET",
-            uri  => "/r0/rooms/$room_id/aliases",
+            uri  => "/v3/rooms/$room_id/aliases",
          );
       })->main::expect_http_403;
    };

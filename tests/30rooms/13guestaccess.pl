@@ -90,7 +90,7 @@ test "Guest user calling /events doesn't tightloop",
       })->then( sub {
          do_request_json_for( $guest_user,
             method => "GET",
-            uri    => "/r0/rooms/$room_id/initialSync",
+            uri    => "/v3/rooms/$room_id/initialSync",
          );
       })->then( sub {
          my ( $sync_body ) = @_;
@@ -157,7 +157,7 @@ test "Guest user can set display names",
    do => sub {
       my ( $guest_user, $user, $room_id ) = @_;
 
-      my $displayname_uri = "/r0/profile/:user_id/displayname";
+      my $displayname_uri = "/v3/profile/:user_id/displayname";
 
       matrix_set_room_guest_access( $user, $room_id, "can_join" )->then( sub {
          # we use join_room_synced as a proxy for ensuring that the join event
@@ -201,7 +201,7 @@ test "Guest user can set display names",
                }),
                do_request_json_for( $guest_user,
                   method => "GET",
-                  uri    => "/r0/rooms/$room_id/state/m.room.member/:user_id",
+                  uri    => "/v3/rooms/$room_id/state/m.room.member/:user_id",
                )->then( sub {
                   my ( $body ) = @_;
                   log_if_fail "Iteration $iter: /state result", $body;
@@ -244,7 +244,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
             assert_eq( $membership, "join", "membership" );
 
             Future->needs_all(
-               await_event_for( $local_user, filter => sub {
+               await_sync_timeline_contains( $local_user, $room_id, check => sub {
                   my ( $event ) = @_;
                   return $event->{type} eq "m.room.guest_access" && $event->{content}->{guest_access} eq "forbidden";
                }),
@@ -256,11 +256,12 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
                },
             );
          })->then( sub {
-            repeat_until_true {
+            retry_until_success {
                matrix_get_room_membership( $local_user, $room_id, $guest_user )
                ->then( sub {
                   my ( $membership ) = @_;
-                  Future->done( $membership eq "leave" );
+                  $membership eq "leave" or die "Expected membership to be 'leave'";
+                  Future->done(1);
                })
             };
          });
@@ -276,7 +277,7 @@ test "Guest user can upgrade to fully featured user",
       my ( $local_part ) = $guest_user->user_id =~ m/^@([^:]+):/g;
       $http->do_request_json(
          method  => "POST",
-         uri     => "/r0/register",
+         uri     => "/v3/register",
          content => {
             username => $local_part,
             password => "SIR_Arthur_David",
@@ -285,7 +286,7 @@ test "Guest user can upgrade to fully featured user",
       )->followed_by( sub {
          $http->do_request_json(
             method  => "POST",
-            uri     => "/r0/register",
+            uri     => "/v3/register",
             content => {
                username     => $local_part,
                password     => "SIR_Arthur_David",
@@ -316,7 +317,7 @@ test "Guest user cannot upgrade other users",
       my ( $local_part1 ) = $guest_user1->user_id =~ m/^@([^:]+):/g;
       $http->do_request_json(
          method  => "POST",
-         uri     => "/r0/register",
+         uri     => "/v3/register",
          content => {
             username => $local_part1,
             password => "SIR_Arthur_David",
@@ -373,7 +374,7 @@ test "GET /publicRooms lists rooms",
             $iter++;
             $http->do_request_json(
                method => "GET",
-               uri    => "/r0/publicRooms",
+               uri    => "/v3/publicRooms",
             )->then( sub {
                my ( $body ) = @_;
 
@@ -463,7 +464,7 @@ test "GET /publicRooms includes avatar URLs",
          repeat_until_true {
             $http->do_request_json(
                method => "GET",
-               uri    => "/r0/publicRooms",
+               uri    => "/v3/publicRooms",
             )->then( sub {
                my ( $body ) = @_;
 
@@ -568,7 +569,7 @@ sub guest_user_fixture
 
          $http->do_request_json(
             method  => "POST",
-            uri     => "/r0/register",
+            uri     => "/v3/register",
             content => {},
             params  => {
                kind => "guest",
