@@ -123,6 +123,7 @@ sub _get_config
 
       client_api => {
          registration_shared_secret => "reg_secret",
+         registration_disabled => $JSON::false,
 
          $self->{recaptcha_config} ? (
             # here "true" gets written as a quote-less string, which in yaml is
