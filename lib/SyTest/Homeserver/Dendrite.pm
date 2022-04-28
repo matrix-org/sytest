@@ -344,6 +344,7 @@ sub _start_monolith
       '--api-bind-address', $self->{bind_host} . ':1' . $self->unsecure_port,
       '--tls-cert', $self->{paths}{tls_cert},
       '--tls-key', $self->{paths}{tls_key},
+      '--really-enable-open-registration',
    );
 
    push(@command, '-api') if $ENV{'API'} == '1';
