@@ -63,7 +63,7 @@ test "Event stream catches up fully after many messages",
          repeat( sub {
             my ( $msgnum ) = @_;
 
-            matrix_send_room_text_message_synced( $user, $room_id,
+            matrix_send_room_text_message( $user, $room_id,
                body => "Message number $msgnum"
             )->on_done( sub {
                push @expected_event_ids, @_;

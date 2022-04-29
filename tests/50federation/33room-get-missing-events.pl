@@ -235,7 +235,7 @@ sub sytest_user_and_room_fixture {
          ) = @_;
 
          Future->needs_all(
-            matrix_invite_user_to_room_synced(
+            matrix_invite_user_to_room(
                $creator_user, $sytest_user_id, $room_id,
             ),
             $inbound_server->await_request_v2_invite( $room_id )->then( sub {
