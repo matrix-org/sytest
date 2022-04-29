@@ -365,9 +365,9 @@ foreach my $i (
             matrix_set_room_history_visibility_synced( $user, $room_id, "world_readable" ),
             matrix_set_room_guest_access_synced( $user, $room_id, "can_join" ),
          )->then( sub {
-            matrix_join_room( $nonjoined_user, $room_id );
+            matrix_join_room_synced( $nonjoined_user, $room_id );
          })->then( sub {
-            matrix_leave_room( $nonjoined_user, $room_id );
+            matrix_leave_room_synced( $nonjoined_user, $room_id );
          })->then( sub {
             do_request_json_for( $nonjoined_user,
                method => "GET",
@@ -408,7 +408,7 @@ foreach my $i (
             })->then( sub {
                matrix_send_room_text_message( $user, $room_id, body => "pre_join" );
             })->then( sub {
-               matrix_join_room( $joining_user, $room_id );
+               matrix_join_room_synced( $joining_user, $room_id );
             })->then( sub {
                matrix_send_room_text_message_synced( $user, $room_id, body => "post_join" );
             })->then( sub {
@@ -509,7 +509,7 @@ test "Backfill works correctly with history visibility set to joined",
       my ( $room_alias_name, $user, $another_user, $remote_user ) = @_;
       my ( $room_id, $room_alias );
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $user,
          room_alias_name => $room_alias_name,
       )->then( sub {
@@ -525,11 +525,11 @@ test "Backfill works correctly with history visibility set to joined",
       })->then( sub {
          # We now send a state event to ensure they're correctly handled in
          # backfill. This was a bug in synapse (c.f. #1943)
-         matrix_join_room( $another_user, $room_alias );
+         matrix_join_room_synced( $another_user, $room_alias );
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id, body => "2" );
       })->then( sub {
-         matrix_join_room( $remote_user, $room_alias );
+         matrix_join_room_synced( $remote_user, $room_alias );
       })->then( sub {
          matrix_get_room_messages( $remote_user, $room_id, limit => 10 )
       })->then( sub {

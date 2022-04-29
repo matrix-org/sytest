@@ -374,7 +374,7 @@ foreach my $error_code ( 403, 500, -1 ) {
                   $child->close();
                }
 
-               return matrix_leave_room( $user, $room_id );
+               return matrix_leave_room_synced( $user, $room_id );
             }
             else {
                Future->needs_all(
@@ -387,7 +387,7 @@ foreach my $error_code ( 403, 500, -1 ) {
 
                      Future->done;
                   }),
-                  matrix_leave_room( $user, $room_id )
+                  matrix_leave_room_synced( $user, $room_id )
                );
             }
          })->then( sub {
@@ -711,7 +711,7 @@ test "Inbound /v1/send_leave rejects leaves from other servers",
          ( $room ) = @_;
          log_if_fail "All users joined room; initiating leave";
          Future->needs_all(
-            matrix_leave_room( $joiner_user, $room_id ),
+            matrix_leave_room_synced( $joiner_user, $room_id ),
 
             # make sure that the leave propagates back to the sytest server...
             $inbound_server->await_event(
@@ -743,7 +743,7 @@ test "Inbound /v1/send_leave rejects leaves from other servers",
 
          # now that we've got the leave event, rejoin
          Future->needs_all(
-            matrix_join_room( $joiner_user, $room_id, server_name => $creator_user->server_name ),
+            matrix_join_room_synced( $joiner_user, $room_id, server_name => $creator_user->server_name ),
             $inbound_server->await_event(
                "m.room.member", $room_id, sub {
                   my ( $ev ) = @_;

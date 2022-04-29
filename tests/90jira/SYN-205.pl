@@ -5,7 +5,7 @@ multi_test "Rooms can be created with an initial invite list (SYN-205)",
    do => sub {
       my ( $user, $invitee ) = @_;
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
          invite => [ $invitee->user_id ],
       )->SyTest::pass_on_done( "Created room" )
       ->then( sub {

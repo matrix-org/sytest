@@ -50,7 +50,7 @@ test "Can get rooms/{roomId}/members at a given point",
          # find the token at this point so we can query it later
          $at_token = $body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_send_room_text_message( $user1, $room_id,
             body => "Hello back",
@@ -87,7 +87,7 @@ test "Can filter rooms/{roomId}/members",
 
       matrix_create_and_join_room( [ $user1, $user2 ] )->then( sub {
          ( $room_id ) = @_;
-         matrix_leave_room( $user2, $room_id );
+         matrix_leave_room_synced( $user2, $room_id );
       })->then( sub {
          do_request_json_for( $user1,
             method => "GET",

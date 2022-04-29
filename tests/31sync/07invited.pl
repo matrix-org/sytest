@@ -15,7 +15,7 @@ test "Rooms a user is invited to appear in an initial sync",
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -64,7 +64,7 @@ test "Rooms a user is invited to appear in an incremental sync",
 
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -121,7 +121,7 @@ test "Newly joined room is included in an incremental sync after invite",
          assert_json_keys( $room->{invite_state}, qw( events ) );
 
          # accept the invite
-         matrix_join_room( $user, $room_id );
+         matrix_join_room_synced( $user, $room_id );
       })->then( sub {
          # wait for the sync to turn up
          await_sync( $user,

@@ -12,7 +12,7 @@ test "Can sync a room with a single message",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -72,7 +72,7 @@ test "Can sync a room with a message with a transaction id",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -189,7 +189,7 @@ test "A filtered timeline reaches its limit",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -324,7 +324,7 @@ test "A prev_batch token can be used in the v1 messages API",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -383,7 +383,7 @@ test "A prev_batch token from incremental sync can be used in the v1 messages AP
 
       my ( $room_id, $event_id_1, $event_id_2 );
 
-      matrix_create_room( $user )
+      matrix_create_room_synced( $user )
       ->then( sub {
          ( $room_id ) = @_;
 
@@ -451,7 +451,7 @@ test "A next_batch token can be used in the v1 messages API",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 

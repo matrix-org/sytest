@@ -62,7 +62,7 @@ test "Inbound federation redacts events from erased users",
       my $room_id = $room->room_id;
       my $message_id;
 
-      matrix_join_room( $remaining_user, $room_id )
+      matrix_join_room_synced( $remaining_user, $room_id )
       ->then( sub {
          # have the creator send a message into the room, which we will try to
          # fetch.

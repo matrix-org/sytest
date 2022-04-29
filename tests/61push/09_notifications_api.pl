@@ -12,11 +12,11 @@ test "Notifications can be viewed with GET /notifications",
          pattern => "*",
          actions => [ "notify" ]
       })->then( sub {
-         matrix_create_room( $user1 );
+         matrix_create_room_synced( $user1 );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_send_room_text_message_synced( $user2, $room_id,
             body => "Test message 1",

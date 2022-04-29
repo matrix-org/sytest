@@ -6,7 +6,7 @@ test "Read markers appear in incremental v2 /sync",
 
       my ( $room_id, $event_id );
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_send_room_text_message( $user, $room_id, body => "hello" );
@@ -26,7 +26,7 @@ test "Read markers appear in initial v2 /sync",
 
       my ( $room_id, $event_id );
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_send_room_text_message( $user, $room_id, body => "hello" );
@@ -66,7 +66,7 @@ test "Read markers can be updated",
 
       my ( $room_id, $event_id );
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_send_room_text_message( $user, $room_id, body => "hello" );

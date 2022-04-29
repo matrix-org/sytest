@@ -114,11 +114,11 @@ test "Changing master key notifies local users",
       matrix_sync( $user1 )->then(sub {
          matrix_sync( $user2 );
       })->then( sub {
-         matrix_create_room( $user1 );
+         matrix_create_room_synced( $user1 );
       })->then( sub {
          my ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          my $self_signing_key = {
             # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
@@ -265,11 +265,11 @@ test "Changing user-signing key notifies local users",
       matrix_sync( $user1 )->then(sub {
          matrix_sync( $user2 );
       })->then( sub {
-         matrix_create_room( $user1 );
+         matrix_create_room_synced( $user1 );
       })->then( sub {
          my ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          my $self_signing_key = {
             # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
@@ -518,7 +518,7 @@ test "uploading self-signing key notifies over federation",
                  },
              },
       } )->then( sub {
-         matrix_create_room( $user1 );
+         matrix_create_room_synced( $user1 );
       })->then( sub {
          ( $room_id ) = @_;
          matrix_sync( $user1 );
@@ -527,7 +527,7 @@ test "uploading self-signing key notifies over federation",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
@@ -638,7 +638,7 @@ test "uploading signed devices gets propagated over federation",
              "self_signing_key" => $self_signing_key,
           });
       })->then( sub {
-         matrix_create_room( $user1 );
+         matrix_create_room_synced( $user1 );
       })->then( sub {
          ( $room_id ) = @_;
          matrix_sync( $user1 );
@@ -647,7 +647,7 @@ test "uploading signed devices gets propagated over federation",
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {

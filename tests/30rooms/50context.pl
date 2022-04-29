@@ -112,8 +112,8 @@ test "/context/ with lazy_load_members filter works",
    check => sub {
       my ( $user, $room_id, $user2, $user3 ) = @_;
 
-      matrix_join_room( $user2, $room_id )->then( sub {
-         matrix_join_room( $user3, $room_id );
+      matrix_join_room_synced( $user2, $room_id )->then( sub {
+         matrix_join_room_synced( $user3, $room_id );
       })->then( sub {
          matrix_send_room_text_message( $user, $room_id,
             body => "hello, world 1",

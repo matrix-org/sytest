@@ -193,7 +193,7 @@ test "POST /createRoom rejects attempts to create rooms with numeric versions",
    do => sub {
       my ( $user ) = @_;
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $user,
          room_version => 1,
       )->main::expect_http_400()
@@ -212,7 +212,7 @@ test "POST /createRoom rejects attempts to create rooms with unknown versions",
    do => sub {
       my ( $user ) = @_;
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $user,
          room_version => "agjkyhdsghkjackljkj",
       )->main::expect_http_400()
@@ -440,7 +440,7 @@ sub matrix_create_room_synced
    # The easiest way to do that is to send a sentinel message in the room and wait for
    # that to turn up.
    matrix_create_room( $user, %params )->then( sub {
-      my ( $room_id ) = @_;
+      my ( $room_id, $room_alias ) = @_;
 
       matrix_do_and_wait_for_sync( $user,
          do => sub {
@@ -461,6 +461,6 @@ sub matrix_create_room_synced
                $_[0]->{event_id} eq $event_id
             });
          },
-      )->then_done( $room_id );
+      )->then_done( $room_id, $room_alias );
    });
 }

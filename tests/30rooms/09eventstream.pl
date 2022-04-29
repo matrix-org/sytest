@@ -13,7 +13,7 @@ multi_test "Check that event streams started after a client joined a room work (
       my $room_id;
 
       # Have Alice create a new private room
-      matrix_create_room( $alice,
+      matrix_create_room_synced( $alice,
          visibility => "private",
       )->SyTest::pass_on_done( "Created a room" )
       ->then( sub {
@@ -52,7 +52,7 @@ test "Event stream catches up fully after many messages",
       my ( $user ) = @_;
       my ( $room_id, @expected_event_ids );
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
         visibility => "private",
       )
       ->then( sub {

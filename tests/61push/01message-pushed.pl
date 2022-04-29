@@ -41,7 +41,7 @@ multi_test "Test that a message is pushed",
       my $room_id;
 
       # Have Alice create a new private room
-      matrix_create_room( $alice,
+      matrix_create_room_synced( $alice,
          visibility => "private",
       )->then( sub {
          ( $room_id ) = @_;
@@ -65,7 +65,7 @@ multi_test "Test that a message is pushed",
          )
       })->then( sub {
          # Bob accepts the invite by joining the room
-         matrix_join_room( $bob, $room_id )
+         matrix_join_room_synced( $bob, $room_id )
       })->then( sub {
          my $join_event;
          await_sync_timeline_contains( $alice, $room_id, check => sub {
@@ -183,7 +183,7 @@ test "Invites are pushed",
       matrix_set_pusher(
          $alice, $test_server_info->client_location . $PUSH_LOCATION,
       )->then( sub {
-         matrix_create_room( $bob, visibility => "private" );
+         matrix_create_room_synced( $bob, visibility => "private" );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -239,11 +239,11 @@ sub setup_push
       $alice, $target,
    )->then( sub {
       log_if_fail "Created pusher for ".$alice->user_id." -> ".$target;
-      matrix_create_room( $bob );
+      matrix_create_room_synced( $bob );
    })->then( sub {
       ( $room_id ) = @_;
 
-      matrix_join_room( $alice, $room_id );
+      matrix_join_room_synced( $alice, $room_id );
    })->then( sub {
       # we need to make sure the pusher is working.
       #
@@ -420,7 +420,7 @@ test "Rooms with many users are correctly pushed",
              content => { name => $name },
          );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id)
+         matrix_join_room_synced( $charlie, $room_id)
       })->then( sub {
          do_request_json_for( $bob,
             method => "PUT",
@@ -599,7 +599,7 @@ test "Rejected events are not pushed",
       )->then( sub {
          # we need a second local user in the room, so that we can test if
          # alice's pusher is active.
-         matrix_join_room( $bob, $room->room_id );
+         matrix_join_room_synced( $bob, $room->room_id );
       })->then( sub {
          wait_for_pusher_to_work( $bob, $room->room_id );
       })->then( sub {

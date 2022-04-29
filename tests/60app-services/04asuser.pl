@@ -6,12 +6,12 @@ test "AS user (not ghost) can join room without registering",
 
       my $room_id;
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_invite_user_to_room( $user, $as_user, $room_id )
       })->then( sub {
-         matrix_join_room( $as_user, $room_id )
+         matrix_join_room_synced( $as_user, $room_id )
       });
    };
 
@@ -25,7 +25,7 @@ test "AS user (not ghost) can join room without registering, with user_id query 
 
       my $room_id;
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_invite_user_to_room( $user, $as_user, $room_id )

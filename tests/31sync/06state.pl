@@ -21,7 +21,7 @@ test "State is included in the timeline in the initial sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -76,7 +76,7 @@ test "State from remote users is included in the state in the initial sync",
         matrix_create_filter( $user, $filter )->then( sub {
             ( $filter_id ) = @_;
 
-            matrix_create_room( $remote_user );
+            matrix_create_room_synced( $remote_user );
         })->then( sub {
             ( $room_id ) = @_;
 
@@ -134,7 +134,7 @@ test "Changes to state are included in an incremental sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -201,7 +201,7 @@ test "Changes to state are included in an gapped incremental sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user )
+         matrix_create_room_synced( $user )
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -273,7 +273,7 @@ test "State from remote users is included in the timeline in an incremental sync
         matrix_create_filter( $user, $filter )->then( sub {
             ( $filter_id ) = @_;
 
-            matrix_create_room( $remote_user );
+            matrix_create_room_synced( $remote_user );
         })->then( sub {
             ( $room_id ) = @_;
             matrix_invite_user_to_room_synced(
@@ -338,7 +338,7 @@ test "A full_state incremental update returns all state",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -438,7 +438,7 @@ test "When user joins a room the state is included in the next sync",
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -496,7 +496,7 @@ test "A change to displayname should not result in a full state sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -615,7 +615,7 @@ test "When user joins a room the state is included in a gapped sync",
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a )
+         matrix_create_room_synced( $user_a )
       })->then( sub {
          ( $room_id ) = @_;
          matrix_put_room_state( $user_a, $room_id,
@@ -630,7 +630,7 @@ test "When user joins a room the state is included in a gapped sync",
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b);
       })->then( sub {
-         matrix_join_room( $user_b, $room_id );
+         matrix_join_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $user_a, $room_id, 20 );
       })->then( sub {
@@ -679,7 +679,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -697,7 +697,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         matrix_join_room( $user_b, $room_id );
+         matrix_join_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_leave_room_synced( $user_b, $room_id );
       })->then( sub {
@@ -733,11 +733,11 @@ test "Current state appears in timeline in private history",
 
       my ( $room_id );
 
-      matrix_create_room( $creator )
+      matrix_create_room_synced( $creator )
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $syncer, $room_id )
+         matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
          matrix_set_room_history_visibility( $creator, $room_id, "joined" )
       })->then( sub {
@@ -745,9 +745,9 @@ test "Current state appears in timeline in private history",
       })->then( sub {
          matrix_sync( $syncer )
       })->then( sub {
-         matrix_leave_room( $syncer, $room_id )
+         matrix_leave_room_synced( $syncer, $room_id )
       })->then( sub {
-         matrix_join_room( $invitee, $room_id )
+         matrix_join_room_synced( $invitee, $room_id )
       })->then( sub {
          matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
@@ -781,11 +781,11 @@ test "Current state appears in timeline in private history with many messages be
 
       my ( $room_id );
 
-      matrix_create_room( $creator )
+      matrix_create_room_synced( $creator )
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $syncer, $room_id )
+         matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
          matrix_set_room_history_visibility( $creator, $room_id, "joined" )
       })->then( sub {
@@ -803,9 +803,9 @@ test "Current state appears in timeline in private history with many messages be
             });
          }, foreach => [ 1 .. 50 ])
       })->then( sub {
-         matrix_leave_room( $syncer, $room_id )
+         matrix_leave_room_synced( $syncer, $room_id )
       })->then( sub {
-         matrix_join_room( $invitee, $room_id )
+         matrix_join_room_synced( $invitee, $room_id )
       })->then( sub {
          matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
@@ -841,11 +841,11 @@ test "Current state appears in timeline in private history with many messages af
 
       my ( $room_id );
 
-      matrix_create_room( $creator )
+      matrix_create_room_synced( $creator )
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $syncer, $room_id )
+         matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
          matrix_set_room_history_visibility( $creator, $room_id, "joined" )
       })->then( sub {
@@ -853,9 +853,9 @@ test "Current state appears in timeline in private history with many messages af
       })->then( sub {
          matrix_sync( $syncer )
       })->then( sub {
-         matrix_leave_room( $syncer, $room_id )
+         matrix_leave_room_synced( $syncer, $room_id )
       })->then( sub {
-         matrix_join_room( $invitee, $room_id )
+         matrix_join_room_synced( $invitee, $room_id )
       })->then( sub {
          repeat( sub {
             my $msgnum = $_[0];

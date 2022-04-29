@@ -54,11 +54,11 @@ foreach my $action_and_counter (
 
          my $room_id;
 
-         matrix_create_room( $user1 )
+         matrix_create_room_synced( $user1 )
          ->then( sub {
             ($room_id) = @_;
 
-            matrix_join_room( $user2, $room_id );
+            matrix_join_room_synced( $user2, $room_id );
          })->then( sub {
             matrix_send_room_text_message( $user2, $room_id,
                body => "Test message 1",
@@ -118,11 +118,11 @@ test "Messages that highlight from another user increment unread highlight count
          pattern => "*",
          actions => [ "notify", { set_tweak => "highlight", value => JSON::true } ]
       })->then( sub {
-         matrix_create_room( $user1 );
+         matrix_create_room_synced( $user1 );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_send_room_text_message( $user2, $room_id,
             body => "Test message 1",

@@ -9,7 +9,7 @@ test "Events come down the correct room",
       my @rooms;
 
       Future->needs_all( map {
-         matrix_create_room( $user )
+         matrix_create_room_synced( $user )
          ->on_done( sub {
             my ( $room_id ) = @_;
 

@@ -20,7 +20,7 @@ my $room_fixture = fixture(
    setup => sub {
       my ( $user, $room_alias_name ) = @_;
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
          room_alias_name => $room_alias_name,
       );
    },
@@ -255,7 +255,7 @@ test "Remote users may not join unfederated rooms",
    check => sub {
       my ( $creator, $remote_user, $room_alias_name ) = @_;
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          room_alias_name  => $room_alias_name,
          creation_content => {
             "m.federate" => JSON::false,
@@ -263,7 +263,7 @@ test "Remote users may not join unfederated rooms",
       )->then( sub {
          my ( undef, $room_alias ) = @_;
 
-         matrix_join_room( $remote_user, $room_alias )
+         matrix_join_room_synced( $remote_user, $room_alias )
             ->main::expect_http_403;
       });
    };

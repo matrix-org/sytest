@@ -7,7 +7,7 @@ multi_test "Non-present room members cannot ban others",
 
       my $room_id;
 
-      matrix_create_room( $creator )
+      matrix_create_room_synced( $creator )
          ->SyTest::pass_on_done( "Created room" )
       ->then( sub {
          ( $room_id ) = @_;

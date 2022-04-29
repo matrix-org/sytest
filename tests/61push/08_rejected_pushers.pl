@@ -56,12 +56,12 @@ multi_test "Test that rejected pushers are removed.",
 
       my $url = $test_server_info->client_location . $PUSH_LOCATION;
 
-      matrix_create_room( $alice, visibility => "private" )->then( sub {
+      matrix_create_room_synced( $alice, visibility => "private" )->then( sub {
          ( $room_id ) = @_;
 
          matrix_invite_user_to_room( $alice, $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $bob, $room_id );
+         matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
          matrix_send_room_text_message(
             $bob, $room_id, body => "message"

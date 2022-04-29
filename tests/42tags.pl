@@ -73,7 +73,7 @@ test "Can add tag",
    do => sub {
       my ( $user ) = @_;
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          my ( $room_id ) = @_;
 
          matrix_add_tag( $user, $room_id, "test_tag", {} );
@@ -89,7 +89,7 @@ test "Can remove tag",
    do => sub {
       my ( $user ) = @_;
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          my ( $room_id ) = @_;
 
          matrix_remove_tag( $user, $room_id, "test_tag" );
@@ -106,7 +106,7 @@ test "Can list tags for a room",
 
       my $room_id;
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_add_tag( $user, $room_id, "test_tag", {} );
@@ -148,7 +148,7 @@ sub create_room_and_add_tag
 {
    my ( $user ) = @_;
 
-   matrix_create_room( $user )->then( sub {
+   matrix_create_room_synced( $user )->then( sub {
       my ( $room_id ) = @_;
 
       matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } )
@@ -303,7 +303,7 @@ test "Tags appear in an initial v2 /sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -340,7 +340,7 @@ test "Newly updated tags appear in an incremental v2 /sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -378,7 +378,7 @@ test "Deleted tags appear in an incremental v2 /sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 

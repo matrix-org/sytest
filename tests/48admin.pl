@@ -272,7 +272,7 @@ test "Can backfill purged history",
 
       matrix_invite_user_to_room( $user, $remote_user, $room_id )
       ->then( sub {
-         matrix_join_room( $remote_user, $room_id )
+         matrix_join_room_synced( $remote_user, $room_id )
       })->then( sub {
          matrix_put_room_state( $user, $room_id,
             type    => "m.room.name",
@@ -411,14 +411,14 @@ multi_test "Shutdown room",
 
       my ( $room_id, $new_room_id );
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
          room_alias_name => $room_alias_name,
       )->then( sub {
          ( $room_id ) = @_;
 
          matrix_invite_user_to_room( $user, $remote_user, $room_id );
       })->then( sub {
-         matrix_join_room( $remote_user, $room_id );
+         matrix_join_room_synced( $remote_user, $room_id );
       })->then( sub {
          do_request_json_for( $admin,
             method   => "DELETE",
@@ -441,7 +441,7 @@ multi_test "Shutdown room",
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot post in room" )
       ->then( sub {
-         matrix_join_room( $user, $room_id )
+         matrix_join_room_synced( $user, $room_id )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot rejoin room" )
       ->then( sub {

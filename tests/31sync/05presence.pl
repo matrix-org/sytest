@@ -104,10 +104,10 @@ test "User sees updates to presence from other users in the incremental sync.",
 
          # We can't use matrix_create_and_join since that polls the event
          # stream to check that the user has joined.
-         matrix_create_room( $user_a )->then( sub {
+         matrix_create_room_synced( $user_a )->then( sub {
             my ( $room_id ) = @_;
 
-            matrix_join_room( $user_b, $room_id );
+            matrix_join_room_synced( $user_b, $room_id );
          });
       })->then( sub {
          matrix_sync( $user_a, filter => $filter_id_a );

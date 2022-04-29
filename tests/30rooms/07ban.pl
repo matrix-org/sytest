@@ -29,7 +29,7 @@ test "Banned user is kicked and may not rejoin until unbanned",
             })
          }
       })->then( sub {
-         matrix_join_room( $banned_user, $room_id )
+         matrix_join_room_synced( $banned_user, $room_id )
             ->main::expect_http_403;  # Must be unbanned first
       })->then( sub {
          do_request_json_for( $creator,
@@ -103,7 +103,7 @@ test "Remote banned user is kicked and may not rejoin until unbanned",
          };
       })->then( sub {
          # Must be unbanned first
-         matrix_join_room( $banned_user, $room_id )->main::check_http_code(
+         matrix_join_room_synced( $banned_user, $room_id )->main::check_http_code(
             403 => "ok",
             200 => "redo",
          );

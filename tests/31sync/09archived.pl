@@ -12,7 +12,7 @@ test "Left rooms appear in the leave section of sync",
       )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -81,7 +81,7 @@ test "We should see our own leave event, even if history_visibility is " .
      )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -133,7 +133,7 @@ test "We should see our own leave event when rejecting an invite, ".
      )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $inviter );
+         matrix_create_room_synced( $inviter );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -192,7 +192,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
-         matrix_leave_room( $user, $room_id_1 );
+         matrix_leave_room_synced( $user, $room_id_1 );
       })->then( sub {
          # Pad out the timeline with filler messages to create a "gap" between
          # this sync and the next. It's useful to test this since
@@ -230,11 +230,11 @@ test "Previously left rooms don't appear in the leave section of sync",
          ( $filter_id ) = @_;
 
          Future->needs_all(
-            matrix_create_room( $user )->on_done( sub { ( $room_id_1 ) = @_; } ),
-            matrix_create_room( $user )->on_done( sub { ( $room_id_2 ) = @_; } ),
+            matrix_create_room_synced( $user )->on_done( sub { ( $room_id_1 ) = @_; } ),
+            matrix_create_room_synced( $user )->on_done( sub { ( $room_id_2 ) = @_; } ),
          );
       })->then( sub {
-         matrix_join_room( $user2, $room_id_1 );
+         matrix_join_room_synced( $user2, $room_id_1 );
       })->then( sub {
          matrix_join_room_synced( $user2, $room_id_2 );
       })->then( sub {
@@ -328,7 +328,7 @@ test "Archived rooms only contain history from before the user left",
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -348,7 +348,7 @@ test "Archived rooms only contain history from before the user left",
             state_key => "",
          );
       })->then( sub {
-         matrix_leave_room( $user_b, $room_id );
+         matrix_leave_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_send_room_text_message( $user_a, $room_id, body => "after" );
       })->then( sub {

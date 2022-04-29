@@ -24,7 +24,7 @@ test "Guest users can join guest_access rooms",
    check => sub {
       my ( undef, $room_id, $guest_user ) = @_;
 
-      matrix_join_room( $guest_user, $room_id );
+      matrix_join_room_synced( $guest_user, $room_id );
    };
 
 test "Guest users can send messages to guest_access rooms if joined",
@@ -233,7 +233,7 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
          })->then( sub {
             matrix_set_room_guest_access( $local_user, $room_id, "can_join" )
          })->then( sub {
-            matrix_join_room( $remote_user, $room_id );
+            matrix_join_room_synced( $remote_user, $room_id );
          })->then( sub {
             matrix_join_room_synced( $guest_user, $room_id );
          })->then( sub {
@@ -305,7 +305,7 @@ test "Guest user can upgrade to fully featured user",
    check => sub {
       my ( undef, $room_id, $guest_user ) = @_;
 
-      matrix_join_room( $guest_user, $room_id );
+      matrix_join_room_synced( $guest_user, $room_id );
    };
 
 test "Guest user cannot upgrade other users",
@@ -346,7 +346,7 @@ test "GET /publicRooms lists rooms",
          my $settings = $rooms{$_};
          my $room_id;
 
-         my $f = matrix_create_room( $user,
+         my $f = matrix_create_room_synced( $user,
             visibility => "public",
             room_alias_name => $aliasname,
          )->on_done( sub {
@@ -428,7 +428,7 @@ test "GET /publicRooms includes avatar URLs",
       my ( $http, $user ) = @_;
 
       Future->needs_all(
-         matrix_create_room( $user,
+         matrix_create_room_synced( $user,
             visibility => "public",
             room_alias_name => "nonworldreadable",
          )->then( sub {
@@ -443,7 +443,7 @@ test "GET /publicRooms includes avatar URLs",
             );
          }),
 
-         matrix_create_room( $user,
+         matrix_create_room_synced( $user,
             visibility => "public",
             room_alias_name => "worldreadable",
          )->then( sub {
@@ -506,7 +506,7 @@ test "Guest users can accept invites to private rooms over federation",
 
       my ( $room_id );
 
-      matrix_create_room( $remote_user )->then( sub {
+      matrix_create_room_synced( $remote_user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_put_room_state( $remote_user, $room_id,
@@ -521,7 +521,7 @@ test "Guest users can accept invites to private rooms over federation",
       })->then( sub {
          matrix_invite_user_to_room( $remote_user, $local_guest, $room_id )
       })->then( sub {
-         matrix_join_room( $local_guest, $room_id );
+         matrix_join_room_synced( $local_guest, $room_id );
       })->then( sub {
          Future->done( 1 );
       });
@@ -535,7 +535,7 @@ test "Guest users denied access over federation if guest access prohibited",
 
       my ( $room_id );
 
-      matrix_create_room( $remote_user )->then( sub {
+      matrix_create_room_synced( $remote_user )->then( sub {
          ( $room_id ) = @_;
 
          matrix_put_room_state( $remote_user, $room_id,
@@ -550,7 +550,7 @@ test "Guest users denied access over federation if guest access prohibited",
       })->then( sub {
          matrix_invite_user_to_room( $remote_user, $local_guest, $room_id )
       })->then( sub {
-         matrix_join_room( $local_guest, $room_id )
+         matrix_join_room_synced( $local_guest, $room_id )
          ->main::expect_http_403
       })->then( sub {
          Future->done( 1 );

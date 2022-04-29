@@ -113,7 +113,7 @@ multi_test "AS-ghosted users can use rooms themselves",
             Future->done;
          }),
 
-         matrix_join_room( $ghost, $room_id )
+         matrix_join_room_synced( $ghost, $room_id )
       )->SyTest::pass_on_done( "Ghost joined room themselves" )
       ->then( sub {
          Future->needs_all(

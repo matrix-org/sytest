@@ -10,7 +10,7 @@ my $room_fixture = fixture(
    setup => sub {
       my ( $user ) = @_;
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
          visibility => "public",
       );
    },
@@ -306,7 +306,7 @@ test "Joining room twice is idempotent",
       get_test_state( $user, $room_id, "m.room.member" )->then( sub {
          ( $event_id_1 ) = @_;
 
-         matrix_join_room( $user, $room_id );
+         matrix_join_room_synced( $user, $room_id );
       })->then( sub {
          get_test_state( $user, $room_id, "m.room.member" );
       })->then( sub {

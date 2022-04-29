@@ -18,7 +18,7 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
         matrix_create_filter( $user, $filter )->then( sub {
             ( $filter_id ) = @_;
 
-            matrix_create_room( $user )
+            matrix_create_room_synced( $user )
                 ->SyTest::pass_on_done( "User A created a room" );
         })->then( sub {
             ( $room_id ) = @_;
