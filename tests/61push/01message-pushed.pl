@@ -60,7 +60,7 @@ multi_test "Test that a message is pushed",
                return $body->{rooms}{invite}{$room_id};
             })->SyTest::pass_on_done( "Bob received invite" ),
 
-            matrix_invite_user_to_room( $alice, $bob, $room_id ),
+            matrix_invite_user_to_room_synced( $alice, $bob, $room_id ),
             flush_events_for( $alice ),
          )
       })->then( sub {
@@ -199,7 +199,7 @@ test "Invites are pushed",
                return unless $body->{notification}{type} eq "m.room.member";
                return 1;
             }),
-            matrix_invite_user_to_room( $bob, $alice, $room_id ),
+            matrix_invite_user_to_room_synced( $bob, $alice, $room_id ),
          );
       })->then( sub {
          my ( $request ) = @_;

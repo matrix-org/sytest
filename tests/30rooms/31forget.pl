@@ -181,7 +181,7 @@ test "Can re-join room if re-invited",
       })->then( sub {
          matrix_join_room_synced( $user, $room_id )->main::expect_http_403;
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $user, $room_id );
+         matrix_invite_user_to_room_synced( $creator, $user, $room_id );
       })->then( sub {
          matrix_join_room_synced( $user, $room_id );
       })->then( sub {

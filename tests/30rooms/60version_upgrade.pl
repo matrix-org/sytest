@@ -752,7 +752,7 @@ test "/upgrade moves remote aliases to the new room",
       log_if_fail $room_id;
 
       # Invite the remote user to our room
-      matrix_invite_user_to_room(
+      matrix_invite_user_to_room_synced(
          $creator, $remote_user, $room_id
       )->then( sub {
          # Have the remote user join the room
@@ -775,7 +775,7 @@ test "/upgrade moves remote aliases to the new room",
          ( $new_room_id ) = @_;
 
          # Invite the remote user to the new room
-         matrix_invite_user_to_room(
+         matrix_invite_user_to_room_synced(
             $creator, $remote_user, $new_room_id
          );
       })->then( sub {

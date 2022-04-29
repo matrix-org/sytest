@@ -310,7 +310,7 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
          try_repeat_until_success {
-            matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
+            matrix_invite_user_to_room_synced( $creator, $remote_leaver, $room_id )
          }
       })->then( sub {
          matrix_join_room_synced( $remote_leaver, $room_id );
@@ -585,7 +585,7 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
          try_repeat_until_success {
-            matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
+            matrix_invite_user_to_room_synced( $creator, $remote_leaver, $room_id )
          }
       })->then( sub {
          matrix_join_room_synced( $remote_leaver, $room_id );
@@ -770,7 +770,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
          retry_until_success sub {
-           matrix_invite_user_to_room( $remote_user, $creator, $room_id 
+           matrix_invite_user_to_room_synced( $remote_user, $creator, $room_id 
            )->then( sub {
                Future->done(1);
             })

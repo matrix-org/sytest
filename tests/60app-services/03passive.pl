@@ -39,7 +39,7 @@ test "Inviting an AS-hosted user asks the AS server",
             Future->done;
          }),
 
-         matrix_invite_user_to_room( $creator, $user_id, $room_id ),
+         matrix_invite_user_to_room_synced( $creator, $user_id, $room_id ),
       );
    };
 

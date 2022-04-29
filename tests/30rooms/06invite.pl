@@ -46,7 +46,7 @@ multi_test "Can invite users to invite-only rooms",
    do => sub {
       my ( $creator, $invitee, $room_id ) = @_;
 
-      matrix_invite_user_to_room( $creator, $invitee, $room_id )
+      matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
          ->SyTest::pass_on_done( "Sent invite" )
       ->then( sub {
          await_sync( $invitee, check => sub {
@@ -194,7 +194,7 @@ sub invited_user_can_reject_invite_for_empty_room
 {
    my ( $invitee, $creator, $room_id ) = @_;
 
-   matrix_invite_user_to_room( $creator, $invitee, $room_id )
+   matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
    ->then( sub {
       # wait for the leave to come down to make sure we're testing an empty room
       matrix_leave_room_synced( $creator, $room_id )
@@ -227,7 +227,7 @@ test "Invited user can reject local invite after originator leaves",
    do => sub {
       my ( $invitee, $creator, $room_id ) = @_;
 
-      matrix_invite_user_to_room( $creator, $invitee, $room_id )
+      matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
       ->then( sub {
          # wait for the leave to come down to make sure we're testing an empty room
          matrix_leave_room_synced( $creator, $room_id );
@@ -270,7 +270,7 @@ test "Invited user can see room metadata",
             content => { url => "http://something" },
          ),
       )->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id );
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id );
       })->then( sub {
          await_sync( $invitee, check => sub {
             my ( $body ) = @_;
@@ -396,7 +396,7 @@ test "Users cannot invite themselves to a room",
    do => sub {
       my ( $creator, $room_id ) = @_;
 
-      matrix_invite_user_to_room( $creator, $creator, $room_id )
+      matrix_invite_user_to_room_synced( $creator, $creator, $room_id )
          ->main::expect_http_403;
    };
 
@@ -407,7 +407,7 @@ test "Users cannot invite a user that is already in the room",
       my ( $creator, $room_id, $invitee ) = @_;
 
       matrix_join_room_synced( $invitee, $room_id )->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
             ->main::expect_http_403;
       });
    };
@@ -432,7 +432,7 @@ multi_test "Test that we can be reinvited to a room we created",
          )->SyTest::pass_on_done( "User A set the join rules to 'invite'" )
       })->then( sub {
 
-         matrix_invite_user_to_room( $user_1, $user_2, $room_id )
+         matrix_invite_user_to_room_synced( $user_1, $user_2, $room_id )
             ->SyTest::pass_on_done( "User A invited user B" )
       })->then( sub {
 
@@ -465,7 +465,7 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User B received the leave event" )
       })->then( sub {
 
-         matrix_invite_user_to_room( $user_2, $user_1, $room_id )
+         matrix_invite_user_to_room_synced( $user_2, $user_1, $room_id )
             ->SyTest::pass_on_done( "User B invited user A back to the room" )
       })->then( sub {
 

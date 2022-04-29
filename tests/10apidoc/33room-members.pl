@@ -401,7 +401,7 @@ sub _invite_users
    Future->needs_all(
      ( map {
          my $user = $_;
-         matrix_invite_user_to_room( $creator, $user, $room_id );
+         matrix_invite_user_to_room_synced( $creator, $user, $room_id );
       } @other_members)
    );
 }

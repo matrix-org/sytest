@@ -332,7 +332,7 @@ test "Can accept unbound 3pid invite after inviter leaves",
       ->then( sub {
          ( $room_id ) = @_;
 
-          matrix_invite_user_to_room( $inviter, $other_member, $room_id );
+          matrix_invite_user_to_room_synced( $inviter, $other_member, $room_id );
       })->then( sub {
           matrix_join_room_synced( $other_member, $room_id );
       })->then( sub {

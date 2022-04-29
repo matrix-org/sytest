@@ -523,7 +523,7 @@ test "uploading self-signing key notifies over federation",
          ( $room_id ) = @_;
          matrix_sync( $user1 );
       })->then( sub {
-         matrix_invite_user_to_room( $user1, $user2, $room_id )
+         matrix_invite_user_to_room_synced( $user1, $user2, $room_id )
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
@@ -643,7 +643,7 @@ test "uploading signed devices gets propagated over federation",
          ( $room_id ) = @_;
          matrix_sync( $user1 );
       })->then( sub {
-         matrix_invite_user_to_room( $user1, $user2, $room_id )
+         matrix_invite_user_to_room_synced( $user1, $user2, $room_id )
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {

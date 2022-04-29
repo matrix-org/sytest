@@ -23,7 +23,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
          ( $room_id ) = @_;
 
          # Alice invites Bob
-         matrix_invite_user_to_room( $alice, $bob, $room_id )
+         matrix_invite_user_to_room_synced( $alice, $bob, $room_id )
             ->SyTest::pass_on_done( "Sent invite" )
       })->then( sub {
 

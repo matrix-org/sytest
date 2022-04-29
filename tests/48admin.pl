@@ -270,7 +270,7 @@ test "Can backfill purged history",
       my @event_ids;
       my $last_event_id;
 
-      matrix_invite_user_to_room( $user, $remote_user, $room_id )
+      matrix_invite_user_to_room_synced( $user, $remote_user, $room_id )
       ->then( sub {
          matrix_join_room_synced( $remote_user, $room_id )
       })->then( sub {
@@ -416,7 +416,7 @@ multi_test "Shutdown room",
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user, $remote_user, $room_id );
+         matrix_invite_user_to_room_synced( $user, $remote_user, $room_id );
       })->then( sub {
          matrix_join_room_synced( $remote_user, $room_id );
       })->then( sub {
@@ -445,7 +445,7 @@ multi_test "Shutdown room",
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot rejoin room" )
       ->then( sub {
-         matrix_invite_user_to_room( $remote_user, $user, $room_id )
+         matrix_invite_user_to_room_synced( $remote_user, $user, $room_id )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "Remote users can't invite local users into room" )
       ->then( sub {

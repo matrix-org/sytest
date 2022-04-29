@@ -25,7 +25,7 @@ test "/joined_rooms returns only joined rooms",
             ( $room_invited ) = @_;
             log_if_fail "room invited", $room_invited;
 
-            matrix_invite_user_to_room( $inviter, $user, $room_invited );
+            matrix_invite_user_to_room_synced( $inviter, $user, $room_invited );
          }),
       )->then( sub {
          do_request_json_for( $user,

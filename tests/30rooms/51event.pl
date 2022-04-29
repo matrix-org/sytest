@@ -80,7 +80,7 @@ test "/event/ does not allow access to events before the user joined",
       matrix_set_room_history_visibility(
          $user, $room_id, "joined",
       )->then( sub {
-         matrix_invite_user_to_room(
+         matrix_invite_user_to_room_synced(
             $user, $other_user, $room_id,
          );
       })->then( sub {

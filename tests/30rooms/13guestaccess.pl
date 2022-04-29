@@ -519,7 +519,7 @@ test "Guest users can accept invites to private rooms over federation",
       })->then( sub {
          matrix_set_room_guest_access( $remote_user, $room_id, "can_join" )
       })->then( sub {
-         matrix_invite_user_to_room( $remote_user, $local_guest, $room_id )
+         matrix_invite_user_to_room_synced( $remote_user, $local_guest, $room_id )
       })->then( sub {
          matrix_join_room_synced( $local_guest, $room_id );
       })->then( sub {
@@ -548,7 +548,7 @@ test "Guest users denied access over federation if guest access prohibited",
       })->then( sub {
          matrix_set_room_guest_access( $remote_user, $room_id, "forbidden" )
       })->then( sub {
-         matrix_invite_user_to_room( $remote_user, $local_guest, $room_id )
+         matrix_invite_user_to_room_synced( $remote_user, $local_guest, $room_id )
       })->then( sub {
          matrix_join_room_synced( $local_guest, $room_id )
          ->main::expect_http_403

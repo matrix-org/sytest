@@ -741,7 +741,7 @@ test "Current state appears in timeline in private history",
       })->then( sub {
          matrix_set_room_history_visibility( $creator, $room_id, "joined" )
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
       })->then( sub {
          matrix_sync( $syncer )
       })->then( sub {
@@ -789,7 +789,7 @@ test "Current state appears in timeline in private history with many messages be
       })->then( sub {
          matrix_set_room_history_visibility( $creator, $room_id, "joined" )
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
       })->then( sub {
          matrix_sync( $syncer )
       })->then( sub {
@@ -849,7 +849,7 @@ test "Current state appears in timeline in private history with many messages af
       })->then( sub {
          matrix_set_room_history_visibility( $creator, $room_id, "joined" )
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
       })->then( sub {
          matrix_sync( $syncer )
       })->then( sub {
