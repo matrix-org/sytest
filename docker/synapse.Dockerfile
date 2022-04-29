@@ -4,6 +4,8 @@ FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
 ARG PYTHON_VERSION=python3
 
+ENV DEBIAN_FRONTEND noninteractive
+
 RUN apt-get -qq update && apt-get -qq install -y \
         apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
         python3-pip eatmydata redis-server
