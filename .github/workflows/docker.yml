@@ -4,7 +4,7 @@ name: Build and deploy docker images
 
 on:
   push:
-    branches: [ develop ]
+    branches: [develop]
   workflow_dispatch:
 
 permissions:
@@ -44,6 +44,7 @@ jobs:
         with:
           pull: true
           push: true
+          platforms: linux/amd64,linux/arm64
           labels: "gitsha1=${{ github.sha }}"
           file: docker/base.Dockerfile
           build-args: "BASE_IMAGE=${{ matrix.base_image }}"
@@ -76,7 +77,7 @@ jobs:
               PYTHON_VERSION=python3.10
           - sytest_image_tag: buster
             dockerfile: dendrite
-            tags: "matrixdotorg/sytest-dendrite:go113,matrixdotorg/sytest-dendrite:latest"
+            tags: "matrixdotorg/sytest-dendrite:go118,matrixdotorg/sytest-dendrite:latest"
             build_args: "SYTEST_IMAGE_TAG=buster"
 
     steps:
@@ -98,11 +99,8 @@ jobs:
         with:
           pull: true
           push: true
+          platforms: linux/amd64,linux/arm64
           labels: "gitsha1=${{ github.sha }}"
           file: docker/${{ matrix.dockerfile }}.Dockerfile
           build-args: ${{ matrix.build_args }}
           tags: ${{ matrix.tags }}
-
-
-
-
