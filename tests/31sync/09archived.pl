@@ -340,7 +340,7 @@ test "Archived rooms only contain history from before the user left",
 
          $next_b = $body->{next_batch};
 
-         matrix_send_room_text_message( $user_a, $room_id, body => "before" );
+         matrix_send_room_text_message_synced( $user_a, $room_id, body => "before" );
       })->then( sub {
          matrix_put_room_state( $user_a, $room_id,
             type      => "a.madeup.test.state",
@@ -350,7 +350,7 @@ test "Archived rooms only contain history from before the user left",
       })->then( sub {
          matrix_leave_room_synced( $user_b, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $user_a, $room_id, body => "after" );
+         matrix_send_room_text_message_synced( $user_a, $room_id, body => "after" );
       })->then( sub {
          matrix_put_room_state_synced( $user_a, $room_id,
             type      => "a.madeup.test.state",

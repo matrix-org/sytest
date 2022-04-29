@@ -106,7 +106,7 @@ test "/purge_history",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $user, $room_id,
+            matrix_send_room_text_message_synced( $user, $room_id,
                body => "Message $msgnum",
             )
          }, foreach => [ 1 .. 10 ])
@@ -189,7 +189,7 @@ test "/purge_history by ts",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $user, $room_id,
+            matrix_send_room_text_message_synced( $user, $room_id,
                body => "Message $msgnum",
             )
          }, foreach => [ 1 .. 9 ])
@@ -197,7 +197,7 @@ test "/purge_history by ts",
          $last_event_ts = time();
          delay(0.01);
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "Message 10",
          );
       })->then( sub {
@@ -288,7 +288,7 @@ test "Can backfill purged history",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $user, $room_id,
+            matrix_send_room_text_message_synced( $user, $room_id,
                body => "Message $msgnum",
             )->on_done( sub { push @event_ids, $_[0]; } )
          }, foreach => [ 0 .. 4 ])
@@ -308,7 +308,7 @@ test "Can backfill purged history",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $remote_user, $room_id,
+            matrix_send_room_text_message_synced( $remote_user, $room_id,
                body => "Message $msgnum",
             )->on_done( sub { push @event_ids, $_[0]; } )
          }, foreach => [ 5 .. 9 ])
@@ -437,7 +437,7 @@ multi_test "Shutdown room",
 
          log_if_fail "Shutdown room, new room ID", $new_room_id;
 
-         matrix_send_room_text_message( $user, $room_id, body => "Hello" )
+         matrix_send_room_text_message_synced( $user, $room_id, body => "Hello" )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot post in room" )
       ->then( sub {
@@ -469,7 +469,7 @@ multi_test "Shutdown room",
             )->SyTest::pass_on_done( "User was added to new room" )
          }
       })->then( sub {
-         matrix_send_room_text_message( $user, $new_room_id, body => "Hello" )
+         matrix_send_room_text_message_synced( $user, $new_room_id, body => "Hello" )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot send into new room" );
    };

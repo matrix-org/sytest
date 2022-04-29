@@ -63,7 +63,7 @@ multi_test "Test that rejected pushers are removed.",
       })->then( sub {
          matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_send_room_text_message(
+         matrix_send_room_text_message_synced(
             $bob, $room_id, body => "message"
          );
       })->then( sub {
@@ -99,7 +99,7 @@ multi_test "Test that rejected pushers are removed.",
             Future->needs_all(
                wait_for_push( "key_1" ),
                wait_for_push( "key_2" ),
-               matrix_send_room_text_message( $bob, $room_id, body => "message" )
+               matrix_send_room_text_message_synced( $bob, $room_id, body => "message" )
             )
          }->SyTest::pass_on_done( "Message 1 Pushed" );
       })->then( sub {
@@ -107,7 +107,7 @@ multi_test "Test that rejected pushers are removed.",
          Future->needs_all(
             wait_for_push( "key_1", { rejected => [ "key_1" ] } ),
             wait_for_push( "key_2" ),
-            matrix_send_room_text_message( $bob, $room_id, body => "message" )
+            matrix_send_room_text_message_synced( $bob, $room_id, body => "message" )
          )->SyTest::pass_on_done( "Message 2 Pushed" );
       })->then( sub {
          retry_until_success {

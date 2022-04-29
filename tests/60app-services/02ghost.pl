@@ -132,7 +132,7 @@ multi_test "AS-ghosted users can use rooms themselves",
                Future->done;
             }),
 
-            matrix_send_room_text_message( $ghost, $room_id,
+            matrix_send_room_text_message_synced( $ghost, $room_id,
                body => "Message from AS Ghost",
             )
          )

@@ -80,7 +80,7 @@ test "Forgetting room does not show up in v2 /sync",
 
       matrix_join_room_synced( $user, $room_id )
       ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "sup" )
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "sup" )
       })->then( sub {
          matrix_leave_room_synced( $user, $room_id )
       })->then( sub {
@@ -108,7 +108,7 @@ test "Can forget room you've been kicked from",
 
       matrix_join_room_synced( $user, $room_id )
       ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "sup" );
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "sup" );
       })->then( sub {
          do_request_json_for( $creator,
             method => "POST",
@@ -142,7 +142,7 @@ test "Can't forget room you're still in",
 
       matrix_join_room_synced( $user, $room_id )
       ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "sup" );
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "sup" );
       })->then( sub {
          matrix_forget_room( $user, $room_id )
       })->main::expect_http_4xx;
@@ -171,7 +171,7 @@ test "Can re-join room if re-invited",
       })->then( sub {
          matrix_join_room_synced( $user, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "before leave" );
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "before leave" );
       })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 100 );
       })->then( sub {

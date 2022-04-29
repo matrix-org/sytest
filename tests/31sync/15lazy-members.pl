@@ -485,7 +485,7 @@ test "Leaves are present in non-gapped incremental syncs",
       })->then( sub {
          matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $charlie, $room_id,
+         matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "Hello world",
          )
       })->then( sub {
@@ -789,7 +789,7 @@ test "We do send redundant membership state across incremental syncs if asked",
             $charlie->user_id
          ]);
 
-         matrix_send_room_text_message( $bob, $room_id,
+         matrix_send_room_text_message_synced( $bob, $room_id,
             body => "New message from bob",
          )
       })->then( sub {

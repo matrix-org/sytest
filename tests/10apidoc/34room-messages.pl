@@ -137,7 +137,7 @@ test "GET /rooms/:room_id/messages returns a message",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "Here is the message content",
       )->then( sub {
          matrix_sync( $user )
@@ -175,7 +175,7 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "Here is the message content",
       )->then( sub {
          matrix_sync( $user )

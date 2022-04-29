@@ -23,7 +23,7 @@ test "Only original members of the room can see messages from erased users",
       my $message_id;
       matrix_join_room_synced( $member, $room_id )
       ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "body1" );
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "body1" );
       })->then( sub {
          ( $message_id ) = @_;
          matrix_join_room_synced( $joiner, $room_id );

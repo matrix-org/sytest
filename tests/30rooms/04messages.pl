@@ -211,7 +211,7 @@ test "Message history can be paginated",
       my ( $user, $room_id ) = @_;
 
       ( repeat {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "Message number $_[0]"
          )
       } foreach => [ 1 .. 20 ] )->then( sub {
@@ -276,7 +276,7 @@ test "Message history can be paginated over federation",
       my ( $creator, $room_id, $room_alias, $remote_user ) = @_;
 
       ( repeat {
-         matrix_send_room_text_message( $creator, $room_id,
+         matrix_send_room_text_message_synced( $creator, $room_id,
             body => "Message number $_[0]"
          )
       } foreach => [ 1 .. 20 ] )->then( sub {
@@ -338,7 +338,7 @@ test "Message history can be paginated over federation",
          assert_eq( $chunk->[4]{content}{body}, "Message number 11",
             'chunk[4] content body' );
 
-         matrix_send_room_text_message( $creator, $room_id,
+         matrix_send_room_text_message_synced( $creator, $room_id,
             body => "Marker message"
          )
       })->then( sub {

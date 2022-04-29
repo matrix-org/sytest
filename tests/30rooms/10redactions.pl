@@ -164,7 +164,7 @@ test "PUT /redact disallows redaction of event in different room",
    do => sub {
       my ( $user1, $room1, $user2, $room2 ) = @_;
 
-      matrix_send_room_text_message( $user1, $room1,
+      matrix_send_room_text_message_synced( $user1, $room1,
          body => "test"
       )->then( sub {
          my ( $event_id ) = @_;

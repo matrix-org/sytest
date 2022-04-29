@@ -41,7 +41,7 @@ test "Guest users can send messages to guest_access rooms if joined",
          # (see https://github.com/matrix-org/sytest/issues/836)
          matrix_join_room_synced( $guest_user, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $guest_user, $room_id, body => "sup" );
+         matrix_send_room_text_message_synced( $guest_user, $room_id, body => "sup" );
       })->then( sub {
          # We need to repeatedly call /messages as it may take some time before
          # the message propogates through the system.

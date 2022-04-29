@@ -6,7 +6,7 @@ test "/context/ on joined room works",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "hello, world",
       )->then( sub {
          my ( $event_id ) = @_;
@@ -33,7 +33,7 @@ test "/context/ on non world readable room does not work",
    check => sub {
       my ( $user, $room_id, $other_user ) = @_;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "hello, world",
       )->then( sub {
          my ( $event_id ) = @_;
@@ -56,14 +56,14 @@ test "/context/ returns correct number of events",
 
       my ( $event_before_id, $event_middle_id, $event_after_id );
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "event before",
       )->then( sub {
          ( $event_before_id ) = @_;
 
          log_if_fail "Before event", $event_before_id;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "hello, world",
          )
       })->then( sub {
@@ -71,7 +71,7 @@ test "/context/ returns correct number of events",
 
          log_if_fail "Middle event", $event_middle_id;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "event after",
          )
       })->then( sub {
@@ -115,15 +115,15 @@ test "/context/ with lazy_load_members filter works",
       matrix_join_room_synced( $user2, $room_id )->then( sub {
          matrix_join_room_synced( $user3, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "hello, world 1",
          );
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "hello, world 2",
          );
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "hello, world 3",
          );
       })->then( sub {

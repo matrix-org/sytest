@@ -119,7 +119,7 @@ foreach my $vis (qw( world_readable shared invite joined )) {
             $creator, $room_id, $vis
          )->then( sub {
             # send a message
-            matrix_send_room_text_message( $creator, $room_id, body => "1" )
+            matrix_send_room_text_message_synced( $creator, $room_id, body => "1" )
          })->then( sub {
             $outbound_client->join_room(
                server_name => $first_home_server,

@@ -60,7 +60,7 @@ foreach my $action_and_counter (
 
             matrix_join_room_synced( $user2, $room_id );
          })->then( sub {
-            matrix_send_room_text_message( $user2, $room_id,
+            matrix_send_room_text_message_synced( $user2, $room_id,
                body => "Test message 1",
             );
          })->then( sub {
@@ -124,7 +124,7 @@ test "Messages that highlight from another user increment unread highlight count
 
          matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $user2, $room_id,
+         matrix_send_room_text_message_synced( $user2, $room_id,
             body => "Test message 1",
          );
       })->then( sub {

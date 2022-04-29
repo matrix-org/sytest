@@ -326,7 +326,7 @@ test "Inbound federation accepts a second soft-failed event",
       })->then( sub {
          # now tell synapse to send a regular message, and check it
          Future->needs_all(
-            matrix_send_room_text_message( $creator, $room_id, body => "m3" ),
+            matrix_send_room_text_message_synced( $creator, $room_id, body => "m3" ),
 
             $inbound_server->await_event( "m.room.message", $room_id, sub {1} )
             ->then( sub {
@@ -545,7 +545,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
       })->then( sub {
          # now tell synapse to send a regular message, and check it
          Future->needs_all(
-            matrix_send_room_text_message( $creator, $room_id, body => "m3" ),
+            matrix_send_room_text_message_synced( $creator, $room_id, body => "m3" ),
 
             $inbound_server->await_event( "m.room.message", $room_id, sub {1} )
             ->then( sub {

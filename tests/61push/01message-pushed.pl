@@ -106,7 +106,7 @@ multi_test "Test that a message is pushed",
                return 1;
             }),
 
-            matrix_send_room_text_message( $bob, $room_id,
+            matrix_send_room_text_message_synced( $bob, $room_id,
                body => "Room message for 50push-01message-pushed",
             )->SyTest::pass_on_done( "Message sent" ),
          )
@@ -293,7 +293,7 @@ sub wait_for_pusher_to_work
 
    # a future which will send messages until failure or cancelled
    my $send_future = repeat {
-      matrix_send_room_text_message( $sending_user, $room_id, body => "Message" ) ->
+      matrix_send_room_text_message_synced( $sending_user, $room_id, body => "Message" ) ->
          then( sub { return delay( 0.2 ); });
    } while => sub {
       my ( $trial_f ) = @_;
@@ -323,7 +323,7 @@ sub check_received_push_with_name
          return unless $body->{notification}{type} eq "m.room.message";
          return 1;
       }),
-      matrix_send_room_text_message( $bob, $room_id,
+      matrix_send_room_text_message_synced( $bob, $room_id,
          body => "Message",
       ),
    )->then( sub {
@@ -468,7 +468,7 @@ test "Don't get pushed for rooms you've muted",
                return unless $body->{notification}{type} eq "m.room.message";
                return 1;
             }),
-            matrix_send_room_text_message( $bob, $room_id,
+            matrix_send_room_text_message_synced( $bob, $room_id,
                body => "Initial Message",
             ),
          )

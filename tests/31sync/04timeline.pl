@@ -16,7 +16,7 @@ test "Can sync a room with a single message",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "Test message 1",
          );
       })->then( sub {
@@ -193,7 +193,7 @@ test "A filtered timeline reaches its limit",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "My message"
          );
       })->then( sub {
@@ -328,7 +328,7 @@ test "A prev_batch token can be used in the v1 messages API",
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id, body => "1" );
+         matrix_send_room_text_message_synced( $user, $room_id, body => "1" );
       })->then( sub {
          ( $event_id_1 ) = @_;
 
@@ -471,7 +471,7 @@ test "A next_batch token can be used in the v1 messages API",
 
          $next_batch = $body->{next_batch};
 
-         matrix_send_room_text_message( $user, $room_id, body => "2" );
+         matrix_send_room_text_message_synced( $user, $room_id, body => "2" );
       })->then( sub {
          ( $event_id_2 ) = @_;
 

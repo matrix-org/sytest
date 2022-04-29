@@ -40,7 +40,7 @@ test "Can get rooms/{roomId}/members at a given point",
 
       matrix_create_and_join_room( [ $user1 ] )->then( sub {
          ( $room_id ) = @_;
-         matrix_send_room_text_message( $user1, $room_id,
+         matrix_send_room_text_message_synced( $user1, $room_id,
             body => "Hello world",
          );
       })->then( sub {
@@ -52,7 +52,7 @@ test "Can get rooms/{roomId}/members at a given point",
 
          matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $user1, $room_id,
+         matrix_send_room_text_message_synced( $user1, $room_id,
             body => "Hello back",
          );
       })->then( sub {

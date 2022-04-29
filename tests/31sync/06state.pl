@@ -796,7 +796,7 @@ test "Current state appears in timeline in private history with many messages be
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $creator, $room_id,
+            matrix_send_room_text_message_synced( $creator, $room_id,
                body => "Message $msgnum",
             )->on_done( sub {
                log_if_fail "Sent msg $msgnum / 50";
@@ -860,7 +860,7 @@ test "Current state appears in timeline in private history with many messages af
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $creator, $room_id,
+            matrix_send_room_text_message_synced( $creator, $room_id,
                body => "Message $msgnum",
             )->on_done( sub {
                log_if_fail "Sent msg $msgnum / 50";

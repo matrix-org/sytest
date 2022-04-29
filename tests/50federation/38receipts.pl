@@ -93,7 +93,7 @@ test "Inbound federation rejects receipts from wrong remote",
          room_id     => $room_id,
          user_id     => $user_id,
       )->then( sub {
-         matrix_send_room_text_message( $creator, $room_id,
+         matrix_send_room_text_message_synced( $creator, $room_id,
             body => "Test message1"
          )
       })->then( sub {

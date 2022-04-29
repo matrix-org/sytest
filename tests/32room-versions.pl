@@ -64,7 +64,7 @@ foreach my $version ( @{ (SyTest::Federation::Client::SUPPORTED_ROOM_VERSIONS) }
             })->then( sub {
                matrix_sync( $joiner );
             })->then( sub {
-               matrix_send_room_text_message( $user, $room_id,
+               matrix_send_room_text_message_synced( $user, $room_id,
                   body => "hello",
                );
             })->then( sub {
@@ -113,7 +113,7 @@ foreach my $version ( @{ (SyTest::Federation::Client::SUPPORTED_ROOM_VERSIONS) }
             })->then( sub {
                matrix_sync( $invitee );
             })->then( sub {
-               matrix_send_room_text_message( $user, $room_id,
+               matrix_send_room_text_message_synced( $user, $room_id,
                   body => "hello",
                );
             })->then( sub {
@@ -155,7 +155,7 @@ foreach my $version ( @{ (SyTest::Federation::Client::SUPPORTED_ROOM_VERSIONS) }
             ( $room_id ) = @_;
 
             ( repeat {
-               matrix_send_room_text_message( $user, $room_id,
+               matrix_send_room_text_message_synced( $user, $room_id,
                   body => "Message number $_[0]"
                )
             } foreach => [ 1 .. 20 ] );
@@ -218,7 +218,7 @@ foreach my $version ( @{ (SyTest::Federation::Client::SUPPORTED_ROOM_VERSIONS) }
 
             matrix_join_room_synced( $remote, $room_id );
          })->then( sub {
-            matrix_send_room_text_message( $remote, $room_id,
+            matrix_send_room_text_message_synced( $remote, $room_id,
                 body => "Message"
             );
          })->then( sub {
