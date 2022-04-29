@@ -3,9 +3,10 @@ ARG SYTEST_IMAGE_TAG=buster
 FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
 ARG PYTHON_VERSION=python3
+
 RUN apt-get -qq update && apt-get -qq install -y \
-    ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
-    python3-pip eatmydata redis-server
+        apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
+        python3-pip eatmydata redis-server
 
 RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.12
 
@@ -36,18 +37,18 @@ RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
 # dependencies.
 RUN wget -q https://github.com/matrix-org/synapse/archive/develop.tar.gz \
         -O /synapse.tar.gz && \
-    mkdir /synapse && \
-    tar -C /synapse --strip-components=1 -xf synapse.tar.gz && \
-    ln -s -T /venv /synapse/.venv && \
-    cd /synapse && \
-    poetry install -q --no-root --extras all && \
-    # Finally clean up the poetry cache and the copy of Synapse.
-    # This must be done in the same RUN command, otherwise intermediate layers
-    # of the Docker image will contain all the unwanted files we think we've
-    # deleted.
-    rm -rf `poetry config cache-dir` && \
-    rm -rf /synapse && \
-    rm /synapse.tar.gz
+        mkdir /synapse && \
+        tar -C /synapse --strip-components=1 -xf synapse.tar.gz && \
+        ln -s -T /venv /synapse/.venv && \
+        cd /synapse && \
+        poetry install -q --no-root --extras all && \
+        # Finally clean up the poetry cache and the copy of Synapse.
+        # This must be done in the same RUN command, otherwise intermediate layers
+        # of the Docker image will contain all the unwanted files we think we've
+        # deleted.
+        rm -rf `poetry config cache-dir` && \
+        rm -rf /synapse && \
+        rm /synapse.tar.gz
 
 # Pre-install test dependencies installed by `scripts/synapse_sytest.sh`.
 RUN /venv/bin/pip install -q --no-cache-dir \
