@@ -26,7 +26,7 @@ jobs:
           - base_image: debian:bookworm
             tag: bookworm
     steps:
-        - name: Set up QEMU
+      - name: Set up QEMU
         id: QEMU
         uses: docker/setup-qemu-action@v1
 
