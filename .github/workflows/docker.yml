@@ -26,7 +26,7 @@ jobs:
           - base_image: debian:bookworm
             tag: bookworm
     steps:
-      - name: Set up QEMU
+        - name: Set up QEMU
         id: QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -52,7 +52,7 @@ jobs:
           labels: "gitsha1=${{ github.sha }}"
           file: docker/base.Dockerfile
           build-args: "BASE_IMAGE=${{ matrix.base_image }}"
-          tags: herenotthere/sytest:${{ matrix.tag }}
+          tags: matrixdotorg/sytest:${{ matrix.tag }}
 
   build-dependent-images:
     needs: build-sytest-images
@@ -63,25 +63,25 @@ jobs:
         include:
           - sytest_image_tag: focal
             dockerfile: synapse
-            tags: "herenotthere/sytest-synapse:focal"
+            tags: "matrixdotorg/sytest-synapse:focal"
             build_args: "SYTEST_IMAGE_TAG=focal"
           - sytest_image_tag: buster
             dockerfile: synapse
-            tags: "herenotthere/sytest-synapse:buster"
+            tags: "matrixdotorg/sytest-synapse:buster"
             build_args: "SYTEST_IMAGE_TAG=buster"
           - sytest_image_tag: testing
             dockerfile: synapse
-            tags: "herenotthere/sytest-synapse:testing"
+            tags: "matrixdotorg/sytest-synapse:testing"
             build_args: "SYTEST_IMAGE_TAG=testing"
           - sytest_image_tag: bookworm
             dockerfile: synapse
-            tags: "herenotthere/sytest-synapse:bookworm-python3.10"
+            tags: "matrixdotorg/sytest-synapse:bookworm-python3.10"
             build_args: |
               SYTEST_IMAGE_TAG=bookworm
               PYTHON_VERSION=python3.10
           - sytest_image_tag: buster
             dockerfile: dendrite
-            tags: "herenotthere/sytest-dendrite:go118,herenotthere/sytest-dendrite:latest"
+            tags: "matrixdotorg/sytest-dendrite:go118,matrixdotorg/sytest-dendrite:latest"
             build_args: "SYTEST_IMAGE_TAG=buster"
 
     steps:
