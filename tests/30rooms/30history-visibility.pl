@@ -387,7 +387,7 @@ foreach my $i (
 
          matrix_set_room_guest_access_synced( $user, $room_id, "can_join" )
          ->then( sub {
-            matrix_send_room_text_message_synced( $nonjoined_user, $room_id, body => "sup" )
+            matrix_send_room_text_message( $nonjoined_user, $room_id, body => "sup" )
                ->main::expect_http_403;
          });
       },

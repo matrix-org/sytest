@@ -9,7 +9,7 @@ test "Events come down the correct room",
       my @rooms;
 
       Future->needs_all( map {
-         matrix_create_room_synced( $user )
+         matrix_create_room( $user )
          ->on_done( sub {
             my ( $room_id ) = @_;
 
@@ -25,7 +25,7 @@ test "Events come down the correct room",
          Future->needs_all( map {
             my $room_id = $_;
 
-            matrix_send_room_text_message_synced( $user, $room_id, body => "$room_id" );
+            matrix_send_room_text_message( $user, $room_id, body => "$room_id" );
          } @rooms );
       })->then( sub {
          # Wait until we see all rooms come down the sync stream.

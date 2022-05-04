@@ -82,7 +82,7 @@ test "Uninvited users cannot join the room",
    check => sub {
       my ( $uninvited, $room_id ) = @_;
 
-      matrix_join_room_synced( $uninvited, $room_id )
+      matrix_join_room( $uninvited, $room_id )
          ->main::expect_http_403;
    };
 
@@ -407,7 +407,7 @@ test "Users cannot invite a user that is already in the room",
       my ( $creator, $room_id, $invitee ) = @_;
 
       matrix_join_room_synced( $invitee, $room_id )->then( sub {
-         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
+         matrix_invite_user_to_room( $creator, $invitee, $room_id )
             ->main::expect_http_403;
       });
    };

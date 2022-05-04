@@ -460,7 +460,7 @@ sub invite_should_fail {
    })->then( sub {
       $bind_sub->( $id_server );
    })->then( sub {
-      matrix_join_room_synced( $invitee, $room_id )
+      matrix_join_room( $invitee, $room_id )
          ->main::expect_http_4xx
    })->then( sub {
       matrix_get_room_state( $inviter, $room_id,

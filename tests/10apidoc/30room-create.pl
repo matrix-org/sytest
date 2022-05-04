@@ -193,7 +193,7 @@ test "POST /createRoom rejects attempts to create rooms with numeric versions",
    do => sub {
       my ( $user ) = @_;
 
-      matrix_create_room_synced(
+      matrix_create_room(
          $user,
          room_version => 1,
       )->main::expect_http_400()
@@ -212,7 +212,7 @@ test "POST /createRoom rejects attempts to create rooms with unknown versions",
    do => sub {
       my ( $user ) = @_;
 
-      matrix_create_room_synced(
+      matrix_create_room(
          $user,
          room_version => "agjkyhdsghkjackljkj",
       )->main::expect_http_400()

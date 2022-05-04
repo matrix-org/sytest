@@ -263,7 +263,7 @@ test "Remote users may not join unfederated rooms",
       )->then( sub {
          my ( undef, $room_alias ) = @_;
 
-         matrix_join_room_synced( $remote_user, $room_alias )
+         matrix_join_room( $remote_user, $room_alias )
             ->main::expect_http_403;
       });
    };

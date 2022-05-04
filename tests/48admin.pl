@@ -437,15 +437,15 @@ multi_test "Shutdown room",
 
          log_if_fail "Shutdown room, new room ID", $new_room_id;
 
-         matrix_send_room_text_message_synced( $user, $room_id, body => "Hello" )
+         matrix_send_room_text_message( $user, $room_id, body => "Hello" )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot post in room" )
       ->then( sub {
-         matrix_join_room_synced( $user, $room_id )
+         matrix_join_room( $user, $room_id )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot rejoin room" )
       ->then( sub {
-         matrix_invite_user_to_room_synced( $remote_user, $user, $room_id )
+         matrix_invite_user_to_room( $remote_user, $user, $room_id )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "Remote users can't invite local users into room" )
       ->then( sub {
@@ -469,7 +469,7 @@ multi_test "Shutdown room",
             )->SyTest::pass_on_done( "User was added to new room" )
          }
       })->then( sub {
-         matrix_send_room_text_message_synced( $user, $new_room_id, body => "Hello" )
+         matrix_send_room_text_message( $user, $new_room_id, body => "Hello" )
          ->main::expect_http_403;
       })->SyTest::pass_on_done( "User cannot send into new room" );
    };
