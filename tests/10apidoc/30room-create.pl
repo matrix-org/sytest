@@ -426,7 +426,9 @@ Creates a new room, and waits for it to appear in the /sync response.
 
 The parameters are passed through to C<matrix_create_room>.
 
-The resultant future completes with the room_id.
+The resultant future completes with the room_id and a room_alias.
+If room_alias_name is present in %params, an alias will be built with the given 
+alias and user's server name. Othwerwise, it will return undef.
 
 =cut
 
