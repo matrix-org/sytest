@@ -419,16 +419,16 @@ sub remote_room_alias_fixture
 =head2 matrix_create_room_synced
 
     matrix_create_room_synced( $creator, %params )->then( sub {
-        my ( $room_id ) = @_;
+        my ( $room_id, $room_alias ) = @_;
     });
 
 Creates a new room, and waits for it to appear in the /sync response.
 
 The parameters are passed through to C<matrix_create_room>.
 
-The resultant future completes with the room_id and a room_alias.
-If room_alias_name is present in %params, an alias will be built with the given 
-alias and user's server name. Othwerwise, it will return undef.
+The resultant future completes with the room_id and a room_alias. If
+C<room_alias_name> is present in C<%params>, an alias will be built with the given 
+alias and user's server name. Otherwise, it will return C<undef>.
 
 =cut
 

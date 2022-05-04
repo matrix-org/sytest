@@ -396,7 +396,7 @@ test "Users cannot invite themselves to a room",
    do => sub {
       my ( $creator, $room_id ) = @_;
 
-      matrix_invite_user_to_room_synced( $creator, $creator, $room_id )
+      matrix_invite_user_to_room( $creator, $creator, $room_id )
          ->main::expect_http_403;
    };
 
