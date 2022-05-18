@@ -70,7 +70,7 @@ multi_test "Test that rejected pushers are removed.",
          my ( $event_id ) = @_;
 
          # Set a read receipt so that we pushed for the subsequent messages.
-         matrix_advance_room_receipt( $alice, $room_id,
+         matrix_advance_room_receipt_synced( $alice, $room_id,
             "m.read" => $event_id
          );
       })->then( sub {
