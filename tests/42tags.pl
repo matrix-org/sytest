@@ -148,7 +148,7 @@ sub create_room_and_add_tag
 {
    my ( $user ) = @_;
 
-   matrix_create_room_synced( $user )->then( sub {
+   matrix_create_room( $user )->then( sub {
       my ( $room_id ) = @_;
 
       matrix_add_tag( $user, $room_id, "test_tag", { order => 1 } )
