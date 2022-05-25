@@ -242,14 +242,24 @@ sub get_test_state
 {
    my ( $user, $room_id, $type ) = @_;
 
-   matrix_initialsync_room( $user, $room_id, limit => 0 )->then( sub {
-      my ( $body ) = @_;
+   matrix_sync( $user,
+      filter            => '{"room":{"rooms":["'.$room_id.'"]},"account_data":{},"presence":{"types":[]}}',
+      update_next_batch => 0,
+      set_presence      => "offline",
+   )->then( sub {
+        my ( $body ) = @_;
 
-      my %state_by_type = partition_by { $_->{type} } @{ $body->{state} };
+        # We expect the event to be in the initial sync
+        sync_timeline_contains( $body, $room_id, sub {
+            my ( $event ) = @_;
+            return unless $event->{type} eq $type and $event->{state_key} eq $user->user_id;
 
-      my $event_id = $state_by_type{ $type }[0]{event_id};
+            log_if_fail "Event for ${\$user->user_id}", $event;
+            Future->done( $event->{event_id} );
+            return 1;
+        }) or die "Expected event not in initial sync";
 
-      Future->done( $event_id );
+        return 0;
    });
 }
 
@@ -259,7 +269,7 @@ sub set_test_state
 
    matrix_put_room_state( $user, $room_id,
          type      => "a.test.state.type",
-         state_key => "",
+         state_key => $user->user_id,
          content   => { "a_key" => "a_value" },
    )->then( sub {
       get_test_state( $user, $room_id, "a.test.state.type" );
@@ -267,7 +277,6 @@ sub set_test_state
 }
 
 test "Setting state twice is idempotent",
-   # TODO: deprecated endpoint used in this test
    # Setting synced to 1 inserts a m.room.test object into the
    # timeline which this test does not expect
    requires => [ local_user_and_room_fixtures( room_opts => { synced => 0 } ) ],
@@ -292,7 +301,6 @@ test "Setting state twice is idempotent",
    };
 
 test "Joining room twice is idempotent",
-   # TODO: deprecated endpoint used in this test
    requires => [ local_user_and_room_fixtures() ],
 
    check => sub {
