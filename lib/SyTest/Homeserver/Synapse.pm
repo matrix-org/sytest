@@ -1320,7 +1320,8 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/state$             client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/login$                      client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/account/3pid$               client_reader
-^/_matrix/client/versions$                                        client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/account/whoami$             client_reader
+^/_matrix/client/versions$                                           client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/voip/turnServer$            client_reader
 ^/_matrix/client/(r0|v3|unstable)/register$                          client_reader
 ^/_matrix/client/(r0|v3|unstable)/auth/.*/fallback/web$              client_reader
