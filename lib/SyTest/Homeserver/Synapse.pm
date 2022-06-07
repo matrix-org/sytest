@@ -415,7 +415,7 @@ sub _generate_base_synapse_command
    if( $self->{coverage} ) {
       # Ensures that even --generate-config has coverage reports. This is intentional
       push @synapse_command,
-         "-m", "coverage", "run", "--source=$self->{synapse_dir}/synapse", "--rcfile=$self->{synapse_dir}/.coveragerc";
+         "-m", "coverage", "run", "--parallel-mode", "--source=$self->{synapse_dir}/synapse", "--rcfile=$self->{synapse_dir}/.coveragerc";
    }
 
    push @synapse_command,

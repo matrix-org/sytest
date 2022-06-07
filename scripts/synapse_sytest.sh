@@ -208,6 +208,7 @@ if [ -n "$REDIS" ]; then
 fi
 
 mkdir -p /logs
+mkdir -p /coverage
 
 TEST_STATUS=0
 "${RUN_TESTS[@]}" "$@" >/logs/results.tap &
@@ -228,7 +229,7 @@ echo >&2 "--- Copying assets"
 
 # Copy out the logs
 rsync --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
-#cp /.coverage.* /src || true
+cp /.coverage.* /coverage || true
 
 #cd /src
 #export TOP=/src
