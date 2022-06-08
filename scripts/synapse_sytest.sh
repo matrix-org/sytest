@@ -210,6 +210,11 @@ fi
 mkdir -p /logs
 mkdir -p /coverage
 
+echo $TOP
+ls $TOP
+
+RUN_TESTS+=(tests/10apidoc/01register.pl)
+
 TEST_STATUS=0
 "${RUN_TESTS[@]}" "$@" >/logs/results.tap &
 pid=$!
