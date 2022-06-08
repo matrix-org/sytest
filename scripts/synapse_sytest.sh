@@ -193,7 +193,7 @@ echo >&2 "+++ Running tests"
 export COVERAGE_PROCESS_START="/src/.coveragerc"
 
 RUN_TESTS=(
-    perl -I "$SYTEST_LIB" /sytest/run-tests.pl --python=/venv/bin/python --synapse-directory=/src -B "/src/$BLACKLIST" --coverage -O tap --all
+    perl -I "$SYTEST_LIB" /sytest/run-tests.pl --python=/venv/bin/python --synapse-directory=/synapse -B "/synapse/$BLACKLIST" --coverage -O tap --all
     --work-directory="/work"
 )
 
