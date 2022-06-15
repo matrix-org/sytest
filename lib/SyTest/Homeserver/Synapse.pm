@@ -293,8 +293,10 @@ sub start
         # Enable ephemeral message support (MSC2228)
         enable_ephemeral_messages => "true",
 
-	# Disable caching of sync responses to make tests easier.
-	sync_response_cache_duration => 0,
+        # Disable caching of sync responses to make tests easier.
+        caches => {
+          sync_response_cache_duration => 0,
+        },
 
         $self->{recaptcha_config} ? (
            recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
