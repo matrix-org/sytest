@@ -262,16 +262,13 @@ sub start
         # If we're using workers we need to disable these things in the main
         # process
         start_pushers         => ( not $self->{workers} ),
-        notify_appservices    => ( not $self->{workers} ),
         send_federation       => ( not $self->{workers} ),
         enable_media_repo     => ( not $self->{workers} ),
         run_background_tasks_on  => ( $self->{workers} ? "background_worker1" : "master" ),
         $self->{workers} ? (
-            update_user_directory_on  => "user_dir",
+            notify_appservices_from_worker     => "appservice",
+            update_user_directory_from_worker  => "user_dir",
         ) : (),
-        # update_user_directory is kept for backwards compatibility,
-        # worker_to_update_user_directory is prioritized before this option.
-        update_user_directory => ( not $self->{workers} ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
