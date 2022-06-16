@@ -696,7 +696,7 @@ sub _start_synapse
 
    {
       my $appservice_config = {
-         "worker_app"              => "synapse.app.appservice",
+         "worker_app"              => "synapse.app.generic_worker",
          "worker_name"             => "appservice",
          "worker_pid_file"         => "$hsdir/appservice.pid",
          "worker_log_config"       => $self->configure_logger("appservice"),
@@ -882,7 +882,7 @@ sub _start_synapse
 
    {
       my $user_dir_config = {
-         "worker_app"              => "synapse.app.user_dir",
+         "worker_app"              => "synapse.app.generic_worker",
          "worker_name"             => "user_dir",
          "worker_pid_file"         => "$hsdir/user_dir.pid",
          "worker_log_config"       => $self->configure_logger("user_dir"),
