@@ -239,7 +239,6 @@ test "Inbound federation accepts a second soft-failed event",
          # the DAG.
          @remote_auth_events = (
             $room->get_current_state_event( "m.room.create" ),
-            $room->get_current_state_event( "m.room.join_rules" ),
             $room->get_current_state_event( "m.room.power_levels" ),
             $join_event,
          );
