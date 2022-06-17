@@ -148,6 +148,10 @@ test "Can get remote public room list",
 
 
 test "Can paginate public room list",
+   # this test can take a while, because we create 10 rooms, which is quite slow
+   # (https://github.com/matrix-org/synapse/issues/6068)
+   timeout => 20,
+
    requires => [ local_user_fixture() ],
 
    check => sub {
