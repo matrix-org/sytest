@@ -19,7 +19,7 @@ test "Typing events appear in initial sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -72,7 +72,7 @@ test "Typing events appear in incremental sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -126,7 +126,7 @@ test "Typing events appear in gapped sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 

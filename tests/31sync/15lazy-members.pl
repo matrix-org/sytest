@@ -93,9 +93,9 @@ test "The only membership state included in an initial sync is for all the sende
             content => { name => "A room name" },
          );
       })->then( sub {
-         matrix_join_room( $bob, $room_id );
+         matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id );
+         matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
@@ -153,9 +153,9 @@ test "The only membership state included in an incremental sync is for senders i
             content => { name => "A room name" },
          );
       })->then( sub {
-         matrix_join_room( $bob, $room_id );
+         matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id );
+         matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
@@ -242,9 +242,9 @@ test "The only membership state included in a gapped incremental sync is for sen
             content => { name => "A room name" },
          );
       })->then( sub {
-         matrix_join_room( $bob, $room_id );
+         matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id );
+         matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
@@ -253,7 +253,7 @@ test "The only membership state included in a gapped incremental sync is for sen
          my ( $body ) = @_;
          assert_room_members( $body, $room_id, [ $alice->user_id, $bob->user_id ]);
 
-         matrix_join_room( $dave, $room_id );
+         matrix_join_room_synced( $dave, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $dave, $room_id, 10 );
       })->then( sub {
@@ -485,7 +485,7 @@ test "Leaves are present in non-gapped incremental syncs",
       })->then( sub {
          matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $charlie, $room_id,
+         matrix_send_room_text_message_synced( $charlie, $room_id,
             body => "Hello world",
          )
       })->then( sub {
@@ -557,9 +557,9 @@ test "Old members are included in gappy incr LL sync if they start speaking",
             content => { name => "A room name" },
          );
       })->then( sub {
-         matrix_join_room( $bob, $room_id );
+         matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id );
+         matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
@@ -626,9 +626,9 @@ test "Members from the gap are included in gappy incr LL sync",
             content => { name => "A room name" },
          );
       })->then( sub {
-         matrix_join_room( $bob, $room_id );
+         matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id );
+         matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
@@ -640,7 +640,7 @@ test "Members from the gap are included in gappy incr LL sync",
             $bob->user_id,
          ]);
 
-         matrix_join_room( $dave, $room_id );
+         matrix_join_room_synced( $dave, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $charlie, $room_id, 10 );
       })->then( sub {
@@ -696,9 +696,9 @@ test "We don't send redundant membership state across incremental syncs by defau
             content => { name => "A room name" },
          );
       })->then( sub {
-         matrix_join_room( $bob, $room_id );
+         matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id );
+         matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
@@ -772,9 +772,9 @@ test "We do send redundant membership state across incremental syncs if asked",
             content => { name => "A room name" },
          );
       })->then( sub {
-         matrix_join_room( $bob, $room_id );
+         matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id );
+         matrix_join_room_synced( $charlie, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $bob, $room_id, 10 );
       })->then( sub {
@@ -789,7 +789,7 @@ test "We do send redundant membership state across incremental syncs if asked",
             $charlie->user_id
          ]);
 
-         matrix_send_room_text_message( $bob, $room_id,
+         matrix_send_room_text_message_synced( $bob, $room_id,
             body => "New message from bob",
          )
       })->then( sub {

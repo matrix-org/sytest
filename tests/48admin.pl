@@ -106,7 +106,7 @@ test "/purge_history",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $user, $room_id,
+            matrix_send_room_text_message_synced( $user, $room_id,
                body => "Message $msgnum",
             )
          }, foreach => [ 1 .. 10 ])
@@ -189,7 +189,7 @@ test "/purge_history by ts",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $user, $room_id,
+            matrix_send_room_text_message_synced( $user, $room_id,
                body => "Message $msgnum",
             )
          }, foreach => [ 1 .. 9 ])
@@ -197,7 +197,7 @@ test "/purge_history by ts",
          $last_event_ts = time();
          delay(0.01);
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "Message 10",
          );
       })->then( sub {
@@ -270,9 +270,9 @@ test "Can backfill purged history",
       my @event_ids;
       my $last_event_id;
 
-      matrix_invite_user_to_room( $user, $remote_user, $room_id )
+      matrix_invite_user_to_room_synced( $user, $remote_user, $room_id )
       ->then( sub {
-         matrix_join_room( $remote_user, $room_id )
+         matrix_join_room_synced( $remote_user, $room_id )
       })->then( sub {
          matrix_put_room_state( $user, $room_id,
             type    => "m.room.name",
@@ -288,7 +288,7 @@ test "Can backfill purged history",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $user, $room_id,
+            matrix_send_room_text_message_synced( $user, $room_id,
                body => "Message $msgnum",
             )->on_done( sub { push @event_ids, $_[0]; } )
          }, foreach => [ 0 .. 4 ])
@@ -308,7 +308,7 @@ test "Can backfill purged history",
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $remote_user, $room_id,
+            matrix_send_room_text_message_synced( $remote_user, $room_id,
                body => "Message $msgnum",
             )->on_done( sub { push @event_ids, $_[0]; } )
          }, foreach => [ 5 .. 9 ])
@@ -411,14 +411,14 @@ multi_test "Shutdown room",
 
       my ( $room_id, $new_room_id );
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
          room_alias_name => $room_alias_name,
       )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $user, $remote_user, $room_id );
+         matrix_invite_user_to_room_synced( $user, $remote_user, $room_id );
       })->then( sub {
-         matrix_join_room( $remote_user, $room_id );
+         matrix_join_room_synced( $remote_user, $room_id );
       })->then( sub {
          do_request_json_for( $admin,
             method   => "DELETE",

@@ -34,17 +34,17 @@ my $room_fixture = fixture(
                content => { body => "S1. B's state before A left" },
             )
         })->then( sub {
-            matrix_send_room_text_message( $other_user, $room_id,
+            matrix_send_room_text_message_synced( $other_user, $room_id,
                body => "M1. B's message before A left",
             )
         })->then( sub {
-            matrix_send_room_text_message( $other_user, $room_id,
+            matrix_send_room_text_message_synced( $other_user, $room_id,
                body => "M2. B's message before A left",
             )
         })->then( sub {
-            matrix_leave_room( $leaving_user, $room_id )
+            matrix_leave_room_synced( $leaving_user, $room_id )
         })->then( sub {
-            matrix_send_room_text_message( $other_user, $room_id,
+            matrix_send_room_text_message_synced( $other_user, $room_id,
                body => "M3. B's message after A left",
             )
         })->then( sub {

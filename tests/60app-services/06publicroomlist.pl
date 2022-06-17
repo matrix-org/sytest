@@ -38,7 +38,7 @@ test "AS can publish rooms in their own list",
       # as this relies on an internal synapse implementation detail.
       my $instance_id = "$appserv_id|$network_id";
 
-      matrix_create_room( $local_user,
+      matrix_create_room_synced( $local_user,
          visibility      => "private",
          preset          => "public_chat",
          name            => "Test Name",
@@ -125,7 +125,7 @@ test "AS and main public room lists are separate",
       # as this relies on an internal synapse implementation detail.
       my $instance_id = "$appserv_id|$network_id";
 
-      matrix_create_room( $local_user,
+      matrix_create_room_synced( $local_user,
          visibility      => "private",
          preset          => "public_chat",
          name            => "Test Name",

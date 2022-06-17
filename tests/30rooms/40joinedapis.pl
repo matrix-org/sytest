@@ -9,23 +9,23 @@ test "/joined_rooms returns only joined rooms",
       my ( $room_joined, $room_left, $room_invited );
 
       Future->needs_all(
-         matrix_create_room( $user )->on_done( sub {
+         matrix_create_room_synced( $user )->on_done( sub {
             ( $room_joined ) = @_;
             log_if_fail "room joined", $room_joined;
          }),
 
-         matrix_create_room( $user )->then( sub {
+         matrix_create_room_synced( $user )->then( sub {
             ( $room_left ) = @_;
             log_if_fail "room left", $room_left;
 
-            matrix_leave_room( $user, $room_left );
+            matrix_leave_room_synced( $user, $room_left );
          }),
 
-         matrix_create_room( $inviter )->then( sub {
+         matrix_create_room_synced( $inviter )->then( sub {
             ( $room_invited ) = @_;
             log_if_fail "room invited", $room_invited;
 
-            matrix_invite_user_to_room( $inviter, $user, $room_invited );
+            matrix_invite_user_to_room_synced( $inviter, $user, $room_invited );
          }),
       )->then( sub {
          do_request_json_for( $user,
@@ -69,7 +69,7 @@ test "/joined_members return joined members",
 
       my $room_id;
 
-      matrix_create_room( $creator,
+      matrix_create_room_synced( $creator,
          invite => [ $user_joined->user_id, $user_left->user_id, $user_invited->user_id ],
       )->then( sub {
          ( $room_id ) = @_;
@@ -77,10 +77,10 @@ test "/joined_members return joined members",
          log_if_fail "room", $room_id;
 
          Future->needs_all(
-            matrix_join_room( $user_joined, $room_id ),
+            matrix_join_room_synced( $user_joined, $room_id ),
 
-            matrix_join_room( $user_left, $room_id )->then( sub {
-               matrix_leave_room( $user_left, $room_id );
+            matrix_join_room_synced( $user_left, $room_id )->then( sub {
+               matrix_leave_room_synced( $user_left, $room_id );
             }),
          );
       })->then( sub {

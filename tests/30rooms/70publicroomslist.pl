@@ -32,7 +32,7 @@ test "Name/topic keys are correct",
          my $alias_local = $_;
          my $room = $rooms{$alias_local};
 
-         matrix_create_room( $user,
+         matrix_create_room_synced( $user,
             visibility      => "public",
             room_alias_name => $alias_local,
             %{$room},
@@ -119,7 +119,7 @@ test "Can get remote public room list",
 
       my $room_id;
 
-      matrix_create_room( $local_user,
+      matrix_create_room_synced( $local_user,
          visibility      => "public",
          name            => "Test Name",
          topic           => "Test Topic",
@@ -263,7 +263,7 @@ test "Can search public room list",
 
       my $room_id;
 
-      matrix_create_room( $local_user,
+      matrix_create_room_synced( $local_user,
          visibility      => "public",
          name            => "Test Name",
          topic           => "Test Topic Wombles",
@@ -309,7 +309,7 @@ test "Asking for a remote rooms list, but supplying the local server's name, ret
 
       my $room_id;
 
-      matrix_create_room( $local_user,
+      matrix_create_room_synced( $local_user,
          visibility      => "public",
          name            => "Test Name",
          topic           => "Test Topic Wibbles",

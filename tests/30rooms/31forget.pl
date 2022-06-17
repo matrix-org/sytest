@@ -21,7 +21,7 @@ test "Forgotten room messages cannot be paginated",
    do => sub {
       my ( $creator, $room_id, $user ) = @_;
 
-      matrix_join_room( $user, $room_id )
+      matrix_join_room_synced( $user, $room_id )
       ->then( sub {
          matrix_send_room_text_message_synced( $creator, $room_id, body => "sup" )
       })->then( sub {
@@ -33,7 +33,7 @@ test "Forgotten room messages cannot be paginated",
          log_if_fail "Chunk", $body->{chunk};
          $body->{chunk}[0]{content}{body} eq "sup" or die "Wrong message";
 
-         matrix_leave_room( $user, $room_id )
+         matrix_leave_room_synced( $user, $room_id )
       })->then( sub {
          matrix_get_room_state( $creator, $room_id,
             type      => "m.room.member",
@@ -78,11 +78,11 @@ test "Forgetting room does not show up in v2 /sync",
    do => sub {
       my ( $creator, $room_id, $user ) = @_;
 
-      matrix_join_room( $user, $room_id )
+      matrix_join_room_synced( $user, $room_id )
       ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "sup" )
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "sup" )
       })->then( sub {
-         matrix_leave_room( $user, $room_id )
+         matrix_leave_room_synced( $user, $room_id )
       })->then( sub {
          matrix_forget_room( $user, $room_id )
       })->then( sub {
@@ -106,9 +106,9 @@ test "Can forget room you've been kicked from",
    do => sub {
       my ( $creator, $room_id, $user ) = @_;
 
-      matrix_join_room( $user, $room_id )
+      matrix_join_room_synced( $user, $room_id )
       ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "sup" );
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "sup" );
       })->then( sub {
          do_request_json_for( $creator,
             method => "POST",
@@ -140,9 +140,9 @@ test "Can't forget room you're still in",
    do => sub {
       my ( $creator, $room_id, $user ) = @_;
 
-      matrix_join_room( $user, $room_id )
+      matrix_join_room_synced( $user, $room_id )
       ->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "sup" );
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "sup" );
       })->then( sub {
          matrix_forget_room( $user, $room_id )
       })->main::expect_http_4xx;
@@ -156,7 +156,7 @@ test "Can re-join room if re-invited",
 
       my ( $room_id );
 
-      matrix_create_room( $creator, invite => [ $user->user_id ] )->then( sub {
+      matrix_create_room_synced( $creator, invite => [ $user->user_id ] )->then( sub {
          ( $room_id ) = @_;
 
          log_if_fail "room_id", $room_id;
@@ -169,21 +169,21 @@ test "Can re-join room if re-invited",
             }
          )
       })->then( sub {
-         matrix_join_room( $user, $room_id );
+         matrix_join_room_synced( $user, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $creator, $room_id, body => "before leave" );
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "before leave" );
       })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 100 );
       })->then( sub {
-         matrix_leave_room( $user, $room_id );
+         matrix_leave_room_synced( $user, $room_id );
       })->then( sub {
          matrix_forget_room( $user, $room_id );
       })->then( sub {
          matrix_join_room( $user, $room_id )->main::expect_http_403;
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $user, $room_id );
+         matrix_invite_user_to_room_synced( $creator, $user, $room_id );
       })->then( sub {
-         matrix_join_room( $user, $room_id );
+         matrix_join_room_synced( $user, $room_id );
       })->then( sub {
          matrix_get_room_messages( $user, $room_id, limit => 100 );
       })->then( sub {
