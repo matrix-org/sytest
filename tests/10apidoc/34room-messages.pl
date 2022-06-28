@@ -158,7 +158,7 @@ test "GET /rooms/:room_id/messages returns a message",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( start end chunk ));
+         assert_json_keys( $body, qw( start chunk ));
          assert_json_list( $body->{chunk} );
 
          scalar @{ $body->{chunk} } > 0 or
@@ -198,7 +198,7 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
 
          log_if_fail "Body", $body;
 
-         assert_json_keys( $body, qw( start end state chunk ));
+         assert_json_keys( $body, qw( start state chunk ));
          assert_json_list( $body->{chunk} );
          assert_json_list( $body->{state} );
 
