@@ -97,7 +97,12 @@ test "Notifications can be viewed with GET /notifications",
 
                assert_json_keys( $body, "notifications" );
 
-               assert_eq( scalar @{ $body->{notifications} }, 0 );
+               # Either we return no notifications, or we make sure its marked
+               # as read.
+               if ( scalar @{ $body->{notifications} } > 0 ) {
+                  my $notif = $body->{notifications}[0];
+                  assert_eq( $notif->{read}, JSON::true );
+               }
 
                Future->done(1);
             });
