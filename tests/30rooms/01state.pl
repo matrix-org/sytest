@@ -10,7 +10,7 @@ my $room_fixture = fixture(
    setup => sub {
       my ( $user ) = @_;
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
          visibility => "public",
       );
    },

@@ -78,7 +78,7 @@ multi_test "Canonical alias can be set",
 
       my ( $room_id, $room_alias );
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
          room_alias_name => $room_alias_name,
       )->then( sub {
          ( $room_id, $room_alias ) = @_;
@@ -122,7 +122,7 @@ multi_test "Canonical alias can include alt_aliases",
 
       my ( $room_id, $room_alias );
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
          room_alias_name => $room_alias_name,
       )->then( sub {
          ( $room_id, $room_alias ) = @_;
@@ -162,7 +162,7 @@ multi_test "Canonical alias can include alt_aliases",
          # Create a second room with an alias on it.
          my $other_alias_name = $room_alias_name . "2";
 
-         matrix_create_room( $user,
+         matrix_create_room_synced( $user,
             room_alias_name => $other_alias_name,
          )->then( sub {
             my ( $other_room_id, $other_room_alias ) = @_;

@@ -61,10 +61,10 @@ test "Local device key changes appear in v2 /sync",
 
       my $room_id;
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -96,10 +96,10 @@ test "Local new device changes appear in v2 /sync",
 
       my ( $room_id );
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -118,10 +118,10 @@ test "Local delete device changes appear in v2 /sync",
 
       my $room_id;
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -149,10 +149,10 @@ test "Local update device changes appear in v2 /sync",
 
       my ( $room_id );
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -310,10 +310,10 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
          try_repeat_until_success {
-            matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
+            matrix_invite_user_to_room_synced( $creator, $remote_leaver, $room_id )
          }
       })->then( sub {
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          retry_until_success {
             matrix_sync_again( $creator, timeout => 1000 )
@@ -386,7 +386,7 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
 
          # now one of the remote users leaves the room...
-         matrix_leave_room( $remote_leaver, $room_id );
+         matrix_leave_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          log_if_fail "Remote_leaver " . $remote_leaver->user_id . " left room";
 
@@ -585,10 +585,10 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
          try_repeat_until_success {
-            matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
+            matrix_invite_user_to_room_synced( $creator, $remote_leaver, $room_id )
          }
       })->then( sub {
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
@@ -770,7 +770,7 @@ test "If user leaves room, remote user changes device and rejoins we see update 
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
          retry_until_success sub {
-           matrix_invite_user_to_room( $remote_user, $creator, $room_id 
+           matrix_invite_user_to_room_synced( $remote_user, $creator, $room_id 
            )->then( sub {
                Future->done(1);
             })

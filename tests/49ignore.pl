@@ -203,7 +203,7 @@ test "Ignore invite in incremental sync",
 
          assert_eq( scalar keys %$invite_rooms, 0, "Expected zero invites" );
 
-         matrix_invite_user_to_room( $user2, $user1, $room_id )
+         matrix_invite_user_to_room_synced( $user2, $user1, $room_id )
       })->then( sub {
          matrix_add_account_data( $user1, "m.ignored_user_list",
             { "ignored_users" => { $user2->user_id => {} } }

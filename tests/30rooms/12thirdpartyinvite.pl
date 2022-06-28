@@ -112,7 +112,7 @@ test "Can invite existing 3pid in createRoom",
             id_server => $id_server->name,
             id_access_token => $id_access_token,
          };
-         matrix_create_room( $inviter, invite_3pid => [ $invite_info ] );
+         matrix_create_room_synced( $inviter, invite_3pid => [ $invite_info ] );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -239,7 +239,7 @@ sub can_invite_unbound_3pid
       assert_eq( $body->{third_party_invite}{display_name}, 'Bob', 'invite display name' );
 
       retry_until_success {
-         matrix_join_room( $invitee, $room_id )
+         matrix_join_room_synced( $invitee, $room_id )
       }
    })->then( sub {
       retry_until_success {
@@ -296,7 +296,7 @@ test "Can invite unbound 3pid over federation with users from both servers",
          assert_eq( $body->{third_party_invite}{display_name}, 'Bob', 'invite display name' );
 
          retry_until_success {
-            matrix_join_room( $invitee, $room_id )
+            matrix_join_room_synced( $invitee, $room_id )
          }
       })->then( sub {
          await_event_for( $inviter, filter => sub {
@@ -328,21 +328,21 @@ test "Can accept unbound 3pid invite after inviter leaves",
 
       my $room_id;
 
-      matrix_create_room( $inviter, visibility => "private" )
+      matrix_create_room_synced( $inviter, visibility => "private" )
       ->then( sub {
          ( $room_id ) = @_;
 
-          matrix_invite_user_to_room( $inviter, $other_member, $room_id );
+          matrix_invite_user_to_room_synced( $inviter, $other_member, $room_id );
       })->then( sub {
-          matrix_join_room( $other_member, $room_id );
+          matrix_join_room_synced( $other_member, $room_id );
       })->then( sub {
          do_3pid_invite( $inviter, $room_id, $id_server, $invitee_email )
       })->then( sub {
-         matrix_leave_room( $inviter, $room_id );
+         matrix_leave_room_synced( $inviter, $room_id );
       })->then( sub {
          $id_server->bind_identity( $hs_uribase, "email", $invitee_email, $invitee );
       })->then( sub {
-         matrix_join_room( $invitee, $room_id )
+         matrix_join_room_synced( $invitee, $room_id )
       })->then( sub {
          matrix_get_room_state( $other_member, $room_id,
             type      => "m.room.member",
@@ -361,7 +361,7 @@ test "Can accept third party invite with /join",
 
       my $room_id;
 
-      matrix_create_room( $inviter, visibility => "private" )
+      matrix_create_room_synced( $inviter, visibility => "private" )
       ->then( sub {
          ( $room_id ) = @_;
 
@@ -384,7 +384,7 @@ test "Can accept third party invite with /join",
 
          $id_server->sign( \%req, ephemeral => 1 );
 
-         matrix_join_room( $invitee, $room_id,
+         matrix_join_room_synced( $invitee, $room_id,
             third_party_signed => \%req
          );
       })->then( sub {
@@ -452,7 +452,7 @@ sub invite_should_fail {
 
    my $room_id;
 
-   matrix_create_room( $inviter, visibility => "private" )
+   matrix_create_room_synced( $inviter, visibility => "private" )
    ->then( sub {
       ( $room_id ) = @_;
       log_if_fail "Created room id $room_id";

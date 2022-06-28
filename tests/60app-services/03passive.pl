@@ -119,7 +119,7 @@ test "Events in rooms with AS-hosted room aliases are sent to AS server",
             Future->done;
          }),
 
-         matrix_send_room_text_message( $creator, $room_id,
+         matrix_send_room_text_message_synced( $creator, $room_id,
             body => "A message for the AS",
          ),
       );

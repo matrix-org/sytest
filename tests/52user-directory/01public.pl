@@ -17,12 +17,12 @@ test "User appears in user directory",
       })->then( sub {
          ( $searching_user ) = @_;
 
-         matrix_create_room( $user,
+         matrix_create_room_synced( $user,
             preset => "public_chat",
          );
       })->then( sub {
          my ( $room_id ) = @_;
-         matrix_join_room( $searching_user, $room_id );
+         matrix_join_room_synced( $searching_user, $room_id );
       })->then( sub {
          repeat_until_true {
             do_request_json_for( $searching_user,
@@ -63,7 +63,7 @@ test "User in private room doesn't appear in user directory",
       })->then( sub {
          ( $searching_user ) = @_;
 
-         matrix_create_room( $user,
+         matrix_create_room_synced( $user,
             preset => "private_chat",
          );
       })->then( sub {
@@ -95,7 +95,7 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
       matrix_set_displayname( $user, $displayname )
       ->then( sub {
-         matrix_create_room( $creator,
+         matrix_create_room_synced( $creator,
             preset => "public_chat",
          );
       })->then( sub {
@@ -115,7 +115,7 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
          pass "User initially not in directory";
 
-         matrix_join_room( $user, $room_id );
+         matrix_join_room_synced( $user, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
@@ -129,7 +129,7 @@ multi_test "User joining then leaving public room appears and dissappears from d
 
          pass "User appears in directory after join";
 
-         matrix_leave_room( $user, $room_id );
+         matrix_leave_room_synced( $user, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
@@ -168,7 +168,7 @@ foreach my $type (qw( join_rules history_visibility )) {
 
          matrix_set_displayname( $user, $displayname )
          ->then( sub {
-            matrix_create_room( $creator,
+            matrix_create_room_synced( $creator,
                preset => "private_chat", invite => [ $user->user_id ],
             );
          })->then( sub {
@@ -176,7 +176,7 @@ foreach my $type (qw( join_rules history_visibility )) {
 
             log_if_fail "Room", $room_id;
 
-            matrix_join_room( $user, $room_id );
+            matrix_join_room_synced( $user, $room_id );
          })->then( sub {
             matrix_get_user_dir_synced( $user, $displayname );
          })->then( sub {
@@ -261,13 +261,13 @@ multi_test "Users stay in directory when join_rules are changed but history_visi
 
       matrix_set_displayname( $user, $displayname )
       ->then( sub {
-         matrix_create_room( $creator,
+         matrix_create_room_synced( $creator,
             preset => "private_chat", invite => [ $user->user_id ],
          );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user, $room_id );
+         matrix_join_room_synced( $user, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
@@ -353,7 +353,7 @@ test "User in remote room doesn't appear in user directory after server left roo
 
       matrix_set_displayname( $creator, $displayname )
       ->then( sub {
-         matrix_create_room( $creator,
+         matrix_create_room_synced( $creator,
             preset => "public_chat", invite => [ $remote->user_id ],
          );
       })->then( sub {
@@ -361,7 +361,7 @@ test "User in remote room doesn't appear in user directory after server left roo
 
          log_if_fail "room_id", $room_id;
 
-         matrix_join_room( $remote, $room_id );
+         matrix_join_room_synced( $remote, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $remote, $displayname );
       })->then( sub {
@@ -373,7 +373,7 @@ test "User in remote room doesn't appear in user directory after server left roo
          any { $_->{user_id} eq $creator->user_id } @$results
             or die "user not in list";
 
-         matrix_leave_room( $remote, $room_id );
+         matrix_leave_room_synced( $remote, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $remote, $displayname );
       })->then( sub {
@@ -412,13 +412,13 @@ test "User directory correctly update on display name change",
 
          log_if_fail "First displayname", $displayname;
 
-         matrix_create_room( $user,
+         matrix_create_room_synced( $user,
             preset => "public_chat",
          );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $searching_user, $room_id );
+         matrix_join_room_synced( $searching_user, $room_id );
       })->then( sub {
          matrix_get_user_dir_synced( $user, $displayname );
       })->then( sub {
@@ -485,7 +485,7 @@ sub matrix_get_user_dir_synced
       log_if_fail "Created test users for user directory search: " .
          $new_user->user_id . ", " . $searching_user->user_id;
 
-      matrix_create_room( $new_user,
+      matrix_create_room_synced( $new_user,
          preset => "public_chat",
       );
    })->then( sub {
@@ -493,7 +493,7 @@ sub matrix_get_user_dir_synced
 
       log_if_fail "Created test room for user directory search: " . $room_id;
 
-      matrix_join_room( $searching_user, $room_id );
+      matrix_join_room_synced( $searching_user, $room_id );
    })->then( sub {
       repeat_until_true {
          do_request_json_for( $searching_user,

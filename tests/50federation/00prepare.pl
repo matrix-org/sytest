@@ -444,7 +444,7 @@ sub federated_rooms_fixture {
 
          repeat( sub {
             my ( $idx ) = @_;
-            matrix_create_room( $synapse_user, %$room_opts )->then( sub {
+            matrix_create_room_synced( $synapse_user, %$room_opts )->then( sub {
                my ( $room_id ) = @_;
                $outbound_client->join_room(
                   server_name => $synapse_server_name,
