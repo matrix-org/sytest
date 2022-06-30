@@ -158,7 +158,7 @@ test "GET /rooms/:room_id/messages returns a message",
       })->then( sub {
          my ( $body ) = @_;
 
-         # We should still get events and a "end" key, check it is actually there
+         # We should still get events and a "end" key: check they are actually there
          assert_json_keys( $body, qw( start end chunk ));
          assert_json_list( $body->{chunk} );
          $token = $body->{end};
@@ -166,13 +166,10 @@ test "GET /rooms/:room_id/messages returns a message",
          scalar @{ $body->{chunk} } > 0 or
             die "Expected some messages but got none at all\n";
       })->then( sub {
-
-         # Do another call to /messages, this time we don't expect to receive a "end" key
+         # Do another call to /messages. This time we don't expect to receive a "end" key
          do_request_json_for( $user,
             method => "GET",
             uri    => "/v3/rooms/$room_id/messages",
-
-            # With no params this does "forwards from END"; i.e. nothing useful
             params => {
                 dir => "b",
                 from => $token,
@@ -220,7 +217,7 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
 
          log_if_fail "Body", $body;
          
-         # We should still get events and a "end" key, check it is actually there
+         # We should still get events and a "end" key: check they are actually there
          assert_json_keys( $body, qw( start end state chunk ));
          assert_json_list( $body->{chunk} );
          assert_json_list( $body->{state} );
@@ -234,12 +231,10 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
             die "Expected some messages but got none at all\n";
 
       })->then( sub {
-         # Do another call to /messages, this time we don't expect to receive a "end" key
+         # Do another call to /messages. This time we don't expect to receive a "end" key
          do_request_json_for( $user,
             method => "GET",
             uri    => "/v3/rooms/$room_id/messages",
-
-            # With no params this does "forwards from END"; i.e. nothing useful
             params => {
                 dir => "b",
                 from => $token,
