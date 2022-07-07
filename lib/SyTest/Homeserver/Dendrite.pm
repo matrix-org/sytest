@@ -118,7 +118,12 @@ sub _get_config
             path => "$self->{hs_dir}/dendrite-logs",
          },
       }];
-
+   if ( $self->{recaptcha_config}) {
+      $config->{client_api}->{enable_registration_captcha} = $JSON::false; # disabled for now
+      $config->{client_api}->{recaptcha_siteverify_api} = $self->{recaptcha_config}->{siteverify_api};
+      $config->{client_api}->{recaptcha_public_key} = $self->{recaptcha_config}->{public_key};
+      $config->{client_api}->{recaptcha_private_key} = $self->{recaptcha_config}->{private_key};
+   }
    # Set database connections for each component depending on which engine to use.
    my @components = ("room_server", "app_service_api", "key_server", "sync_api", "federation_api", "user_api", "media_api", "mscs");
    my $component;
