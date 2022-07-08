@@ -104,6 +104,7 @@ sub _get_config
    # Set SyTest specific values.
    $config->{global}->{server_name} = $self->server_name;
    $config->{global}->{private_key} = $self->{paths}{matrix_key};
+   $config->{global}->{server_notices}->{enabled} = $JSON::false;
    $config->{global}->{jetstream}->{storage_path} = $self->{hs_dir};
    $config->{app_service_api}->{config_files} = $self->{app_service_config_files} ? $self->{app_service_config_files} : [];
    $config->{client_api}->{registration_shared_secret} = "reg_secret";
