@@ -10,7 +10,7 @@ RUN apt-get -qq update && apt-get -qq install -y \
         apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
         python3-pip eatmydata redis-server
 
-RUN ${PYTHON_VERSION} -m pip install --cache-dir /pip-cache poetry==1.1.12 && \
+RUN ${PYTHON_VERSION} -m pip install --cache-dir /pip-cache poetry==1.1.14 && \
     rm -rf /pip-cache
 # Instead of using `--no-cache-dir`, we specify a `--cache-dir` and delete it
 # afterwards. This works around a bug where `msgpack` gets installed to
