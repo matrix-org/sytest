@@ -10,13 +10,11 @@ RUN apt-get -qq update && apt-get -qq install -y \
         apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
         python3-pip eatmydata redis-server
 
-RUN ${PYTHON_VERSION} -m pip install --cache-dir /pip-cache poetry==1.1.14 && \
-    rm -rf /pip-cache
-# Instead of using `--no-cache-dir`, we specify a `--cache-dir` and delete it
-# afterwards. This works around a bug where `msgpack` gets installed to
-# `site-packages`, where Python can't find it, instead of `dist-packages`, when
-# using `setuptools>=48.0.0` and the `--no-cache-dir` option.
-# https://github.com/matrix-org/sytest/issues/1269
+# Use the latest version of pip. This pulls in fixes not present in the
+# pip version provided by Debian Buster. See
+# https://github.com/pypa/setuptools/issues/3457#issuecomment-1190125849
+RUN ${PYTHON_VERSION} -m pip install -q --upgrade pip
+RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.14
 
 # As part of the Docker build, we attempt to pre-install Synapse's dependencies
 # in the hope that it speeds up the real install of Synapse. To make this work,
