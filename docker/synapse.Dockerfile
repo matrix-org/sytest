@@ -11,7 +11,7 @@ RUN apt-get -qq update && apt-get -qq install -y \
         python3-pip eatmydata redis-server
 
 RUN ${PYTHON_VERSION} -m pip install -q --upgrade pip
-RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.12
+RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.14
 
 # As part of the Docker build, we attempt to pre-install Synapse's dependencies
 # in the hope that it speeds up the real install of Synapse. To make this work,
