@@ -276,6 +276,7 @@ sub _start_monolith
       setup => [
          env => {
             LOG_DIR => $self->{hs_dir},
+            GORACE => "log_path=/logs/$idx-race.log", 
             DENDRITE_TRACE_SQL => $ENV{'DENDRITE_TRACE_SQL'},
             DENDRITE_TRACE_HTTP => $ENV{'DENDRITE_TRACE_HTTP'},
             DENDRITE_TRACE_INTERNAL => $ENV{'DENDRITE_TRACE_INTERNAL'},
