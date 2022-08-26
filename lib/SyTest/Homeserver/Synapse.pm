@@ -1260,12 +1260,8 @@ EOCONFIG
 
 sub generate_haproxy_map
 {
-   my $self = shift;
+   return <<'EOCONFIG';
 
-   # The base haproxy routes. Note that we add more routes below if using
-   # haproxy. Also, the routing for GET requests below takes precedence over
-   # these routes.
-   my $haproxy_map = <<'EOCONFIG';
 ^/_matrix/client/(v2_alpha|r0|v3)/sync$                  synchrotron
 ^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
 ^/_matrix/client/(api/v1|r0|v3)/initialSync$             synchrotron
@@ -1328,12 +1324,6 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/profile/                                      event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/createRoom                                    event_creator
 
-EOCONFIG
-
-   # Some things can only be moved off master when using redis.
-   if ( $self->{redis_host} ne '' ) {
-      $haproxy_map .= <<'EOCONFIG';
-
 ^/_matrix/client/(api/v1|r0|v3|v3|unstable)/rooms/.*/typing     stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/sendToDevice/          stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/.*/tags                stream_writer
@@ -1342,9 +1332,6 @@ EOCONFIG
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/read_markers  stream_writer
 
 EOCONFIG
-   }
-
-   return $haproxy_map
 }
 
 sub generate_haproxy_get_map
