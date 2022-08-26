@@ -38,14 +38,12 @@ The following environment variables can be set with `-e` to control the test run
   specified path relative to the Synapse directory
 - `TIMEOUT_FACTOR`: sets a number that test timeouts are multiplied by.
 
-Some examples of running Synapse in different configurations:
+An example of running Synapse in worker mode:
 
-- Running Synapse in worker mode:
-
-  ```
-  docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -v /path/to/synapse\:/src:ro \
-      -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:buster
-  ```
+```
+docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -v /path/to/synapse\:/src:ro \
+    -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:buster
+```
 
 ### Dendrite
 
