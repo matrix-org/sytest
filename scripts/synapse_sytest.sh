@@ -16,7 +16,7 @@ cd "$(dirname $0)/.."
 mkdir -p /work
 
 # start the redis server, if desired
-if [ -n "$REDIS" ]; then
+if [ -n "$WORKERS" ]; then
     /usr/bin/redis-server /etc/redis/redis.conf
 fi
 
@@ -199,12 +199,9 @@ RUN_TESTS=(
 
 if [ -n "$WORKERS" ]; then
     RUN_TESTS+=(-I Synapse::ViaHaproxy --workers)
+    RUN_TESTS+=(--redis-host=localhost)
 else
     RUN_TESTS+=(-I Synapse)
-fi
-
-if [ -n "$REDIS" ]; then
-    RUN_TESTS+=(--redis-host=localhost)
 fi
 
 mkdir -p /logs
