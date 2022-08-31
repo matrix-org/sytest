@@ -45,7 +45,7 @@ test "Can search for an event by body",
 
          assert_json_keys( $result, qw( rank result ) );
          assert_json_keys( $result->{result}, qw(
-            event_id room_id user_id content type
+            event_id room_id content type
          ));
 
          $result->{result}{content}{body} eq "hello, world"
@@ -288,7 +288,7 @@ test "Search works across an upgraded room and its predecessor",
 
          assert_json_keys( $result, qw( rank result ) );
          assert_json_keys( $result->{result}, qw(
-            event_id room_id user_id content type
+            event_id room_id content type
          ));
 
          $result->{result}{content}{body} eq "message 1"
@@ -298,7 +298,7 @@ test "Search works across an upgraded room and its predecessor",
 
          assert_json_keys( $result_two, qw( rank result ) );
          assert_json_keys( $result_two->{result}, qw(
-            event_id room_id user_id content type
+            event_id room_id content type
          ));
 
          $result_two->{result}{content}{body} eq "message 2"
@@ -367,7 +367,7 @@ foreach my $ordering_type ( qw ( rank recent ) ) {
 
             assert_json_keys( $result, qw( rank result ) );
             assert_json_keys( $result->{result}, qw(
-               event_id room_id user_id content type
+               event_id room_id content type
             ));
 
             $result->{result}{content}{body} eq "message 2"
