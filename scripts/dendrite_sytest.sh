@@ -55,7 +55,11 @@ wait $pid || TEST_STATUS=$?
 trap - TERM INT
 
 if [ $TEST_STATUS -ne 0 ]; then
-    echo >&2 -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"
+    if [ $TEST_STATUS -ne 66 ]; then
+        echo >&2 -e "run-tests \e[31mFAILED\e[0m: exit code $TEST_STATUS"
+    else
+        echo >&2 -e "run-tests \e[31mFAILED\e[0m: failed with golang race detector warnings, look in the race logs"
+    fi
 else
     echo >&2 -e "run-tests \e[32mPASSED\e[0m"
 fi
