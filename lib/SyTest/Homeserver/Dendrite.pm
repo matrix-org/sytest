@@ -97,7 +97,10 @@ sub _get_config
 
    # Execute generate-config and parse the result YAML.
    local $YAML::XS::Boolean = "JSON::PP";
-   my $command = $self->{bindir} . "/generate-config -ci";
+   my $command = $self->{bindir} . "/generate-config -ci -dir $self->{hs_dir}";
+   if (defined $ENV{'POSTGRES'} && $ENV{'POSTGRES'} != '0') {
+      $command = $command . " -db $db_uri"
+   }
    my $output = qx($command);
    my $config = YAML::XS::Load $output;
 
@@ -105,13 +108,11 @@ sub _get_config
    $config->{global}->{server_name} = $self->server_name;
    $config->{global}->{private_key} = $self->{paths}{matrix_key};
    $config->{global}->{server_notices}->{enabled} = $JSON::false;
-   $config->{global}->{jetstream}->{storage_path} = $self->{hs_dir};
    $config->{app_service_api}->{config_files} = $self->{app_service_config_files} ? $self->{app_service_config_files} : [];
    $config->{client_api}->{registration_shared_secret} = "reg_secret";
    $config->{federation_api}->{federation_certificates} = [$self->{paths}{tls_cert}];
    $config->{federation_api}->{disable_tls_validation} = $JSON::true;
    $config->{user_api}->{push_gateway_disable_tls_validation} = $JSON::true;
-   $config->{media_api}->{base_path} = "$self->{hs_dir}/media_store";
    $config->{logging} = [{
          type => 'file',
          level => 'trace',
@@ -124,18 +125,6 @@ sub _get_config
       $config->{client_api}->{recaptcha_siteverify_api} = $self->{recaptcha_config}->{siteverify_api};
       $config->{client_api}->{recaptcha_public_key} = $self->{recaptcha_config}->{public_key};
       $config->{client_api}->{recaptcha_private_key} = $self->{recaptcha_config}->{private_key};
-   }
-   # Set database connections for each component depending on which engine to use.
-   my @components = ("room_server", "app_service_api", "key_server", "sync_api", "federation_api", "user_api", "media_api", "mscs");
-   my $component;
-   foreach $component (@components) {
-      my $connection_string = ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-         "file:$self->{hs_dir}/$component.db" : $db_uri;
-      if ( $component eq "user_api" ) {
-         $config->{$component}->{account_database}->{connection_string} = $connection_string;
-      } else {
-         $config->{$component}->{database}->{connection_string} = $connection_string;
-      }
    }
    return $config;
 }
