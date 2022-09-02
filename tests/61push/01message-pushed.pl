@@ -41,7 +41,7 @@ multi_test "Test that a message is pushed",
       my $room_id;
 
       # Have Alice create a new private room
-      matrix_create_room( $alice,
+      matrix_create_room_synced( $alice,
          visibility => "private",
       )->then( sub {
          ( $room_id ) = @_;
@@ -60,12 +60,12 @@ multi_test "Test that a message is pushed",
                return $body->{rooms}{invite}{$room_id};
             })->SyTest::pass_on_done( "Bob received invite" ),
 
-            matrix_invite_user_to_room( $alice, $bob, $room_id ),
+            matrix_invite_user_to_room_synced( $alice, $bob, $room_id ),
             flush_events_for( $alice ),
          )
       })->then( sub {
          # Bob accepts the invite by joining the room
-         matrix_join_room( $bob, $room_id )
+         matrix_join_room_synced( $bob, $room_id )
       })->then( sub {
          my $join_event;
          await_sync_timeline_contains( $alice, $room_id, check => sub {
@@ -106,7 +106,7 @@ multi_test "Test that a message is pushed",
                return 1;
             }),
 
-            matrix_send_room_text_message( $bob, $room_id,
+            matrix_send_room_text_message_synced( $bob, $room_id,
                body => "Room message for 50push-01message-pushed",
             )->SyTest::pass_on_done( "Message sent" ),
          )
@@ -183,7 +183,7 @@ test "Invites are pushed",
       matrix_set_pusher(
          $alice, $test_server_info->client_location . $PUSH_LOCATION,
       )->then( sub {
-         matrix_create_room( $bob, visibility => "private" );
+         matrix_create_room_synced( $bob, visibility => "private" );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -199,7 +199,7 @@ test "Invites are pushed",
                return unless $body->{notification}{type} eq "m.room.member";
                return 1;
             }),
-            matrix_invite_user_to_room( $bob, $alice, $room_id ),
+            matrix_invite_user_to_room_synced( $bob, $alice, $room_id ),
          );
       })->then( sub {
          my ( $request ) = @_;
@@ -239,11 +239,11 @@ sub setup_push
       $alice, $target,
    )->then( sub {
       log_if_fail "Created pusher for ".$alice->user_id." -> ".$target;
-      matrix_create_room( $bob );
+      matrix_create_room_synced( $bob );
    })->then( sub {
       ( $room_id ) = @_;
 
-      matrix_join_room( $alice, $room_id );
+      matrix_join_room_synced( $alice, $room_id );
    })->then( sub {
       # we need to make sure the pusher is working.
       #
@@ -293,7 +293,7 @@ sub wait_for_pusher_to_work
 
    # a future which will send messages until failure or cancelled
    my $send_future = repeat {
-      matrix_send_room_text_message( $sending_user, $room_id, body => "Message" ) ->
+      matrix_send_room_text_message_synced( $sending_user, $room_id, body => "Message" ) ->
          then( sub { return delay( 0.2 ); });
    } while => sub {
       my ( $trial_f ) = @_;
@@ -323,7 +323,7 @@ sub check_received_push_with_name
          return unless $body->{notification}{type} eq "m.room.message";
          return 1;
       }),
-      matrix_send_room_text_message( $bob, $room_id,
+      matrix_send_room_text_message_synced( $bob, $room_id,
          body => "Message",
       ),
    )->then( sub {
@@ -420,7 +420,7 @@ test "Rooms with many users are correctly pushed",
              content => { name => $name },
          );
       })->then( sub {
-         matrix_join_room( $charlie, $room_id)
+         matrix_join_room_synced( $charlie, $room_id)
       })->then( sub {
          do_request_json_for( $bob,
             method => "PUT",
@@ -468,7 +468,7 @@ test "Don't get pushed for rooms you've muted",
                return unless $body->{notification}{type} eq "m.room.message";
                return 1;
             }),
-            matrix_send_room_text_message( $bob, $room_id,
+            matrix_send_room_text_message_synced( $bob, $room_id,
                body => "Initial Message",
             ),
          )
@@ -599,7 +599,7 @@ test "Rejected events are not pushed",
       )->then( sub {
          # we need a second local user in the room, so that we can test if
          # alice's pusher is active.
-         matrix_join_room( $bob, $room->room_id );
+         matrix_join_room_synced( $bob, $room->room_id );
       })->then( sub {
          wait_for_pusher_to_work( $bob, $room->room_id );
       })->then( sub {

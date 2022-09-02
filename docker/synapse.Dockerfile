@@ -10,7 +10,11 @@ RUN apt-get -qq update && apt-get -qq install -y \
         apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
         python3-pip eatmydata redis-server
 
-RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.1.12
+# Use the latest version of pip. This pulls in fixes not present in the
+# pip version provided by Debian Buster. See
+# https://github.com/pypa/setuptools/issues/3457#issuecomment-1190125849
+RUN ${PYTHON_VERSION} -m pip install -q --upgrade pip
+RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.2.0
 
 # As part of the Docker build, we attempt to pre-install Synapse's dependencies
 # in the hope that it speeds up the real install of Synapse. To make this work,
@@ -30,10 +34,9 @@ ENV POETRY_VIRTUALENVS_IN_PROJECT true
 RUN mkdir /src
 
 # Download a cache of build dependencies to support offline mode.
-# `setuptools` and `wheel` are only required for pre-poetry Synapse versions.
 # These version numbers are arbitrary and were the latest at the time.
 RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
-        poetry-core==1.0.8 setuptools==60.10.0 wheel==0.37.1
+        poetry-core==1.1.0 setuptools==60.10.0 wheel==0.37.1
 
 # Create the virtual env upfront so we don't need to keep reinstalling
 # dependencies.

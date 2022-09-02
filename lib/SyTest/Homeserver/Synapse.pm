@@ -44,7 +44,6 @@ sub _init
    $self->{ports} = {
       synapse                  => main::alloc_port( "synapse[$idx]" ),
       synapse_metrics          => main::alloc_port( "synapse[$idx].metrics" ),
-      synapse_replication_tcp  => main::alloc_port( "synapse[$idx].replication_tcp" ),
 
       pusher_metrics => main::alloc_port( "pusher[$idx].metrics" ),
       pusher_manhole => main::alloc_port( "pusher[$idx].manhole" ),
@@ -262,16 +261,13 @@ sub start
         # If we're using workers we need to disable these things in the main
         # process
         start_pushers         => ( not $self->{workers} ),
-        notify_appservices    => ( not $self->{workers} ),
         send_federation       => ( not $self->{workers} ),
         enable_media_repo     => ( not $self->{workers} ),
         run_background_tasks_on  => ( $self->{workers} ? "background_worker1" : "master" ),
         $self->{workers} ? (
-            update_user_directory_on  => "user_dir",
+            notify_appservices_from_worker     => "appservice",
+            update_user_directory_from_worker  => "user_dir",
         ) : (),
-        # update_user_directory is kept for backwards compatibility,
-        # worker_to_update_user_directory is prioritized before this option.
-        update_user_directory => ( not $self->{workers} ),
 
         url_preview_enabled => "true",
         url_preview_ip_range_blacklist => [],
@@ -292,6 +288,11 @@ sub start
 
         # Enable ephemeral message support (MSC2228)
         enable_ephemeral_messages => "true",
+
+        # Disable caching of sync responses to make tests easier.
+        caches => {
+          sync_response_cache_duration => 0,
+        },
 
         $self->{recaptcha_config} ? (
            recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
@@ -456,14 +457,6 @@ sub generate_listeners
    my $bind_host = $self->{bind_host};
 
    my @listeners;
-
-   if( my $replication_tcp_port = $self->{ports}{synapse_replication_tcp} ) {
-      push @listeners, {
-         type         => "replication",
-         port         => $replication_tcp_port,
-         bind_address => $bind_host,
-      }
-   }
 
    return @listeners,
       {
@@ -677,7 +670,6 @@ sub _start_synapse
          "worker_pid_file"         => "$hsdir/pusher.pid",
          "worker_log_config"       => $self->configure_logger("pusher"),
          "worker_replication_host" => "$bind_host",
-         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
@@ -699,12 +691,11 @@ sub _start_synapse
 
    {
       my $appservice_config = {
-         "worker_app"              => "synapse.app.appservice",
+         "worker_app"              => "synapse.app.generic_worker",
          "worker_name"             => "appservice",
          "worker_pid_file"         => "$hsdir/appservice.pid",
          "worker_log_config"       => $self->configure_logger("appservice"),
          "worker_replication_host" => "$bind_host",
-         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
@@ -731,7 +722,6 @@ sub _start_synapse
          "worker_pid_file"         => "$hsdir/federation_sender.pid",
          "worker_log_config"       => $self->configure_logger("federation_sender"),
          "worker_replication_host" => "$bind_host",
-         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
@@ -758,7 +748,6 @@ sub _start_synapse
          "worker_pid_file"         => "$hsdir/synchrotron.pid",
          "worker_log_config"       => $self->configure_logger("synchrotron"),
          "worker_replication_host" => "$bind_host",
-         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
@@ -792,7 +781,6 @@ sub _start_synapse
          "worker_log_config"       => $self->configure_logger("federation_reader"),
          "worker_replication_host" => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -824,7 +812,6 @@ sub _start_synapse
          "worker_pid_file"         => "$hsdir/media_repository.pid",
          "worker_log_config"       => $self->configure_logger("media_repository"),
          "worker_replication_host" => "$bind_host",
-         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
@@ -858,7 +845,6 @@ sub _start_synapse
          "worker_log_config"            => $self->configure_logger("client_reader"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_listeners"             => [
             {
                type      => "http",
@@ -885,12 +871,11 @@ sub _start_synapse
 
    {
       my $user_dir_config = {
-         "worker_app"              => "synapse.app.user_dir",
+         "worker_app"              => "synapse.app.generic_worker",
          "worker_name"             => "user_dir",
          "worker_pid_file"         => "$hsdir/user_dir.pid",
          "worker_log_config"       => $self->configure_logger("user_dir"),
          "worker_replication_host" => "$bind_host",
-         "worker_replication_port" => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
@@ -923,7 +908,6 @@ sub _start_synapse
          "worker_pid_file"              => "$hsdir/event_creator.pid",
          "worker_log_config"            => $self->configure_logger("event_creator"),
          "worker_replication_host"      => "$bind_host",
-         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"             => [
             {
@@ -956,7 +940,6 @@ sub _start_synapse
          "worker_pid_file"              => "$hsdir/frontend_proxy.pid",
          "worker_log_config"            => $self->configure_logger("frontend_proxy"),
          "worker_replication_host"      => "$bind_host",
-         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
@@ -991,7 +974,6 @@ sub _start_synapse
          "worker_log_config"            => $self->configure_logger("background_worker"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
       };
 
@@ -1005,7 +987,6 @@ sub _start_synapse
          "worker_pid_file"              => "$hsdir/event_persister1.pid",
          "worker_log_config"            => $self->configure_logger("event_persister1"),
          "worker_replication_host"      => "$bind_host",
-         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
@@ -1039,7 +1020,6 @@ sub _start_synapse
          "worker_pid_file"              => "$hsdir/event_persister2.pid",
          "worker_log_config"            => $self->configure_logger("event_persister2"),
          "worker_replication_host"      => "$bind_host",
-         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
@@ -1073,7 +1053,6 @@ sub _start_synapse
          "worker_pid_file"              => "$hsdir/stream_writer.pid",
          "worker_log_config"            => $self->configure_logger("stream_writer"),
          "worker_replication_host"      => "$bind_host",
-         "worker_replication_port"      => $self->{ports}{synapse_replication_tcp},
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
@@ -1281,12 +1260,8 @@ EOCONFIG
 
 sub generate_haproxy_map
 {
-   my $self = shift;
+   return <<'EOCONFIG';
 
-   # The base haproxy routes. Note that we add more routes below if using
-   # haproxy. Also, the routing for GET requests below takes precedence over
-   # these routes.
-   my $haproxy_map = <<'EOCONFIG';
 ^/_matrix/client/(v2_alpha|r0|v3)/sync$                  synchrotron
 ^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
 ^/_matrix/client/(api/v1|r0|v3)/initialSync$             synchrotron
@@ -1349,12 +1324,6 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/profile/                                      event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/createRoom                                    event_creator
 
-EOCONFIG
-
-   # Some things can only be moved off master when using redis.
-   if ( $self->{redis_host} ne '' ) {
-      $haproxy_map .= <<'EOCONFIG';
-
 ^/_matrix/client/(api/v1|r0|v3|v3|unstable)/rooms/.*/typing     stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/sendToDevice/          stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/.*/tags                stream_writer
@@ -1363,9 +1332,6 @@ EOCONFIG
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/read_markers  stream_writer
 
 EOCONFIG
-   }
-
-   return $haproxy_map
 }
 
 sub generate_haproxy_get_map

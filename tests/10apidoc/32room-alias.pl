@@ -6,7 +6,7 @@ my $room_fixture = fixture(
    setup => sub {
       my ( $user ) = @_;
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          my ( $room_id, undef ) = @_;
          Future->done( $room_id );  # Don't return the alias
       });
@@ -56,7 +56,7 @@ test "GET /rooms/:room_id/aliases lists aliases",
       my ( $user, $room_alias ) = @_;
       my ( $room_id );
 
-      matrix_create_room( $user )->then( sub {
+      matrix_create_room_synced( $user )->then( sub {
          ( $room_id ) = @_;
 
          # the list should be empty initially

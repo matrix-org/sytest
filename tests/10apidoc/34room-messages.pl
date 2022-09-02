@@ -136,15 +136,15 @@ test "GET /rooms/:room_id/messages returns a message",
 
    check => sub {
       my ( $user, $room_id ) = @_;
+      my $token;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "Here is the message content",
       )->then( sub {
          matrix_sync( $user )
       })->then( sub {
          my ( $sync_body ) = @_;
-         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
-
+         $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
          do_request_json_for( $user,
             method => "GET",
             uri    => "/v3/rooms/$room_id/messages",
@@ -158,12 +158,30 @@ test "GET /rooms/:room_id/messages returns a message",
       })->then( sub {
          my ( $body ) = @_;
 
+         # We should still get events and a "end" key: check they are actually there
          assert_json_keys( $body, qw( start end chunk ));
          assert_json_list( $body->{chunk} );
+         $token = $body->{end};
 
          scalar @{ $body->{chunk} } > 0 or
             die "Expected some messages but got none at all\n";
+      })->then( sub {
+         # Do another call to /messages. This time we don't expect to receive a "end" key
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/v3/rooms/$room_id/messages",
+            params => {
+                dir => "b",
+                from => $token,
+            },
+         )
+      })->then( sub {
+         my ( $body ) = @_;
 
+         assert_json_keys( $body, qw( start chunk ));
+         if( exists $body->{end} ) {
+            die "Unexpected 'end' key in response"
+         }
          Future->done(1);
       });
    };
@@ -174,14 +192,15 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
 
    check => sub {
       my ( $user, $room_id ) = @_;
+      my $token;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "Here is the message content",
       )->then( sub {
          matrix_sync( $user )
       })->then( sub {
          my ( $sync_body ) = @_;
-         my $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
+         $token = $sync_body->{rooms}->{join}->{$room_id}->{timeline}->{prev_batch};
 
          do_request_json_for( $user,
             method => "GET",
@@ -197,10 +216,12 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
          my ( $body ) = @_;
 
          log_if_fail "Body", $body;
-
+         
+         # We should still get events and a "end" key: check they are actually there
          assert_json_keys( $body, qw( start end state chunk ));
          assert_json_list( $body->{chunk} );
          assert_json_list( $body->{state} );
+         $token = $body->{end};
 
          assert_eq( scalar @{$body->{state}}, 1);
          assert_eq( $body->{state}[0]{type}, 'm.room.member');
@@ -209,6 +230,23 @@ test "GET /rooms/:room_id/messages lazy loads members correctly",
          scalar @{ $body->{chunk} } > 0 or
             die "Expected some messages but got none at all\n";
 
+      })->then( sub {
+         # Do another call to /messages. This time we don't expect to receive a "end" key
+         do_request_json_for( $user,
+            method => "GET",
+            uri    => "/v3/rooms/$room_id/messages",
+            params => {
+                dir => "b",
+                from => $token,
+            },
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, qw( start chunk ));
+         if( exists $body->{end} ) {
+            die "Unexpected 'end' key in response"
+         }
          Future->done(1);
       });
    };

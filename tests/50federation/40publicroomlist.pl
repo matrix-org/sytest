@@ -25,7 +25,7 @@ test "Federation publicRoom Name/topic keys are correct",
          my $alias_local = $_;
          my $room = $rooms{$alias_local};
 
-         matrix_create_room( $user,
+         matrix_create_room_synced( $user,
             visibility      => "public",
             room_alias_name => $alias_local,
             %$room,

@@ -883,7 +883,7 @@ test "Getting state checks the events requested belong to the room",
          user_id     => $fed_user_id,
       )->then( sub {
          # Send an event into the private room
-         matrix_send_room_text_message( $priv_creator, $priv_room_id,
+         matrix_send_room_text_message_synced( $priv_creator, $priv_room_id,
             body => "Hello world",
          )
       })->then( sub {
@@ -923,7 +923,7 @@ test "Getting state IDs checks the events requested belong to the room",
          user_id     => $fed_user_id,
       )->then( sub {
          # Send an event into the private room
-         matrix_send_room_text_message( $priv_creator, $priv_room_id,
+         matrix_send_room_text_message_synced( $priv_creator, $priv_room_id,
             body => "Hello world",
          )
       })->then( sub {

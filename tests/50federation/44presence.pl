@@ -16,14 +16,14 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       )->then( sub {
 
          # Have Alice create a new private room
-         matrix_create_room( $alice,
+         matrix_create_room_synced( $alice,
             visibility => "private",
          )->SyTest::pass_on_done( "Created a room" )
       })->then( sub {
          ( $room_id ) = @_;
 
          # Alice invites Bob
-         matrix_invite_user_to_room( $alice, $bob, $room_id )
+         matrix_invite_user_to_room_synced( $alice, $bob, $room_id )
             ->SyTest::pass_on_done( "Sent invite" )
       })->then( sub {
 
@@ -37,7 +37,7 @@ multi_test "New federated private chats get full presence information (SYN-115)"
       })->then( sub {
 
          # Bob accepts the invite by joining the room
-         matrix_join_room( $bob, $room_id )
+         matrix_join_room_synced( $bob, $room_id )
             ->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
 
