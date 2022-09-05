@@ -48,7 +48,7 @@ sub test_history_visibility
          my $before_join_event_id;
          my $after_invite_event_id;
 
-         matrix_set_room_history_visibility( $creator, $room_id, $visibility )
+         matrix_set_room_history_visibility_synced( $creator, $room_id, $visibility )
          ->then( sub {
             matrix_set_room_guest_access_synced($creator, $room_id, "can_join");
          })->then( sub {
@@ -119,7 +119,7 @@ foreach my $i (
          do => sub {
             my ( $nonjoined_user, $creator_user, $room_id ) = @_;
 
-            matrix_set_room_history_visibility( $creator_user, $room_id, $visibility )
+            matrix_set_room_history_visibility_synced( $creator_user, $room_id, $visibility )
             ->then( sub {
                matrix_send_room_text_message_synced( $creator_user, $room_id, body => "mice" )
             })->then( sub {
@@ -404,7 +404,7 @@ foreach my $i (
             ->then( sub {
                matrix_send_room_text_message_synced( $user, $room_id, body => "shared" );
             })->then( sub {
-               matrix_set_room_history_visibility( $user, $room_id, $visibility );
+               matrix_set_room_history_visibility_synced( $user, $room_id, $visibility );
             })->then( sub {
                matrix_send_room_text_message_synced( $user, $room_id, body => "pre_join" );
             })->then( sub {

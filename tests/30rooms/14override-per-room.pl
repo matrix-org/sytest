@@ -4,7 +4,7 @@ test "Room members can override their displayname on a room-specific basis",
    do => sub {
       my ( $user, $room_id ) = @_;
 
-      matrix_put_room_state( $user, $room_id,
+      matrix_put_room_state_synced( $user, $room_id,
          type      => "m.room.member",
          state_key => $user->user_id,
          content   => {
@@ -35,7 +35,7 @@ test "Room members can join a room with an overridden displayname",
       my ( $creator, $room_id, $joiner ) = @_;
 
       # PUT'ing my membership state should join me
-      matrix_put_room_state( $joiner, $room_id,
+      matrix_put_room_state_synced( $joiner, $room_id,
          type      => "m.room.member",
          state_key => $joiner->user_id,
          content   => {

@@ -79,7 +79,7 @@ test "PUT power_levels should not explode if the old power levels were empty",
       my ( $user, $room_id ) = @_;
 
       # absence of an 'events' key
-      matrix_put_room_state(
+      matrix_put_room_state_synced(
          $user,
          $room_id,
          type      => "m.room.power_levels",
@@ -91,7 +91,7 @@ test "PUT power_levels should not explode if the old power levels were empty",
          },
       )->then( sub {
          # absence of a 'users' key
-         matrix_put_room_state(
+         matrix_put_room_state_synced(
             $user,
             $room_id,
             type      => "m.room.power_levels",
@@ -101,7 +101,7 @@ test "PUT power_levels should not explode if the old power levels were empty",
          );
       })->then( sub {
          # this should now give a 403 (not a 500)
-         matrix_put_room_state(
+         matrix_put_room_state_synced(
             $user,
             $room_id,
             type      => "m.room.power_levels",

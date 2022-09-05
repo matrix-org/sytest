@@ -495,7 +495,7 @@ test "/upgrade copies important state to the new room",
       my $f = Future->done(1);
       foreach my $k ( keys %STATE_DICT ) {
          $f = $f->then( sub {
-            matrix_put_room_state(
+            matrix_put_room_state_synced(
                $creator, $room_id,
                type => $k,
                content => $STATE_DICT{$k},

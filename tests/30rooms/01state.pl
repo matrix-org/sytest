@@ -253,7 +253,7 @@ sub set_test_state
 {
    my ( $user, $room_id ) = @_;
 
-   matrix_put_room_state( $user, $room_id,
+   matrix_put_room_state_synced( $user, $room_id,
          type      => "a.test.state.type",
          state_key => "",
          content   => { "a_key" => "a_value" },

@@ -8,7 +8,7 @@ sub make_room_and_message
    matrix_create_and_join_room( $users )->then( sub {
       ( $room_id ) = @_;
 
-      matrix_send_room_message( $sender, $room_id,
+      matrix_send_room_message_synced( $sender, $room_id,
          content => { msgtype => "m.message", body => "orangutans are not monkeys" },
       )
    })->then( sub {

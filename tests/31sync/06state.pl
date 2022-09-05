@@ -80,7 +80,7 @@ test "State from remote users is included in the state in the initial sync",
         })->then( sub {
             ( $room_id ) = @_;
 
-            matrix_put_room_state( $remote_user, $room_id,
+            matrix_put_room_state_synced( $remote_user, $room_id,
                                    type    => "a.madeup.test.state",
                                    content => { "my_key" => 1 });
         })->then( sub {
@@ -557,7 +557,7 @@ test "A change to displayname should appear in incremental /sync",
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
 
-         matrix_put_room_state( $user, $room_id,
+         matrix_put_room_state_synced( $user, $room_id,
             type      => "m.room.member",
             content   => { "membership" => "join",
                            "displayname" => "boris" },
@@ -618,7 +618,7 @@ test "When user joins a room the state is included in a gapped sync",
          matrix_create_room_synced( $user_a )
       })->then( sub {
          ( $room_id ) = @_;
-         matrix_put_room_state( $user_a, $room_id,
+         matrix_put_room_state_synced( $user_a, $room_id,
             type => "a.madeup.test.state",
             content => { "my_key" => 1 },
             state_key => ""
@@ -685,7 +685,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
 
          log_if_fail "Room id", $room_id;
 
-         matrix_put_room_state( $user_a, $room_id,
+         matrix_put_room_state_synced( $user_a, $room_id,
             type      => "a.madeup.test.state",
             content   => { "my_key" => 1 },
             state_key => "",
