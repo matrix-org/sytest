@@ -69,6 +69,15 @@ jobs:
         with:
           path: sytest
 
+      # There should already be a Rust compiler in the docker image, but we
+      # pick a particular version here.
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.61.0
+            override: true
+      - uses: Swatinem/rust-cache@v2
+
       # TODO the shell script below is nicked from complement. We use this pattern
       # in a few places. Can we make this an Action so it's easier to reuse?
       - name: Fetch corresponding synapse branch
