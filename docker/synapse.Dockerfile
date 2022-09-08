@@ -10,6 +10,13 @@ RUN apt-get -qq update && apt-get -qq install -y \
         apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
         python3-pip eatmydata redis-server
 
+ENV RUSTUP_HOME=/rust
+ENV CARGO_HOME=/cargo
+ENV PATH=/cargo/bin:/rust/bin:$PATH
+RUN mkdir /rust /cargo
+
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable
+
 # Use the latest version of pip. This pulls in fixes not present in the
 # pip version provided by Debian Buster. See
 # https://github.com/pypa/setuptools/issues/3457#issuecomment-1190125849
@@ -36,7 +43,8 @@ RUN mkdir /src
 # Download a cache of build dependencies to support offline mode.
 # These version numbers are arbitrary and were the latest at the time.
 RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
-        poetry-core==1.1.0 setuptools==60.10.0 wheel==0.37.1
+        poetry-core==1.1.0 setuptools==65.3.0 wheel==0.37.1 \
+        setuptools-rust==1.5.1
 
 # Create the virtual env upfront so we don't need to keep reinstalling
 # dependencies.
