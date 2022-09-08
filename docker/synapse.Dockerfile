@@ -10,6 +10,13 @@ RUN apt-get -qq update && apt-get -qq install -y \
         apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
         python3-pip eatmydata redis-server
 
+ENV RUSTUP_HOME=/rust
+ENV CARGO_HOME=/cargo
+ENV PATH=/cargo/bin:/rust/bin:$PATH
+RUN mkdir /rust /cargo
+
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable
+
 # Use the latest version of pip. This pulls in fixes not present in the
 # pip version provided by Debian Buster. See
 # https://github.com/pypa/setuptools/issues/3457#issuecomment-1190125849
