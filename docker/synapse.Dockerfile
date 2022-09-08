@@ -36,7 +36,8 @@ RUN mkdir /src
 # Download a cache of build dependencies to support offline mode.
 # These version numbers are arbitrary and were the latest at the time.
 RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
-        poetry-core==1.1.0 setuptools==60.10.0 wheel==0.37.1
+        poetry-core==1.1.0 setuptools==60.10.0 wheel==0.37.1 \
+        setuptools-rust==1.5.1
 
 # Create the virtual env upfront so we don't need to keep reinstalling
 # dependencies.
