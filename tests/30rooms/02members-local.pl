@@ -18,11 +18,8 @@ my $room_fixture = fixture(
       # not want to wait for the join events; as we'll be testing later on
       # that we do in fact receive them
 
-      Future->needs_all(
-         map { flush_events_for( $_ ) } $creator, $local_user
-      )->then( sub {
-         matrix_create_room_synced( $creator )
-      })->then( sub {
+      matrix_create_room_synced( $creator )
+      ->then( sub {
          my ( $room_id ) = @_;
 
          matrix_join_room_synced( $local_user, $room_id )
@@ -128,30 +125,33 @@ test "All room members see all room members' presence in global initialSync",
       Future->needs_all( map {
          my $user = $_;
 
-         matrix_initialsync( $user )->then( sub {
-            my ( $body ) = @_;
+         matrix_set_presence_status( $user, "online")
+         ->then(sub {
+            matrix_initialsync( $user )->then( sub {
+               my ( $body ) = @_;
 
-            assert_json_keys( $body, qw( presence ));
-            assert_json_list( my $presence = $body->{presence} );
+               assert_json_keys( $body, qw( presence ));
+               assert_json_list( my $presence = $body->{presence} );
 
-            my %presence_by_userid = map { $_->{content}{user_id} => $_ } @$presence;
+               my %presence_by_userid = map { $_->{content}{user_id} => $_ } @$presence;
 
-            foreach my $user ( @all_users ) {
-               my $user_id = $user->user_id;
+               foreach my $user ( @all_users ) {
+                  my $user_id = $user->user_id;
 
-               $presence_by_userid{$user_id} or
-                  die "Expected to see presence of $user_id";
+                  $presence_by_userid{$user_id} or
+                     die "Expected to see presence of $user_id";
 
-               assert_json_keys( my $event = $presence_by_userid{$user_id},
-                  qw( type content ) );
-               assert_json_keys( my $content = $event->{content},
-                  qw( user_id presence last_active_ago ));
+                  assert_json_keys( my $event = $presence_by_userid{$user_id},
+                     qw( type content ) );
+                  assert_json_keys( my $content = $event->{content},
+                     qw( user_id presence last_active_ago ));
 
-               $content->{presence} eq "online" or
-                  die "Expected presence of $user_id to be online";
-            }
+                  $content->{presence} eq "online" or
+                     die "Expected presence of $user_id to be online";
+               }
 
-            Future->done(1);
-         });
+               Future->done(1);
+            });
+         })
       } @all_users );
    };
