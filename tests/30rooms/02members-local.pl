@@ -125,7 +125,7 @@ test "All room members see all room members' presence in global initialSync",
       Future->needs_all( map {
          my $user = $_;
 
-         matrix_set_presence_status( $user, "online")
+         flush_events_for( $user )
          ->then(sub {
             matrix_initialsync( $user )->then( sub {
                my ( $body ) = @_;
