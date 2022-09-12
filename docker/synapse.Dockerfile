@@ -6,6 +6,9 @@ ARG PYTHON_VERSION=python3
 
 ENV DEBIAN_FRONTEND noninteractive
 
+# Ensire we die correctly when using pipes in RUN.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 RUN apt-get -qq update && apt-get -qq install -y \
         apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
         python3-pip eatmydata redis-server curl
