@@ -6,7 +6,7 @@ ARG PYTHON_VERSION=python3
 
 ENV DEBIAN_FRONTEND noninteractive
 
-# Ensire we die correctly when using pipes in RUN.
+# Ensure we die correctly when using pipes in RUN.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get -qq update && apt-get -qq install -y \
