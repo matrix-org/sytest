@@ -6,9 +6,12 @@ ARG PYTHON_VERSION=python3
 
 ENV DEBIAN_FRONTEND noninteractive
 
+# Ensure we die correctly when using pipes in RUN.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 RUN apt-get -qq update && apt-get -qq install -y \
         apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
-        python3-pip eatmydata redis-server
+        python3-pip eatmydata redis-server curl
 
 ENV RUSTUP_HOME=/rust
 ENV CARGO_HOME=/cargo
