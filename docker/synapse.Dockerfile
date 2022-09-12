@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get -qq update && apt-get -qq install -y \
         apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
-        python3-pip eatmydata redis-server cur
+        python3-pip eatmydata redis-server curl
 
 ENV RUSTUP_HOME=/rust
 ENV CARGO_HOME=/cargo
