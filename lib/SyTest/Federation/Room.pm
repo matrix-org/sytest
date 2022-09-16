@@ -229,12 +229,24 @@ sub create_event
    my $self = shift;
    my %fields = @_;
 
+   defined $fields{$_} or croak "Every event needs a '$_' field"
+      for qw( type content sender );
+
+   # pick auth events, per https://spec.matrix.org/v1.2/server-server-api/#auth-events-selection
    my @auth_events = grep { defined } (
       $self->get_current_state_event( "m.room.create" ),
-      $self->get_current_state_event( "m.room.join_rules" ),
       $self->get_current_state_event( "m.room.power_levels" ),
       $self->get_current_state_event( "m.room.member", $fields{sender} ),
    );
+   if( $fields{type} eq 'm.room.member' ) {
+      my $membership = $fields{content}{membership};
+      if( $membership eq 'join' || $membership eq 'invite' ) {
+         push @auth_events, grep { defined } (
+            $self->get_current_state_event( "m.room.join_rules" ),
+         );
+      }
+      # TODO: target's membership, third-party-invite event, join_authorised_via_users_server event.
+   }
    $fields{auth_events} //= $self->make_event_refs( @auth_events ),
 
    $fields{depth} //= JSON::number($self->next_depth);

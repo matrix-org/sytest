@@ -17,12 +17,8 @@ test "Local device key changes get to remote servers",
          alias   => $room_alias,
       );
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/v3/join/$room_alias",
-
-         content => {},
-      )->then( sub {
+      matrix_join_room_synced( $user, $room_alias )
+      ->then( sub {
          Future->needs_all(
             $inbound_server->await_edu( "m.device_list_update", sub {1} )
             ->then( sub {
@@ -321,7 +317,7 @@ test "Server correctly resyncs when server leaves and rejoins a room",
          assert_json_keys( $alice_keys, ( $device_id1 ) );
 
          Future->needs_all(
-            matrix_leave_room( $user, $room->room_id )->on_done( sub {
+            matrix_leave_room_synced( $user, $room->room_id )->on_done( sub {
                log_if_fail "sent leave request";
             }),
 
@@ -338,17 +334,7 @@ test "Server correctly resyncs when server leaves and rejoins a room",
          );
       })->then( sub {
          log_if_fail "left room; now rejoining";
-         my $iter = 0;
-         retry_until_success {
-            $iter++;
-            matrix_join_room( $user, $room->room_id,
-               server_name => $inbound_server->server_name,
-            )->on_fail( sub {
-               my ( $exc ) = @_;
-               chomp $exc;
-               log_if_fail "Room join iteration $iter failed: $exc";
-            });
-         }
+         matrix_join_room_synced( $user, $room->room_id, server_name => $inbound_server->server_name)
       })->then( sub {
          log_if_fail "rejoined room";
          Future->needs_all(
@@ -420,18 +406,9 @@ test "Local device key changes get to remote servers with correct prev_id",
          alias   => $room_alias,
       );
 
-      do_request_json_for( $user1,
-         method => "POST",
-         uri    => "/v3/join/$room_alias",
-
-         content => {},
-      )->then( sub {
-         do_request_json_for( $user2,
-            method => "POST",
-            uri    => "/v3/join/$room_alias",
-
-            content => {},
-         )
+      matrix_join_room_synced( $user1, $room_alias)
+      ->then( sub {
+         matrix_join_room_synced( $user2, $room_alias)
       })->then( sub {
          Future->needs_all(
             $inbound_server->await_edu( "m.device_list_update", sub {1} )
@@ -734,12 +711,8 @@ test "If a device list update goes missing, the server resyncs on the next one",
          },
       };
 
-      do_request_json_for( $user,
-         method => "POST",
-         uri    => "/v3/join/$room_alias",
-
-         content => {},
-      )->then( sub {
+      matrix_join_room_synced( $user, $room_alias )
+      ->then( sub {
          Future->needs_all(
             $inbound_server->await_request_user_devices( $creator_id )
             ->then( sub {

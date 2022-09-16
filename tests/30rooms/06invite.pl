@@ -10,7 +10,7 @@ sub inviteonly_room_fixture
       setup => sub {
          my ( $creator ) = @_;
 
-         matrix_create_room( $creator,
+         matrix_create_room_synced( $creator,
             preset => "private_chat",
          )->then( sub {
             my ( $room_id ) = @_;
@@ -28,6 +28,8 @@ sub inviteonly_room_fixture
    )
 }
 
+push our @EXPORT, qw( inviteonly_room_fixture );
+
 multi_test "Can invite users to invite-only rooms",
    # TODO: deprecated endpoint used in this test
    requires => do {
@@ -44,7 +46,7 @@ multi_test "Can invite users to invite-only rooms",
    do => sub {
       my ( $creator, $invitee, $room_id ) = @_;
 
-      matrix_invite_user_to_room( $creator, $invitee, $room_id )
+      matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
          ->SyTest::pass_on_done( "Sent invite" )
       ->then( sub {
          await_sync( $invitee, check => sub {
@@ -55,7 +57,7 @@ multi_test "Can invite users to invite-only rooms",
             return 1;
          })
       })->then( sub {
-         matrix_join_room( $invitee, $room_id )
+         matrix_join_room_synced( $invitee, $room_id )
             ->SyTest::pass_on_done( "Joined room" )
       })->then( sub {
          matrix_get_room_state( $invitee, $room_id,
@@ -192,13 +194,13 @@ sub invited_user_can_reject_invite_for_empty_room
 {
    my ( $invitee, $creator, $room_id ) = @_;
 
-   matrix_invite_user_to_room( $creator, $invitee, $room_id )
+   matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
    ->then( sub {
       # wait for the leave to come down to make sure we're testing an empty room
       matrix_leave_room_synced( $creator, $room_id )
    })
    ->then( sub {
-      matrix_leave_room( $invitee, $room_id )
+      matrix_leave_room_synced( $invitee, $room_id )
    })->then( sub {
       matrix_sync( $invitee )
    })->then( sub {
@@ -225,12 +227,12 @@ test "Invited user can reject local invite after originator leaves",
    do => sub {
       my ( $invitee, $creator, $room_id ) = @_;
 
-      matrix_invite_user_to_room( $creator, $invitee, $room_id )
+      matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
       ->then( sub {
          # wait for the leave to come down to make sure we're testing an empty room
          matrix_leave_room_synced( $creator, $room_id );
       })->then( sub {
-         matrix_leave_room( $invitee, $room_id );
+         matrix_leave_room_synced( $invitee, $room_id );
       })->then( sub {
          # there's nobody left who can look at the room state, but the
          # important thing is that a /sync for the invitee should not include
@@ -268,7 +270,7 @@ test "Invited user can see room metadata",
             content => { url => "http://something" },
          ),
       )->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id );
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id );
       })->then( sub {
          await_sync( $invitee, check => sub {
             my ( $body ) = @_;
@@ -404,7 +406,7 @@ test "Users cannot invite a user that is already in the room",
    do => sub {
       my ( $creator, $room_id, $invitee ) = @_;
 
-      matrix_join_room( $invitee, $room_id )->then( sub {
+      matrix_join_room_synced( $invitee, $room_id )->then( sub {
          matrix_invite_user_to_room( $creator, $invitee, $room_id )
             ->main::expect_http_403;
       });
@@ -419,7 +421,7 @@ multi_test "Test that we can be reinvited to a room we created",
 
       my $room_id;
 
-      matrix_create_room( $user_1 )
+      matrix_create_room_synced( $user_1 )
          ->SyTest::pass_on_done( "User A created a room" )
       ->then( sub {
          ( $room_id ) = @_;
@@ -430,7 +432,7 @@ multi_test "Test that we can be reinvited to a room we created",
          )->SyTest::pass_on_done( "User A set the join rules to 'invite'" )
       })->then( sub {
 
-         matrix_invite_user_to_room( $user_1, $user_2, $room_id )
+         matrix_invite_user_to_room_synced( $user_1, $user_2, $room_id )
             ->SyTest::pass_on_done( "User A invited user B" )
       })->then( sub {
 
@@ -442,7 +444,7 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User B received the invite from A" )
       })->then( sub {
 
-         matrix_join_room( $user_2, $room_id )
+         matrix_join_room_synced( $user_2, $room_id )
             ->SyTest::pass_on_done( "User B joined the room" )
       })->then( sub {
 
@@ -453,7 +455,7 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User A set user B's power level to 100" )
       })->then( sub {
 
-         matrix_leave_room( $user_1, $room_id )
+         matrix_leave_room_synced( $user_1, $room_id )
             ->SyTest::pass_on_done( "User A left the room" )
       })->then( sub {
          await_sync_timeline_contains( $user_2, $room_id,  check => sub {
@@ -463,7 +465,7 @@ multi_test "Test that we can be reinvited to a room we created",
          })->SyTest::pass_on_done( "User B received the leave event" )
       })->then( sub {
 
-         matrix_invite_user_to_room( $user_2, $user_1, $room_id )
+         matrix_invite_user_to_room_synced( $user_2, $user_1, $room_id )
             ->SyTest::pass_on_done( "User B invited user A back to the room" )
       })->then( sub {
 
@@ -476,7 +478,7 @@ multi_test "Test that we can be reinvited to a room we created",
       })->then( sub {
 
          retry_until_success {
-            matrix_join_room( $user_1, $room_id )
+            matrix_join_room_synced( $user_1, $room_id )
          }->SyTest::pass_on_done( "User A joined the room" )
       })->then_done(1);
    };

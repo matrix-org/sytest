@@ -34,24 +34,21 @@ sub sync_until_user_in_device_list_id
 
    log_if_fail "$msg: waiting for $wait_for_id in $device_list";
 
-   return repeat_until_true {
-      matrix_sync_again( $syncing_user, timeout => 1000 )
-      ->then( sub {
+   return await_sync( $syncing_user, 
+      update_next_batch => 1,
+      check => sub {
          my ( $body ) = @_;
-
          log_if_fail "$msg: body", $body;
 
-         if(
+         return unless
             $body->{device_lists} &&
             $body->{device_lists}{$device_list} &&
-            any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} }
-         ) {
-            log_if_fail "$msg: found $wait_for_id in $device_list";
-            return Future->done( $body );
-         }
-         return Future->done(0);
-      });
-   };
+            any { $_ eq $wait_for_id } @{ $body->{device_lists}{$device_list} };
+
+         log_if_fail "$msg: found $wait_for_id in $device_list";
+         return $body;
+      },
+   )
 }
 
 
@@ -64,10 +61,10 @@ test "Local device key changes appear in v2 /sync",
 
       my $room_id;
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -87,29 +84,16 @@ test "Local new device changes appear in v2 /sync",
 
       my ( $room_id );
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
          matrix_login_again_with_user( $user2 )
       })->then( sub {
-         retry_until_success {
-            matrix_sync_again( $user1, timeout => 1000 )
-            ->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Body", $body;
-
-               Future->done(
-                  $body->{device_lists} &&
-                  $body->{device_lists}{changed} &&
-                  any { $_ eq $user2->user_id } @{ $body->{device_lists}{changed} }
-               );
-            });
-         };
+         sync_until_user_in_device_list( $user1, $user2 );
       });
    };
 
@@ -122,10 +106,10 @@ test "Local delete device changes appear in v2 /sync",
 
       my $room_id;
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -153,10 +137,10 @@ test "Local update device changes appear in v2 /sync",
 
       my ( $room_id );
 
-      matrix_create_room( $user1 )->then( sub {
+      matrix_create_room_synced( $user1 )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user2, $room_id );
+         matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
@@ -314,10 +298,10 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
          try_repeat_until_success {
-            matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
+            matrix_invite_user_to_room_synced( $creator, $remote_leaver, $room_id )
          }
       })->then( sub {
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          retry_until_success {
             matrix_sync_again( $creator, timeout => 1000 )
@@ -390,7 +374,7 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
 
          # now one of the remote users leaves the room...
-         matrix_leave_room( $remote_leaver, $room_id );
+         matrix_leave_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          log_if_fail "Remote_leaver " . $remote_leaver->user_id . " left room";
 
@@ -423,14 +407,14 @@ test "If remote user leaves room we no longer receive device updates",
          # sure that remote_leaver *doesn't* appear in the meantime.
 
          my $wait_for_id = $remote2->user_id;
-         retry_until_success {
+         retry_until_success sub {
             matrix_sync_again( $creator, timeout => 1000 )
             ->then( sub {
                 my ( $body ) = @_;
 
                 log_if_fail "waiting for $wait_for_id in 'changed'", $body;
 
-                return Future->done(0) unless
+                die "No device_lists->changed entry" unless
                    $body->{device_lists} &&
                    $body->{device_lists}{changed};
 
@@ -463,17 +447,15 @@ test "Local device key changes appear in /keys/changes",
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $from_token = $body->{next_batch};
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_put_e2e_keys ( $user2 )
       })->then( sub {
          matrix_sync_again( $user1 );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $to_token = $body->{next_batch};
+         my ( $sync_result ) = @_;
+         $to_token = $sync_result->{next_batch};
 
          do_request_json_for( $user1,
             method => "GET",
@@ -511,17 +493,15 @@ test "New users appear in /keys/changes",
 
          matrix_sync( $user1 );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $from_token = $body->{next_batch};
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
          matrix_sync_again( $user1 );
       })->then( sub {
-         my ( $body ) = @_;
-
-         $to_token = $body->{next_batch};
+         my ( $sync_result ) = @_;
+         $to_token = $sync_result->{next_batch};
 
          do_request_json_for( $user1,
             method => "GET",
@@ -571,7 +551,8 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
-         $from_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
@@ -580,14 +561,15 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
          try_repeat_until_success {
-            matrix_invite_user_to_room( $creator, $remote_leaver, $room_id )
+            matrix_invite_user_to_room_synced( $creator, $remote_leaver, $room_id )
          }
       })->then( sub {
-         matrix_join_room( $remote_leaver, $room_id );
+         matrix_join_room_synced( $remote_leaver, $room_id );
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
-         $to_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $to_token = $sync_result->{next_batch};
 
          do_request_json_for( $creator,
             method => "GET",
@@ -637,7 +619,8 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
       })->then( sub {
          sync_until_user_in_device_list( $creator, $other_user );
       })->then( sub {
-         $from_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_leave_room_synced( $other_user, $room_id )
       })->then( sub {
@@ -646,13 +629,15 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
             device_list => "left",
          );
       })->then( sub {
+         my ( $sync_result ) = @_;
+
          do_request_json_for( $creator,
             method => "GET",
             uri    => "/v3/keys/changes",
 
             params => {
                from => $from_token,
-               to   => $creator->sync_next_batch,
+               to   => $sync_result->{next_batch},
             }
          )
       })->then( sub {
@@ -691,7 +676,8 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
       })->then( sub {
          sync_until_user_in_device_list( $creator, $other_user );
       })->then( sub {
-         $from_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
@@ -700,13 +686,15 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
             device_list => "left",
          );
       })->then( sub {
+         my ( $sync_result ) = @_;
+
          do_request_json_for( $creator,
             method => "GET",
             uri    => "/v3/keys/changes",
 
             params => {
                from => $from_token,
-               to   => $creator->sync_next_batch,
+               to   => $sync_result->{next_batch},
             }
          )
       })->then( sub {
@@ -748,7 +736,8 @@ test "If user leaves room, remote user changes device and rejoins we see update 
             $creator, $remote_user, msg => 'First body',
          );
       })->then( sub {
-         $from_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $from_token = $sync_result->{next_batch};
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
@@ -756,8 +745,8 @@ test "If user leaves room, remote user changes device and rejoins we see update 
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
-         retry_until_success {
-           matrix_invite_user_to_room( $remote_user, $creator, $room_id 
+         retry_until_success sub {
+           matrix_invite_user_to_room_synced( $remote_user, $creator, $room_id 
            )->then( sub {
                Future->done(1);
             })
@@ -769,7 +758,8 @@ test "If user leaves room, remote user changes device and rejoins we see update 
             $creator, $remote_user, msg => 'Second body',
          );
       })->then( sub {
-         $to_token = $creator->sync_next_batch;
+         my ( $sync_result ) = @_;
+         $to_token = $sync_result->{next_batch};
 
          do_request_json_for( $creator,
             method => "GET",

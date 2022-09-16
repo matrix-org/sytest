@@ -10,7 +10,7 @@ test "Can search for an event by body",
 
       my ( $event_id );
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "hello, world",
       )->then( sub {
          ( $event_id ) = @_;
@@ -45,7 +45,7 @@ test "Can search for an event by body",
 
          assert_json_keys( $result, qw( rank result ) );
          assert_json_keys( $result->{result}, qw(
-            event_id room_id user_id content type
+            event_id room_id content type
          ));
 
          $result->{result}{content}{body} eq "hello, world"
@@ -81,7 +81,7 @@ test "Can get context around search results",
       repeat( sub {
          my $msgnum = $_[0];
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "Message number $msgnum"
          )->on_done( sub { ( $event_ids[$msgnum] ) = @_ } );
       }, foreach => [ 1 .. 7 ] )->then( sub {
@@ -143,7 +143,7 @@ test "Can back-paginate search results",
 
         repeat( sub {
             my $msgnum = $_[0];
-            matrix_send_room_text_message( $user, $room_id,
+            matrix_send_room_text_message_synced( $user, $room_id,
                                            body => "Message number $msgnum" )
                 ->on_done( sub { ( $event_ids[$msgnum] ) = @_ } )
         }, foreach => [ 0 .. 19 ] )->then( sub {
@@ -240,7 +240,7 @@ test "Search works across an upgraded room and its predecessor",
 
       my ( $event_id_one, $event_id_two );
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "message 1",
       )->then( sub {
          ( $event_id_one ) = @_;
@@ -252,7 +252,7 @@ test "Search works across an upgraded room and its predecessor",
       })->then( sub {
          my ( $new_room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $new_room_id,
+         matrix_send_room_text_message_synced( $user, $new_room_id,
             body => "message 2",
          );
       })->then( sub {
@@ -288,7 +288,7 @@ test "Search works across an upgraded room and its predecessor",
 
          assert_json_keys( $result, qw( rank result ) );
          assert_json_keys( $result->{result}, qw(
-            event_id room_id user_id content type
+            event_id room_id content type
          ));
 
          $result->{result}{content}{body} eq "message 1"
@@ -298,7 +298,7 @@ test "Search works across an upgraded room and its predecessor",
 
          assert_json_keys( $result_two, qw( rank result ) );
          assert_json_keys( $result_two->{result}, qw(
-            event_id room_id user_id content type
+            event_id room_id content type
          ));
 
          $result_two->{result}{content}{body} eq "message 2"
@@ -319,12 +319,12 @@ foreach my $ordering_type ( qw ( rank recent ) ) {
 
          my ( $event_id_one, $event_id_two );
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "message 1",
          )->then( sub {
             ( $event_id_one ) = @_;
 
-            matrix_send_room_text_message( $user, $room_id,
+            matrix_send_room_text_message_synced( $user, $room_id,
                body => "message 2",
             );
          })->then( sub {
@@ -367,7 +367,7 @@ foreach my $ordering_type ( qw ( rank recent ) ) {
 
             assert_json_keys( $result, qw( rank result ) );
             assert_json_keys( $result->{result}, qw(
-               event_id room_id user_id content type
+               event_id room_id content type
             ));
 
             $result->{result}{content}{body} eq "message 2"

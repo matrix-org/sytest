@@ -19,6 +19,7 @@ use Future;
 
 package SyTest::Homeserver::Dendrite::Base;
 use base qw( SyTest::Homeserver );
+use YAML::XS ();
 
 use Carp;
 use POSIX qw( WIFEXITED WEXITSTATUS );
@@ -51,9 +52,9 @@ sub start
    $self->{paths}{tls_key} = "$hs_dir/server.key";
    $self->{paths}{matrix_key} = "$hs_dir/matrix_key.pem";
 
-   my %config = $self->_get_config;
+   my $config = $self->_get_config;
 
-   $self->{paths}{config} = $self->write_yaml_file( "dendrite.yaml" => \%config );
+   $self->{paths}{config} = $self->write_yaml_file( "dendrite.yaml" => $config );
 
    return $self->_generate_keyfiles;
 }
@@ -85,7 +86,6 @@ sub _get_config
       args => {},
    );
 
-
    my $db_uri = sprintf(
       'postgresql://%s:%s@%s/%s?sslmode=%s',
       $db_config{args}->{user},
@@ -95,151 +95,38 @@ sub _get_config
       $db_config{args}->{sslmode},
    );
 
-   return (
-      version => 2,
-      global => {
-         server_name => $self->server_name,
-         private_key => $self->{paths}{matrix_key},
-         presence_enabled => $JSON::true,
+   # Execute generate-config and parse the result YAML.
+   local $YAML::XS::Boolean = "JSON::PP";
+   my $command = $self->{bindir} . "/generate-config -ci -dir $self->{hs_dir}";
+   if (defined $ENV{'POSTGRES'} && $ENV{'POSTGRES'} != '0') {
+      $command = $command . " -db $db_uri"
+   }
+   my $output = qx($command);
+   my $config = YAML::XS::Load $output;
 
-         jetstream => {
-             storage_path => $self->{hs_dir},
-             in_memory => $JSON::true,
-         },
-      },
-
-      app_service_api => {
-         database => {
-            connection_string =>
-                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                "file:$self->{hs_dir}/appservice_api.db" : $db_uri,
-         },
-         config_files => $self->{app_service_config_files} ? $self->{app_service_config_files} : [],
-         disable_tls_validation => $JSON::true,
-      },
-
-      client_api => {
-         database => {
-            connection_string =>
-                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                "file:$self->{hs_dir}/client_api.db" : $db_uri,
-         },
-         registration_shared_secret => "reg_secret",
-
-         $self->{recaptcha_config} ? (
-            # here "true" gets written as a quote-less string, which in yaml is
-            # a boolean value
-            # Disabled until #592 is resolved
-            # enable_registration_captcha => "true",
-            recaptcha_siteverify_api => $self->{recaptcha_config}->{siteverify_api},
-            recaptcha_public_key     => $self->{recaptcha_config}->{public_key},
-            recaptcha_private_key    => $self->{recaptcha_config}->{private_key},
-         ) : (),
-
-         rate_limiting => {
-            enabled => $JSON::false,
-         },
-      },
-
-      current_state_server => {
-          database => {
-             connection_string =>
-                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                "file:$self->{hs_dir}/current_state_server.db" : $db_uri,
-          },
-      },
-
-      federation_api => {
-         database => {
-             connection_string =>
-                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                "file:$self->{hs_dir}/federation_sender.db" : $db_uri,
-         },
-         disable_tls_validation => $JSON::true,
-         federation_certificates => [$self->{paths}{tls_cert}],
-      },
-
-      key_server => {
-         database => {
-             connection_string =>
-                ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-                "file:$self->{hs_dir}/key_server.db" : $db_uri,
-         },
-      },
-
-      media_api => {
-         database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/media_api.db" : $db_uri,
-         },
-         base_path => "$self->{hs_dir}/media_store",
-      },
-
-      mscs => {
-         database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/mscs.db" : $db_uri,
-         },
-         mscs => ["msc2836", "msc2946", "msc2444", "msc2753"],
-      },
-
-      room_server => {
-         database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/room_server.db" : $db_uri,
-         },
-      },
-
-      sync_api => {
-         database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/sync_api.db" : $db_uri,
-         },
-      },
-
-      user_api => {
-         push_gateway_disable_tls_validation => $JSON::true,
-         account_database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/accounts.db" : $db_uri,
-         },
-         device_database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/devices.db" : $db_uri,
-         },
-         presence_database => {
-            connection_string =>
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/presence.db" : $db_uri,
-         },
-         threepid_database => {
-            connection_string => 
-               ( ! defined $ENV{'POSTGRES'} || $ENV{'POSTGRES'} == '0') ?
-               "file:$self->{hs_dir}/threepids.db" : $db_uri,
-         },
-         email => {
-            enabled => JSON::true,
-            from => 'synapse@localhost',
-            smtp => {
-               host => $self->{smtp_server_config}->{host} . ':' . $self->{smtp_server_config}->{port},
-            },
-         },
-      },
-
-      logging => [{
+   # Set SyTest specific values.
+   $config->{global}->{server_name} = $self->server_name;
+   $config->{global}->{private_key} = $self->{paths}{matrix_key};
+   $config->{global}->{server_notices}->{enabled} = $JSON::false;
+   $config->{app_service_api}->{config_files} = $self->{app_service_config_files} ? $self->{app_service_config_files} : [];
+   $config->{client_api}->{registration_shared_secret} = "reg_secret";
+   $config->{federation_api}->{federation_certificates} = [$self->{paths}{tls_cert}];
+   $config->{federation_api}->{disable_tls_validation} = $JSON::true;
+   $config->{user_api}->{push_gateway_disable_tls_validation} = $JSON::true;
+   $config->{logging} = [{
          type => 'file',
          level => 'trace',
          params => {
             path => "$self->{hs_dir}/dendrite-logs",
          },
-      }],
-   );
+      }];
+   if ( $self->{recaptcha_config}) {
+      $config->{client_api}->{enable_registration_captcha} = $JSON::false; # disabled for now
+      $config->{client_api}->{recaptcha_siteverify_api} = $self->{recaptcha_config}->{siteverify_api};
+      $config->{client_api}->{recaptcha_public_key} = $self->{recaptcha_config}->{public_key};
+      $config->{client_api}->{recaptcha_private_key} = $self->{recaptcha_config}->{private_key};
+   }
+   return $config;
 }
 
 # run the process to generate the key files
@@ -345,8 +232,8 @@ sub start
 sub _get_config
 {
    my $self = shift;
-   my %config = $self->SUPER::_get_config();
-   return %config;
+   my $config = $self->SUPER::_get_config();
+   return $config;
 }
 
 # start the monolith binary, and return a future which will resolve once it is
@@ -357,6 +244,7 @@ sub _start_monolith
 
    my $output = $self->{output};
    my $loop = $self->loop;
+   my $idx = $self->{hs_index};
 
    $output->diag( "Starting monolith server" );
    my @command = (
@@ -367,6 +255,7 @@ sub _start_monolith
       '--api-bind-address', $self->{bind_host} . ':1' . $self->unsecure_port,
       '--tls-cert', $self->{paths}{tls_cert},
       '--tls-key', $self->{paths}{tls_key},
+      '--really-enable-open-registration',
    );
 
    push(@command, '-api') if $ENV{'API'} == '1';
@@ -384,6 +273,7 @@ sub _start_monolith
       command => [ @command ],
       connect_host => $self->{bind_host},
       connect_port => $self->secure_port,
+      name => "dendrite-$idx-monolith",
    )->else( sub {
       die "Unable to start dendrite monolith: $_[0]\n";
    })->on_done( sub {

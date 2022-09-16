@@ -56,21 +56,21 @@ multi_test "Test that rejected pushers are removed.",
 
       my $url = $test_server_info->client_location . $PUSH_LOCATION;
 
-      matrix_create_room( $alice, visibility => "private" )->then( sub {
+      matrix_create_room_synced( $alice, visibility => "private" )->then( sub {
          ( $room_id ) = @_;
 
-         matrix_invite_user_to_room( $alice, $bob, $room_id );
+         matrix_invite_user_to_room_synced( $alice, $bob, $room_id );
       })->then( sub {
-         matrix_join_room( $bob, $room_id );
+         matrix_join_room_synced( $bob, $room_id );
       })->then( sub {
-         matrix_send_room_text_message(
+         matrix_send_room_text_message_synced(
             $bob, $room_id, body => "message"
          );
       })->then( sub {
          my ( $event_id ) = @_;
 
          # Set a read receipt so that we pushed for the subsequent messages.
-         matrix_advance_room_receipt( $alice, $room_id,
+         matrix_advance_room_receipt_synced( $alice, $room_id,
             "m.read" => $event_id
          );
       })->then( sub {
@@ -99,7 +99,7 @@ multi_test "Test that rejected pushers are removed.",
             Future->needs_all(
                wait_for_push( "key_1" ),
                wait_for_push( "key_2" ),
-               matrix_send_room_text_message( $bob, $room_id, body => "message" )
+               matrix_send_room_text_message_synced( $bob, $room_id, body => "message" )
             )
          }->SyTest::pass_on_done( "Message 1 Pushed" );
       })->then( sub {
@@ -107,7 +107,7 @@ multi_test "Test that rejected pushers are removed.",
          Future->needs_all(
             wait_for_push( "key_1", { rejected => [ "key_1" ] } ),
             wait_for_push( "key_2" ),
-            matrix_send_room_text_message( $bob, $room_id, body => "message" )
+            matrix_send_room_text_message_synced( $bob, $room_id, body => "message" )
          )->SyTest::pass_on_done( "Message 2 Pushed" );
       })->then( sub {
          retry_until_success {

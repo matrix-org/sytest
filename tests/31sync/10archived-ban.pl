@@ -37,11 +37,11 @@ test "Banned rooms appear in the leave section of sync",
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user_b, $room_id );
+         matrix_join_room_synced( $user_b, $room_id );
       })->then( sub {
          ban_user_synced( $user_a, $user_b, $room_id );
       })->then( sub {
@@ -74,11 +74,11 @@ test "Newly banned rooms appear in the leave section of incremental sync",
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user_b, $room_id);
+         matrix_join_room_synced( $user_b, $room_id);
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
@@ -113,11 +113,11 @@ test "Newly banned rooms appear in the leave section of incremental sync",
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $user_b, $room_id);
+         matrix_join_room_synced( $user_b, $room_id);
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {

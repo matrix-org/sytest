@@ -133,6 +133,10 @@ The C<since> parameter can be specified to give a particular starting stream
 token. If not specified then it will default to using $user->sync_next_batch,
 falling back to doing a full sync if that doesn't exist either.
 
+The C<update_next_batch> parameter determines whether or not to update the
+$user->sync_next_batch with the next token from the sync response.
+Defaults to 0 if not specified.
+
 =cut
 
 sub await_sync {
@@ -140,6 +144,7 @@ sub await_sync {
 
    my $check = delete $params{check} or die "Must supply a 'check' param";
    $params{timeout} = $params{timeout} // 1000;
+   $params{update_next_batch} //= 0;
 
    my $next_batch = delete $params{since} // $user->sync_next_batch;
    if ( $next_batch ) {
@@ -149,7 +154,6 @@ sub await_sync {
    repeat {
       matrix_sync( $user,
          %params,
-         update_next_batch => 0,
          set_presence      => "offline",
       )->then( sub {
          my ( $body ) = @_;

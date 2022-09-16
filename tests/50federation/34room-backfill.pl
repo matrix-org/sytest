@@ -150,7 +150,7 @@ test "Inbound federation can backfill events",
 
       # Create some past messages to backfill from
       ( repeat {
-         matrix_send_room_text_message( $creator, $room_id,
+         matrix_send_room_text_message_synced( $creator, $room_id,
             body => "Message $_[0] here",
          )
       } foreach => [ 1 .. 10 ] )->then( sub {
@@ -219,7 +219,7 @@ test "Backfill checks the events requested belong to the room",
          user_id     => $fed_user_id,
       )->then( sub {
          # Send an event into the private room
-         matrix_send_room_text_message( $priv_creator, $priv_room_id,
+         matrix_send_room_text_message_synced( $priv_creator, $priv_room_id,
             body => "Hello world",
          )
       })->then( sub {
@@ -304,6 +304,8 @@ test "Backfilled events whose prev_events are in a different room do not allow c
 
       log_if_fail "events P, Q, R, S", [ $event_id_P, $event_id_Q, $event_id_R, $event_id_S ];
 
+      my $state_req_fut;
+
       Future->needs_all(
          # kick things off by sending S over federation
          $outbound_client->send_event(
@@ -338,7 +340,7 @@ test "Backfilled events whose prev_events are in a different room do not allow c
             $room2_id, $event_id_Q,
          )->then( sub {
             my ( $req, @params ) = @_;
-            log_if_fail "/state_ids request", \@params;
+            log_if_fail "/state_ids request (1)", \@params;
 
             my %state  = %{ $room2->{current_state} };
             my $resp = {
@@ -352,7 +354,15 @@ test "Backfilled events whose prev_events are in a different room do not allow c
                auth_chain_ids => $room2->event_ids_from_refs( $event_Q->{auth_events} ),
             };
 
-            log_if_fail "/state_ids response", $resp;
+            log_if_fail "/state_ids response (1)", $resp;
+
+            # once we respond to /state_ids, the server may send a /state request;
+            # be prepared to answer that.  (it may, alternatively, send individual
+            # /event requests)
+            $state_req_fut = await_and_handle_request_state(
+               $inbound_server, $room2, $event_id_Q, [ values( %state ) ]
+            );
+
             $req->respond_json( $resp );
             Future->done(1);
          }),
@@ -363,14 +373,18 @@ test "Backfilled events whose prev_events are in a different room do not allow c
             destination => $synapse_server_name,
          );
       })->then( sub {
-         # wait for S to arrive
          log_if_fail "Awating arrival of event S $event_id_S in room $room2_id";
 
-         await_sync_timeline_contains(
-            $creator_user, $room2_id,
-            check => sub {
-               $_[0]->{event_id} eq $event_id_S
-            },
+         # wait for either S to turn up in /sync, or $state_req_fut to fail.
+         Future->wait_any(
+            $state_req_fut->then( sub { Future->new() } ),
+
+            await_sync_timeline_contains(
+               $creator_user, $room2_id,
+               check => sub {
+                  $_[0]->{event_id} eq $event_id_S
+               },
+            ),
          );
       })->then( sub {
          my $filter = $json->encode( { room => { timeline => { limit => 2 }}} );
@@ -392,7 +406,7 @@ test "Backfilled events whose prev_events are in a different room do not allow c
             $room2_id, $event_id_Q,
          )->then( sub {
             my ( $req, @params ) = @_;
-            log_if_fail "/state_ids request", \@params;
+            log_if_fail "/state_ids request (2)", \@params;
 
             my %state  = %{ $room2->{current_state} };
             my $resp = {
@@ -402,47 +416,51 @@ test "Backfilled events whose prev_events are in a different room do not allow c
                auth_chain_ids => $room2->event_ids_from_refs( $event_Q->{auth_events} ),
             };
 
-            log_if_fail "/state_ids response", $resp;
+            log_if_fail "/state_ids response (2)", $resp;
             $req->respond_json( $resp );
-            Future->done(1);
+
+            # return a future which never completes, so that wait_any is not
+            # satisfied.
+            return Future->new();
          });
 
          # now back-paginate, and provide event Q when the
          # server backfills.
-         Future->needs_all(
-            do_request_json_for(
-               $creator_user,
-               method => "GET",
-               uri    => "/v3/rooms/$room2_id/messages",
-               params => {
-                  dir  => "b",
-                  from => $prev_batch,
-               },
-            )->on_done(sub {
-               my ( $resp ) = @_;
-               log_if_fail "Pagination request completed", $resp;
-            }),
+         Future->wait_any(
+            $state_ids_fut,
 
-            $inbound_server->await_request_backfill( $room2_id )->then( sub {
-               my ( $req, @params ) = @_;
+            Future->needs_all(
+               do_request_json_for(
+                  $creator_user,
+                  method => "GET",
+                  uri    => "/v3/rooms/$room2_id/messages",
+                  params => {
+                     dir  => "b",
+                     from => $prev_batch,
+                  },
+               )->on_done(sub {
+                  my ( $resp ) = @_;
+                  log_if_fail "Pagination request completed", $resp;
+               }),
 
-               log_if_fail "Incoming /backfill request", \@params;
+               $inbound_server->await_request_backfill( $room2_id )->then( sub {
+                  my ( $req, @params ) = @_;
 
-               $req->respond_json( {
-                  origin           => $inbound_server->server_name,
-                  origin_server_ts => $inbound_server->time_ms,
-                  pdus             => [
-                     $event_Q,
-                  ],
-               });
-               Future->done;
-            }),
+                  log_if_fail "Incoming /backfill request", \@params;
+
+                  $req->respond_json( {
+                     origin           => $inbound_server->server_name,
+                     origin_server_ts => $inbound_server->time_ms,
+                     pdus             => [
+                        $event_Q,
+                     ],
+                  });
+                  Future->done;
+               }),
+            ),
          )->then( sub {
              my ( $messages ) = @_;
              log_if_fail "/messages result", $messages;
-
-             # cancel the state_ids responder, if it didn't get used.
-             $state_ids_fut->cancel();
 
              # ensure that P does not feature in the list.
              die 'too few events' if @{$messages->{chunk}} < 2;

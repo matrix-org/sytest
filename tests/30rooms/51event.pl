@@ -27,7 +27,7 @@ test "/event/ on joined room works",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "hello, world",
       )->then( sub {
          my ( $event_id ) = @_;
@@ -54,7 +54,7 @@ test "/event/ on non world readable room does not work",
    check => sub {
       my ( $user, $room_id, $other_user ) = @_;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "hello, world",
       )->then( sub {
          my ( $event_id ) = @_;
@@ -80,11 +80,11 @@ test "/event/ does not allow access to events before the user joined",
       matrix_set_room_history_visibility(
          $user, $room_id, "joined",
       )->then( sub {
-         matrix_invite_user_to_room(
+         matrix_invite_user_to_room_synced(
             $user, $other_user, $room_id,
          );
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "before join",
          );
       })->then( sub {
@@ -92,7 +92,7 @@ test "/event/ does not allow access to events before the user joined",
 
          matrix_join_room_synced( $other_user, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "after join",
          );
       })->then( sub {

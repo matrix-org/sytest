@@ -68,7 +68,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: sytest
-
+          
       # TODO the shell script below is nicked from complement. We use this pattern
       # in a few places. Can we make this an Action so it's easier to reuse?
       - name: Fetch corresponding synapse branch
@@ -122,6 +122,7 @@ jobs:
   dendrite:
     runs-on: ubuntu-latest
     name: "Dendrite: ${{ matrix.label }}"
+
     strategy:
       fail-fast: false
       matrix:

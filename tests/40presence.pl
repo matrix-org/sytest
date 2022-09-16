@@ -145,3 +145,29 @@ test "Newly created users see their own presence in /initialSync (SYT-34)",
          Future->done(1);
       });
    };
+
+test "Presence can be set from sync",
+    requires => [ $senduser_fixture, $local_user_fixture ],
+
+    proves => [qw( can_sync )],
+
+    do => sub {
+       my ( $senduser, $recvuser ) = @_;
+
+       matrix_sync( $senduser, timeout => 0, set_presence => 'unavailable' ) ->then( sub {
+          my ( $body ) = @_;
+
+          await_sync_presence_contains( $recvuser, check => sub {
+             my ( $event ) = @_;
+             return unless $event->{type} eq "m.presence";
+
+             assert_json_keys( $event, qw( type content sender ));
+             assert_json_keys( $event->{content}, qw( presence last_active_ago ));
+             $event->{sender} eq $senduser->user_id or return;
+             $event->{content}->{presence} eq 'unavailable' or
+                die "Expected content presence to be 'unavailable'";
+
+             return 1;
+          });
+       })->then_done(1);
+    };

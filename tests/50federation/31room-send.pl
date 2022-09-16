@@ -42,7 +42,7 @@ test "Outbound federation can send events",
                Future->done(1);
             }),
 
-            matrix_send_room_text_message( $user, $room_id, body => "Hello" ),
+            matrix_send_room_text_message_synced( $user, $room_id, body => "Hello" ),
          );
       });
    };

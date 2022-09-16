@@ -1,18 +1,16 @@
 # SyTest Docker Images
 
 These Dockerfiles create containers for running SyTest in various
-configurations. SyTest is not included in these images (see 
+configurations. SyTest is not included in these images (see
 [Selecting a checkout of SyTest](#selecting-a-sytest-checkout)),
 but its dependencies are.
 
 Included currently is:
 
 - `matrixdotorg/sytest` Base container with SyTest dependencies installed
-    - Tagged by underlying Debian/Ubuntu image: `focal`, `buster` or `testing`
+  - Tagged by underlying Debian/Ubuntu image: `focal`, `buster` or `testing`
 - `matrixdotorg/sytest-synapse`: Runs SyTest against Synapse
-    - Tagged by underlying Debian/Ubunutu image: `focal`, `buster` or `testing`
-- `matrixdotorg/sytest-dendrite:go113`: Runs SyTest against Dendrite on Go 1.13
-    - Currently uses Debian 10 (Buster) as its base image
+  - Tagged by underlying Debian/Ubunutu image: `focal`, `buster` or `testing`
 
 ## Target-specific details
 
@@ -30,34 +28,22 @@ docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs
 
 The following environment variables can be set with `-e` to control the test run:
 
- * `POSTGRES`: set non-empty to test against a PostgreSQL database instead of sqlite.
- * `WORKERS`: set non-empty to test a worker-mode deployment rather than a
-   monolith. Requires `POSTGRES`.
- * `REDIS`: set non-empty to use redis replication rather than old
-   TCP. Requires `WORKERS`.
- * `OFFLINE`: set non-empty to avoid updating the python or perl dependencies.
- * `BLACKLIST`: set non-empty to change the default blacklist file to the
-   specified path relative to the Synapse directory
- * `TIMEOUT_FACTOR`: sets a number that test timeouts are multiplied by.
+- `POSTGRES`: set non-empty to test against a PostgreSQL database instead of SQLite.
+- `MULTI_POSTGRES`: set non-empty (along with `POSTGRES`) to test against multiple
+  PostgreSQL databases where the main store and state store are split.
+- `WORKERS`: set non-empty to test a worker-mode deployment rather than a
+  monolith. Requires `POSTGRES`.
+- `OFFLINE`: set non-empty to avoid updating the python or perl dependencies.
+- `BLACKLIST`: set non-empty to change the default blacklist file to the
+  specified path relative to the Synapse directory
+- `TIMEOUT_FACTOR`: sets a number that test timeouts are multiplied by.
 
-Some examples of running Synapse in different configurations:
+An example of running Synapse in worker mode:
 
-* Running Synapse in worker mode using
-[TCP-replication](https://github.com/matrix-org/synapse/blob/master/docs/tcp_replication.md):
-
-  ```
-  docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -v /path/to/synapse\:/src:ro \
-      -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:buster
-  ```
-
-* Running Synapse in worker mode using redis:
-
-  ```
-  docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -e REDIS=1 \
-       -v /path/to/synapse\:/src:ro \
-       -v /path/to/where/you/want/logs\:/logs \
-       matrixdotorg/sytest-synapse:buster
-  ```
+```
+docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -v /path/to/synapse\:/src:ro \
+    -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:buster
+```
 
 ### Dendrite
 

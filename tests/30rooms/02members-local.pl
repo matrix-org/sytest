@@ -21,11 +21,11 @@ my $room_fixture = fixture(
       Future->needs_all(
          map { flush_events_for( $_ ) } $creator, $local_user
       )->then( sub {
-         matrix_create_room( $creator )
+         matrix_create_room_synced( $creator )
       })->then( sub {
          my ( $room_id ) = @_;
 
-         matrix_join_room( $local_user, $room_id )
+         matrix_join_room_synced( $local_user, $room_id )
             ->then_done( $room_id );
       });
    },

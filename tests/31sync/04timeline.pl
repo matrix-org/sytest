@@ -12,11 +12,11 @@ test "Can sync a room with a single message",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "Test message 1",
          );
       })->then( sub {
@@ -72,7 +72,7 @@ test "Can sync a room with a message with a transaction id",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -189,11 +189,11 @@ test "A filtered timeline reaches its limit",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "My message"
          );
       })->then( sub {
@@ -324,11 +324,11 @@ test "A prev_batch token can be used in the v1 messages API",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id, body => "1" );
+         matrix_send_room_text_message_synced( $user, $room_id, body => "1" );
       })->then( sub {
          ( $event_id_1 ) = @_;
 
@@ -383,7 +383,7 @@ test "A prev_batch token from incremental sync can be used in the v1 messages AP
 
       my ( $room_id, $event_id_1, $event_id_2 );
 
-      matrix_create_room( $user )
+      matrix_create_room_synced( $user )
       ->then( sub {
          ( $room_id ) = @_;
 
@@ -451,7 +451,7 @@ test "A next_batch token can be used in the v1 messages API",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -471,7 +471,7 @@ test "A next_batch token can be used in the v1 messages API",
 
          $next_batch = $body->{next_batch};
 
-         matrix_send_room_text_message( $user, $room_id, body => "2" );
+         matrix_send_room_text_message_synced( $user, $room_id, body => "2" );
       })->then( sub {
          ( $event_id_2 ) = @_;
 

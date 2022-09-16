@@ -355,7 +355,7 @@ test "Inbound /v1/make_join rejects remote attempts to join local users to rooms
 
       my $user_id = $user->user_id;
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $creator_user,
          room_version => "1",
       )->then( sub {
@@ -427,7 +427,7 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
       my $join_event;
       my $room_version;
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $creator_user,
       )->then( sub {
          ( $room_id ) = @_;
@@ -560,7 +560,7 @@ test "Inbound /v1/send_join rejects joins from other servers",
          log_if_fail "Found join event", $join_event;
 
          Future->needs_all(
-            matrix_leave_room( $joiner_user, $room_id ),
+            matrix_leave_room_synced( $joiner_user, $room_id ),
 
             # make sure that the leave propagates back to server-0
             await_sync_timeline_contains(
@@ -606,7 +606,7 @@ test "Inbound federation rejects remote attempts to kick local users to rooms",
 
       my $user_id = $creator_user->user_id;
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $creator_user,
       )->then( sub {
          my ( $room_id ) = @_;
@@ -637,7 +637,7 @@ test "Inbound federation rejects attempts to join v1 rooms from servers without 
       my ( $outbound_client, $creator_user, $user_id ) = @_;
       my $first_home_server = $creator_user->server_name;
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $creator_user,
          room_version => "1",
       )->then( sub {
@@ -673,7 +673,7 @@ test "Inbound federation rejects attempts to join v2 rooms from servers lacking 
       my ( $outbound_client, $creator_user, $user_id ) = @_;
       my $first_home_server = $creator_user->server_name;
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $creator_user,
          room_version => '2',
       )->then( sub {
@@ -706,7 +706,7 @@ test "Inbound federation rejects attempts to join v2 rooms from servers only sup
       my ( $outbound_client, $creator_user, $user_id ) = @_;
       my $first_home_server = $creator_user->server_name;
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $creator_user,
          room_version => '2',
       )->then( sub {
@@ -742,7 +742,7 @@ test "Inbound federation accepts attempts to join v2 rooms from servers with sup
       my ( $outbound_client, $creator_user, $user_id ) = @_;
       my $first_home_server = $creator_user->server_name;
 
-      matrix_create_room(
+      matrix_create_room_synced(
          $creator_user,
          room_version => '2',
       )->then( sub {
@@ -1132,7 +1132,7 @@ test "Membership event with an invalid displayname in the send_join response sho
       # join the room and wait for it to turn up in /sync
       matrix_do_and_wait_for_sync( $user,
          do => sub {
-            matrix_join_room( $user, $room_alias )->on_done( sub {
+            matrix_join_room_synced( $user, $room_alias )->on_done( sub {
                my ( $res ) = @_;
                log_if_fail "Joined room", $res;
             });

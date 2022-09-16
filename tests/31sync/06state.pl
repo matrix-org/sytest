@@ -21,7 +21,7 @@ test "State is included in the timeline in the initial sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -35,10 +35,10 @@ test "State is included in the timeline in the initial sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline ));
 
          # state from the timeline should *not* appear in the state dictionary
-         assert_json_empty_list( $room->{state}{events} );
+         assert_json_empty_list( $room->{state}{events} // [] );
 
          @{ $room->{timeline}{events} } == 1
             or die "Expected one timeline event";
@@ -76,7 +76,7 @@ test "State from remote users is included in the state in the initial sync",
         matrix_create_filter( $user, $filter )->then( sub {
             ( $filter_id ) = @_;
 
-            matrix_create_room( $remote_user );
+            matrix_create_room_synced( $remote_user );
         })->then( sub {
             ( $room_id ) = @_;
 
@@ -95,12 +95,12 @@ test "State from remote users is included in the state in the initial sync",
             my ( $body ) = @_;
 
             my $room = $body->{rooms}{join}{$room_id};
-            assert_json_keys( $room, qw( timeline state ephemeral ));
+            assert_json_keys( $room, qw( state ));
 
             @{ $room->{state}{events} } == 1
                 or die "Expected one state event";
 
-            assert_json_empty_list( $room->{timeline}{events} );
+            assert_json_empty_list( $room->{timeline}{events} // [] );
 
             my $event = $room->{state}{events}[0];
             $event->{type} eq "a.madeup.test.state"
@@ -134,7 +134,7 @@ test "Changes to state are included in an incremental sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -163,11 +163,11 @@ test "Changes to state are included in an incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline ));
          @{ $room->{timeline}{events} } == 1
             or die "Expected only one state event";
 
-         assert_json_empty_list( $room->{state}{events} );
+         assert_json_empty_list( $room->{state}{events} // [] );
 
          my $event = $room->{timeline}{events}[0];
          $event->{type} eq "a.madeup.test.state"
@@ -201,7 +201,7 @@ test "Changes to state are included in an gapped incremental sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user )
+         matrix_create_room_synced( $user )
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -237,7 +237,7 @@ test "Changes to state are included in an gapped incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
@@ -273,7 +273,7 @@ test "State from remote users is included in the timeline in an incremental sync
         matrix_create_filter( $user, $filter )->then( sub {
             ( $filter_id ) = @_;
 
-            matrix_create_room( $remote_user );
+            matrix_create_room_synced( $remote_user );
         })->then( sub {
             ( $room_id ) = @_;
             matrix_invite_user_to_room_synced(
@@ -303,9 +303,9 @@ test "State from remote users is included in the timeline in an incremental sync
             my ( $body ) = @_;
 
             my $room = $body->{rooms}{join}{$room_id};
-            assert_json_keys( $room, qw( timeline state ephemeral ));
+            assert_json_keys( $room, qw( timeline ));
 
-            assert_json_empty_list( $room->{state}{events} );
+            assert_json_empty_list( $room->{state}{events} // [] );
 
             @{ $room->{timeline}{events} } == 1
                 or die "Expected one timeline event";
@@ -338,7 +338,7 @@ test "A full_state incremental update returns all state",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -358,7 +358,7 @@ test "A full_state incremental update returns all state",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_empty_list( $body->{rooms}{join}{$room_id}{state}{events} );
+         assert_json_empty_list( $body->{rooms}{join}{$room_id}{state}{events} // [] );
 
          @{ $body->{rooms}{join}{$room_id}{timeline}{events} } == 2
              or die "Expected two timeline events";
@@ -376,7 +376,7 @@ test "A full_state incremental update returns all state",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw(timeline state ephemeral ));
+         assert_json_keys( $room, qw(timeline state ));
 
          @{ $room->{state}{events} } == 2
             or die "Expected two state events";
@@ -438,7 +438,7 @@ test "When user joins a room the state is included in the next sync",
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -461,7 +461,7 @@ test "When user joins a room the state is included in the next sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( state ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
@@ -496,7 +496,7 @@ test "A change to displayname should not result in a full state sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -615,7 +615,7 @@ test "When user joins a room the state is included in a gapped sync",
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a )
+         matrix_create_room_synced( $user_a )
       })->then( sub {
          ( $room_id ) = @_;
          matrix_put_room_state( $user_a, $room_id,
@@ -630,7 +630,7 @@ test "When user joins a room the state is included in a gapped sync",
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b);
       })->then( sub {
-         matrix_join_room( $user_b, $room_id );
+         matrix_join_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_send_filler_messages_synced( $user_a, $room_id, 20 );
       })->then( sub {
@@ -639,7 +639,7 @@ test "When user joins a room the state is included in a gapped sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline state ));
          @{ $room->{state}{events} } == 1
             or die "Expected only one state event";
 
@@ -679,7 +679,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       )->then( sub {
          ( $filter_id_a, $filter_id_b ) = @_;
 
-         matrix_create_room( $user_a );
+         matrix_create_room_synced( $user_a );
       })->then( sub {
          ( $room_id ) = @_;
 
@@ -697,7 +697,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
-         matrix_join_room( $user_b, $room_id );
+         matrix_join_room_synced( $user_b, $room_id );
       })->then( sub {
          matrix_leave_room_synced( $user_b, $room_id );
       })->then( sub {
@@ -706,7 +706,7 @@ test "When user joins and leaves a room in the same batch, the full state is sti
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         assert_json_keys( $room, qw( timeline state ));
+         assert_json_keys( $room, qw( state ));
          my $eventcount = scalar @{ $room->{state}{events} };
          $eventcount == 1 or
              die "Expected one state event, got $eventcount";
@@ -733,21 +733,21 @@ test "Current state appears in timeline in private history",
 
       my ( $room_id );
 
-      matrix_create_room( $creator )
+      matrix_create_room_synced( $creator )
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $syncer, $room_id )
+         matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
          matrix_set_room_history_visibility( $creator, $room_id, "joined" )
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
       })->then( sub {
          matrix_sync( $syncer )
       })->then( sub {
-         matrix_leave_room( $syncer, $room_id )
+         matrix_leave_room_synced( $syncer, $room_id )
       })->then( sub {
-         matrix_join_room( $invitee, $room_id )
+         matrix_join_room_synced( $invitee, $room_id )
       })->then( sub {
          matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
@@ -781,31 +781,31 @@ test "Current state appears in timeline in private history with many messages be
 
       my ( $room_id );
 
-      matrix_create_room( $creator )
+      matrix_create_room_synced( $creator )
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $syncer, $room_id )
+         matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
          matrix_set_room_history_visibility( $creator, $room_id, "joined" )
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
       })->then( sub {
          matrix_sync( $syncer )
       })->then( sub {
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $creator, $room_id,
+            matrix_send_room_text_message_synced( $creator, $room_id,
                body => "Message $msgnum",
             )->on_done( sub {
                log_if_fail "Sent msg $msgnum / 50";
             });
          }, foreach => [ 1 .. 50 ])
       })->then( sub {
-         matrix_leave_room( $syncer, $room_id )
+         matrix_leave_room_synced( $syncer, $room_id )
       })->then( sub {
-         matrix_join_room( $invitee, $room_id )
+         matrix_join_room_synced( $invitee, $room_id )
       })->then( sub {
          matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
@@ -841,26 +841,26 @@ test "Current state appears in timeline in private history with many messages af
 
       my ( $room_id );
 
-      matrix_create_room( $creator )
+      matrix_create_room_synced( $creator )
       ->then( sub {
          ( $room_id ) = @_;
 
-         matrix_join_room( $syncer, $room_id )
+         matrix_join_room_synced( $syncer, $room_id )
       })->then( sub {
          matrix_set_room_history_visibility( $creator, $room_id, "joined" )
       })->then( sub {
-         matrix_invite_user_to_room( $creator, $invitee, $room_id )
+         matrix_invite_user_to_room_synced( $creator, $invitee, $room_id )
       })->then( sub {
          matrix_sync( $syncer )
       })->then( sub {
-         matrix_leave_room( $syncer, $room_id )
+         matrix_leave_room_synced( $syncer, $room_id )
       })->then( sub {
-         matrix_join_room( $invitee, $room_id )
+         matrix_join_room_synced( $invitee, $room_id )
       })->then( sub {
          repeat( sub {
             my $msgnum = $_[0];
 
-            matrix_send_room_text_message( $creator, $room_id,
+            matrix_send_room_text_message_synced( $creator, $room_id,
                body => "Message $msgnum",
             )->on_done( sub {
                log_if_fail "Sent msg $msgnum / 50";

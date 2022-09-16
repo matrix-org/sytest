@@ -287,8 +287,9 @@ The following options have defaults:
 commandline.
 
 The resultant future completes with two values: the room_id from the
-/createRoom response; the room_alias from the /createRoom response (which is
-non-standard and its use is deprecated).
+/createRoom response; and the room_alias. If room_alias_name is present
+in %opts, an alias will be built with the given alias and user's server name.
+Othwerwise, it will return undef.
 
 =cut
 
@@ -312,8 +313,13 @@ sub matrix_create_room
       content => \%opts,
    )->then( sub {
       my ( $body ) = @_;
+      my $room_id = $body->{room_id};
 
-      Future->done( $body->{room_id}, $body->{room_alias} );
+      my $room_alias;
+      if( defined $opts{room_alias_name} ) {
+         $room_alias = sprintf( '#%s:%s', $opts{room_alias_name}, $user->server_name );
+      }
+      Future->done( $room_id, $room_alias );
    });
 }
 
@@ -413,14 +419,16 @@ sub remote_room_alias_fixture
 =head2 matrix_create_room_synced
 
     matrix_create_room_synced( $creator, %params )->then( sub {
-        my ( $room_id ) = @_;
+        my ( $room_id, $room_alias ) = @_;
     });
 
 Creates a new room, and waits for it to appear in the /sync response.
 
 The parameters are passed through to C<matrix_create_room>.
 
-The resultant future completes with the room_id.
+The resultant future completes with the room_id and a room_alias. If
+C<room_alias_name> is present in C<%params>, an alias will be built with the given 
+alias and user's server name. Otherwise, it will return C<undef>.
 
 =cut
 
@@ -434,7 +442,7 @@ sub matrix_create_room_synced
    # The easiest way to do that is to send a sentinel message in the room and wait for
    # that to turn up.
    matrix_create_room( $user, %params )->then( sub {
-      my ( $room_id ) = @_;
+      my ( $room_id, $room_alias ) = @_;
 
       matrix_do_and_wait_for_sync( $user,
          do => sub {
@@ -455,6 +463,6 @@ sub matrix_create_room_synced
                $_[0]->{event_id} eq $event_id
             });
          },
-      )->then_done( $room_id );
+      )->then_done( $room_id, $room_alias );
    });
 }

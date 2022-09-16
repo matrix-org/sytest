@@ -145,12 +145,15 @@ test "HS will proxy request for 3PU mapping",
             sub { 1 }
          )->then( sub {
             my ( $request ) = @_;
+            
+            my $access_token = $appserv1->info->hs2as_token;
 
             assert_deeply_eq(
                { $request->query_form },
                {
                   field1 => "ONE",
                   field2 => "TWO",
+                  access_token => $access_token,
                },
                'fields in received AS request'
             );
@@ -209,11 +212,13 @@ test "HS will proxy request for 3PL mapping",
             sub { 1 }
          )->then( sub {
             my ( $request ) = @_;
+            my $access_token = $appserv1->info->hs2as_token;
 
             assert_deeply_eq(
                { $request->query_form },
                {
                   field3 => "THREE",
+                  access_token => $access_token,
                },
                'fields in received AS request'
             );

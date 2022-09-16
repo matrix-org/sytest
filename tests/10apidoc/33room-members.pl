@@ -11,7 +11,7 @@ my $room_fixture = fixture(
    setup => sub {
       my ( $user, $room_alias_name ) = @_;
 
-      matrix_create_room( $user,
+      matrix_create_room_synced( $user,
          room_alias_name => $room_alias_name,
       );
    },
@@ -242,7 +242,7 @@ test "POST /rooms/:room_id/leave can leave a room",
    do => sub {
       my ( $joiner_to_leave, $room_id, undef ) = @_;
 
-      matrix_join_room( $joiner_to_leave, $room_id )
+      matrix_join_room_synced( $joiner_to_leave, $room_id )
       ->then( sub {
          do_request_json_for( $joiner_to_leave,
             method => "POST",
@@ -401,7 +401,7 @@ sub _invite_users
    Future->needs_all(
      ( map {
          my $user = $_;
-         matrix_invite_user_to_room( $creator, $user, $room_id );
+         matrix_invite_user_to_room_synced( $creator, $user, $room_id );
       } @other_members)
    );
 }
@@ -465,7 +465,7 @@ sub matrix_create_and_join_room
    my $with_invite = delete $options{with_invite};
    my $with_alias = delete $options{with_alias};
 
-   matrix_create_room( $creator,
+   matrix_create_room_synced( $creator,
       %options,
       room_alias_name => $room_alias_name,
    )->then( sub {

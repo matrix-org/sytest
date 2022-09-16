@@ -6,11 +6,14 @@ test "/context/ on joined room works",
    check => sub {
       my ( $user, $room_id ) = @_;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "hello, world",
       )->then( sub {
          my ( $event_id ) = @_;
-
+         await_sync_timeline_contains( $user, $room_id, check => sub {
+            my ( $event ) = @_;
+            return $event->{event_id} eq $event_id;
+         });
          do_request_json_for( $user,
             method  => "GET",
             uri     => "/v3/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
@@ -30,11 +33,14 @@ test "/context/ on non world readable room does not work",
    check => sub {
       my ( $user, $room_id, $other_user ) = @_;
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "hello, world",
       )->then( sub {
          my ( $event_id ) = @_;
-
+         await_sync_timeline_contains( $user, $room_id, check => sub {
+            my ( $event ) = @_;
+            return $event->{event_id} eq $event_id;
+         });
          do_request_json_for( $other_user,
             method  => "GET",
             uri     => "/v3/rooms/$room_id/context/${ \uri_escape( $event_id ) }",
@@ -50,14 +56,14 @@ test "/context/ returns correct number of events",
 
       my ( $event_before_id, $event_middle_id, $event_after_id );
 
-      matrix_send_room_text_message( $user, $room_id,
+      matrix_send_room_text_message_synced( $user, $room_id,
          body => "event before",
       )->then( sub {
          ( $event_before_id ) = @_;
 
          log_if_fail "Before event", $event_before_id;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "hello, world",
          )
       })->then( sub {
@@ -65,13 +71,18 @@ test "/context/ returns correct number of events",
 
          log_if_fail "Middle event", $event_middle_id;
 
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "event after",
          )
       })->then( sub {
          ( $event_after_id ) = @_;
 
          log_if_fail "After event", $event_after_id;
+
+         await_sync_timeline_contains( $user, $room_id, check => sub {
+            my ( $event ) = @_;
+            return $event->{event_id} eq $event_after_id;
+         });
 
          do_request_json_for( $user,
             method  => "GET",
@@ -101,22 +112,27 @@ test "/context/ with lazy_load_members filter works",
    check => sub {
       my ( $user, $room_id, $user2, $user3 ) = @_;
 
-      matrix_join_room( $user2, $room_id )->then( sub {
-         matrix_join_room( $user3, $room_id );
+      matrix_join_room_synced( $user2, $room_id )->then( sub {
+         matrix_join_room_synced( $user3, $room_id );
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "hello, world 1",
          );
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "hello, world 2",
          );
       })->then( sub {
-         matrix_send_room_text_message( $user, $room_id,
+         matrix_send_room_text_message_synced( $user, $room_id,
             body => "hello, world 3",
          );
       })->then( sub {
          my ( $event_id ) = @_;
+
+         await_sync_timeline_contains( $user, $room_id, check => sub {
+            my ( $event ) = @_;
+            return $event->{event_id} eq $event_id;
+         });
 
          do_request_json_for( $user,
             method  => "GET",
