@@ -31,7 +31,7 @@ test "Inbound federation ignores redactions from invalid servers room > v3",
       my ( $msg_event_id, $redaction_event_id );
 
       Future->needs_all(
-         matrix_send_room_text_message( $creator, $room_id, body => "Hello" )
+         matrix_send_room_text_message_synced( $creator, $room_id, body => "Hello" )
             -> on_done( sub {
                ( $msg_event_id ) = @_;
                log_if_fail "Sent message: $msg_event_id";

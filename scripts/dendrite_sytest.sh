@@ -36,6 +36,7 @@ cd /src
 mkdir -p $GOBIN
 go install -v ./cmd/dendrite-monolith-server
 go install -v ./cmd/generate-keys
+go install -v ./cmd/generate-config
 cd -
 
 # Run the tests

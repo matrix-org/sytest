@@ -16,7 +16,7 @@ cd "$(dirname $0)/.."
 mkdir -p /work
 
 # start the redis server, if desired
-if [ -n "$REDIS" ]; then
+if [ -n "$WORKERS" ]; then
     /usr/bin/redis-server /etc/redis/redis.conf
 fi
 
@@ -135,8 +135,19 @@ if [ -n "$OFFLINE" ]; then
     # pip will want to install any requirements for the build system
     # (https://github.com/pypa/pip/issues/5402), so we have to provide a
     # directory of pre-downloaded build requirements.
+    #
+    # We need both the `--no-deps` and `--no-index` flags for offline mode:
+    # `--no-index` only prevents PyPI usage and does not stop pip from
+    # installing dependencies from git.
+    # `--no-deps` skips installing dependencies but does not stop pip from
+    # pulling Synapse's build dependencies from PyPI.
     echo "Installing Synapse using pip in offline mode..."
-    /venv/bin/pip install --no-index --find-links /pypi-offline-cache /synapse
+    /venv/bin/pip install --no-deps --no-index --find-links /pypi-offline-cache /synapse
+
+    if ! /venv/bin/pip check ; then
+        echo "There are unmet dependencies which can't be installed in offline mode" >&2
+        exit 1
+    fi
 else
     if [ -f "/synapse/poetry.lock" ]; then
         # Install Synapse and dependencies using poetry, respecting the lockfile.
@@ -150,7 +161,7 @@ else
         fi
         ln -s -T /venv /synapse/.venv # reuse the existing virtual env
         pushd /synapse
-        poetry install --extras all
+        poetry install -vvv --extras all
         popd
     else
         # Install Synapse and dependencies using pip. As of pip 20.1, this will
@@ -158,8 +169,10 @@ else
         # directory.
         # The virtual env will already be populated with dependencies from the
         # Docker build.
+        # Keeping this option around allows us to `pip install` from wheel in synapse's
+        # "latest dependencies" job.
         echo "Installing Synapse using pip..."
-        /venv/bin/pip install -q --upgrade --no-cache-dir /synapse[all]
+        /venv/bin/pip install -q --upgrade --upgrade-strategy eager --no-cache-dir /synapse[all]
     fi
 
     /venv/bin/pip install -q --upgrade --no-cache-dir \
@@ -186,12 +199,9 @@ RUN_TESTS=(
 
 if [ -n "$WORKERS" ]; then
     RUN_TESTS+=(-I Synapse::ViaHaproxy --workers)
+    RUN_TESTS+=(--redis-host=localhost)
 else
     RUN_TESTS+=(-I Synapse)
-fi
-
-if [ -n "$REDIS" ]; then
-    RUN_TESTS+=(--redis-host=localhost)
 fi
 
 mkdir -p /logs

@@ -18,7 +18,7 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
         matrix_create_filter( $user, $filter )->then( sub {
             ( $filter_id ) = @_;
 
-            matrix_create_room( $user )
+            matrix_create_room_synced( $user )
                 ->SyTest::pass_on_done( "User A created a room" );
         })->then( sub {
             ( $room_id ) = @_;
@@ -26,7 +26,7 @@ multi_test "Multiple calls to /sync should not cause 500 errors",
             matrix_typing( $user, $room_id, typing => JSON::true, timeout => 30000 )
                 ->SyTest::pass_on_done( "Sent typing notification" );
         })->then( sub {
-            matrix_send_room_message( $user, $room_id,
+            matrix_send_room_message_synced( $user, $room_id,
                                       content => { msgtype => "m.message",
                                                    body => "message" })
                 ->SyTest::pass_on_done( "Sent message" );

@@ -150,7 +150,7 @@ test "Inbound federation can backfill events",
 
       # Create some past messages to backfill from
       ( repeat {
-         matrix_send_room_text_message( $creator, $room_id,
+         matrix_send_room_text_message_synced( $creator, $room_id,
             body => "Message $_[0] here",
          )
       } foreach => [ 1 .. 10 ] )->then( sub {
@@ -219,7 +219,7 @@ test "Backfill checks the events requested belong to the room",
          user_id     => $fed_user_id,
       )->then( sub {
          # Send an event into the private room
-         matrix_send_room_text_message( $priv_creator, $priv_room_id,
+         matrix_send_room_text_message_synced( $priv_creator, $priv_room_id,
             body => "Hello world",
          )
       })->then( sub {

@@ -35,7 +35,7 @@ test "Remote servers cannot set power levels in rooms without existing powerleve
       my $room_id = $room->{room_id};
 
       # now get synapse to join
-      return matrix_join_room(
+      return matrix_join_room_synced(
          $synapse_user, $room_alias
       )->then( sub {
          # now the synapse user ought not to be able to send a power_levels event

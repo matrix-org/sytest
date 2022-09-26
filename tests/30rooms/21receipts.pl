@@ -76,7 +76,7 @@ multi_test "Read receipts are visible to /initialSync",
          pass "First m.read receipt is available";
 
          # Now try advancing the receipt by posting a message
-         matrix_send_room_text_message( $user, $room_id, body => "a message" );
+         matrix_send_room_text_message_synced( $user, $room_id, body => "a message" );
       })->then( sub {
          ( $message_event_id ) = @_;
 

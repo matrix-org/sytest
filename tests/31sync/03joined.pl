@@ -142,16 +142,16 @@ test "Newly joined room has correct timeline in incremental sync",
          matrix_create_filter( $user_b, $filter )
             ->on_done( sub { ( $filter_id_b ) = @_ } ),
       )->then( sub {
-         matrix_create_room( $user_a )->on_done( sub { ( $room_id ) = @_ } );
+         matrix_create_room_synced( $user_a )->on_done( sub { ( $room_id ) = @_ } );
       })->then( sub {
          Future->needs_all( map {
-            matrix_send_room_text_message( $user_a, $room_id, body => "test1-$_" );
+            matrix_send_room_text_message_synced( $user_a, $room_id, body => "test1-$_" );
          } 0 .. 3 );
       })->then( sub {
          matrix_sync( $user_b, filter => $filter_id_b );
       })->then( sub {
          Future->needs_all( map {
-            matrix_send_room_text_message( $user_a, $room_id, body => "test2-$_" );
+            matrix_send_room_text_message_synced( $user_a, $room_id, body => "test2-$_" );
          } 0 .. 3 );
       })->then( sub {
          matrix_join_room_synced( $user_b, $room_id );
@@ -195,7 +195,7 @@ test "Newly joined room includes presence in incremental sync",
 
       my $room_id;
 
-      matrix_create_room( $user_a )
+      matrix_create_room_synced( $user_a )
       ->then( sub {
          ( $room_id ) = @_;
 
@@ -248,7 +248,7 @@ test "Get presence for newly joined members in incremental sync",
 
       my $room_id;
 
-      matrix_create_room( $user_a )
+      matrix_create_room_synced( $user_a )
       ->then( sub {
          ( $room_id ) = @_;
 

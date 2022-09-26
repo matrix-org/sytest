@@ -19,11 +19,11 @@ test "Read receipts appear in initial v2 /sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id, body => "hello" );
+         matrix_send_room_text_message_synced( $user, $room_id, body => "hello" );
       })->then( sub {
          ( $event_id ) = @_;
 
@@ -73,11 +73,11 @@ test "New read receipts appear in incremental v2 /sync",
       matrix_create_filter( $user, $filter )->then( sub {
          ( $filter_id ) = @_;
 
-         matrix_create_room( $user );
+         matrix_create_room_synced( $user );
       })->then( sub {
          ( $room_id ) = @_;
 
-         matrix_send_room_text_message( $user, $room_id, body => "hello" );
+         matrix_send_room_text_message_synced( $user, $room_id, body => "hello" );
       })->then( sub {
          ( $event_id ) = @_;
 

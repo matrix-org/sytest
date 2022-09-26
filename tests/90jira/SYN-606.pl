@@ -41,7 +41,7 @@ foreach my $i (
             my $from_token = $body->{messages}{end};
 
             Future->needs_all(
-               matrix_send_room_text_message( $user, $room_id1, body => "moose" ),
+               matrix_send_room_text_message_synced( $user, $room_id1, body => "moose" ),
                await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id1, [],
                   from => $from_token,
                ),
@@ -54,7 +54,7 @@ foreach my $i (
             my $from_token = $body->{messages}{end};
 
             Future->needs_all(
-               matrix_send_room_text_message( $user, $room_id2, body => "mice" ),
+               matrix_send_room_text_message_synced( $user, $room_id2, body => "mice" ),
                await_event_not_history_visibility_or_presence_for( $nonjoined_user, $room_id2, [],
                   from => $from_token,
                )->then( sub {
