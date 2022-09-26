@@ -17,15 +17,13 @@ sub assert_is_valid_pdu {
    my ( $event ) = @_;
 
    assert_json_keys( $event, qw(
-      auth_events content depth hashes origin origin_server_ts
+      auth_events content depth hashes origin_server_ts
       prev_events room_id sender signatures type
    ));
 
    assert_json_list( $event->{auth_events} );
    assert_json_number( $event->{depth} );
    assert_json_object( $event->{hashes} );
-
-   assert_json_string( $event->{origin} );
 
    assert_json_number( $event->{origin_server_ts} );
    assert_json_list( $event->{prev_events} );
@@ -94,7 +92,6 @@ foreach my $versionprefix ( qw( v1 v2 ) ) {
                   user_id => $user_id,
                );
 
-               $proto->{origin}           = $inbound_server->server_name;
                $proto->{origin_server_ts} = $inbound_server->time_ms;
 
                $req->respond_json( {
@@ -276,7 +273,6 @@ foreach my $versionprefix ( qw ( v1 v2 ) ) {
                   state_key type ) ),
 
                event_id         => $datastore->next_event_id,
-               origin           => $local_server_name,
                origin_server_ts => $inbound_server->time_ms,
             );
 
@@ -445,7 +441,6 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
 
          $join_event = $body->{event};
 
-         $join_event->{origin} = $sytest_server_name;
          $join_event->{origin_server_ts} = $outbound_client->time_ms;
 
          if( $room_version eq '1' || $room_version eq '2' ) {
@@ -858,7 +853,6 @@ test "Outbound federation rejects send_join responses with no m.room.create even
                user_id => $user_id,
             );
 
-            $proto->{origin}           = $inbound_server->server_name;
             $proto->{origin_server_ts} = $inbound_server->time_ms;
 
             $req->respond_json( {
@@ -947,7 +941,6 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
                user_id => $user_id,
             );
 
-            $proto->{origin}           = $inbound_server->server_name;
             $proto->{origin_server_ts} = $inbound_server->time_ms;
 
             $req->respond_json( {
@@ -1041,7 +1034,6 @@ test "Event with an invalid signature in the send_join response should not cause
                user_id => $user_id,
             );
 
-            $proto->{origin}           = $inbound_server->server_name;
             $proto->{origin_server_ts} = $inbound_server->time_ms;
 
             $req->respond_json( {
@@ -1182,7 +1174,6 @@ test "Inbound: send_join rejects invalid JSON for room version 6",
                auth_events content depth prev_events room_id sender
                state_key type ) ),
 
-            origin           => $local_server_name,
             origin_server_ts => $inbound_server->time_ms,
          );
          # Insert a "bad" value into the send join, in this case a float.

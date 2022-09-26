@@ -68,12 +68,10 @@ foreach my $prefix ( qw( v1 v2 )) {
                }
 
                # this should be a member event
-               assert_json_keys( $body, qw( origin room_id sender type ));
+               assert_json_keys( $body, qw( room_id sender type ));
 
                assert_eq( $body->{type}, "m.room.member",
                   'event type' );
-               assert_eq( $body->{origin}, $user->http->server_name,
-                  'event origin' );
                assert_eq( $body->{room_id}, $room_id,
                   'event room_id' );
                assert_eq( $body->{sender}, $user->user_id,
@@ -226,7 +224,7 @@ sub invite_server
 
          # Response should be the same event reflected back
          assert_eq( $event->{$_}, $invitation->{$_},
-            "response $_" ) for qw( event_id origin room_id sender state_key type );
+            "response $_" ) for qw( event_id room_id sender state_key type );
 
          # server should have signed it
          exists $event->{signatures}{$first_home_server} or
@@ -602,7 +600,6 @@ test "Inbound federation rejects incorrectly-signed invite rejections",
 
          $leave_event = $resp->{event};
 
-         $leave_event->{origin} = $outbound_client->server_name;
          $leave_event->{origin_server_ts} = JSON::number($outbound_client->time_ms);
          $leave_event->{event_id} = $leave_event_id = $outbound_client->datastore->next_event_id();
 
@@ -911,7 +908,6 @@ test "Inbound federation rejects invite rejections which include invalid JSON fo
                auth_events content depth prev_events room_id sender
                state_key type)),
 
-            origin           => $outbound_client->server_name,
             origin_server_ts => $inbound_server->time_ms,
          );
          # Insert a "bad" value into the send leave, in this case a float.
