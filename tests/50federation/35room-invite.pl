@@ -600,9 +600,6 @@ test "Inbound federation rejects incorrectly-signed invite rejections",
 
          $leave_event = $resp->{event};
 
-         # The spec does not require the origin field, but Dendrite does. This can be removed
-         # once this issue gets solved: https://github.com/matrix-org/dendrite/issues/2736
-         $leave_event->{origin} = $outbound_client->server_name;
          $leave_event->{origin_server_ts} = JSON::number($outbound_client->time_ms);
          $leave_event->{event_id} = $leave_event_id = $outbound_client->datastore->next_event_id();
 
@@ -911,9 +908,6 @@ test "Inbound federation rejects invite rejections which include invalid JSON fo
                auth_events content depth prev_events room_id sender
                state_key type)),
 
-            # The spec does not require the origin field, but Dendrite does. This can be removed
-            # once this issue gets solved: https://github.com/matrix-org/dendrite/issues/2736
-            origin           => $outbound_client->server_name,
             origin_server_ts => $inbound_server->time_ms,
          );
          # Insert a "bad" value into the send leave, in this case a float.
