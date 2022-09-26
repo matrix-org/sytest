@@ -194,6 +194,9 @@ sub create_event
 
    my $event = {
       %fields,
+      # The spec does not require the origin field, but Dendrite does. This can be removed
+      # once this issue gets solved: https://github.com/matrix-org/dendrite/issues/2736
+      origin           => $self->server_name,
       origin_server_ts => JSON::number( int( time() * 1000 )),
    };
 

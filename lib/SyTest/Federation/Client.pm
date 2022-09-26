@@ -240,6 +240,9 @@ sub join_room
             auth_events content depth prev_events room_id sender
             state_key type ) ),
 
+         # The spec does not require the origin field, but Dendrite does. This can be removed
+         # once this issue gets solved: https://github.com/matrix-org/dendrite/issues/2736
+         origin           => $store->server_name,
          origin_server_ts => $self->time_ms,
       );
 
