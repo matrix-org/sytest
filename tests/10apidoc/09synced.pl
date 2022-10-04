@@ -357,11 +357,13 @@ sub assert_room_members {
    my ( $body, $room_id, $memberships ) = @_;
 
    my $room = $body->{rooms}{join}{$room_id};
-   my $timeline = $room->{timeline}{events};
 
    #log_if_fail "Room", $room;
-
-   assert_json_keys( $room, qw( timeline state ephemeral ));
+   
+   if ( scalar @{ $memberships } == 0 && !exists ( $room->{state} ) ) {
+      return 1;
+   }
+   assert_json_keys( $room, qw( state ));
 
    return assert_state_room_members_match( $room->{state}{events}, $memberships );
 }

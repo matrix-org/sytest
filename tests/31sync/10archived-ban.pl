@@ -89,7 +89,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         assert_json_keys( $room, qw( timeline state ));
+         assert_json_keys( $room, qw( timeline ));
 
          Future->done(1);
       });
@@ -134,7 +134,7 @@ test "Newly banned rooms appear in the leave section of incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         assert_json_keys( $room, qw( timeline state ));
+         assert_json_keys( $room, qw( state ));
 
          Future->done(1);
       });

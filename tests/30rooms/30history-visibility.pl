@@ -417,7 +417,7 @@ foreach my $i (
                my ( $body ) = @_;
 
                my $room = $body->{rooms}{join}{$room_id};
-               assert_json_keys( $room, qw( timeline state ephemeral ));
+               assert_json_keys( $room, qw( timeline ));
                assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
 
                # look at the last four events
@@ -481,7 +481,7 @@ test "Only see history_visibility changes on boundaries",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
 
          # look at the last four events
