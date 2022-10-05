@@ -274,10 +274,10 @@ test "Can backfill purged history",
       ->then( sub {
          matrix_join_room_synced( $remote_user, $room_id )
       })->then( sub {
-         # Force the remote server to backfill all of the events to the beginning of the
-         # room. We want to make sure to de-outlier all of the state (like the invite
-         # event) before the join so it's available later when `server-0` asks about it
-         # again.
+         # Force the remote server (`server-1`) to backfill all of the events to the
+         # beginning of the room. We want to make sure to de-outlier all of the state
+         # (like the invite event) before the join so it's available later when
+         # `server-0` asks about it again.
          matrix_get_room_messages( $remote_user, $room_id, limit => 100 )
       })->then( sub {
          matrix_put_room_state( $user, $room_id,
