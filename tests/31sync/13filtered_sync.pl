@@ -22,7 +22,9 @@ test "Can pass a JSON filter as a query parameter",
 
          my $room = $body->{rooms}{join}{$room_id};
 
-         assert_json_empty_list( $room->{timeline}{events} );
+         if (exists($room->{timeline})) {
+             assert_json_empty_list( $room->{timeline}{events} );
+         }       
 
          @{ $room->{state}{events} } == 1
             or die "Expected a single state event because of the filter";

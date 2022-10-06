@@ -33,15 +33,18 @@ test "Local users can peek into world_readable rooms by room ID",
          log_if_fail "first sync response", $body;
 
          my $room = $body->{rooms}{peek}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         assert_json_keys( $room->{state}, qw( events ));
-         assert_json_keys( $room->{ephemeral}, qw( events ));
+         if (exists($room->{state})) {
+            assert_json_empty_list( $room->{state}{events} );
+         }
+         if (exists($room->{ephemeral})) {
+            assert_json_empty_list( $room->{ephemeral}{events} );
+         }
 
          assert_ok( $room->{timeline}->{events}->[0]->{type} eq 'm.room.create', "peek has m.room.create" );
          assert_ok( $room->{timeline}->{events}->[-1]->{type} eq 'm.room.message', "peek has message type" );
          assert_ok( $room->{timeline}->{events}->[-1]->{content}->{body} eq 'something to peek', "peek has message body" );
-         assert_ok( @{$room->{state}->{events}} == 0 );
 
          assert_ok( scalar keys(%{$body->{rooms}{join}}) == 0, "no joined rooms present");
 
