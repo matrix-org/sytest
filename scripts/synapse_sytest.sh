@@ -197,6 +197,10 @@ RUN_TESTS=(
     --work-directory="/work"
 )
 
+if [ -n "$ASYNCIO_REACTOR" ]; then
+    RUN_TESTS+=(--asyncio-reactor)
+fi
+
 if [ -n "$WORKERS" ]; then
     RUN_TESTS+=(-I Synapse::ViaHaproxy --workers)
     RUN_TESTS+=(--redis-host=localhost)
