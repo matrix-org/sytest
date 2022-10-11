@@ -102,7 +102,7 @@ test "Outbound federation can request missing events",
       });
    };
 
-foreach my $vis (qw( world_readable shared invite joined )) {
+foreach my $vis (qw( world_readable shared invited joined )) {
    test "Inbound federation can return missing events for $vis visibility",
       requires => [ $main::OUTBOUND_CLIENT,
                     # Setting synced to 1 inserts a m.room.test object into the
