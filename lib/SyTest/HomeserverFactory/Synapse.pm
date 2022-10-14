@@ -26,11 +26,12 @@ sub _init
    $self->{impl} = "SyTest::Homeserver::Synapse::Direct";
 
    $self->{args} = {
-      synapse_dir   => "../synapse",
-      python        => "python",
-      coverage      => 0,
-      print_output  => 0,
-      filter_output => undef,
+      synapse_dir     => "../synapse",
+      python          => "python",
+      asyncio_reactor => 0,
+      coverage        => 0,
+      print_output    => 0,
+      filter_output   => undef,
    };
 
    $self->{extra_args} = [];
@@ -51,6 +52,7 @@ sub get_options
       'd|synapse-directory=s' => \$self->{args}{synapse_dir},
       'python=s' => \$self->{args}{python},
       'coverage+' => \$self->{args}{coverage},
+      'asyncio-reactor+' => \$self->{args}{asyncio_reactor},
 
       'S|server-log+' => \$self->{args}{print_output},
       'server-grep=s' => \$self->{args}{filter_output},
@@ -76,6 +78,8 @@ sub print_usage
        --python PATH            - path to the 'python' binary
 
        --coverage               - generate code coverage stats for synapse
+
+       --asyncio-reactor        - run Synapse with the asyncio reactor enabled
 
    -ENAME, -ENAME=VALUE         - pass extra argument NAME or NAME=VALUE to the
                                   homeserver.

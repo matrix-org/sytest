@@ -29,7 +29,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      synapse_dir extra_args python coverage
+      synapse_dir extra_args python coverage asyncio_reactor
    );
 
    $self->{paths} = {};
@@ -380,6 +380,7 @@ sub start
       "PATH" => $ENV{PATH},
       "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
       "SYNAPSE_TEST_PATCH_LOG_CONTEXTS" => 1,
+      "SYNAPSE_ASYNC_IO_REACTOR" => $self->{asyncio_reactor},
    };
 
    my $loop = $self->loop;

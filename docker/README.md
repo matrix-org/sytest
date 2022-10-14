@@ -33,6 +33,7 @@ The following environment variables can be set with `-e` to control the test run
   PostgreSQL databases where the main store and state store are split.
 - `WORKERS`: set non-empty to test a worker-mode deployment rather than a
   monolith. Requires `POSTGRES`.
+- `ASYNCIO_REACTOR`: set non-empty to test with the Twisted asyncio reactor enabled
 - `OFFLINE`: set non-empty to avoid updating the python or perl dependencies.
 - `BLACKLIST`: set non-empty to change the default blacklist file to the
   specified path relative to the Synapse directory
