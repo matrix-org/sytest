@@ -212,7 +212,7 @@ test "Can query remote device keys using POST after notification",
          # and they're considered optional in the GET /user/devices/{userId} response.
          # So accept either a match or a lack of key.
          my $device_display_name = $alice_device_keys->{"unsigned"}->{"device_display_name"};
-         $device_display_name = undef or $device_display_name = "test display name" or
+         (!defined $device_display_name) or ($device_display_name == "test display name") or
             croak "Unexpected device_display_name: $device_display_name";
 
          Future->done(1)
