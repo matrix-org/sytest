@@ -28,8 +28,11 @@ multi_test "Can query remote device keys using POST",
 
          # TODO: Check that the content matches what we uploaded.
 
-         assert_eq( $alice_device_keys->{"unsigned"}->{"device_display_name"},
-                    "test display name" );
+         # Device display names are optional for POST /user/keys/query responses.
+         # If one exists, ensure it's the one we expected.
+         my $device_display_name = $alice_device_keys->{"unsigned"}->{"device_display_name"};
+         (!defined $device_display_name) or ($device_display_name == "test display name") or
+            croak "Unexpected device_display_name: $device_display_name";
 
          Future->done(1)
       });
