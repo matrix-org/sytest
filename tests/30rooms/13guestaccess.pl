@@ -143,11 +143,14 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
       })->then( sub {
          matrix_get_room_membership( $user, $room_id, $guest_user );
       })->then( sub {
-         my ( $membership ) = @_;
-
-         assert_eq( $membership, "leave", "membership" );
-
-         Future->done( 1 );
+         retry_until_success {
+            matrix_get_room_membership( $user, $room_id, $guest_user )
+               ->then( sub {
+                  my ( $membership ) = @_;
+                  $membership eq "leave" or die "Expected membership to be 'leave'";
+                  Future->done(1);
+            })
+         };
       });
    };
 
