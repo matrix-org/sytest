@@ -141,8 +141,6 @@ test "Guest users are kicked from guest_access rooms on revocation of guest_acce
 
          matrix_set_room_guest_access( $user, $room_id, "forbidden" );
       })->then( sub {
-         matrix_get_room_membership( $user, $room_id, $guest_user );
-      })->then( sub {
          retry_until_success {
             matrix_get_room_membership( $user, $room_id, $guest_user )
                ->then( sub {
