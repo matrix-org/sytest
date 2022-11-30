@@ -34,9 +34,9 @@ export GOBIN=/tmp/bin
 echo >&2 "--- Building dendrite from source"
 cd /src
 mkdir -p $GOBIN
-go install -v ./cmd/dendrite-monolith-server
-go install -v ./cmd/generate-keys
-go install -v ./cmd/generate-config
+go install -buildvcs=false -race=${RACE_DETECTION:-0} -tags vw -v ./cmd/dendrite-monolith-server
+go install -buildvcs=false -race=${RACE_DETECTION:-0} -tags vw -v ./cmd/generate-keys
+go install -buildvcs=false -race=${RACE_DETECTION:-0} -tags vw -v ./cmd/generate-config
 cd -
 
 # Run the tests

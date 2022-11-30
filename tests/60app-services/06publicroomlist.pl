@@ -82,7 +82,7 @@ test "AS can publish rooms in their own list",
          log_if_fail "AS public room in AS list";
 
          get_room_list_synced( $local_user,
-            content => { include_all_networks => "true" },
+            content => { include_all_networks => JSON::true },
 
             check => sub {
                my ( $body ) = @_;
@@ -181,7 +181,7 @@ test "AS and main public room lists are separate",
             method => "POST",
             uri    => "/v3/publicRooms",
 
-            content => { include_all_networks => "true", limit => 1000000 }
+            content => { include_all_networks => JSON::true, limit => 1000000 }
          )
       })->then( sub {
          do_request_json_for( $as_user,
@@ -214,7 +214,7 @@ test "AS and main public room lists are separate",
          log_if_fail "Room in main list after deletion";
 
          get_room_list_synced( $local_user,
-            content => { include_all_networks => "true" },
+            content => { include_all_networks => JSON::true },
 
             check => sub {
                my ( $body ) = @_;

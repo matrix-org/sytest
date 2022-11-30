@@ -11,9 +11,11 @@ sub check_add_push_rule
 
       log_if_fail "Rule", $rule;
 
-      assert_json_keys( $rule, qw( rule_id actions enabled ) );
+      assert_json_keys( $rule, qw( rule_id actions enabled default ) );
 
       assert_json_boolean( $rule->{enabled} );
+
+      assert_json_boolean( $rule->{default} );
 
       assert_eq( $rule->{rule_id}, $rule_id );
    };

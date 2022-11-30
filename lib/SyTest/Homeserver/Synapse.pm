@@ -29,7 +29,7 @@ sub _init
    my ( $args ) = @_;
 
    $self->{$_} = delete $args->{$_} for qw(
-      synapse_dir extra_args python coverage
+      synapse_dir extra_args python coverage asyncio_reactor
    );
 
    $self->{paths} = {};
@@ -380,6 +380,7 @@ sub start
       "PATH" => $ENV{PATH},
       "PYTHONDONTWRITEBYTECODE" => "Don't write .pyc files",
       "SYNAPSE_TEST_PATCH_LOG_CONTEXTS" => 1,
+      "SYNAPSE_ASYNC_IO_REACTOR" => $self->{asyncio_reactor},
    };
 
    my $loop = $self->loop;
@@ -941,7 +942,6 @@ sub _start_synapse
          "worker_log_config"            => $self->configure_logger("frontend_proxy"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
             {
                type      => "http",
@@ -974,7 +974,6 @@ sub _start_synapse
          "worker_log_config"            => $self->configure_logger("background_worker"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
       };
 
       push @worker_configs, $background_worker_config;
@@ -988,7 +987,6 @@ sub _start_synapse
          "worker_log_config"            => $self->configure_logger("event_persister1"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
             {
                type      => "http",
@@ -1021,7 +1019,6 @@ sub _start_synapse
          "worker_log_config"            => $self->configure_logger("event_persister2"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
             {
                type      => "http",
@@ -1054,7 +1051,6 @@ sub _start_synapse
          "worker_log_config"            => $self->configure_logger("stream_writer"),
          "worker_replication_host"      => "$bind_host",
          "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
             {
                type      => "http",

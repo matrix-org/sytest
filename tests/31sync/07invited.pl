@@ -133,10 +133,14 @@ test "Newly joined room is included in an incremental sync after invite",
          my ( $room ) = @_;
          log_if_fail "post-join sync", $room;
 
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         assert_json_keys( $room->{state}, qw( events ));
-         assert_json_keys( $room->{ephemeral}, qw( events ));
+         if (exists($room->{state})) {
+            assert_json_empty_list( $room->{state}{events} );
+         }
+         if (exists($room->{ephemeral})) {
+            assert_json_empty_list( $room->{ephemeral}{events} );
+         }
 
          Future->done(1);
       })

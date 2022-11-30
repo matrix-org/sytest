@@ -240,7 +240,6 @@ sub join_room
             auth_events content depth prev_events room_id sender
             state_key type ) ),
 
-         origin           => $store->server_name,
          origin_server_ts => $self->time_ms,
       );
 

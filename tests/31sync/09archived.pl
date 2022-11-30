@@ -57,10 +57,11 @@ test "Newly left rooms appear in the leave section of incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         assert_json_keys( $room, qw( timeline state ));
-
-         @{ $room->{state}{events} } == 0
-            or die "Expected no state events";
+         assert_json_keys( $room, qw( timeline ));
+         if ( exists ( $room->{state} ) ) {
+            @{ $room->{state}{events} } == 0
+               or die "Expected no state events";
+         }
 
          Future->done(1);
       });
@@ -101,10 +102,12 @@ test "We should see our own leave event, even if history_visibility is " .
          log_if_fail "sync result", $body;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         assert_json_keys( $room, qw( timeline state ));
+         assert_json_keys( $room, qw( timeline ));
 
-         assert_eq( scalar @{ $room->{state}{events} }, 0,
-                    "state events" );
+         if ( exists ( $room->{state} ) ) {
+            @{ $room->{state}{events} } == 0
+               or die "Expected no state events";
+         }
 
          # we should see our own leave event
          assert_eq( scalar @{ $room->{timeline}{events} }, 1,
@@ -206,7 +209,7 @@ test "Newly left rooms appear in the leave section of gapped sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id_1};
-         assert_json_keys( $room, qw( timeline state ));
+         assert_json_keys( $room, qw( timeline ));
 
          Future->done(1);
       });
@@ -298,7 +301,7 @@ test "Left rooms appear in the leave section of full state sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{leave}{$room_id};
-         assert_json_keys( $room, qw( timeline state ));
+         assert_json_keys( $room, qw( timeline ));
 
          Future->done(1);
       });

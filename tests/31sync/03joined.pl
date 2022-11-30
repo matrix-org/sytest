@@ -23,10 +23,15 @@ test "Can sync a joined room",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         assert_json_keys( $room->{state}, qw( events ));
-         assert_json_keys( $room->{ephemeral}, qw( events ));
+         
+         if (exists($room->{state})) {
+            assert_json_empty_list( $room->{state}{events} );
+         }
+         if (exists($room->{ephemeral})) {
+            assert_json_empty_list( $room->{ephemeral}{events} );
+         }
 
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {
@@ -67,11 +72,14 @@ test "Full state sync includes joined rooms",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-
-         assert_json_keys( $room, qw( timeline state ephemeral ));
-         assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         assert_json_keys( $room->{state}, qw( events ));
-         assert_json_keys( $room->{ephemeral}, qw( events ));
+         
+         assert_json_keys( $room, qw( state ));
+         if (exists($room->{timeline})) {
+            assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
+         }
+         if (exists($room->{ephemeral})) {
+            assert_json_empty_list( $room->{ephemeral}{events} );
+         }
 
          Future->done(1)
       })
@@ -103,10 +111,14 @@ test "Newly joined room is included in an incremental sync",
          my ( $body ) = @_;
 
          my $room = $body->{rooms}{join}{$room_id};
-         assert_json_keys( $room, qw( timeline state ephemeral ));
+         assert_json_keys( $room, qw( timeline ));
          assert_json_keys( $room->{timeline}, qw( events limited prev_batch ));
-         assert_json_keys( $room->{state}, qw( events ));
-         assert_json_keys( $room->{ephemeral}, qw( events ));
+         if (exists($room->{state})) {
+            assert_json_empty_list( $room->{state}{events} );
+         }
+         if (exists($room->{ephemeral})) {
+            assert_json_empty_list( $room->{ephemeral}{events} );
+         }
 
          matrix_sync_again( $user, filter => $filter_id );
       })->then( sub {

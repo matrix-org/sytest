@@ -194,7 +194,6 @@ sub create_event
 
    my $event = {
       %fields,
-      origin           => $self->server_name,
       origin_server_ts => JSON::number( int( time() * 1000 )),
    };
 

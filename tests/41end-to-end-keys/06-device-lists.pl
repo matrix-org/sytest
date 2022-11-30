@@ -209,8 +209,15 @@ test "Can query remote device keys using POST after notification",
 
          # TODO: Check that the content matches what we uploaded.
 
-         assert_eq( $alice_device_keys->{"unsigned"}->{"device_display_name"},
-                    "test display name" );
+         # Device display names aren't mandated in the POST /user/keys/query response,
+         # and they're considered optional in the GET /user/devices/{userId} response.
+         # So accept either a match or a lack of key.
+         if (exists( $alice_device_keys->{"unsigned"}->{"device_display_name"} )) {
+            assert_eq(
+               $alice_device_keys->{"unsigned"}->{"device_display_name"},
+               "test display name",
+            );
+         }
 
          Future->done(1)
       });

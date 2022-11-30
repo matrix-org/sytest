@@ -21,7 +21,7 @@ test "Inbound federation can return events",
          my ( $body ) = @_;
          log_if_fail "Body", $body;
 
-         assert_json_keys( $body, qw( origin origin_server_ts pdus ));
+         assert_json_keys( $body, qw( origin_server_ts pdus ));
          assert_json_list( my $events = $body->{pdus} );
 
          @$events == 1 or
@@ -30,7 +30,7 @@ test "Inbound federation can return events",
 
          # Check that the string fields seem right
          assert_eq( $event->{$_}, $member_event->{$_},
-            "event $_" ) for qw( depth origin room_id sender state_key type );
+            "event $_" ) for qw( depth room_id sender state_key type );
 
          if ( $room->room_version eq "1" || $room->room_version eq "2" ) {
             assert_eq( $event->{event_id}, $member_event->{event_id}, "event_id" );
