@@ -79,10 +79,6 @@ jobs:
             build_args: |
               SYTEST_IMAGE_TAG=bookworm
               PYTHON_VERSION=python3.10
-          - sytest_image_tag: buster
-            dockerfile: dendrite
-            tags: "matrixdotorg/sytest-dendrite:latest"
-            build_args: "SYTEST_IMAGE_TAG=buster"
 
     steps:
       - name: Set up QEMU
