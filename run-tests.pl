@@ -27,6 +27,7 @@ use Struct::Dumb 0.04;
 use MIME::Base64 qw( decode_base64 );
 use Time::HiRes qw( time );
 use POSIX qw( strftime );
+use IO::Socket::SSL qw(debug4); # Enable debug logging, to trace down "SSL accept attempt failed" failures
 
 use Data::Dump::Filtered;
 Data::Dump::Filtered::add_dump_filter( sub {
