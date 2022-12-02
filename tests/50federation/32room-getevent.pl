@@ -47,6 +47,7 @@ test "Inbound federation redacts events from erased users",
       federated_rooms_fixture(),
       local_user_fixture(),
    ],
+   implementation_specific => ['synapse'],
 
    # On the homeserver under test, have a user `creator` create a public room.
    # A second user `remaining_user` on the same HS joins too.

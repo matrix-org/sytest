@@ -16,6 +16,7 @@ use List::Util qw( first );
 
 test "Only original members of the room can see messages from erased users",
    requires => [ local_user_and_room_fixtures(), local_user_fixture(), local_user_fixture() ],
+   implementation_specific => ['synapse'],
 
    do => sub {
       my ( $creator, $room_id, $member, $joiner ) = @_;

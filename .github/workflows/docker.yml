@@ -1,84 +1,24 @@
 # GitHub actions workflow which builds and publishes the docker images.
 
-name: Build and deploy docker images
+name: Build and deploy Dendrite docker images
 
 on:
-  push:
-    branches: [develop]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build-sytest-images:
-    name: "Build sytest:${{ matrix.tag }}"
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - base_image: ubuntu:focal
-            tag: focal
-          - base_image: debian:buster
-            tag: buster
-          - base_image: debian:testing
-            tag: testing
-          - base_image: debian:bookworm
-            tag: bookworm
-    steps:
-      - name: Set up QEMU
-        id: QEMU
-        uses: docker/setup-qemu-action@v1
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Inspect builder
-        run: docker buildx inspect
-
-      - name: Log in to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v2
-        with:
-          pull: true
-          push: true
-          platforms: linux/amd64,linux/arm64
-          labels: "gitsha1=${{ github.sha }}"
-          file: docker/base.Dockerfile
-          build-args: "BASE_IMAGE=${{ matrix.base_image }}"
-          tags: matrixdotorg/sytest:${{ matrix.tag }}
-
   build-dependent-images:
-    needs: build-sytest-images
     name: "Build sytest-${{ matrix.dockerfile }}:${{ matrix.sytest_image_tag }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - sytest_image_tag: focal
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:focal"
-            build_args: "SYTEST_IMAGE_TAG=focal"
           - sytest_image_tag: buster
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:buster"
+            dockerfile: dendrite
+            tags: "matrixdotorg/sytest-dendrite:latest"
             build_args: "SYTEST_IMAGE_TAG=buster"
-          - sytest_image_tag: testing
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:testing"
-            build_args: "SYTEST_IMAGE_TAG=testing"
-          - sytest_image_tag: bookworm
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:bookworm-python3.10"
-            build_args: |
-              SYTEST_IMAGE_TAG=bookworm
-              PYTHON_VERSION=python3.10
 
     steps:
       - name: Set up QEMU
