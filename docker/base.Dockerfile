@@ -24,6 +24,8 @@ RUN apt-get -qq update && apt-get -qq install -y \
     rsync \
     sqlite3 \
     wget \
+    libicu-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up the locales, as the default Debian image only has C, and PostgreSQL needs the correct locales to make a UTF-8 database
