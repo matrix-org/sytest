@@ -93,6 +93,11 @@ test "POST /login can log in as a user",
 
          assert_json_keys( $body, qw( access_token ));
 
+         if (defined $body->{home_server}) {
+            assert_eq( $body->{home_server}, $http->server_name,
+               'Response home_server' );
+         }
+
          Future->done(1);
       });
    };
@@ -159,6 +164,11 @@ test "POST /login can log in as a user with just the local part of the id",
          my ( $body ) = @_;
 
          assert_json_keys( $body, qw( access_token ));
+
+         if (defined $body->{home_server}) {
+            assert_eq( $body->{home_server}, $http->server_name,
+               'Response home_server' );
+         }
 
          Future->done(1);
       });
