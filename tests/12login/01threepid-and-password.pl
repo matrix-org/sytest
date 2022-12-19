@@ -26,10 +26,12 @@ test "Can login with 3pid and password using m.login.password",
       })->then( sub {
          my ( $body ) = @_;
 
-         assert_json_keys( $body, qw( access_token home_server ));
+         assert_json_keys( $body, qw( access_token ));
 
-         assert_eq( $body->{home_server}, $http->server_name,
-            'Response home_server' );
+         if (defined $body->{home_server}) {
+            assert_eq( $body->{home_server}, $http->server_name,
+               'Response home_server' );
+         }
 
          Future->done(1);
       });
