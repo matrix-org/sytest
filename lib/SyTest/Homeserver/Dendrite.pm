@@ -259,6 +259,8 @@ sub _start_monolith
    );
 
    push(@command, '-api') if $ENV{'API'} == '1';
+   push @command, '--test.coverprofile=' . $self->{hs_dir} . '/integrationcover.log' , "DEVEL" if $ENV{'COVER'} == '1';
+
    $output->diag( "Starting Dendrite with: @command" );
 
    return $self->_start_process_and_await_connectable(
