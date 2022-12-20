@@ -34,7 +34,13 @@ export GOBIN=/tmp/bin
 echo >&2 "--- Building dendrite from source"
 cd /src
 mkdir -p $GOBIN
-go install -buildvcs=false -race=${RACE_DETECTION:-0} -tags vw -v ./cmd/dendrite-monolith-server
+
+if [[ -z ${COVER} || ${COVER} -eq 0 ]]; then
+    go install -buildvcs=false -race=${RACE_DETECTION:-0} -tags vw -v ./cmd/dendrite-monolith-server
+else 
+    go test -c -cover -covermode=atomic -race=${RACE_DETECTION:-0} -buildvcs=false -tags vw -o $GOBIN/dendrite-monolith-server -coverpkg "github.com/matrix-org/..." ./cmd/dendrite-monolith-server
+fi
+
 go install -buildvcs=false -race=${RACE_DETECTION:-0} -tags vw -v ./cmd/generate-keys
 go install -buildvcs=false -race=${RACE_DETECTION:-0} -tags vw -v ./cmd/generate-config
 cd -
