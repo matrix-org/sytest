@@ -826,12 +826,15 @@ test "/upgrade preserves direct room state",
       })->then( sub {
          ( $new_room_id ) = @_;
 
-         is_direct_room( $creator, $new_room_id );
-      })->then( sub {
-         my ( $is_direct_room ) = @_;
-
-         $is_direct_room == 1 or die "Expected upgraded room to be a direct room";
-         Future->done( 1 );
+         retry_until_success {
+            is_direct_room( $creator, $new_room_id )
+            ->then( sub {
+               my ( $is_direct_room ) = @_;
+               
+               $is_direct_room == 1 or die "Expected upgraded room to be a direct room";
+               Future->done( 1 );
+            })
+         }
       });
    };
 
