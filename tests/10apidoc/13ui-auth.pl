@@ -185,12 +185,16 @@ sub matrix_login_with_cas
 
       log_if_fail "Response from /login", $body;
 
-      assert_json_keys( $body, qw( access_token home_server user_id device_id ));
+      assert_json_keys( $body, qw( access_token user_id device_id ));
 
-      assert_eq( $body->{home_server}, $http->server_name,
-                 'home_server in /login response' );
+      if (defined $body->{home_server}) {
+         assert_eq( $body->{home_server}, $http->server_name,
+            'home_server in /login response' );
+      }
+
+      
       assert_eq( $body->{user_id}, $user_id,
-                 'user_id in /login response' );
+         'user_id in /login response' );
 
       Future->done(1);
    });

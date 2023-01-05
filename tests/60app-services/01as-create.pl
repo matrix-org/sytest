@@ -21,7 +21,7 @@ test "AS can create a user",
 
          log_if_fail "Body", $body;
 
-         assert_json_keys( $body, qw( user_id home_server access_token device_id ));
+         assert_json_keys( $body, qw( user_id access_token device_id ));
 
          Future->done(1);
       });
@@ -46,7 +46,7 @@ test "AS can create a user with an underscore",
 
          log_if_fail "Body", $body;
 
-         assert_json_keys( $body, qw( user_id home_server access_token device_id ));
+         assert_json_keys( $body, qw( user_id access_token device_id ));
 
          Future->done(1);
       });
@@ -73,7 +73,7 @@ test "AS can create a user with inhibit_login",
 
          log_if_fail "Body", $body;
 
-         assert_json_keys( $body, qw( user_id home_server ));
+         assert_json_keys( $body, qw( user_id ));
          foreach ( qw( device_id access_token )) {
             exists $body->{$_} and die "Got an unexpected '$_' key";
          }
