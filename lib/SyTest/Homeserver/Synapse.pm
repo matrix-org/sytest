@@ -1317,6 +1317,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/send                                 event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/join/                                         event_creator
+^/_matrix/client/(api/v1|r0|v3|unstable)/knock/                                        event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/profile/                                      event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/createRoom                                    event_creator
 
