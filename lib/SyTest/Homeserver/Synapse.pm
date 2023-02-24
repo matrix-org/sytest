@@ -63,7 +63,8 @@ sub _init
       appservice_metrics => main::alloc_port( "appservice[$idx].metrics" ),
       appservice_manhole => main::alloc_port( "appservice[$idx].manhole" ),
 
-      federation_sender_metrics => main::alloc_port( "federation_sender1[$idx].metrics" ),
+      federation_sender => main::alloc_port( "federation_sender[$idx]" ),
+      federation_sender_metrics => main::alloc_port( "federation_sender[$idx].metrics" ),
       federation_sender_manhole => main::alloc_port( "federation_sender[$idx].manhole" ),
 
       client_reader         => main::alloc_port( "client_reader[$idx]" ),
@@ -325,7 +326,13 @@ sub start
               host => "$bind_host",
               port => $self->{ports}{stream_writer},
            },
+           "federation_sender" => {
+              host => "$bind_host",
+              port => $self->{ports}{federation_sender},
+           },
         },
+
+        federation_sender_instances => ["federation_sender"],
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
@@ -734,6 +741,12 @@ sub _start_synapse
                type      => "http",
                resources => [{ names => ["metrics"] }],
                port      => $self->{ports}{federation_sender_metrics},
+               bind_address => $bind_host,
+            },
+            {
+               type      => "http",
+               resources => [{ names => ["replication"] }],
+               port      => $self->{ports}{federation_sender},
                bind_address => $bind_host,
             },
          ],
