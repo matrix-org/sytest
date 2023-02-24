@@ -5,6 +5,8 @@ name: Build and deploy docker images
 on:
   push:
     branches: [develop]
+  schedule:
+    - cron: 0 1 * * *  # 1am, daily.
   workflow_dispatch:
 
 permissions:
