@@ -248,17 +248,17 @@ sub _start_monolith
 
    $output->diag( "Starting monolith server" );
    my @command = (
-      $self->{bindir} . '/dendrite-monolith-server',
+      $self->{bindir} . '/dendrite',
       '--config', $self->{paths}{config},
       '--http-bind-address', $self->{bind_host} . ':' . $self->unsecure_port,
       '--https-bind-address', $self->{bind_host} . ':' . $self->secure_port,
-      '--api-bind-address', $self->{bind_host} . ':1' . $self->unsecure_port,
       '--tls-cert', $self->{paths}{tls_cert},
       '--tls-key', $self->{paths}{tls_key},
       '--really-enable-open-registration',
    );
 
-   push(@command, '-api') if $ENV{'API'} == '1';
+   push(@command, '--test.coverprofile=' . $self->{hs_dir} . '/integrationcover.log') if $ENV{'COVER'} == '1';
+
    $output->diag( "Starting Dendrite with: @command" );
 
    return $self->_start_process_and_await_connectable(
@@ -274,7 +274,7 @@ sub _start_monolith
       command => [ @command ],
       connect_host => $self->{bind_host},
       connect_port => $self->secure_port,
-      name => "dendrite-$idx-monolith",
+      name => "dendrite-$idx",
    )->else( sub {
       die "Unable to start dendrite monolith: $_[0]\n";
    })->on_done( sub {
