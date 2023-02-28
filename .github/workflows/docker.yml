@@ -3,6 +3,8 @@
 name: Build and deploy Dendrite docker images
 
 on:
+  push:
+    branches: ["dendrite"]
   workflow_dispatch:
 
 permissions:
