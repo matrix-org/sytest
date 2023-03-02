@@ -77,10 +77,8 @@ jobs:
             build_args: "SYTEST_IMAGE_TAG=testing"
           - sytest_image_tag: bookworm
             dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:bookworm-python3.10"
-            build_args: |
-              SYTEST_IMAGE_TAG=bookworm
-              PYTHON_VERSION=python3.10
+            tags: "matrixdotorg/sytest-synapse:bookworm"
+            # Note: at the time of writing, bookworm's python3 is python 3.11.
 
     steps:
       - name: Set up QEMU
