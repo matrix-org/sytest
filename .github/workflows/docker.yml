@@ -78,6 +78,7 @@ jobs:
           - sytest_image_tag: bookworm
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:bookworm"
+            build_args: "SYTEST_IMAGE_TAG=bookworm"
             # Note: at the time of writing, bookworm's python3 is python 3.11.
 
     steps:
