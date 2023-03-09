@@ -25,8 +25,6 @@ jobs:
             tag: buster
           - base_image: debian:testing
             tag: testing
-          - base_image: debian:bookworm
-            tag: bookworm
     steps:
       - name: Set up QEMU
         id: QEMU
@@ -75,11 +73,6 @@ jobs:
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
             build_args: "SYTEST_IMAGE_TAG=testing"
-          - sytest_image_tag: bookworm
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:bookworm"
-            build_args: "SYTEST_IMAGE_TAG=bookworm"
-            # Note: at the time of writing, bookworm's python3 is python 3.11.
 
     steps:
       - name: Set up QEMU
