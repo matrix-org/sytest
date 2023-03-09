@@ -72,7 +72,9 @@ jobs:
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
-            build_args: "SYTEST_IMAGE_TAG=testing"
+            build_args: |
+              SYTEST_IMAGE_TAG=testing
+              SYSTEM_PIP_INSTALL_SUFFIX=--break-system-packages
 
     steps:
       - name: Set up QEMU
