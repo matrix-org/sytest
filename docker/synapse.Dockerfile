@@ -23,8 +23,11 @@ RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-tool
 # Use the latest version of pip. This pulls in fixes not present in the
 # pip version provided by Debian Buster. See
 # https://github.com/pypa/setuptools/issues/3457#issuecomment-1190125849
-RUN ${PYTHON_VERSION} -m pip install -q --upgrade pip
-RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.3.2
+# For now, we need to tell Debian we don't care that we're editing the system python
+# installation.
+# Some context in https://github.com/pypa/pip/issues/11381#issuecomment-1399263627
+RUN ${PYTHON_VERSION} -m pip install -q --upgrade pip --break-system-packages
+RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.3.2 --break-system-packages
 
 # As part of the Docker build, we attempt to pre-install Synapse's dependencies
 # in the hope that it speeds up the real install of Synapse. To make this work,

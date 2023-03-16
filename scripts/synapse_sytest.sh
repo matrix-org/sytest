@@ -161,7 +161,7 @@ else
         fi
         ln -s -T /venv /synapse/.venv # reuse the existing virtual env
         pushd /synapse
-        poetry install -vvv --extras all
+        poetry install -vv --extras all
         popd
     else
         # Install Synapse and dependencies using pip. As of pip 20.1, this will

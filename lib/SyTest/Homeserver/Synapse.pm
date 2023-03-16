@@ -1201,6 +1201,8 @@ global
     ssl-default-bind-ciphers "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL !eNULL !LOW !3DES !MD5 !EXP !PSK !SRP !DSS !RC4"
     ssl-default-bind-options no-sslv3
 
+    maxconn 2000
+
 defaults
     mode http
     log global
@@ -1301,6 +1303,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/joined_rooms                client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable/.*)/rooms/.*/aliases         client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/search                      client_reader
+^/_matrix/client/(r0|v3|unstable)/user/.*/filter(/|$)                client_reader
 
 ^/_matrix/client/(api/v1|r0|v3|unstable)/devices$                    stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/query$                 stream_writer
@@ -1317,6 +1320,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/send                                 event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/join/                                         event_creator
+^/_matrix/client/(api/v1|r0|v3|unstable)/knock/                                        event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/profile/                                      event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/createRoom                                    event_creator
 
