@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-sytest-images:
     name: "Build sytest:${{ matrix.tag }}"
@@ -25,8 +29,6 @@ jobs:
             tag: buster
           - base_image: debian:testing
             tag: testing
-          - base_image: debian:bookworm
-            tag: bookworm
     steps:
       - name: Set up QEMU
         id: QEMU
@@ -74,11 +76,9 @@ jobs:
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
-            build_args: "SYTEST_IMAGE_TAG=testing"
-          - sytest_image_tag: bookworm
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:bookworm"
-            # Note: at the time of writing, bookworm's python3 is python 3.11.
+            build_args: |
+              SYTEST_IMAGE_TAG=testing
+              SYSTEM_PIP_INSTALL_SUFFIX=--break-system-packages
 
     steps:
       - name: Set up QEMU
