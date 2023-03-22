@@ -38,7 +38,8 @@ mkdir -p $GOBIN
 if [[ -z ${COVER} || ${COVER} -eq 0 ]]; then
     go install -buildvcs=false -race=${RACE_DETECTION:-0} -tags vw -v ./cmd/dendrite
 else 
-    go test -c -cover -covermode=atomic -race=${RACE_DETECTION:-0} -buildvcs=false -tags vw -o $GOBIN/dendrite -coverpkg "github.com/matrix-org/..." ./cmd/dendrite
+    mkdir -p /work/server-0/covdatafiles /work/server-1/covdatafiles
+    go build -cover -covermode=atomic -race=${RACE_DETECTION:-0} -buildvcs=false -tags vw -o $GOBIN/dendrite -coverpkg "github.com/matrix-org/..." ./cmd/dendrite
 fi
 
 go install -buildvcs=false -race=${RACE_DETECTION:-0} -tags vw -v ./cmd/generate-keys
@@ -73,7 +74,7 @@ fi
 echo >&2 "--- Copying assets"
 
 # Copy out the logs
-rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+rsync -r --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --include "*/covdatafiles/*" --exclude="*"
 find /logs | xargs -r chmod go+rX
 
 # Generate annotate.md. This is Buildkite-specific.

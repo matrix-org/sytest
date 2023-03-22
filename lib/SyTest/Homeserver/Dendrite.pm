@@ -257,7 +257,7 @@ sub _start_monolith
       '--really-enable-open-registration',
    );
 
-   push(@command, '--test.coverprofile=' . $self->{hs_dir} . '/integrationcover.log') if $ENV{'COVER'} == '1';
+   #push(@command, '--test.coverprofile=' . $self->{hs_dir} . '/integrationcover.log') if $ENV{'COVER'} == '1';
 
    $output->diag( "Starting Dendrite with: @command" );
 
@@ -268,7 +268,8 @@ sub _start_monolith
             DENDRITE_TRACE_SQL => $ENV{'DENDRITE_TRACE_SQL'},
             DENDRITE_TRACE_HTTP => $ENV{'DENDRITE_TRACE_HTTP'},
             DENDRITE_TRACE_INTERNAL => $ENV{'DENDRITE_TRACE_INTERNAL'},
-            GORACE => "log_path=" . $self->{hs_dir} . "/racedetection.log"
+            GORACE => "log_path=" . $self->{hs_dir} . "/racedetection.log",
+            GOCOVERDIR => $self->{hs_dir} ."/covdatafiles",
          },
       ],
       command => [ @command ],

@@ -1,7 +1,7 @@
 ARG SYTEST_IMAGE_TAG=buster
 FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
-ARG GO_VERSION=1.19.1
+ARG GO_VERSION=1.20.2
 ARG TARGETARCH
 ENV GO_DOWNLOAD https://dl.google.com/go/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz
 
