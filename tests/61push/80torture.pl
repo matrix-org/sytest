@@ -42,8 +42,19 @@ foreach my $test_put ( @$TO_CHECK_PUT ) {
       };
 };
 
+test "Trying to get push rules with no trailing slash fails with 404",
+  requires => [ local_user_fixture() ],
+
+  check => sub {
+     my ( $user ) = @_;
+
+     do_request_json_for( $user,
+        method  => "GET",
+        uri     => "/v3/pushrules",
+     )->main::expect_http_404;
+  };
+
 my $TO_CHECK_GET_400 = [
-   [ "no trailing slash", "" ],
    [ "scope without trailing slash", "/global" ],
    [ "template without tailing slash", "/global/room" ],
    [ "unknown scope", "/not_a_scope/" ],

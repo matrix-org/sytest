@@ -129,15 +129,8 @@ jobs:
         include:
           - label: SQLite
 
-          - label: SQLite, full HTTP APIs
-            api: full-http
-
           - label: Postgres
             postgres: postgres
-
-          - label: Postgres, full HTTP APIs
-            postgres: postgres
-            api: full-http
 
     container:
       image: matrixdotorg/sytest-dendrite

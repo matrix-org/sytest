@@ -5,6 +5,7 @@
 set -ex
 
 export SYTEST_TARGET="$1"
+export SYTEST_DEFAULT_BRANCH="${SYTEST_DEFAULT_BRANCH:-develop}"
 shift
 
 if [ -d "/sytest" ]; then
@@ -19,20 +20,15 @@ else
         branch_name="$SYTEST_BRANCH"
     else
         # Otherwise, try and find the branch that the Synapse/Dendrite checkout
-        # is using. Fall back to develop if unknown.
-        branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="develop"
-    fi
-
-    if [ "$SYTEST_TARGET" == "dendrite" ] && [ "$branch_name" == "master" ]; then
-        # Dendrite uses master as its main branch. If the branch is master, we probably want sytest develop
-        branch_name="develop"
+        # is using. Fall back to the default branch if unknown.
+        branch_name="$(git --git-dir=/src/.git symbolic-ref HEAD 2>/dev/null)" || branch_name="${SYTEST_DEFAULT_BRANCH}"
     fi
 
     # Try and fetch the branch
     wget -q https://github.com/matrix-org/sytest/archive/$branch_name.tar.gz -O sytest.tar.gz || {
         # Probably a 404, fall back to develop
-        echo "Using develop instead..."
-        wget -q https://github.com/matrix-org/sytest/archive/develop.tar.gz -O sytest.tar.gz
+        echo "Using ${SYTEST_DEFAULT_BRANCH} instead..."
+        wget -q https://github.com/matrix-org/sytest/archive/${SYTEST_DEFAULT_BRANCH}.tar.gz -O sytest.tar.gz
     }
 
     mkdir -p /sytest

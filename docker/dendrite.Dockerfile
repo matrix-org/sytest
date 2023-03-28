@@ -11,6 +11,8 @@ RUN tar xf go.tar.gz -C /goroot --strip-components=1
 ENV GOROOT=/goroot
 ENV GOPATH=/gopath
 ENV PATH="/goroot/bin:${PATH}"
+# This is used in bootstrap.sh to pull in a dendrite specific Sytest branch
+ENV SYTEST_DEFAULT_BRANCH dendrite
 
 # This is where we expect Dendrite to be binded to from the host
 RUN mkdir -p /src

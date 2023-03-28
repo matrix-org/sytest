@@ -5,10 +5,16 @@ name: Build and deploy docker images
 on:
   push:
     branches: [develop]
+  schedule:
+    - cron: 0 1 * * *  # 1am, daily.
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-sytest-images:
@@ -23,8 +29,6 @@ jobs:
             tag: buster
           - base_image: debian:testing
             tag: testing
-          - base_image: debian:bookworm
-            tag: bookworm
     steps:
       - name: Set up QEMU
         id: QEMU
@@ -72,17 +76,9 @@ jobs:
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
-            build_args: "SYTEST_IMAGE_TAG=testing"
-          - sytest_image_tag: bookworm
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:bookworm-python3.10"
             build_args: |
-              SYTEST_IMAGE_TAG=bookworm
-              PYTHON_VERSION=python3.10
-          - sytest_image_tag: buster
-            dockerfile: dendrite
-            tags: "matrixdotorg/sytest-dendrite:latest"
-            build_args: "SYTEST_IMAGE_TAG=buster"
+              SYTEST_IMAGE_TAG=testing
+              SYSTEM_PIP_INSTALL_SUFFIX=--break-system-packages
 
     steps:
       - name: Set up QEMU
