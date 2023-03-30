@@ -50,7 +50,7 @@ test "Outbound federation can send events",
 test "Inbound federation can receive events",
    requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures(
-                   user_opts => { with_events => 1 },
+                   user_opts => { with_events => 0 },
                  ),
                  federation_user_id_fixture() ],
 
@@ -98,7 +98,7 @@ test "Inbound federation can receive events",
 test "Inbound federation can receive redacted events",
    requires => [ $main::OUTBOUND_CLIENT,
                  local_user_and_room_fixtures(
-                   user_opts => { with_events => 1 },
+                   user_opts => { with_events => 0 },
                  ),
                  federation_user_id_fixture() ],
 
