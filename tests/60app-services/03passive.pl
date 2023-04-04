@@ -13,7 +13,7 @@ test "Inviting an AS-hosted user asks the AS server",
       my $localpart = "astest-03passive-1";
       my $user_id = "\@$localpart:$server_name";
 
-      require_stub $appserv->await_http_request( "/users/$user_id", sub { 1 } )
+      require_stub $appserv->await_http_request( "/_matrix/app/v1/users/$user_id", sub { 1 } )
          ->then( sub {
             my ( $request ) = @_;
 
@@ -52,7 +52,7 @@ multi_test "Accesing an AS-hosted room alias asks the AS server",
    do => sub {
       my ( $as_user, $appserv, $local_user, $room_id, $room_alias ) = @_;
 
-      require_stub $appserv->await_http_request( "/rooms/$room_alias", sub { 1 } )
+      require_stub $appserv->await_http_request( "/_matrix/app/v1/rooms/$room_alias", sub { 1 } )
          ->then( sub {
             my ( $request ) = @_;
 

@@ -1297,6 +1297,7 @@ sub generate_haproxy_map
 ^/_matrix/client/versions$                                           client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/voip/turnServer$            client_reader
 ^/_matrix/client/(r0|v3|unstable)/register$                          client_reader
+^/_matrix/client/(r0|v3|unstable)/register/available$                client_reader
 ^/_matrix/client/(r0|v3|unstable)/auth/.*/fallback/web$              client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/messages$          client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/event              client_reader
@@ -1304,6 +1305,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable/.*)/rooms/.*/aliases         client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/search                      client_reader
 ^/_matrix/client/(r0|v3|unstable)/user/.*/filter(/|$)                client_reader
+^/_matrix/client/(r0|v3|unstable)/password_policy$                   client_reader
 
 ^/_matrix/client/(api/v1|r0|v3|unstable)/devices$                    stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/query$                 stream_writer

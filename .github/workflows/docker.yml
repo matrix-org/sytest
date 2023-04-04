@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-dependent-images:
     name: "Build sytest-${{ matrix.dockerfile }}:${{ matrix.sytest_image_tag }}"
