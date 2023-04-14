@@ -1,6 +1,6 @@
 use List::UtilsBy qw( sort_by );
 
-use constant AS_PREFIX => "/_matrix/app/unstable";
+use constant AS_PREFIX => "/_matrix/app/v1";
 
 sub stub_empty_result
 {
@@ -59,7 +59,7 @@ test "HS provides query metadata",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/thirdparty/protocols"
+            uri    => "/v3/thirdparty/protocols"
          )->then( sub {
             my ( $body ) = @_;
 
@@ -107,7 +107,7 @@ test "HS can provide query metadata on a single protocol",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/unstable/thirdparty/protocol/ymca"
+         uri    => "/v3/thirdparty/protocol/ymca"
       )->then( sub {
          my ( $body ) = @_;
 
@@ -172,7 +172,7 @@ test "HS will proxy request for 3PU mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/thirdparty/user/ymca",
+            uri    => "/v3/thirdparty/user/ymca",
 
             params => {
                field1 => "ONE",
@@ -237,7 +237,7 @@ test "HS will proxy request for 3PL mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/thirdparty/location/ymca",
+            uri    => "/v3/thirdparty/location/ymca",
 
             params => {
                field3 => "THREE",
