@@ -77,7 +77,7 @@ test "Can download specifying a different ASCII file name",
          my ( $body, $response ) = @_;
 
          my $disposition = $response->header( "Content-Disposition" );
-         $disposition eq "inline; filename=also_ascii" or
+         $disposition eq "attachment; filename=also_ascii" or
             die "Expected an ASCII filename parameter";
 
          Future->done(1);
