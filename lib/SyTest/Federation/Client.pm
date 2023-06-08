@@ -92,10 +92,15 @@ sub do_request_json
 
    my $signature = $signing_block{signatures}{$origin}{$key_id};
 
+   # Assume that there is no delegation in place, so the hostname and
+   # destination server name are the same.
+   my $destination = $params{hostname};
+
    my $auth = "X-Matrix " . join_header_words(
-      [ origin => $origin ],
-      [ key    => $key_id ],
-      [ sig    => $signature ],
+      [ origin      => $origin      ],
+      [ key         => $key_id      ],
+      [ sig         => $signature   ],
+      [ destination => $destination ],
    );
 
    # TODO: SYN-437 synapse does not like OWS between auth-param elements
