@@ -122,10 +122,10 @@ sub parse_content_disposition_params {
    assert_eq( scalar @parts, 1, "number of content-dispostion header lists" );
    @parts = @{$parts[0]};
 
-   # the first part must be 'inline'
+   # the first part must be 'attachment'
    my $k = shift @parts;
    my $v = shift @parts;
-   assert_eq( $k, "inline", "content-disposition" );
+   assert_eq( $k, "attachment", "content-disposition" );
    die "invalid CD" if defined $v;
 
    my %params;
@@ -233,8 +233,8 @@ test "Can download specifying a different Unicode file name",
          my ( $body, $response ) = @_;
 
          my $disposition = $response->header( "Content-Disposition" );
-         uc $disposition eq uc "inline; filename*=utf-8''$alt_filename_encoded" or
-            uc $disposition eq uc "inline; filename=utf-8\"$alt_filename\"" or
+         uc $disposition eq uc "attachment; filename*=utf-8''$alt_filename_encoded" or
+            uc $disposition eq uc "attachment; filename=utf-8\"$alt_filename\"" or
             die "Expected a UTF-8 filename parameter";
 
          Future->done(1);
