@@ -23,7 +23,8 @@ sub test_using_client
       my ( $disposition ) = @_;
 
       # Require `attachment` `Content-Disposition` without a filename portion.
-      $disposition eq "attachment" or die "Expected content-disposition of `attachment`";
+      # See `get_media`: {} means attachment with no key-value components in the header value.
+      assert_eq( $disposition, {}, "content-disposition" );
 
       Future->done(1);
    });
