@@ -1306,6 +1306,8 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/search                      client_reader
 ^/_matrix/client/(r0|v3|unstable)/user/.*/filter(/|$)                client_reader
 ^/_matrix/client/(r0|v3|unstable)/password_policy$                   client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/directory/room/.*$          client_reader
+^/_matrix/client/(r0|v3|unstable)/capabilities$                      client_reader
 
 ^/_matrix/client/(api/v1|r0|v3|unstable)/devices$                    stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/query$                 stream_writer
