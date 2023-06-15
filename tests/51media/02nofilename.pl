@@ -22,8 +22,8 @@ sub test_using_client
    get_media( $client, $content_id )->then( sub {
       my ( $disposition ) = @_;
 
-      defined $disposition and
-         die "Unexpected Content-Disposition header";
+      # Require `attachment` `Content-Disposition` without a filename portion.
+      assert_eq( $disposition, "attachment", "content-disposition" );
 
       Future->done(1);
    });
