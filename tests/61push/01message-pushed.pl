@@ -630,3 +630,103 @@ test "Rejected events are not pushed",
          );
       });
    };
+
+test "Invites over federation are correctly pushed",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ),
+      remote_user_fixture(),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $charlie, $test_server_info ) = @_;
+      my $room_id;
+
+      setup_push( $alice, $bob, $test_server_info )
+      ->then( sub {
+         matrix_create_room_synced( $charlie );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         Future->needs_all(
+            await_http_request( $PUSH_LOCATION, sub {
+               my ( $request ) = @_;
+               my $body = $request->body_from_json;
+
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
+               return unless $body->{notification}{type};
+               return unless $body->{notification}{type} eq "m.room.member";
+               return 1;
+            }),
+            matrix_invite_user_to_room( $charlie, $alice, $room_id )
+         )
+      })->then( sub {
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
+
+         log_if_fail "Message push request body", $body;
+
+         assert_json_keys( my $notification = $body->{notification}, qw(
+            id room_id type sender content devices counts
+         ));
+
+         assert_eq( $notification->{room_id}, $room_id, "room_id");
+         assert_eq( $notification->{sender}, $charlie->user_id, "sender");
+
+         Future->done(1);
+      })
+   };
+
+
+test "Invites over federation are correctly pushed with name",
+   requires => [
+      local_user_fixtures( 2, with_events => 0 ),
+      remote_user_fixture(),
+      $main::TEST_SERVER_INFO
+   ],
+
+   check => sub {
+      my ( $alice, $bob, $charlie, $test_server_info ) = @_;
+      my $room_id;
+
+      my $name = "Test Name";
+
+      setup_push( $alice, $bob, $test_server_info )
+      ->then( sub {
+         matrix_create_room_synced( $charlie, name => $name );
+      })->then( sub {
+         ( $room_id ) = @_;
+
+         Future->needs_all(
+            await_http_request( $PUSH_LOCATION, sub {
+               my ( $request ) = @_;
+               my $body = $request->body_from_json;
+
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
+               return unless $body->{notification}{type};
+               return unless $body->{notification}{type} eq "m.room.member";
+               return 1;
+            }),
+            matrix_invite_user_to_room( $charlie, $alice, $room_id )
+         )
+      })->then( sub {
+         my ( $request ) = @_;
+         my $body = $request->body_from_json;
+
+         log_if_fail "Message push request body", $body;
+
+         assert_json_keys( my $notification = $body->{notification}, qw(
+            id room_id type sender content devices counts
+         ));
+
+         assert_eq( $notification->{room_id}, $room_id, "room_id");
+         assert_eq( $notification->{sender}, $charlie->user_id, "sender");
+         assert_eq( $notification->{room_name}, $name, "room_name");
+
+         Future->done(1);
+      })
+   };
