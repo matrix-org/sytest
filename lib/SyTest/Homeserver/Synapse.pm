@@ -308,28 +308,30 @@ sub start
            },
         ) : (),
 
-        instance_map => {
-           "main" => {
-              host => "$bind_host",
-              port => $self->{ports}{synapse_unsecure},
-           },
-           "event_persister1" => {
-              host => "$bind_host",
-              port => $self->{ports}{event_persister1},
-           },
-           "event_persister2" => {
-              host => "$bind_host",
-              port => $self->{ports}{event_persister2},
-           },
-           "client_reader" => {
-              host => "$bind_host",
-              port => $self->{ports}{client_reader},
-           },
-           "stream_writer" => {
-              host => "$bind_host",
-              port => $self->{ports}{stream_writer},
-           },
-        },
+        $self->{workers} ? (
+            instance_map => {
+               "main" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{synapse_unsecure},
+               },
+               "event_persister1" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{event_persister1},
+               },
+               "event_persister2" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{event_persister2},
+               },
+               "client_reader" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{client_reader},
+               },
+               "stream_writer" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{stream_writer},
+               },
+            },
+        ) : (),
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
