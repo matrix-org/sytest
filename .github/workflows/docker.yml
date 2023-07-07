@@ -25,8 +25,8 @@ jobs:
         include:
           - base_image: ubuntu:focal
             tag: focal
-          - base_image: debian:buster
-            tag: buster
+          - base_image: debian:bullseye
+            tag: bullseye
           - base_image: debian:testing
             tag: testing
     steps:
@@ -69,10 +69,10 @@ jobs:
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:focal"
             build_args: "SYTEST_IMAGE_TAG=focal"
-          - sytest_image_tag: buster
+          - sytest_image_tag: bullseye
             dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:buster"
-            build_args: "SYTEST_IMAGE_TAG=buster"
+            tags: "matrixdotorg/sytest-synapse:bullseye"
+            build_args: "SYTEST_IMAGE_TAG=bullseye"
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
