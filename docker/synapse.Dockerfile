@@ -1,4 +1,4 @@
-ARG SYTEST_IMAGE_TAG=buster
+ARG SYTEST_IMAGE_TAG=bullseye
 
 FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
@@ -21,13 +21,9 @@ RUN mkdir /rust /cargo
 
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable --profile minimal
 
-# Use the latest version of pip. This pulls in fixes not present in the
-# pip version provided by Debian Buster. See
-# https://github.com/pypa/setuptools/issues/3457#issuecomment-1190125849
 # For now, we need to tell Debian we don't care that we're editing the system python
 # installation.
 # Some context in https://github.com/pypa/pip/issues/11381#issuecomment-1399263627
-RUN ${PYTHON_VERSION} -m pip install -q --upgrade pip ${SYSTEM_PIP_INSTALL_SUFFIX}
 RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.3.2 ${SYSTEM_PIP_INSTALL_SUFFIX}
 
 # As part of the Docker build, we attempt to pre-install Synapse's dependencies

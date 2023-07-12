@@ -308,24 +308,30 @@ sub start
            },
         ) : (),
 
-        instance_map => {
-           "event_persister1" => {
-              host => "$bind_host",
-              port => $self->{ports}{event_persister1},
-           },
-           "event_persister2" => {
-              host => "$bind_host",
-              port => $self->{ports}{event_persister2},
-           },
-           "client_reader" => {
-              host => "$bind_host",
-              port => $self->{ports}{client_reader},
-           },
-           "stream_writer" => {
-              host => "$bind_host",
-              port => $self->{ports}{stream_writer},
-           },
-        },
+        $self->{workers} ? (
+            instance_map => {
+               "main" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{synapse_unsecure},
+               },
+               "event_persister1" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{event_persister1},
+               },
+               "event_persister2" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{event_persister2},
+               },
+               "client_reader" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{client_reader},
+               },
+               "stream_writer" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{stream_writer},
+               },
+            },
+        ) : (),
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
@@ -670,8 +676,6 @@ sub _start_synapse
          "worker_name"             => "pusher",
          "worker_pid_file"         => "$hsdir/pusher.pid",
          "worker_log_config"       => $self->configure_logger("pusher"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -696,8 +700,6 @@ sub _start_synapse
          "worker_name"             => "appservice",
          "worker_pid_file"         => "$hsdir/appservice.pid",
          "worker_log_config"       => $self->configure_logger("appservice"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -722,8 +724,6 @@ sub _start_synapse
          "worker_name"             => "federation_sender",
          "worker_pid_file"         => "$hsdir/federation_sender.pid",
          "worker_log_config"       => $self->configure_logger("federation_sender"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -748,8 +748,6 @@ sub _start_synapse
          "worker_name"             => "synchrotron",
          "worker_pid_file"         => "$hsdir/synchrotron.pid",
          "worker_log_config"       => $self->configure_logger("synchrotron"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -780,8 +778,6 @@ sub _start_synapse
          "worker_name"             => "federation_reader",
          "worker_pid_file"         => "$hsdir/federation_reader.pid",
          "worker_log_config"       => $self->configure_logger("federation_reader"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -812,8 +808,6 @@ sub _start_synapse
          "worker_name"             => "media_repository",
          "worker_pid_file"         => "$hsdir/media_repository.pid",
          "worker_log_config"       => $self->configure_logger("media_repository"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -844,8 +838,6 @@ sub _start_synapse
          "worker_name"                  => "client_reader",
          "worker_pid_file"              => "$hsdir/client_reader.pid",
          "worker_log_config"            => $self->configure_logger("client_reader"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"             => [
             {
                type      => "http",
@@ -876,8 +868,6 @@ sub _start_synapse
          "worker_name"             => "user_dir",
          "worker_pid_file"         => "$hsdir/user_dir.pid",
          "worker_log_config"       => $self->configure_logger("user_dir"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -908,8 +898,6 @@ sub _start_synapse
          "worker_name"                  => "event_creator",
          "worker_pid_file"              => "$hsdir/event_creator.pid",
          "worker_log_config"            => $self->configure_logger("event_creator"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"             => [
             {
                type      => "http",
@@ -940,8 +928,6 @@ sub _start_synapse
          "worker_name"                  => "frontend_proxy1",
          "worker_pid_file"              => "$hsdir/frontend_proxy.pid",
          "worker_log_config"            => $self->configure_logger("frontend_proxy"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"             => [
             {
                type      => "http",
@@ -972,8 +958,6 @@ sub _start_synapse
          "worker_name"                  => "background_worker1",
          "worker_pid_file"              => "$hsdir/background_worker.pid",
          "worker_log_config"            => $self->configure_logger("background_worker"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
       };
 
       push @worker_configs, $background_worker_config;
@@ -985,8 +969,6 @@ sub _start_synapse
          "worker_name"                  => "event_persister1",
          "worker_pid_file"              => "$hsdir/event_persister1.pid",
          "worker_log_config"            => $self->configure_logger("event_persister1"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"             => [
             {
                type      => "http",
@@ -1017,8 +999,6 @@ sub _start_synapse
          "worker_name"                  => "event_persister2",
          "worker_pid_file"              => "$hsdir/event_persister2.pid",
          "worker_log_config"            => $self->configure_logger("event_persister2"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"             => [
             {
                type      => "http",
@@ -1049,8 +1029,6 @@ sub _start_synapse
          "worker_name"                  => "stream_writer",
          "worker_pid_file"              => "$hsdir/stream_writer.pid",
          "worker_log_config"            => $self->configure_logger("stream_writer"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"             => [
             {
                type      => "http",
