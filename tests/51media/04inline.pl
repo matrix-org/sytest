@@ -3,11 +3,6 @@ my $content_id;
 # This test ensures an uploaded file may optionally be rendered inline
 # in the browser. This is checked in get_media
 
-sub test_using_client
-{
-   my ( $client ) = @_;
-}
-
 test "Can download a file that optionally inlines",
    requires => [ $main::API_CLIENTS[0] ],
 
