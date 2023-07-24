@@ -45,7 +45,7 @@ my $PROXY_SERVER = fixture(
 =head2 upload_test_content
 
    my ( $content_id, $content_uri ) = upload_test_content(
-      $user, filename => "filename",
+      $user, filename => "filename", $content_type
    ) -> get;
 
 Uploads some test content with the given filename.
@@ -55,13 +55,15 @@ Returns the content id of the uploaded content.
 =cut
 sub upload_test_content
 {
-   my ( $user, %params ) = @_;
+   my ( $user, %params, $content_type) = @_;
+
+   $content_type ||= "application/octet-stream"
 
    $user->http->do_request(
       method       => "POST",
       full_uri     => "/_matrix/media/v3/upload",
       content      => "Test media file",
-      content_type => "text/plain",
+      content_type => $content_type,
 
       params => {
          access_token => $user->access_token,
@@ -88,14 +90,16 @@ push our @EXPORT, qw( upload_test_content );
 
 =head2 get_media
 
-   my ( $content_disposition_params, $content ) = get_media( $http, $content_id ) -> get;
+   my ( $content_disposition_params, $content ) = get_media( $http, $content_id, $allowed_depositions ) -> get;
 
 Fetches a piece of media from the server.
 
 =cut
 sub get_media
 {
-   my ( $http, $content_id ) = @_;
+   my ( $http, $content_id, $allow_inline_disposition ) = @_;
+
+   $allow_inline_disposition ||= 0;
 
    $http->do_request(
       method   => "GET",
@@ -107,7 +111,7 @@ sub get_media
 
       my $cd_params;
       if ( defined $disposition ) {
-         $cd_params = parse_content_disposition_params( $disposition );
+         $cd_params = parse_content_disposition_params( $disposition, $allow_inline_disposition );
       }
       Future->done( $cd_params, $body );
    });
@@ -115,7 +119,7 @@ sub get_media
 push @EXPORT, qw( get_media );
 
 sub parse_content_disposition_params {
-   my ( $disposition ) = @_;
+   my ( $disposition, $allow_inline_disposition ) = @_;
    my @parts = split_header_words( $disposition );
 
    # should be only one list of words
@@ -125,7 +129,14 @@ sub parse_content_disposition_params {
    # the first part must be 'attachment'
    my $k = shift @parts;
    my $v = shift @parts;
-   assert_eq( $k, "attachment", "content-disposition" );
+
+   if ($allow_inline_disposition eq 1) {
+      assert_ok( $k eq "attachment" or $k eq "inline", "content-disposition");
+   }
+   else {
+      assert_eq( $k, "attachment", "content-disposition" );
+   }
+
    die "invalid CD" if defined $v;
 
    my %params;

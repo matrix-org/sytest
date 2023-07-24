@@ -6,7 +6,7 @@ test "Can upload without a file name",
    do => sub {
       my ( $user ) = @_;
 
-      upload_test_content( $user, )->then( sub {
+      upload_test_content( $user )->then( sub {
          ( $content_id ) = @_;
          Future->done(1)
       });
@@ -19,7 +19,7 @@ sub test_using_client
 {
    my ( $client ) = @_;
 
-   get_media( $client, $content_id )->then( sub {
+   get_media( $client, $content_id, 0 )->then( sub {
       my ( $disposition ) = @_;
 
       # Require `attachment` `Content-Disposition` without a filename portion.
