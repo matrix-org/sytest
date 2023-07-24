@@ -90,7 +90,7 @@ push our @EXPORT, qw( upload_test_content );
 
 =head2 get_media
 
-   my ( $content_disposition_params, $content ) = get_media( $http, $content_id, $allowed_depositions ) -> get;
+   my ( $content_disposition_params, $content ) = get_media( $http, $content_id, $allow_inline_disposition ) -> get;
 
 Fetches a piece of media from the server.
 
