@@ -557,7 +557,7 @@ test "After /purge_history users still get pushed for new messages",
          # Test that /sync with an existing token still works.
          matrix_sync_again( $admin )
       })->then( sub {
-         # Check that the notifiication count increases if we see a new message.
+         # Check that the notification count increases if we see a new message.
          matrix_send_room_text_message_synced( $user, $room_id,
             body => "New Message",
          )
@@ -575,7 +575,7 @@ test "After /purge_history users still get pushed for new messages",
          # the first being $last_event_id and the second the "new message"
          assert_eq( $room->{unread_notifications}{"notification_count"}, 2 );
 
-         pass( "Notificaiton count was increased on new message" );
+         pass( "Notification count was increased on new message" );
 
          # Check that we get pushed messages
          do_request_json_for(
