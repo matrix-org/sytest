@@ -615,7 +615,8 @@ test "uploading signed devices gets propagated over federation",
           "keys" => {
               "curve25519:$user2_device" => "IQ/Hu4GGOaxIpMavovFYGouVJeIP2miSfysv+Db3NXg",
               "ed25519:$user2_device" => "MKkClRdltZlOHyCzxiDrm7MsDAsohXmAyeu2cYO6how",
-          }
+          },
+          "signatures" => { "$user2_id" => {"ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ" => "dSO80A01XiigH3uBiDVx/EjzaoycHcjq9lfQX0uWsqxl2giMIiSPR8a4d291W1ihKJL/a+myXS367WT6NAIcBA"} },
       };
       my $cross_signature;
 
