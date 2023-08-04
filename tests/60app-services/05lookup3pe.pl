@@ -156,6 +156,7 @@ test "HS will proxy request for 3PU mapping",
                {
                   field1 => "ONE",
                   field2 => "TWO",
+                  access_token => $access_token,
                },
                'fields in received AS request'
             );
@@ -223,6 +224,7 @@ test "HS will proxy request for 3PL mapping",
                { $request->query_form },
                {
                   field3 => "THREE",
+                  access_token => $access_token,
                },
                'fields in received AS request'
             );
