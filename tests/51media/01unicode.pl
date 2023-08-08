@@ -130,7 +130,7 @@ sub parse_content_disposition_params {
    my $k = shift @parts;
    my $v = shift @parts;
 
-   if ($allow_inline_disposition eq 1) {
+   if ($allow_inline_disposition) {
       assert_ok( $k eq "attachment" or $k eq "inline", "content-disposition");
    }
    else {
