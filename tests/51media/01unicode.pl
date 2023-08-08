@@ -57,7 +57,7 @@ sub upload_test_content
 {
    my ( $user, %params, $content_type) = @_;
 
-   $content_type ||= "application/octet-stream"
+   $content_type ||= "application/octet-stream";
 
    $user->http->do_request(
       method       => "POST",

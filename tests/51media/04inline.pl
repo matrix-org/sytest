@@ -4,10 +4,10 @@ my $content_id;
 # in the browser. This is checked in get_media
 
 test "Can download a file that optionally inlines",
-   requires => [ $main::API_CLIENTS[0] ],
+   requires => [ $main::API_CLIENTS[0], local_user_fixture() ],
 
    check => sub {
-      my ( $http ) = @_;
+      my ( $http, $user ) = @_;
       upload_test_content( $user, {} , "text/plain")->then( sub {
          ( $content_id ) = @_;
          get_media( $http, $content_id, 1 )->then( sub {
