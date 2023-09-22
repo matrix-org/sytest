@@ -498,3 +498,121 @@ sub await_message_in_room
       log_if_fail "Found event $event_id for $user_id";
    })
 }
+
+
+test "After /purge_history users still get pushed for new messages",
+   requires => [ local_admin_fixture(), local_user_and_room_fixtures(), $main::TEST_SERVER_INFO, ],
+   implementation_specific => ['synapse'],
+
+   do => sub {
+      my ( $admin, $user, $room_id, $test_server_info ) = @_;
+
+      my $PUSH_LOCATION = "/_matrix/push/v1/notify";
+
+      my $last_event_id;
+
+      matrix_join_room( $admin, $room_id )
+      ->then( sub {
+         matrix_sync( $user )
+      })->then( sub {
+         matrix_sync( $admin )
+      })->then( sub {
+         matrix_send_room_text_message_synced( $user, $room_id,
+            body => "First message",
+         )
+      })->then( sub {
+         my ( $event_id ) = @_;
+
+         matrix_advance_room_receipt_synced( $admin, $room_id, "m.read" => $event_id )
+      })->then( sub {
+         repeat( sub {
+            my $msgnum = $_[0];
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "Message $msgnum",
+            )
+         }, foreach => [ 1 .. 10 ])
+      })->then( sub {
+         ( $last_event_id ) = @_;
+
+         await_message_in_room( $user, $room_id, $last_event_id ),
+      })->then( sub {
+         log_if_fail "Got message down sync";
+
+         do_request_json_for( $admin,
+            method   => "POST",
+            full_uri => "/_synapse/admin/v1/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
+            content  => {}
+         )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body, "purge_id" );
+         my $purge_id = $body->{purge_id};
+         await_purge_complete( $admin, $purge_id );
+      })->then( sub {
+         my ( $purge_status ) = @_;
+         assert_eq( $purge_status, 'complete' );
+
+         # Test that /sync with an existing token still works.
+         matrix_sync_again( $admin )
+      })->then( sub {
+         # Check that the notification count increases if we see a new message.
+         matrix_send_room_text_message_synced( $user, $room_id,
+            body => "New Message",
+         )
+      })->then( sub {
+         matrix_sync_again( $admin )
+      })->then( sub {
+         my ( $body ) = @_;
+
+         assert_json_keys( $body->{rooms}{join}, $room_id );
+         my $room =  $body->{rooms}{join}{$room_id};
+
+         log_if_fail( "Room", $room );
+
+         # We expect notification count to be 2, as we'll still see two events:
+         # the first being $last_event_id and the second the "new message"
+         assert_eq( $room->{unread_notifications}{"notification_count"}, 2 );
+
+         pass( "Notification count was increased on new message" );
+
+         # Check that we get pushed messages
+         do_request_json_for(
+            $admin,
+            method  => "POST",
+            uri     => "/v3/pushers/set",
+            content => {
+               profile_tag         => "tag",
+               kind                => "http",
+               app_id              => "sytest",
+               app_display_name    => "sytest_display_name",
+               device_display_name => "device_display_name",
+               pushkey             => "a_push_key",
+               lang                => "en",
+               data                => { url => $test_server_info->client_location . $PUSH_LOCATION, },
+            },
+         )
+      })->then( sub {
+         Future->needs_all(
+            await_http_request( $PUSH_LOCATION, sub {
+               my ( $request ) = @_;
+               my $body = $request->body_from_json;
+
+               # Respond to all requests, even if we filiter them out
+               $request->respond_json( {} );
+
+               log_if_fail( "Push", $body );
+
+               return unless $body->{notification}{type};
+               return unless $body->{notification}{type} eq "m.room.message";
+               return unless $body->{notification}{content}{body} eq "Pushed room message";
+               return 1;
+            }),
+
+            matrix_send_room_text_message_synced( $user, $room_id,
+               body => "Pushed room message",
+            )->SyTest::pass_on_done( "Message sent" ),
+         )->SyTest::pass_on_done( "New messages was pushed" )
+      })
+   };

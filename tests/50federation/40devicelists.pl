@@ -739,6 +739,9 @@ test "If a device list update goes missing, the server resyncs on the next one",
             )
          )
       })->then( sub {
+         # Wait for the device list update to be handled
+         sync_until_user_in_device_list_id( $user, $creator_id )
+      })->then( sub {
          # in stream_id 2, we add keys to the device but deliberately don't
          # tell the remote server about it.
 
@@ -781,6 +784,9 @@ test "If a device list update goes missing, the server resyncs on the next one",
                }
             )
          );
+      })->then( sub {
+         # Wait for the device list update to be handled
+         sync_until_user_in_device_list_id( $user, $creator_id )
       })->then( sub {
          do_request_json_for( $user,
             method  => "POST",
