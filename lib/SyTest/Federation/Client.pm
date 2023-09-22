@@ -16,7 +16,7 @@ use SyTest::Assertions qw( :all );
 use URI::Escape qw( uri_escape );
 
 use constant SUPPORTED_ROOM_VERSIONS => [qw(
-   1 2 3 4 5 6 7 8 9 10
+   1 2 3 4 5 6 7 8 9 10 11
 )];
 
 sub configure
