@@ -340,6 +340,7 @@ sub start
            account_data => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            receipts     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            presence     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           push         => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            typing       => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
         },
 
