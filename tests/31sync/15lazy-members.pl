@@ -494,6 +494,7 @@ test "Leaves are present in non-gapped incremental syncs",
          # Ensure server has propagated those messages to Alice's sync stream
          await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $bob->user_id, 10 ));
       })->then( sub {
+         # Alice does an initial sync; this stashes the "next_batch" token for use below.
          matrix_sync( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
@@ -503,16 +504,23 @@ test "Leaves are present in non-gapped incremental syncs",
       })->then( sub {
          matrix_send_filler_messages_synced( $bob, $room_id, 5 );
       })->then( sub {
+         # Make sure alice can see the filler messages. This starts with an initialsync, and doesn't update the "next batch".
          await_sync_timeline_contains( $alice, $room_id, check => check_filler_event( $bob->user_id, 5 ));
       })->then( sub {
+         # Finally, do an incremental sync, which should include all of the changes since the `matrix_sync` above
+         # (ie, before charlie left).
          matrix_sync_again( $alice, filter => $filter_id );
       })->then( sub {
          my ( $body ) = @_;
 
-         # XXX: i'm surprised we have an explicit state entry here at all,
-         # given the state transition is included in the timeline.
-         my $state = $body->{rooms}{join}{$room_id}{state}{events};
-         assert_state_room_members_match( $state, { $charlie->user_id => 'leave' });
+         log_if_fail "Incremental sync", $body;
+
+         # The timeline should include Charlie's leave event (followed by the 5 padding events).
+         my $room = $body->{rooms}{join}{$room_id};
+         my $event = $room->{timeline}{events}[0];
+
+         assert_eq( $event->{type}, "m.room.member" );
+         assert_eq( $event->{state_key}, $charlie->user_id );
 
          Future->done(1);
       });
