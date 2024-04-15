@@ -340,6 +340,7 @@ sub start
            account_data => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            receipts     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            presence     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           push_rules   => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            typing       => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
         },
 
@@ -1294,6 +1295,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/claim                  stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/room_keys                   stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/presence/                   stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/pushrules/                  stream_writer
 
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/upload  frontend_proxy
 
@@ -1320,8 +1322,6 @@ EOCONFIG
 sub generate_haproxy_get_map
 {
     return <<'EOCONFIG';
-# pushrules should be here, but the tests seem to be racy.
-# ^/_matrix/client/(api/v1|r0|v3|unstable)/pushrules/            client_reader
 ^/_matrix/client/(r0|v3)/user/[^/]*/account_data/                client_reader
 ^/_matrix/client/(r0|v3)/user/[^/]*/rooms/[^/]*/account_data/    client_reader
 EOCONFIG

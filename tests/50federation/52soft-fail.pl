@@ -116,9 +116,15 @@ test "Inbound federation correctly soft fails events",
             destination => $first_home_server,
          );
       })->then( sub {
+         # Wait until we receive the power levels
+         retry_until_success {
+            $inbound_server->datastore->get_event( $power_level_event_id );
+            Future->done( 1 )
+         }
+      })->then( sub {
          # Now send a non-message (event D)
          my $pl_event = $inbound_server->datastore->get_event( $power_level_event_id );
-         die "did not receive PL event" unless $pl_event;
+
          my $event = $room->create_and_insert_event(
             type => "m.room.other_message_type",
 
@@ -518,6 +524,12 @@ test "Inbound federation correctly handles soft failed events as extremities",
             event => $event_sf2,
             destination => $first_home_server,
          );
+      })->then( sub {
+         # Wait until we receive the power levels
+         retry_until_success {
+            $inbound_server->datastore->get_event( $event_id_pl1 );
+            Future->done( 1 )
+         }
       })->then( sub {
          # send a regular message (event m2), which should be accepted
          my $event_pl1 = $inbound_server->datastore->get_event( $event_id_pl1 );
