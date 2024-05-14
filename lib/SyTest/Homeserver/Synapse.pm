@@ -1240,7 +1240,7 @@ sub generate_haproxy_map
    return <<'EOCONFIG';
 
 ^/_matrix/client/(v2_alpha|r0|v3)/sync$                  synchrotron
-^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
+^/_matrix/client/(api/v1|v2_alpha|r0)/events$            synchrotron
 ^/_matrix/client/(api/v1|r0|v3)/initialSync$             synchrotron
 ^/_matrix/client/(api/v1|r0|v3)/rooms/[^/]+/initialSync$ synchrotron
 
@@ -1257,6 +1257,8 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/make_leave/                   federation_reader
 ^/_matrix/federation/v1/send_join/                    federation_reader
 ^/_matrix/federation/v1/send_leave/                   federation_reader
+^/_matrix/federation/(v1|v2)/make_knock/              federation_reader
+^/_matrix/federation/(v1|v2)/send_knock/              federation_reader
 ^/_matrix/federation/v1/invite/                       federation_reader
 ^/_matrix/federation/v1/query_auth/                   federation_reader
 ^/_matrix/federation/v1/event_auth/                   federation_reader
