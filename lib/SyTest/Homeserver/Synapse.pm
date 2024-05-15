@@ -1257,8 +1257,8 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/make_leave/                   federation_reader
 ^/_matrix/federation/v1/send_join/                    federation_reader
 ^/_matrix/federation/v1/send_leave/                   federation_reader
-^/_matrix/federation/(v1|v2)/make_knock/              federation_reader
-^/_matrix/federation/(v1|v2)/send_knock/              federation_reader
+^/_matrix/federation/v1/make_knock/                   federation_reader
+^/_matrix/federation/v1/send_knock/                   federation_reader
 ^/_matrix/federation/v1/invite/                       federation_reader
 ^/_matrix/federation/v1/query_auth/                   federation_reader
 ^/_matrix/federation/v1/event_auth/                   federation_reader
