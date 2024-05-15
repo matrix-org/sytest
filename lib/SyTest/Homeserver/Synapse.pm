@@ -1244,7 +1244,13 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3)/initialSync$             synchrotron
 ^/_matrix/client/(api/v1|r0|v3)/rooms/[^/]+/initialSync$ synchrotron
 
-^/_matrix/media/    media_repository
+^/_matrix/media/                           media_repository
+^/_synapse/admin/v1/purge_media_cache$     media_repository
+^/_synapse/admin/v1/room/.*/media.*$       media_repository
+^/_synapse/admin/v1/user/.*/media.*$       media_repository
+^/_synapse/admin/v1/media/.*$              media_repository
+^/_synapse/admin/v1/quarantine_media/.*$   media_repository
+^/_synapse/admin/v1/users/.*/media$        media_repository
 
 ^/_matrix/federation/v1/event/                        federation_reader
 ^/_matrix/federation/v1/state/                        federation_reader
