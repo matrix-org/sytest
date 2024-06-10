@@ -52,23 +52,37 @@ test "Can upload self-signing keys",
       });
    };
 
-test "Fails to upload self-signing keys with no auth",
+test "Fails to replace cross-signing keys with no auth",
    requires => [ local_user_fixture(), qw( can_upload_self_signing_keys ) ],
 
    do => sub {
       my ( $user ) = @_;
       my $user_id = $user->user_id;
 
+      # Initial upload does not require UIA
       matrix_set_cross_signing_key( $user, {
-          "master_key" => {
-              # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
-              "user_id" => $user_id,
-              "usage" => ["master"],
-              "keys" => {
+         "master_key" => {
+            # private key: HvQBbU+hc2Zr+JP1sE0XwBe1pfZZEYtJNPJLZJtS+F8
+            "user_id" => $user_id,
+            "usage" => ["master"],
+            "keys" => {
+                "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ"
+                   => "EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ",
+            },
+         },
+      })->then( sub {
+         # Replacing the key with no auth should be rejected
+         matrix_set_cross_signing_key( $user, {
+            "master_key" => {
+               # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
+               "user_id" => $user_id,
+               "usage" => ["master"],
+               "keys" => {
                   "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
                       => "nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk",
-              },
-          },
+               },
+            },
+         });
       })->main::expect_http_401;
    };
 
