@@ -12,14 +12,6 @@ test "Can upload self-signing keys",
       my $user_id = $user->user_id;
 
       matrix_set_cross_signing_key( $user, {
-          "auth" => {
-              type     => "m.login.password",
-              identifier => {
-                 type => "m.id.user",
-                 user => $user->user_id,
-              },
-              password => $user->password,
-          },
           "master_key" => {
               # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
               "user_id" => $user_id,
@@ -94,11 +86,6 @@ test "Fails to upload self-signing key without master key",
       my $user_id = $user->user_id;
 
       matrix_set_cross_signing_key( $user, {
-          "auth" => {
-              "type"     => "m.login.password",
-              "user"     => $user_id,
-              "password" => $user->password,
-          },
           "self_signing_key" => {
               # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
               "user_id" => $user_id,
@@ -148,11 +135,6 @@ test "Changing master key notifies local users",
             origin => $user_id, key_id => "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
          );
          matrix_set_cross_signing_key( $user1, {
-             "auth" => {
-                 "type"     => "m.login.password",
-                 "user"     => $user_id,
-                 "password" => $user1->password,
-             },
              "master_key" => {
                  # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
                  "user_id" => $user_id,
@@ -299,11 +281,6 @@ test "Changing user-signing key notifies local users",
             origin => $user_id, key_id => "ed25519:nqOvzeuGWT/sRx3h7+MHoInYj3Uk2LD/unI9kDYcHwk"
          );
          matrix_set_cross_signing_key( $user1, {
-             "auth" => {
-                 "type"     => "m.login.password",
-                 "user"     => $user_id,
-                 "password" => $user1->password,
-             },
              "master_key" => {
                  # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
                  "user_id" => $user_id,
@@ -343,11 +320,6 @@ test "Changing user-signing key notifies local users",
          });
       })->then( sub {
          matrix_set_cross_signing_key( $user2, {
-             "auth" => {
-                 "type"     => "m.login.password",
-                 "user"     => $user2_id,
-                 "password" => $user2->password,
-             },
              "master_key" => {
                  # private key: OMkooTr76ega06xNvXIGPbgvvxAOzmQncN8VObS7aBA
                  "user_id" => $user2_id,
@@ -450,11 +422,6 @@ test "can fetch self-signing keys over federation",
           );
 
       matrix_set_cross_signing_key( $user2, {
-          "auth" => {
-              "type"     => "m.login.password",
-              "user"     => $user2_id,
-              "password" => $user2->password,
-          },
           "master_key" => {
               # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
               "user_id" => $user2_id,
@@ -546,11 +513,6 @@ test "uploading self-signing key notifies over federation",
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
          matrix_set_cross_signing_key( $user2, {
-             "auth" => {
-                 "type"     => "m.login.password",
-                  "user"     => $user2_id,
-                  "password" => $user2->password,
-             },
              "master_key" => {
                  # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
                  "user_id" => $user2_id,
@@ -635,11 +597,6 @@ test "uploading signed devices gets propagated over federation",
 
       matrix_put_e2e_keys( $user2, device_keys => $device)->then( sub {
          matrix_set_cross_signing_key( $user2, {
-             "auth" => {
-                 "type"     => "m.login.password",
-                 "user"     => $user2_id,
-                 "password" => $user2->password,
-             },
              "master_key" => {
                  # private key: 2lonYOM6xYKdEsO+6KrC766xBcHnYnim1x/4LFGF8B0
                  "user_id" => $user2_id,
