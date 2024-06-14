@@ -62,7 +62,13 @@ sub create_ssl_cert
    # Create extension file
    my $ext_file = "$cert_file.ext";
    open(my $fh, '>', $ext_file) or die "Could not open file '$ext_file': $!";
-   print $fh "subjectAltName=DNS:$server_name\n";
+   if ( $server_name =~ m/^[\d\.:]+$/ ) {
+      # We assume that a server name that is purely numeric (plus ':' and '.')
+      # is an IP.
+      print $fh "subjectAltName=IP:$server_name\n";
+   } else {
+      print $fh "subjectAltName=DNS:$server_name\n";
+   }
    close $fh;
 
    # sign it with the CA

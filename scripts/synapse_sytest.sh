@@ -192,9 +192,11 @@ echo >&2 "+++ Running tests"
 
 export COVERAGE_PROCESS_START="/src/.coveragerc"
 
+# We set the `--bind-host` as 127.0.0.1 as docker sometimes can't find
+# localhost.
 RUN_TESTS=(
     perl -I "$SYTEST_LIB" /sytest/run-tests.pl --python=/venv/bin/python --synapse-directory=/src -B "/src/$BLACKLIST" --coverage -O tap --all
-    --work-directory="/work"
+    --work-directory="/work" --bind-host 127.0.0.1
 )
 
 if [ -n "$ASYNCIO_REACTOR" ]; then
