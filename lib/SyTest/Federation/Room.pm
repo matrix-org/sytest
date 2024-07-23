@@ -414,6 +414,7 @@ sub make_join_protoevent
 
       auth_events      => $auth_events,
       content          => { membership => "join" },
+      origin_server_ts => JSON::number( int( time() * 1000 )),
       depth            => JSON::number($self->next_depth),
       prev_events      => $prev_events,
       room_id          => $self->room_id,

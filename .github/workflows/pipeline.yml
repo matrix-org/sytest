@@ -3,6 +3,7 @@ on:
   push:
     branches: ["develop", "release-*"]
   pull_request:
+  workflow_dispatch:
 
 # Only run this action once per pull request/branch; restart if a new commit arrives.
 # C.f. https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
@@ -88,7 +89,7 @@ jobs:
             if [[ -z "$BRANCH_NAME" || $BRANCH_NAME =~ ^refs/pull/.* ]]; then
               continue
             fi
-            (wget -O - "https://github.com/matrix-org/synapse/archive/$BRANCH_NAME.tar.gz" \
+            (wget -O - "https://github.com/element-hq/synapse/archive/$BRANCH_NAME.tar.gz" \
               | tar -xz --strip-components=1 -C /src/) \
               && echo "Successfully downloaded and extracted $BRANCH_NAME.tar.gz" \
               && break
@@ -129,15 +130,8 @@ jobs:
         include:
           - label: SQLite
 
-          - label: SQLite, full HTTP APIs
-            api: full-http
-
           - label: Postgres
             postgres: postgres
-
-          - label: Postgres, full HTTP APIs
-            postgres: postgres
-            api: full-http
 
     container:
       image: matrixdotorg/sytest-dendrite

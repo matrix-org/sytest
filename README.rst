@@ -6,7 +6,13 @@ primarily at present the Synapse server. It performs "black-box" testing, by
 starting up multiple home server instances and testing the interaction using
 regular HTTP interaction much as any other Matrix client would do. It can
 output test results either to an interactive terminal, or as a TAP-style test
-report, for continuous-integration test harnsses such as Jenkins.
+report, for continuous-integration test harnesses such as Jenkins.
+
+SyTest is written in Perl, and is the original integration testing system for
+Matrix.  New tests tend to be written in Complement_, a Go-based integration
+testing system.
+
+.. _Complement: https://github.com/matrix-org/complement
 
 Installing
 ----------

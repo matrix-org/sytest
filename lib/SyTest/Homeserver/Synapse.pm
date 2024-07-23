@@ -308,24 +308,30 @@ sub start
            },
         ) : (),
 
-        instance_map => {
-           "event_persister1" => {
-              host => "$bind_host",
-              port => $self->{ports}{event_persister1},
-           },
-           "event_persister2" => {
-              host => "$bind_host",
-              port => $self->{ports}{event_persister2},
-           },
-           "client_reader" => {
-              host => "$bind_host",
-              port => $self->{ports}{client_reader},
-           },
-           "stream_writer" => {
-              host => "$bind_host",
-              port => $self->{ports}{stream_writer},
-           },
-        },
+        $self->{workers} ? (
+            instance_map => {
+               "main" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{synapse_unsecure},
+               },
+               "event_persister1" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{event_persister1},
+               },
+               "event_persister2" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{event_persister2},
+               },
+               "client_reader" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{client_reader},
+               },
+               "stream_writer" => {
+                  host => "$bind_host",
+                  port => $self->{ports}{stream_writer},
+               },
+            },
+        ) : (),
 
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
@@ -334,6 +340,7 @@ sub start
            account_data => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            receipts     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            presence     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           push_rules   => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
            typing       => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
         },
 
@@ -670,8 +677,6 @@ sub _start_synapse
          "worker_name"             => "pusher",
          "worker_pid_file"         => "$hsdir/pusher.pid",
          "worker_log_config"       => $self->configure_logger("pusher"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -696,8 +701,6 @@ sub _start_synapse
          "worker_name"             => "appservice",
          "worker_pid_file"         => "$hsdir/appservice.pid",
          "worker_log_config"       => $self->configure_logger("appservice"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -722,8 +725,6 @@ sub _start_synapse
          "worker_name"             => "federation_sender",
          "worker_pid_file"         => "$hsdir/federation_sender.pid",
          "worker_log_config"       => $self->configure_logger("federation_sender"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type => "manhole",
@@ -748,8 +749,6 @@ sub _start_synapse
          "worker_name"             => "synchrotron",
          "worker_pid_file"         => "$hsdir/synchrotron.pid",
          "worker_log_config"       => $self->configure_logger("synchrotron"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -780,8 +779,6 @@ sub _start_synapse
          "worker_name"             => "federation_reader",
          "worker_pid_file"         => "$hsdir/federation_reader.pid",
          "worker_log_config"       => $self->configure_logger("federation_reader"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -812,8 +809,6 @@ sub _start_synapse
          "worker_name"             => "media_repository",
          "worker_pid_file"         => "$hsdir/media_repository.pid",
          "worker_log_config"       => $self->configure_logger("media_repository"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -844,8 +839,6 @@ sub _start_synapse
          "worker_name"                  => "client_reader",
          "worker_pid_file"              => "$hsdir/client_reader.pid",
          "worker_log_config"            => $self->configure_logger("client_reader"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"             => [
             {
                type      => "http",
@@ -876,8 +869,6 @@ sub _start_synapse
          "worker_name"             => "user_dir",
          "worker_pid_file"         => "$hsdir/user_dir.pid",
          "worker_log_config"       => $self->configure_logger("user_dir"),
-         "worker_replication_host" => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"        => [
             {
                type      => "http",
@@ -908,8 +899,6 @@ sub _start_synapse
          "worker_name"                  => "event_creator",
          "worker_pid_file"              => "$hsdir/event_creator.pid",
          "worker_log_config"            => $self->configure_logger("event_creator"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
          "worker_listeners"             => [
             {
                type      => "http",
@@ -940,9 +929,6 @@ sub _start_synapse
          "worker_name"                  => "frontend_proxy1",
          "worker_pid_file"              => "$hsdir/frontend_proxy.pid",
          "worker_log_config"            => $self->configure_logger("frontend_proxy"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
             {
                type      => "http",
@@ -973,9 +959,6 @@ sub _start_synapse
          "worker_name"                  => "background_worker1",
          "worker_pid_file"              => "$hsdir/background_worker.pid",
          "worker_log_config"            => $self->configure_logger("background_worker"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
       };
 
       push @worker_configs, $background_worker_config;
@@ -987,9 +970,6 @@ sub _start_synapse
          "worker_name"                  => "event_persister1",
          "worker_pid_file"              => "$hsdir/event_persister1.pid",
          "worker_log_config"            => $self->configure_logger("event_persister1"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
             {
                type      => "http",
@@ -1020,9 +1000,6 @@ sub _start_synapse
          "worker_name"                  => "event_persister2",
          "worker_pid_file"              => "$hsdir/event_persister2.pid",
          "worker_log_config"            => $self->configure_logger("event_persister2"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
             {
                type      => "http",
@@ -1053,9 +1030,6 @@ sub _start_synapse
          "worker_name"                  => "stream_writer",
          "worker_pid_file"              => "$hsdir/stream_writer.pid",
          "worker_log_config"            => $self->configure_logger("stream_writer"),
-         "worker_replication_host"      => "$bind_host",
-         "worker_replication_http_port" => $self->{ports}{synapse_unsecure},
-         "worker_main_http_uri"         => "http://$bind_host:$self->{ports}{synapse_unsecure}",
          "worker_listeners"             => [
             {
                type      => "http",
@@ -1206,6 +1180,8 @@ global
     ssl-default-bind-ciphers "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL !eNULL !LOW !3DES !MD5 !EXP !PSK !SRP !DSS !RC4"
     ssl-default-bind-options no-sslv3
 
+    maxconn 2000
+
 defaults
     mode http
     log global
@@ -1264,11 +1240,17 @@ sub generate_haproxy_map
    return <<'EOCONFIG';
 
 ^/_matrix/client/(v2_alpha|r0|v3)/sync$                  synchrotron
-^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
+^/_matrix/client/(api/v1|v2_alpha|r0)/events$            synchrotron
 ^/_matrix/client/(api/v1|r0|v3)/initialSync$             synchrotron
 ^/_matrix/client/(api/v1|r0|v3)/rooms/[^/]+/initialSync$ synchrotron
 
-^/_matrix/media/    media_repository
+^/_matrix/media/                           media_repository
+^/_synapse/admin/v1/purge_media_cache$     media_repository
+^/_synapse/admin/v1/room/.*/media.*$       media_repository
+^/_synapse/admin/v1/user/.*/media.*$       media_repository
+^/_synapse/admin/v1/media/.*$              media_repository
+^/_synapse/admin/v1/quarantine_media/.*$   media_repository
+^/_synapse/admin/v1/users/.*/media$        media_repository
 
 ^/_matrix/federation/v1/event/                        federation_reader
 ^/_matrix/federation/v1/state/                        federation_reader
@@ -1279,9 +1261,11 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/query/                        federation_reader
 ^/_matrix/federation/v1/make_join/                    federation_reader
 ^/_matrix/federation/v1/make_leave/                   federation_reader
-^/_matrix/federation/v1/send_join/                    federation_reader
-^/_matrix/federation/v1/send_leave/                   federation_reader
-^/_matrix/federation/v1/invite/                       federation_reader
+^/_matrix/federation/(v1|v2)/send_join/               federation_reader
+^/_matrix/federation/(v1|v2)/send_leave/              federation_reader
+^/_matrix/federation/v1/make_knock/                   federation_reader
+^/_matrix/federation/v1/send_knock/                   federation_reader
+^/_matrix/federation/(v1|v2)/invite/                  federation_reader
 ^/_matrix/federation/v1/query_auth/                   federation_reader
 ^/_matrix/federation/v1/event_auth/                   federation_reader
 ^/_matrix/federation/v1/exchange_third_party_invite/  federation_reader
@@ -1300,12 +1284,18 @@ sub generate_haproxy_map
 ^/_matrix/client/versions$                                           client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/voip/turnServer$            client_reader
 ^/_matrix/client/(r0|v3|unstable)/register$                          client_reader
+^/_matrix/client/(r0|v3|unstable)/register/available$                client_reader
 ^/_matrix/client/(r0|v3|unstable)/auth/.*/fallback/web$              client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/messages$          client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/event              client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/joined_rooms                client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable/.*)/rooms/.*/aliases         client_reader
 ^/_matrix/client/(api/v1|r0|v3|unstable)/search                      client_reader
+^/_matrix/client/(r0|v3|unstable)/user/.*/filter(/|$)                client_reader
+^/_matrix/client/(r0|v3|unstable)/password_policy$                   client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/directory/room/.*$          client_reader
+^/_matrix/client/(r0|v3|unstable)/capabilities$                      client_reader
+^/_matrix/client/(r0|v3|unstable)/notifications$                     client_reader
 
 ^/_matrix/client/(api/v1|r0|v3|unstable)/devices$                    stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/query$                 stream_writer
@@ -1313,6 +1303,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/claim                  stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/room_keys                   stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/presence/                   stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/pushrules/                  stream_writer
 
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/upload  frontend_proxy
 
@@ -1322,6 +1313,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/send                                 event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)$  event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/join/                                         event_creator
+^/_matrix/client/(api/v1|r0|v3|unstable)/knock/                                        event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/profile/                                      event_creator
 ^/_matrix/client/(api/v1|r0|v3|unstable)/createRoom                                    event_creator
 
@@ -1338,8 +1330,6 @@ EOCONFIG
 sub generate_haproxy_get_map
 {
     return <<'EOCONFIG';
-# pushrules should be here, but the tests seem to be racy.
-# ^/_matrix/client/(api/v1|r0|v3|unstable)/pushrules/            client_reader
 ^/_matrix/client/(r0|v3)/user/[^/]*/account_data/                client_reader
 ^/_matrix/client/(r0|v3)/user/[^/]*/rooms/[^/]*/account_data/    client_reader
 EOCONFIG

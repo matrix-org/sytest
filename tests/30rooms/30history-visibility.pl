@@ -148,6 +148,13 @@ foreach my $i (
          })->then( sub {
             matrix_initialsync_room( $nonjoined_user, $room_id )
          })->then( sub {
+            # Get a token and configure the waits for events below to start from it.
+            matrix_get_events( $nonjoined_user, room_id => $room_id, timeout => 0 )
+            ->then( sub {
+               my ( $body ) = @_;
+               $nonjoined_user->eventstream_token = $body->{end};
+            });
+         })->then( sub {
             Future->needs_all(
                matrix_send_room_text_message_synced( $user, $room_id, body => "mice" )
                ->on_done( sub {

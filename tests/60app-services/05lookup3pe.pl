@@ -1,6 +1,6 @@
 use List::UtilsBy qw( sort_by );
 
-use constant AS_PREFIX => "/_matrix/app/unstable";
+use constant AS_PREFIX => "/_matrix/app/v1";
 
 sub stub_empty_result
 {
@@ -59,7 +59,7 @@ test "HS provides query metadata",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/thirdparty/protocols"
+            uri    => "/v3/thirdparty/protocols"
          )->then( sub {
             my ( $body ) = @_;
 
@@ -107,7 +107,7 @@ test "HS can provide query metadata on a single protocol",
 
       do_request_json_for( $user,
          method => "GET",
-         uri    => "/unstable/thirdparty/protocol/ymca"
+         uri    => "/v3/thirdparty/protocol/ymca"
       )->then( sub {
          my ( $body ) = @_;
 
@@ -147,13 +147,15 @@ test "HS will proxy request for 3PU mapping",
             my ( $request ) = @_;
             
             my $access_token = $appserv1->info->hs2as_token;
+            my $auth_header = $request->header("Authorization");
+
+            assert_eq($auth_header, "Bearer " . $access_token, 'Access token');
 
             assert_deeply_eq(
                { $request->query_form },
                {
                   field1 => "ONE",
                   field2 => "TWO",
-                  access_token => $access_token,
                },
                'fields in received AS request'
             );
@@ -172,7 +174,7 @@ test "HS will proxy request for 3PU mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/thirdparty/user/ymca",
+            uri    => "/v3/thirdparty/user/ymca",
 
             params => {
                field1 => "ONE",
@@ -213,12 +215,14 @@ test "HS will proxy request for 3PL mapping",
          )->then( sub {
             my ( $request ) = @_;
             my $access_token = $appserv1->info->hs2as_token;
+            my $auth_header = $request->header("Authorization");
+
+            assert_eq($auth_header, "Bearer " . $access_token, 'Access token');
 
             assert_deeply_eq(
                { $request->query_form },
                {
                   field3 => "THREE",
-                  access_token => $access_token,
                },
                'fields in received AS request'
             );
@@ -237,7 +241,7 @@ test "HS will proxy request for 3PL mapping",
 
          do_request_json_for( $user,
             method => "GET",
-            uri    => "/unstable/thirdparty/location/ymca",
+            uri    => "/v3/thirdparty/location/ymca",
 
             params => {
                field3 => "THREE",
