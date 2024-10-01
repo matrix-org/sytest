@@ -60,6 +60,11 @@ SyTest requires a number of dependencies that are easiest installed from CPAN.
     ./install-deps.pl
     cd ..
 
+    Alternatively, you can use carton:
+
+    cpan Carton (if not installed)
+    carton install
+
 #. As ``sytest`` is intended for testing the synapse home server
    implementation, it is likely you'll want to fetch the source of that as
    well. By default SyTest will expect to find it in a sibling directory called
