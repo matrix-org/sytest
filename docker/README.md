@@ -10,7 +10,7 @@ Included currently is:
 - `matrixdotorg/sytest` Base container with SyTest dependencies installed
   - Tagged by underlying Debian/Ubuntu image: `bullseye` or `testing`
 - `matrixdotorg/sytest-synapse`: Runs SyTest against Synapse
-  - Tagged by underlying Debian/Ubunutu image: `bullseye` or `testing`
+  - Tagged by underlying Debian/Ubuntu image: `bullseye` or `testing`
 
 ## Target-specific details
 
