@@ -23,10 +23,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - base_image: ubuntu:focal
-            tag: focal
-          - base_image: ubuntu:mantic
-            tag: mantic
           - base_image: debian:bullseye
             tag: bullseye
           - base_image: debian:testing
@@ -67,17 +63,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - sytest_image_tag: focal
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:focal"
-            build_args: "SYTEST_IMAGE_TAG=focal"
-          - sytest_image_tag: mantic
-            dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:mantic-3.12"
-            build_args: |
-              SYTEST_IMAGE_TAG=mantic
-              PYTHON_VERSION=python3.12
-              SYSTEM_PIP_INSTALL_SUFFIX=--break-system-packages
           - sytest_image_tag: bullseye
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:bullseye"
