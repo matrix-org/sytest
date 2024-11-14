@@ -158,7 +158,7 @@ jobs:
             if [[ -z "$BRANCH_NAME" || $BRANCH_NAME =~ ^refs/pull/.* ]]; then
               continue
             fi
-            (wget -O - "https://github.com/matrix-org/dendrite/archive/$BRANCH_NAME.tar.gz" \
+            (wget -O - "https://github.com/element-hq/dendrite/archive/$BRANCH_NAME.tar.gz" \
               | tar -xz --strip-components=1 -C /src/) \
               && echo "Successfully downloaded and extracted $BRANCH_NAME.tar.gz" \
               && break
