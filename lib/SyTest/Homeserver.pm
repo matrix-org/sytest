@@ -374,8 +374,11 @@ sub _get_dbconfigs
    foreach my $db ( keys %db_configs ) {
       my $db_config = $db_configs{$db};
 
-      # backwards-compatibility hacks
-      my $db_name = delete $db_config->{name};
+      # Extract the name of the module that is used to access the database. This
+      # does add a new item to the database config block, 'type'. It appears to
+      # be harmless and is used later on to determine which method to use to
+      # clear the database
+      my $db_name = $db_config->{name};
       if( defined $db_name ) {
          if( $db_name eq 'psycopg2' ) {
             $db_config->{type} = 'pg';
