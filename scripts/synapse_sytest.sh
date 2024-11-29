@@ -56,7 +56,7 @@ main:
     data_stores:
         - main
     args:
-        database: pg1_main
+        dbname: pg1_main
         user: postgres
         password: $PGPASSWORD
         host: localhost
@@ -66,7 +66,7 @@ state_db:
     data_stores:
         - state
     args:
-        database: pg1_state
+        dbname: pg1_state
         user: postgres
         password: $PGPASSWORD
         host: localhost
@@ -79,7 +79,7 @@ main:
     data_stores:
         - main
     args:
-        database: pg2_main
+        dbname: pg2_main
         user: postgres
         password: $PGPASSWORD
         host: localhost
@@ -89,7 +89,7 @@ state_db:
     data_stores:
         - state
     args:
-        database: pg2_state
+        dbname: pg2_state
         user: postgres
         password: $PGPASSWORD
         host: localhost
