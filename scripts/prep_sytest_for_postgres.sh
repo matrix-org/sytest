@@ -28,7 +28,7 @@ mkdir -p "server-1"
 cat > "server-0/database.yaml" << EOF
 name: psycopg2
 args:
-    database: $POSTGRES_DB_1
+    dbname: $POSTGRES_DB_1
     user: $PGUSER
     password: $PGPASSWORD
     host: localhost
@@ -38,7 +38,7 @@ EOF
 cat > "server-1/database.yaml" << EOF
 name: psycopg2
 args:
-    database: $POSTGRES_DB_2
+    dbname: $POSTGRES_DB_2
     user: $PGUSER
     password: $PGPASSWORD
     host: localhost

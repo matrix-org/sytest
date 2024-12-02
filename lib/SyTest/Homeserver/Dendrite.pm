@@ -91,7 +91,7 @@ sub _get_config
       $db_config{args}->{user},
       $db_config{args}->{password},
       "", # $db_config{args}->{host},
-      $db_config{args}->{database},
+      $db_config{args}->{dbname},
       $db_config{args}->{sslmode},
    );
 
