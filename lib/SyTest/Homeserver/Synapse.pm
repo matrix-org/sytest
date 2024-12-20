@@ -125,6 +125,21 @@ sub start
       },
    );
 
+   # convert sytest db args onto synapse db args
+   for my $db ( keys %db_configs ) {
+      my %db_config = %{ $db_configs{$db} };
+
+      my $db_type = $db_config{type};
+
+      if( $db_type eq "pg" ) {
+         $db_configs{$db}{name} = 'psycopg2';
+      }
+      else {
+         # must be sqlite
+         $db_configs{$db}{name} = 'sqlite3';
+      }
+   }
+
    # Clean up the media_store directory each time, or else it fills up with
    # thousands of automatically-generated avatar images
    if( -d "$hs_dir/media_store" ) {
