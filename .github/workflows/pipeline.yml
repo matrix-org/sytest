@@ -21,6 +21,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - label: Py 3.10, SQLite, Monolith
+            sytest-tag: bookworm-python3.10
+
           - label: Py 3.10, PG 14, Monolith
             sytest-tag: bookworm-python3.10
             postgres: postgres
