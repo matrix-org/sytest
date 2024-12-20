@@ -133,10 +133,11 @@ sub start
 
       if( $db_type eq "pg" ) {
          $db_configs{$db}{name} = 'psycopg2';
-      }
-      else {
-         # must be sqlite
+      } elsif ($db_type eq "sqlite" ) {
          $db_configs{$db}{name} = 'sqlite3';
+      } else {
+         # We should have already validated the database type here.
+         die "Unrecognized database type: '$db_type'";
       }
    }
 
