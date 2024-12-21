@@ -51,7 +51,7 @@ RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
 
 # Create the virtual env upfront so we don't need to keep reinstalling
 # dependencies.
-RUN wget -q https://github.com/matrix-org/synapse/archive/develop.tar.gz \
+RUN wget -q https://github.com/element-hq/synapse/archive/develop.tar.gz \
         -O /synapse.tar.gz && \
         mkdir /synapse && \
         tar -C /synapse --strip-components=1 -xf synapse.tar.gz && \

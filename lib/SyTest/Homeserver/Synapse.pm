@@ -133,10 +133,11 @@ sub start
 
       if( $db_type eq "pg" ) {
          $db_configs{$db}{name} = 'psycopg2';
-      }
-      else {
-         # must be sqlite
+      } elsif ($db_type eq "sqlite" ) {
          $db_configs{$db}{name} = 'sqlite3';
+      } else {
+         # We should have already validated the database type here.
+         die "Unrecognized database type: '$db_type'";
       }
    }
 
@@ -1240,11 +1241,19 @@ sub generate_haproxy_map
    return <<'EOCONFIG';
 
 ^/_matrix/client/(v2_alpha|r0|v3)/sync$                  synchrotron
-^/_matrix/client/(api/v1|v2_alpha|r0)/events$         synchrotron
+^/_matrix/client/(api/v1|v2_alpha|r0)/events$            synchrotron
 ^/_matrix/client/(api/v1|r0|v3)/initialSync$             synchrotron
 ^/_matrix/client/(api/v1|r0|v3)/rooms/[^/]+/initialSync$ synchrotron
 
-^/_matrix/media/    media_repository
+^/_matrix/media/                           media_repository
+^/_matrix/client/v1/media/.*$              media_repository
+^/_matrix/federation/v1/media/.*$          media_repository
+^/_synapse/admin/v1/purge_media_cache$     media_repository
+^/_synapse/admin/v1/room/.*/media.*$       media_repository
+^/_synapse/admin/v1/user/.*/media.*$       media_repository
+^/_synapse/admin/v1/media/.*$              media_repository
+^/_synapse/admin/v1/quarantine_media/.*$   media_repository
+^/_synapse/admin/v1/users/.*/media$        media_repository
 
 ^/_matrix/federation/v1/event/                        federation_reader
 ^/_matrix/federation/v1/state/                        federation_reader
@@ -1255,9 +1264,11 @@ sub generate_haproxy_map
 ^/_matrix/federation/v1/query/                        federation_reader
 ^/_matrix/federation/v1/make_join/                    federation_reader
 ^/_matrix/federation/v1/make_leave/                   federation_reader
-^/_matrix/federation/v1/send_join/                    federation_reader
-^/_matrix/federation/v1/send_leave/                   federation_reader
-^/_matrix/federation/v1/invite/                       federation_reader
+^/_matrix/federation/(v1|v2)/send_join/               federation_reader
+^/_matrix/federation/(v1|v2)/send_leave/              federation_reader
+^/_matrix/federation/v1/make_knock/                   federation_reader
+^/_matrix/federation/v1/send_knock/                   federation_reader
+^/_matrix/federation/(v1|v2)/invite/                  federation_reader
 ^/_matrix/federation/v1/query_auth/                   federation_reader
 ^/_matrix/federation/v1/event_auth/                   federation_reader
 ^/_matrix/federation/v1/exchange_third_party_invite/  federation_reader

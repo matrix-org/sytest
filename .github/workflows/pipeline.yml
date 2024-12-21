@@ -63,7 +63,7 @@ jobs:
             if [[ -z "$BRANCH_NAME" || $BRANCH_NAME =~ ^refs/pull/.* ]]; then
               continue
             fi
-            (wget -O - "https://github.com/matrix-org/dendrite/archive/$BRANCH_NAME.tar.gz" \
+            (wget -O - "https://github.com/element-hq/dendrite/archive/$BRANCH_NAME.tar.gz" \
               | tar -xz --strip-components=1 -C /src/) \
               && echo "Successfully downloaded and extracted $BRANCH_NAME.tar.gz" \
               && break
@@ -80,7 +80,7 @@ jobs:
         run:  /sytest/scripts/tap_to_gha.pl /logs/results.tap
 
       - name: Upload SyTest logs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: ${{ always() }}
         with:
           name: Sytest Logs - ${{ job.status }} - (Dendrite, ${{ join(matrix.*, ', ') }})

@@ -56,7 +56,7 @@ main:
     data_stores:
         - main
     args:
-        database: pg1_main
+        dbname: pg1_main
         user: postgres
         password: $PGPASSWORD
         host: localhost
@@ -66,7 +66,7 @@ state_db:
     data_stores:
         - state
     args:
-        database: pg1_state
+        dbname: pg1_state
         user: postgres
         password: $PGPASSWORD
         host: localhost
@@ -79,7 +79,7 @@ main:
     data_stores:
         - main
     args:
-        database: pg2_main
+        dbname: pg2_main
         user: postgres
         password: $PGPASSWORD
         host: localhost
@@ -89,7 +89,7 @@ state_db:
     data_stores:
         - state
     args:
-        database: pg2_state
+        dbname: pg2_state
         user: postgres
         password: $PGPASSWORD
         host: localhost
@@ -192,9 +192,11 @@ echo >&2 "+++ Running tests"
 
 export COVERAGE_PROCESS_START="/src/.coveragerc"
 
+# We set the `--bind-host` as 127.0.0.1 as docker sometimes can't find
+# localhost.
 RUN_TESTS=(
     perl -I "$SYTEST_LIB" /sytest/run-tests.pl --python=/venv/bin/python --synapse-directory=/src -B "/src/$BLACKLIST" --coverage -O tap --all
-    --work-directory="/work"
+    --work-directory="/work" --bind-host 127.0.0.1
 )
 
 if [ -n "$ASYNCIO_REACTOR" ]; then

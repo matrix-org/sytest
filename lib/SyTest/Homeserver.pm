@@ -374,7 +374,8 @@ sub _get_dbconfigs
    foreach my $db ( keys %db_configs ) {
       my $db_config = $db_configs{$db};
 
-      # backwards-compatibility hacks
+      # Backwards compatibility: the `type` field in the sytest database config
+      # used to be called `name` and have different values. We fix that up here.
       my $db_name = delete $db_config->{name};
       if( defined $db_name ) {
          if( $db_name eq 'psycopg2' ) {
@@ -409,7 +410,7 @@ sub _check_db_config
 
    my $db_type = $db_config{type};
    if( $db_type eq 'pg' ) {
-      foreach (qw( database )) {
+      foreach (qw( dbname )) {
          if( !$db_config{args}->{$_} ) {
             die "Missing required database argument $_";
          }
@@ -445,7 +446,7 @@ sub _clear_db_pg
    my %args = @_;
 
    my $host = $args{host} // '';
-   $self->{output}->diag( "Clearing Pg database $args{database} on '$host'" );
+   $self->{output}->diag( "Clearing Pg database $args{dbname} on '$host'" );
 
    require DBI;
    require DBD::Pg;
@@ -455,13 +456,13 @@ sub _clear_db_pg
    # a fair few seconds)
    my $dbh = DBI->connect( "dbi:Pg:dbname=sytest_template;host=$host", $args{user}, $args{password} );
    if ( $dbh ) {
-      $dbh->do( "DROP DATABASE $args{database}" );  # we don't mind if this dies
+      $dbh->do( "DROP DATABASE $args{dbname}" );  # we don't mind if this dies
 
-      $dbh->do( "CREATE DATABASE $args{database} WITH TEMPLATE sytest_template" ) or
+      $dbh->do( "CREATE DATABASE $args{dbname} WITH TEMPLATE sytest_template" ) or
          die $dbh->errstr;
    }
    else {
-      $dbh = DBI->connect( "dbi:Pg:dbname=$args{database};host=$host", $args{user}, $args{password} )
+      $dbh = DBI->connect( "dbi:Pg:dbname=$args{dbname};host=$host", $args{user}, $args{password} )
          or die DBI->errstr;
 
       foreach my $row ( @{ $dbh->selectall_arrayref( "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" ) } ) {

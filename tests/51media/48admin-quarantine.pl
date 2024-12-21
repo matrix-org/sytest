@@ -44,7 +44,7 @@ multi_test "Can quarantine media in rooms",
       })->then( sub {
          do_request_json_for( $admin,
             method   => "POST",
-            full_uri => "/_synapse/admin/v1/quarantine_media/$room_id",
+            full_uri => "/_synapse/admin/v1/room/$room_id/media/quarantine",
             content  => {},
          );
       })->SyTest::pass_on_done( "Quarantine returns success" )
