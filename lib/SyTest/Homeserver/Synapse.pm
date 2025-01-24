@@ -229,6 +229,13 @@ sub start
            },
         },
 
+        rc_presence => {
+           per_user => {
+              per_second => 1000,
+              burst_count => 1000,
+           },
+        },
+
         enable_registration => "true",
         enable_registration_without_verification => "true",
         databases => \%db_configs,
