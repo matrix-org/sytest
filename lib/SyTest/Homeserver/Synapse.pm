@@ -239,7 +239,7 @@ sub start
         rc_delayed_event_mgmt => {
             per_second => 1000,
             burst_count => 1000,
-        }
+        },
 
         enable_registration => "true",
         enable_registration_without_verification => "true",
