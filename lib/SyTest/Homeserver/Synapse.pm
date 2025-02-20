@@ -368,6 +368,11 @@ sub start
            host    => $self->{redis_host},
         },
 
+        # Tests assume that room list publication is enabled.
+        room_list_publication_rules => [{
+           action => "allow",
+        }],
+
         map {
            defined $self->{$_} ? ( $_ => $self->{$_} ) : ()
         } qw(
