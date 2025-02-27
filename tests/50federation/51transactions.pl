@@ -64,6 +64,14 @@ test "Server rejects invalid JSON in a version 6 room",
 
       my $room = $rooms[0];
 
+      my $first_event = $room->create_and_insert_event(
+          type => "m.room.message",
+
+          sender  => $user_id,
+          content => {
+              body => "Message 1",
+          },
+         );
       my $bad_event = $room->create_and_insert_event(
           type => "m.room.message",
 
@@ -75,11 +83,25 @@ test "Server rejects invalid JSON in a version 6 room",
           },
       );
 
-      my @pdus = ( $bad_event );
+      my $third_event = $room->create_and_insert_event(
+          type => "m.room.message",
+
+          sender  => $user_id,
+          content => {
+              body => "Message 1",
+          },
+         );
+
+      my @pdus = ( $first_event, $bad_event, $third_event );
+      print "meowwo";
+      print @pdus;
 
       # Send the transaction to the client and expect a fail
       $outbound_client->send_transaction(
           pdus => \@pdus,
           destination => $creator->server_name,
-      )->main::expect_m_bad_json;
+      )->then( sub {
+         my ( $body ) = @_;
+         assert_json_keys( $body->{pdus}, map { $room->id_for_event( $_ ) } @pdus[0, 2] )
+      });
    };
