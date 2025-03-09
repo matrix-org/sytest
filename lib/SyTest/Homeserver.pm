@@ -374,9 +374,10 @@ sub _get_dbconfigs
    foreach my $db ( keys %db_configs ) {
       my $db_config = $db_configs{$db};
 
-      # Backwards compatibility: the `type` field in the sytest database config
-      # used to be called `name` and have different values. We fix that up here.
-      my $db_name = delete $db_config->{name};
+      # The `type` field will be needed to define the method used to clear the
+      # database. `name` seems to be the python module name from the sytest database
+      # configs.
+      my $db_name = $db_config->{name};
       if( defined $db_name ) {
          if( ($db_name eq 'psycopg2') || ($db_name eq 'psycopg') ) {
             $db_config->{type} = 'pg';
