@@ -31,6 +31,8 @@ The following environment variables can be set with `-e` to control the test run
 - `POSTGRES`: set non-empty to test against a PostgreSQL database instead of SQLite.
 - `MULTI_POSTGRES`: set non-empty (along with `POSTGRES`) to test against multiple
   PostgreSQL databases where the main store and state store are split.
+- `PGMODULE`: set to `psycopg` to test against that Postgres database module. Unset
+  defaults to `psycopg2`. Ignored if `POSTGRES` above is not used.
 - `WORKERS`: set non-empty to test a worker-mode deployment rather than a
   monolith. Requires `POSTGRES`.
 - `ASYNCIO_REACTOR`: set non-empty to test with the Twisted asyncio reactor enabled
