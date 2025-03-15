@@ -139,7 +139,7 @@ sub do_request
 
       my $content = $response->content;
 
-      if( $response->header( "Content-type" ) eq MIME_TYPE_JSON ) {
+      if(  any { $_ eq MIME_TYPE_JSON } split ";", $response->header( "Content-type" )) {
          $content = wrap_numbers( $json->decode( $content ) );
       }
 
