@@ -54,6 +54,9 @@ test "Server correctly handles transactions that break edu limits",
 # This enforces that invalid PDUs are discarded rather than failing the entire
 # transaction.
 #
+# It is unclear whether the invalid PDU should be included in the /send response
+# with an error, which is why there is no assertion on the response.
+#
 # See https://github.com/matrix-org/synapse/issues/7543
 test "Server discards events with invalid JSON in a version 6 room",
    requires => [ $main::OUTBOUND_CLIENT,
