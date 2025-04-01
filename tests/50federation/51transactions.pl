@@ -58,6 +58,8 @@ test "Server correctly handles transactions that break edu limits",
 test "Server discards events with invalid JSON in a version 6 room",
    requires => [ $main::OUTBOUND_CLIENT,
                  federated_rooms_fixture( room_opts => { room_version => "6" } ) ],
+   # This behaviour has only been changed in Synapse, not Dendrite
+   implementation_specific => ['synapse'],
 
    do => sub {
       my ( $outbound_client, $creator, $user_id, @rooms ) = @_;
@@ -113,4 +115,47 @@ test "Server discards events with invalid JSON in a version 6 room",
              uri     => "/v3/rooms/$room_id/event/$event_id",
          )->main::expect_m_not_found
       });
+   };
+
+# This is an alternative behaviour that isn't spec compliant, where the server
+# rejects the whole transaction if any PDU is invalid.
+# This is the behaviour that Dendrite currently implements.
+test "Server rejects invalid JSON in a version 6 room",
+   requires => [ $main::OUTBOUND_CLIENT,
+                 federated_rooms_fixture( room_opts => { room_version => "6" } ) ],
+   implementation_specific => ['dendrite'],
+
+   do => sub {
+      my ( $outbound_client, $creator, $user_id, @rooms ) = @_;
+
+      my $room = $rooms[0];
+      my $room_id = $room->room_id;
+
+      my $good_event = $room->create_and_insert_event(
+          type => "m.room.message",
+
+          sender  => $user_id,
+          content => {
+              body    => "Good event",
+          },
+      );
+
+      my $bad_event = $room->create_and_insert_event(
+          type => "m.room.message",
+
+          sender  => $user_id,
+          content => {
+             body    => "Bad event",
+             # Insert a "bad" value into the PDU, in this case a float.
+             bad_val => 1.1,
+          },
+      );
+
+      my @pdus = ( $good_event, $bad_event );
+
+      # Send the transaction to the client and expect to fail
+      $outbound_client->send_transaction(
+          pdus => \@pdus,
+          destination => $creator->server_name,
+      )->main::expect_bad_json
    };
