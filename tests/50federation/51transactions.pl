@@ -51,8 +51,8 @@ test "Server correctly handles transactions that break edu limits",
 # on PDUs. Test that a transaction to `send` with a PDU that has bad data will
 # be handled properly.
 #
-# This enforces that the entire transaction is rejected if a single bad PDU is
-# sent. It is unclear if this is the correct behavior or not.
+# This enforces that invalid PDUs are discarded rather than failing the entire
+# transaction.
 #
 # See https://github.com/matrix-org/synapse/issues/7543
 test "Server discards events with invalid JSON in a version 6 room",
@@ -87,7 +87,7 @@ test "Server discards events with invalid JSON in a version 6 room",
 
       my @pdus = ( $good_event, $bad_event );
 
-      # Send the transaction to the client and expect a fail
+      # Send the transaction to the client and expect to succeed
       $outbound_client->send_transaction(
           pdus => \@pdus,
           destination => $creator->server_name,
