@@ -1352,6 +1352,7 @@ sub generate_haproxy_get_map
     return <<'EOCONFIG';
 ^/_matrix/client/(r0|v3)/user/[^/]*/account_data/                client_reader
 ^/_matrix/client/(r0|v3)/user/[^/]*/rooms/[^/]*/account_data/    client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/devices/                client_reader
 EOCONFIG
 }
 
