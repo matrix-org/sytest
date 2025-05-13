@@ -24,7 +24,7 @@ RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-tool
 # For now, we need to tell Debian we don't care that we're editing the system python
 # installation.
 # Some context in https://github.com/pypa/pip/issues/11381#issuecomment-1399263627
-RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.3.2 ${SYSTEM_PIP_INSTALL_SUFFIX}
+RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==2.1.3 ${SYSTEM_PIP_INSTALL_SUFFIX}
 
 # As part of the Docker build, we attempt to pre-install Synapse's dependencies
 # in the hope that it speeds up the real install of Synapse. To make this work,
