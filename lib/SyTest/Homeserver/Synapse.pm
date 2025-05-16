@@ -1272,6 +1272,7 @@ sub generate_haproxy_map
 ^/_synapse/admin/v1/quarantine_media/.*$   media_repository
 ^/_synapse/admin/v1/users/.*/media$        media_repository
 
+^/_matrix/federation/v1/version                       federation_reader
 ^/_matrix/federation/v1/event/                        federation_reader
 ^/_matrix/federation/v1/state/                        federation_reader
 ^/_matrix/federation/v1/state_ids/                    federation_reader
