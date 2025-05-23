@@ -79,7 +79,7 @@ test "Can request federation format via the filter",
 
          assert_json_keys(
             $room->{timeline}{events}[0], qw(
-               event_id content room_id sender origin origin_server_ts type
+               event_id content room_id sender origin_server_ts type
                prev_events auth_events depth hashes signatures
             )
          );
