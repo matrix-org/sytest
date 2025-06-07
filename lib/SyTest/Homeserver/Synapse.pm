@@ -119,7 +119,7 @@ sub start
    my $hs_dir = $self->{hs_dir};
 
    my %db_configs = $self->_get_dbconfigs(
-      type => 'sqlite',
+      name => 'sqlite3',
       args => {
          database => ":memory:", #"$hs_dir/homeserver.db",
       },
@@ -129,15 +129,13 @@ sub start
    for my $db ( keys %db_configs ) {
       my %db_config = %{ $db_configs{$db} };
 
-      my $db_type = $db_config{type};
+      my $db_module_name = $db_config{name};
 
-      if( $db_type eq "pg" ) {
-         $db_configs{$db}{name} = 'psycopg2';
-      } elsif ($db_type eq "sqlite" ) {
-         $db_configs{$db}{name} = 'sqlite3';
+      if( ($db_module_name eq "psycopg2") || ($db_module_name eq "psycopg") || ($db_module_name eq "sqlite3") ) {
+         $db_configs{$db}{name} = $db_module_name;
       } else {
          # We should have already validated the database type here.
-         die "Unrecognized database type: '$db_type'";
+         die "Unrecognized database type: '$db_module_name'";
       }
    }
 
