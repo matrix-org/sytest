@@ -239,6 +239,11 @@ sub start
             burst_count => 1000,
         },
 
+        rc_room_creation => {
+            per_second => 1000,
+            burst_count => 1000,
+        },
+
         enable_registration => "true",
         enable_registration_without_verification => "true",
         databases => \%db_configs,
@@ -1270,6 +1275,7 @@ sub generate_haproxy_map
 ^/_synapse/admin/v1/quarantine_media/.*$   media_repository
 ^/_synapse/admin/v1/users/.*/media$        media_repository
 
+^/_matrix/federation/v1/version                       federation_reader
 ^/_matrix/federation/v1/event/                        federation_reader
 ^/_matrix/federation/v1/state/                        federation_reader
 ^/_matrix/federation/v1/state_ids/                    federation_reader
@@ -1314,6 +1320,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/directory/room/.*$          client_reader
 ^/_matrix/client/(r0|v3|unstable)/capabilities$                      client_reader
 ^/_matrix/client/(r0|v3|unstable)/notifications$                     client_reader
+^/_synapse/admin/v1/rooms/                                           client_reader
 
 ^/_matrix/client/(api/v1|r0|v3|unstable)/devices$                    stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/query$                 stream_writer
@@ -1350,6 +1357,7 @@ sub generate_haproxy_get_map
     return <<'EOCONFIG';
 ^/_matrix/client/(r0|v3)/user/[^/]*/account_data/                client_reader
 ^/_matrix/client/(r0|v3)/user/[^/]*/rooms/[^/]*/account_data/    client_reader
+^/_matrix/client/(api/v1|r0|v3|unstable)/devices/                client_reader
 EOCONFIG
 }
 
