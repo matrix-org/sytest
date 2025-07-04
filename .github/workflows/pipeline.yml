@@ -28,9 +28,31 @@ jobs:
             sytest-tag: bookworm-python3.10
             postgres: postgres
 
+          - label: Py 3.10, PG 14(psycopg), Monolith
+            sytest-tag: bookworm-python3.10
+            postgres: postgres
+            pgmodule: psycopg
+
           - label: Py 3.10, PG 14, Workers
             sytest-tag: bookworm-python3.10
             postgres: postgres
+            workers: workers
+
+          - label: Py 3.10, PG 14(psycopg), Workers
+            sytest-tag: bookworm-python3.10
+            postgres: postgres
+            pgmodule: psycopg
+            workers: workers
+
+          - label: debian-testing, Monolith(psycopg)
+            sytest-tag: testing
+            postgres: postgres
+            pgmodule: psycopg
+
+          - label: debian-testing, Workers(psycopg)
+            sytest-tag: testing
+            postgres: postgres
+            pgmodule: psycopg
             workers: workers
 
           - label: debian-testing, Monolith
@@ -52,6 +74,7 @@ jobs:
         - ${{ github.workspace }}/synapse:/src
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
+        PGMODULE: ${{ matrix.pgmodule == 'psycopg' && 'psycopg' || 'psycopg2' }}
         WORKERS: ${{ matrix.workers && 1 }}
         BLACKLIST: ${{ (matrix.workers && 'synapse-blacklist-with-workers') || 'sytest-blacklist' }}
 
@@ -75,12 +98,12 @@ jobs:
           # 2. Attempt to use the base branch, e.g. when merging into release-vX.Y
           #    (GITHUB_BASE_REF for pull requests).
           # 3. Use the default synapse branch ("develop").
-          for BRANCH_NAME in "$GITHUB_HEAD_REF" "$GITHUB_BASE_REF" "${GITHUB_REF#refs/heads/}" "develop"; do
+          for BRANCH_NAME in "psycopg3"; do
             # Skip empty branch names and merge commits.
             if [[ -z "$BRANCH_NAME" || $BRANCH_NAME =~ ^refs/pull/.* ]]; then
               continue
             fi
-            (wget -O - "https://github.com/element-hq/synapse/archive/$BRANCH_NAME.tar.gz" \
+            (wget -O - "https://github.com/realtyem/synapse/archive/$BRANCH_NAME.tar.gz" \
               | tar -xz --strip-components=1 -C /src/) \
               && echo "Successfully downloaded and extracted $BRANCH_NAME.tar.gz" \
               && break
@@ -93,6 +116,7 @@ jobs:
       - name: Run sytest
         run: |
           echo POSTGRES=${POSTGRES:-<NOT SET>}
+          echo PGMODULE=${PGMODULE:-<NOT SET>}
           echo WORKERS=${WORKERS:-<NOT SET>}
           echo BLACKLIST=${BLACKLIST:-<NOT SET>}
           bash -xe /bootstrap.sh synapse
