@@ -17,7 +17,7 @@ mkdir -p /work
 
 # start the redis server, if desired
 if [ -n "$WORKERS" ]; then
-    /usr/bin/redis-server /etc/redis/redis.conf
+    /usr/bin/redis-server /etc/redis/redis.conf --loglevel verbose
 fi
 
 # PostgreSQL setup
