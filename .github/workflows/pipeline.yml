@@ -69,6 +69,7 @@ jobs:
         - ${{ github.workspace }}/synapse:/src
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
+        # Default to `psycopg2` if `pgmodule` is not set.
         PGMODULE: ${{ matrix.pgmodule == 'psycopg' && 'psycopg' || 'psycopg2' }}
         WORKERS: ${{ matrix.workers && 1 }}
         BLACKLIST: ${{ (matrix.workers && 'synapse-blacklist-with-workers') || 'sytest-blacklist' }}
