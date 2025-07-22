@@ -506,11 +506,37 @@ test "uploading self-signing key notifies over federation",
       })->then( sub {
          matrix_invite_user_to_room_synced( $user1, $user2, $room_id )
       })->then( sub {
-         sync_until_user_in_device_list( $user1, $user2 );
+         await_sync_timeline_contains( $user1, $room_id, check => sub {
+            my ( $event ) = @_;
+
+            assert_json_keys( $event, qw( type content sender state_key ));
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{sender} eq $user1->user_id;
+            return unless $event->{state_key} eq $user2->user_id;
+            
+            assert_json_keys( my $content = $event->{content}, qw( membership ));
+            $content->{membership} eq "invite" or
+                die "Expected invite membership";
+
+            return 1;
+         });
       })->then( sub {
          matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
-         sync_until_user_in_device_list( $user1, $user2 );
+         await_sync_timeline_contains( $user1, $room_id, check => sub {
+            my ( $event ) = @_;
+
+            assert_json_keys( $event, qw( type content sender state_key ));
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{sender} eq $user2->user_id;
+            return unless $event->{state_key} eq $user2->user_id;
+            
+            assert_json_keys( my $content = $event->{content}, qw( membership ));
+            $content->{membership} eq "join" or
+                die "Expected join membership";
+
+            return 1;
+         });
       })->then( sub {
          matrix_set_cross_signing_key( $user2, {
              "master_key" => {
@@ -616,11 +642,37 @@ test "uploading signed devices gets propagated over federation",
       })->then( sub {
          matrix_invite_user_to_room_synced( $user1, $user2, $room_id )
       })->then( sub {
-         sync_until_user_in_device_list( $user1, $user2 );
+         await_sync_timeline_contains( $user1, $room_id, check => sub {
+            my ( $event ) = @_;
+
+            assert_json_keys( $event, qw( type content sender state_key ));
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{sender} eq $user1->user_id;
+            return unless $event->{state_key} eq $user2->user_id;
+
+            assert_json_keys( my $content = $event->{content}, qw( membership ));
+            $content->{membership} eq "invite" or
+                die "Expected ${\$user2->user_id} to have been invited";
+
+            return 1;
+         });
       })->then( sub {
          matrix_join_room_synced( $user2, $room_id );
       })->then( sub {
-         sync_until_user_in_device_list( $user1, $user2 );
+         await_sync_timeline_contains( $user1, $room_id, check => sub {
+            my ( $event ) = @_;
+
+            assert_json_keys( $event, qw( type content sender state_key ));
+            return unless $event->{type} eq "m.room.member";
+            return unless $event->{sender} eq $user2->user_id;
+            return unless $event->{state_key} eq $user2->user_id;
+
+            assert_json_keys( my $content = $event->{content}, qw( membership ));
+            $content->{membership} eq "join" or
+                die "Expected ${\$user2->user_id} to have joined";
+
+            return 1;
+         });
       })->then( sub {
          matrix_get_e2e_keys( $user1, $user2_id );
       })->then( sub {
