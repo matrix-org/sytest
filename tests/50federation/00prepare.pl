@@ -242,21 +242,28 @@ The created outlier is returned.
 sub send_and_await_outlier {
    my ( $inbound_server, $outbound_client, $room, $sending_user_id, $receiving_user ) = @_;
 
-   # to construct an outlier, we create three events, Q, R, S.
+   # to construct an outlier, we create four three events, P, Q, R, S.
    #
-   # We send S over federation, and allow the server to backfill R, leaving
-   # the server with a gap in the dag. It therefore requests the state at Q,
+   # P is the membership event which we need to auth other events, so we send
+   # that first. Then we send S over federation, and allow the server to backfill R,
+   # leaving the server with a gap in the dag. It therefore requests the state at Q,
    # which leads to Q being persisted as an outlier.
 
    my $first_home_server = $receiving_user->server_name;
    my $room_id = $room->room_id;
    my %initial_room_state  = %{ $room->{current_state} };
 
-   my ( $outlier_event_Q, $outlier_event_id_Q ) = $room->create_and_insert_event(
+   my ( $membership_event_P, $membership_event_id_P ) = $room->create_and_insert_event(
       type => 'm.room.member',
       sender => $sending_user_id,
       state_key => $sending_user_id,
       content => { membership => 'join' },
+   );
+
+   my ( $outlier_event_Q, $outlier_event_id_Q ) = $room->create_and_insert_event(
+      type        => "m.room.message",
+      sender      => $sending_user_id,
+      content     => { body => "state-requested event Q" },
    );
 
    my ( $backfilled_event_R, $backfilled_event_id_R ) = $room->create_and_insert_event(
@@ -271,11 +278,17 @@ sub send_and_await_outlier {
       content     => { body => "sent event S" },
    );
 
-   log_if_fail "create_outlier_event: events Q, R, S", [ $outlier_event_id_Q, $backfilled_event_id_R, $sent_event_id_S ];
+   log_if_fail "create_outlier_event: events P, Q, R, S", [ $membership_event_id_P, $outlier_event_id_Q, $backfilled_event_id_R, $sent_event_id_S ];
 
    my $state_req_fut;
 
    Future->needs_all(
+      # send P
+      $outbound_client->send_event(
+         event => $membership_event_P,
+         destination => $first_home_server,
+      ),
+
       # send S
       $outbound_client->send_event(
          event => $sent_event_S,
