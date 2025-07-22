@@ -27,6 +27,7 @@ jobs:
           - label: Debian Bullseye (Py 3.9, PG 13) Monolith
             sytest-tag: bullseye
             postgres: postgres
+            pgmodule: psycopg2
 
           - label: Debian Bullseye (Py 3.9, PG 13) Monolith, psycopg
             sytest-tag: bullseye
@@ -42,6 +43,7 @@ jobs:
           - label: Debian Testing (Py 3.13, PG 17), Monolith
             sytest-tag: testing
             postgres: postgres
+            pgmodule: psycopg2
 
           - label: Debian Testing (Py 3.13, PG 17), Monolith(psycopg)
             sytest-tag: testing
@@ -51,6 +53,7 @@ jobs:
           - label: Debian Testing (Py 3.13, PG 17), Workers
             sytest-tag: testing
             postgres: postgres
+            pgmodule: psycopg2
             workers: workers
 
           - label: Debian Testing (Py 3.13, PG 17), Workers(psycopg)
