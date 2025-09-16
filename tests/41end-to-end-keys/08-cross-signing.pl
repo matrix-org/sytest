@@ -673,7 +673,7 @@ test "uploading signed devices gets propagated over federation",
                exists $sigs->{$user2_id}
                   && exists $sigs->{$user2_id}{$user2_device_key_id}
                   && $sigs->{$user2_id}{$user2_device_key_id} eq $cross_signature
-                  or die "Expected cross-signature not visible";
+                  or die "Expected cross-signature ($user2_device_key_id}->$cross_signature not visible";
 
                Future->done( $content );
             });
