@@ -663,7 +663,7 @@ test "uploading signed devices gets propagated over federation",
             # sync may complete before the signatures have uploaded, propagated over
             # federation to server 1 and then over replication to the sync worker.
             #
-            # Thus we check for the expected signatures inside this function.
+            # Thus we wait for the expected signatures to show up inside this function.
             matrix_get_e2e_keys( $user1, $user2_id )->then( sub {
                my ( $content ) = @_;
                log_if_fail "key query content2", $content;
