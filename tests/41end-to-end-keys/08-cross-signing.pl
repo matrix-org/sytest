@@ -563,6 +563,8 @@ test "uploading signed devices gets propagated over federation",
 
       my $user2_id = $user2->user_id;
       my $user2_device = $user2->device_id;
+      my $user2_device_key_id_hash = "EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ";
+      my $user2_device_key_id = "ed25519:$user2_device_key_id_hash";
 
       my $room_id;
 
@@ -573,8 +575,7 @@ test "uploading signed devices gets propagated over federation",
          "user_id" => $user2_id,
          "usage" => ["self_signing"],
          "keys" => {
-            "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ"
-                => "EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ",
+            $user2_device_key_id => $user2_device_key_id_hash,
          },
       };
       sign_json(
@@ -639,10 +640,10 @@ test "uploading signed devices gets propagated over federation",
       })->then( sub {
          sign_json(
             $device, secret_key => $self_signing_secret_key,
-            origin => $user2_id, key_id => "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ"
+            origin => $user2_id, key_id => $user2_device_key_id
          );
          log_if_fail "sent signature", $device;
-         $cross_signature = $device->{signatures}->{$user2_id}->{"ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ"};
+         $cross_signature = $device->{signatures}->{$user2_id}->{$user2_device_key_id};
          matrix_upload_signatures( $user2, {
              $user2_id => {
                  $user2_device => $device
@@ -661,11 +662,19 @@ test "uploading signed devices gets propagated over federation",
             # On server0, user1 syncs until they see user2's device. This is racey: the
             # sync may complete before the signatures have uploaded, propagated over
             # federation to server 1 and then over replication to the sync worker.
+            #
+            # Thus we wait for the expected signatures to show up inside this function.
             matrix_get_e2e_keys( $user1, $user2_id )->then( sub {
                my ( $content ) = @_;
                log_if_fail "key query content2", $content;
-               $content->{device_keys}{$user2_id}{$user2_device}{"signatures"}
+               my $sigs = $content->{device_keys}{$user2_id}{$user2_device}{"signatures"}
                   or die "No 'signatures' key present";
+               
+               exists $sigs->{$user2_id}
+                  && exists $sigs->{$user2_id}{$user2_device_key_id}
+                  && $sigs->{$user2_id}{$user2_device_key_id} eq $cross_signature
+                  or die "Expected cross-signature ($user2_device_key_id}->$cross_signature not visible";
+
                Future->done( $content );
             });
          };
@@ -673,15 +682,6 @@ test "uploading signed devices gets propagated over federation",
          my ( $content ) = @_;
 
          log_if_fail "key query content3", $content;
-
-         # Check that fetching the devices again returns the new signature
-         assert_json_keys( $content->{device_keys}->{$user2_id}->{$user2_device}, "signatures" );
-
-         assert_deeply_eq( $content->{device_keys}->{$user2_id}->{$user2_device}->{signatures}, {
-            $user2_id => {
-               "ed25519:EmkqvokUn8p+vQAGZitOk4PWjp7Ukp3txV2TbMPEiBQ" => $cross_signature
-            },
-         } );
 
          # Check that we still see the master key when querying the devices.
          assert_json_keys( $content->{master_keys}, $user2_id );
