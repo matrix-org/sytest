@@ -222,19 +222,11 @@ sub configure_logger
             format => "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(request)s - %(message)s"
          }
       },
-
-      filters => {
-         context => {
-            "()" => "synapse.logging.context.LoggingContextFilter",
-            request => ""
-         }
-      },
       handlers => {
          file => {
             class => "logging.FileHandler",
             formatter => "precise",
             filename => "$hs_dir/$log_type.log",
-            filters => ["context"],
             encoding => "utf8"
          }
       },
