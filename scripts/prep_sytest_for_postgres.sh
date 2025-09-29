@@ -23,8 +23,8 @@ mkdir -p "server-1"
 
 : PGUSER=${PGUSER:=$USER}
 
-# Allow passing in a custom python module name to use for Postgres instead of
-# psycopg2, but make sure to set a default in case it wasn't used
+# Allow passing in a custom python module name to use for Postgres.
+# Default to "psycopg2".
 PGMODULE="${PGMODULE:-psycopg2}"
 
 

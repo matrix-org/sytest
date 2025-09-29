@@ -32,8 +32,8 @@ if [ -n "$MULTI_POSTGRES" ] || [ -n "$POSTGRES" ]; then
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w start -s' postgres
     echo "postgres started"
 
-    # Allow passing in a custom python module name to use for Postgres instead of
-    # psycopg2, but make sure to set a default in case it wasn't used
+    # Allow passing in a custom python module name to use for Postgres.
+    # Default to "psycopg2".
     PGMODULE="${PGMODULE:-psycopg2}"
 
 fi
