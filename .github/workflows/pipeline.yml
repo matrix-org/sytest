@@ -28,35 +28,18 @@ jobs:
             sytest-tag: bullseye
             postgres: postgres
 
-          - label: Debian Bullseye (Py 3.9, PG 13) Monolith, psycopg
+          - label: Debian Bullseye (Py 3.9, PG 13) Workers
             sytest-tag: bullseye
             postgres: postgres
-            pgmodule: psycopg
-
-          - label: Debian Bullseye (Py 3.9, PG 13) Workers, psycopg
-            sytest-tag: bullseye
-            postgres: postgres
-            pgmodule: psycopg
             workers: workers
 
           - label: Debian Testing (Py 3.13, PG 17), Monolith
             sytest-tag: testing
             postgres: postgres
 
-          - label: Debian Testing (Py 3.13, PG 17), Monolith(psycopg)
-            sytest-tag: testing
-            postgres: postgres
-            pgmodule: psycopg
-
           - label: Debian Testing (Py 3.13, PG 17), Workers
             sytest-tag: testing
             postgres: postgres
-            workers: workers
-
-          - label: Debian Testing (Py 3.13, PG 17), Workers(psycopg)
-            sytest-tag: testing
-            postgres: postgres
-            pgmodule: psycopg
             workers: workers
 
     container:
@@ -69,8 +52,6 @@ jobs:
         - ${{ github.workspace }}/synapse:/src
       env:
         POSTGRES: ${{ matrix.postgres && 1 }}
-        # Default to `psycopg2` if `pgmodule` is not set.
-        PGMODULE: ${{ matrix.pgmodule == 'psycopg' && 'psycopg' || 'psycopg2' }}
         WORKERS: ${{ matrix.workers && 1 }}
         BLACKLIST: ${{ (matrix.workers && 'synapse-blacklist-with-workers') || 'sytest-blacklist' }}
 
@@ -94,12 +75,12 @@ jobs:
           # 2. Attempt to use the base branch, e.g. when merging into release-vX.Y
           #    (GITHUB_BASE_REF for pull requests).
           # 3. Use the default synapse branch ("develop").
-          for BRANCH_NAME in "psycopg3"; do
+          for BRANCH_NAME in "$GITHUB_HEAD_REF" "$GITHUB_BASE_REF" "${GITHUB_REF#refs/heads/}" "develop"; do
             # Skip empty branch names and merge commits.
             if [[ -z "$BRANCH_NAME" || $BRANCH_NAME =~ ^refs/pull/.* ]]; then
               continue
             fi
-            (wget -O - "https://github.com/realtyem/synapse/archive/$BRANCH_NAME.tar.gz" \
+            (wget -O - "https://github.com/element-hq/synapse/archive/$BRANCH_NAME.tar.gz" \
               | tar -xz --strip-components=1 -C /src/) \
               && echo "Successfully downloaded and extracted $BRANCH_NAME.tar.gz" \
               && break
@@ -112,7 +93,6 @@ jobs:
       - name: Run sytest
         run: |
           echo POSTGRES=${POSTGRES:-<NOT SET>}
-          echo PGMODULE=${PGMODULE:-<NOT SET>}
           echo WORKERS=${WORKERS:-<NOT SET>}
           echo BLACKLIST=${BLACKLIST:-<NOT SET>}
           bash -xe /bootstrap.sh synapse
