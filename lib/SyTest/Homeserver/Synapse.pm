@@ -131,10 +131,7 @@ sub start
 
       my $db_module_name = $db_config{name};
 
-      if( ($db_module_name eq "psycopg2") || ($db_module_name eq "psycopg") || ($db_module_name eq "sqlite3") ) {
-         $db_configs{$db}{name} = $db_module_name;
-      } else {
-         # We should have already validated the database type here.
+      if( ($db_module_name ne "psycopg2") && ($db_module_name ne "psycopg") && ($db_module_name ne "sqlite3") ) {
          die "Unrecognized database type: '$db_module_name'";
       }
    }
