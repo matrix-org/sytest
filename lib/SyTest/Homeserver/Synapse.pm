@@ -125,10 +125,9 @@ sub start
       },
    );
 
-   # convert sytest db args onto synapse db args
+   # Validate the chosen DB module name against those that Synapse supports.
    for my $db ( keys %db_configs ) {
       my %db_config = %{ $db_configs{$db} };
-
       my $db_module_name = $db_config{name};
 
       if( ($db_module_name ne "psycopg2") && ($db_module_name ne "psycopg") && ($db_module_name ne "sqlite3") ) {

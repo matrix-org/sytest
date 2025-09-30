@@ -32,8 +32,7 @@ The following environment variables can be set with `-e` to control the test run
 - `MULTI_POSTGRES`: set non-empty (along with `POSTGRES`) to test against multiple
   PostgreSQL databases where the main store and state store are split.
 - `PGMODULE`: set to `psycopg` to test against the
-  
-[psycopg 3](https://www.psycopg.org/psycopg3/)
+  [psycopg 3](https://www.psycopg.org/psycopg3/)
   Python Postgres database driver. Unset defaults to `psycopg2`, the previous
   major version. Ignored if `POSTGRES` above is not used.
 - `WORKERS`: set non-empty to test a worker-mode deployment rather than a
