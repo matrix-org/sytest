@@ -31,6 +31,11 @@ if [ -n "$MULTI_POSTGRES" ] || [ -n "$POSTGRES" ]; then
     echo "starting postgres..."
     su -c 'eatmydata /usr/lib/postgresql/*/bin/pg_ctl -w start -s' postgres
     echo "postgres started"
+
+    # Allow passing in a custom python module name to use for Postgres.
+    # Default to "psycopg2".
+    PGMODULE="${PGMODULE:-psycopg2}"
+
 fi
 
 # Now create the databases
@@ -52,7 +57,7 @@ EOF
     # local auth)
     cat > "/work/server-0/databases.yaml" << EOF
 main:
-    name: psycopg2
+    name: $PGMODULE
     data_stores:
         - main
     args:
@@ -62,7 +67,7 @@ main:
         host: localhost
         sslmode: disable
 state_db:
-    name: psycopg2
+    name: $PGMODULE
     data_stores:
         - state
     args:
@@ -75,7 +80,7 @@ EOF
 
     cat > "/work/server-1/databases.yaml" << EOF
 main:
-    name: psycopg2
+    name: $PGMODULE
     data_stores:
         - main
     args:
@@ -85,7 +90,7 @@ main:
         host: localhost
         sslmode: disable
 state_db:
-    name: psycopg2
+    name: $PGMODULE
     data_stores:
         - state
     args:
