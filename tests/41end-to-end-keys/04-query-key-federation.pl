@@ -5,7 +5,16 @@ multi_test "Can query remote device keys using POST",
    check => sub {
       my ( $user, $remote_user ) = @_;
 
-      matrix_put_e2e_keys( $user )
+      my $device_keys = {
+         algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+         keys => {
+            "curve25519:".$user->device_id => "base64publicidentitykey",
+            "ed25519:".$user->device_id => "base64publicidentitykey2"
+         },
+         signatures => {}
+      };
+
+      matrix_put_e2e_keys( $user, device_keys => $device_keys )
          ->SyTest::pass_on_done( "Uploaded key" )
       ->then( sub {
          matrix_set_device_display_name( $user, $user->device_id, "test display name" ),
