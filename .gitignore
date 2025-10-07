@@ -16,3 +16,6 @@ signingkeyserver.db
 .coverage*
 .idea
 .DS_Store
+
+# Carton stores local packages here.
+local/
