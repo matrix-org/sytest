@@ -33,7 +33,14 @@ test "Local device key changes get to remote servers",
 
                Future->done(1);
             }),
-            matrix_put_e2e_keys( $user )
+            matrix_put_e2e_keys(
+               $user,
+               device_keys => {
+                  algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+                  keys => { "ed25519:".$user->device_id => "base64publicidentitykey" },
+                  signatures => {},
+               }
+            )
          )
       })->then( sub {
          Future->needs_all(
@@ -49,7 +56,11 @@ test "Local device key changes get to remote servers",
 
                Future->done(1);
             }),
-            matrix_put_e2e_keys( $user, device_keys => { updated => "keys" } )
+            matrix_put_e2e_keys( $user, device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$user->device_id => "newkey" },
+               signatures => {},
+            } )
          )
       });
    };
@@ -424,7 +435,14 @@ test "Local device key changes get to remote servers with correct prev_id",
 
                Future->done(1);
             }),
-            matrix_put_e2e_keys( $user1 )
+            matrix_put_e2e_keys(
+               $user1,
+               device_keys => {
+                  algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+                  keys => { "ed25519:".$user1->device_id => "base64publicidentitykey" },
+                  signatures => {},
+               }
+            )
          )
       })->then( sub {
          Future->needs_all(
@@ -439,7 +457,14 @@ test "Local device key changes get to remote servers with correct prev_id",
 
                Future->done(1);
             }),
-            matrix_put_e2e_keys( $user2 )
+            matrix_put_e2e_keys(
+               $user2,
+               device_keys => {
+                  algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+                  keys => { "ed25519:".$user2->device_id => "base64publicidentitykey" },
+                  signatures => {},
+               }
+            )
          )
       })->then( sub {
          Future->needs_all(
@@ -455,7 +480,14 @@ test "Local device key changes get to remote servers with correct prev_id",
 
                Future->done(1);
             }),
-            matrix_put_e2e_keys( $user1, device_keys => { updated => "keys" } )
+            matrix_put_e2e_keys(
+               $user1,
+               device_keys => {
+                  algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+                  keys => { "ed25519:".$user1->device_id => "newkey" },
+                  signatures => {},
+               }
+            )
          )
       });
    };
