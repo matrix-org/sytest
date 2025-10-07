@@ -75,6 +75,12 @@ test "Local device key changes appear in v2 /sync",
                device_keys => {
                   user_id   => $user2->user_id,
                   device_id => $user2->device_id,
+                  algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+                  keys => {
+                     "curve25519:".$user2->device_id => "base64publicidentitykey",
+                     "ed25519:".$user2->device_id => "base64publicidentitykey2"
+                  },
+                  signatures => {}
                },
                one_time_keys => {
                   "my_algorithm:my_id_1" => "my+base64+key"
@@ -181,7 +187,17 @@ test "Can query remote device keys using POST after notification",
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
-         matrix_put_e2e_keys( $user2 )
+         matrix_put_e2e_keys(
+            $user2,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => {
+                  "curve25519:".$user2->device_id => "base64publicidentitykey",
+                  "ed25519:".$user2->device_id => "base64publicidentitykey2"
+               },
+               signatures => {}
+            }
+         )
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
@@ -244,7 +260,17 @@ test "Device deletion propagates over federation",
       })->then( sub {
          matrix_sync( $user1 );
       })->then( sub {
-         matrix_put_e2e_keys( $user2 )
+         matrix_put_e2e_keys(
+            $user2,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => {
+                  "curve25519:".$user2->device_id => "base64publicidentitykey",
+                  "ed25519:".$user2->device_id => "base64publicidentitykey2"
+               },
+               signatures => {}
+            }
+         )
       })->then( sub {
          sync_until_user_in_device_list( $user1, $user2 );
       })->then( sub {
@@ -306,13 +332,27 @@ test "If remote user leaves room, changes device and rejoins we see update in sy
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver )
+         matrix_put_e2e_keys(
+            $remote_leaver,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => {
+                  "curve25519:".$remote_leaver->device_id => "base64publicidentitykey",
+                  "ed25519:".$remote_leaver->device_id => "base64publicidentitykey2"
+               },
+               signatures => {}
+            }
+         )
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { "ed25519:test" => "cmltKURmLTRV86hBT_jh8AFH9RAdz0yAZOfvlBUQqP8" } } )
+         matrix_put_e2e_keys( $remote_leaver, device_keys => {
+            algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+            keys => { "ed25519:".$remote_leaver->device_id => "cmltKURmLTRV86hBT_jh8AFH9RAdz0yAZOfvlBUQqP8" },
+            signatures => {},
+         } );
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
@@ -366,9 +406,23 @@ test "If remote user leaves room we no longer receive device updates",
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
          # there must be e2e keys for the devices, otherwise they don't appear in /query.
-         matrix_put_e2e_keys( $remote2, device_keys => { keys => { "ed25519:test" => "aI2BUUeIQ0Y8T7Tv7jJh2ADagpoWdtHf4XipFPvjXI8" } } );
+         matrix_put_e2e_keys(
+            $remote2,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$remote2->device_id => "aI2BUUeIQ0Y8T7Tv7jJh2ADagpoWdtHf4XipFPvjXI8" },
+               signatures => {},
+            }
+         );
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { "ed25519:test" => "j9eIBhARnZg5vhKzp8zm1A6up1LmSiDoXuDqTTIvkcI" } } );
+         matrix_put_e2e_keys(
+            $remote_leaver,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$remote_leaver->device_id => "j9eIBhARnZg5vhKzp8zm1A6up1LmSiDoXuDqTTIvkcI" },
+               signatures => {},
+            }
+         );
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
 
@@ -387,7 +441,7 @@ test "If remote user leaves room we no longer receive device updates",
             log_if_fail "keys after remote_leaver uploaded keys", $body;
             assert_json_keys( $body, qw( device_keys ));
             my $update = $body->{device_keys}->{ $remote_leaver->user_id }->{ $remote_leaver->device_id };
-            assert_eq( $update->{keys}{"ed25519:test"}, "j9eIBhARnZg5vhKzp8zm1A6up1LmSiDoXuDqTTIvkcI" );
+            assert_eq( $update->{keys}{"ed25519:".$remote_leaver->device_id}, "j9eIBhARnZg5vhKzp8zm1A6up1LmSiDoXuDqTTIvkcI" );
             Future->done;
          });
       })->then( sub {
@@ -415,10 +469,24 @@ test "If remote user leaves room we no longer receive device updates",
       })->then( sub {
          # now /finally/ we can test what we came here for. Both remote users update their
          # device keys, and we check that we only get an update for one of them.
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { "ed25519:test" => "2NNgAXoqO06lZc3FOOKj76daZT8CmbHmmJKr29Jv85g" } } )
+         matrix_put_e2e_keys(
+            $remote_leaver,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$remote_leaver->device_id => "2NNgAXoqO06lZc3FOOKj76daZT8CmbHmmJKr29Jv85g" },
+               signatures => {},
+            }
+         )
       })->then( sub {
          log_if_fail "Remote_leaver " . $remote_leaver->user_id . " updated keys";
-         matrix_put_e2e_keys( $remote2, device_keys => { keys => { "ed25519:test" => "c3op6BJi8aUnDGA541Q6TbTPmbiy1GqGv-zzXDQM9Us" } } )
+         matrix_put_e2e_keys(
+            $remote2,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$remote2->device_id => "c3op6BJi8aUnDGA541Q6TbTPmbiy1GqGv-zzXDQM9Us" },
+               signatures => {},
+            }
+         )
       })->then( sub {
          log_if_fail "Remote user 2 " . $remote2->user_id . " updated keys";
 
@@ -476,6 +544,9 @@ test "Local device key changes appear in /keys/changes",
                device_keys => {
                   user_id   => $user2->user_id,
                   device_id => $user2->device_id,
+                  algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+                  keys => { "ed25519:test" => "c3op6BJi8aUnDGA541Q6TbTPmbiy1GqGv-zzXDQM9Us" },
+                  signatures => {},
                },
                one_time_keys => {
                   "my_algorithm:my_id_1" => "my+base64+key"
@@ -578,7 +649,14 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver )
+         matrix_put_e2e_keys(
+            $remote_leaver,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$remote_leaver->device_id => "c3op6BJi8aUnDGA541Q6TbTPmbiy1GqGv-zzXDQM9Us" },
+               signatures => {},
+            }
+         )
       })->then( sub {
          sync_until_user_in_device_list( $creator, $remote_leaver );
       })->then( sub {
@@ -587,7 +665,11 @@ test "If remote user leaves room, changes device and rejoins we see update in /k
 
          matrix_leave_room_synced( $remote_leaver, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $remote_leaver, device_keys => { keys => { "ed25519:test" => "72Fyh13X3itrbsWXHGQkqozmasfNRE6AEQPGbQFIykc" } } )
+         matrix_put_e2e_keys( $remote_leaver, device_keys => {
+            algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+            keys => { "ed25519:".$remote_leaver->device_id => "72Fyh13X3itrbsWXHGQkqozmasfNRE6AEQPGbQFIykc" },
+            signatures => {},
+         } )
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
@@ -642,7 +724,14 @@ test "Get left notifs in sync and /keys/changes when other user leaves",
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
-         matrix_put_e2e_keys( $other_user )
+         matrix_put_e2e_keys(
+            $other_user,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$other_user->device_id => "c3op6BJi8aUnDGA541Q6TbTPmbiy1GqGv-zzXDQM9Us" },
+               signatures => {},
+            }
+         )
       })->then( sub {
          sync_until_user_in_device_list( $creator, $other_user );
       })->then( sub {
@@ -701,7 +790,14 @@ test "Get left notifs for other users in sync and /keys/changes when user leaves
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
-         matrix_put_e2e_keys( $other_user )
+         matrix_put_e2e_keys(
+            $other_user,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$other_user->device_id => "c3op6BJi8aUnDGA541Q6TbTPmbiy1GqGv-zzXDQM9Us" },
+               signatures => {},
+            }
+         )
       })->then( sub {
          matrix_set_device_display_name( $other_user, $other_user->device_id, "test display name" )
       })->then( sub {
@@ -761,7 +857,14 @@ test "If user leaves room, remote user changes device and rejoins we see update 
       })->then( sub {
          matrix_sync( $creator );
       })->then( sub {
-         matrix_put_e2e_keys( $remote_user )
+         matrix_put_e2e_keys(
+            $remote_user,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$remote_user->device_id => "c3op6BJi8aUnDGA541Q6TbTPmbiy1GqGv-zzXDQM9Us" },
+               signatures => {},
+            }
+         )
       })->then( sub {
          sync_until_user_in_device_list(
             $creator, $remote_user, msg => 'First body',
@@ -772,7 +875,14 @@ test "If user leaves room, remote user changes device and rejoins we see update 
 
          matrix_leave_room_synced( $creator, $room_id )
       })->then( sub {
-         matrix_put_e2e_keys( $remote_user, device_keys => { keys => { "ed25519:test" => "jAV9juztEM6Fjda60eut1GYyaP6QFlkfCd609celbwo" } } )
+         matrix_put_e2e_keys(
+            $remote_user,
+            device_keys => {
+               algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+               keys => { "ed25519:".$remote_user->device_id => "jAV9juztEM6Fjda60eut1GYyaP6QFlkfCd609celbwo" },
+               signatures => {},
+            }
+         )
       })->then( sub {
          # It takes a while for the leave to propagate so lets just hammer this
          # endpoint...
