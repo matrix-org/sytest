@@ -4,7 +4,7 @@ push our @EXPORT, qw( matrix_typing );
 
 =head1 matrix_typing
 
-   matrix_typing($user, $room_id, typing => 1, timeout => 30000)->get;
+   matrix_typing($user, $room_id, typing => JSON::true, timeout => 30000)->get;
 
 Mark the user as typing.
 
