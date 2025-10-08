@@ -188,6 +188,23 @@ test "query for user with no keys returns empty key dict",
 
 push our @EXPORT, qw( matrix_put_e2e_keys matrix_get_e2e_keys );
 
+=head2 matrix_put_e2e_keys
+
+   matrix_put_e2e_keys( $user, device_keys => {
+      algorithms => [ "m.olm.v1.curve25519-aes-sha2", "m.megolm.v1.aes-sha2" ],
+      keys => {
+         "curve25519:".$user->device_id => "base64publicidentitykey",
+         "ed25519:".$user->device_id => "base64publicidentitykey2"
+      },
+      signatures => {}
+   })
+
+Upload device keys and one time keys for a user.
+
+The `user_id` and `device_id` fields in `device_keys` will be set automatically
+by this function.
+=cut
+
 sub matrix_put_e2e_keys
 {
    # TODO(paul): I don't really know what's parametric about this
