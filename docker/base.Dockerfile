@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=debian:bullseye
+ARG BASE_IMAGE=debian:bookworm
 
 FROM ${BASE_IMAGE}
 
@@ -20,7 +20,7 @@ RUN apt-get -qq update && apt-get -qq install -y \
     libz-dev \
     locales \
     perl \
-    postgresql \
+    postgresql-common \
     rsync \
     sqlite3 \
     wget \
@@ -52,6 +52,10 @@ RUN mkdir /logs
 ADD docker/bootstrap.sh /bootstrap.sh
 
 # PostgreSQL setup
+RUN /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+ARG POSTGRESQL_VERSION=13
+RUN apt -qq install -y postgresql-${POSTGRESQL_VERSION}
+
 ENV PGHOST=/var/run/postgresql
 ENV PGDATA=$PGHOST/data
 ENV PGUSER=postgres

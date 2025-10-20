@@ -1,9 +1,6 @@
-ARG SYTEST_IMAGE_TAG=bullseye
+ARG SYTEST_IMAGE_TAG=bookworm
 
 FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
-
-ARG PYTHON_VERSION=python3
-ARG SYSTEM_PIP_INSTALL_SUFFIX=""
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -11,8 +8,7 @@ ENV DEBIAN_FRONTEND noninteractive
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get -qq update && apt-get -qq install -y \
-        apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
-        python3-pip eatmydata redis-server curl
+        apt-utils eatmydata redis-server curl
 
 ENV RUSTUP_HOME=/rust
 ENV CARGO_HOME=/cargo
@@ -21,10 +17,13 @@ RUN mkdir /rust /cargo
 
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable --profile minimal
 
-# For now, we need to tell Debian we don't care that we're editing the system python
-# installation.
-# Some context in https://github.com/pypa/pip/issues/11381#issuecomment-1399263627
-RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.3.2 ${SYSTEM_PIP_INSTALL_SUFFIX}
+ARG PYTHON_VERSION=python3
+
+RUN --mount=type=bind,from=ghcr.io/astral-sh/uv:0.9.4,source=/uv,target=/bin/uv \
+        uv python install "$PYTHON_VERSION" && \
+        uv tool install poetry@1.3.2
+
+ENV PATH=/root/.local/bin:$PATH
 
 # As part of the Docker build, we attempt to pre-install Synapse's dependencies
 # in the hope that it speeds up the real install of Synapse. To make this work,

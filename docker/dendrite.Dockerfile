@@ -1,4 +1,4 @@
-ARG SYTEST_IMAGE_TAG=bullseye
+ARG SYTEST_IMAGE_TAG=bookworm
 FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
 
 ARG GO_VERSION=1.19.1
