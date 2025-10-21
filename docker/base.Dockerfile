@@ -25,8 +25,7 @@ RUN apt-get -qq update && apt-get -qq install -y \
     sqlite3 \
     wget \
     libicu-dev \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+    pkg-config
 
 # Set up the locales, as the default Debian image only has C, and PostgreSQL needs the correct locales to make a UTF-8 database
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
@@ -65,3 +64,5 @@ RUN for ver in `ls /usr/lib/postgresql | head -n 1`; do \
 
 # configure it not to try to listen on IPv6 (it won't work and will cause warnings)
 RUN echo "listen_addresses = '127.0.0.1'" >> "$PGDATA/postgresql.conf"
+
+RUN rm -rf /var/lib/apt/lists/*
