@@ -28,6 +28,10 @@ RUN apt-get -qq update && apt-get -qq install -y \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
+RUN /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+ARG POSTGRESQL_VERSION=13
+RUN apt -qq install -y postgresql-${POSTGRESQL_VERSION}
+
 # Set up the locales, as the default Debian image only has C, and PostgreSQL needs the correct locales to make a UTF-8 database
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
@@ -52,10 +56,6 @@ RUN mkdir /logs
 ADD docker/bootstrap.sh /bootstrap.sh
 
 # PostgreSQL setup
-RUN /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-ARG POSTGRESQL_VERSION=13
-RUN apt -qq install -y postgresql-${POSTGRESQL_VERSION}
-
 ENV PGHOST=/var/run/postgresql
 ENV PGDATA=$PGHOST/data
 ENV PGUSER=postgres
