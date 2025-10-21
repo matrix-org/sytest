@@ -38,6 +38,9 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
+# Install some Perl module(s) from Debian repos that have trouble being installed by the below script
+RUN apt-get -qq install -y libdbd-pg-perl
+
 # Copy in the sytest dependencies and install them
 # (we expect the docker build context be the sytest repo root, rather than the `docker` folder)
 ADD install-deps.pl ./install-deps.pl
