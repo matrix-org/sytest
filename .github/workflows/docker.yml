@@ -26,11 +26,9 @@ jobs:
           - base_image: debian:bookworm
             tag: bookworm
             postgresql_version: 13
-            python_version: python3.9
           - base_image: debian:testing
             tag: testing
             postgresql_version: 18
-            python_version: python3.14
     steps:
       - name: Set up QEMU
         id: QEMU
@@ -74,13 +72,13 @@ jobs:
             tags: "matrixdotorg/sytest-synapse:bookworm"
             build_args: |
               SYTEST_IMAGE_TAG=bookworm
-              PYTHON_VERSION=${{ matrix.python_version }}
+              PYTHON_VERSION=python3.9
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
             build_args: |
               SYTEST_IMAGE_TAG=testing
-              PYTHON_VERSION=${{ matrix.python_version }}
+              PYTHON_VERSION=python3.14
 
     steps:
       - name: Set up QEMU
