@@ -18,7 +18,7 @@ RUN mkdir /rust /cargo
 
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable --profile minimal
 
-ARG PYTHON_VERSION=python3
+ARG PYTHON_VERSION=3.9
 
 RUN --mount=type=bind,from=ghcr.io/astral-sh/uv:0.9.4,source=/uv,target=/bin/uv \
         uv python install "$PYTHON_VERSION" && \
@@ -45,7 +45,7 @@ RUN mkdir /src
 
 # Download a cache of build dependencies to support offline mode.
 # These version numbers are arbitrary and were the latest at the time.
-RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
+RUN "python${PYTHON_VERSION}" -m pip download --dest /pypi-offline-cache \
         poetry-core==1.1.0 setuptools==65.3.0 wheel==0.37.1 \
         setuptools-rust==1.5.1
 
