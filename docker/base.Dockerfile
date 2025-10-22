@@ -25,7 +25,8 @@ RUN apt-get -qq update && apt-get -qq install -y \
     sqlite3 \
     wget \
     libicu-dev \
-    pkg-config
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set up the locales, as the default Debian image only has C, and PostgreSQL needs the correct locales to make a UTF-8 database
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
@@ -38,7 +39,9 @@ ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
 # Install some Perl module(s) from Debian repos that have trouble being installed by the below script
-RUN apt-get -qq install -y libdbd-pg-perl
+RUN apt-get -qq update && apt-get -qq install -y \
+    libdbd-pg-perl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy in the sytest dependencies and install them
 # (we expect the docker build context be the sytest repo root, rather than the `docker` folder)
@@ -64,5 +67,3 @@ RUN for ver in `ls /usr/lib/postgresql | head -n 1`; do \
 
 # configure it not to try to listen on IPv6 (it won't work and will cause warnings)
 RUN echo "listen_addresses = '127.0.0.1'" >> "$PGDATA/postgresql.conf"
-
-RUN rm -rf /var/lib/apt/lists/*
