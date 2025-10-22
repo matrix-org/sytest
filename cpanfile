@@ -6,13 +6,6 @@ requires 'Crypt::Ed25519';
 
 requires 'Data::Dump';
 
-# DBD::Pg fails to install if DBI is not already installed before we start.
-# (DBI goes into an architecture-dependent directory, which may not exist when
-# the installation process starts; by doing the install in two steps, we force
-# perl to rescan the library directories and add any new ones which it finds.)
-requires 'DBI';
-
-requires 'DBD::Pg';
 requires 'Digest::HMAC_SHA1';
 requires 'Digest::SHA';
 requires 'Email::Address::XS';
