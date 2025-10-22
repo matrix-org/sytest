@@ -8,7 +8,8 @@ ENV DEBIAN_FRONTEND noninteractive
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get -qq update && apt-get -qq install -y \
-        apt-utils eatmydata redis-server curl
+        apt-utils eatmydata redis-server curl \
+        && rm -rf /var/lib/apt/lists/*
 
 ENV RUSTUP_HOME=/rust
 ENV CARGO_HOME=/cargo
