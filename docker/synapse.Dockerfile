@@ -20,7 +20,7 @@ RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-tool
 
 # Set the default Python version to the minimum supported by Synapse:
 # https://element-hq.github.io/synapse/latest/deprecation_policy.html
-ARG PYTHON_VERSION=3.9
+ARG PYTHON_VERSION=3.10
 
 RUN --mount=type=bind,from=ghcr.io/astral-sh/uv:0.9.4,source=/uv,target=/bin/uv \
         uv python install "$PYTHON_VERSION" && \
