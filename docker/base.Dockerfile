@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=debian:bullseye
+ARG BASE_IMAGE=debian:bookworm
 
 FROM ${BASE_IMAGE}
 
@@ -20,12 +20,21 @@ RUN apt-get -qq update && apt-get -qq install -y \
     libz-dev \
     locales \
     perl \
-    postgresql \
+    postgresql-common \
     rsync \
     sqlite3 \
     wget \
     libicu-dev \
     pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the default PostgreSQL version to the minimum supported by Synapse:
+# https://element-hq.github.io/synapse/latest/deprecation_policy.html
+ARG POSTGRESQL_VERSION=13
+# Install a specific PostgreSQL version via the official upstream repository:
+# https://wiki.debian.org/PostgreSql%20%20#PGDG_Repository
+RUN /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+    && apt -qq install -y postgresql-${POSTGRESQL_VERSION} \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up the locales, as the default Debian image only has C, and PostgreSQL needs the correct locales to make a UTF-8 database

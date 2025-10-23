@@ -1,9 +1,6 @@
-ARG SYTEST_IMAGE_TAG=bullseye
+ARG SYTEST_IMAGE_TAG=bookworm
 
 FROM matrixdotorg/sytest:${SYTEST_IMAGE_TAG}
-
-ARG PYTHON_VERSION=python3
-ARG SYSTEM_PIP_INSTALL_SUFFIX=""
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -11,8 +8,8 @@ ENV DEBIAN_FRONTEND noninteractive
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get -qq update && apt-get -qq install -y \
-        apt-utils ${PYTHON_VERSION} ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv \
-        python3-pip eatmydata redis-server curl
+        apt-utils eatmydata redis-server curl \
+        && rm -rf /var/lib/apt/lists/*
 
 ENV RUSTUP_HOME=/rust
 ENV CARGO_HOME=/cargo
@@ -21,10 +18,15 @@ RUN mkdir /rust /cargo
 
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable --profile minimal
 
-# For now, we need to tell Debian we don't care that we're editing the system python
-# installation.
-# Some context in https://github.com/pypa/pip/issues/11381#issuecomment-1399263627
-RUN ${PYTHON_VERSION} -m pip install -q --no-cache-dir poetry==1.3.2 ${SYSTEM_PIP_INSTALL_SUFFIX}
+# Set the default Python version to the minimum supported by Synapse:
+# https://element-hq.github.io/synapse/latest/deprecation_policy.html
+ARG PYTHON_VERSION=3.10
+
+RUN --mount=type=bind,from=ghcr.io/astral-sh/uv:0.9.4,source=/uv,target=/bin/uv \
+        uv python install "$PYTHON_VERSION" && \
+        uv tool install poetry@1.3.2
+
+ENV PATH=/root/.local/bin:$PATH
 
 # As part of the Docker build, we attempt to pre-install Synapse's dependencies
 # in the hope that it speeds up the real install of Synapse. To make this work,
@@ -45,7 +47,7 @@ RUN mkdir /src
 
 # Download a cache of build dependencies to support offline mode.
 # These version numbers are arbitrary and were the latest at the time.
-RUN ${PYTHON_VERSION} -m pip download --dest /pypi-offline-cache \
+RUN "python${PYTHON_VERSION}" -m pip download --dest /pypi-offline-cache \
         poetry-core==1.1.0 setuptools==65.3.0 wheel==0.37.1 \
         setuptools-rust==1.5.1
 
@@ -57,7 +59,7 @@ RUN wget -q https://github.com/element-hq/synapse/archive/develop.tar.gz \
         tar -C /synapse --strip-components=1 -xf synapse.tar.gz && \
         ln -s -T /venv /synapse/.venv && \
         cd /synapse && \
-        poetry install -q --no-root --extras all && \
+        poetry install --no-root --extras all && \
         # Finally clean up the poetry cache and the copy of Synapse.
         # This must be done in the same RUN command, otherwise intermediate layers
         # of the Docker image will contain all the unwanted files we think we've

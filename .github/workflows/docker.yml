@@ -23,10 +23,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - base_image: debian:bullseye
-            tag: bullseye
-          - base_image: debian:testing
-            tag: testing
+          - tag: bookworm
+            build_args: |
+              BASE_IMAGE=debian:bookworm
+              POSTGRESQL_VERSION=13
+          - tag: testing
+            build_args: |
+              BASE_IMAGE=debian:testing
+              POSTGRESQL_VERSION=18
     steps:
       - name: Set up QEMU
         id: QEMU
@@ -53,7 +57,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           labels: "gitsha1=${{ github.sha }}"
           file: docker/base.Dockerfile
-          build-args: "BASE_IMAGE=${{ matrix.base_image }}"
+          build-args: ${{ matrix.build_args }}
           tags: matrixdotorg/sytest:${{ matrix.tag }}
 
   build-dependent-images:
@@ -63,16 +67,18 @@ jobs:
     strategy:
       matrix:
         include:
-          - sytest_image_tag: bullseye
+          - sytest_image_tag: bookworm
             dockerfile: synapse
-            tags: "matrixdotorg/sytest-synapse:bullseye"
-            build_args: "SYTEST_IMAGE_TAG=bullseye"
+            tags: "matrixdotorg/sytest-synapse:bookworm"
+            build_args: |
+              SYTEST_IMAGE_TAG=bookworm
+              PYTHON_VERSION=3.10
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
             build_args: |
               SYTEST_IMAGE_TAG=testing
-              SYSTEM_PIP_INSTALL_SUFFIX=--break-system-packages
+              PYTHON_VERSION=3.13
 
     steps:
       - name: Set up QEMU

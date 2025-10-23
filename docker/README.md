@@ -8,9 +8,9 @@ but its dependencies are.
 Included currently is:
 
 - `matrixdotorg/sytest` Base container with SyTest dependencies installed
-  - Tagged by underlying Debian/Ubuntu image: `bullseye` or `testing`
+  - Tagged by underlying Debian/Ubuntu image: `bookworm` or `testing`
 - `matrixdotorg/sytest-synapse`: Runs SyTest against Synapse
-  - Tagged by underlying Debian/Ubuntu image: `bullseye` or `testing`
+  - Tagged by underlying Debian/Ubuntu image: `bookworm` or `testing`
 
 ## Target-specific details
 
@@ -23,7 +23,7 @@ it is useful to mount a volume there too.
 For example:
 
 ```
-docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:bullseye
+docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:bookworm
 ```
 
 The following environment variables can be set with `-e` to control the test run:
@@ -47,7 +47,7 @@ An example of running Synapse in worker mode:
 
 ```
 docker run --rm -it -e POSTGRES=1 -e WORKERS=1 -v /path/to/synapse\:/src:ro \
-    -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:bullseye
+    -v /path/to/where/you/want/logs\:/logs matrixdotorg/sytest-synapse:bookworm
 ```
 
 ### Dendrite
@@ -72,7 +72,7 @@ for example:
 docker run --rm -it \
     -e SYTEST_BRANCH="my-sytest-branch"
     -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs
-    matrixdotorg/sytest-synapse:bullseye
+    matrixdotorg/sytest-synapse:bookworm
 ```
 
 If the branch referred to by `SYTEST_BRANCH` does not exist, `develop` is used
@@ -84,7 +84,7 @@ the container:
 
 ```
 docker run --rm -it -v /path/to/synapse\:/src:ro -v /path/to/where/you/want/logs\:/logs \
-    -v /path/to/code/sytest\:/sytest:ro matrixdotorg/sytest-synapse:bullseye
+    -v /path/to/code/sytest\:/sytest:ro matrixdotorg/sytest-synapse:bookworm
 ```
 
 ## Running a single test file, and other sytest commandline options
@@ -93,7 +93,7 @@ You can pass arguments to sytest by adding them at the end of the
 docker command. For example:
 
 ```
-docker run --rm -it ... matrixdotorg/sytest-synapse:bullseye tests/20profile-events.pl
+docker run --rm -it ... matrixdotorg/sytest-synapse:bookworm tests/20profile-events.pl
 ```
 
 ## Building the containers
