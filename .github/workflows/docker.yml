@@ -74,7 +74,7 @@ jobs:
             tags: "matrixdotorg/sytest-synapse:testing"
             build_args: |
               SYTEST_IMAGE_TAG=testing
-              PYTHON_VERSION=3.14
+              PYTHON_VERSION=3.13
 
     steps:
       - name: Set up QEMU
