@@ -28,6 +28,8 @@ RUN apt-get -qq update && apt-get -qq install -y \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
+# Set the default PostgreSQL version to the minimum supported by Synapse:
+# https://element-hq.github.io/synapse/latest/deprecation_policy.html
 ARG POSTGRESQL_VERSION=13
 RUN /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
     && apt -qq install -y postgresql-${POSTGRESQL_VERSION} \
