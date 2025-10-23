@@ -57,7 +57,7 @@ RUN wget -q https://github.com/element-hq/synapse/archive/develop.tar.gz \
         tar -C /synapse --strip-components=1 -xf synapse.tar.gz && \
         ln -s -T /venv /synapse/.venv && \
         cd /synapse && \
-        poetry install -q --no-root --extras all && \
+        poetry install --no-root --extras all && \
         # Finally clean up the poetry cache and the copy of Synapse.
         # This must be done in the same RUN command, otherwise intermediate layers
         # of the Docker image will contain all the unwanted files we think we've
