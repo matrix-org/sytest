@@ -91,6 +91,12 @@ test "Should reject keys claiming to belong to a different user",
             device_keys => {
                user_id => "\@50-e2e-alice:localhost:8480",
                device_id => "alices_first_device",
+               algorithms => ["m.olm.curve25519-aes-sha256", "m.megolm.v1.aes-sha"],
+               keys => {
+                 "curve25519:".$user->device_id => "curve25519+key",
+                 "ed25519:".$user->device_id => "ed25519+key",
+               },
+               signatures => {},
             },
          }
       )->main::expect_http_4xx;
