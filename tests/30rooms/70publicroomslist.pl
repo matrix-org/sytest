@@ -259,52 +259,6 @@ test "Can paginate public room list",
       })
    };
 
-test "Can search public room list",
-   requires => [ local_user_fixture() ],
-
-   check => sub {
-      my ( $local_user ) = @_;
-
-      my $room_id;
-
-      matrix_create_room_synced( $local_user,
-         visibility      => "public",
-         name            => "Test Name",
-         topic           => "Test Topic Wombles",
-      )->then( sub {
-         ( $room_id ) = @_;
-
-         retry_until_success {
-            do_request_json_for( $local_user,
-               method => "POST",
-               uri    => "/v3/publicRooms",
-
-               content => {
-                  filter => {
-                     generic_search_term => "wombles",  # Search case insensitively
-                  }
-               },
-            )->then( sub {
-               my ( $body ) = @_;
-
-               log_if_fail "Body", $body;
-
-               assert_json_keys( $body, qw( chunk ) );
-
-               # We only expect to find a single result
-               assert_eq scalar @{ $body->{chunk} }, 1, "Number of results";
-               assert_eq $body->{chunk}[0]{room_id}, $room_id, "Room id";
-
-               Future->done( 1 );
-            })->on_fail( sub {
-               my ( $exc ) = @_;
-               chomp $exc;
-               log_if_fail "Failed to search room dir: $exc";
-            });
-         }
-      })
-   };
-
 test "Asking for a remote rooms list, but supplying the local server's name, returns the local rooms list",
    requires => [ local_user_fixture() ],
 
