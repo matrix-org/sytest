@@ -24,7 +24,7 @@ ARG PYTHON_VERSION=3.10
 
 RUN --mount=type=bind,from=ghcr.io/astral-sh/uv:0.9.4,source=/uv,target=/bin/uv \
         uv python install "$PYTHON_VERSION" && \
-        uv tool install poetry@1.3.2
+        uv tool install poetry@2.2.1
 
 ENV PATH=/root/.local/bin:$PATH
 
@@ -48,7 +48,7 @@ RUN mkdir /src
 # Download a cache of build dependencies to support offline mode.
 # These version numbers are arbitrary and were the latest at the time.
 RUN "python${PYTHON_VERSION}" -m pip download --dest /pypi-offline-cache \
-        poetry-core==1.1.0 setuptools==65.3.0 wheel==0.37.1 \
+        poetry-core==2.2.1 setuptools==65.3.0 wheel==0.37.1 \
         setuptools-rust==1.5.1
 
 # Create the virtual env upfront so we don't need to keep reinstalling
@@ -75,14 +75,8 @@ RUN /venv/bin/pip install -q --no-cache-dir \
 # Poetry runs multiple pip operations in parallel. Unfortunately this results
 # in race conditions when a dependency is installed while another dependency
 # is being up/downgraded in `scripts/synapse_sytest.sh`. Configure poetry to
-# serialize `pip` operations by setting `experimental.new-installer` to a falsy
-# value.
+# serialize `pip` operations by setting `installer.parallel` to false.
 # See https://github.com/matrix-org/synapse/issues/12419
-# TODO: Once poetry 1.2.0 has been released, use the `installer.max-workers`
-#       or `installer.parallel` config option instead.
-# poetry has a bug where this environment variable is not converted to a
-# boolean, so we choose a falsy string value for it. It's fixed in 1.2.0,
-# where we'll be wanting to use `installer.max-workers` anyway.
-ENV POETRY_EXPERIMENTAL_NEW_INSTALLER ""
+ENV POETRY_INSTALLER_PARALLEL false
 
 ENTRYPOINT [ "/bin/bash", "/bootstrap.sh", "synapse" ]
