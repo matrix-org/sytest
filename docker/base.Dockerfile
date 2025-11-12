@@ -30,7 +30,7 @@ RUN apt-get -qq update && apt-get -qq install -y \
 
 # Set the default PostgreSQL version to the minimum supported by Synapse:
 # https://element-hq.github.io/synapse/latest/deprecation_policy.html
-ARG POSTGRESQL_VERSION=13
+ARG POSTGRESQL_VERSION=14
 # Install a specific PostgreSQL version via the official upstream repository:
 # https://wiki.debian.org/PostgreSql%20%20#PGDG_Repository
 RUN /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
