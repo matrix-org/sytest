@@ -26,7 +26,7 @@ jobs:
           - tag: bookworm
             build_args: |
               BASE_IMAGE=debian:bookworm
-              POSTGRESQL_VERSION=13
+              POSTGRESQL_VERSION=14
           - tag: testing
             build_args: |
               BASE_IMAGE=debian:testing
