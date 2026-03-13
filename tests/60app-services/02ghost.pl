@@ -61,11 +61,9 @@ multi_test "AS-ghosted users can use rooms via AS",
                Future->done;
             }),
 
-            my $txn_id = random_transaction_id();
-
             do_request_json_for( $as_user,
                method => "PUT",
-               uri    => "/v3/rooms/$room_id/send/m.room.message/$txn_id",
+               uri    => "/v3/rooms/$room_id/send/m.room.message/" . random_transaction_id(),
                params => {
                   user_id => $ghost->user_id,
                },
