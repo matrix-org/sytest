@@ -67,8 +67,8 @@ test "Event size limits",
 
       Future->needs_all(
          do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/v3/rooms/$room_id/send/m.room.message",
+            method  => "PUT",
+            uri     => "/v3/rooms/$room_id/send/m.room.message/aaaaaaa",
             content => {
                msgtype => "m.text",
                body    => "A" x 70000,
