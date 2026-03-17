@@ -348,12 +348,13 @@ sub start
         stream_writers => {
            events => $self->{redis_host} ne '' ? [ "event_persister1", "event_persister2" ] : "master",
 
-           to_device    => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
-           account_data => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
-           receipts     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
-           presence     => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
-           push_rules   => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
-           typing       => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           to_device       => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           account_data    => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           receipts        => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           presence        => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           profile_updates => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           push_rules      => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
+           typing          => $self->{redis_host} ne '' ? [ "stream_writer" ] : "master",
         },
 
         # We use a high limit so the limit is never reached, but enabling the
@@ -1325,6 +1326,7 @@ sub generate_haproxy_map
 ^/_matrix/client/(api/v1|r0|v3|unstable)/room_keys                   stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/presence/                   stream_writer
 ^/_matrix/client/(api/v1|r0|v3|unstable)/pushrules/                  stream_writer
+^/_matrix/client/(api/v1|r0|v3|unstable)/profile/.*/                 stream_writer
 
 ^/_matrix/client/(api/v1|r0|v3|unstable)/keys/upload  frontend_proxy
 
