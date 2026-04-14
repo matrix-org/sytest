@@ -266,7 +266,8 @@ my %ALLOWED_CONTENT_BY_TYPE = (
 
 sub redact_event
 {
-   my ( $event ) = @_;
+   my ( $event, $room_version ) = @_;
+   $room_version //= 1;
 
    defined( my $type = $event->{type} ) or
       croak "Event requires a 'type'";
@@ -278,6 +279,32 @@ sub redact_event
 
    my $new_content = $event->{content} = {};
 
+   # Room version 11+ uses updated redaction rules (MSC2176 / Matrix 1.9):
+   # - m.room.create: entire content is preserved
+   # - m.room.power_levels: 'invite' is also preserved
+   # - m.room.member: 'third_party_invite.signed' is also preserved
+   # - m.room.redaction: 'redacts' is also preserved
+   if( $room_version >= 11 ) {
+      if( $type eq 'm.room.create' ) {
+         # Preserve all content for create events
+         %$new_content = %{ $old_content // {} };
+         $event->{unsigned}{age_ts} = $old_unsigned->{age_ts} if exists $old_unsigned->{age_ts};
+         return;
+      }
+      if( $type eq 'm.room.power_levels' ) {
+         exists $old_content->{invite} and $new_content->{invite} = $old_content->{invite};
+      }
+      if( $type eq 'm.room.member' ) {
+         my $tpi = $old_content->{third_party_invite};
+         if( ref $tpi eq 'HASH' && exists $tpi->{signed} ) {
+            $new_content->{third_party_invite} = { signed => $tpi->{signed} };
+         }
+      }
+      if( $type eq 'm.room.redaction' ) {
+         exists $old_content->{redacts} and $new_content->{redacts} = $old_content->{redacts};
+      }
+   }
+
    if( my $allowed_content_keys = $ALLOWED_CONTENT_BY_TYPE{$type} ) {
       exists $old_content->{$_} and $new_content->{$_} = $old_content->{$_} for
          @$allowed_content_keys;
@@ -288,8 +315,8 @@ sub redact_event
 
 sub redacted_event
 {
-   my ( $event ) = @_;
-   redact_event( $event = { %$event } );
+   my ( $event, $room_version ) = @_;
+   redact_event( $event = { %$event }, $room_version );
    return $event;
 }
 

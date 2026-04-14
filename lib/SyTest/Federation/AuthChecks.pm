@@ -48,9 +48,12 @@ sub auth_check_event
          $accepted_events, $event->{auth_events}, "m.room.create"
       );
 
+      # For room version 11+, 'creator' is absent from content; use sender instead
+      my $room_creator = $create_event->{content}{creator} // $create_event->{sender};
+
       {
          users => {
-            $create_event->{content}{creator} => 100,
+            $room_creator => 100,
          },
          users_default => 0,
 
@@ -95,8 +98,10 @@ sub auth_check_event_m_room_create
    @{ $event->{auth_events} } == 0 or
       return 0;
 
-   # Any m.room.create event is acceptable, provided that the creator matches
-   return $event->{sender} eq $event->{content}{creator};
+   # Any m.room.create event is acceptable, provided that the creator matches.
+   # For room version 11+, 'creator' is absent from content; creator is implicit from sender.
+   my $creator = $event->{content}{creator} // $event->{sender};
+   return $event->{sender} eq $creator;
 }
 
 sub auth_check_event_m_room_member
@@ -117,7 +122,9 @@ sub auth_check_event_m_room_member
       $accepted_events, $event->{auth_events}, "m.room.create"
    );
 
-   if( $create_event and $event->{state_key} eq $create_event->{content}{creator} ) {
+   # For room version 11+, 'creator' is absent from content; use sender instead
+   my $creator = $create_event ? ( $create_event->{content}{creator} // $create_event->{sender} ) : undef;
+   if( $creator and $event->{state_key} eq $creator ) {
       return 1;
    }
 

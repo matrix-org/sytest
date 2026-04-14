@@ -44,9 +44,10 @@ Calculates the reference hash of an event.
 
 sub hash_event
 {
-   my ( $event ) = @_;
+   my ( $event, $room_version ) = @_;
+   $room_version //= 1;
    croak "Require an event" unless ref $event eq 'HASH';
-   my $redacted = redacted_event( $event );
+   my $redacted = redacted_event( $event, $room_version );
    delete $redacted->{signatures};
    delete $redacted->{age_ts};
    delete $redacted->{unsigned};
@@ -76,7 +77,7 @@ sub id_for_event
       return $event_id;
    }
 
-   my $event_hash = hash_event( $event );
+   my $event_hash = hash_event( $event, $room_version );
 
    # room v3 uses the unpadded-base64-encoded hash
    if( $room_version eq '3' ) {
