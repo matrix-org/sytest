@@ -9,8 +9,8 @@ test "Invalid JSON integers",
 
       Future->needs_all(
          do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/v3/rooms/$room_id/send/sytest.dummy",
+            method  => "PUT",
+            uri     => "/v3/rooms/$room_id/send/sytest.dummy/253",
             content => {
                msgtype => "sytest.dummy",
                body    => 9007199254740992,  # 2 ** 53
@@ -18,8 +18,8 @@ test "Invalid JSON integers",
          )->main::expect_m_bad_json,
 
          do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/v3/rooms/$room_id/send/sytest.dummy",
+            method  => "PUT",
+            uri     => "/v3/rooms/$room_id/send/sytest.dummy/-253",
             content => {
                msgtype => "sytest.dummy",
                body    => -9007199254740992,  # -2 ** 53
@@ -38,8 +38,8 @@ test "Invalid JSON floats",
       my ( $user, $room_id ) = @_;
 
       do_request_json_for( $user,
-         method  => "POST",
-         uri     => "/v3/rooms/$room_id/send/sytest.dummy",
+         method  => "PUT",
+         uri     => "/v3/rooms/$room_id/send/sytest.dummy/1.1",
          content => {
             msgtype => "sytest.dummy",
             body    => 1.1,
@@ -66,8 +66,8 @@ test "Invalid JSON special values",
       Future->needs_all(
          # Try some Perl magic values.
          do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/v3/rooms/$room_id/send/sytest.dummy",
+            method  => "PUT",
+            uri     => "/v3/rooms/$room_id/send/sytest.dummy/NaN",
             content => {
                msgtype => "sytest.dummy",
                body    => "NaN" + 0,
@@ -75,8 +75,8 @@ test "Invalid JSON special values",
          )->main::expect_http_400,
 
          do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/v3/rooms/$room_id/send/sytest.dummy",
+            method  => "PUT",
+            uri     => "/v3/rooms/$room_id/send/sytest.dummy/inf",
             content => {
                msgtype => "sytest.dummy",
                body    => "inf" + 0,
@@ -84,8 +84,8 @@ test "Invalid JSON special values",
          )->main::expect_http_400,
 
          do_request_json_for( $user,
-            method  => "POST",
-            uri     => "/v3/rooms/$room_id/send/sytest.dummy",
+            method  => "PUT",
+            uri     => "/v3/rooms/$room_id/send/sytest.dummy/-inf",
             content => {
                msgtype => "sytest.dummy",
                body    => "-inf" + 0,
@@ -94,8 +94,8 @@ test "Invalid JSON special values",
 
          # Try some Python magic values.
          $user->http->do_request(
-            method       => "POST",
-            uri          => "/v3/rooms/$room_id/send/sytest.dummy",
+            method       => "PUT",
+            uri          => "/v3/rooms/$room_id/send/sytest.dummy/Infinity",
             params       => {
                access_token => $user->access_token,
             },
@@ -104,8 +104,8 @@ test "Invalid JSON special values",
          )->main::expect_http_400,
 
          $user->http->do_request(
-            method       => "POST",
-            uri          => "/v3/rooms/$room_id/send/sytest.dummy",
+            method       => "PUT",
+            uri          => "/v3/rooms/$room_id/send/sytest.dummy/-Infinity",
             params       => {
                access_token => $user->access_token,
             },
@@ -114,8 +114,8 @@ test "Invalid JSON special values",
          )->main::expect_http_400,
 
          $user->http->do_request(
-            method       => "POST",
-            uri          => "/v3/rooms/$room_id/send/sytest.dummy",
+            method       => "PUT",
+            uri          => "/v3/rooms/$room_id/send/sytest.dummy/NaNBody",
             params       => {
                access_token => $user->access_token,
             },
