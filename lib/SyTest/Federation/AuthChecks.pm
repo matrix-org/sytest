@@ -48,9 +48,12 @@ sub auth_check_event
          $accepted_events, $event->{auth_events}, "m.room.create"
       );
 
+      my $room_creator = _creator_for_create_event( $create_event );
+      return 0 unless defined $room_creator;
+
       {
          users => {
-            $create_event->{content}{creator} => 100,
+            $room_creator => 100,
          },
          users_default => 0,
 
@@ -86,6 +89,24 @@ sub auth_check_event
    return 1;
 }
 
+sub _creator_for_create_event
+{
+   my ( $create_event ) = @_;
+
+   $create_event or
+      return undef;
+
+   my $room_version = $create_event->{content}{room_version};
+
+   # For room version 11+, 'creator' is absent from content, we use sender.
+   if( defined $room_version and $room_version =~ /\A[0-9]+\z/ and $room_version >= 11 ) {
+      return $create_event->{sender};
+   }
+
+   # For older room versions, 'creator' must be present explicitly.
+   return $create_event->{content}{creator};
+}
+
 sub auth_check_event_m_room_create
 {
    my $self = shift;
@@ -96,7 +117,8 @@ sub auth_check_event_m_room_create
       return 0;
 
    # Any m.room.create event is acceptable, provided that the creator matches
-   return $event->{sender} eq $event->{content}{creator};
+   my $creator = _creator_for_create_event( $event );
+   return defined( $creator ) and $event->{sender} eq $creator;
 }
 
 sub auth_check_event_m_room_member
@@ -117,7 +139,8 @@ sub auth_check_event_m_room_member
       $accepted_events, $event->{auth_events}, "m.room.create"
    );
 
-   if( $create_event and $event->{state_key} eq $create_event->{content}{creator} ) {
+   my $creator = _creator_for_create_event( $create_event );
+   if( $creator and $event->{state_key} eq $creator ) {
       return 1;
    }
 

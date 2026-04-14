@@ -266,17 +266,45 @@ my %ALLOWED_CONTENT_BY_TYPE = (
 
 sub redact_event
 {
-   my ( $event ) = @_;
+   my ( $event, $room_version ) = @_;
+   $room_version //= 1;
 
    defined( my $type = $event->{type} ) or
       croak "Event requires a 'type'";
 
+   delete $event->{redacts};
    my $old_content = delete $event->{content};
    my $old_unsigned = delete $event->{unsigned};
 
    $ALLOWED_KEYS{$_} or delete $event->{$_} for keys %$event;
 
    my $new_content = $event->{content} = {};
+
+   # Room version 11+ uses updated redaction rules:
+   # - m.room.create: entire content property is preserved
+   # - m.room.power_levels: 'invite' is also preserved
+   # - m.room.member: 'third_party_invite.signed' is also preserved
+   # - m.room.redaction: 'redacts' is also preserved
+   if( defined $room_version and $room_version =~ /\A[0-9]+\z/ and $room_version >= 11 ) {
+      if( $type eq 'm.room.create' ) {
+         %$new_content = %{ $old_content // {} };
+         $event->{unsigned}{age_ts} = $old_unsigned->{age_ts} if exists $old_unsigned->{age_ts};
+         return;
+      }
+      if( $type eq 'm.room.power_levels' ) {
+         exists $old_content->{invite} and $new_content->{invite} = $old_content->{invite};
+      }
+      if( $type eq 'm.room.member' ) {
+         my $tpi = $old_content->{third_party_invite};
+         if( ref $tpi eq 'HASH' && exists $tpi->{signed} ) {
+            $new_content->{third_party_invite} = { signed => $tpi->{signed} };
+         }
+      }
+      if( $type eq 'm.room.redaction' ) {
+         # In v11, 'redacts' moved into content; preserve content.redacts
+         exists $old_content->{redacts} and $new_content->{redacts} = $old_content->{redacts};
+      }
+   }
 
    if( my $allowed_content_keys = $ALLOWED_CONTENT_BY_TYPE{$type} ) {
       exists $old_content->{$_} and $new_content->{$_} = $old_content->{$_} for
@@ -288,8 +316,8 @@ sub redact_event
 
 sub redacted_event
 {
-   my ( $event ) = @_;
-   redact_event( $event = { %$event } );
+   my ( $event, $room_version ) = @_;
+   redact_event( $event = { %$event }, $room_version );
    return $event;
 }
 
@@ -309,6 +337,7 @@ sub sign_event_json
 
    my $origin = $args{origin} or croak "Require an 'origin'";
    my $key_id = $args{key_id} or croak "Require a 'key_id'";
+   my $room_version = delete $args{room_version};
 
    # 'hashes' records the original unredacted version
    {
@@ -319,7 +348,7 @@ sub sign_event_json
    }
 
    # Signature is of redacted version
-   sign_json( my $signed = redacted_event( $event ), %args );
+   sign_json( my $signed = redacted_event( $event, $room_version ), %args );
 
    $event->{signatures} = $signed->{signatures};
 }
@@ -349,9 +378,10 @@ sub signed_event_json
 
 sub verify_event_json_signature
 {
-   my ( $event, @args ) = @_;
+   my ( $event, %args ) = @_;
 
-   verify_json_signature( redacted_event( $event ), @args );
+   my $room_version = delete $args{room_version};
+   verify_json_signature( redacted_event( $event, $room_version ), %args );
 }
 
 =head1 AUTHOR

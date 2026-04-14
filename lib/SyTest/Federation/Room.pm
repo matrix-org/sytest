@@ -180,13 +180,16 @@ sub create_initial_events
       $self->room_version eq "1" ? undef : $self->room_version
    );
 
+   # For room version 11+, 'creator' is absent from content, we use sender.
+   my $create_content = {
+      defined( $room_version ) ? ( room_version => $room_version ) : (),
+   };
+   $create_content->{creator} = $creator if !defined( $room_version ) || $room_version < 11;
+
    $self->create_and_insert_event(
       type => "m.room.create",
 
-      content     => {
-         creator => $creator,
-         defined( $room_version ) ? ( room_version => $room_version ) : (),
-      },
+      content     => $create_content,
       sender      => $creator,
       state_key   => "",
    );

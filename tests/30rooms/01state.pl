@@ -32,9 +32,12 @@ test "Room creation reports m.room.create to myself",
          $event->{sender} eq $user->user_id or
             die "Expected user_id to be ${\$user->user_id}";
 
-         assert_json_keys( my $content = $event->{content}, qw( creator ));
-         $content->{creator} eq $user->user_id or
-            die "Expected creator to be ${\$user->user_id}";
+         my $content = $event->{content};
+         # For room version 11+, 'creator' is absent from content, we use sender.
+         if( exists $content->{creator} ) {
+            $content->{creator} eq $user->user_id or
+               die "Expected creator to be ${\$user->user_id}";
+         }
 
          return 1;
       });
