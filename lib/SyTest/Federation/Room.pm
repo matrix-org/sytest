@@ -176,9 +176,9 @@ sub create_initial_events
    my $creator = $args{creator} or
       croak "Require a 'creator'";
 
-   my $room_version = $args{room_version} // (
-      $self->room_version eq "1" ? undef : $self->room_version
-   );
+   # Only declare a room version if its not 1.
+   my $room_version = $args{room_version} // $self->room_version;
+   $room_version = $room_version eq "1" ? undef : $room_version;
 
    $self->create_and_insert_event(
       type => "m.room.create",

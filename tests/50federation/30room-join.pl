@@ -929,7 +929,10 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
          creator => $creator_id,
          alias   => $room_alias,
 
-         room_version => 'sytest-room-ver',
+         # We want this room to act like a v1 room, but declare itself an
+         # unknown version.
+         room_version              => '1',
+         room_version_create_event => 'sytest-room-ver',
       );
 
       my $room_id = $room->room_id;
@@ -942,7 +945,7 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
                user_id => $user_id,
             );
 
-            $proto->{origin_server_ts} = $inbound_server->time_ms;
+            $proto->{origin_server_ts} = JSON::number($inbound_server->time_ms);
 
             $req->respond_json( {
                event => $proto,
@@ -1085,7 +1088,7 @@ test "Event with an invalid signature in the send_join response should not cause
          })->then(sub {
             await_sync_timeline_contains( $user, $room_id, check => sub {
                my ( $event ) = @_;
-                
+
                assert_json_keys( $event, qw( type sender ));
                return unless $event->{type} eq "m.room.member";
                assert_json_keys( $event->{content}, qw( membership ) );
