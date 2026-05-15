@@ -442,6 +442,7 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
          $join_event = $body->{event};
 
          $join_event->{origin_server_ts} = $outbound_client->time_ms;
+         $join_event->{hashes} = {};
 
          if( $room_version eq '1' || $room_version eq '2' ) {
             # room v1/v2: assign an event id
