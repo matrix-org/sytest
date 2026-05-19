@@ -379,9 +379,10 @@ sub create_room
    my $creator = $args{creator};
    my $room_version = $args{room_version} // 1;
 
-   # Allow override the room version we add to the create event, to test the
-   # case where the create event's room version is different from the room's
-   # actual version.
+   # Allow override of the room version declared in the create event.
+   #
+   # Events will be formatted according to the `$room_version` but the
+   # room will be declared as this room version instead.
    my $room_version_used_for_create_event = $args{room_version_used_for_create_event} // $room_version;
 
    my $room = SyTest::Federation::Room->new(
