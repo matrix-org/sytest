@@ -932,8 +932,8 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
          # We create a room with an unknown room version. However, we still need
          # to base it off a known version (to actually be able to create the
          # events), and so we choose v1.
-         room_version              => '1',
-         room_version_create_event => 'sytest-room-ver',
+         room_version                       => '1',
+         room_version_used_for_create_event => 'sytest-room-ver',
       );
 
       my $room_id = $room->room_id;
