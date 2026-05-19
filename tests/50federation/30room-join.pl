@@ -929,8 +929,9 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
          creator => $creator_id,
          alias   => $room_alias,
 
-         # We want this room to act like a v1 room, but declare itself an
-         # unknown version.
+         # We create a room with an unknown room version. However, we still need
+         # to base it off a known version (to actually be able to create the
+         # events), and so we choose v1.
          room_version              => '1',
          room_version_create_event => 'sytest-room-ver',
       );
@@ -947,6 +948,11 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
 
             $proto->{origin_server_ts} = JSON::number($inbound_server->time_ms);
 
+            # Note: if we were being compliant we would return the unknown room
+            # version here. Instead, we skip it and so the calling server will
+            # assume its a v1 room. Since the room events are formatted like v1,
+            # this won't cause any problems here and the server will continue to
+            # the send_join stage.
             $req->respond_json( {
                event => $proto,
             } );
@@ -967,6 +973,9 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
                @{ $room->event_ids_from_refs( $event->{auth_events} ) }
             );
 
+            # This is where we respond with the create event, which has the
+            # unknown room version. At this point the calling server should
+            # realise that the room version is unknown and reject the join.
             $req->respond_json(
                my $response = {
                   auth_chain => \@auth_chain,
