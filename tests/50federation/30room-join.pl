@@ -946,6 +946,8 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
                user_id => $user_id,
             );
 
+            # Need to make sure `origin_server_ts` is formatted as a JSON number
+            # (by default perl will serialize as a string)
             $proto->{origin_server_ts} = JSON::number($inbound_server->time_ms);
 
             # Note: if we were being compliant we would return the unknown room
