@@ -8,7 +8,7 @@ test "Can invite existing 3pid",
    do => sub {
       my ( $inviter, $invitee, $id_server ) = @_;
 
-      my $invitee_mxid = $invitee->user_id;
+      my $invitee_mxid = $invitee->sender;
 
       my $room_id;
       my $id_access_token = $id_server->get_access_token;
@@ -50,7 +50,7 @@ test "Can invite existing 3pid with no ops into a private room",
    do => sub {
       my ( $creator, $inviter, $invitee, $id_server ) = @_;
 
-      my $invitee_mxid = $invitee->user_id;
+      my $invitee_mxid = $invitee->sender;
 
       my $room_id;
       my $id_access_token = $id_server->get_access_token;
@@ -99,7 +99,7 @@ test "Can invite existing 3pid in createRoom",
    do => sub {
       my ( $inviter, $invitee, $id_server ) = @_;
 
-      my $invitee_mxid = $invitee->user_id;
+      my $invitee_mxid = $invitee->sender;
 
       my $room_id;
       my $id_access_token = $id_server->get_access_token;
@@ -226,11 +226,11 @@ sub can_invite_unbound_3pid
          $_->{state_key} => $_
       } grep { $_->{type} eq "m.room.member" } @{ $body->{invite_state}{events} };
 
-      exists $members{ $inviter->user_id } or die "No inviter member invite state";
+      exists $members{ $inviter->sender } or die "No inviter member invite state";
 
       matrix_get_room_state( $inviter, $room_id,
          type      => "m.room.member",
-         state_key => $invitee->user_id,
+         state_key => $invitee->sender,
       )
    })->then( sub {
       my ( $body ) = @_;
@@ -245,7 +245,7 @@ sub can_invite_unbound_3pid
       retry_until_success {
          matrix_get_room_state( $inviter, $room_id,
             type      => "m.room.member",
-            state_key => $invitee->user_id,
+            state_key => $invitee->sender,
          )->followed_by( assert_membership( "join" ) )
       }
    })
@@ -278,7 +278,7 @@ test "Can invite unbound 3pid over federation with users from both servers",
          await_event_for( $inviter, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
-            return unless $event->{state_key} eq $invitee->user_id;
+            return unless $event->{state_key} eq $invitee->sender;
 
             assert_eq( $event->{content}{membership}, "invite" );
 
@@ -287,7 +287,7 @@ test "Can invite unbound 3pid over federation with users from both servers",
       })->then( sub {
          matrix_get_room_state( $inviter, $room_id,
             type      => "m.room.member",
-            state_key => $invitee->user_id,
+            state_key => $invitee->sender,
          )
       })->then( sub {
          my ( $body ) = @_;
@@ -302,7 +302,7 @@ test "Can invite unbound 3pid over federation with users from both servers",
          await_event_for( $inviter, filter => sub {
             my ( $event ) = @_;
             return unless $event->{type} eq "m.room.member";
-            return unless $event->{state_key} eq $invitee->user_id;
+            return unless $event->{state_key} eq $invitee->sender;
 
             assert_eq( $event->{content}{membership},  "join" );
 
@@ -312,7 +312,7 @@ test "Can invite unbound 3pid over federation with users from both servers",
          retry_until_success {
             matrix_get_room_state( $inviter, $room_id,
                type      => "m.room.member",
-               state_key => $invitee->user_id,
+               state_key => $invitee->sender,
             )->followed_by( assert_membership( "join" ) )
          }
       });
@@ -346,7 +346,7 @@ test "Can accept unbound 3pid invite after inviter leaves",
       })->then( sub {
          matrix_get_room_state( $other_member, $room_id,
             type      => "m.room.member",
-            state_key => $invitee->user_id,
+            state_key => $invitee->sender,
          )
       })->followed_by( assert_membership( "join" ) );
    };
@@ -377,8 +377,8 @@ test "Can accept third party invite with /join",
          my $token = $invite_event->{state_key};
 
          my %req = (
-            mxid   => $invitee->user_id,
-            sender => $inviter->user_id,
+            mxid   => $invitee->sender,
+            sender => $inviter->sender,
             token  => $token,
          );
 
@@ -390,7 +390,7 @@ test "Can accept third party invite with /join",
       })->then( sub {
          matrix_get_room_state( $inviter, $room_id,
             type      => "m.room.member",
-            state_key => $invitee->user_id,
+            state_key => $invitee->sender,
          )
       })->followed_by( assert_membership( "join" ) );
    };
@@ -465,7 +465,7 @@ sub invite_should_fail {
    })->then( sub {
       matrix_get_room_state( $inviter, $room_id,
          type      => "m.room.member",
-         state_key => $invitee->user_id,
+         state_key => $invitee->sender,
       )
    })->followed_by(assert_membership( undef ) );
 }
