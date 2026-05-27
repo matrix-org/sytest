@@ -223,7 +223,7 @@ sub can_invite_unbound_3pid
       assert_json_list( $body->{invite_state}{events} );
 
       my %members = map {
-         $_->{state_key} => $_
+         $_->{sender} => $_
       } grep { $_->{type} eq "m.room.member" } @{ $body->{invite_state}{events} };
 
       exists $members{ $inviter->user_id } or die "No inviter member invite state";
