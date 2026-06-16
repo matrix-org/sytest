@@ -288,10 +288,8 @@ sub redact_event
    # - m.room.power_levels: 'invite' is also preserved
    # - m.room.member: 'third_party_invite.signed' is also preserved
    # - m.room.redaction: 'redacts' is also preserved
-   # The regex /\A[0-9]+\z/ ignores room versions that are not comprised only of digits
-   # (e.g. custom non-numeric versions used in some federation tests).
-   # (e.g. unstable room versions).
-   if( $room_version =~ /\A[0-9]+\z/ and $room_version >= 11 ) {
+   # Non-numeric (unstable) room versions are assumed to be 11+
+   if( $room_version !~ /\A[0-9]+\z/ or $room_version >= 11 ) {
       if( $type eq 'm.room.create' ) {
          %$new_content = %$old_content;
          $event->{unsigned}{age_ts} = $old_unsigned->{age_ts} if exists $old_unsigned->{age_ts};
