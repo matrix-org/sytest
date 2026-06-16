@@ -183,9 +183,10 @@ sub create_initial_events
    my $create_content = {
       defined( $room_version ) ? ( room_version => $room_version ) : (),
    };
-   # Default to old 'creator' field unless room version is a numeric integer >= 11.
+   # Default to old 'creator' field if no room version is specified, or room version is
+   # a numeric value <11. Non-numeric (unstable) versions are treated as 11+.
    $create_content->{creator} = $creator
-      unless defined( $room_version ) && $room_version =~ /\A[0-9]+\z/ && $room_version >= 11;
+      unless defined( $room_version ) && ( $room_version !~ /\A[0-9]+\z/ || $room_version >= 11 );
 
    $self->create_and_insert_event(
       type => "m.room.create",

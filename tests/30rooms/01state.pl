@@ -34,7 +34,7 @@ test "Room creation reports m.room.create to myself",
 
          my $content = $event->{content};
          my $room_version = $content->{room_version} // "1";
-         if( $room_version =~ /\A[0-9]+\z/ && $room_version >= 11 ) {
+         if( $room_version !~ /\A[0-9]+\z/ || $room_version >= 11 ) {
             # Room version 11+: 'creator' must be absent from content.
             exists $content->{creator} and
                die "Expected no 'creator' key in content for room version $room_version";

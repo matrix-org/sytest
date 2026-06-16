@@ -108,8 +108,9 @@ sub _creator_for_create_event
 
    my $room_version = $create_event->{content}{room_version};
 
-   # For room version 11+, 'creator' is absent from content, we use sender.
-   if( defined $room_version and $room_version =~ /\A[0-9]+\z/ and $room_version >= 11 ) {
+   # For room version 11+ (or unstable/non-numeric versions), 'creator' is absent
+   # from content; use sender instead.
+   if( defined $room_version && ( $room_version !~ /\A[0-9]+\z/ || $room_version >= 11 ) ) {
       return $create_event->{sender};
    }
 
