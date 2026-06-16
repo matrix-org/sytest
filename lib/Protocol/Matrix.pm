@@ -290,6 +290,7 @@ sub redact_event
    # - m.room.redaction: 'redacts' is also preserved
    # The regex /\A[0-9]+\z/ ignores room versions that are not comprised only of digits
    # (e.g. custom non-numeric versions used in some federation tests).
+   # (e.g. unstable room versions).
    if( $room_version =~ /\A[0-9]+\z/ and $room_version >= 11 ) {
       if( $type eq 'm.room.create' ) {
          %$new_content = %$old_content;
