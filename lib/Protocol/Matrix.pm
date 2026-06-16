@@ -280,19 +280,24 @@ sub redact_event
 
    my $new_content = $event->{content} = {};
 
+   $old_content  //= {};
+   $old_unsigned //= {};
+
    # Room version 11+ uses updated redaction rules:
    # - m.room.create: entire content property is preserved
    # - m.room.power_levels: 'invite' is also preserved
    # - m.room.member: 'third_party_invite.signed' is also preserved
    # - m.room.redaction: 'redacts' is also preserved
-   if( defined $room_version and $room_version =~ /\A[0-9]+\z/ and $room_version >= 11 ) {
+   # The regex /\A[0-9]+\z/ ignores room versions that are not comprised only of digits
+   # (e.g. custom non-numeric versions used in some federation tests).
+   if( $room_version =~ /\A[0-9]+\z/ and $room_version >= 11 ) {
       if( $type eq 'm.room.create' ) {
-         %$new_content = %{ $old_content // {} };
+         %$new_content = %$old_content;
          $event->{unsigned}{age_ts} = $old_unsigned->{age_ts} if exists $old_unsigned->{age_ts};
          return;
       }
       if( $type eq 'm.room.power_levels' ) {
-         exists $old_content->{invite} and $new_content->{invite} = $old_content->{invite};
+         $new_content->{invite} = $old_content->{invite} if exists $old_content->{invite};
       }
       if( $type eq 'm.room.member' ) {
          my $tpi = $old_content->{third_party_invite};
@@ -302,7 +307,7 @@ sub redact_event
       }
       if( $type eq 'm.room.redaction' ) {
          # In v11, 'redacts' moved into content; preserve content.redacts
-         exists $old_content->{redacts} and $new_content->{redacts} = $old_content->{redacts};
+         $new_content->{redacts} = $old_content->{redacts} if exists $old_content->{redacts};
       }
    }
 

@@ -89,6 +89,16 @@ sub auth_check_event
    return 1;
 }
 
+=head2 _creator_for_create_event
+
+   my $creator = _creator_for_create_event( $create_event )
+
+Returns the creator MXID for a given C<m.room.create> event. For room
+version 11+, the creator is taken from the C<sender> field; for older
+versions it is taken from C<content.creator>.
+
+=cut
+
 sub _creator_for_create_event
 {
    my ( $create_event ) = @_;
