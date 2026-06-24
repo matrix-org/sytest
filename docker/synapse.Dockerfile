@@ -24,7 +24,7 @@ ARG PYTHON_VERSION=3.10
 
 RUN --mount=type=bind,from=ghcr.io/astral-sh/uv:0.9.4,source=/uv,target=/bin/uv \
         uv python install "$PYTHON_VERSION" && \
-        uv tool install poetry@2.2.1
+        uv tool install poetry@2.4.1
 
 ENV PATH=/root/.local/bin:$PATH
 
@@ -48,7 +48,7 @@ RUN mkdir /src
 # Download a cache of build dependencies to support offline mode.
 # These version numbers are arbitrary and were the latest at the time.
 RUN "python${PYTHON_VERSION}" -m pip download --dest /pypi-offline-cache \
-        poetry-core==2.2.1 setuptools==65.3.0 wheel==0.37.1 \
+        poetry-core==2.4.1 setuptools==65.3.0 wheel==0.37.1 \
         setuptools-rust==1.5.1
 
 # Create the virtual env upfront so we don't need to keep reinstalling
