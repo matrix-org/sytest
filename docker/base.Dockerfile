@@ -13,6 +13,7 @@ RUN apt-get -qq update && apt-get -qq install -y \
     haproxy \
     jq \
     libffi-dev \
+    libcrypt-dev \
     libjpeg-dev \
     libpq-dev \
     libssl-dev \
