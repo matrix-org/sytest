@@ -77,12 +77,13 @@ the C<signatures> key.
 sub sign_event
 {
    my $self = shift;
-   my ( $event ) = @_;
+   my ( $event, %args ) = @_;
 
    sign_event_json( $event,
-      secret_key => $self->secret_key,
-      origin     => $self->server_name,
-      key_id     => $self->key_id,
+      secret_key   => $self->secret_key,
+      origin       => $self->server_name,
+      key_id       => $self->key_id,
+      room_version => $args{room_version},
    );
 }
 
@@ -204,12 +205,12 @@ sub create_event
          $event_id = $self->next_event_id( $event_id_suffix );
          $event->{event_id} = $event_id;
       }
-      $self->sign_event( $event );
+      $self->sign_event( $event, room_version => $room_version );
    } else {
       die "event with explicit event_id in room v$room_version"
          if defined $event_id;
 
-      $self->sign_event( $event );
+      $self->sign_event( $event, room_version => $room_version );
       $event_id = id_for_event( $event, $room_version );
    }
 
@@ -379,6 +380,12 @@ sub create_room
    my $creator = $args{creator};
    my $room_version = $args{room_version} // 1;
 
+   # Allow override of the room version declared in the create event.
+   #
+   # Events will be formatted according to the `$room_version` but the
+   # room will be declared as this room version instead.
+   my $room_version_used_for_create_event = $args{room_version_used_for_create_event} // $room_version;
+
    my $room = SyTest::Federation::Room->new(
       datastore => $self,
       room_version => $room_version,
@@ -386,6 +393,7 @@ sub create_room
 
    $room->create_initial_events(
       creator => $creator,
+      room_version => $room_version_used_for_create_event,
    );
 
    $self->{rooms_by_id}{ $room->room_id } = $room;

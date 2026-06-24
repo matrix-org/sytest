@@ -176,17 +176,22 @@ sub create_initial_events
    my $creator = $args{creator} or
       croak "Require a 'creator'";
 
-   my $room_version = $args{room_version} // (
-      $self->room_version eq "1" ? undef : $self->room_version
-   );
+   # Only declare a room version if its not 1.
+   my $room_version = $args{room_version} // $self->room_version;
+   $room_version = $room_version eq "1" ? undef : $room_version;
+
+   my $create_content = {
+      defined( $room_version ) ? ( room_version => $room_version ) : (),
+   };
+   # Default to old 'creator' field if no room version is specified, or room version is
+   # a numeric value <11. Non-numeric (unstable) versions are treated as 11+.
+   $create_content->{creator} = $creator
+      unless defined( $room_version ) && ( $room_version !~ /\A[0-9]+\z/ || $room_version >= 11 );
 
    $self->create_and_insert_event(
       type => "m.room.create",
 
-      content     => {
-         creator => $creator,
-         defined( $room_version ) ? ( room_version => $room_version ) : (),
-      },
+      content     => $create_content,
       sender      => $creator,
       state_key   => "",
    );

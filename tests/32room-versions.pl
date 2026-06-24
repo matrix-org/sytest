@@ -228,8 +228,8 @@ foreach my $version ( @{ (SyTest::Federation::Client::SUPPORTED_ROOM_VERSIONS) }
 
             do_request_json_for(
                $remote,
-               method => "POST",
-               uri    => "/v3/rooms/$room_id/redact/$to_redact",
+               method => "PUT",
+               uri    => "/v3/rooms/$room_id/redact/$to_redact/$to_redact",
                content => {},
              );
          })->then( sub {

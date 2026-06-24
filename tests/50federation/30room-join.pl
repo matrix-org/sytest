@@ -442,6 +442,7 @@ test "Inbound /v1/send_join rejects incorrectly-signed joins",
          $join_event = $body->{event};
 
          $join_event->{origin_server_ts} = $outbound_client->time_ms;
+         $join_event->{hashes} = {};
 
          if( $room_version eq '1' || $room_version eq '2' ) {
             # room v1/v2: assign an event id
@@ -928,7 +929,11 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
          creator => $creator_id,
          alias   => $room_alias,
 
-         room_version => 'sytest-room-ver',
+         # We create a room with an unknown room version. However, we still need
+         # to base it off a known version (to actually be able to create the
+         # events), and so we choose v1.
+         room_version                       => '1',
+         room_version_used_for_create_event => 'sytest-room-ver',
       );
 
       my $room_id = $room->room_id;
@@ -941,8 +946,15 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
                user_id => $user_id,
             );
 
-            $proto->{origin_server_ts} = $inbound_server->time_ms;
+            # Need to make sure `origin_server_ts` is formatted as a JSON number
+            # (by default perl will serialize as a string)
+            $proto->{origin_server_ts} = JSON::number($inbound_server->time_ms);
 
+            # Note: if we were being compliant we would return the unknown room
+            # version here. Instead, we skip it and so the calling server will
+            # assume its a v1 room. Since the room events are formatted like v1,
+            # this won't cause any problems here and the server will continue to
+            # the send_join stage.
             $req->respond_json( {
                event => $proto,
             } );
@@ -963,6 +975,9 @@ test "Outbound federation rejects m.room.create events with an unknown room vers
                @{ $room->event_ids_from_refs( $event->{auth_events} ) }
             );
 
+            # This is where we respond with the create event, which has the
+            # unknown room version. At this point the calling server should
+            # realise that the room version is unknown and reject the join.
             $req->respond_json(
                my $response = {
                   auth_chain => \@auth_chain,
@@ -1084,7 +1099,7 @@ test "Event with an invalid signature in the send_join response should not cause
          })->then(sub {
             await_sync_timeline_contains( $user, $room_id, check => sub {
                my ( $event ) = @_;
-                
+
                assert_json_keys( $event, qw( type sender ));
                return unless $event->{type} eq "m.room.member";
                assert_json_keys( $event->{content}, qw( membership ) );

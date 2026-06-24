@@ -542,7 +542,13 @@ test "After /purge_history users still get pushed for new messages",
          do_request_json_for( $admin,
             method   => "POST",
             full_uri => "/_synapse/admin/v1/purge_history/$room_id/${ \uri_escape( $last_event_id ) }",
-            content  => {}
+            content  => {
+               # This test has relied on local events being deleted,
+               # even though the admin API was not meant to do that by
+               # default.
+               # Fixed in https://github.com/element-hq/synapse/pull/19850
+               delete_local_events => JSON::true
+            }
          )
       })->then( sub {
          my ( $body ) = @_;

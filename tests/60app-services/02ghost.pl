@@ -1,5 +1,10 @@
 my $user_fixture = local_user_fixture( with_events => 1 );
 
+sub random_transaction_id
+{
+   join "", map { chr( 65 + rand 26 )} 1 .. 20;
+}
+
 multi_test "AS-ghosted users can use rooms via AS",
    requires => [ as_ghost_fixture(), $main::AS_USER[0], $user_fixture, $main::APPSERV[0],
                      room_fixture( $user_fixture ),
@@ -57,8 +62,8 @@ multi_test "AS-ghosted users can use rooms via AS",
             }),
 
             do_request_json_for( $as_user,
-               method => "POST",
-               uri    => "/v3/rooms/$room_id/send/m.room.message",
+               method => "PUT",
+               uri    => "/v3/rooms/$room_id/send/m.room.message/" . random_transaction_id(),
                params => {
                   user_id => $ghost->user_id,
                },
