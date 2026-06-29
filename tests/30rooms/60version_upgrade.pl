@@ -291,6 +291,12 @@ test "/upgrade copies >100 power levels to the new room",
 
       matrix_create_room_synced(
          $creator,
+         # Room v12+ (MSC4289) gives creators an implicit, infinite power level
+         # and forbids listing them in m.room.power_levels, so a creator cannot
+         # hold an explicit >100 power level. This test exercises the pre-v12
+         # behaviour of copying such power levels on upgrade, so pin the source
+         # room to a version that still supports it.
+         room_version => "11",
          power_level_content_override => { users => $user_power_levels },
       )->then( sub() {
          ( $room_id ) = @_;
@@ -738,7 +744,12 @@ test "/upgrade moves aliases to the new room",
 
 test "/upgrade moves remote aliases to the new room",
    requires => [
-      local_user_and_room_fixtures(),
+      # Pin the source room to a pre-v12 version. In room v12+ (MSC4289) the
+      # creator has an implicit, infinite power level and is not listed in
+      # m.room.power_levels; when upgrading such a room to a pre-v12 version the
+      # creator's power level is not carried over, leaving them unable to invite
+      # users to (and thus exercise alias migration on) the replacement room.
+      local_user_and_room_fixtures( room_opts => { room_version => "11" } ),
       remote_user_fixture(),
       remote_room_alias_fixture(),
       qw( can_upgrade_room_version ),

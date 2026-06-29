@@ -200,7 +200,7 @@ test "outliers whose auth_events are in a different room are correctly rejected"
          sender => $sytest_user_1,
          state_key => $sytest_user_1,
          content => { membership => 'join', },
-         auth_events => $room2->make_event_refs(
+         auth_events => $room2->auth_event_refs(
             $room2->get_current_state_event( "m.room.create" ),
             $room2->get_current_state_event( "m.room.power_levels" ),
             $room1->get_current_state_event( "m.room.member", $sytest_user_1 ),

@@ -18,7 +18,7 @@ sub assert_is_valid_pdu {
 
    assert_json_keys( $event, qw(
       auth_events content depth hashes origin_server_ts
-      prev_events room_id sender signatures type
+      prev_events sender signatures type
    ));
 
    assert_json_list( $event->{auth_events} );
@@ -28,7 +28,11 @@ sub assert_is_valid_pdu {
    assert_json_number( $event->{origin_server_ts} );
    assert_json_list( $event->{prev_events} );
 
-   assert_json_string( $event->{room_id} );
+   # In room v12+, the m.room.create event has no room_id (the room ID is
+   # derived from the create event itself); every other event still carries one.
+   if ( $event->{type} ne "m.room.create" or defined $event->{room_id} ) {
+      assert_json_string( $event->{room_id} );
+   }
    assert_json_string( $event->{sender} );
    assert_json_object( $event->{signatures} );
    assert_json_string( $event->{type} );

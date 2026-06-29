@@ -5,7 +5,7 @@ use warnings;
 
 use Carp;
 
-use Protocol::Matrix qw( sign_event_json );
+use Protocol::Matrix qw( sign_event_json room_version_is_12_plus );
 
 use List::Util 1.45 qw( uniq );
 use Time::HiRes qw( time );
@@ -187,11 +187,19 @@ sub create_event
    my $self = shift;
    my %fields = @_;
 
-   defined $fields{$_} or croak "Every event needs a '$_' field"
-      for qw( type auth_events content depth prev_events room_id sender );
-
    my $room_version = delete $fields{room_version} // 1;
    my $event_id_suffix = delete $fields{event_id_suffix};
+
+   # In room v12+, the m.room.create event carries no 'room_id' field: the room
+   # ID is instead derived from the create event's own reference hash.
+   my $omit_room_id =
+      defined $fields{type} && $fields{type} eq "m.room.create"
+      && room_version_is_12_plus( $room_version );
+
+   my @required_fields = qw( type auth_events content depth prev_events sender );
+   push @required_fields, "room_id" unless $omit_room_id;
+   defined $fields{$_} or croak "Every event needs a '$_' field"
+      for @required_fields;
 
    my $event = {
       %fields,
@@ -218,6 +226,34 @@ sub create_event
 
    return $event unless wantarray;
    return ( $event, $event_id );
+}
+
+=head2 _event_ref_ids
+
+   $event_ids = $store->_event_ref_ids( $event, $refs )
+
+Decodes a C<prev_events> or C<auth_events> reference list belonging to C<$event>
+into a plain ARRAY ref of event IDs, by looking up the event's room (the
+decoding differs between room versions).
+
+In room v12+, the C<m.room.create> event has no C<room_id> (and carries no
+C<prev_events> or C<auth_events>), so its room cannot be looked up from the
+event alone. As such events have no references to decode, an empty list is
+returned without requiring a room lookup.
+
+=cut
+
+sub _event_ref_ids
+{
+   my $self = shift;
+   my ( $event, $refs ) = @_;
+
+   return [] unless $refs && @$refs;
+
+   my $room = $self->get_room( $event->{room_id} ) or
+      croak "Unknown room " . ( $event->{room_id} // "(undef)" );
+
+   return $room->event_ids_from_refs( $refs );
 }
 
 =head2 get_backfill_events
@@ -272,13 +308,10 @@ sub get_backfill_events
       my $event = eval { $self->get_event( $id ) }
          or next;
 
-      my $room = $self->get_room( $event->{room_id} ) or
-         croak "Unknown room $event->{room_id}";
-
       push @events, $event;
 
       push @event_ids, grep { !$exclude{$_} }
-                       @{ $room->event_ids_from_refs( $event->{prev_events} ) };
+                       @{ $self->_event_ref_ids( $event, $event->{prev_events} ) };
 
       # Don't include this event if we encounter it again
       $exclude{$id} = 1;
@@ -308,10 +341,7 @@ sub get_auth_chain_events
    while( @event_ids ) {
       my $event = $events_by_id{shift @event_ids};
 
-      my $room = $self->get_room( $event->{room_id} ) or
-         croak "Unknown room $event->{room_id}";
-
-      my @auth_ids = @{ $room->event_ids_from_refs( $event->{auth_events} ) };
+      my @auth_ids = @{ $self->_event_ref_ids( $event, $event->{auth_events} ) };
 
       foreach my $id ( @auth_ids ) {
          next if $events_by_id{$id};

@@ -99,7 +99,7 @@ test "Inbound federation correctly soft fails events",
          $denied_event = $room->create_and_insert_event(
             type => "m.room.message",
 
-            auth_events => $room->make_event_refs( @remote_auth_events ),
+            auth_events => $room->auth_event_refs( @remote_auth_events ),
             prev_events => $room->make_event_refs( $join_event ),
 
             sender  => $user_id,
@@ -273,7 +273,7 @@ test "Inbound federation accepts a second soft-failed event",
          # send a regular message (event m1), which should be accepted
          $event_m1 = $room->create_and_insert_event(
             event_id_suffix => "m1",
-            auth_events => $room->make_event_refs( @remote_auth_events ),
+            auth_events => $room->auth_event_refs( @remote_auth_events ),
             prev_events => $room->make_event_refs( $join_event ),
             sender  => $remote_user_id,
             type => "m.room.message",
@@ -291,7 +291,7 @@ test "Inbound federation accepts a second soft-failed event",
          # send an event which will be soft-failed (sf1)
          $event_sf1 = $room->create_and_insert_event(
             event_id_suffix => "sf1",
-            auth_events => $room->make_event_refs( @remote_auth_events ),
+            auth_events => $room->auth_event_refs( @remote_auth_events ),
             prev_events => $room->make_event_refs( $event_m1 ),
             sender  => $remote_user_id,
             type => "test.sf",
@@ -309,7 +309,7 @@ test "Inbound federation accepts a second soft-failed event",
          # send a second soft-fail event
          $event_sf2 = $room->create_and_insert_event(
             event_id_suffix => "sf2",
-            auth_events => $room->make_event_refs( @remote_auth_events ),
+            auth_events => $room->auth_event_refs( @remote_auth_events ),
             prev_events => $room->make_event_refs( $event_m1 ),
             sender  => $remote_user_id,
             type => "test.sf",
@@ -475,7 +475,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
          $event_m1 = $room->create_and_insert_event(
             event_id_suffix => "m1",
             prev_events => $room->make_event_refs( $join_event ),
-            auth_events => $room->make_event_refs( @remote_auth_events ),
+            auth_events => $room->auth_event_refs( @remote_auth_events ),
             sender  => $remote_user_id,
             type => "m.room.message",
             content => { body => "M1" },
@@ -493,7 +493,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
          $event_sf1 = $room->create_and_insert_event(
             event_id_suffix => "sf1",
             prev_events => $room->make_event_refs( $event_m1 ),
-            auth_events => $room->make_event_refs( @remote_auth_events ),
+            auth_events => $room->auth_event_refs( @remote_auth_events ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF1" },
@@ -511,7 +511,7 @@ test "Inbound federation correctly handles soft failed events as extremities",
          $event_sf2 = $room->create_and_insert_event(
             event_id_suffix => "sf2",
             prev_events => $room->make_event_refs( $event_sf1 ),
-            auth_events => $room->make_event_refs( @remote_auth_events ),
+            auth_events => $room->auth_event_refs( @remote_auth_events ),
             sender  => $remote_user_id,
             type => "test.sf",
             content => { body => "SF2" },

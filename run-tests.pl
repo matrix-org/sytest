@@ -68,7 +68,7 @@ my $BLACKLIST_FILE;
 # the room version that we use for the majority of our tests (those which do
 # not requires a specific room version). 'undef' means 'use the default from
 # the server under test'.
-our $TEST_ROOM_VERSION;
+our $TEST_ROOM_VERSION = '12';
 
 # should we include tests that claim to use deprecated endpoints?
 our $INCLUDE_DEPRECATED_ENDPOINTS = 1;

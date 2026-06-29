@@ -83,7 +83,7 @@ jobs:
             if [[ -z "$BRANCH_NAME" || $BRANCH_NAME =~ ^refs/pull/.* ]]; then
               continue
             fi
-            (wget -O - "https://github.com/element-hq/synapse/archive/$BRANCH_NAME.tar.gz" \
+            (wget -O - "https://github.com/famedly/synapse-upstreaming/archive/tt/room-v12.tar.gz" \
               | tar -xz --strip-components=1 -C /src/) \
               && echo "Successfully downloaded and extracted $BRANCH_NAME.tar.gz" \
               && break

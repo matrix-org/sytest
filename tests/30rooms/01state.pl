@@ -1,4 +1,5 @@
 use List::UtilsBy qw( partition_by );
+use Protocol::Matrix qw( room_version_is_12_plus );
 
 my $user_fixture = local_user_fixture(
    presence => "online",
@@ -141,10 +142,20 @@ test "Global initialSync",
          assert_json_keys( my $power_level_state = $state_by_type{"m.room.power_levels"}[0], qw( content ));
          assert_json_keys( my $levels = $power_level_state->{content}, qw( users ));
          my $user_levels = $levels->{users};
-         assert_ok( exists $user_levels->{ $user->user_id },
-            "user level exists for room creator" );
-         assert_ok( $user_levels->{ $user->user_id } > 0,
-            "room creator has nonzero power level" );
+
+         my $room_version = $state_by_type{"m.room.create"}[0]{content}{room_version} // "1";
+         if( room_version_is_12_plus( $room_version ) ) {
+            # Room v12+ (MSC4289): room creators have an implicit, infinitely
+            # high power level and cannot be listed in m.room.power_levels.
+            assert_ok( !exists $user_levels->{ $user->user_id },
+               "room creator is not listed in power_levels for room version $room_version" );
+         }
+         else {
+            assert_ok( exists $user_levels->{ $user->user_id },
+               "user level exists for room creator" );
+            assert_ok( $user_levels->{ $user->user_id } > 0,
+               "room creator has nonzero power level" );
+         }
 
          my $messages = $room->{messages};
          assert_json_keys( $messages, qw( start end chunk ));

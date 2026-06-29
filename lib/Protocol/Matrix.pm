@@ -31,6 +31,9 @@ our @EXPORT_OK = qw(
 
    sign_event_json signed_event_json
    verify_event_json_signature
+
+   room_version_is_11_plus
+   room_version_is_12_plus
 );
 
 my $json_canon = JSON->new
@@ -53,6 +56,57 @@ with signing and verifying signatures on federation-level events.
 =head1 FUNCTIONS
 
 =cut
+
+=head2 room_version_is_11_plus
+
+   $bool = room_version_is_11_plus( $room_version )
+
+Returns true if the given room version uses the room v11 (or later) event
+format and redaction rules (most notably, C<m.room.create> has no C<creator>
+field and its entire content is preserved on redaction). Non-numeric
+(unstable) room versions are treated as 11+.
+
+=cut
+
+sub room_version_is_11_plus
+{
+   my ( $room_version ) = @_;
+   $room_version //= 1;
+   return ( $room_version !~ /\A[0-9]+\z/ || $room_version >= 11 );
+}
+
+=head2 room_version_is_12_plus
+
+   $bool = room_version_is_12_plus( $room_version )
+
+Returns true if the given room version uses the room v12 (or later) semantics
+introduced by MSC4291 (hash-based room IDs) and MSC4289 (privileged room
+creators):
+
+=over 4
+
+=item * the room ID is a hash of the C<m.room.create> event (sigil C<!>) [MSC4291];
+
+=item * the C<m.room.create> event carries no C<room_id> field [MSC4291];
+
+=item * C<m.room.create> is never referenced in any event's C<auth_events> [MSC4291]; and
+
+=item * room creators have an infinitely high power level [MSC4289].
+
+=back
+
+Only numeric versions >= 12 qualify; intentionally-unknown placeholder versions
+(e.g. C<"sytest-room-ver">) are treated as pre-v12, as they are used in tests
+that deliberately mimic the older event format.
+
+=cut
+
+sub room_version_is_12_plus
+{
+   my ( $room_version ) = @_;
+   $room_version //= 1;
+   return ( $room_version =~ /\A[0-9]+\z/ && $room_version >= 12 );
+}
 
 =head2 encode_json_for_signing
 
@@ -289,7 +343,7 @@ sub redact_event
    # - m.room.member: 'third_party_invite.signed' is also preserved
    # - m.room.redaction: 'redacts' is also preserved
    # Non-numeric (unstable) room versions are assumed to be 11+
-   if( $room_version !~ /\A[0-9]+\z/ or $room_version >= 11 ) {
+   if( room_version_is_11_plus( $room_version ) ) {
       if( $type eq 'm.room.create' ) {
          %$new_content = %$old_content;
          $event->{unsigned}{age_ts} = $old_unsigned->{age_ts} if exists $old_unsigned->{age_ts};
