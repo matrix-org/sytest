@@ -28,9 +28,23 @@ sub assert_is_valid_pdu {
    assert_json_number( $event->{origin_server_ts} );
    assert_json_list( $event->{prev_events} );
 
-   # In room v12+, the m.room.create event has no room_id (the room ID is
-   # derived from the create event itself); every other event still carries one.
-   if ( $event->{type} ne "m.room.create" or defined $event->{room_id} ) {
+   # In room v12+ (MSC4291) the m.room.create event has no room_id: the room id
+   # is derived from the create event itself. Every other event, and the create
+   # event in earlier room versions, still carries one. Validate against the
+   # room version advertised in the create event's content so that a regression
+   # in either direction (a v12+ create with a room_id, or a pre-v12 create
+   # without one) is caught.
+   if ( $event->{type} eq "m.room.create" ) {
+      my $room_version = $event->{content}{room_version} // "1";
+      if ( $room_version =~ m/^\d+$/ and $room_version >= 12 ) {
+         exists $event->{room_id}
+            and die "Expected m.room.create event in room v$room_version to have no room_id\n";
+      }
+      else {
+         assert_json_string( $event->{room_id} );
+      }
+   }
+   else {
       assert_json_string( $event->{room_id} );
    }
    assert_json_string( $event->{sender} );

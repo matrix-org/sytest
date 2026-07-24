@@ -188,14 +188,17 @@ test "Newly left rooms appear in the leave section of gapped sync",
 
       matrix_create_filter( $user, {} )->then( sub {
          ( $filter_id ) = @_;
-         # Create the two rooms sequentially rather than concurrently. In room
-         # v12+ the room ID is the hash of the m.room.create event, so two rooms
-         # created by the same user with identical content in the same
-         # millisecond would hash to the same room ID and collide. Serialising
-         # the creates ensures their origin_server_ts (and thus room IDs) differ.
-         matrix_create_room_synced( $user )->on_done( sub { ( $room_id_1 ) = @_; } );
-      })->then( sub {
-         matrix_create_room_synced( $user )->on_done( sub { ( $room_id_2 ) = @_; } );
+         # Create the two rooms concurrently. In room v12+ the room
+         # ID is the hash of the m.room.create event, so two rooms created by the
+         # same user with identical content in the same millisecond would hash to
+         # the same room ID and collide. This is kept as a stress test: a
+         # correct homeserver must disambiguate concurrent creates (e.g. Synapse
+         # does), and implementations that don't handle concurrent room ID
+         # generation may trip up here.
+         Future->needs_all(
+            matrix_create_room_synced( $user )->on_done( sub { ( $room_id_1 ) = @_; } ),
+            matrix_create_room_synced( $user )->on_done( sub { ( $room_id_2 ) = @_; } ),
+         );
       })->then( sub {
          matrix_sync( $user, filter => $filter_id );
       })->then( sub {
