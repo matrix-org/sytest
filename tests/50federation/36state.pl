@@ -292,7 +292,7 @@ foreach my $type ( qw( message state ) ) {
 
                sender  => '@fake_sender:' . $outbound_client->server_name,
                content => { body => "Rejected" },
-               auth_events => $room->make_event_refs(
+               auth_events => $room->auth_event_refs(
                   $room->get_current_state_event( "m.room.create" ),
                   $room->get_current_state_event( "m.room.power_levels" ),
                ),
@@ -345,7 +345,7 @@ foreach my $type ( qw( message state ) ) {
             content => {
                body => "Rejected",
             },
-            auth_events => $room->make_event_refs(
+            auth_events => $room->auth_event_refs(
                $room->get_current_state_event( "m.room.create" ),
                $room->get_current_state_event( "m.room.power_levels" ),
             ),

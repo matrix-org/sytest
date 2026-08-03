@@ -8,6 +8,7 @@ use Carp;
 use List::Util qw( max );
 use List::UtilsBy qw( extract_by );
 
+use Protocol::Matrix qw( room_version_is_11_plus room_version_is_12_plus );
 use SyTest::Federation::Protocol;
 
 =head1 NAME
@@ -82,6 +83,32 @@ sub make_event_refs
       # other room versions just use event ids.
       return [ map { $self->id_for_event( $_ ) } @_ ];
    }
+}
+
+=head2 auth_event_refs
+
+   $refs = $room->auth_event_refs( $event1, $event2, ... );
+
+As C<make_event_refs>, but intended for building an C<auth_events> list: in
+room v12+, the C<m.room.create> event must not be referenced in C<auth_events>,
+so any create event in the given list is filtered out. For earlier room
+versions this is equivalent to C<make_event_refs>.
+
+This lets callers pass the create event unconditionally (as they would for
+pre-v12 rooms) without producing invalid v12 events.
+
+=cut
+
+sub auth_event_refs
+{
+   my $self = shift;
+   my @events = @_;
+
+   if( room_version_is_12_plus( $self->room_version ) ) {
+      @events = grep { defined $_ && $_->{type} ne "m.room.create" } @events;
+   }
+
+   return $self->make_event_refs( @events );
 }
 
 =head2 event_ids_from_refs
@@ -186,7 +213,7 @@ sub create_initial_events
    # Default to old 'creator' field if no room version is specified, or room version is
    # a numeric value <11. Non-numeric (unstable) versions are treated as 11+.
    $create_content->{creator} = $creator
-      unless defined( $room_version ) && ( $room_version !~ /\A[0-9]+\z/ || $room_version >= 11 );
+      unless defined( $room_version ) && room_version_is_11_plus( $room_version );
 
    $self->create_and_insert_event(
       type => "m.room.create",
@@ -237,9 +264,14 @@ sub create_event
    defined $fields{$_} or croak "Every event needs a '$_' field"
       for qw( type content sender );
 
+   my $is_v12 = room_version_is_12_plus( $self->room_version );
+
    # pick auth events, per https://spec.matrix.org/v1.2/server-server-api/#auth-events-selection
+   #
+   # In room v12+, the m.room.create event MUST NOT be referenced in auth_events;
+   # the room_id (being the create event's ID) implies it instead.
    my @auth_events = grep { defined } (
-      $self->get_current_state_event( "m.room.create" ),
+      ( $is_v12 ? () : $self->get_current_state_event( "m.room.create" ) ),
       $self->get_current_state_event( "m.room.power_levels" ),
       $self->get_current_state_event( "m.room.member", $fields{sender} ),
    );
@@ -257,6 +289,24 @@ sub create_event
    $fields{depth} //= JSON::number($self->next_depth);
 
    $fields{prev_events} //= $self->make_event_refs( @{ $self->{prev_events} } );
+
+   # In room v12+, the m.room.create event has no room_id; instead the room ID
+   # is derived from the create event's reference hash (its event ID with the
+   # sigil '!' in place of '$'). We must therefore create the event without a
+   # room_id and adopt the derived room ID for the room.
+   if( $is_v12 && $fields{type} eq "m.room.create" ) {
+      my ( $event, $event_id ) = $self->{datastore}->create_event(
+         room_version => $self->room_version,
+         %fields,
+      );
+
+      ( my $room_id = $event_id ) =~ s/\A\$/!/
+         or croak "Unexpected create event id '$event_id'";
+      $self->{room_id} = $room_id;
+
+      return $event unless wantarray;
+      return ( $event, $event_id );
+   }
 
    return $self->{datastore}->create_event(
       room_version => $self->room_version,
@@ -402,8 +452,10 @@ sub make_join_protoevent
 
    my $user_id = $args{user_id};
 
+   # In room v12+, the m.room.create event MUST NOT be referenced in auth_events.
    my @auth_events = grep { defined } (
-      $self->get_current_state_event( "m.room.create" ),
+      ( room_version_is_12_plus( $self->room_version )
+         ? () : $self->get_current_state_event( "m.room.create" ) ),
       $self->get_current_state_event( "m.room.join_rules" ),
    );
    my $auth_events = $self->make_event_refs( @auth_events );

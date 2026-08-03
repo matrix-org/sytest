@@ -250,7 +250,7 @@ test "Events whose auth_events are in the wrong room do not mess up the room sta
             type        => "m.room.message",
             sender      => $sytest_user_id,
             content     => { body => "event P" },
-            auth_events => $room2->make_event_refs( @auth_events ),
+            auth_events => $room2->auth_event_refs( @auth_events ),
          );
 
          log_if_fail "sending dodgy event $event_id_P in ".$room2->room_id, $event_P;
