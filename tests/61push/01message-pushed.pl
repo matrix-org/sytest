@@ -538,6 +538,9 @@ test "Don't get pushed for rooms you've muted",
                         msgtype => "m.text",
                         body    => "Second message - " . $alice->user_id,
                         expect  => JSON::true,  # This should be pushed
+                        # Intentional mention, so the message is pushed by
+                        # .m.rule.is_user_mention even though the room is muted.
+                        "m.mentions" => { user_ids => [ $alice->user_id ] },
                      }
                   )
                }),
