@@ -25,6 +25,7 @@ test "Inbound federation rejects typing notifications from wrong remote",
                room_id => $room_id,
                user_id => $creator->user_id,
                typing  => JSON::true,
+               timeout => 30000,
             },
          );
       })->then( sub {
@@ -36,6 +37,7 @@ test "Inbound federation rejects typing notifications from wrong remote",
                room_id => $room_id,
                user_id => $user_id,
                typing  => JSON::true,
+               timeout => 30000,
             },
          );
       })->then( sub {
