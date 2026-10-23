@@ -21,14 +21,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: Debian Bookworm (Py 3.10, SQLite 3.40) Monolith
+          - label: Debian Bookworm (Py 3.11, SQLite 3.40) Monolith
             sytest-tag: bookworm
 
-          - label: Debian Bookworm (Py 3.10, PG 14) Monolith
+          - label: Debian Bookworm (Py 3.11, PG 14) Monolith
             sytest-tag: bookworm
             postgres: postgres
 
-          - label: Debian Bookworm (Py 3.10, PG 14) Workers
+          - label: Debian Bookworm (Py 3.11, PG 14) Workers
             sytest-tag: bookworm
             postgres: postgres
             workers: workers
