@@ -6,7 +6,7 @@ on:
   push:
     branches: [develop]
   schedule:
-    - cron: 0 1 * * *  # 1am, daily.
+    - cron: 0 1 * * * # 1am, daily.
   workflow_dispatch:
 
 permissions:
@@ -72,13 +72,13 @@ jobs:
             tags: "matrixdotorg/sytest-synapse:bookworm"
             build_args: |
               SYTEST_IMAGE_TAG=bookworm
-              PYTHON_VERSION=3.10
+              PYTHON_VERSION=3.11
           - sytest_image_tag: testing
             dockerfile: synapse
             tags: "matrixdotorg/sytest-synapse:testing"
             build_args: |
               SYTEST_IMAGE_TAG=testing
-              PYTHON_VERSION=3.13
+              PYTHON_VERSION=3.14
 
     steps:
       - name: Set up QEMU
