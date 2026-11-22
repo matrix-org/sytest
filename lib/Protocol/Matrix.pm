@@ -332,6 +332,11 @@ sub redact_event
 
    $ALLOWED_KEYS{$_} or delete $event->{$_} for keys %$event;
 
+   # Room version 11 (MSC2176) no longer protects these top-level keys.
+   if( room_version_is_11_plus( $room_version ) ) {
+      delete $event->{$_} for qw( origin membership prev_state );
+   }
+
    my $new_content = $event->{content} = {};
 
    $old_content  //= {};
