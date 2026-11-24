@@ -338,12 +338,14 @@ sub redact_event
    $old_unsigned //= {};
 
    # Room version 11+ uses updated redaction rules:
+   # - top-level 'origin', 'membership' and 'prev_state' are no longer preserved
    # - m.room.create: entire content property is preserved
    # - m.room.power_levels: 'invite' is also preserved
    # - m.room.member: 'third_party_invite.signed' is also preserved
    # - m.room.redaction: 'redacts' is also preserved
    # Non-numeric (unstable) room versions are assumed to be 11+
    if( room_version_is_11_plus( $room_version ) ) {
+      delete $event->{$_} for qw( origin membership prev_state );
       if( $type eq 'm.room.create' ) {
          %$new_content = %$old_content;
          $event->{unsigned}{age_ts} = $old_unsigned->{age_ts} if exists $old_unsigned->{age_ts};
