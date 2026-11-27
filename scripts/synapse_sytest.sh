@@ -236,6 +236,7 @@ echo >&2 "--- Copying assets"
 
 # Copy out the logs
 rsync --ignore-missing-args --min-size=1B -av /work/server-0 /work/server-1 /logs --include "*/" --include="*.log.*" --include="*.log" --exclude="*"
+cp /var/log/syslog /logs/syslog
 #cp /.coverage.* /src || true
 
 #cd /src
